@@ -31,6 +31,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole
+    phone: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -38,6 +39,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     password: Optional[str] = None
+    phone: Optional[str] = None
 
 class User(UserBase):
     id: str
@@ -222,7 +224,7 @@ class SchoolBase(BaseModel):
     name: str
     address: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    code: Optional[str] = None
 
 class SchoolCreate(SchoolBase):
     pass
@@ -231,10 +233,9 @@ class SchoolUpdate(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
 
 class School(SchoolBase):
-    id: int
+    id: str  # Changed from int to str to support UUID
     created_at: datetime
     updated_at: Optional[datetime] = None
 

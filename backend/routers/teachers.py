@@ -31,7 +31,7 @@ async def get_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get teacher dashboard data"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Get teacher's classes
@@ -67,7 +67,7 @@ async def create_class(
     db: Session = Depends(get_db)
 ):
     """Create a new class"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     db_class = models.Class(
@@ -85,7 +85,7 @@ async def get_classes(
     db: Session = Depends(get_db)
 ):
     """Get all classes for the current teacher"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     classes = db.query(models.Class).filter(
@@ -101,7 +101,7 @@ async def add_students_to_class(
     db: Session = Depends(get_db)
 ):
     """Add students to a class"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Verify teacher owns the class
@@ -145,7 +145,7 @@ async def create_course(
     db: Session = Depends(get_db)
 ):
     """Create a new course"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Generate a unique course code
@@ -183,7 +183,7 @@ async def get_courses(
     db: Session = Depends(get_db)
 ):
     """Get all courses created by the teacher"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     courses = db.query(models.Course).filter(
@@ -198,7 +198,7 @@ async def get_course_details(
     db: Session = Depends(get_db)
 ):
     """Get detailed information about a specific course"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Get course with enrollments
@@ -242,7 +242,7 @@ async def create_lesson(
     db: Session = Depends(get_db)
 ):
     """Create a new lesson in a course"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Verify teacher owns the course
@@ -270,7 +270,7 @@ async def create_assignments(
     db: Session = Depends(get_db)
 ):
     """Create assignments for students"""
-    if current_user.role != models.UserRole.TEACHER:
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Verify lesson exists and teacher has access
