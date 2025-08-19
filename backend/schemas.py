@@ -212,3 +212,7 @@ class GoogleAuthRequest(BaseModel):
 class StudentLoginRequest(BaseModel):
     email: str
     birth_date: str  # YYYYMMDD as password
+
+class StudentPasswordVerify(BaseModel):
+    student_id: str
+    password: str  # YYYYMMDD format birth date

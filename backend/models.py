@@ -50,8 +50,12 @@ class Student(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
     birth_date = Column(String, nullable=False)  # YYYYMMDD format
+    phone_number = Column(String, unique=True, index=True)  # Student's phone
     parent_email = Column(String)
     parent_phone = Column(String)
+    name = Column(String)  # Alias for full_name
+    grade = Column(Integer)
+    school = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -59,6 +63,7 @@ class Student(Base):
     # Relationships
     class_enrollments = relationship("ClassStudent", back_populates="student")
     assignments = relationship("StudentAssignment", back_populates="student")
+    enrollments = relationship("Enrollment", back_populates="student")
 
 class School(Base):
     __tablename__ = "schools"
@@ -110,6 +115,10 @@ class Course(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     description = Column(Text)
+    course_code = Column(String, unique=True, index=True)
+    grade_level = Column(Integer)
+    subject = Column(String)
+    max_students = Column(Integer, default=30)
     difficulty_level = Column(Enum(DifficultyLevel))
     created_by = Column(String, ForeignKey("users.id"))
     is_active = Column(Boolean, default=True)
@@ -120,6 +129,12 @@ class Course(Base):
     creator = relationship("User", back_populates="created_courses")
     lessons = relationship("Lesson", back_populates="course")
     class_mappings = relationship("ClassCourseMapping", back_populates="course")
+    enrollments = relationship("Enrollment", back_populates="course")
+    
+    @property
+    def teacher(self):
+        """Alias for creator to maintain consistency"""
+        return self.creator
 
 class ClassCourseMapping(Base):
     __tablename__ = "class_course_mappings"
@@ -182,3 +197,15 @@ class ActivityResult(Base):
     
     # Relationships
     assignment = relationship("StudentAssignment", back_populates="submissions")
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    student_id = Column(String, ForeignKey("students.id"))
+    course_id = Column(String, ForeignKey("courses.id"))
+    enrolled_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    student = relationship("Student", back_populates="enrollments")
+    course = relationship("Course", back_populates="enrollments")

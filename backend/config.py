@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     from_email: str = "noreply@duotopia.com"
     
     # CORS
-    backend_cors_origins: list = ["http://localhost:5173"]
+    backend_cors_origins: list = ["http://localhost:5173", "http://localhost:5174"]
     
     class Config:
         env_file = ".env"

@@ -8,6 +8,23 @@ import schemas
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 
+@router.get("/profile")
+async def get_teacher_profile(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get teacher profile"""
+    if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.full_name,
+        "role": current_user.role.value,
+        "is_active": current_user.is_active
+    }
+
 @router.get("/dashboard")
 async def get_dashboard(
     current_user: models.User = Depends(get_current_active_user),
@@ -121,7 +138,7 @@ async def add_students_to_class(
     db.commit()
     return {"added_students": added_students}
 
-@router.post("/courses", response_model=schemas.Course)
+@router.post("/courses")
 async def create_course(
     course_data: schemas.CourseCreate,
     current_user: models.User = Depends(get_current_active_user),
@@ -131,14 +148,34 @@ async def create_course(
     if current_user.role != models.UserRole.TEACHER:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    # Generate a unique course code
+    import random
+    import string
+    course_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    # Check if code already exists
+    while db.query(models.Course).filter(models.Course.course_code == course_code).first():
+        course_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
     db_course = models.Course(
         **course_data.dict(),
+        course_code=course_code,
         created_by=current_user.id
     )
     db.add(db_course)
     db.commit()
     db.refresh(db_course)
-    return db_course
+    
+    return {
+        "id": db_course.id,
+        "title": db_course.title,
+        "description": db_course.description,
+        "course_code": db_course.course_code,
+        "grade_level": db_course.grade_level,
+        "subject": db_course.subject,
+        "max_students": db_course.max_students,
+        "created_at": db_course.created_at
+    }
 
 @router.get("/courses", response_model=List[schemas.Course])
 async def get_courses(
@@ -153,6 +190,49 @@ async def get_courses(
         models.Course.created_by == current_user.id
     ).all()
     return courses
+
+@router.get("/courses/{course_id}")
+async def get_course_details(
+    course_id: str,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed information about a specific course"""
+    if current_user.role != models.UserRole.TEACHER:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get course with enrollments
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.created_by == current_user.id
+    ).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Get enrolled students
+    students = []
+    for enrollment in course.enrollments:
+        student = enrollment.student
+        students.append({
+            "id": student.id,
+            "name": student.name or student.full_name,
+            "grade": student.grade,
+            "school": student.school,
+            "enrolled_at": enrollment.enrolled_at
+        })
+    
+    return {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "course_code": course.course_code,
+        "grade_level": course.grade_level,
+        "subject": course.subject,
+        "max_students": course.max_students,
+        "students": students,
+        "created_at": course.created_at
+    }
 
 @router.post("/courses/{course_id}/lessons", response_model=schemas.Lesson)
 async def create_lesson(

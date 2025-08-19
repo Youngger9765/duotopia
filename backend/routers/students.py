@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from database import get_db
@@ -6,6 +6,21 @@ import models
 import schemas
 
 router = APIRouter(prefix="/api/students", tags=["students"])
+
+@router.get("/profile")
+async def get_student_profile(
+    db: Session = Depends(get_db)
+):
+    """Get student profile based on token"""
+    # For testing, return a mock profile
+    # In production, decode the JWT token to get student info
+    return {
+        "id": "test-student-id",
+        "name": "Test Student",
+        "grade": 10,
+        "school": "Test High School",
+        "phone_number": "+1234567890"
+    }
 
 @router.post("/register", response_model=schemas.Student)
 async def register_student(
@@ -80,6 +95,43 @@ async def get_class_students(
         "email": s.email
     } for s in students]
 
+@router.post("/verify-password")
+async def verify_student_password(
+    request: schemas.StudentPasswordVerify,
+    db: Session = Depends(get_db)
+):
+    """Verify student password (birth date) and return access token"""
+    from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+    from datetime import timedelta
+    
+    student = db.query(models.Student).filter(
+        models.Student.id == request.student_id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check if birth_date matches (expecting YYYYMMDD format)
+    if student.birth_date != request.password:
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": student.email, "role": "student", "student_id": student.id}, 
+        expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "student": {
+            "id": student.id,
+            "name": student.full_name,
+            "email": student.email
+        }
+    }
+
 @router.get("/{student_id}/assignments")
 async def get_student_assignments(
     student_id: str,
@@ -113,6 +165,27 @@ async def get_student_assignments(
             })
     
     return result
+
+@router.get("/courses")
+async def get_student_courses_auth(
+    db: Session = Depends(get_db)
+):
+    """Get all courses for authenticated student"""
+    # For testing, return mock courses
+    return [
+        {
+            "id": "course-1",
+            "title": "基礎英語會話",
+            "teacher_name": "王老師",
+            "description": "培養日常英語對話能力"
+        },
+        {
+            "id": "course-2", 
+            "title": "進階閱讀理解",
+            "teacher_name": "李老師",
+            "description": "提升英文閱讀理解與分析能力"
+        }
+    ]
 
 @router.get("/{student_id}/courses")
 async def get_student_courses(

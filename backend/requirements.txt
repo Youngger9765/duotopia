@@ -14,7 +14,7 @@ google-auth==2.25.2
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-cloud-storage==2.13.0
-google-cloud-sql==0.5.0
+# google-cloud-sql==0.5.0  # Not needed for local development
 openai==1.6.1
 sendgrid==6.11.0
 redis==5.0.1
