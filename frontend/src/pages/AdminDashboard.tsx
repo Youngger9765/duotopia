@@ -1,12 +1,13 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen } from 'lucide-react'
+import { Home, Users, GraduationCap, BookOpen, Building2, LogOut, Menu, X, UserCheck, Settings } from 'lucide-react'
 import { useState } from 'react'
+import InstitutionManagement from './InstitutionManagement'
+import TeacherManagement from './TeacherManagement'
 import StudentManagement from './StudentManagement'
 import CourseManagement from './CourseManagement'
-import ClassManagement from './ClassManagement'
 
-function TeacherDashboard() {
+function AdminDashboard() {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -18,12 +19,12 @@ function TeacherDashboard() {
   }
 
   const navItems = [
-    { path: '/teacher', label: '總覽', icon: Home },
-    { path: '/teacher/students', label: '學生管理', icon: GraduationCap },
-    { path: '/teacher/classes', label: '班級管理', icon: Users },
-    { path: '/teacher/courses', label: '課程管理', icon: BookOpen },
-    { path: '/teacher/assignments', label: '作業管理', icon: FileText },
-    { path: '/teacher/reports', label: '成績報表', icon: BarChart },
+    { path: '/admin', label: '總覽', icon: Home },
+    { path: '/admin/institution', label: '機構管理', icon: Building2 },
+    { path: '/admin/teachers', label: '教師名冊', icon: UserCheck },
+    { path: '/admin/students', label: '學生名單', icon: GraduationCap },
+    { path: '/admin/courses', label: '機構內課程', icon: BookOpen },
+    { path: '/admin/settings', label: '系統設定', icon: Settings },
   ]
   
   return (
@@ -34,7 +35,7 @@ function TeacherDashboard() {
           <div className="flex-1 flex flex-col bg-white shadow-sm h-full">
             {/* Logo section */}
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
-              <h1 className="text-xl font-bold">Duotopia 教師平台</h1>
+              <h1 className="text-xl font-bold">機構管理系統</h1>
             </div>
             
             {/* Navigation */}
@@ -72,13 +73,13 @@ function TeacherDashboard() {
                 <div className="flex items-center">
                   <div>
                     <div className="text-sm font-medium text-gray-900">
-                      王老師
+                      系統管理員
                     </div>
                     <div className="text-xs text-gray-500">
-                      teacher1@duotopia.com
+                      admin@duotopia.com
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      教師
+                      機構管理員
                     </div>
                   </div>
                 </div>
@@ -111,7 +112,7 @@ function TeacherDashboard() {
             
             {/* Mobile Logo */}
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
-              <h1 className="text-xl font-bold">Duotopia 教師平台</h1>
+              <h1 className="text-xl font-bold">機構管理系統</h1>
             </div>
             
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
@@ -149,13 +150,13 @@ function TeacherDashboard() {
                 <div className="flex items-center">
                   <div>
                     <div className="text-sm font-medium text-gray-900">
-                      王老師
+                      系統管理員
                     </div>
                     <div className="text-xs text-gray-500">
-                      teacher1@duotopia.com
+                      admin@duotopia.com
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      教師
+                      機構管理員
                     </div>
                   </div>
                 </div>
@@ -184,7 +185,7 @@ function TeacherDashboard() {
               >
                 <Menu className="h-6 w-6" />
               </button>
-              <h1 className="text-xl font-bold">Duotopia 教師平台</h1>
+              <h1 className="text-xl font-bold">機構管理系統</h1>
               <div className="w-10" /> {/* Spacer for centering */}
             </div>
           </div>
@@ -195,12 +196,12 @@ function TeacherDashboard() {
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <Routes>
-                <Route path="/" element={<TeacherOverview />} />
+                <Route path="/" element={<AdminOverview />} />
+                <Route path="/institution" element={<InstitutionManagement />} />
+                <Route path="/teachers" element={<TeacherManagement />} />
                 <Route path="/students" element={<StudentManagement />} />
-                <Route path="/classes" element={<ClassManagement />} />
                 <Route path="/courses" element={<CourseManagement />} />
-                <Route path="/assignments" element={<AssignmentManagement />} />
-                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<SystemSettings />} />
               </Routes>
             </div>
           </div>
@@ -210,81 +211,97 @@ function TeacherDashboard() {
   )
 }
 
-function TeacherOverview() {
+function AdminOverview() {
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">歡迎回來，王老師！</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">機構總覽</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">總學生數</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">48</dd>
+            <dt className="text-sm font-medium text-gray-500 truncate">機構數量</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">3</dd>
           </div>
         </div>
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">管理班級</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">2</dd>
+            <dt className="text-sm font-medium text-gray-500 truncate">教師總數</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">24</dd>
           </div>
         </div>
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">待批改作業</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">12</dd>
+            <dt className="text-sm font-medium text-gray-500 truncate">學生總數</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">486</dd>
           </div>
         </div>
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">本週完成率</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">87%</dd>
+            <dt className="text-sm font-medium text-gray-500 truncate">活躍課程</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">45</dd>
           </div>
         </div>
       </div>
-      
+
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">最新提交的作業</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <p className="font-medium text-gray-900">陳小明 - Unit 3 Speaking</p>
-                  <p className="text-gray-500">六年一班 · 5分鐘前</p>
-                </div>
-                <Button size="sm" variant="outline">批改</Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <p className="font-medium text-gray-900">林小華 - Reading Test</p>
-                  <p className="text-gray-500">六年二班 · 15分鐘前</p>
-                </div>
-                <Button size="sm" variant="outline">批改</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">班級表現</h3>
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">機構活動統計</h3>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">六年一班</span>
-                  <span className="text-gray-900 font-medium">92%</span>
+                  <span className="text-gray-600">台北分校</span>
+                  <span className="text-gray-900 font-medium">245 位學生</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '92%' }}></div>
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '50%' }}></div>
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">六年二班</span>
-                  <span className="text-gray-900 font-medium">78%</span>
+                  <span className="text-gray-600">新竹分校</span>
+                  <span className="text-gray-900 font-medium">156 位學生</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '78%' }}></div>
+                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '32%' }}></div>
                 </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">台中分校</span>
+                  <span className="text-gray-900 font-medium">85 位學生</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '18%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">最新加入教師</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <p className="font-medium text-gray-900">陳老師</p>
+                  <p className="text-gray-500">台北分校 · 2 天前</p>
+                </div>
+                <Button size="sm" variant="outline">查看</Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <p className="font-medium text-gray-900">林老師</p>
+                  <p className="text-gray-500">新竹分校 · 5 天前</p>
+                </div>
+                <Button size="sm" variant="outline">查看</Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <p className="font-medium text-gray-900">黃老師</p>
+                  <p className="text-gray-500">台中分校 · 1 週前</p>
+                </div>
+                <Button size="sm" variant="outline">查看</Button>
               </div>
             </div>
           </div>
@@ -294,58 +311,18 @@ function TeacherOverview() {
   )
 }
 
-
-function AssignmentManagement() {
+function SystemSettings() {
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">作業管理</h2>
-        <Button>建立新作業</Button>
-      </div>
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          <li className="px-4 py-4 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Unit 3 - Speaking Practice</p>
-                <p className="text-sm text-gray-500">六年一班、六年二班 · 截止日期：2024/01/15</p>
-              </div>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline">查看提交</Button>
-                <Button size="sm" variant="outline">編輯</Button>
-              </div>
-            </div>
-          </li>
-          <li className="px-4 py-4 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Reading Comprehension Test</p>
-                <p className="text-sm text-gray-500">六年二班 · 截止日期：2024/01/18</p>
-              </div>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline">查看提交</Button>
-                <Button size="sm" variant="outline">編輯</Button>
-              </div>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  )
-}
-
-function Reports() {
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">成績報表</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">系統設定</h2>
       <div className="bg-white shadow rounded-lg p-6">
         <div className="text-center text-gray-500">
-          <BarChart className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2">報表功能開發中</p>
+          <Settings className="mx-auto h-12 w-12 text-gray-400" />
+          <p className="mt-2">系統設定功能開發中</p>
         </div>
       </div>
     </div>
   )
 }
 
-export default TeacherDashboard
+export default AdminDashboard
