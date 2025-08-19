@@ -5,7 +5,7 @@ import logging
 
 from config import settings
 from database import engine, Base
-from routers import auth, teachers, students
+from routers import auth, teachers, students, admin
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(teachers.router)
 app.include_router(students.router)
+app.include_router(admin.router)
 
 @app.get("/")
 async def root():

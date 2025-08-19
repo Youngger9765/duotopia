@@ -216,3 +216,50 @@ class StudentLoginRequest(BaseModel):
 class StudentPasswordVerify(BaseModel):
     student_id: str
     password: str  # YYYYMMDD format birth date
+
+# School Schemas
+class SchoolBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class SchoolCreate(SchoolBase):
+    pass
+
+class SchoolUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class School(SchoolBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# Extended User Schemas for Admin
+class UserCreateAdmin(UserBase):
+    password: str
+    school_id: Optional[int] = None
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+    school_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+# Extended Student Schemas for Admin  
+class StudentUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    school_id: Optional[int] = None
+    grade: Optional[str] = None
+    parent_email: Optional[EmailStr] = None
+    parent_phone: Optional[str] = None

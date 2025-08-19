@@ -77,3 +77,12 @@ def authenticate_student(db: Session, email: str, birth_date: str):
     if student.birth_date != birth_date:
         return False
     return student
+
+async def require_admin(current_user: models.User = Depends(get_current_active_user)):
+    """Dependency to require admin role"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions. Admin role required."
+        )
+    return current_user
