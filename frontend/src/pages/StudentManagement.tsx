@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Users, UserPlus, School, Plus, Search, Filter, Edit2, X, Check } from 'lucide-react'
+import { Users, UserPlus, School, Plus, Search, Edit2, X, Check } from 'lucide-react'
+import { adminApi } from '@/lib/api'
+import { useToast } from '@/components/ui/use-toast'
 
 interface Student {
   id: string
@@ -12,6 +15,8 @@ interface Student {
   birthDate?: string
   parentEmail?: string
   parentPhone?: string
+  schoolId: string
+  schoolName: string
 }
 
 interface Class {
@@ -20,15 +25,102 @@ interface Class {
   teacher: string
   students: number
   grade: string
+  schoolId: string
+  schoolName: string
 }
 
 function StudentManagement() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<'students' | 'classes'>('students')
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showAddClass, setShowAddClass] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [showAssignClass, setShowAssignClass] = useState(false)
   const [selectedStudentsForAssign, setSelectedStudentsForAssign] = useState<string[]>([])
+  const [selectedSchool, setSelectedSchool] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedRole, setSelectedRole] = useState<string>('all')
+  const [loading, setLoading] = useState(true)
+  const [students, setStudents] = useState<Student[]>([])
+  const [schools, setSchools] = useState<any[]>([])
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchStudents()
+    fetchSchools()
+  }, [])
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true)
+      const response = await adminApi.getStudents()
+      const formattedStudents = response.data.map((student: any) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        class: student.class_name || '未分班',
+        classId: student.class_id,
+        status: student.class_id ? '已分班' : '待分班',
+        birthDate: student.birth_date,
+        schoolId: student.school_id,
+        schoolName: student.school_name || ''
+      }))
+      setStudents(formattedStudents)
+    } catch (error) {
+      console.error('Failed to fetch students:', error)
+      toast({
+        title: "錯誤",
+        description: "無法載入學生資料",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchSchools = async () => {
+    try {
+      const response = await adminApi.getSchools()
+      setSchools(response.data)
+    } catch (error) {
+      console.error('Failed to fetch schools:', error)
+    }
+  }
+
+  // Handle URL query parameters
+  useEffect(() => {
+    const action = searchParams.get('action')
+    const tab = searchParams.get('tab')
+    
+    if (tab === 'students') {
+      setActiveTab('students')
+    } else if (tab === 'classes') {
+      setActiveTab('classes')
+    }
+    
+    if (action === 'add') {
+      setShowAddStudent(true)
+      // Clear the action parameter
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('action')
+      setSearchParams(newParams)
+    } else if (action === 'assign') {
+      setShowAssignClass(true)
+      // Clear the action parameter
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('action')
+      setSearchParams(newParams)
+    }
+  }, [searchParams.get('action'), searchParams.get('tab')])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">載入中...</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -65,9 +157,64 @@ function StudentManagement() {
         </nav>
       </div>
 
+      {/* Compact Filters */}
+      <div className="mb-4 bg-white p-4 rounded-lg shadow">
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="搜尋姓名、Email或電話..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <select
+            value={selectedSchool}
+            onChange={(e) => setSelectedSchool(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">所有學校</option>
+            <option value="1">台北總校</option>
+            <option value="2">新竹分校</option>
+            <option value="3">台中補習班</option>
+          </select>
+          
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">所有狀態</option>
+            <option value="assigned">已分班</option>
+            <option value="unassigned">待分班</option>
+          </select>
+          
+          {activeTab === 'students' && (
+            <Button onClick={() => setShowAddStudent(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              新增學生
+            </Button>
+          )}
+          
+          {activeTab === 'classes' && (
+            <Button onClick={() => setShowAddClass(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              新增班級
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Content based on active tab */}
       {activeTab === 'students' ? (
         <StudentListView 
+          students={students}
+          loading={loading}
           showAddStudent={showAddStudent} 
           setShowAddStudent={setShowAddStudent}
           editingStudent={editingStudent}
@@ -76,11 +223,17 @@ function StudentManagement() {
           setShowAssignClass={setShowAssignClass}
           selectedStudentsForAssign={selectedStudentsForAssign}
           setSelectedStudentsForAssign={setSelectedStudentsForAssign}
+          selectedSchool={selectedSchool}
+          searchTerm={searchTerm}
+          selectedRole={selectedRole}
+          fetchStudents={fetchStudents}
         />
       ) : (
         <ClassListView 
           showAddClass={showAddClass} 
           setShowAddClass={setShowAddClass}
+          selectedSchool={selectedSchool}
+          searchTerm={searchTerm}
         />
       )}
     </div>
@@ -88,6 +241,8 @@ function StudentManagement() {
 }
 
 function StudentListView({ 
+  students,
+  loading,
   showAddStudent, 
   setShowAddStudent,
   editingStudent,
@@ -95,22 +250,23 @@ function StudentListView({
   showAssignClass,
   setShowAssignClass,
   selectedStudentsForAssign,
-  setSelectedStudentsForAssign
+  setSelectedStudentsForAssign,
+  selectedSchool,
+  searchTerm,
+  selectedRole,
+  fetchStudents
 }: any) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
   
-  const [students, setStudents] = useState<Student[]>([
-    { id: '1', name: '陳小明', email: 'student1@duotopia.com', class: '六年一班', classId: '1', status: '已分班', birthDate: '20090828' },
-    { id: '2', name: '林小華', email: 'student2@duotopia.com', class: '未分班', status: '待分班', birthDate: '20090828' },
-    { id: '3', name: '王小美', email: 'student3@duotopia.com', class: '六年二班', classId: '2', status: '已分班', birthDate: '20090828' },
-    { id: '4', name: '張小強', email: 'student4@duotopia.com', class: '未分班', status: '待分班', birthDate: '20090828' },
-  ])
-
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredStudents = (students || []).filter((student: any) => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSchool = selectedSchool === 'all' || student.schoolId === selectedSchool
+    const matchesRole = selectedRole === 'all' || 
+                       (selectedRole === 'assigned' && student.status === '已分班') ||
+                       (selectedRole === 'unassigned' && student.status === '待分班')
+    return matchesSearch && matchesSchool && matchesRole
+  })
 
   const handleAssignToClass = () => {
     setSelectedStudentsForAssign(selectedStudents)
@@ -119,40 +275,23 @@ function StudentListView({
 
   return (
     <div>
-      {/* Action Bar */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="搜尋學生姓名或Email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 w-64"
-            />
-          </div>
-          <Button variant="outline" size="sm">
-            <Filter className="w-4 h-4 mr-2" />
-            篩選
-          </Button>
-        </div>
-        <div className="flex space-x-2">
-          {selectedStudents.length > 0 && (
+      {/* Action buttons for selected students */}
+      {selectedStudents.length > 0 && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-700">
+              已選擇 {selectedStudents.length} 位學生
+            </span>
             <Button 
               variant="outline" 
               size="sm"
               onClick={handleAssignToClass}
             >
-              分配到班級 ({selectedStudents.length})
+              分配到班級
             </Button>
-          )}
-          <Button onClick={() => setShowAddStudent(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            新增學生
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Student List */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -187,14 +326,17 @@ function StudentListView({
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        student.status === '已分班' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {student.class}
-                      </span>
+                    <div>
+                      <div className="text-sm text-gray-600">{student.schoolName}</div>
+                      <div className="text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          student.status === '已分班' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {student.class}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex space-x-2">
                       {student.status === '待分班' && (
@@ -229,10 +371,34 @@ function StudentListView({
       {showAddStudent && (
         <AddStudentModal 
           onClose={() => setShowAddStudent(false)}
-          onSave={(newStudent: any) => {
-            // Add new student logic
-            setShowAddStudent(false)
+          onSave={async (newStudent: any) => {
+            try {
+              const studentData = {
+                name: newStudent.name,
+                email: newStudent.email,
+                birth_date: newStudent.birthDate,
+                school_id: newStudent.schoolId || schools[0]?.id,
+                parent_email: newStudent.parentEmail,
+                parent_phone: newStudent.parentPhone,
+                grade: newStudent.grade || '6'
+              }
+              
+              await adminApi.createStudent(studentData)
+              toast({
+                title: "成功",
+                description: "學生已新增",
+              })
+              fetchStudents()
+              setShowAddStudent(false)
+            } catch (error: any) {
+              toast({
+                title: "錯誤",
+                description: error.response?.data?.detail || "無法新增學生",
+                variant: "destructive",
+              })
+            }
           }}
+          schools={schools}
         />
       )}
 
@@ -241,11 +407,32 @@ function StudentListView({
         <EditStudentModal 
           student={editingStudent}
           onClose={() => setEditingStudent(null)}
-          onSave={(updatedStudent: Student) => {
-            setStudents(students.map(s => 
-              s.id === updatedStudent.id ? updatedStudent : s
-            ))
-            setEditingStudent(null)
+          onSave={async (updatedStudent: Student) => {
+            try {
+              const updateData = {
+                name: updatedStudent.name,
+                email: updatedStudent.email,
+                phone: updatedStudent.phone,
+                birth_date: updatedStudent.birthDate,
+                parent_email: updatedStudent.parentEmail,
+                parent_phone: updatedStudent.parentPhone,
+                grade: updatedStudent.grade
+              }
+              
+              await adminApi.updateStudent(updatedStudent.id, updateData)
+              toast({
+                title: "成功",
+                description: "學生資料已更新",
+              })
+              fetchStudents()
+              setEditingStudent(null)
+            } catch (error: any) {
+              toast({
+                title: "錯誤",
+                description: error.response?.data?.detail || "無法更新學生資料",
+                variant: "destructive",
+              })
+            }
           }}
         />
       )}
@@ -283,36 +470,31 @@ function StudentListView({
   )
 }
 
-function ClassListView({ showAddClass, setShowAddClass }: any) {
+function ClassListView({ showAddClass, setShowAddClass, selectedSchool, searchTerm }: any) {
   const classes: Class[] = [
-    { id: '1', name: '六年一班', teacher: '王老師', students: 24, grade: '6' },
-    { id: '2', name: '六年二班', teacher: '王老師', students: 22, grade: '6' },
-    { id: '3', name: '五年三班', teacher: '李老師', students: 20, grade: '5' },
+    { id: '1', name: '六年一班', teacher: '王老師', students: 24, grade: '6', schoolId: '1', schoolName: '台北總校' },
+    { id: '2', name: '六年二班', teacher: '王老師', students: 22, grade: '6', schoolId: '1', schoolName: '台北總校' },
+    { id: '3', name: '五年三班', teacher: '李老師', students: 20, grade: '5', schoolId: '2', schoolName: '新竹分校' },
+    { id: '4', name: '國一甲班', teacher: '張老師', students: 28, grade: '7', schoolId: '3', schoolName: '台中補習班' },
   ]
+  
+  const filteredClasses = classes.filter(cls => {
+    const matchesSearch = cls.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSchool = selectedSchool === 'all' || cls.schoolId === selectedSchool
+    return matchesSearch && matchesSchool
+  })
 
   return (
     <div>
-      {/* Action Bar */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="搜尋班級名稱..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 w-64"
-            />
-          </div>
-        </div>
-        <Button onClick={() => setShowAddClass(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          新增班級
-        </Button>
+
+      {/* Results count */}
+      <div className="mb-2 text-sm text-gray-600">
+        共 {filteredClasses.length} 個班級
       </div>
 
       {/* Class Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {classes.map((cls) => (
+        {filteredClasses.map((cls) => (
           <div key={cls.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center justify-between mb-4">
@@ -322,6 +504,7 @@ function ClassListView({ showAddClass, setShowAddClass }: any) {
                 </span>
               </div>
               <div className="text-sm text-gray-500 space-y-1">
+                <p>學校：{cls.schoolName}</p>
                 <p>教師：{cls.teacher}</p>
                 <p>學生人數：{cls.students} 人</p>
               </div>

@@ -1,15 +1,20 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen } from 'lucide-react'
+import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, ClipboardList, FileEdit, UserCog, ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
-import StudentManagement from './StudentManagement'
+import StudentManagement from './StudentManagementSimple'
 import CourseManagement from './CourseManagement'
 import ClassManagement from './ClassManagement'
+import InstitutionManagement from './InstitutionManagement'
+import AssignmentManagement from './AssignmentManagement'
+import StaffManagement from './StaffManagement'
 
 function TeacherDashboard() {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
   
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -17,50 +22,183 @@ function TeacherDashboard() {
     navigate('/')
   }
 
+  const toggleExpand = (path: string) => {
+    setExpandedItems(prev => 
+      prev.includes(path) 
+        ? [] // Collapse if already expanded
+        : [path] // Only expand this one, collapse others
+    )
+  }
+
   const navItems = [
     { path: '/teacher', label: '總覽', icon: Home },
-    { path: '/teacher/students', label: '學生管理', icon: GraduationCap },
-    { path: '/teacher/classes', label: '班級管理', icon: Users },
-    { path: '/teacher/courses', label: '課程管理', icon: BookOpen },
-    { path: '/teacher/assignments', label: '作業管理', icon: FileText },
-    { path: '/teacher/reports', label: '成績報表', icon: BarChart },
+    
+    // 學校負責人管理區
+    { type: 'section', label: '學校負責人管理' },
+    { 
+      path: '/teacher/institutions', 
+      label: '學校管理', 
+      icon: Building2,
+      subItems: [
+        { label: '新增學校', icon: Plus, action: () => navigate('/teacher/institutions?action=add') },
+        { label: '學校列表', icon: Building2, action: () => navigate('/teacher/institutions') }
+      ]
+    },
+    { 
+      path: '/teacher/staff', 
+      label: '教職員管理', 
+      icon: UserCog,
+      subItems: [
+        { label: '新增教職員', icon: UserPlus, action: () => navigate('/teacher/staff?action=add') },
+        { label: '教職員列表', icon: Users, action: () => navigate('/teacher/staff') }
+      ]
+    },
+    { 
+      path: '/teacher/students', 
+      label: '學生管理', 
+      icon: GraduationCap,
+      subItems: [
+        { label: '新增學生', icon: UserPlus, action: () => navigate('/teacher/students?action=add') },
+        { label: '學生名單', icon: Users, action: () => navigate('/teacher/students?tab=students') }
+      ]
+    },
+    { 
+      path: '/teacher/courses', 
+      label: '課程管理', 
+      icon: BookOpen,
+      subItems: [
+        { label: '新增課程', icon: Plus, action: () => navigate('/teacher/courses?action=add') },
+        { label: '課程列表', icon: BookOpen, action: () => navigate('/teacher/courses') }
+      ]
+    },
+    
+    // 老師管理區
+    { type: 'section', label: '老師管理' },
+    { 
+      path: '/teacher/classes', 
+      label: '班級管理', 
+      icon: Users,
+      subItems: [
+        { label: '新增班級', icon: Plus, action: () => navigate('/teacher/classes?action=add') },
+        { label: '班級列表', icon: School, action: () => navigate('/teacher/classes') }
+      ]
+    },
   ]
   
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-64">
-          <div className="flex-1 flex flex-col bg-white shadow-sm h-full">
+      <aside className={`hidden lg:flex lg:flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+        <div className="flex flex-col w-full">
+          <div className="flex-1 flex flex-col bg-white shadow-sm h-full relative">
             {/* Logo section */}
-            <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
-              <h1 className="text-xl font-bold">Duotopia 教師平台</h1>
+            <div className="flex items-center justify-between h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
+              {!sidebarCollapsed && <h1 className="text-xl font-bold">Duotopia 教師平台</h1>}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className={`p-1.5 hover:bg-gray-100 rounded-md transition-transform ${
+                  sidebarCollapsed ? 'rotate-180' : ''
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
             </div>
             
             {/* Navigation */}
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
               <nav className="flex-1 px-2 space-y-1">
-                {navItems.map((item) => {
+                {navItems.map((item, idx) => {
+                  // Handle section headers
+                  if (item.type === 'section') {
+                    return (
+                      <div key={idx} className="pt-4 pb-2">
+                        {!sidebarCollapsed && (
+                          <p className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {item.label}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  }
+                  
                   const Icon = item.icon
+                  const isExpanded = expandedItems.includes(item.path)
+                  const isActive = location.pathname === item.path || 
+                                 location.pathname.startsWith(item.path + '/')
+                  
                   return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                        location.pathname === item.path
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      <Icon
-                        className={`mr-3 h-5 w-5 ${
-                          location.pathname === item.path
-                            ? 'text-blue-700'
-                            : 'text-gray-400 group-hover:text-gray-500'
-                        }`}
-                      />
-                      {item.label}
-                    </Link>
+                    <div key={item.path}>
+                      <div className="relative">
+                        {item.subItems ? (
+                          <button
+                            onClick={() => {
+                              toggleExpand(item.path)
+                              navigate(item.path)
+                            }}
+                            className={`group w-full flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <Icon
+                              className={`${sidebarCollapsed ? '' : 'mr-3'} h-5 w-5 ${
+                                isActive
+                                  ? 'text-blue-700'
+                                  : 'text-gray-400 group-hover:text-gray-500'
+                              }`}
+                            />
+                            {!sidebarCollapsed && (
+                              <>
+                                <span className="flex-1 text-left">{item.label}</span>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4 ml-auto" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 ml-auto" />
+                                )}
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <Link
+                            to={item.path}
+                            className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <Icon
+                              className={`${sidebarCollapsed ? '' : 'mr-3'} h-5 w-5 ${
+                                isActive
+                                  ? 'text-blue-700'
+                                  : 'text-gray-400 group-hover:text-gray-500'
+                              }`}
+                            />
+                            {!sidebarCollapsed && item.label}
+                          </Link>
+                        )}
+                      </div>
+                      
+                      {/* Sub-items */}
+                      {item.subItems && isExpanded && !sidebarCollapsed && (
+                        <div className="ml-8 space-y-1 mt-1">
+                          {item.subItems.map((subItem, index) => {
+                            const SubIcon = subItem.icon
+                            return (
+                              <button
+                                key={index}
+                                onClick={subItem.action}
+                                className="group w-full flex items-center px-2 py-1.5 text-xs font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900"
+                              >
+                                <SubIcon className="mr-2 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
+                                {subItem.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </nav>
@@ -69,26 +207,37 @@ function TeacherDashboard() {
             {/* User info section */}
             <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
               <div className="flex-shrink-0 w-full">
-                <div className="flex items-center">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      王老師
+                {!sidebarCollapsed ? (
+                  <>
+                    <div className="flex items-center">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          王老師
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          teacher1@duotopia.com
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          教師
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      teacher1@duotopia.com
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      教師
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  登出
-                </button>
+                    <button
+                      onClick={handleLogout}
+                      className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      登出
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center p-2 text-gray-700 hover:bg-gray-50 rounded-md"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -116,28 +265,98 @@ function TeacherDashboard() {
             
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
               <nav className="px-2 space-y-1">
-                {navItems.map((item) => {
+                {navItems.map((item, idx) => {
+                  // Handle section headers
+                  if (item.type === 'section') {
+                    return (
+                      <div key={idx} className="pt-4 pb-2">
+                        {!sidebarCollapsed && (
+                          <p className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {item.label}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  }
+                  
                   const Icon = item.icon
+                  const isExpanded = expandedItems.includes(item.path)
+                  const isActive = location.pathname === item.path || 
+                                 location.pathname.startsWith(item.path + '/')
+                  
                   return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
-                        location.pathname === item.path
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      <Icon
-                        className={`mr-4 h-6 w-6 ${
-                          location.pathname === item.path
-                            ? 'text-blue-700'
-                            : 'text-gray-400 group-hover:text-gray-500'
-                        }`}
-                      />
-                      {item.label}
-                    </Link>
+                    <div key={item.path}>
+                      <div className="relative">
+                        {item.subItems ? (
+                          <button
+                            onClick={() => {
+                              toggleExpand(item.path)
+                              navigate(item.path)
+                            }}
+                            className={`group w-full flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <Icon
+                              className={`mr-4 h-6 w-6 ${
+                                isActive
+                                  ? 'text-blue-700'
+                                  : 'text-gray-400 group-hover:text-gray-500'
+                              }`}
+                            />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 ml-auto" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 ml-auto" />
+                            )}
+                          </button>
+                        ) : (
+                          <Link
+                            to={item.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <Icon
+                              className={`mr-4 h-6 w-6 ${
+                                isActive
+                                  ? 'text-blue-700'
+                                  : 'text-gray-400 group-hover:text-gray-500'
+                              }`}
+                            />
+                            {item.label}
+                          </Link>
+                        )}
+                      </div>
+                      
+                      {/* Sub-items */}
+                      {item.subItems && isExpanded && (
+                        <div className="ml-10 space-y-1 mt-1">
+                          {item.subItems.map((subItem, index) => {
+                            const SubIcon = subItem.icon
+                            return (
+                              <button
+                                key={index}
+                                onClick={() => {
+                                  subItem.action()
+                                  setSidebarOpen(false)
+                                }}
+                                className="group w-full flex items-center px-2 py-1.5 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900"
+                              >
+                                <SubIcon className="mr-2 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
+                                {subItem.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </nav>
@@ -199,8 +418,9 @@ function TeacherDashboard() {
                 <Route path="/students" element={<StudentManagement />} />
                 <Route path="/classes" element={<ClassManagement />} />
                 <Route path="/courses" element={<CourseManagement />} />
+                <Route path="/institutions" element={<InstitutionManagement />} />
                 <Route path="/assignments" element={<AssignmentManagement />} />
-                <Route path="/reports" element={<Reports />} />
+                <Route path="/staff" element={<StaffManagement />} />
               </Routes>
             </div>
           </div>
@@ -288,60 +508,6 @@ function TeacherOverview() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-function AssignmentManagement() {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">作業管理</h2>
-        <Button>建立新作業</Button>
-      </div>
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          <li className="px-4 py-4 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Unit 3 - Speaking Practice</p>
-                <p className="text-sm text-gray-500">六年一班、六年二班 · 截止日期：2024/01/15</p>
-              </div>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline">查看提交</Button>
-                <Button size="sm" variant="outline">編輯</Button>
-              </div>
-            </div>
-          </li>
-          <li className="px-4 py-4 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Reading Comprehension Test</p>
-                <p className="text-sm text-gray-500">六年二班 · 截止日期：2024/01/18</p>
-              </div>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline">查看提交</Button>
-                <Button size="sm" variant="outline">編輯</Button>
-              </div>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  )
-}
-
-function Reports() {
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">成績報表</h2>
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="text-center text-gray-500">
-          <BarChart className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2">報表功能開發中</p>
         </div>
       </div>
     </div>

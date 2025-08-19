@@ -58,6 +58,18 @@ export const teacherApi = {
   
   getClasses: () =>
     api.get('/api/teachers/classes'),
+    
+  getClass: (classId: string) =>
+    api.get(`/api/teachers/classes/${classId}`),
+    
+  getClassStudents: (classId: string) =>
+    api.get(`/api/teachers/classes/${classId}/students`),
+    
+  updateClass: (classId: string, data: any) =>
+    api.put(`/api/teachers/classes/${classId}`, data),
+    
+  deleteClass: (classId: string) =>
+    api.delete(`/api/teachers/classes/${classId}`),
   
   addStudentsToClass: (classId: string, studentIds: string[]) =>
     api.post(`/api/teachers/classes/${classId}/students`, { student_ids: studentIds }),
@@ -67,9 +79,21 @@ export const teacherApi = {
   
   getCourses: () =>
     api.get('/api/teachers/courses'),
+    
+  getCourse: (courseId: string) =>
+    api.get(`/api/teachers/courses/${courseId}`),
+    
+  updateCourse: (courseId: string, data: any) =>
+    api.put(`/api/teachers/courses/${courseId}`, data),
+    
+  deleteCourse: (courseId: string) =>
+    api.delete(`/api/teachers/courses/${courseId}`),
   
   createLesson: (courseId: string, data: any) =>
     api.post(`/api/teachers/courses/${courseId}/lessons`, data),
+    
+  getLessons: (courseId: string) =>
+    api.get(`/api/teachers/courses/${courseId}/lessons`),
   
   createAssignments: (data: any) =>
     api.post('/api/teachers/assignments', data),
@@ -100,4 +124,68 @@ export const studentApi = {
   
   updateParentInfo: (studentId: string, parentEmail: string, parentPhone: string) =>
     api.put(`/api/students/${studentId}/parent-info`, { parent_email: parentEmail, parent_phone: parentPhone }),
+}
+
+// Admin API
+export const adminApi = {
+  // Schools/Institutions Management
+  getSchools: () =>
+    api.get('/api/admin/schools'),
+    
+  getSchool: (schoolId: string) =>
+    api.get(`/api/admin/schools/${schoolId}`),
+    
+  createSchool: (data: any) =>
+    api.post('/api/admin/schools', data),
+    
+  updateSchool: (schoolId: string, data: any) =>
+    api.put(`/api/admin/schools/${schoolId}`, data),
+    
+  deleteSchool: (schoolId: string) =>
+    api.delete(`/api/admin/schools/${schoolId}`),
+  
+  // Staff/User Management
+  getUsers: (params?: { role?: string; school_id?: string }) =>
+    api.get('/api/admin/users', { params }),
+    
+  getUser: (userId: string) =>
+    api.get(`/api/admin/users/${userId}`),
+    
+  createUser: (data: any) =>
+    api.post('/api/admin/users', data),
+    
+  updateUser: (userId: string, data: any) =>
+    api.put(`/api/admin/users/${userId}`, data),
+    
+  deleteUser: (userId: string) =>
+    api.delete(`/api/admin/users/${userId}`),
+    
+  updateUserStatus: (userId: string, status: string) =>
+    api.put(`/api/admin/users/${userId}/status`, { status }),
+  
+  // Student Management (Admin)
+  getStudents: (params?: { school_id?: string; class_id?: string; search?: string }) =>
+    api.get('/api/admin/students', { params }),
+    
+  getStudent: (studentId: string) =>
+    api.get(`/api/admin/students/${studentId}`),
+    
+  createStudent: (data: any) =>
+    api.post('/api/admin/students', data),
+    
+  updateStudent: (studentId: string, data: any) =>
+    api.put(`/api/admin/students/${studentId}`, data),
+    
+  deleteStudent: (studentId: string) =>
+    api.delete(`/api/admin/students/${studentId}`),
+  
+  // Statistics
+  getStats: () =>
+    api.get('/api/admin/stats'),
+    
+  getClassStats: (classId: string) =>
+    api.get(`/api/teachers/classes/${classId}/stats`),
+    
+  getCourseStats: (courseId: string) =>
+    api.get(`/api/teachers/courses/${courseId}/stats`),
 }
