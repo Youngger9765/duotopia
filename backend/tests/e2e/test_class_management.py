@@ -24,9 +24,9 @@ class TestClassManagement:
         # 1. 前往登入頁面
         page.goto("http://localhost:5174/login")
         
-        # 2. 執行登入
+        # 2. 執行登入 - teacher1 現在是 ADMIN 角色
         page.fill('input[type="email"]', 'teacher1@duotopia.com')
-        page.fill('input[type="password"]', 'teacher123')
+        page.fill('input[type="password"]', 'password123')
         page.click('button[type="submit"]')
         
         # 3. 等待登入完成 

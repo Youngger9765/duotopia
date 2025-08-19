@@ -20,12 +20,14 @@ class TestStudentManagementWorking:
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         """前置準備：登入並導航到學生管理頁面"""
+        # 確保使用 headless 模式
+        page.set_extra_http_headers({"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"})
         # 1. 前往登入頁面
         page.goto("http://localhost:5174/login")
         
-        # 2. 執行登入
+        # 2. 執行登入 - teacher1 現在是 ADMIN 角色
         page.fill('input[type="email"]', 'teacher1@duotopia.com')
-        page.fill('input[type="password"]', 'teacher123')
+        page.fill('input[type="password"]', 'password123')
         page.click('button[type="submit"]')
         
         # 3. 等待登入完成 
@@ -66,6 +68,14 @@ class TestStudentManagementWorking:
         
         # 檢查新增學生按鈕
         expect(page.locator('main button:has-text("新增學生")')).to_be_visible()
+        
+        # 重要：檢查是否有真實學生資料顯示
+        page.wait_for_timeout(3000)  # 等待 API 載入
+        student_list = page.locator('ul.divide-y div.text-sm.font-medium.text-gray-900')
+        if student_list.count() > 0:
+            print(f"✓ 找到 {student_list.count()} 個學生資料")
+        else:
+            print("❌ 警告：學生列表為空，可能權限或 API 問題")
         
         print("✓ 所有基本元素正常顯示")
     

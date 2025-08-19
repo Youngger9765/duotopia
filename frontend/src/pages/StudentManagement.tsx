@@ -82,9 +82,15 @@ function StudentManagement() {
   const fetchSchools = async () => {
     try {
       const response = await adminApi.getSchools()
-      setSchools(response.data)
+      setSchools(response.data || [])
     } catch (error) {
       console.error('Failed to fetch schools:', error)
+      setSchools([]) // 確保 schools 不是 undefined
+      toast({
+        title: "警告",
+        description: "無法載入學校資料",
+        variant: "destructive",
+      })
     }
   }
 
@@ -227,6 +233,7 @@ function StudentManagement() {
           searchTerm={searchTerm}
           selectedRole={selectedRole}
           fetchStudents={fetchStudents}
+          schools={schools}
         />
       ) : (
         <ClassListView 
@@ -254,7 +261,8 @@ function StudentListView({
   selectedSchool,
   searchTerm,
   selectedRole,
-  fetchStudents
+  fetchStudents,
+  schools
 }: any) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   
@@ -373,11 +381,12 @@ function StudentListView({
           onClose={() => setShowAddStudent(false)}
           onSave={async (newStudent: any) => {
             try {
+              const defaultSchoolId = schools && schools.length > 0 ? schools[0]?.id : '1';
               const studentData = {
                 name: newStudent.name,
                 email: newStudent.email,
                 birth_date: newStudent.birthDate,
-                school_id: newStudent.schoolId || schools[0]?.id,
+                school_id: newStudent.schoolId || defaultSchoolId,
                 parent_email: newStudent.parentEmail,
                 parent_phone: newStudent.parentPhone,
                 grade: newStudent.grade || '6'

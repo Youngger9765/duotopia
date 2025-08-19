@@ -32,8 +32,14 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post('/api/auth/login', new URLSearchParams({ username: email, password })),
+  login: (email: string, password: string) => {
+    const formData = new URLSearchParams({ username: email, password })
+    return api.post('/api/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }
+    })
+  },
   
   googleLogin: (idToken: string) =>
     api.post('/api/auth/google', { id_token: idToken }),

@@ -2,7 +2,12 @@ import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, ClipboardList, FileEdit, UserCog, ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
-import StudentManagement from './StudentManagementSimple'
+import StudentManagementWorking from './StudentManagementWorking'
+
+// 使用工作版本的 StudentManagement 組件
+function StudentManagement() {
+  return <StudentManagementWorking />
+}
 import CourseManagement from './CourseManagement'
 import ClassManagement from './ClassManagement'
 import InstitutionManagement from './InstitutionManagement'

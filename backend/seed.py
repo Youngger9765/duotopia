@@ -54,7 +54,7 @@ def create_test_data(db: Session):
     print("👩‍🏫 Creating teachers...")
     teachers = []
     teacher_data = [
-        {"email": "teacher1@duotopia.com", "full_name": "王老師"},
+        {"email": "teacher1@duotopia.com", "full_name": "王老師", "role": models.UserRole.ADMIN},
         {"email": "teacher2@duotopia.com", "full_name": "李老師"},
         {"email": "teacher3@duotopia.com", "full_name": "張老師"},
         {"email": "admin@duotopia.com", "full_name": "系統管理員", "role": models.UserRole.ADMIN},
