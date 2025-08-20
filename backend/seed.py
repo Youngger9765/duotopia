@@ -104,8 +104,8 @@ def create_test_data(db: Session):
     ]
     
     for i, name in enumerate(student_names):
-        # Create 3-5 students per classroom
-        classroom_idx = i % len(classrooms)
+        # Randomly assign students to classrooms
+        classroom_idx = random.randint(0, len(classrooms) - 1)
         birth_year = 2012 if classrooms[classroom_idx].grade_level == "6" else 2013
         
         # All students have the same birth date for easy testing

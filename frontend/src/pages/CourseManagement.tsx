@@ -44,6 +44,8 @@ function CourseManagement() {
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [editingActivity, setEditingActivity] = useState<CourseActivity | null>(null)
+  const [showActivityPreview, setShowActivityPreview] = useState(false)
+  const [showActivityEditor, setShowActivityEditor] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<CourseActivity | null>(null)
   const [searchCoursesTerm, setSearchCoursesTerm] = useState('')
@@ -522,11 +524,18 @@ function CourseManagement() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setShowActivityPreview(true)}
+                    >
                       <Eye className="w-4 h-4 mr-1" />
                       預覽
                     </Button>
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => setShowActivityEditor(true)}
+                    >
                       編輯內容
                     </Button>
                   </div>
@@ -730,6 +739,35 @@ function CourseManagement() {
               a.id === updatedActivity.id ? updatedActivity : a
             ))
             setEditingActivity(null)
+          }}
+        />
+      )}
+
+      {/* Activity Preview Modal */}
+      {showActivityPreview && selectedActivity && (
+        <ActivityPreviewModal
+          activity={selectedActivity}
+          content={currentActivityContent}
+          onClose={() => setShowActivityPreview(false)}
+        />
+      )}
+
+      {/* Activity Editor Modal */}
+      {showActivityEditor && selectedActivity && (
+        <ActivityEditorModal
+          activity={selectedActivity}
+          content={currentActivityContent}
+          onClose={() => setShowActivityEditor(false)}
+          onSave={(updatedContent) => {
+            // Update activity content
+            setActivityContents(prev => 
+              prev.map(content => 
+                content.activityId === selectedActivity.id 
+                  ? updatedContent 
+                  : content
+              )
+            )
+            setShowActivityEditor(false)
           }}
         />
       )}
@@ -1116,6 +1154,146 @@ function EditActivityModal({
         </div>
 
         <div className="mt-6 flex space-x-3">
+          <Button onClick={onClose} variant="outline" className="flex-1">
+            取消
+          </Button>
+          <Button onClick={handleSave} className="flex-1">
+            儲存變更
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ActivityPreviewModal({
+  activity,
+  content,
+  onClose
+}: {
+  activity: CourseActivity
+  content: ActivityContent | null
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="flex justify-between items-center p-6 border-b">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">活動預覽</h3>
+            <p className="text-sm text-gray-500">{activity.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="mb-6">
+            <h4 className="text-base font-medium text-gray-900 mb-2">活動說明</h4>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                {content?.instructions || '請完成以下活動'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h4 className="text-base font-medium text-gray-900 mb-2">活動內容</h4>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {content?.content || '活動內容尚未設定'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h4 className="text-base font-medium text-gray-900 mb-2">活動資訊</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-4 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600">活動類型</p>
+                <p className="font-medium">{activity.type}</p>
+              </div>
+              <div className="bg-white p-4 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600">完成進度</p>
+                <p className="font-medium">{activity.completedStudents}/{activity.totalStudents}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ActivityEditorModal({
+  activity,
+  content,
+  onClose,
+  onSave
+}: {
+  activity: CourseActivity
+  content: ActivityContent | null
+  onClose: () => void
+  onSave: (content: ActivityContent) => void
+}) {
+  const [formData, setFormData] = useState({
+    instructions: content?.instructions || '請完成以下活動',
+    content: content?.content || '活動內容尚未設定',
+    resources: content?.resources || []
+  })
+
+  const handleSave = () => {
+    const updatedContent: ActivityContent = {
+      id: content?.id || activity.id,
+      activityId: activity.id,
+      instructions: formData.instructions,
+      content: formData.content,
+      resources: formData.resources
+    }
+    onSave(updatedContent)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="flex justify-between items-center p-6 border-b">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">編輯活動內容</h3>
+            <p className="text-sm text-gray-500">{activity.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">活動說明</label>
+              <textarea
+                value={formData.instructions}
+                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="請輸入活動說明..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">活動內容</label>
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                rows={8}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="請輸入活動內容..."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t flex space-x-3">
           <Button onClick={onClose} variant="outline" className="flex-1">
             取消
           </Button>
