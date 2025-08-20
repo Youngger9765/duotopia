@@ -21,12 +21,12 @@ interface Course {
   classroom_id: string | null
   copied_from_id: string | null
   copied_from_title?: string
-  unit_count: number
+  lesson_count: number
   difficulty_level?: string
-  pricing_per_unit?: number
+  pricing_per_lesson?: number
 }
 
-interface Unit {
+interface Lesson {
   id: string
   unit_number: number
   title: string
@@ -37,9 +37,9 @@ interface Unit {
   course_id: string
 }
 
-interface UnitContent {
+interface LessonContent {
   id: string
-  unitId: string
+  lessonId: string
   content: string
   instructions: string
   materials?: string[]
@@ -52,9 +52,9 @@ export default function ClassroomDetail() {
   const [classroom, setClassroom] = useState<any>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [courses, setCourses] = useState<Course[]>([])
-  const [units, setUnits] = useState<Unit[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
   const [publicCourses, setPublicCourses] = useState<Course[]>([])
-  const [unitContents, setUnitContents] = useState<UnitContent[]>([])
+  const [lessonContents, setLessonContents] = useState<LessonContent[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'students' | 'courses'>('students')
   
@@ -63,16 +63,16 @@ export default function ClassroomDetail() {
   
   // Course management states (three-panel design)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
-  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [searchCoursesTerm, setSearchCoursesTerm] = useState('')
-  const [searchUnitsTerm, setSearchUnitsTerm] = useState('')
+  const [searchLessonsTerm, setSearchLessonsTerm] = useState('')
   const [coursePanelCollapsed, setCoursePanelCollapsed] = useState(false)
-  const [unitPanelCollapsed, setUnitPanelCollapsed] = useState(false)
+  const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(false)
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [showAddCourse, setShowAddCourse] = useState(false)
-  const [showAddUnit, setShowAddUnit] = useState(false)
-  const [showUnitPreview, setShowUnitPreview] = useState(false)
-  const [showUnitEditor, setShowUnitEditor] = useState(false)
+  const [showAddLesson, setShowAddLesson] = useState(false)
+  const [showLessonPreview, setShowLessonPreview] = useState(false)
+  const [showLessonEditor, setShowLessonEditor] = useState(false)
 
   useEffect(() => {
     fetchClassroomDetails()
@@ -98,12 +98,12 @@ export default function ClassroomDetail() {
     }
   }
 
-  const fetchCourseUnits = async (courseId: string) => {
+  const fetchCourseLessons = async (courseId: string) => {
     try {
       const response = await api.get(`/api/individual/courses/${courseId}/lessons`)
-      setUnits(response.data)
+      setLessons(response.data)
     } catch (error) {
-      console.error('Failed to fetch course units:', error)
+      console.error('Failed to fetch course lessons:', error)
     }
   }
 
@@ -117,7 +117,7 @@ export default function ClassroomDetail() {
   // Fetch units when course is selected
   useEffect(() => {
     if (selectedCourse) {
-      fetchCourseUnits(selectedCourse.id)
+      fetchCourseLessons(selectedCourse.id)
     }
   }, [selectedCourse?.id])
 
@@ -161,22 +161,22 @@ export default function ClassroomDetail() {
     course.description.toLowerCase().includes(searchCoursesTerm.toLowerCase())
   )
 
-  const currentCourseUnits = selectedCourse 
-    ? units.filter(unit => 
-        unit.course_id === selectedCourse.id &&
-        (unit.title.toLowerCase().includes(searchUnitsTerm.toLowerCase()) ||
-         unit.activity_type.toLowerCase().includes(searchUnitsTerm.toLowerCase()))
+  const currentCourseLessons = selectedCourse 
+    ? lessons.filter(lesson => 
+        lesson.course_id === selectedCourse.id &&
+        (lesson.title.toLowerCase().includes(searchLessonsTerm.toLowerCase()) ||
+         lesson.activity_type.toLowerCase().includes(searchLessonsTerm.toLowerCase()))
       )
     : []
 
-  const currentUnitContent = selectedUnit
-    ? unitContents.find(content => content.unitId === selectedUnit.id) || {
-        id: selectedUnit.id,
-        unitId: selectedUnit.id,
-        content: selectedUnit.content?.instructions || '單元內容尚未設定',
+  const currentLessonContent = selectedLesson
+    ? lessonContents.find(content => content.lessonId === selectedLesson.id) || {
+        id: selectedLesson.id,
+        lessonId: selectedLesson.id,
+        content: selectedLesson.content?.instructions || '單元內容尚未設定',
         instructions: '請完成以下單元',
-        materials: selectedUnit.content?.materials || [],
-        objectives: selectedUnit.content?.objectives || []
+        materials: selectedLesson.content?.materials || [],
+        objectives: selectedLesson.content?.objectives || []
       }
     : null
 
@@ -362,7 +362,7 @@ export default function ClassroomDetail() {
                     key={course.id}
                     onClick={() => {
                       setSelectedCourse(course)
-                      setSelectedUnit(null)
+                      setSelectedLesson(null)
                     }}
                     className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
                       selectedCourse?.id === course.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
@@ -382,12 +382,12 @@ export default function ClassroomDetail() {
                         <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
                           <span className="flex items-center">
                             <Activity className="w-3 h-3 mr-1" />
-                            {course.unit_count} 個單元
+                            {course.lesson_count} 個單元
                           </span>
-                          {course.pricing_per_unit && (
+                          {course.pricing_per_lesson && (
                             <span className="flex items-center text-green-600">
                               <DollarSign className="w-3 h-3 mr-1" />
-                              {course.pricing_per_unit}/堂
+                              {course.pricing_per_lesson}/堂
                             </span>
                           )}
                           {course.difficulty_level && (
@@ -425,14 +425,14 @@ export default function ClassroomDetail() {
                 {unitPanelCollapsed ? (
                   <div className="p-2 border-b flex flex-col items-center">
                     <button
-                      onClick={() => setUnitPanelCollapsed(false)}
+                      onClick={() => setLessonPanelCollapsed(false))
                       className="p-2 hover:bg-gray-100 rounded-md"
                       title="展開單元列表"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => setShowAddUnit(true)}
+                      onClick={() => setShowAddLesson(true))
                       className="p-2 hover:bg-gray-100 rounded-md mt-2"
                       title="新增單元"
                     >
@@ -449,12 +449,12 @@ export default function ClassroomDetail() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" onClick={() => setShowAddUnit(true)}>
+                        <Button size="sm" onClick={() => setShowAddLesson(true)}>
                           <Plus className="w-4 h-4 mr-1" />
                           新增單元
                         </Button>
                         <button
-                          onClick={() => setUnitPanelCollapsed(true)}
+                          onClick={() => setLessonPanelCollapsed(true))
                           className="p-1 hover:bg-gray-100 rounded"
                           title="收合面板"
                         >
@@ -467,8 +467,8 @@ export default function ClassroomDetail() {
                       <input
                         type="text"
                         placeholder="搜尋單元..."
-                        value={searchUnitsTerm}
-                        onChange={(e) => setSearchUnitsTerm(e.target.value)}
+                        value={searchLessonsTerm}
+                        onChange={(e) => setSearchLessonsTerm(e.target.value))
                         className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                       />
                     </div>
@@ -477,39 +477,39 @@ export default function ClassroomDetail() {
 
                 {!unitPanelCollapsed && (
                   <div className="flex-1 overflow-y-auto">
-                    {currentCourseUnits.length > 0 ? (
+                    {currentCourseLessons.length > 0 ? (
                       <div className="divide-y divide-gray-200">
-                        {currentCourseUnits.map((unit) => (
+                        {currentCourseLessons.map((lesson) => (
                           <div 
-                            key={unit.id} 
-                            onClick={() => setSelectedUnit(unit)}
+                            key={lesson.id} 
+                            onClick={() => setSelectedLesson(lesson))
                             className={`p-3 hover:bg-gray-50 cursor-pointer ${
-                              selectedUnit?.id === unit.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                              selectedLesson?.id === lesson.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                             }`}
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex items-start space-x-2">
                                 <div className="flex-shrink-0">
                                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-800">
-                                    {unit.unit_number}
+                                    {lesson.lesson_number}
                                   </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <h4 className="text-sm font-medium text-gray-900 truncate">{unit.title}</h4>
+                                  <h4 className="text-sm font-medium text-gray-900 truncate">{lesson.title}</h4>
                                   <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                      {unit.activity_type}
+                                      {lesson.activity_type}
                                     </span>
                                     <span className="flex items-center">
                                       <Clock className="w-3 h-3 mr-1" />
-                                      {unit.time_limit_minutes} 分鐘
+                                      {lesson.time_limit_minutes} 分鐘
                                     </span>
                                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                      unit.is_active 
+                                      lesson.is_active 
                                         ? 'bg-green-100 text-green-800' 
                                         : 'bg-gray-100 text-gray-800'
                                     }`}>
-                                      {unit.is_active ? '啟用' : '停用'}
+                                      {lesson.is_active ? '啟用' : '停用'}
                                     </span>
                                   </div>
                                 </div>
@@ -548,20 +548,20 @@ export default function ClassroomDetail() {
 
           {/* Third Panel - Lesson Content */}
           <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-            {selectedUnit && currentUnitContent ? (
+            {selectedLesson && currentLessonContent ? (
               <>
                 <div className="p-4 border-b">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-lg font-medium">{selectedUnit.title}</h3>
+                      <h3 className="text-lg font-medium">{selectedLesson.title}</h3>
                       <div className="mt-1 flex items-center space-x-3 text-sm text-gray-500">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                          {selectedUnit.activity_type}
+                          {selectedLesson.activity_type}
                         </span>
-                        <span>第 {selectedUnit.unit_number} 課</span>
+                        <span>第 {selectedLesson.lesson_number} 課</span>
                         <span className="flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
-                          {selectedUnit.time_limit_minutes} 分鐘
+                          {selectedLesson.time_limit_minutes} 分鐘
                         </span>
                       </div>
                     </div>
@@ -569,14 +569,14 @@ export default function ClassroomDetail() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setShowUnitPreview(true)}
+                        onClick={() => setShowLessonPreview(true))
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         預覽
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={() => setShowUnitEditor(true)}
+                        onClick={() => setShowLessonEditor(true))
                       >
                         編輯內容
                       </Button>
@@ -590,7 +590,7 @@ export default function ClassroomDetail() {
                     <div className="mb-6">
                       <h4 className="text-base font-medium text-gray-900 mb-2">單元說明</h4>
                       <div className="bg-blue-50 p-4 rounded-lg">
-                        <p className="text-sm text-blue-800">{currentUnitContent.instructions}</p>
+                        <p className="text-sm text-blue-800">{currentLessonContent.instructions}</p>
                       </div>
                     </div>
 
@@ -598,16 +598,16 @@ export default function ClassroomDetail() {
                     <div className="mb-6">
                       <h4 className="text-base font-medium text-gray-900 mb-2">單元內容</h4>
                       <div className="bg-gray-50 p-6 rounded-lg">
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentUnitContent.content}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentLessonContent.content}</p>
                       </div>
                     </div>
 
                     {/* Materials Section */}
-                    {currentUnitContent.materials && currentUnitContent.materials.length > 0 && (
+                    {currentLessonContent.materials && currentLessonContent.materials.length > 0 && (
                       <div className="mb-6">
                         <h4 className="text-base font-medium text-gray-900 mb-2">教材資源</h4>
                         <div className="grid grid-cols-1 gap-3">
-                          {currentUnitContent.materials.map((material, index) => (
+                          {currentLessonContent.materials.map((material, index) => (
                             <div key={index} className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm">
                               <FileText className="w-5 h-5 text-gray-400 mr-3" />
                               <span className="text-sm text-gray-700">{material}</span>
@@ -621,12 +621,12 @@ export default function ClassroomDetail() {
                     )}
 
                     {/* Objectives Section */}
-                    {currentUnitContent.objectives && currentUnitContent.objectives.length > 0 && (
+                    {currentLessonContent.objectives && currentLessonContent.objectives.length > 0 && (
                       <div className="mb-6">
                         <h4 className="text-base font-medium text-gray-900 mb-2">學習目標</h4>
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <ul className="list-disc list-inside space-y-1">
-                            {currentUnitContent.objectives.map((objective, index) => (
+                            {currentLessonContent.objectives.map((objective, index) => (
                               <li key={index} className="text-sm text-gray-700">{objective}</li>
                             ))}
                           </ul>
@@ -735,9 +735,9 @@ export default function ClassroomDetail() {
                       <div className="flex-1">
                         <h4 className="font-medium">{course.title}</h4>
                         <p className="text-sm text-gray-600 mt-1">{course.description}</p>
-                        <p className="text-sm text-gray-500 mt-2">單元數: {course.unit_count}</p>
+                        <p className="text-sm text-gray-500 mt-2">單元數: {course.lesson_count}</p>
                         {course.pricing_per_unit && (
-                          <p className="text-sm text-green-600 mt-1">${course.pricing_per_unit}/堂</p>
+                          <p className="text-sm text-green-600 mt-1">${course.pricing_per_lesson}/堂</p>
                         )}
                       </div>
                       <Button 

@@ -480,8 +480,8 @@ async def get_public_courses(
             "description": course.description,
             "difficulty_level": course.difficulty_level,
             "teacher_name": course.teacher.full_name if course.teacher else "系統",
-            "unit_count": lesson_count,
-            "pricing_per_unit": course.pricing_per_lesson,
+            "lesson_count": lesson_count,
+            "pricing_per_lesson": course.pricing_per_lesson,
             "is_public": True
         })
     
@@ -691,8 +691,8 @@ async def get_courses(
         "difficulty_level": course.difficulty_level,
         "is_public": course.is_public,
         "custom_materials": course.custom_materials,
-        "pricing_per_unit": course.pricing_per_lesson,
-        "unit_count": len(course.lessons),
+        "pricing_per_lesson": course.pricing_per_lesson,
+        "lesson_count": len(course.lessons),
         "teacher_name": course.teacher.full_name if course.teacher else "",
         "classroom_id": None,  # 個人教師課程不屬於特定教室
         "classroom_name": None
@@ -726,7 +726,7 @@ async def get_course_lessons(
     return [{
         "id": lesson.id,
         "course_id": lesson.course_id,
-        "unit_number": lesson.lesson_number,  # 後端 lesson_number 映射為前端 unit_number
+        "lesson_number": lesson.lesson_number,  # 保持一致
         "title": lesson.title,
         "activity_type": lesson.activity_type,
         "content": lesson.content,
