@@ -206,7 +206,13 @@ def create_test_data(db: Session):
                 course_id=course.id,
                 lesson_number=i+1,
                 title=f"{course.title} - 第 {i+1} 課",
-                activity_type=random.choice(list(models.ActivityType)),
+                activity_type=random.choice([
+                    models.ActivityType.READING_ASSESSMENT,
+                    models.ActivityType.SPEAKING_PRACTICE,
+                    models.ActivityType.LISTENING_CLOZE,
+                    models.ActivityType.SENTENCE_MAKING,
+                    models.ActivityType.SPEAKING_QUIZ
+                ]),
                 content={
                     "type": "mixed",
                     "sections": [

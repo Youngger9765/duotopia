@@ -56,7 +56,7 @@ function CourseManagement() {
   const [schools, setSchools] = useState<any[]>([])
   const [activities, setActivities] = useState<CourseActivity[]>([])
 
-  const [activityContents] = useState<ActivityContent[]>([])
+  const [activityContents, setActivityContents] = useState<ActivityContent[]>([])
 
   // Fetch data on component mount
   useEffect(() => {
@@ -104,10 +104,21 @@ function CourseManagement() {
   const fetchCourseActivities = async (courseId: string) => {
     try {
       const response = await teacherApi.getLessons(courseId)
+      
+      // Map backend activity types to Chinese names
+      const typeMapping: Record<string, string> = {
+        'reading_assessment': '活動管理',
+        'listening_cloze': '聽力克漏字',
+        'sentence_making': '造句活動',
+        'speaking_practice': '錄音集',
+        'speaking_quiz': '口語測驗',
+        'speaking_scenario': '情境對話'
+      }
+      
       const formattedActivities = response.data.map((lesson: any) => ({
         id: lesson.id,
         title: lesson.title,
-        type: lesson.type || '活動管理',
+        type: typeMapping[lesson.activity_type] || lesson.type || '活動管理',
         courseId: lesson.course_id,
         dueDate: lesson.due_date,
         totalStudents: lesson.student_count || 0,
@@ -160,7 +171,13 @@ function CourseManagement() {
     : []
 
   const currentActivityContent = selectedActivity
-    ? activityContents.find(content => content.activityId === selectedActivity.id)
+    ? activityContents.find(content => content.activityId === selectedActivity.id) || {
+        id: selectedActivity.id,
+        activityId: selectedActivity.id,
+        content: '活動內容尚未設定',
+        instructions: '請完成以下活動',
+        resources: []
+      }
     : null
 
   // Update course activity count when activities change
@@ -661,12 +678,28 @@ function CourseManagement() {
           onClose={() => setShowAddActivity(false)}
           onSave={async (newActivity) => {
             try {
+              // Map Chinese activity types to backend enums
+              const typeMapping: Record<string, string> = {
+                '活動管理': 'reading_assessment',
+                '聽力克漏字': 'listening_cloze',
+                '造句活動': 'sentence_making',
+                '錄音集': 'speaking_practice',
+                '填空活動': 'reading_assessment'
+              }
+              
+              // Get existing lessons count to determine lesson number
+              const existingLessons = activities.length
+              
               const activityData = {
                 title: newActivity.title,
-                type: newActivity.type,
-                due_date: newActivity.dueDate,
-                content: '',
-                instructions: ''
+                lesson_number: existingLessons + 1,
+                activity_type: typeMapping[newActivity.type] || 'reading_assessment',
+                content: {
+                  type: 'activity',
+                  instructions: '請完成以下活動',
+                  sections: []
+                },
+                time_limit_minutes: 30
               }
               
               await teacherApi.createLesson(selectedCourse.id, activityData)

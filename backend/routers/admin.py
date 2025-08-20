@@ -203,13 +203,13 @@ async def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     # Check if user has associated data
-    classes_count = db.query(Class).filter(Class.teacher_id == user_id).count()
+    classrooms_count = db.query(Classroom).filter(Classroom.teacher_id == user_id).count()
     courses_count = db.query(Course).filter(Course.created_by == user_id).count()
     
-    if classes_count > 0 or courses_count > 0:
+    if classrooms_count > 0 or courses_count > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete user with {classes_count} classes and {courses_count} courses"
+            detail=f"Cannot delete user with {classrooms_count} classrooms and {courses_count} courses"
         )
     
     db.delete(db_user)
@@ -251,8 +251,8 @@ async def get_students(
     # Note: Student model doesn't have school_id field, ignoring school_id filter for now
     
     if class_id:
-        # Join with ClassStudent to filter by class
-        query = query.join(ClassStudent).filter(ClassStudent.class_id == class_id)
+        # Join with ClassroomStudent to filter by classroom
+        query = query.join(ClassroomStudent).filter(ClassroomStudent.classroom_id == class_id)
     
     if search:
         search_pattern = f"%{search}%"
@@ -308,7 +308,7 @@ async def delete_student(
         raise HTTPException(status_code=404, detail="Student not found")
     
     # Delete related records
-    db.query(ClassStudent).filter(ClassStudent.student_id == student_id).delete()
+    db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student_id).delete()
     
     db.delete(db_student)
     db.commit()
@@ -327,7 +327,7 @@ async def get_platform_stats(
         "total_teachers": db.query(User).filter(User.role == "teacher").count(),
         "total_admins": db.query(User).filter(User.role == "admin").count(),
         "total_students": db.query(Student).count(),
-        "total_classes": db.query(Class).count(),
+        "total_classrooms": db.query(Classroom).count(),
         "total_courses": db.query(Course).count(),
         "active_users": db.query(User).filter(User.is_active == True).count(),
         "schools": []
@@ -341,7 +341,7 @@ async def get_platform_stats(
             "name": school.name,
             "users": 0,  # User model doesn't have school_id
             "students": 0,  # Student model doesn't have school_id  
-            "classes": db.query(Class).filter(Class.school_id == school.id).count(),
+            "classrooms": db.query(Classroom).filter(Classroom.school_id == school.id).count(),
             "courses": 0  # Course model doesn't have school_id
         }
         stats["schools"].append(school_stats)
