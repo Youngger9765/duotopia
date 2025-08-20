@@ -79,7 +79,7 @@ async def create_classroom(
     db.refresh(db_classroom)
     return db_classroom
 
-@router.get("/classrooms", response_model=List[schemas.Classroom])
+@router.get("/classrooms")
 async def get_classrooms(
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
@@ -88,10 +88,49 @@ async def get_classrooms(
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    classrooms = db.query(models.Classroom).filter(
-        models.Classroom.teacher_id == current_user.id
-    ).all()
-    return classrooms
+    if current_user.role == models.UserRole.ADMIN:
+        # Admin can see all classrooms
+        classrooms = db.query(models.Classroom).all()
+    else:
+        # Teachers can only see their own classrooms
+        classrooms = db.query(models.Classroom).filter(
+            models.Classroom.teacher_id == current_user.id
+        ).all()
+    
+    # Add student count and school info for each classroom
+    classroom_data = []
+    for classroom in classrooms:
+        # Count students in this classroom
+        student_count = db.query(models.ClassroomStudent).filter(
+            models.ClassroomStudent.classroom_id == classroom.id
+        ).count()
+        
+        # Get school info
+        school = db.query(models.School).filter(
+            models.School.id == classroom.school_id
+        ).first()
+        
+        # Get teacher info
+        teacher = db.query(models.User).filter(
+            models.User.id == classroom.teacher_id
+        ).first()
+        
+        classroom_dict = {
+            "id": classroom.id,
+            "name": classroom.name,
+            "grade_level": classroom.grade_level,
+            "school_id": classroom.school_id,
+            "school_name": school.name if school else None,
+            "teacher_id": classroom.teacher_id,
+            "teacher_name": teacher.full_name if teacher else None,
+            "student_count": student_count,
+            "is_active": classroom.is_active,
+            "created_at": classroom.created_at,
+            "updated_at": classroom.updated_at
+        }
+        classroom_data.append(classroom_dict)
+    
+    return classroom_data
 
 @router.post("/classrooms/{classroom_id}/students")
 async def add_students_to_classroom(
