@@ -80,6 +80,8 @@ function ClassroomManagement() {
         schoolId: cls.school_id,
         schoolName: cls.school_name || ''
       }))
+      
+      
       setClassrooms(formattedClassrooms)
     } catch (error) {
       console.error('Failed to fetch classrooms:', error)
@@ -139,6 +141,8 @@ function ClassroomManagement() {
   const filteredClassrooms = classrooms.filter(cls => {
     const matchesSearch = cls.name.toLowerCase().includes(searchClassroomTerm.toLowerCase())
     const matchesSchool = selectedSchool === 'all' || cls.schoolId === selectedSchool
+    
+    
     return matchesSearch && matchesSchool
   })
 
