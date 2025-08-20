@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from database import get_db
-from models import User, Student, School, Class, Course, ClassStudent, ClassCourseMapping
+from models import User, Student, School, Classroom, Course, ClassroomStudent, ClassroomCourseMapping
 from schemas import (
     SchoolCreate, SchoolUpdate, School as SchoolSchema,
     UserCreate, UserCreateAdmin, UserUpdate, User as UserSchema,

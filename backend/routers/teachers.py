@@ -234,6 +234,71 @@ async def get_course_details(
         "created_at": course.created_at
     }
 
+@router.get("/courses/{course_id}/lessons")
+async def get_course_lessons(
+    course_id: str,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get all lessons for a course"""
+    # Verify teacher has access to the course
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id
+    ).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check if teacher has access (owns the course or is admin)
+    if current_user.role == models.UserRole.TEACHER:
+        # Check if teacher created the course or has it assigned to their classroom
+        is_course_creator = course.created_by == current_user.id
+        has_classroom_access = db.query(models.ClassroomCourseMapping).join(
+            models.Classroom
+        ).filter(
+            models.ClassroomCourseMapping.course_id == course_id,
+            models.Classroom.teacher_id == current_user.id
+        ).first() is not None
+        
+        if not is_course_creator and not has_classroom_access:
+            raise HTTPException(status_code=403, detail="Not authorized to access this course")
+    
+    # Get lessons
+    lessons = db.query(models.Lesson).filter(
+        models.Lesson.course_id == course_id
+    ).order_by(models.Lesson.lesson_number).all()
+    
+    # Get assignment counts for each lesson
+    lesson_data = []
+    for lesson in lessons:
+        # Count total assignments and completed assignments
+        total_assignments = db.query(models.StudentAssignment).filter(
+            models.StudentAssignment.lesson_id == lesson.id
+        ).count()
+        
+        completed_assignments = db.query(models.StudentAssignment).filter(
+            models.StudentAssignment.lesson_id == lesson.id,
+            models.StudentAssignment.status == "completed"
+        ).count()
+        
+        lesson_data.append({
+            "id": lesson.id,
+            "course_id": lesson.course_id,
+            "lesson_number": lesson.lesson_number,
+            "title": lesson.title,
+            "activity_type": lesson.activity_type,
+            "content": lesson.content,
+            "time_limit_minutes": lesson.time_limit_minutes,
+            "is_active": lesson.is_active,
+            "created_at": lesson.created_at.isoformat() if lesson.created_at else None,
+            "student_count": total_assignments,
+            "completed_count": completed_assignments,
+            "type": lesson.activity_type.value if lesson.activity_type else "活動管理",
+            "status": "completed" if completed_assignments == total_assignments and total_assignments > 0 else "active"
+        })
+    
+    return lesson_data
+
 @router.post("/courses/{course_id}/lessons", response_model=schemas.Lesson)
 async def create_lesson(
     course_id: str,

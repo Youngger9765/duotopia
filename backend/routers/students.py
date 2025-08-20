@@ -85,8 +85,8 @@ async def get_class_students(
     db: Session = Depends(get_db)
 ):
     """Get all students in a class (for student selection)"""
-    students = db.query(models.Student).join(models.ClassStudent).filter(
-        models.ClassStudent.class_id == class_id
+    students = db.query(models.Student).join(models.ClassroomStudent).filter(
+        models.ClassroomStudent.classroom_id == class_id
     ).all()
     
     return [{
@@ -194,13 +194,13 @@ async def get_student_courses(
 ):
     """Get all courses available to a student through their classes"""
     # Get student's classes
-    class_ids = db.query(models.ClassStudent.class_id).filter(
-        models.ClassStudent.student_id == student_id
+    class_ids = db.query(models.ClassroomStudent.classroom_id).filter(
+        models.ClassroomStudent.student_id == student_id
     ).subquery()
     
     # Get courses mapped to those classes
-    courses = db.query(models.Course).join(models.ClassCourseMapping).filter(
-        models.ClassCourseMapping.class_id.in_(class_ids),
+    courses = db.query(models.Course).join(models.ClassroomCourseMapping).filter(
+        models.ClassroomCourseMapping.classroom_id.in_(class_ids),
         models.Course.is_active == True
     ).distinct().all()
     
