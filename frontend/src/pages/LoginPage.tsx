@@ -105,6 +105,7 @@ function LoginPage() {
           <div>
             <button
               type="button"
+              data-testid="demo-teacher-login"
               onClick={() => {
                 setEmail('teacher1@duotopia.com')
                 setPassword('password123')
