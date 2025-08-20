@@ -699,13 +699,13 @@ async def get_courses(
     } for course in courses]
 
 
-@router.get("/courses/{course_id}/units", response_model=List[dict])
-async def get_course_units(
+@router.get("/courses/{course_id}/lessons", response_model=List[dict])
+async def get_course_lessons(
     course_id: str,
     current_user: User = Depends(require_individual_teacher),
     db: Session = Depends(get_db)
 ):
-    """獲取課程的所有單元（課時）"""
+    """獲取課程的所有課時"""
     # 驗證課程屬於當前教師或是公版課程
     course = db.query(IndividualCourse).filter(
         IndividualCourse.id == course_id,
@@ -726,7 +726,7 @@ async def get_course_units(
     return [{
         "id": lesson.id,
         "course_id": lesson.course_id,
-        "unit_number": lesson.lesson_number,
+        "unit_number": lesson.lesson_number,  # 後端 lesson_number 映射為前端 unit_number
         "title": lesson.title,
         "activity_type": lesson.activity_type,
         "content": lesson.content,

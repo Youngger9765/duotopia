@@ -100,7 +100,7 @@ export default function ClassroomDetail() {
 
   const fetchCourseUnits = async (courseId: string) => {
     try {
-      const response = await api.get(`/api/individual/courses/${courseId}/units`)
+      const response = await api.get(`/api/individual/courses/${courseId}/lessons`)
       setUnits(response.data)
     } catch (error) {
       console.error('Failed to fetch course units:', error)
