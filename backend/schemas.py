@@ -143,7 +143,7 @@ class LessonBase(BaseModel):
     target_accuracy: Optional[int] = None
 
 class LessonCreate(LessonBase):
-    course_id: str
+    pass  # course_id is provided in URL path
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
