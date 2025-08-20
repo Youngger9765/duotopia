@@ -237,7 +237,7 @@ async def update_user_status(
     return {"message": f"User status updated to {'active' if db_user.is_active else 'inactive'}"}
 
 # Student Management
-@router.get("/students", response_model=List[StudentSchema])
+@router.get("/students")
 async def get_students(
     school_id: Optional[str] = Query(None),
     class_id: Optional[int] = Query(None),
@@ -263,7 +263,47 @@ async def get_students(
         )
     
     students = query.all()
-    return students
+    
+    # Add classroom information to each student
+    student_data = []
+    for student in students:
+        # Get classroom info
+        classroom_student = db.query(ClassroomStudent).filter(
+            ClassroomStudent.student_id == student.id
+        ).first()
+        
+        classroom_info = None
+        if classroom_student:
+            classroom = db.query(Classroom).filter(
+                Classroom.id == classroom_student.classroom_id
+            ).first()
+            if classroom:
+                classroom_info = {
+                    "classroom_id": classroom.id,
+                    "classroom_name": classroom.name,
+                    "school_id": classroom.school_id,
+                    "school_name": classroom.school.name if classroom.school else None
+                }
+        
+        # Convert student to dict and add classroom info
+        student_dict = {
+            "id": student.id,
+            "email": student.email,
+            "full_name": student.full_name,
+            "birth_date": student.birth_date,
+            "parent_email": student.parent_email,
+            "parent_phone": student.parent_phone,
+            "is_active": student.is_active,
+            "created_at": student.created_at,
+            "updated_at": student.updated_at,
+            "classroom_id": classroom_info["classroom_id"] if classroom_info else None,
+            "classroom_name": classroom_info["classroom_name"] if classroom_info else None,
+            "school_id": classroom_info["school_id"] if classroom_info else None,
+            "school_name": classroom_info["school_name"] if classroom_info else None
+        }
+        student_data.append(student_dict)
+    
+    return student_data
 
 @router.get("/students/{student_id}", response_model=StudentSchema)
 async def get_student(
