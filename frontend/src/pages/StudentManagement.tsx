@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, School, Plus, Search, Edit2, X, Check } from 'lucide-react'
-import { adminApi } from '@/lib/api'
+import { adminApi, teacherApi } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
 interface Student {
   id: string
   name: string
   email: string
-  class: string
-  classId?: string
+  classroomName: string
+  classroomId?: string
   status: '已分班' | '待分班'
   birthDate?: string
   parentEmail?: string
@@ -19,7 +19,7 @@ interface Student {
   schoolName: string
 }
 
-interface Class {
+interface Classroom {
   id: string
   name: string
   teacher: string
@@ -32,11 +32,11 @@ interface Class {
 function StudentManagement() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<'students' | 'classes'>('students')
+  const [activeTab, setActiveTab] = useState<'students' | 'classrooms'>('students')
   const [showAddStudent, setShowAddStudent] = useState(false)
-  const [showAddClass, setShowAddClass] = useState(false)
+  const [showAddClassroom, setShowAddClassroom] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
-  const [showAssignClass, setShowAssignClass] = useState(false)
+  const [showAssignClassroom, setShowAssignClassroom] = useState(false)
   const [selectedStudentsForAssign, setSelectedStudentsForAssign] = useState<string[]>([])
   const [selectedSchool, setSelectedSchool] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -44,11 +44,13 @@ function StudentManagement() {
   const [loading, setLoading] = useState(true)
   const [students, setStudents] = useState<Student[]>([])
   const [schools, setSchools] = useState<any[]>([])
+  const [classrooms, setClassrooms] = useState<any[]>([])
 
   // Fetch data on component mount
   useEffect(() => {
     fetchStudents()
     fetchSchools()
+    fetchClassrooms()
   }, [])
 
   const fetchStudents = async () => {
@@ -57,14 +59,14 @@ function StudentManagement() {
       const response = await adminApi.getStudents()
       const formattedStudents = response.data.map((student: any) => ({
         id: student.id,
-        name: student.name,
+        name: student.full_name || student.name || '',
         email: student.email,
-        class: student.class_name || '未分班',
-        classId: student.class_id,
-        status: student.class_id ? '已分班' : '待分班',
+        classroomName: student.classroom_name || '未分班',
+        classroomId: student.classroom_id,
+        status: student.classroom_id ? '已分班' : '待分班',
         birthDate: student.birth_date,
-        schoolId: student.school_id,
-        schoolName: student.school_name || ''
+        schoolId: student.school_id || '1',
+        schoolName: student.school_name || '未指定學校'
       }))
       setStudents(formattedStudents)
     } catch (error) {
@@ -94,6 +96,16 @@ function StudentManagement() {
     }
   }
 
+  const fetchClassrooms = async () => {
+    try {
+      const response = await teacherApi.getClassrooms()
+      setClassrooms(response.data || [])
+    } catch (error) {
+      console.error('Failed to fetch classrooms:', error)
+      setClassrooms([])
+    }
+  }
+
   // Handle URL query parameters
   useEffect(() => {
     const action = searchParams.get('action')
@@ -101,8 +113,8 @@ function StudentManagement() {
     
     if (tab === 'students') {
       setActiveTab('students')
-    } else if (tab === 'classes') {
-      setActiveTab('classes')
+    } else if (tab === 'classrooms') {
+      setActiveTab('classrooms')
     }
     
     if (action === 'add') {
@@ -112,7 +124,7 @@ function StudentManagement() {
       newParams.delete('action')
       setSearchParams(newParams)
     } else if (action === 'assign') {
-      setShowAssignClass(true)
+      setShowAssignClassroom(true)
       // Clear the action parameter
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('action')
@@ -132,7 +144,7 @@ function StudentManagement() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">學生管理</h2>
-        <p className="text-sm text-gray-500 mt-1">管理學生資料、分配班級</p>
+        <p className="text-sm text-gray-500 mt-1">管理學生資料、分配教室</p>
       </div>
 
       {/* Tab Navigation */}
@@ -150,15 +162,15 @@ function StudentManagement() {
             學生名單
           </button>
           <button
-            onClick={() => setActiveTab('classes')}
+            onClick={() => setActiveTab('classrooms')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'classes'
+              activeTab === 'classrooms'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             <School className="inline-block w-4 h-4 mr-2" />
-            班級管理
+            教室管理
           </button>
         </nav>
       </div>
@@ -207,10 +219,10 @@ function StudentManagement() {
             </Button>
           )}
           
-          {activeTab === 'classes' && (
-            <Button onClick={() => setShowAddClass(true)}>
+          {activeTab === 'classrooms' && (
+            <Button onClick={() => setShowAddClassroom(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              新增班級
+              新增教室
             </Button>
           )}
         </div>
@@ -225,8 +237,8 @@ function StudentManagement() {
           setShowAddStudent={setShowAddStudent}
           editingStudent={editingStudent}
           setEditingStudent={setEditingStudent}
-          showAssignClass={showAssignClass}
-          setShowAssignClass={setShowAssignClass}
+          showAssignClassroom={showAssignClassroom}
+          setShowAssignClassroom={setShowAssignClassroom}
           selectedStudentsForAssign={selectedStudentsForAssign}
           setSelectedStudentsForAssign={setSelectedStudentsForAssign}
           selectedSchool={selectedSchool}
@@ -234,11 +246,12 @@ function StudentManagement() {
           selectedRole={selectedRole}
           fetchStudents={fetchStudents}
           schools={schools}
+          classrooms={classrooms}
         />
       ) : (
-        <ClassListView 
-          showAddClass={showAddClass} 
-          setShowAddClass={setShowAddClass}
+        <ClassroomListView 
+          showAddClassroom={showAddClassroom} 
+          setShowAddClassroom={setShowAddClassroom}
           selectedSchool={selectedSchool}
           searchTerm={searchTerm}
         />
@@ -254,15 +267,16 @@ function StudentListView({
   setShowAddStudent,
   editingStudent,
   setEditingStudent,
-  showAssignClass,
-  setShowAssignClass,
+  showAssignClassroom,
+  setShowAssignClassroom,
   selectedStudentsForAssign,
   setSelectedStudentsForAssign,
   selectedSchool,
   searchTerm,
   selectedRole,
   fetchStudents,
-  schools
+  schools,
+  classrooms
 }: any) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   
@@ -276,9 +290,9 @@ function StudentListView({
     return matchesSearch && matchesSchool && matchesRole
   })
 
-  const handleAssignToClass = () => {
+  const handleAssignToClassroom = () => {
     setSelectedStudentsForAssign(selectedStudents)
-    setShowAssignClass(true)
+    setShowAssignClassroom(true)
   }
 
   return (
@@ -293,9 +307,9 @@ function StudentListView({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={handleAssignToClass}
+              onClick={handleAssignToClassroom}
             >
-              分配到班級
+              分配到教室
             </Button>
           </div>
         </div>
@@ -342,7 +356,7 @@ function StudentListView({
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {student.class}
+                          {student.classroomName}
                         </span>
                       </div>
                     </div>
@@ -353,10 +367,10 @@ function StudentListView({
                           variant="outline"
                           onClick={() => {
                             setSelectedStudentsForAssign([student.id])
-                            setShowAssignClass(true)
+                            setShowAssignClassroom(true)
                           }}
                         >
-                          分配班級
+                          分配教室
                         </Button>
                       )}
                       <Button 
@@ -447,29 +461,30 @@ function StudentListView({
       )}
 
       {/* Assign Class Modal */}
-      {showAssignClass && (
+      {showAssignClassroom && (
         <AssignClassModal
           studentIds={selectedStudentsForAssign}
           students={students}
+          classrooms={classrooms}
           onClose={() => {
-            setShowAssignClass(false)
+            setShowAssignClassroom(false)
             setSelectedStudentsForAssign([])
             setSelectedStudents([])
           }}
-          onAssign={(classId: string, className: string) => {
+          onAssign={async (classroomId: string, classroomName: string) => {
             // Update students with new class
             setStudents(students.map(student => {
               if (selectedStudentsForAssign.includes(student.id)) {
                 return {
                   ...student,
-                  class: className,
-                  classId: classId,
+                  classroomName: classroomName,
+                  classroomId: classroomId,
                   status: '已分班' as const
                 }
               }
               return student
             }))
-            setShowAssignClass(false)
+            setShowAssignClassroom(false)
             setSelectedStudentsForAssign([])
             setSelectedStudents([])
           }}
@@ -645,7 +660,7 @@ function EditStudentModal({
           {student.status === '已分班' && (
             <div className="bg-gray-50 p-3 rounded-md">
               <p className="text-sm text-gray-600">
-                目前班級：<span className="font-medium">{student.class}</span>
+                目前教室：<span className="font-medium">{student.classroomName}</span>
               </p>
             </div>
           )}
@@ -668,23 +683,19 @@ function EditStudentModal({
 function AssignClassModal({ 
   studentIds, 
   students,
+  classes,
   onClose, 
   onAssign 
 }: { 
   studentIds: string[]
   students: Student[]
+  classes: any[]
   onClose: () => void
-  onAssign: (classId: string, className: string) => void 
+  onAssign: (classroomId: string, classroomName: string) => void 
 }) {
   const [selectedClass, setSelectedClass] = useState('')
   
   const selectedStudents = students.filter(s => studentIds.includes(s.id))
-  
-  const classes = [
-    { id: '1', name: '六年一班', teacher: '王老師', grade: '6' },
-    { id: '2', name: '六年二班', teacher: '王老師', grade: '6' },
-    { id: '3', name: '五年三班', teacher: '李老師', grade: '5' },
-  ]
 
   const handleAssign = () => {
     const cls = classes.find(c => c.id === selectedClass)
@@ -696,11 +707,11 @@ function AssignClassModal({
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">分配班級</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">分配教室</h3>
         
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-2">
-            將以下 {selectedStudents.length} 位學生分配到班級：
+            將以下 {selectedStudents.length} 位學生分配到教室：
           </p>
           <div className="bg-gray-50 rounded-md p-3 max-h-32 overflow-y-auto">
             {selectedStudents.map(student => (
@@ -713,7 +724,7 @@ function AssignClassModal({
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            選擇班級
+            選擇教室
           </label>
           <div className="space-y-2">
             {classes.map(cls => (
@@ -767,7 +778,7 @@ function AddStudentModal({ onClose, onSave }: any) {
     name: '',
     email: '',
     birthDate: '',
-    classId: '',
+    classroomId: '',
     parentEmail: '',
     parentPhone: '',
   })
@@ -777,8 +788,8 @@ function AddStudentModal({ onClose, onSave }: any) {
     onSave({
       ...formData,
       id: Date.now().toString(),
-      class: assignToClass && formData.classId ? '已分配' : '未分班',
-      status: assignToClass && formData.classId ? '已分班' : '待分班'
+      classroomName: assignToClassroom && formData.classroomId ? '已分配' : '未分班',
+      status: assignToClassroom && formData.classroomId ? '已分班' : '待分班'
     })
   }
 
@@ -851,19 +862,19 @@ function AddStudentModal({ onClose, onSave }: any) {
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label className="ml-2 block text-sm text-gray-900">
-              立即分配到班級
+              立即分配到教室
             </label>
           </div>
 
           {assignToClass && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">選擇班級</label>
+              <label className="block text-sm font-medium text-gray-700">選擇教室</label>
               <select 
-                value={formData.classId}
-                onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                value={formData.classroomId}
+                onChange={(e) => setFormData({ ...formData, classroomId: e.target.value })}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                <option value="">請選擇班級</option>
+                <option value="">請選擇教室</option>
                 <option value="1">六年一班</option>
                 <option value="2">六年二班</option>
                 <option value="3">五年三班</option>

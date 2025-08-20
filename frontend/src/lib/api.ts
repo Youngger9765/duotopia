@@ -59,26 +59,26 @@ export const teacherApi = {
   getDashboard: () =>
     api.get('/api/teachers/dashboard'),
   
-  createClass: (data: any) =>
-    api.post('/api/teachers/classes', data),
+  createClassroom: (data: any) =>
+    api.post('/api/teachers/classrooms', data),
   
-  getClasses: () =>
-    api.get('/api/teachers/classes'),
+  getClassrooms: () =>
+    api.get('/api/teachers/classrooms'),
     
-  getClass: (classId: string) =>
-    api.get(`/api/teachers/classes/${classId}`),
+  getClassroom: (classroomId: string) =>
+    api.get(`/api/teachers/classrooms/${classroomId}`),
     
-  getClassStudents: (classId: string) =>
-    api.get(`/api/teachers/classes/${classId}/students`),
+  getClassroomStudents: (classroomId: string) =>
+    api.get(`/api/teachers/classrooms/${classroomId}/students`),
     
-  updateClass: (classId: string, data: any) =>
-    api.put(`/api/teachers/classes/${classId}`, data),
+  updateClassroom: (classroomId: string, data: any) =>
+    api.put(`/api/teachers/classrooms/${classroomId}`, data),
     
-  deleteClass: (classId: string) =>
-    api.delete(`/api/teachers/classes/${classId}`),
+  deleteClassroom: (classroomId: string) =>
+    api.delete(`/api/teachers/classrooms/${classroomId}`),
   
-  addStudentsToClass: (classId: string, studentIds: string[]) =>
-    api.post(`/api/teachers/classes/${classId}/students`, { student_ids: studentIds }),
+  addStudentsToClassroom: (classroomId: string, studentIds: string[]) =>
+    api.post(`/api/teachers/classrooms/${classroomId}/students`, { student_ids: studentIds }),
   
   createCourse: (data: any) =>
     api.post('/api/teachers/courses', data),
@@ -113,11 +113,11 @@ export const studentApi = {
   searchTeacher: (email: string) =>
     api.get(`/api/students/teachers/search?email=${email}`),
   
-  getTeacherClasses: (teacherId: string) =>
-    api.get(`/api/students/teachers/${teacherId}/classes`),
+  getTeacherClassrooms: (teacherId: string) =>
+    api.get(`/api/students/teachers/${teacherId}/classrooms`),
   
-  getClassStudents: (classId: string) =>
-    api.get(`/api/students/classes/${classId}/students`),
+  getClassroomStudents: (classroomId: string) =>
+    api.get(`/api/students/classrooms/${classroomId}/students`),
   
   getAssignments: (studentId: string) =>
     api.get(`/api/students/${studentId}/assignments`),

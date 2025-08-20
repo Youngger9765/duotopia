@@ -22,10 +22,10 @@ def create_test_data(db: Session):
     db.query(models.ActivityResult).delete()
     db.query(models.StudentAssignment).delete()
     db.query(models.Lesson).delete()
-    db.query(models.ClassCourseMapping).delete()
-    db.query(models.ClassStudent).delete()
+    db.query(models.ClassroomCourseMapping).delete()
+    db.query(models.ClassroomStudent).delete()
     db.query(models.Course).delete()
-    db.query(models.Class).delete()
+    db.query(models.Classroom).delete()
     db.query(models.Student).delete()
     db.query(models.User).delete()
     db.query(models.School).delete()
@@ -74,23 +74,23 @@ def create_test_data(db: Session):
     
     db.commit()
     
-    # Create classes
-    print("🎓 Creating classes...")
-    classes = []
-    class_data = [
+    # Create classrooms
+    print("🎓 Creating classrooms...")
+    classrooms = []
+    classroom_data = [
         {"name": "六年一班", "grade_level": "6", "teacher_id": teachers[0].id, "school_id": schools[0].id},
         {"name": "六年二班", "grade_level": "6", "teacher_id": teachers[0].id, "school_id": schools[0].id},
         {"name": "五年三班", "grade_level": "5", "teacher_id": teachers[1].id, "school_id": schools[0].id},
         {"name": "國一甲班", "grade_level": "7", "teacher_id": teachers[2].id, "school_id": schools[1].id},
     ]
     
-    for data in class_data:
-        class_obj = models.Class(
+    for data in classroom_data:
+        classroom_obj = models.Classroom(
             id=str(uuid.uuid4()),
             **data
         )
-        classes.append(class_obj)
-        db.add(class_obj)
+        classrooms.append(classroom_obj)
+        db.add(classroom_obj)
     
     db.commit()
     
@@ -104,9 +104,9 @@ def create_test_data(db: Session):
     ]
     
     for i, name in enumerate(student_names):
-        # Create 3-5 students per class
-        class_idx = i % len(classes)
-        birth_year = 2012 if classes[class_idx].grade_level == "6" else 2013
+        # Create 3-5 students per classroom
+        classroom_idx = i % len(classrooms)
+        birth_year = 2012 if classrooms[classroom_idx].grade_level == "6" else 2013
         
         # All students have the same birth date for easy testing
         birth_date = "20090828"
@@ -123,12 +123,12 @@ def create_test_data(db: Session):
         students.append(student)
         db.add(student)
         
-        # Add student to class
-        class_student = models.ClassStudent(
-            class_id=classes[class_idx].id,
+        # Add student to classroom
+        classroom_student = models.ClassroomStudent(
+            classroom_id=classrooms[classroom_idx].id,
             student_id=student.id
         )
-        db.add(class_student)
+        db.add(classroom_student)
     
     db.commit()
     
@@ -180,14 +180,14 @@ def create_test_data(db: Session):
     
     db.commit()
     
-    # Assign courses to classes
-    print("🔗 Assigning courses to classes...")
-    for i, class_obj in enumerate(classes):
-        # Each class gets 2-3 courses
+    # Assign courses to classrooms
+    print("🔗 Assigning courses to classrooms...")
+    for i, classroom_obj in enumerate(classrooms):
+        # Each classroom gets 2-3 courses
         selected_courses = random.sample(courses, random.randint(2, 3))
         for course in selected_courses:
-            mapping = models.ClassCourseMapping(
-                class_id=class_obj.id,
+            mapping = models.ClassroomCourseMapping(
+                classroom_id=classroom_obj.id,
                 course_id=course.id
             )
             db.add(mapping)
@@ -230,20 +230,20 @@ def create_test_data(db: Session):
     
     # Create assignments
     print("📝 Creating assignments...")
-    for class_obj in classes:
-        # Get students in this class
-        class_students = db.query(models.ClassStudent).filter_by(class_id=class_obj.id).all()
+    for classroom_obj in classrooms:
+        # Get students in this classroom
+        classroom_students = db.query(models.ClassroomStudent).filter_by(classroom_id=classroom_obj.id).all()
         
-        # Get courses for this class
-        class_courses = db.query(models.ClassCourseMapping).filter_by(class_id=class_obj.id).all()
+        # Get courses for this classroom
+        classroom_courses = db.query(models.ClassroomCourseMapping).filter_by(classroom_id=classroom_obj.id).all()
         
-        for mapping in class_courses:
+        for mapping in classroom_courses:
             # Get lessons for this course
             course_lessons = [l for l in lessons if l.course_id == mapping.course_id]
             
             # Create assignment for first lesson
             if course_lessons:
-                for student_mapping in class_students:
+                for student_mapping in classroom_students:
                     status = random.choice(["pending", "in_progress", "completed"])
                     assignment = models.StudentAssignment(
                         id=str(uuid.uuid4()),
@@ -263,7 +263,7 @@ def create_test_data(db: Session):
     print(f"  - Schools: {len(schools)}")
     print(f"  - Teachers: {len([t for t in teachers if t.role == models.UserRole.TEACHER])}")
     print(f"  - Admins: {len([t for t in teachers if t.role == models.UserRole.ADMIN])}")
-    print(f"  - Classes: {len(classes)}")
+    print(f"  - Classrooms: {len(classrooms)}")
     print(f"  - Students: {len(students)}")
     print(f"  - Courses: {len(courses)}")
     print(f"  - Lessons: {len(lessons)}")

@@ -2,14 +2,14 @@ import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, ClipboardList, FileEdit, UserCog, ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
-import StudentManagementWorking from './StudentManagementWorking'
+import StudentManagementOriginal from './StudentManagement'
 
-// 使用工作版本的 StudentManagement 組件
+// 使用完整版本的 StudentManagement 組件
 function StudentManagement() {
-  return <StudentManagementWorking />
+  return <StudentManagementOriginal />
 }
 import CourseManagement from './CourseManagement'
-import ClassManagement from './ClassManagement'
+import ClassroomManagement from './ClassroomManagement'
 import InstitutionManagement from './InstitutionManagement'
 import AssignmentManagement from './AssignmentManagement'
 import StaffManagement from './StaffManagement'
@@ -80,12 +80,12 @@ function TeacherDashboard() {
     // 老師管理區
     { type: 'section', label: '老師管理' },
     { 
-      path: '/teacher/classes', 
-      label: '班級管理', 
+      path: '/teacher/classrooms', 
+      label: '教室管理', 
       icon: Users,
       subItems: [
-        { label: '新增班級', icon: Plus, action: () => navigate('/teacher/classes?action=add') },
-        { label: '班級列表', icon: School, action: () => navigate('/teacher/classes') }
+        { label: '新增教室', icon: Plus, action: () => navigate('/teacher/classrooms?action=add') },
+        { label: '教室列表', icon: School, action: () => navigate('/teacher/classrooms') }
       ]
     },
   ]
@@ -421,7 +421,7 @@ function TeacherDashboard() {
               <Routes>
                 <Route path="/" element={<TeacherOverview />} />
                 <Route path="/students" element={<StudentManagement />} />
-                <Route path="/classes" element={<ClassManagement />} />
+                <Route path="/classrooms" element={<ClassroomManagement />} />
                 <Route path="/courses" element={<CourseManagement />} />
                 <Route path="/institutions" element={<InstitutionManagement />} />
                 <Route path="/assignments" element={<AssignmentManagement />} />

@@ -81,22 +81,22 @@ class Student(StudentBase):
     class Config:
         from_attributes = True
 
-# Class Schemas
-class ClassBase(BaseModel):
+# Classroom Schemas
+class ClassroomBase(BaseModel):
     name: str
     grade_level: Optional[str] = None
     difficulty_level: Optional[DifficultyLevel] = None
 
-class ClassCreate(ClassBase):
+class ClassroomCreate(ClassroomBase):
     pass
 
-class ClassUpdate(BaseModel):
+class ClassroomUpdate(BaseModel):
     name: Optional[str] = None
     grade_level: Optional[str] = None
     difficulty_level: Optional[DifficultyLevel] = None
     is_active: Optional[bool] = None
 
-class Class(ClassBase):
+class Classroom(ClassroomBase):
     id: str
     teacher_id: str
     school_id: Optional[str]

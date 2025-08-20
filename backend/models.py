@@ -41,7 +41,7 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    created_classes = relationship("Class", back_populates="teacher")
+    created_classrooms = relationship("Classroom", back_populates="teacher")
     created_courses = relationship("Course", back_populates="creator")
 
 class Student(Base):
@@ -62,7 +62,7 @@ class Student(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    class_enrollments = relationship("ClassStudent", back_populates="student")
+    classroom_enrollments = relationship("ClassroomStudent", back_populates="student")
     assignments = relationship("StudentAssignment", back_populates="student")
     enrollments = relationship("Enrollment", back_populates="student")
 
@@ -77,10 +77,10 @@ class School(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    classes = relationship("Class", back_populates="school")
+    classrooms = relationship("Classroom", back_populates="school")
 
-class Class(Base):
-    __tablename__ = "classes"
+class Classroom(Base):
+    __tablename__ = "classrooms"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
@@ -93,22 +93,22 @@ class Class(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    teacher = relationship("User", back_populates="created_classes")
-    school = relationship("School", back_populates="classes")
-    students = relationship("ClassStudent", back_populates="class_")
-    course_mappings = relationship("ClassCourseMapping", back_populates="class_")
+    teacher = relationship("User", back_populates="created_classrooms")
+    school = relationship("School", back_populates="classrooms")
+    students = relationship("ClassroomStudent", back_populates="classroom")
+    course_mappings = relationship("ClassroomCourseMapping", back_populates="classroom")
 
-class ClassStudent(Base):
-    __tablename__ = "class_students"
+class ClassroomStudent(Base):
+    __tablename__ = "classroom_students"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    class_id = Column(String, ForeignKey("classes.id"))
+    classroom_id = Column(String, ForeignKey("classrooms.id"))
     student_id = Column(String, ForeignKey("students.id"))
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    class_ = relationship("Class", back_populates="students")
-    student = relationship("Student", back_populates="class_enrollments")
+    classroom = relationship("Classroom", back_populates="students")
+    student = relationship("Student", back_populates="classroom_enrollments")
 
 class Course(Base):
     __tablename__ = "courses"
@@ -129,7 +129,7 @@ class Course(Base):
     # Relationships
     creator = relationship("User", back_populates="created_courses")
     lessons = relationship("Lesson", back_populates="course")
-    class_mappings = relationship("ClassCourseMapping", back_populates="course")
+    classroom_mappings = relationship("ClassroomCourseMapping", back_populates="course")
     enrollments = relationship("Enrollment", back_populates="course")
     
     @property
@@ -137,17 +137,17 @@ class Course(Base):
         """Alias for creator to maintain consistency"""
         return self.creator
 
-class ClassCourseMapping(Base):
-    __tablename__ = "class_course_mappings"
+class ClassroomCourseMapping(Base):
+    __tablename__ = "classroom_course_mappings"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    class_id = Column(String, ForeignKey("classes.id"))
+    classroom_id = Column(String, ForeignKey("classrooms.id"))
     course_id = Column(String, ForeignKey("courses.id"))
     assigned_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    class_ = relationship("Class", back_populates="course_mappings")
-    course = relationship("Course", back_populates="class_mappings")
+    classroom = relationship("Classroom", back_populates="course_mappings")
+    course = relationship("Course", back_populates="classroom_mappings")
 
 class Lesson(Base):
     __tablename__ = "lessons"

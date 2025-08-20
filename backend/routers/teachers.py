@@ -34,10 +34,10 @@ async def get_dashboard(
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get teacher's classes
-    classes = db.query(models.Class).filter(
-        models.Class.teacher_id == current_user.id,
-        models.Class.is_active == True
+    # Get teacher's classrooms
+    classrooms = db.query(models.Classroom).filter(
+        models.Classroom.teacher_id == current_user.id,
+        models.Classroom.is_active == True
     ).all()
     
     # Get teacher's courses
@@ -50,70 +50,70 @@ async def get_dashboard(
     # This would need a more complex query joining through classes
     
     return {
-        "classes": classes,
+        "classrooms": classrooms,
         "courses": courses,
         "stats": {
-            "total_classes": len(classes),
+            "total_classrooms": len(classrooms),
             "total_courses": len(courses),
-            "total_students": 0,  # TODO: Calculate from class enrollments
+            "total_students": 0,  # TODO: Calculate from classroom enrollments
             "pending_grading": 0  # TODO: Calculate from submissions
         }
     }
 
-@router.post("/classes", response_model=schemas.Class)
-async def create_class(
-    class_data: schemas.ClassCreate,
+@router.post("/classrooms", response_model=schemas.Classroom)
+async def create_classroom(
+    classroom_data: schemas.ClassroomCreate,
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new class"""
+    """Create a new classroom"""
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    db_class = models.Class(
-        **class_data.dict(),
+    db_classroom = models.Classroom(
+        **classroom_data.dict(),
         teacher_id=current_user.id
     )
-    db.add(db_class)
+    db.add(db_classroom)
     db.commit()
-    db.refresh(db_class)
-    return db_class
+    db.refresh(db_classroom)
+    return db_classroom
 
-@router.get("/classes", response_model=List[schemas.Class])
-async def get_classes(
+@router.get("/classrooms", response_model=List[schemas.Classroom])
+async def get_classrooms(
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get all classes for the current teacher"""
+    """Get all classrooms for the current teacher"""
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    classes = db.query(models.Class).filter(
-        models.Class.teacher_id == current_user.id
+    classrooms = db.query(models.Classroom).filter(
+        models.Classroom.teacher_id == current_user.id
     ).all()
-    return classes
+    return classrooms
 
-@router.post("/classes/{class_id}/students")
-async def add_students_to_class(
-    class_id: str,
+@router.post("/classrooms/{classroom_id}/students")
+async def add_students_to_classroom(
+    classroom_id: str,
     student_ids: List[str],
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Add students to a class"""
+    """Add students to a classroom"""
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Verify teacher owns the class
-    class_ = db.query(models.Class).filter(
-        models.Class.id == class_id,
-        models.Class.teacher_id == current_user.id
+    # Verify teacher owns the classroom
+    classroom = db.query(models.Classroom).filter(
+        models.Classroom.id == classroom_id,
+        models.Classroom.teacher_id == current_user.id
     ).first()
     
-    if not class_:
-        raise HTTPException(status_code=404, detail="Class not found")
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
     
-    # Add students to class
+    # Add students to classroom
     added_students = []
     for student_id in student_ids:
         # Check if student exists
@@ -122,14 +122,14 @@ async def add_students_to_class(
             continue
             
         # Check if already enrolled
-        existing = db.query(models.ClassStudent).filter(
-            models.ClassStudent.class_id == class_id,
-            models.ClassStudent.student_id == student_id
+        existing = db.query(models.ClassroomStudent).filter(
+            models.ClassroomStudent.classroom_id == classroom_id,
+            models.ClassroomStudent.student_id == student_id
         ).first()
         
         if not existing:
-            enrollment = models.ClassStudent(
-                class_id=class_id,
+            enrollment = models.ClassroomStudent(
+                classroom_id=classroom_id,
                 student_id=student_id
             )
             db.add(enrollment)

@@ -5,7 +5,7 @@ import { Plus, Edit2, Trash2, Search, UserPlus, MoreVertical, X, FileText, BookO
 import { teacherApi, adminApi } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
-interface Class {
+interface Classroom {
   id: string
   name: string
   grade: string
@@ -30,30 +30,30 @@ interface Course {
   schoolId: string
 }
 
-function ClassManagement() {
+function ClassroomManagement() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
-  const [showAddClass, setShowAddClass] = useState(false)
-  const [editingClass, setEditingClass] = useState<Class | null>(null)
+  const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null)
+  const [showAddClassroom, setShowAddClassroom] = useState(false)
+  const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null)
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showManageCourses, setShowManageCourses] = useState(false)
-  const [searchClassTerm, setSearchClassTerm] = useState('')
+  const [searchClassroomTerm, setSearchClassroomTerm] = useState('')
   const [searchStudentTerm, setSearchStudentTerm] = useState('')
   const [selectedSchool, setSelectedInstitution] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'courses' | 'students' | 'assignments'>('courses')
   const [loading, setLoading] = useState(true)
-  const [classes, setClasses] = useState<Class[]>([])
+  const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [schools, setSchools] = useState<any[]>([])
-  const [classStudents, setClassStudents] = useState<Record<string, Student[]>>({})
+  const [classroomStudents, setClassroomStudents] = useState<Record<string, Student[]>>({})
 
   // Handle URL query parameters
   useEffect(() => {
     const action = searchParams.get('action')
     
     if (action === 'add') {
-      setShowAddClass(true)
+      setShowAddClassroom(true)
       // Clear the action parameter
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('action')
@@ -63,15 +63,15 @@ function ClassManagement() {
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchClasses()
+    fetchClassrooms()
     fetchSchools()
   }, [])
 
-  const fetchClasses = async () => {
+  const fetchClassrooms = async () => {
     try {
       setLoading(true)
-      const response = await teacherApi.getClasses()
-      const formattedClasses = response.data.map((cls: any) => ({
+      const response = await teacherApi.getClassrooms()
+      const formattedClassrooms = response.data.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
         grade: cls.grade_level || cls.grade,
@@ -80,12 +80,12 @@ function ClassManagement() {
         schoolId: cls.school_id,
         schoolName: cls.school_name || ''
       }))
-      setClasses(formattedClasses)
+      setClassrooms(formattedClassrooms)
     } catch (error) {
-      console.error('Failed to fetch classes:', error)
+      console.error('Failed to fetch classrooms:', error)
       toast({
         title: "錯誤",
-        description: "無法載入班級資料",
+        description: "無法載入教室資料",
         variant: "destructive",
       })
     } finally {
@@ -102,9 +102,9 @@ function ClassManagement() {
     }
   }
 
-  const fetchClassStudents = async (classId: string) => {
+  const fetchClassroomStudents = async (classroomId: string) => {
     try {
-      const response = await teacherApi.getClassStudents(classId)
+      const response = await teacherApi.getClassroomStudents(classroomId)
       const students = response.data.map((student: any) => ({
         id: student.id,
         name: student.name,
@@ -112,9 +112,9 @@ function ClassManagement() {
         status: 'active' as const,
         joinDate: student.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
       }))
-      setClassStudents(prev => ({ ...prev, [classId]: students }))
+      setClassroomStudents(prev => ({ ...prev, [classroomId]: students }))
     } catch (error) {
-      console.error('Failed to fetch class students:', error)
+      console.error('Failed to fetch classroom students:', error)
     }
   }
 
@@ -129,21 +129,21 @@ function ClassManagement() {
   ])
 
   // Class-course relationships
-  const [classCourses, setClassCourses] = useState<Record<string, string[]>>({
+  const [classroomCourses, setClassroomCourses] = useState<Record<string, string[]>>({
     '1': ['1', '2'], // 六年一班 has English Conversation 101 and Advanced Grammar
     '2': ['1', '3'], // 六年二班 has English Conversation 101 and Business English
     '3': ['4', '5'], // 五年三班 has Pronunciation Practice and Writing Skills
     '4': ['6'],      // 國一甲班 has Test Preparation
   })
 
-  const filteredClasses = classes.filter(cls => {
-    const matchesSearch = cls.name.toLowerCase().includes(searchClassTerm.toLowerCase())
+  const filteredClassrooms = classrooms.filter(cls => {
+    const matchesSearch = cls.name.toLowerCase().includes(searchClassroomTerm.toLowerCase())
     const matchesSchool = selectedSchool === 'all' || cls.schoolId === selectedSchool
     return matchesSearch && matchesSchool
   })
 
-  const currentClassStudents = selectedClass ? (classStudents[selectedClass.id] || []) : []
-  const filteredStudents = currentClassStudents.filter(student =>
+  const currentClassroomStudents = selectedClassroom ? (classroomStudents[selectedClassroom.id] || []) : []
+  const filteredStudents = currentClassroomStudents.filter(student =>
     student && student.name && student.email && (
       student.name.toLowerCase().includes(searchStudentTerm.toLowerCase()) ||
       student.email.toLowerCase().includes(searchStudentTerm.toLowerCase())
@@ -153,8 +153,8 @@ function ClassManagement() {
   return (
     <div className="h-full">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">班級管理</h2>
-        <p className="text-sm text-gray-500 mt-1">管理班級和學生分配</p>
+        <h2 className="text-2xl font-bold text-gray-900">教室管理</h2>
+        <p className="text-sm text-gray-500 mt-1">管理教室和學生分配</p>
       </div>
 
       {/* School Filter */}
@@ -165,7 +165,7 @@ function ClassManagement() {
             value={selectedSchool}
             onChange={(e) => {
               setSelectedSchool(e.target.value)
-              setSelectedClass(null) // Clear selected class when changing school
+              setSelectedClassroom(null) // Clear selected classroom when changing school
             }}
             className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
@@ -175,7 +175,7 @@ function ClassManagement() {
             ))}
           </select>
           <div className="ml-auto text-sm text-gray-600">
-            共 {filteredClasses.length} 個班級
+            共 {filteredClassrooms.length} 個教室
           </div>
         </div>
       </div>
@@ -185,36 +185,36 @@ function ClassManagement() {
         <div className="w-1/3 bg-white rounded-lg shadow overflow-hidden flex flex-col">
           <div className="p-4 border-b">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-medium">班級列表</h3>
-              <Button size="sm" onClick={() => setShowAddClass(true)}>
+              <h3 className="text-lg font-medium">教室列表</h3>
+              <Button size="sm" onClick={() => setShowAddClassroom(true)}>
                 <Plus className="w-4 h-4 mr-1" />
-                新增班級
+                新增教室
               </Button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="搜尋班級..."
-                value={searchClassTerm}
-                onChange={(e) => setSearchClassTerm(e.target.value)}
+                placeholder="搜尋教室..."
+                value={searchClassroomTerm}
+                onChange={(e) => setSearchClassroomTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            {filteredClasses.map((cls) => (
+            {filteredClassrooms.map((cls) => (
               <div
                 key={cls.id}
                 onClick={() => {
-                  setSelectedClass(cls)
-                  if (!classStudents[cls.id]) {
-                    fetchClassStudents(cls.id)
+                  setSelectedClassroom(cls)
+                  if (!classroomStudents[cls.id]) {
+                    fetchClassroomStudents(cls.id)
                   }
                 }}
                 className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
-                  selectedClass?.id === cls.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                  selectedClassroom?.id === cls.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                 }`}
               >
                 <div className="flex justify-between items-start">
@@ -229,7 +229,7 @@ function ClassManagement() {
                     <div className="mt-2 flex items-center space-x-3 text-xs text-gray-500">
                       <span className="flex items-center">
                         <BookOpen className="w-3 h-3 mr-1" />
-                        {classCourses[cls.id]?.length || 0} 個課程
+                        {classroomCourses[cls.id]?.length || 0} 個課程
                       </span>
                       <span className="flex items-center">
                         <FileText className="w-3 h-3 mr-1" />
@@ -244,7 +244,7 @@ function ClassManagement() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        setEditingClass(cls)
+                        setEditingClassroom(cls)
                       }}
                       className="p-1 hover:bg-gray-200 rounded"
                     >
@@ -255,19 +255,19 @@ function ClassManagement() {
                         e.stopPropagation()
                         if (window.confirm(`確定要刪除「${cls.name}」嗎？`)) {
                           try {
-                            await teacherApi.deleteClass(cls.id)
+                            await teacherApi.deleteClassroom(cls.id)
                             toast({
                               title: "成功",
                               description: "班級已刪除",
                             })
-                            fetchClasses()
-                            if (selectedClass?.id === cls.id) {
-                              setSelectedClass(null)
+                            fetchClassrooms()
+                            if (selectedClassroom?.id === cls.id) {
+                              setSelectedClassroom(null)
                             }
                           } catch (error: any) {
                             toast({
                               title: "錯誤",
-                              description: error.response?.data?.detail || "無法刪除班級",
+                              description: error.response?.data?.detail || "無法刪除教室",
                               variant: "destructive",
                             })
                           }
@@ -286,12 +286,12 @@ function ClassManagement() {
 
         {/* Right Panel - Tabbed Content */}
         <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-          {selectedClass ? (
+          {selectedClassroom ? (
             <>
               <div className="p-4 border-b">
                 <div className="mb-3">
-                  <h3 className="text-lg font-medium">{selectedClass.name}</h3>
-                  <p className="text-sm text-gray-500">{selectedClass.schoolName} · {currentClassStudents.length} 位學生</p>
+                  <h3 className="text-lg font-medium">{selectedClassroom.name}</h3>
+                  <p className="text-sm text-gray-500">{selectedClassroom.schoolName} · {currentClassroomStudents.length} 位學生</p>
                 </div>
                 
                 {/* Tab Navigation */}
@@ -334,16 +334,16 @@ function ClassManagement() {
 
               {/* Tab Content */}
               <div className="flex-1 overflow-hidden">
-                {activeTab === 'courses' && selectedClass && (
+                {activeTab === 'courses' && selectedClassroom && (
                   <CourseTabContent 
-                    selectedClass={selectedClass}
-                    classCourses={classCourses[selectedClass.id] || []}
-                    availableCourses={availableCourses.filter(course => course.schoolId === selectedClass.schoolId)}
+                    selectedClassroom={selectedClassroom}
+                    classroomCourses={classroomCourses[selectedClassroom.id] || []}
+                    availableCourses={availableCourses.filter(course => course.schoolId === selectedClassroom.schoolId)}
                     onManageCourses={() => setShowManageCourses(true)}
                   />
                 )}
                 
-                {activeTab === 'students' && selectedClass && (
+                {activeTab === 'students' && selectedClassroom && (
                   <StudentTabContent
                     students={filteredStudents}
                     searchTerm={searchStudentTerm}
@@ -352,26 +352,26 @@ function ClassManagement() {
                   />
                 )}
                 
-                {activeTab === 'assignments' && selectedClass && (
+                {activeTab === 'assignments' && selectedClassroom && (
                   <AssignmentTabContent
-                    classId={selectedClass.id}
-                    className={selectedClass.name}
+                    classroomId={selectedClassroom.id}
+                    classroomName={selectedClassroom.name}
                   />
                 )}
               </div>
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
-              <p>請選擇一個班級查看詳情</p>
+              <p>請選擇一個教室查看詳情</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Add Class Modal */}
-      {showAddClass && (
-        <AddClassModal
-          onClose={() => setShowAddClass(false)}
+      {showAddClassroom && (
+        <AddClassroomModal
+          onClose={() => setShowAddClassroom(false)}
           onSave={async (newClass) => {
             try {
               const classData = {
@@ -380,17 +380,17 @@ function ClassManagement() {
                 school_id: newClass.schoolId
               }
               
-              await teacherApi.createClass(classData)
+              await teacherApi.createClassroom(classData)
               toast({
                 title: "成功",
-                description: "班級已新增",
+                description: "教室已新增",
               })
-              fetchClasses()
-              setShowAddClass(false)
+              fetchClassrooms()
+              setShowAddClassroom(false)
             } catch (error: any) {
               toast({
                 title: "錯誤",
-                description: error.response?.data?.detail || "無法新增班級",
+                description: error.response?.data?.detail || "無法新增教室",
                 variant: "destructive",
               })
             }
@@ -400,28 +400,28 @@ function ClassManagement() {
       )}
 
       {/* Edit Class Modal */}
-      {editingClass && (
-        <EditClassModal
-          classData={editingClass}
-          onClose={() => setEditingClass(null)}
-          onSave={async (updatedClass) => {
+      {editingClassroom && (
+        <EditClassroomModal
+          classroomData={editingClassroom}
+          onClose={() => setEditingClassroom(null)}
+          onSave={async (updatedClassroom) => {
             try {
               const updateData = {
                 name: updatedClass.name,
-                grade_level: updatedClass.grade
+                grade_level: updatedClassroom.grade
               }
               
-              await teacherApi.updateClass(updatedClass.id, updateData)
+              await teacherApi.updateClassroom(updatedClassroom.id, updateData)
               toast({
                 title: "成功",
-                description: "班級資料已更新",
+                description: "教室資料已更新",
               })
-              fetchClasses()
-              setEditingClass(null)
+              fetchClassrooms()
+              setEditingClassroom(null)
             } catch (error: any) {
               toast({
                 title: "錯誤",
-                description: error.response?.data?.detail || "無法更新班級資料",
+                description: error.response?.data?.detail || "無法更新教室資料",
                 variant: "destructive",
               })
             }
@@ -430,19 +430,19 @@ function ClassManagement() {
       )}
 
       {/* Add Student to Class Modal */}
-      {showAddStudent && selectedClass && (
-        <AddStudentToClassModal
-          className={selectedClass.name}
-          classId={selectedClass.id}
+      {showAddStudent && selectedClassroom && (
+        <AddStudentToClassroomModal
+          classroomName={selectedClassroom.name}
+          classroomId={selectedClassroom.id}
           onClose={() => setShowAddStudent(false)}
           onSave={async (studentIds) => {
             try {
-              await teacherApi.addStudentsToClass(selectedClass.id, studentIds)
+              await teacherApi.addStudentsToClassroom(selectedClassroom.id, studentIds)
               toast({
                 title: "成功",
-                description: "學生已加入班級",
+                description: "學生已加入教室",
               })
-              fetchClassStudents(selectedClass.id)
+              fetchClassroomStudents(selectedClassroom.id)
               setShowAddStudent(false)
             } catch (error: any) {
               toast({
@@ -456,18 +456,18 @@ function ClassManagement() {
       )}
 
       {/* Manage Courses Modal */}
-      {showManageCourses && selectedClass && (
+      {showManageCourses && selectedClassroom && (
         <ManageCoursesModal
-          classId={selectedClass.id}
-          className={selectedClass.name}
-          schoolId={selectedClass.schoolId}
-          currentCourses={classCourses[selectedClass.id] || []}
-          availableCourses={availableCourses.filter(course => course.schoolId === selectedClass.schoolId)}
+          classroomId={selectedClassroom.id}
+          classroomName={selectedClassroom.name}
+          schoolId={selectedClassroom.schoolId}
+          currentCourses={classroomCourses[selectedClassroom.id] || []}
+          availableCourses={availableCourses.filter(course => course.schoolId === selectedClassroom.schoolId)}
           onClose={() => setShowManageCourses(false)}
           onSave={(courseIds) => {
-            setClassCourses({
-              ...classCourses,
-              [selectedClass.id]: courseIds
+            setClassroomCourses({
+              ...classroomCourses,
+              [selectedClassroom.id]: courseIds
             })
             setShowManageCourses(false)
           }}
@@ -477,7 +477,7 @@ function ClassManagement() {
   )
 }
 
-function AddClassModal({ onClose, onSave }: any) {
+function AddClassroomModal({ onClose, onSave, schools }: any) {
   const [formData, setFormData] = useState({
     name: '',
     grade: '',
@@ -486,18 +486,11 @@ function AddClassModal({ onClose, onSave }: any) {
     schoolName: ''
   })
 
-  // Mock schools data - in real app, this would come from API
-  const schools = [
-    { id: '1', name: '台北總校' },
-    { id: '2', name: '新竹分校' },
-    { id: '3', name: '台中補習班' }
-  ]
-
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">新增班級</h3>
+          <h3 className="text-lg font-medium text-gray-900">新增教室</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
             <X className="h-5 w-5" />
           </button>
@@ -509,7 +502,7 @@ function AddClassModal({ onClose, onSave }: any) {
             <select
               value={formData.schoolId}
               onChange={(e) => {
-                const inst = institutions.find(i => i.id === e.target.value)
+                const inst = schools.find(i => i.id === e.target.value)
                 setFormData({ 
                   ...formData, 
                   schoolId: e.target.value,
@@ -526,7 +519,7 @@ function AddClassModal({ onClose, onSave }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">班級名稱 *</label>
+            <label className="block text-sm font-medium text-gray-700">教室名稱 *</label>
             <input
               type="text"
               value={formData.name}
@@ -587,27 +580,22 @@ function AddClassModal({ onClose, onSave }: any) {
   )
 }
 
-function EditClassModal({ classData, onClose, onSave }: any) {
+function EditClassroomModal({ classroomData, onClose, onSave }: any) {
   const [formData, setFormData] = useState({
-    name: classData.name,
-    grade: classData.grade,
-    teacher: classData.teacher,
-    schoolId: classData.schoolId,
-    schoolName: classData.schoolName
+    name: classroomData.name,
+    grade: classroomData.grade,
+    teacher: classroomData.teacher,
+    schoolId: classroomData.schoolId,
+    schoolName: classroomData.schoolName
   })
 
-  // Mock schools data - in real app, this would come from API
-  const schools = [
-    { id: '1', name: '台北總校' },
-    { id: '2', name: '新竹分校' },
-    { id: '3', name: '台中補習班' }
-  ]
+  // Schools data would come from props in real app
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">編輯班級</h3>
+          <h3 className="text-lg font-medium text-gray-900">編輯教室</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
             <X className="h-5 w-5" />
           </button>
@@ -622,11 +610,11 @@ function EditClassModal({ classData, onClose, onSave }: any) {
               disabled
               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed sm:text-sm"
             />
-            <p className="mt-1 text-xs text-gray-500">班級建立後無法更改所屬學校</p>
+            <p className="mt-1 text-xs text-gray-500">教室建立後無法更改所屬學校</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">班級名稱</label>
+            <label className="block text-sm font-medium text-gray-700">教室名稱</label>
             <input
               type="text"
               value={formData.name}
@@ -673,7 +661,7 @@ function EditClassModal({ classData, onClose, onSave }: any) {
             取消
           </Button>
           <Button 
-            onClick={() => onSave({ ...classData, ...formData })} 
+            onClick={() => onSave({ ...classroomData, ...formData })} 
             className="flex-1"
           >
             儲存
@@ -684,7 +672,7 @@ function EditClassModal({ classData, onClose, onSave }: any) {
   )
 }
 
-function AddStudentToClassModal({ className, onClose, onSave }: any) {
+function AddStudentToClassroomModal({ classroomName, classroomId, onClose, onSave }: any) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
 
@@ -704,7 +692,7 @@ function AddStudentToClassModal({ className, onClose, onSave }: any) {
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">新增學生到 {className}</h3>
+          <h3 className="text-lg font-medium text-gray-900">新增學生到 {classroomName}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
             <X className="h-5 w-5" />
           </button>
@@ -767,16 +755,16 @@ function AddStudentToClassModal({ className, onClose, onSave }: any) {
 }
 
 function ManageCoursesModal({ 
-  classId, 
-  className, 
+  classroomId, 
+  classroomName, 
   schoolId,
   currentCourses, 
   availableCourses, 
   onClose, 
   onSave 
 }: { 
-  classId: string
-  className: string
+  classroomId: string
+  classroomName: string
   schoolId: string
   currentCourses: string[]
   availableCourses: Course[]
@@ -798,7 +786,7 @@ function ManageCoursesModal({
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">管理課程 - {className}</h3>
+            <h3 className="text-lg font-medium text-gray-900">管理課程 - {classroomName}</h3>
             <p className="text-sm text-gray-500 mt-1">選擇要引入到此班級的課程</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
@@ -868,17 +856,17 @@ function ManageCoursesModal({
 
 // Course Tab Content Component
 function CourseTabContent({ 
-  selectedClass, 
-  classCourses, 
+  selectedClassroom, 
+  classroomCourses, 
   availableCourses, 
   onManageCourses 
 }: {
-  selectedClass: Class
-  classCourses: string[]
+  selectedClassroom: Classroom
+  classroomCourses: string[]
   availableCourses: Course[]
   onManageCourses: () => void
 }) {
-  const enrolledCourses = availableCourses.filter(course => classCourses.includes(course.id))
+  const enrolledCourses = availableCourses.filter(course => classroomCourses.includes(course.id))
   
   return (
     <div className="p-4">
@@ -1020,10 +1008,10 @@ function StudentTabContent({
 
 // Assignment Tab Content Component
 function AssignmentTabContent({ 
-  classId, 
+  classroomId, 
   className 
 }: {
-  classId: string
+  classroomId: string
   className: string
 }) {
   // Mock assignment data
@@ -1053,10 +1041,10 @@ function AssignmentTabContent({
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-700">班級作業</h4>
+        <h4 className="text-sm font-medium text-gray-700">教室作業</h4>
         <Button 
           size="sm"
-          onClick={() => window.location.href = `/teacher/assignments?classId=${classId}&action=add`}
+          onClick={() => window.location.href = `/teacher/assignments?classroomId=${classroomId}&action=add`}
         >
           <Plus className="w-4 h-4 mr-1" />
           新增作業
@@ -1112,4 +1100,4 @@ function AssignmentTabContent({
   )
 }
 
-export default ClassManagement
+export default ClassroomManagement
