@@ -41,7 +41,7 @@ function ClassroomManagement() {
   const [showManageCourses, setShowManageCourses] = useState(false)
   const [searchClassroomTerm, setSearchClassroomTerm] = useState('')
   const [searchStudentTerm, setSearchStudentTerm] = useState('')
-  const [selectedSchool, setSelectedInstitution] = useState<string>('all')
+  const [selectedSchool, setSelectedSchool] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'courses' | 'students' | 'assignments'>('courses')
   const [loading, setLoading] = useState(true)
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
