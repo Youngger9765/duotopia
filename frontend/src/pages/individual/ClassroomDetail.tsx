@@ -419,13 +419,13 @@ export default function ClassroomDetail() {
           </div>
 
           {/* Second Panel - Lessons */}
-          <div className={`${unitPanelCollapsed ? 'w-12' : 'w-96'} bg-white rounded-lg shadow overflow-hidden flex flex-col transition-all duration-300`}>
+          <div className={`${lessonPanelCollapsed ? 'w-12' : 'w-96'} bg-white rounded-lg shadow overflow-hidden flex flex-col transition-all duration-300`}>
             {selectedCourse ? (
               <>
-                {unitPanelCollapsed ? (
+                {lessonPanelCollapsed ? (
                   <div className="p-2 border-b flex flex-col items-center">
                     <button
-                      onClick={() => setLessonPanelCollapsed(false))
+                      onClick={() => setLessonPanelCollapsed(false)}
                       className="p-2 hover:bg-gray-100 rounded-md"
                       title="展開單元列表"
                     >
@@ -475,7 +475,7 @@ export default function ClassroomDetail() {
                   </div>
                 )}
 
-                {!unitPanelCollapsed && (
+                {!lessonPanelCollapsed && (
                   <div className="flex-1 overflow-y-auto">
                     {currentCourseLessons.length > 0 ? (
                       <div className="divide-y divide-gray-200">
