@@ -30,7 +30,7 @@ class IndividualClassroomCreate(BaseModel):
 
 class IndividualStudentCreate(BaseModel):
     full_name: str
-    email: EmailStr
+    email: Optional[str] = None
     birth_date: str
     referred_by: Optional[str] = None
     learning_goals: Optional[str] = None
@@ -59,14 +59,20 @@ class IndividualLessonCreate(BaseModel):
     lesson_number: int
     title: str
     activity_type: str
-    content: dict
+    content: dict = {}
     time_limit_minutes: int = 30
+    is_active: bool = True
 
 
 class IndividualEnrollmentCreate(BaseModel):
     student_id: str
     classroom_id: str
     payment_status: str = "pending"
+
+
+class AssignClassroomsRequest(BaseModel):
+    student_ids: List[str]
+    classroom_ids: List[str]
 
 
 # ===== Router =====
@@ -496,24 +502,25 @@ async def create_student(
     db: Session = Depends(get_db)
 ):
     """創建個體戶學生"""
-    # 檢查 email 是否已存在
-    existing = db.query(IndividualStudent).filter(
-        IndividualStudent.email == student_data.email
-    ).first()
+    # 創建學生時加上所屬老師
+    student_dict = student_data.dict()
+    student_dict['teacher_id'] = current_user.id
     
-    if existing:
-        raise HTTPException(status_code=400, detail="Email 已存在")
-    
-    student = IndividualStudent(**student_data.dict())
+    student = IndividualStudent(**student_dict)
     db.add(student)
     db.commit()
     db.refresh(student)
+    
+    # 生成預設密碼（生日格式：YYYYMMDD）
+    password = student.birth_date.replace('-', '') if student.birth_date else None
     
     return {
         "id": student.id,
         "full_name": student.full_name,
         "email": student.email,
         "birth_date": student.birth_date,
+        "default_password": password,  # 預設密碼
+        "is_default_password": student.is_default_password,
         "referred_by": student.referred_by,
         "learning_goals": student.learning_goals,
         "preferred_schedule": student.preferred_schedule,
@@ -527,41 +534,31 @@ async def get_students(
     db: Session = Depends(get_db)
 ):
     """獲取個體戶學生列表"""
-    # 獲取教師的所有教室
-    teacher_classrooms = db.query(IndividualClassroom).filter(
-        IndividualClassroom.teacher_id == current_user.id
-    ).all()
-    
-    classroom_ids = [c.id for c in teacher_classrooms]
-    
-    # 獲取這些教室的所有學生
-    enrollments = db.query(IndividualEnrollment).filter(
-        IndividualEnrollment.classroom_id.in_(classroom_ids),
-        IndividualEnrollment.is_active == True
-    ).all()
-    
-    # 使用 set 避免重複學生
-    student_ids = set()
-    student_classroom_map = {}
-    
-    for enrollment in enrollments:
-        student_ids.add(enrollment.student_id)
-        if enrollment.student_id not in student_classroom_map:
-            student_classroom_map[enrollment.student_id] = []
-        student_classroom_map[enrollment.student_id].append({
-            "classroom_id": enrollment.classroom_id,
-            "classroom_name": enrollment.classroom.name,
-            "payment_status": enrollment.payment_status
-        })
-    
-    # 獲取學生資料
+    # 直接查詢該老師的學生
     students = db.query(IndividualStudent).filter(
-        IndividualStudent.id.in_(student_ids)
+        IndividualStudent.teacher_id == current_user.id
     ).all()
     
     result = []
     for student in students:
-        classrooms = student_classroom_map.get(student.id, [])
+        # 獲取學生的班級資訊
+        enrollments = db.query(IndividualEnrollment).filter(
+            IndividualEnrollment.student_id == student.id,
+            IndividualEnrollment.is_active == True
+        ).all()
+        
+        classrooms = []
+        classroom_names = []
+        classroom_ids = []
+        
+        for enrollment in enrollments:
+            classrooms.append({
+                "classroom_id": enrollment.classroom_id,
+                "classroom_name": enrollment.classroom.name,
+                "payment_status": enrollment.payment_status
+            })
+            classroom_names.append(enrollment.classroom.name)
+            classroom_ids.append(enrollment.classroom_id)
         
         result.append({
             "id": student.id,
@@ -570,11 +567,253 @@ async def get_students(
             "birth_date": student.birth_date,
             "referred_by": student.referred_by,
             "learning_goals": student.learning_goals,
+            "classroom_names": classroom_names,
+            "classroom_ids": classroom_ids,
             "classrooms": classrooms,
+            "is_default_password": student.is_default_password,  # 密碼狀態
+            "default_password": student.default_password if student.is_default_password else None,  # 只有使用預設密碼時才顯示
             "type": "individual"
         })
     
     return result
+
+
+@router.get("/students/{student_id}/classrooms", response_model=dict)
+async def get_student_classrooms(
+    student_id: str,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """獲取單個學生的班級資訊"""
+    # 驗證學生存在
+    student = db.query(IndividualStudent).filter(
+        IndividualStudent.id == student_id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="學生不存在")
+    
+    # 獲取教師的教室
+    teacher_classrooms = db.query(IndividualClassroom).filter(
+        IndividualClassroom.teacher_id == current_user.id
+    ).all()
+    
+    classroom_ids = [c.id for c in teacher_classrooms]
+    
+    # 獲取學生在這些教室的註冊記錄
+    enrollments = db.query(IndividualEnrollment).filter(
+        IndividualEnrollment.student_id == student_id,
+        IndividualEnrollment.classroom_id.in_(classroom_ids),
+        IndividualEnrollment.is_active == True
+    ).all()
+    
+    classrooms = []
+    classroom_ids_list = []
+    
+    for enrollment in enrollments:
+        classrooms.append({
+            "classroom_id": enrollment.classroom_id,
+            "classroom_name": enrollment.classroom.name,
+            "payment_status": enrollment.payment_status
+        })
+        classroom_ids_list.append(enrollment.classroom_id)
+    
+    return {
+        "student_id": student_id,
+        "classroom_names": [c["classroom_name"] for c in classrooms],
+        "classroom_ids": classroom_ids_list,
+        "classrooms": classrooms
+    }
+
+
+@router.post("/students/assign-classrooms", response_model=dict)
+async def assign_students_to_classrooms(
+    request: AssignClassroomsRequest,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """批量分配學生到班級（完整更新）"""
+    # 驗證所有學生存在
+    students = db.query(IndividualStudent).filter(
+        IndividualStudent.id.in_(request.student_ids)
+    ).all()
+    
+    if len(students) != len(request.student_ids):
+        raise HTTPException(status_code=404, detail="部分學生不存在")
+    
+    # 獲取教師的所有教室
+    teacher_classrooms = db.query(IndividualClassroom).filter(
+        IndividualClassroom.teacher_id == current_user.id
+    ).all()
+    
+    teacher_classroom_ids = [c.id for c in teacher_classrooms]
+    
+    # 驗證所有指定的教室屬於當前教師
+    invalid_classrooms = [cid for cid in request.classroom_ids if cid not in teacher_classroom_ids]
+    if invalid_classrooms:
+        raise HTTPException(status_code=404, detail="部分教室不存在或不屬於您")
+    
+    success_count = 0
+    errors = []
+    
+    for student_id in request.student_ids:
+        try:
+            # 獲取學生在教師所有教室的現有註冊
+            existing_enrollments = db.query(IndividualEnrollment).filter(
+                IndividualEnrollment.student_id == student_id,
+                IndividualEnrollment.classroom_id.in_(teacher_classroom_ids)
+            ).all()
+            
+            current_classroom_ids = {e.classroom_id for e in existing_enrollments if e.is_active}
+            target_classroom_ids = set(request.classroom_ids)
+            
+            # 獲取所有存在的註冊記錄（包括非活躍的）
+            existing_classroom_ids = {e.classroom_id for e in existing_enrollments}
+            current_classroom_ids = {e.classroom_id for e in existing_enrollments if e.is_active}
+            
+            # 需要新增的班級（完全不存在的）
+            to_add = target_classroom_ids - existing_classroom_ids
+            # 需要移除的班級
+            to_remove = current_classroom_ids - target_classroom_ids
+            # 需要重新啟用的班級（存在但非活躍的）
+            to_reactivate = target_classroom_ids & (existing_classroom_ids - current_classroom_ids)
+            
+            # 新增班級（只有完全不存在的才創建新記錄）
+            for classroom_id in to_add:
+                enrollment = IndividualEnrollment(
+                    id=str(uuid.uuid4()),
+                    student_id=student_id,
+                    classroom_id=classroom_id,
+                    payment_status="pending"
+                )
+                db.add(enrollment)
+                success_count += 1
+            
+            # 移除班級（設為非活躍）
+            for enrollment in existing_enrollments:
+                if enrollment.classroom_id in to_remove and enrollment.is_active:
+                    enrollment.is_active = False
+                    success_count += 1
+            
+            # 重新啟用班級
+            for enrollment in existing_enrollments:
+                if enrollment.classroom_id in to_reactivate:
+                    enrollment.is_active = True
+                    enrollment.payment_status = "pending"
+                    success_count += 1
+                    
+        except Exception as e:
+            errors.append(f"學生 {student_id} 分配失敗: {str(e)}")
+    
+    db.commit()
+    
+    return {
+        "message": f"成功更新 {success_count} 個班級分配",
+        "success_count": success_count,
+        "errors": errors
+    }
+
+
+@router.post("/students/{student_id}/reset-password", response_model=dict)
+async def reset_student_password(
+    student_id: str,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """重置學生密碼為預設密碼（生日）"""
+    # 驗證學生屬於當前老師
+    student = db.query(IndividualStudent).filter(
+        IndividualStudent.id == student_id,
+        IndividualStudent.teacher_id == current_user.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="學生不存在或不屬於您")
+    
+    # 重置為預設密碼
+    student.is_default_password = True
+    student.password_hash = None  # 清除自訂密碼
+    
+    db.commit()
+    db.refresh(student)
+    
+    return {
+        "message": "密碼已重置為預設密碼",
+        "student_id": student_id,
+        "student_name": student.full_name,
+        "default_password": student.default_password,
+        "is_default_password": True
+    }
+
+
+@router.put("/students/{student_id}", response_model=dict)
+async def update_student(
+    student_id: str,
+    student_data: IndividualStudentCreate,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新學生資料"""
+    # 驗證學生屬於當前老師
+    student = db.query(IndividualStudent).filter(
+        IndividualStudent.id == student_id,
+        IndividualStudent.teacher_id == current_user.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="學生不存在或不屬於您")
+    
+    # 更新學生資料
+    for field, value in student_data.dict().items():
+        if hasattr(student, field):
+            setattr(student, field, value)
+    
+    # 如果生日有變更且使用預設密碼，需要更新密碼
+    if student.is_default_password and student.birth_date != student_data.birth_date:
+        # 預設密碼會自動更新（因為是 property）
+        pass
+    
+    db.commit()
+    db.refresh(student)
+    
+    return {
+        "message": "學生資料更新成功",
+        "student_id": student_id,
+        "student_name": student.full_name,
+        "is_default_password": student.is_default_password
+    }
+
+
+@router.delete("/students/{student_id}")
+async def delete_student(
+    student_id: str,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除學生"""
+    # 驗證學生屬於當前老師
+    student = db.query(IndividualStudent).filter(
+        IndividualStudent.id == student_id,
+        IndividualStudent.teacher_id == current_user.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="學生不存在或不屬於您")
+    
+    # 軟刪除：標記為非活躍
+    student.is_active = False
+    
+    # 同時將所有註冊記錄標記為非活躍
+    enrollments = db.query(IndividualEnrollment).filter(
+        IndividualEnrollment.student_id == student_id
+    ).all()
+    
+    for enrollment in enrollments:
+        enrollment.is_active = False
+    
+    db.commit()
+    
+    return {"message": "學生已刪除"}
 
 
 # ===== 註冊管理 =====
@@ -697,6 +936,45 @@ async def get_courses(
         "classroom_id": None,  # 個人教師課程不屬於特定教室
         "classroom_name": None
     } for course in courses]
+
+
+@router.put("/courses/{course_id}", response_model=dict)
+async def update_course(
+    course_id: str,
+    course_data: IndividualCourseCreate,
+    current_user: User = Depends(require_individual_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新個體戶課程"""
+    # 驗證課程屬於當前教師
+    course = db.query(IndividualCourse).filter(
+        IndividualCourse.id == course_id,
+        IndividualCourse.teacher_id == current_user.id
+    ).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="課程不存在")
+    
+    # 更新課程資料
+    for field, value in course_data.dict(exclude_unset=True).items():
+        setattr(course, field, value)
+    
+    db.commit()
+    db.refresh(course)
+    
+    return {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "difficulty_level": course.difficulty_level,
+        "is_public": course.is_public,
+        "custom_materials": course.custom_materials,
+        "pricing_per_lesson": course.pricing_per_lesson,
+        "lesson_count": len(course.lessons),
+        "teacher_name": course.teacher.full_name if course.teacher else "",
+        "classroom_id": course.classroom_id,
+        "type": "individual"
+    }
 
 
 @router.get("/courses/{course_id}/lessons", response_model=List[dict])

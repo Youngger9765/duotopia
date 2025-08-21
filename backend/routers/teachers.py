@@ -70,8 +70,13 @@ async def create_classroom(
     if current_user.role not in [models.UserRole.TEACHER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    # For individual teachers, school_id should be None
+    classroom_dict = classroom_data.dict()
+    if current_user.current_role_context == "individual" and current_user.is_individual_teacher:
+        classroom_dict["school_id"] = None
+    
     db_classroom = models.Classroom(
-        **classroom_data.dict(),
+        **classroom_dict,
         teacher_id=current_user.id
     )
     db.add(db_classroom)

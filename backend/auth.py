@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from database import get_db
 import models
+from models_dual_system import DualUser
 import os
 from dotenv import load_dotenv
 
@@ -52,12 +53,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
     
+    # Try to find user in dual system first
+    user = db.query(DualUser).filter(DualUser.email == email).first()
+    if user:
+        return user
+    
+    # If not found, try regular user
     user = db.query(models.User).filter(models.User.email == email).first()
     if user is None:
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user: models.User = Depends(get_current_user)):
+async def get_current_active_user(current_user = Depends(get_current_user)):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
@@ -77,6 +84,15 @@ def authenticate_student(db: Session, email: str, birth_date: str):
     if student.birth_date != birth_date:
         return False
     return student
+
+def authenticate_dual_user(db: Session, email: str, password: str):
+    """Authenticate user from dual system"""
+    user = db.query(DualUser).filter(DualUser.email == email).first()
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
 
 async def require_admin(current_user: models.User = Depends(get_current_active_user)):
     """Dependency to require admin role"""

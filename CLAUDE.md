@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 最高指導原則：修完要自己去測試過！
+
+### ⚡ 每次修改後必須執行的測試流程：
+
+1. **立即編譯測試**
+   ```bash
+   npm run build  # 確保沒有編譯錯誤
+   ```
+
+2. **實際打開瀏覽器檢查**
+   ```bash
+   open http://localhost:5173/[修改的頁面]
+   ```
+
+3. **檢查瀏覽器控制台**
+   - 打開 F12 開發者工具
+   - 查看 Console 是否有錯誤
+   - 檢查 Network 標籤 API 請求
+
+4. **API 功能測試**
+   ```bash
+   # 寫測試腳本驗證 API
+   python test_[功能]_api.py
+   ```
+
+5. **截圖存證**
+   ```bash
+   screencapture -x frontend_[功能]_fixed.png
+   ```
+
+**⚠️ 絕對不要讓用戶一直幫你抓錯！每個修復都要自己先測試過！**
+
 ## 🏗️ 平台開發核心原則 - 不要繞遠路
 
 ### 🎯 核心教訓：直接用生產級方案，避免技術債

@@ -47,6 +47,7 @@ function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [schools, setSchools] = useState<any[]>([])
   const [classroomStudents, setClassroomStudents] = useState<Record<string, Student[]>>({})
+  const [isIndividual, setIsIndividual] = useState(false)
 
   // Handle URL query parameters
   useEffect(() => {

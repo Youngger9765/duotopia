@@ -33,16 +33,39 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
-    role = Column(Enum(UserRole), nullable=False)
+    role = Column(Enum(UserRole), nullable=False)  # Primary role
     phone = Column(String)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # Relationships
+    # Multi-role support
+    is_individual_teacher = Column(Boolean, default=False)  # Can act as individual teacher
+    is_institutional_admin = Column(Boolean, default=False)  # Can act as institutional admin
+    current_role_context = Column(String, default="default")  # "individual" or "institutional" or "default"
+    
+    # Relationships - 舊系統
     created_classrooms = relationship("Classroom", back_populates="teacher")
     created_courses = relationship("Course", back_populates="creator")
+    
+    # Relationships - 新的雙體系
+    # individual_classrooms = relationship("IndividualClassroom", back_populates="teacher")
+    # individual_courses = relationship("IndividualCourse", back_populates="teacher")
+    
+    @property
+    def has_multiple_roles(self):
+        """Check if user has multiple role contexts"""
+        return self.is_individual_teacher and self.is_institutional_admin
+    
+    @property
+    def effective_role(self):
+        """Get the effective role based on current context"""
+        if self.current_role_context == "individual" and self.is_individual_teacher:
+            return UserRole.TEACHER
+        elif self.current_role_context == "institutional" and self.is_institutional_admin:
+            return UserRole.ADMIN
+        return self.role
 
 class Student(Base):
     __tablename__ = "students"
@@ -87,7 +110,7 @@ class Classroom(Base):
     grade_level = Column(String)
     difficulty_level = Column(Enum(DifficultyLevel))
     teacher_id = Column(String, ForeignKey("users.id"))
-    school_id = Column(String, ForeignKey("schools.id"))
+    school_id = Column(String, ForeignKey("schools.id"), nullable=True)  # Nullable for individual teachers
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -97,6 +120,23 @@ class Classroom(Base):
     school = relationship("School", back_populates="classrooms")
     students = relationship("ClassroomStudent", back_populates="classroom")
     course_mappings = relationship("ClassroomCourseMapping", back_populates="classroom")
+    
+    @property
+    def is_individual(self):
+        """Check if this is an individual teacher's classroom"""
+        return self.school_id is None
+    
+    @property
+    def owner_name(self):
+        """Get the owner name (school name for institutional, teacher name for individual)"""
+        if self.is_individual:
+            return self.teacher.full_name if self.teacher else "個人教師"
+        return self.school.name if self.school else "未知學校"
+    
+    @property
+    def owner_type(self):
+        """Get the owner type"""
+        return "individual" if self.is_individual else "institutional"
 
 class ClassroomStudent(Base):
     __tablename__ = "classroom_students"

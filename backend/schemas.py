@@ -46,6 +46,11 @@ class User(UserBase):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime]
+    is_individual_teacher: bool = False
+    is_institutional_admin: bool = False
+    current_role_context: str = "default"
+    has_multiple_roles: bool = False
+    effective_role: UserRole
 
     class Config:
         from_attributes = True

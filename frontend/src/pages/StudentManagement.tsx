@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, School, Plus, Search, Edit2, X, Check } from 'lucide-react'
-import { adminApi, teacherApi } from '@/lib/api'
+import { adminApi, teacherApi, api } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
 interface Student {
@@ -45,13 +45,38 @@ function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([])
   const [schools, setSchools] = useState<any[]>([])
   const [classrooms, setClassrooms] = useState<any[]>([])
+  const [isIndividual, setIsIndividual] = useState(false)
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchStudents()
-    fetchSchools()
-    fetchClassrooms()
+    fetchUserRole()
   }, [])
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await api.get('/api/role/current')
+      const roleInfo = response.data
+      
+      // 判斷是否為個體戶
+      const isIndividualTeacher = roleInfo.current_role_context === 'individual' || 
+                                 (roleInfo.primary_role === 'teacher' && !roleInfo.is_institutional_admin)
+      setIsIndividual(isIndividualTeacher)
+      
+      // 根據角色決定要載入哪些資料
+      fetchStudents()
+      fetchClassrooms()
+      
+      // 只有機構管理員才載入學校資料
+      if (!isIndividualTeacher) {
+        fetchSchools()
+      }
+    } catch (error) {
+      console.error('Failed to fetch role info:', error)
+      // 預設載入基本資料
+      fetchStudents()
+      fetchClassrooms()
+    }
+  }
 
   const fetchStudents = async () => {
     try {
@@ -191,16 +216,20 @@ function StudentManagement() {
             </div>
           </div>
           
-          <select
-            value={selectedSchool}
-            onChange={(e) => setSelectedSchool(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">所有學校</option>
-            <option value="1">台北總校</option>
-            <option value="2">新竹分校</option>
-            <option value="3">台中補習班</option>
-          </select>
+          {!isIndividual && (
+            <select
+              value={selectedSchool}
+              onChange={(e) => setSelectedSchool(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">所有學校</option>
+              {schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.name}
+                </option>
+              ))}
+            </select>
+          )}
           
           <select
             value={selectedRole}

@@ -11,6 +11,7 @@ from database import get_db
 from auth import (
     authenticate_user, 
     authenticate_student,
+    authenticate_dual_user,
     create_access_token, 
     get_password_hash,
     get_current_active_user,
@@ -49,23 +50,40 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login for teachers/admins"""
-    user = authenticate_user(db, form_data.username, form_data.password)
+    # Try dual system authentication first
+    user = authenticate_dual_user(db, form_data.username, form_data.password)
+    
+    # If not found in dual system, try regular authentication
+    if not user:
+        user = authenticate_user(db, form_data.username, form_data.password)
+    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {
+    
+    # Check if it's a dual user
+    response = {
         "access_token": access_token, 
         "token_type": "bearer",
         "user_type": user.role.value,
         "user_id": user.id
     }
+    
+    # Add dual system specific fields if applicable
+    if hasattr(user, 'is_individual_teacher'):
+        response["is_individual_teacher"] = user.is_individual_teacher
+        response["is_institutional_admin"] = user.is_institutional_admin
+        response["current_role_context"] = user.current_role_context
+    
+    return response
 
 @router.post("/google", response_model=schemas.Token)
 async def google_auth(request: schemas.GoogleAuthRequest, db: Session = Depends(get_db)):

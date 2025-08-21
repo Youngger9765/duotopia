@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Users, BookOpen, Copy, Edit, Trash2, ChevronLeft, Search, Activity, Clock, FileText, Eye, ChevronRight, DollarSign } from 'lucide-react'
+import { Plus, Users, BookOpen, Copy, Edit, Trash2, ChevronLeft, Search, Activity, Clock, FileText, Eye, ChevronRight, DollarSign, X, Edit2 } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface Student {
@@ -46,6 +46,15 @@ interface LessonContent {
   objectives?: string[]
 }
 
+const activityTypeMap: Record<string, string> = {
+  reading_assessment: '錄音集',
+  speaking_practice: '口說練習',
+  speaking_scenario: '情境對話',
+  listening_cloze: '聽力填空',
+  sentence_making: '造句練習',
+  speaking_quiz: '口說測驗'
+}
+
 export default function ClassroomDetail() {
   const { classroomId } = useParams()
   const navigate = useNavigate()
@@ -73,10 +82,25 @@ export default function ClassroomDetail() {
   const [showAddLesson, setShowAddLesson] = useState(false)
   const [showLessonPreview, setShowLessonPreview] = useState(false)
   const [showLessonEditor, setShowLessonEditor] = useState(false)
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([])
+  const [showAssignStudents, setShowAssignStudents] = useState(false)
+  const [allClassrooms, setAllClassrooms] = useState<any[]>([])
 
   useEffect(() => {
     fetchClassroomDetails()
+    fetchAllClassrooms()
   }, [classroomId])
+
+  const fetchAllClassrooms = async () => {
+    try {
+      const response = await api.get('/api/individual/classrooms')
+      setAllClassrooms(response.data)
+    } catch (error) {
+      console.error('Failed to fetch all classrooms:', error)
+    }
+  }
 
   const fetchClassroomDetails = async () => {
     try {
@@ -107,6 +131,20 @@ export default function ClassroomDetail() {
     }
   }
 
+  const handleDeleteLesson = async (lessonId: string) => {
+    try {
+      if (!selectedCourse) return
+      await api.delete(`/api/individual/courses/${selectedCourse.id}/lessons/${lessonId}`)
+      setLessons(prev => prev.filter(l => l.id !== lessonId))
+      if (selectedLesson?.id === lessonId) {
+        setSelectedLesson(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete lesson:', error)
+      alert('刪除單元失敗')
+    }
+  }
+
   // Auto-select first course if none selected
   useEffect(() => {
     if (!selectedCourse && courses.length > 0) {
@@ -114,7 +152,7 @@ export default function ClassroomDetail() {
     }
   }, [selectedCourse, courses.length])
 
-  // Fetch units when course is selected
+  // Fetch lessons when course is selected
   useEffect(() => {
     if (selectedCourse) {
       fetchCourseLessons(selectedCourse.id)
@@ -187,11 +225,27 @@ export default function ClassroomDetail() {
   const renderStudentsTab = () => (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium">班級學生</h2>
-        <Button onClick={() => setShowAddStudent(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          新增學生
-        </Button>
+        <div>
+          <h2 className="text-lg font-medium">班級學生</h2>
+          {selectedStudents.length > 0 && (
+            <p className="text-sm text-gray-500">已選擇 {selectedStudents.length} 位學生</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {selectedStudents.length > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAssignStudents(true)}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              分配班級 ({selectedStudents.length})
+            </Button>
+          )}
+          <Button onClick={() => setShowAddStudent(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            新增學生
+          </Button>
+        </div>
       </div>
 
       {students.length === 0 ? (
@@ -220,6 +274,9 @@ export default function ClassroomDetail() {
                   Email
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  註冊日期
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   付款狀態
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -235,6 +292,17 @@ export default function ClassroomDetail() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {student.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {student.enrolled_at ? (() => {
+                      const date = new Date(student.enrolled_at)
+                      const year = date.getFullYear()
+                      const month = String(date.getMonth() + 1).padStart(2, '0')
+                      const day = String(date.getDate()).padStart(2, '0')
+                      const hours = String(date.getHours()).padStart(2, '0')
+                      const minutes = String(date.getMinutes()).padStart(2, '0')
+                      return `${year}/${month}/${day} ${hours}:${minutes}`
+                    })() : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -404,7 +472,7 @@ export default function ClassroomDetail() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            // Edit course logic here
+                            setEditingCourse(course)
                           }}
                           className="p-1 hover:bg-gray-200 rounded"
                         >
@@ -498,7 +566,7 @@ export default function ClassroomDetail() {
                                   <h4 className="text-sm font-medium text-gray-900 truncate">{lesson.title}</h4>
                                   <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                      {lesson.activity_type}
+                                      {activityTypeMap[lesson.activity_type] || lesson.activity_type}
                                     </span>
                                     <span className="flex items-center">
                                       <Clock className="w-3 h-3 mr-1" />
@@ -518,7 +586,7 @@ export default function ClassroomDetail() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    // Edit unit logic here
+                                    setEditingLesson(lesson)
                                   }}
                                   className="p-1 hover:bg-gray-200 rounded"
                                 >
@@ -556,7 +624,7 @@ export default function ClassroomDetail() {
                       <h3 className="text-lg font-medium">{selectedLesson.title}</h3>
                       <div className="mt-1 flex items-center space-x-3 text-sm text-gray-500">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                          {selectedLesson.activity_type}
+                          {activityTypeMap[selectedLesson.activity_type] || selectedLesson.activity_type}
                         </span>
                         <span>第 {selectedLesson.lesson_number} 課</span>
                         <span className="flex items-center">
@@ -736,7 +804,7 @@ export default function ClassroomDetail() {
                         <h4 className="font-medium">{course.title}</h4>
                         <p className="text-sm text-gray-600 mt-1">{course.description}</p>
                         <p className="text-sm text-gray-500 mt-2">單元數: {course.lesson_count}</p>
-                        {course.pricing_per_unit && (
+                        {course.pricing_per_lesson && (
                           <p className="text-sm text-green-600 mt-1">${course.pricing_per_lesson}/堂</p>
                         )}
                       </div>
@@ -756,6 +824,314 @@ export default function ClassroomDetail() {
                 關閉
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新增單元對話框 */}
+      {showAddLesson && selectedCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowAddLesson(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">新增單元</h2>
+              <button
+                onClick={() => setShowAddLesson(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              try {
+                await api.post(`/api/individual/courses/${selectedCourse.id}/lessons`, {
+                  lesson_number: lessons.length + 1,
+                  title: formData.get('title'),
+                  activity_type: formData.get('activity_type'),
+                  time_limit_minutes: Number(formData.get('time_limit_minutes')),
+                  content: {}  // 初始化為空內容
+                })
+                setShowAddLesson(false)
+                fetchCourseLessons(selectedCourse.id)
+              } catch (error: any) {
+                console.error('Failed to create lesson:', error)
+                alert(error.response?.data?.detail || '建立單元失敗')
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    單元名稱
+                  </label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="例如：Unit 1 - My Family"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    活動類型
+                  </label>
+                  <select
+                    name="activity_type"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="reading_assessment">錄音集</option>
+                    <option value="speaking_practice" disabled>口說練習</option>
+                    <option value="speaking_scenario" disabled>情境對話</option>
+                    <option value="listening_cloze" disabled>聽力填空</option>
+                    <option value="sentence_making" disabled>造句練習</option>
+                    <option value="speaking_quiz" disabled>口說測驗</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    時間限制（分鐘）
+                  </label>
+                  <input
+                    name="time_limit_minutes"
+                    type="number"
+                    required
+                    defaultValue={60}
+                    min={1}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">課程：</span>{selectedCourse.title}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">單元編號：</span>第 {lessons.length + 1} 課
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setShowAddLesson(false)}>
+                  取消
+                </Button>
+                <Button type="submit">
+                  建立單元
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 編輯單元對話框 */}
+      {editingLesson && selectedCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setEditingLesson(null)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">編輯單元</h2>
+              <button
+                onClick={() => setEditingLesson(null)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              try {
+                await api.put(`/api/individual/courses/${selectedCourse.id}/lessons/${editingLesson.id}`, {
+                  title: formData.get('title'),
+                  activity_type: formData.get('activity_type'),
+                  time_limit_minutes: Number(formData.get('time_limit_minutes')),
+                  is_active: formData.get('is_active') === 'true'
+                })
+                setEditingLesson(null)
+                fetchCourseLessons(selectedCourse.id)
+              } catch (error) {
+                console.error('Failed to update lesson:', error)
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    單元名稱
+                  </label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    defaultValue={editingLesson.title}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    活動類型
+                  </label>
+                  <select
+                    name="activity_type"
+                    required
+                    defaultValue={editingLesson.activity_type}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="reading_assessment">錄音集</option>
+                    <option value="speaking_practice" disabled>口說練習</option>
+                    <option value="speaking_scenario" disabled>情境對話</option>
+                    <option value="listening_cloze" disabled>聽力填空</option>
+                    <option value="sentence_making" disabled>造句練習</option>
+                    <option value="speaking_quiz" disabled>口說測驗</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    時間限制（分鐘）
+                  </label>
+                  <input
+                    name="time_limit_minutes"
+                    type="number"
+                    required
+                    defaultValue={editingLesson.time_limit_minutes}
+                    min={1}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input
+                    name="is_active"
+                    type="checkbox"
+                    value="true"
+                    id="edit_is_active"
+                    defaultChecked={editingLesson.is_active}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="edit_is_active" className="ml-2 block text-sm text-gray-900">
+                    啟用單元
+                  </label>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">課程：</span>{selectedCourse.title}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">單元編號：</span>第 {editingLesson.lesson_number} 課
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setEditingLesson(null)}>
+                  取消
+                </Button>
+                <Button type="submit">
+                  更新單元
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 編輯課程對話框 */}
+      {editingCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setEditingCourse(null)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">編輯課程</h2>
+              <button
+                onClick={() => setEditingCourse(null)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              try {
+                await api.put(`/api/individual/courses/${editingCourse.id}`, {
+                  title: formData.get('title'),
+                  description: formData.get('description'),
+                  difficulty_level: formData.get('difficulty_level'),
+                  pricing_per_lesson: Number(formData.get('pricing_per_lesson')) || null
+                })
+                setEditingCourse(null)
+                fetchClassroomDetails()
+              } catch (error: any) {
+                console.error('Failed to update course:', error)
+                alert(error.response?.data?.detail || '更新課程失敗')
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    課程名稱
+                  </label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    defaultValue={editingCourse.title}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    課程描述
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    defaultValue={editingCourse.description}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="請描述課程內容..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    難度等級
+                  </label>
+                  <select
+                    name="difficulty_level"
+                    defaultValue={editingCourse.difficulty_level}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">請選擇難度等級</option>
+                    <option value="preA">preA</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    每堂課價格
+                  </label>
+                  <input
+                    name="pricing_per_lesson"
+                    type="number"
+                    defaultValue={editingCourse.pricing_per_lesson}
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="例如：500"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setEditingCourse(null)}>
+                  取消
+                </Button>
+                <Button type="submit">
+                  更新課程
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

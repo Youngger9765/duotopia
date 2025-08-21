@@ -1,8 +1,10 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, ClipboardList, FileEdit, UserCog, ChevronLeft } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import StudentManagementOriginal from './StudentManagement'
+import { RoleSwitcher } from '@/components/RoleSwitcher'
+import { api } from '@/lib/api'
 
 // 使用完整版本的 StudentManagement 組件
 function StudentManagement() {
@@ -20,6 +22,20 @@ function TeacherDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const [roleInfo, setRoleInfo] = useState<any>(null)
+  
+  useEffect(() => {
+    fetchRoleInfo()
+  }, [])
+  
+  const fetchRoleInfo = async () => {
+    try {
+      const response = await api.get('/api/role/current')
+      setRoleInfo(response.data)
+    } catch (error) {
+      console.error('Failed to fetch role info:', error)
+    }
+  }
   
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -35,60 +51,74 @@ function TeacherDashboard() {
     )
   }
 
-  const navItems = [
-    { path: '/teacher', label: '總覽', icon: Home },
+  // Build navigation items based on role
+  const getNavItems = () => {
+    const items = [
+      { path: '/teacher', label: '總覽', icon: Home },
+    ]
     
-    // 學校負責人管理區
-    { type: 'section', label: '學校負責人管理' },
-    { 
-      path: '/teacher/institutions', 
-      label: '學校管理', 
-      icon: Building2,
-      subItems: [
-        { label: '新增學校', icon: Plus, action: () => navigate('/teacher/institutions?action=add') },
-        { label: '學校列表', icon: Building2, action: () => navigate('/teacher/institutions') }
-      ]
-    },
-    { 
-      path: '/teacher/staff', 
-      label: '教職員管理', 
-      icon: UserCog,
-      subItems: [
-        { label: '新增教職員', icon: UserPlus, action: () => navigate('/teacher/staff?action=add') },
-        { label: '教職員列表', icon: Users, action: () => navigate('/teacher/staff') }
-      ]
-    },
-    { 
-      path: '/teacher/students', 
-      label: '學生管理', 
-      icon: GraduationCap,
-      subItems: [
-        { label: '新增學生', icon: UserPlus, action: () => navigate('/teacher/students?action=add') },
-        { label: '學生名單', icon: Users, action: () => navigate('/teacher/students?tab=students') }
-      ]
-    },
-    { 
-      path: '/teacher/courses', 
-      label: '課程管理', 
-      icon: BookOpen,
-      subItems: [
-        { label: '新增課程', icon: Plus, action: () => navigate('/teacher/courses?action=add') },
-        { label: '課程列表', icon: BookOpen, action: () => navigate('/teacher/courses') }
-      ]
-    },
+    // Institutional admin items
+    if (roleInfo?.current_role_context === 'institutional' || 
+        (roleInfo?.effective_role === 'admin' && roleInfo?.current_role_context !== 'individual')) {
+      items.push(
+        { type: 'section', label: '機構管理' },
+        { 
+          path: '/teacher/institutions', 
+          label: '學校管理', 
+          icon: Building2,
+          subItems: [
+            { label: '新增學校', icon: Plus, action: () => navigate('/teacher/institutions?action=add') },
+            { label: '學校列表', icon: Building2, action: () => navigate('/teacher/institutions') }
+          ]
+        },
+        { 
+          path: '/teacher/staff', 
+          label: '教職員管理', 
+          icon: UserCog,
+          subItems: [
+            { label: '新增教職員', icon: UserPlus, action: () => navigate('/teacher/staff?action=add') },
+            { label: '教職員列表', icon: Users, action: () => navigate('/teacher/staff') }
+          ]
+        }
+      )
+    }
     
-    // 老師管理區
-    { type: 'section', label: '老師管理' },
-    { 
-      path: '/teacher/classrooms', 
-      label: '教室管理', 
-      icon: Users,
-      subItems: [
-        { label: '新增教室', icon: Plus, action: () => navigate('/teacher/classrooms?action=add') },
-        { label: '教室列表', icon: School, action: () => navigate('/teacher/classrooms') }
-      ]
-    },
-  ]
+    // Both institutional and individual teacher items
+    items.push(
+      { type: 'section', label: '教學管理' },
+      { 
+        path: '/teacher/classrooms', 
+        label: '教室管理', 
+        icon: Users,
+        subItems: [
+          { label: '新增教室', icon: Plus, action: () => navigate('/teacher/classrooms?action=add') },
+          { label: '教室列表', icon: School, action: () => navigate('/teacher/classrooms') }
+        ]
+      },
+      { 
+        path: '/teacher/students', 
+        label: '學生管理', 
+        icon: GraduationCap,
+        subItems: [
+          { label: '新增學生', icon: UserPlus, action: () => navigate('/teacher/students?action=add') },
+          { label: '學生名單', icon: Users, action: () => navigate('/teacher/students?tab=students') }
+        ]
+      },
+      { 
+        path: '/teacher/courses', 
+        label: '課程管理', 
+        icon: BookOpen,
+        subItems: [
+          { label: '新增課程', icon: Plus, action: () => navigate('/teacher/courses?action=add') },
+          { label: '課程列表', icon: BookOpen, action: () => navigate('/teacher/courses') }
+        ]
+      }
+    )
+    
+    return items
+  }
+  
+  const navItems = roleInfo ? getNavItems() : []
   
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
@@ -215,7 +245,7 @@ function TeacherDashboard() {
                 {!sidebarCollapsed ? (
                   <>
                     <div className="flex items-center">
-                      <div>
+                      <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
                           王老師
                         </div>
@@ -227,9 +257,15 @@ function TeacherDashboard() {
                         </div>
                       </div>
                     </div>
+                    {/* Role Switcher */}
+                    {roleInfo?.has_multiple_roles && (
+                      <div className="mt-3 mb-3">
+                        <RoleSwitcher />
+                      </div>
+                    )}
                     <button
                       onClick={handleLogout}
-                      className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       登出
@@ -473,7 +509,7 @@ function TeacherOverview() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">陳小明 - Unit 3 Speaking</p>
+                  <p className="font-medium text-gray-900">陳小明 - Lesson 3 Speaking</p>
                   <p className="text-gray-500">六年一班 · 5分鐘前</p>
                 </div>
                 <Button size="sm" variant="outline">批改</Button>

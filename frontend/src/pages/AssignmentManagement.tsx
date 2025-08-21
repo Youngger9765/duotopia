@@ -67,7 +67,7 @@ function AssignmentManagement() {
   const [assignments, setAssignments] = useState<Assignment[]>([
     {
       id: '1',
-      title: 'Unit 3 - Speaking Practice',
+      title: 'Lesson 3 - Speaking Practice',
       description: '錄音練習：課文朗讀與對話',
       classId: '1',
       className: '六年一班',

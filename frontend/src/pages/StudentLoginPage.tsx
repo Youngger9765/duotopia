@@ -23,15 +23,15 @@ function StudentLoginPage() {
     
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/students/teachers/search?email=${teacherEmail}`
+        `${API_BASE_URL}/api/student-login/teachers/search?email=${teacherEmail}`
       )
       setTeacherId(response.data.id)
       
-      // Get teacher's classes
-      const classesResponse = await axios.get(
-        `${API_BASE_URL}/api/students/teachers/${response.data.id}/classes`
+      // Get teacher's classrooms
+      const classroomsResponse = await axios.get(
+        `${API_BASE_URL}/api/student-login/teachers/${response.data.id}/classrooms`
       )
-      setClasses(classesResponse.data)
+      setClasses(classroomsResponse.data)
       setStep(2)
     } catch (err) {
       setError('找不到此老師的Email')
@@ -44,7 +44,7 @@ function StudentLoginPage() {
     
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/students/classes/${classId}/students`
+        `${API_BASE_URL}/api/student-login/classrooms/${classId}/students`
       )
       setStudents(response.data)
       setStep(3)
@@ -63,7 +63,7 @@ function StudentLoginPage() {
     setError('')
     
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/students/verify-password`, {
+      const response = await axios.post(`${API_BASE_URL}/api/student-login/verify-password`, {
         student_id: selectedStudent,
         password: password
       })
@@ -112,10 +112,10 @@ function StudentLoginPage() {
               <div className="flex justify-center">
                 <button
                   type="button"
-                  onClick={() => setTeacherEmail('teacher1@duotopia.com')}
+                  onClick={() => setTeacherEmail('teacher@individual.com')}
                   className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
                 >
-                  teacher1@duotopia.com
+                  teacher@individual.com
                 </button>
               </div>
             </form>
@@ -219,7 +219,7 @@ function StudentLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
               <p className="text-sm text-gray-500">
-                測試密碼統一為: 20090828
+                預設密碼為您的生日（YYYYMMDD格式）
               </p>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <Button type="submit" className="w-full">
@@ -250,6 +250,32 @@ function StudentLoginPage() {
           </div>
         </div>
         {renderStep()}
+        
+        {/* 測試帳號小抄 */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md">
+            <h3 className="text-sm font-semibold text-yellow-800 mb-2">🎓 測試帳號小抄</h3>
+            <div className="text-xs text-yellow-700 space-y-2">
+              <div>
+                <strong>老師 Email:</strong> teacher@individual.com
+              </div>
+              <div>
+                <strong>教室:</strong> 測試教室A
+              </div>
+              <div className="pt-2 border-t border-yellow-200">
+                <strong>學生帳號：</strong>
+                <ul className="mt-1 space-y-1">
+                  <li>• 張小明 - 密碼: 20100101</li>
+                  <li>• 李小華 - 密碼: 20110215</li>
+                  <li>• 王小美 - 密碼: 20100820</li>
+                </ul>
+              </div>
+              <div className="text-xs pt-2 opacity-75">
+                💡 密碼格式：YYYYMMDD（生日）
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

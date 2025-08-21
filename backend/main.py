@@ -5,7 +5,7 @@ import logging
 
 from config import settings
 from database import engine, Base
-from routers import auth, teachers, students, admin
+from routers import auth, teachers, students, admin, role_management, institutional, individual, student_login
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +43,10 @@ app.include_router(auth.router)
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(admin.router)
+app.include_router(role_management.router)
+app.include_router(institutional.router)
+app.include_router(individual.router)
+app.include_router(student_login.router)
 
 @app.get("/")
 async def root():
