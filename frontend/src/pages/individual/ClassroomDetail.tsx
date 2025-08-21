@@ -28,7 +28,7 @@ interface Course {
 
 interface Lesson {
   id: string
-  unit_number: number
+  lesson_number: number
   title: string
   activity_type: string
   time_limit_minutes: number
@@ -432,7 +432,7 @@ export default function ClassroomDetail() {
                       <ChevronRight className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => setShowAddLesson(true))
+                      onClick={() => setShowAddLesson(true)}
                       className="p-2 hover:bg-gray-100 rounded-md mt-2"
                       title="新增單元"
                     >
@@ -454,7 +454,7 @@ export default function ClassroomDetail() {
                           新增單元
                         </Button>
                         <button
-                          onClick={() => setLessonPanelCollapsed(true))
+                          onClick={() => setLessonPanelCollapsed(true)}
                           className="p-1 hover:bg-gray-100 rounded"
                           title="收合面板"
                         >
@@ -468,7 +468,7 @@ export default function ClassroomDetail() {
                         type="text"
                         placeholder="搜尋單元..."
                         value={searchLessonsTerm}
-                        onChange={(e) => setSearchLessonsTerm(e.target.value))
+                        onChange={(e) => setSearchLessonsTerm(e.target.value)}
                         className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                       />
                     </div>
@@ -482,7 +482,7 @@ export default function ClassroomDetail() {
                         {currentCourseLessons.map((lesson) => (
                           <div 
                             key={lesson.id} 
-                            onClick={() => setSelectedLesson(lesson))
+                            onClick={() => setSelectedLesson(lesson)}
                             className={`p-3 hover:bg-gray-50 cursor-pointer ${
                               selectedLesson?.id === lesson.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                             }`}
@@ -569,14 +569,14 @@ export default function ClassroomDetail() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setShowLessonPreview(true))
+                        onClick={() => setShowLessonPreview(true)}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         預覽
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={() => setShowLessonEditor(true))
+                        onClick={() => setShowLessonEditor(true)}
                       >
                         編輯內容
                       </Button>

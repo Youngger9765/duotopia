@@ -20,7 +20,7 @@ interface Course {
 
 interface Lesson {
   id: string
-  unit_number: number
+  lesson_number: number
   title: string
   activity_type: string
   time_limit_minutes: number
@@ -460,14 +460,14 @@ export default function IndividualCourses() {
                     <Button 
                       size="sm" 
                       variant="outline"
-                      onClick={() => setShowLessonPreview(true))
+                      onClick={() => setShowLessonPreview(true)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
                       預覽
                     </Button>
                     <Button 
                       size="sm"
-                      onClick={() => setShowLessonEditor(true))
+                      onClick={() => setShowLessonEditor(true)}
                     >
                       編輯內容
                     </Button>
