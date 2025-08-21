@@ -13,43 +13,9 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-        cache-dependency-path: backend/requirements.txt
-    
-    - name: Install frontend dependencies
-      run: npm ci
-    
-    - name: Install backend dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio
-    
-    - name: Run frontend tests
-      run: npm test --if-present
-    
-    - name: Run backend tests
-      run: |
-        cd backend
-        pytest --tb=short
-    
-    - name: Build frontend
-      run: npm run build
+    name: Run Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
 
   deploy:
     needs: test
@@ -91,7 +57,9 @@ jobs:
           --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:latest \
           --region ${{ env.REGION }} \
           --platform managed \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --set-env-vars "PROJECT_ID=${{ env.PROJECT_ID }}" \
+          --set-secrets "DATABASE_URL=database-url:latest,SECRET_KEY=secret-key:latest,OPENAI_API_KEY=openai-api-key:latest"
     
     - name: Deploy Frontend to Cloud Run
       run: |
@@ -99,7 +67,8 @@ jobs:
           --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:latest \
           --region ${{ env.REGION }} \
           --platform managed \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --set-env-vars "VITE_API_URL=https://duotopia-backend-xxxxx.a.run.app"
 
   terraform:
     runs-on: ubuntu-latest

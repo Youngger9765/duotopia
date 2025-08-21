@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Search, Edit2, Trash2, Users, Upload, Download, X, Eye, Mail, Calendar, Key, RotateCcw } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Users, Upload, Download, X, Eye, Mail, Calendar, Key, RotateCcw, Copy, MoreVertical } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Student {
   id: string
@@ -234,10 +241,10 @@ export default function IndividualStudents() {
                 />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                姓名
+                學生資料
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email / 生日
+                所屬班級
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 加入方式
@@ -248,7 +255,7 @@ export default function IndividualStudents() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 密碼狀態
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
             </tr>
@@ -270,17 +277,42 @@ export default function IndividualStudents() {
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{student.full_name}</div>
+                <td className="px-6 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{student.full_name}</div>
+                    <div className="text-sm text-gray-500 flex items-center mt-1">
+                      <Mail className="w-3 h-3 mr-1 text-gray-400" />
+                      {student.email || '未設定'}
+                    </div>
+                    <div className="text-sm text-gray-500 flex items-center mt-1">
+                      <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                      {student.birth_date}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 flex items-center">
-                    <Mail className="w-3 h-3 mr-1 text-gray-400" />
-                    {student.email}
-                  </div>
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <Calendar className="w-3 h-3 mr-1 text-gray-400" />
-                    {student.birth_date}
+                  <div className="space-y-1">
+                    <div>
+                      {student.classroom_ids && student.classroom_ids.length > 0 ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          已分配
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                          未分配
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setAssigningStudent(student)
+                        await fetchStudentClassrooms(student.id)
+                      }}
+                      className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <Users className="w-3 h-3 mr-1" />
+                      分配
+                    </button>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -291,68 +323,85 @@ export default function IndividualStudents() {
                     {student.learning_goals || '-'}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                <td className="px-6 py-4 whitespace-nowrap">
                   {student.is_default_password ? (
-                    <div className="flex items-center text-green-600">
-                      <Key className="w-4 h-4 mr-1" />
-                      <span>預設密碼</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-green-600 text-sm">
+                        <Key className="w-4 h-4 mr-1" />
+                        <span>預設密碼</span>
+                      </div>
                       {student.default_password && (
-                        <span className="ml-2 text-xs font-mono bg-gray-100 px-2 py-1 rounded">
-                          {student.default_password}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                            {student.default_password}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(student.default_password || '')
+                              toast({
+                                title: "已複製",
+                                description: "密碼已複製到剪貼簿"
+                              })
+                            }}
+                            className="text-gray-400 hover:text-gray-600 p-1"
+                            title="複製密碼"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center text-blue-600">
+                    <div className="flex items-center text-blue-600 text-sm">
                       <Key className="w-4 h-4 mr-1" />
                       <span>自訂密碼</span>
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex flex-col space-y-1">
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <div className="flex items-center justify-center space-x-2">
                     <button
                       onClick={() => setViewingStudent(student)}
-                      className="text-blue-600 hover:text-blue-900 flex items-center justify-end"
+                      className="text-blue-600 hover:text-blue-900 p-1"
+                      title="查看"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
-                      查看
-                    </button>
-                    <button
-                      onClick={async () => {
-                        setAssigningStudent(student)
-                        await fetchStudentClassrooms(student.id)
-                      }}
-                      className="text-green-600 hover:text-green-900 flex items-center justify-end"
-                    >
-                      <Users className="w-4 h-4 mr-1" />
-                      分配班級
+                      <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setEditingStudent(student)}
-                      className="text-blue-600 hover:text-blue-900 flex items-center justify-end"
+                      className="text-blue-600 hover:text-blue-900 p-1"
+                      title="編輯"
                     >
-                      <Edit2 className="w-4 h-4 mr-1" />
-                      編輯
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleResetPassword(student)}
-                      className="text-orange-600 hover:text-orange-900 flex items-center justify-end"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-1" />
-                      重置密碼
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('確定要刪除此學生嗎？')) {
-                          handleDeleteStudent(student.id)
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-900 flex items-center justify-end"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      刪除
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="text-gray-600 hover:text-gray-900 p-1">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleResetPassword(student)}
+                          className="text-orange-600"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          重置密碼
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (window.confirm('確定要刪除此學生嗎？')) {
+                              handleDeleteStudent(student.id)
+                            }
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          刪除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>

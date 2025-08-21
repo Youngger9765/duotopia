@@ -1,83 +1,87 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { authApi } from '@/lib/api'
-
-interface User {
-  id: string
-  email: string
-  full_name: string
-  role: 'admin' | 'teacher' | 'student'
-}
+import { authApi } from '@/api/auth'
+import type { User } from '@/types'
 
 interface AuthContextType {
   user: User | null
-  loading: boolean
+  isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  googleLogin: (idToken: string) => Promise<void>
-  studentLogin: (email: string, birthDate: string) => Promise<void>
   logout: () => void
+  roles: string[]
+  currentRole: string | null
+  switchRole: (role: string) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [roles, setRoles] = useState<string[]>([])
+  const [currentRole, setCurrentRole] = useState<string | null>(null)
 
   useEffect(() => {
-    validateToken()
+    const initAuth = async () => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const user = await authApi.validateToken(token)
+          setUser(user)
+        } catch (error) {
+          localStorage.removeItem('token')
+        }
+      }
+      setIsLoading(false)
+    }
+    initAuth()
   }, [])
 
-  const validateToken = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      const response = await authApi.validate()
-      setUser(response.data)
-    } catch (error) {
-      localStorage.removeItem('token')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const login = async (email: string, password: string) => {
-    const response = await authApi.login(email, password)
-    localStorage.setItem('token', response.data.access_token)
-    await validateToken()
-  }
-
-  const googleLogin = async (idToken: string) => {
-    const response = await authApi.googleLogin(idToken)
-    localStorage.setItem('token', response.data.access_token)
-    await validateToken()
-  }
-
-  const studentLogin = async (email: string, birthDate: string) => {
-    const response = await authApi.studentLogin(email, birthDate)
-    localStorage.setItem('token', response.data.access_token)
-    await validateToken()
+    try {
+      const response = await authApi.login(email, password)
+      localStorage.setItem('token', response.access_token)
+      setUser(response.user)
+      setRoles(response.roles)
+      setCurrentRole(response.roles[0] || null)
+    } catch (error) {
+      throw error
+    }
   }
 
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
+    setRoles([])
+    setCurrentRole(null)
+  }
+
+  const switchRole = (role: string) => {
+    if (roles.includes(role)) {
+      setCurrentRole(role)
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, googleLogin, studentLogin, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        roles,
+        currentRole,
+        switchRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
 }
