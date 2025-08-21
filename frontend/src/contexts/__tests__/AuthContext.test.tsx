@@ -16,11 +16,19 @@ vi.mock('@/api/auth');
 const TestComponent = () => {
   const { user, isLoading, login, logout } = useAuth();
   
+  const handleLogin = async () => {
+    try {
+      await login('test@example.com', 'password');
+    } catch (error) {
+      // 處理錯誤，避免未處理的 rejection
+    }
+  };
+  
   return (
     <div>
       <div data-testid="loading">{isLoading ? 'Loading' : 'Ready'}</div>
       <div data-testid="user">{user ? user.email : 'No user'}</div>
-      <button onClick={() => login('test@example.com', 'password')}>Login</button>
+      <button onClick={handleLogin}>Login</button>
       <button onClick={logout}>Logout</button>
     </div>
   );
@@ -100,6 +108,7 @@ describe('AuthContext', () => {
     });
 
     it('應該處理登入錯誤', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       (authApi.login as vi.Mock).mockRejectedValueOnce(new Error('Invalid credentials'));
 
       const user = userEvent.setup();
@@ -118,6 +127,8 @@ describe('AuthContext', () => {
       });
 
       expect(localStorage.getItem('token')).toBeNull();
+      
+      consoleSpy.mockRestore();
     });
   });
 
