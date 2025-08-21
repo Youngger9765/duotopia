@@ -1,6 +1,6 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Home, Users, GraduationCap, BookOpen, Building2, LogOut, Menu, X, UserCheck, Settings } from 'lucide-react'
+import { Home, GraduationCap, BookOpen, Building2, LogOut, Menu, X, UserCheck, Settings } from 'lucide-react'
 import { useState } from 'react'
 import InstitutionManagement from './InstitutionManagement'
 import TeacherManagement from './TeacherManagement'

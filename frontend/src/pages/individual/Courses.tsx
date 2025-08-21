@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Plus, Search, BookOpen, Clock, Users, Edit2, Trash2, Eye, Activity, X, FileText, Calendar, ChevronLeft, ChevronRight, DollarSign } from 'lucide-react'
+import { Plus, Search, Clock, Edit2, Trash2, Eye, Activity, X, FileText, ChevronLeft, ChevronRight, DollarSign } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface Course {
@@ -54,7 +54,6 @@ export default function IndividualCourses() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [showLessonPreview, setShowLessonPreview] = useState(false)
-  const [showLessonEditor, setShowLessonEditor] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [searchCoursesTerm, setSearchCoursesTerm] = useState('')
@@ -62,10 +61,11 @@ export default function IndividualCourses() {
   const [courseFilter, setCourseFilter] = useState<string>('all') // all, public, classroom
   const [coursePanelCollapsed, setCoursePanelCollapsed] = useState(false)
   const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [courses, setCourses] = useState<Course[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [lessonContents, setLessonContents] = useState<LessonContent[]>([])
+  const [lessonContents] = useState<LessonContent[]>([])
+  const [, setLoading] = useState(false)
+  const [showLessonEditor, setShowLessonEditor] = useState(false)
 
   // Fetch data on component mount
   useEffect(() => {
@@ -531,7 +531,7 @@ export default function IndividualCourses() {
                     <div className="mb-6">
                       <h4 className="text-base font-medium text-gray-900 mb-2">教材資源</h4>
                       <div className="grid grid-cols-1 gap-3">
-                        {currentLessonContent.materials.map((material, index) => (
+                        {currentLessonContent.materials.map((material: any, index: number) => (
                           <div key={index} className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm">
                             <FileText className="w-5 h-5 text-gray-400 mr-3" />
                             <span className="text-sm text-gray-700">{material}</span>
@@ -550,7 +550,7 @@ export default function IndividualCourses() {
                       <h4 className="text-base font-medium text-gray-900 mb-2">學習目標</h4>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <ul className="list-disc list-inside space-y-1">
-                          {currentLessonContent.objectives.map((objective, index) => (
+                          {currentLessonContent.objectives.map((objective: any, index: number) => (
                             <li key={index} className="text-sm text-gray-700">{objective}</li>
                           ))}
                         </ul>
@@ -1048,6 +1048,57 @@ export default function IndividualCourses() {
                 </Button>
                 <Button onClick={() => setShowLessonPreview(false)}>
                   關閉
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 單元編輯對話框 */}
+      {showLessonEditor && selectedLesson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowLessonEditor(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">編輯單元內容</h2>
+              <button
+                onClick={() => setShowLessonEditor(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">{selectedLesson.title}</h3>
+                <div className="mt-2 flex items-center space-x-3 text-sm text-gray-500">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                    {activityTypeMap[selectedLesson.activity_type] || selectedLesson.activity_type}
+                  </span>
+                  <span>第 {selectedLesson.lesson_number} 課</span>
+                  <span className="flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {selectedLesson.time_limit_minutes} 分鐘
+                  </span>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">編輯單元內容</h4>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <textarea
+                    className="w-full h-40 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="請輸入單元內容..."
+                    defaultValue={currentLessonContent?.content || ''}
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button variant="outline" onClick={() => setShowLessonEditor(false)}>
+                  取消
+                </Button>
+                <Button onClick={() => setShowLessonEditor(false)}>
+                  儲存變更
                 </Button>
               </div>
             </div>

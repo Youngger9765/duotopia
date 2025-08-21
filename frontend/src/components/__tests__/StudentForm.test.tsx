@@ -2,7 +2,6 @@
  * StudentForm 元件單元測試
  * 測試學生表單的各種功能
  */
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Plus, Edit2, Trash2, Search, Building2, MapPin, Phone, Mail, Users, Calendar } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, Building2, MapPin, Phone, Mail, Calendar } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -34,7 +34,6 @@ function InstitutionManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [institutions, setInstitutions] = useState<Institution[]>([])
-  const [statsData, setStatsData] = useState<any>(null)
 
   // Handle URL query parameters
   useEffect(() => {
@@ -114,92 +113,9 @@ function InstitutionManagement() {
     return matchesSearch && matchesType
   })
 
-  // Get stats for each institution from statsData
-  const getInstitutionStats = (institutionId: number) => {
-    if (!statsData || !statsData.schools) return { users: 0, students: 0, classes: 0, courses: 0 }
-    const schoolStats = statsData.schools.find((s: any) => s.id === institutionId)
-    return schoolStats || { users: 0, students: 0, classes: 0, courses: 0 }
-  }
 
-  const handleAddInstitution = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    
-    try {
-      const institutionData = {
-        name: formData.get('name') as string,
-        address: formData.get('address') as string || undefined,
-        phone: formData.get('phone') as string || undefined,
-        email: formData.get('email') as string || undefined
-      }
-      
-      await adminApi.createSchool(institutionData)
-      toast({
-        title: "成功",
-        description: "機構已新增",
-      })
-      setShowAddInstitution(false)
-      fetchInstitutions()
-      fetchStats()
-    } catch (error: any) {
-      toast({
-        title: "錯誤",
-        description: error.response?.data?.detail || "無法新增機構",
-        variant: "destructive",
-      })
-    }
-  }
 
-  const handleUpdateInstitution = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingInstitution) return
-    
-    const formData = new FormData(e.target as HTMLFormElement)
-    
-    try {
-      const updateData = {
-        name: formData.get('name') as string,
-        address: formData.get('address') as string || undefined,
-        phone: formData.get('phone') as string || undefined,
-        email: formData.get('email') as string || undefined
-      }
-      
-      await adminApi.updateSchool(editingInstitution.id, updateData)
-      toast({
-        title: "成功",
-        description: "機構資料已更新",
-      })
-      setEditingInstitution(null)
-      fetchInstitutions()
-      fetchStats()
-    } catch (error: any) {
-      toast({
-        title: "錯誤",
-        description: error.response?.data?.detail || "無法更新機構資料",
-        variant: "destructive",
-      })
-    }
-  }
 
-  const handleDeleteInstitution = async (id: number) => {
-    try {
-      await adminApi.deleteSchool(id)
-      toast({
-        title: "成功",
-        description: "機構已刪除",
-      })
-      setShowDeleteConfirm(null)
-      fetchInstitutions()
-      fetchStats()
-    } catch (error: any) {
-      toast({
-        title: "錯誤",
-        description: error.response?.data?.detail || "無法刪除機構",
-        variant: "destructive",
-      })
-      setShowDeleteConfirm(null)
-    }
-  }
 
   if (loading) {
     return (
@@ -333,9 +249,9 @@ function InstitutionManagement() {
       {showAddInstitution && (
         <AddInstitutionModal
           onClose={() => setShowAddInstitution(false)}
-          onSave={async (newInstitution) => {
+          onSave={async (newInstitution: any) => {
             try {
-              const response = await adminApi.createSchool({
+              await adminApi.createSchool({
                 name: newInstitution.name,
                 address: newInstitution.address,
                 phone: newInstitution.phone,
@@ -383,9 +299,9 @@ function InstitutionManagement() {
         <EditInstitutionModal
           institution={editingInstitution}
           onClose={() => setEditingInstitution(null)}
-          onSave={async (updatedInstitution) => {
+          onSave={async (updatedInstitution: any) => {
             try {
-              await adminApi.updateSchool(updatedInstitution.id, {
+              await adminApi.updateSchool(String(updatedInstitution.id), {
                 name: updatedInstitution.name,
                 address: updatedInstitution.address,
                 phone: updatedInstitution.phone
@@ -446,7 +362,7 @@ function InstitutionManagement() {
                 variant="destructive"
                 onClick={async () => {
                   try {
-                    await adminApi.deleteSchool(showDeleteConfirm)
+                    await adminApi.deleteSchool(String(showDeleteConfirm))
                     // Reload institutions after deletion
                     const response = await adminApi.getSchools()
                     const schools = response.data.map((school: any) => ({

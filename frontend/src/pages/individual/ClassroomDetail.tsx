@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Users, BookOpen, Copy, Edit, Trash2, ChevronLeft, Search, Activity, Clock, FileText, Eye, ChevronRight, DollarSign, X, Edit2 } from 'lucide-react'
+import { Plus, Users, BookOpen, Copy, Edit, Trash2, ChevronLeft, Search, Activity, Clock, FileText, Eye, ChevronRight, DollarSign, X } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface Student {
@@ -11,6 +11,7 @@ interface Student {
   email: string
   enrollment_id: string
   payment_status: string
+  enrolled_at?: string
 }
 
 interface Course {
@@ -63,12 +64,13 @@ export default function ClassroomDetail() {
   const [courses, setCourses] = useState<Course[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [publicCourses, setPublicCourses] = useState<Course[]>([])
-  const [lessonContents, setLessonContents] = useState<LessonContent[]>([])
+  const [lessonContents] = useState<LessonContent[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'students' | 'courses'>('students')
   
   // Student management states
   const [showAddStudent, setShowAddStudent] = useState(false)
+  const [selectedStudents] = useState<string[]>([])
   
   // Course management states (three-panel design)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -78,29 +80,14 @@ export default function ClassroomDetail() {
   const [coursePanelCollapsed, setCoursePanelCollapsed] = useState(false)
   const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(false)
   const [showCopyModal, setShowCopyModal] = useState(false)
-  const [showAddCourse, setShowAddCourse] = useState(false)
   const [showAddLesson, setShowAddLesson] = useState(false)
-  const [showLessonPreview, setShowLessonPreview] = useState(false)
-  const [showLessonEditor, setShowLessonEditor] = useState(false)
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([])
-  const [showAssignStudents, setShowAssignStudents] = useState(false)
-  const [allClassrooms, setAllClassrooms] = useState<any[]>([])
 
   useEffect(() => {
     fetchClassroomDetails()
-    fetchAllClassrooms()
   }, [classroomId])
 
-  const fetchAllClassrooms = async () => {
-    try {
-      const response = await api.get('/api/individual/classrooms')
-      setAllClassrooms(response.data)
-    } catch (error) {
-      console.error('Failed to fetch all classrooms:', error)
-    }
-  }
 
   const fetchClassroomDetails = async () => {
     try {
@@ -131,19 +118,6 @@ export default function ClassroomDetail() {
     }
   }
 
-  const handleDeleteLesson = async (lessonId: string) => {
-    try {
-      if (!selectedCourse) return
-      await api.delete(`/api/individual/courses/${selectedCourse.id}/lessons/${lessonId}`)
-      setLessons(prev => prev.filter(l => l.id !== lessonId))
-      if (selectedLesson?.id === lessonId) {
-        setSelectedLesson(null)
-      }
-    } catch (error) {
-      console.error('Failed to delete lesson:', error)
-      alert('刪除單元失敗')
-    }
-  }
 
   // Auto-select first course if none selected
   useEffect(() => {
@@ -227,18 +201,18 @@ export default function ClassroomDetail() {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-lg font-medium">班級學生</h2>
-          {selectedStudents.length > 0 && (
-            <p className="text-sm text-gray-500">已選擇 {selectedStudents.length} 位學生</p>
+          {(selectedStudents?.length || 0) > 0 && (
+            <p className="text-sm text-gray-500">已選擇 {selectedStudents?.length || 0} 位學生</p>
           )}
         </div>
         <div className="flex gap-2">
-          {selectedStudents.length > 0 && (
+          {(selectedStudents?.length || 0) > 0 && (
             <Button 
               variant="outline" 
-              onClick={() => setShowAssignStudents(true)}
+              onClick={() => alert('功能開發中')}
             >
               <Users className="mr-2 h-4 w-4" />
-              分配班級 ({selectedStudents.length})
+              分配班級 ({selectedStudents?.length || 0})
             </Button>
           )}
           <Button onClick={() => setShowAddStudent(true)}>
@@ -354,7 +328,7 @@ export default function ClassroomDetail() {
                   <Copy className="mr-2 h-4 w-4" />
                   從公版複製
                 </Button>
-                <Button onClick={() => setShowAddCourse(true)}>
+                <Button onClick={() => alert('功能開發中')}>
                   <Plus className="mr-2 h-4 w-4" />
                   建立新課程
                 </Button>
@@ -637,14 +611,14 @@ export default function ClassroomDetail() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setShowLessonPreview(true)}
+                        onClick={() => alert('功能開發中')}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         預覽
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={() => setShowLessonEditor(true)}
+                        onClick={() => alert('功能開發中')}
                       >
                         編輯內容
                       </Button>
@@ -675,7 +649,7 @@ export default function ClassroomDetail() {
                       <div className="mb-6">
                         <h4 className="text-base font-medium text-gray-900 mb-2">教材資源</h4>
                         <div className="grid grid-cols-1 gap-3">
-                          {currentLessonContent.materials.map((material, index) => (
+                          {currentLessonContent.materials.map((material: any, index: number) => (
                             <div key={index} className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm">
                               <FileText className="w-5 h-5 text-gray-400 mr-3" />
                               <span className="text-sm text-gray-700">{material}</span>
@@ -694,7 +668,7 @@ export default function ClassroomDetail() {
                         <h4 className="text-base font-medium text-gray-900 mb-2">學習目標</h4>
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <ul className="list-disc list-inside space-y-1">
-                            {currentLessonContent.objectives.map((objective, index) => (
+                            {currentLessonContent.objectives.map((objective: any, index: number) => (
                               <li key={index} className="text-sm text-gray-700">{objective}</li>
                             ))}
                           </ul>

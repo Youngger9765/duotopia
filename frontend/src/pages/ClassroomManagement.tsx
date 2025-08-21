@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Plus, Edit2, Trash2, Search, UserPlus, MoreVertical, X, FileText, BookOpen, BookPlus, Check, Users } from 'lucide-react'
 import { teacherApi, adminApi } from '@/lib/api'
@@ -30,8 +30,18 @@ interface Course {
   schoolId: string
 }
 
+interface ClassroomFormData {
+  name: string
+  grade: string
+  schoolId: string
+}
+
+interface School {
+  id: string
+  name: string
+}
+
 function ClassroomManagement() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null)
@@ -43,11 +53,9 @@ function ClassroomManagement() {
   const [searchStudentTerm, setSearchStudentTerm] = useState('')
   const [selectedSchool, setSelectedSchool] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'courses' | 'students' | 'assignments'>('courses')
-  const [loading, setLoading] = useState(true)
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [schools, setSchools] = useState<any[]>([])
   const [classroomStudents, setClassroomStudents] = useState<Record<string, Student[]>>({})
-  const [isIndividual, setIsIndividual] = useState(false)
 
   // Handle URL query parameters
   useEffect(() => {
@@ -70,7 +78,7 @@ function ClassroomManagement() {
 
   const fetchClassrooms = async () => {
     try {
-      setLoading(true)
+      // setLoading(true)
       const response = await teacherApi.getClassrooms()
       const formattedClassrooms = response.data.map((cls: any) => ({
         id: cls.id,
@@ -92,7 +100,7 @@ function ClassroomManagement() {
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      // setLoading(false)
     }
   }
 
@@ -175,7 +183,7 @@ function ClassroomManagement() {
             className="px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">所有學校</option>
-            {schools.map(inst => (
+            {(schools || []).map(inst => (
               <option key={inst.id} value={inst.id}>{inst.name}</option>
             ))}
           </select>
@@ -341,7 +349,6 @@ function ClassroomManagement() {
               <div className="flex-1 overflow-hidden">
                 {activeTab === 'courses' && selectedClassroom && (
                   <CourseTabContent 
-                    selectedClassroom={selectedClassroom}
                     classroomCourses={classroomCourses[selectedClassroom.id] || []}
                     availableCourses={availableCourses.filter(course => course.schoolId === selectedClassroom.schoolId)}
                     onManageCourses={() => setShowManageCourses(true)}
@@ -412,7 +419,7 @@ function ClassroomManagement() {
           onSave={async (updatedClassroom) => {
             try {
               const updateData = {
-                name: updatedClass.name,
+                name: updatedClassroom.name,
                 grade_level: updatedClassroom.grade
               }
               
@@ -465,7 +472,6 @@ function ClassroomManagement() {
         <ManageCoursesModal
           classroomId={selectedClassroom.id}
           classroomName={selectedClassroom.name}
-          schoolId={selectedClassroom.schoolId}
           currentCourses={classroomCourses[selectedClassroom.id] || []}
           availableCourses={availableCourses.filter(course => course.schoolId === selectedClassroom.schoolId)}
           onClose={() => setShowManageCourses(false)}
@@ -482,7 +488,13 @@ function ClassroomManagement() {
   )
 }
 
-function AddClassroomModal({ onClose, onSave, schools }: any) {
+interface AddClassroomModalProps {
+  onClose: () => void
+  onSave: (classroom: ClassroomFormData) => Promise<void>
+  schools?: School[]
+}
+
+function AddClassroomModal({ onClose, onSave, schools }: AddClassroomModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     grade: '',
@@ -507,7 +519,7 @@ function AddClassroomModal({ onClose, onSave, schools }: any) {
             <select
               value={formData.schoolId}
               onChange={(e) => {
-                const inst = schools.find(i => i.id === e.target.value)
+                const inst = (schools || []).find(i => i.id === e.target.value)
                 setFormData({ 
                   ...formData, 
                   schoolId: e.target.value,
@@ -517,7 +529,7 @@ function AddClassroomModal({ onClose, onSave, schools }: any) {
               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
               <option value="">請選擇學校</option>
-              {schools.map(inst => (
+              {(schools || []).map(inst => (
                 <option key={inst.id} value={inst.id}>{inst.name}</option>
               ))}
             </select>
@@ -585,7 +597,13 @@ function AddClassroomModal({ onClose, onSave, schools }: any) {
   )
 }
 
-function EditClassroomModal({ classroomData, onClose, onSave }: any) {
+interface EditClassroomModalProps {
+  classroomData: Classroom
+  onClose: () => void
+  onSave: (classroom: Classroom) => Promise<void>
+}
+
+function EditClassroomModal({ classroomData, onClose, onSave }: EditClassroomModalProps) {
   const [formData, setFormData] = useState({
     name: classroomData.name,
     grade: classroomData.grade,
@@ -677,7 +695,14 @@ function EditClassroomModal({ classroomData, onClose, onSave }: any) {
   )
 }
 
-function AddStudentToClassroomModal({ classroomName, classroomId, onClose, onSave }: any) {
+interface AddStudentToClassroomModalProps {
+  classroomName: string
+  classroomId: string
+  onClose: () => void
+  onSave: (studentIds: string[]) => Promise<void>
+}
+
+function AddStudentToClassroomModal({ classroomName, onClose, onSave }: AddStudentToClassroomModalProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
 
@@ -760,9 +785,7 @@ function AddStudentToClassroomModal({ classroomName, classroomId, onClose, onSav
 }
 
 function ManageCoursesModal({ 
-  classroomId, 
   classroomName, 
-  schoolId,
   currentCourses, 
   availableCourses, 
   onClose, 
@@ -770,7 +793,6 @@ function ManageCoursesModal({
 }: { 
   classroomId: string
   classroomName: string
-  schoolId: string
   currentCourses: string[]
   availableCourses: Course[]
   onClose: () => void
@@ -861,12 +883,10 @@ function ManageCoursesModal({
 
 // Course Tab Content Component
 function CourseTabContent({ 
-  selectedClassroom, 
   classroomCourses, 
   availableCourses, 
   onManageCourses 
 }: {
-  selectedClassroom: Classroom
   classroomCourses: string[]
   availableCourses: Course[]
   onManageCourses: () => void
@@ -1013,11 +1033,10 @@ function StudentTabContent({
 
 // Assignment Tab Content Component
 function AssignmentTabContent({ 
-  classroomId, 
-  className 
+  classroomId
 }: {
   classroomId: string
-  className: string
+  classroomName: string
 }) {
   // Mock assignment data
   const assignments = [

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Plus, Search, FileText, Clock, Users, CheckCircle, AlertCircle, Calendar, Filter, Download } from 'lucide-react'
+import { Plus, Search, FileText, Users, AlertCircle, Calendar, Download } from 'lucide-react'
 
 interface Assignment {
   id: string
@@ -22,7 +22,6 @@ interface Assignment {
 function AssignmentManagement() {
   const [searchParams, setSearchParams] = useSearchParams()
   const classId = searchParams.get('classId')
-  const className = searchParams.get('className')
   
   const [showAddAssignment, setShowAddAssignment] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -64,7 +63,7 @@ function AssignmentManagement() {
     { id: '4', name: '國一甲班', institutionId: '3' }
   ]
 
-  const [assignments, setAssignments] = useState<Assignment[]>([
+  const [assignments] = useState<Assignment[]>([
     {
       id: '1',
       title: 'Lesson 3 - Speaking Practice',
@@ -331,7 +330,7 @@ function AssignmentManagement() {
         <AddAssignmentModal
           defaultClassId={classId}
           onClose={() => setShowAddAssignment(false)}
-          onSave={(newAssignment: any) => {
+          onSave={(_newAssignment: any) => {
             // Add new assignment logic
             setShowAddAssignment(false)
           }}

@@ -1,6 +1,6 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { BookOpen, FileText, TrendingUp, LogOut, Menu, X, Settings, User, Users } from 'lucide-react'
+import { BookOpen, FileText, TrendingUp, LogOut, Menu, X, Settings, Users } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
@@ -384,7 +384,7 @@ function StudentSettings({ toast }: { toast: any }) {
     setIsChangingPassword(true)
     
     try {
-      const response = await api.post('/api/student-login/change-password', {
+      await api.post('/api/student-login/change-password', {
         student_id: studentInfo.id,
         current_password: currentPassword,
         new_password: newPassword

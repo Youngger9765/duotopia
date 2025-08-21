@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Edit2, Trash2, Search, UserCheck, Mail, Phone, Calendar, Building2, Filter, Download, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, UserCheck, Mail, Phone, Calendar, Building2, Download, Upload } from 'lucide-react'
 
 interface Teacher {
   id: string
@@ -308,7 +308,7 @@ function TeacherManagement() {
         <AddTeacherModal
           institutions={institutions}
           onClose={() => setShowAddTeacher(false)}
-          onSave={(newTeacher) => {
+          onSave={(newTeacher: any) => {
             setTeachers([...teachers, {
               ...newTeacher,
               id: Date.now().toString(),
@@ -328,7 +328,7 @@ function TeacherManagement() {
           teacher={editingTeacher}
           institutions={institutions}
           onClose={() => setEditingTeacher(null)}
-          onSave={(updatedTeacher) => {
+          onSave={(updatedTeacher: any) => {
             setTeachers(teachers.map(t =>
               t.id === updatedTeacher.id ? updatedTeacher : t
             ))
@@ -364,7 +364,7 @@ function AddTeacherModal({ institutions, onClose, onSave }: any) {
   const removeSubject = (subject: string) => {
     setFormData({
       ...formData,
-      subjects: formData.subjects.filter(s => s !== subject)
+      subjects: formData.subjects.filter((s: any) => s !== subject)
     })
   }
 
@@ -448,7 +448,7 @@ function AddTeacherModal({ institutions, onClose, onSave }: any) {
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.subjects.map((subject, index) => (
+              {formData.subjects.map((subject: any, index: number) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
@@ -509,7 +509,7 @@ function EditTeacherModal({ teacher, institutions, onClose, onSave }: any) {
   const removeSubject = (subject: string) => {
     setFormData({
       ...formData,
-      subjects: formData.subjects.filter(s => s !== subject)
+      subjects: formData.subjects.filter((s: any) => s !== subject)
     })
   }
 
@@ -589,7 +589,7 @@ function EditTeacherModal({ teacher, institutions, onClose, onSave }: any) {
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.subjects.map((subject, index) => (
+              {formData.subjects.map((subject: any, index: number) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"

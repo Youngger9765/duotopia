@@ -1,5 +1,4 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { Home, Users, GraduationCap, BookOpen, LogOut, Menu, X, ChevronLeft } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { RoleSwitcher } from '@/components/RoleSwitcher'

@@ -43,7 +43,7 @@ export const ClassroomCard: React.FC<ClassroomCardProps> = ({
   const isFull = studentCount >= classroom.capacity
 
   return (
-    <Card role="article">
+    <Card>
       <CardHeader>
         <CardTitle>{classroom.name}</CardTitle>
         <p className="text-sm text-gray-500">{classroom.grade}</p>

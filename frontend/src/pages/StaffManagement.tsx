@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Plus, Search, Edit2, Trash2, X, UserCog, Mail, Phone, Building2, Shield, Calendar, MoreVertical } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, X, UserCog, Mail, Phone, Building2, Calendar } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 

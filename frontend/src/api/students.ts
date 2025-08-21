@@ -11,16 +11,16 @@ export const studentsApi = {
     return { ...student, id: 1 } as Student
   },
 
-  updateStudent: async (id: number, student: Partial<Student>): Promise<Student> => {
+  updateStudent: async (_id: number, student: Partial<Student>): Promise<Student> => {
     // Mock implementation
-    return { ...student, id } as Student
+    return { ...student, id: _id } as Student
   },
 
-  deleteStudent: async (id: number): Promise<void> => {
+  deleteStudent: async (_id: number): Promise<void> => {
     // Mock implementation
   },
 
-  resetPassword: async (id: number) => {
+  resetPassword: async (_id: number) => {
     // Mock implementation
     return {
       message: '密碼已重置',
@@ -30,9 +30,11 @@ export const studentsApi = {
 
   bulkAssignToClass: async (studentIds: number[], classId: number) => {
     // Mock implementation
+    console.log(`Assigning ${studentIds.length} students to class ${classId}`)
     return {
       success: true,
       assigned_count: studentIds.length,
+      class_id: classId,
     }
   },
 }

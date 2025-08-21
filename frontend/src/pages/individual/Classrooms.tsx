@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Users, DollarSign, Edit2, Trash2, Search, BarChart, Calendar, MapPin, X, UserPlus, Settings } from 'lucide-react'
+import { Plus, Users, DollarSign, Edit2, Trash2, Search, BarChart, Calendar, MapPin, X, UserPlus } from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface Classroom {

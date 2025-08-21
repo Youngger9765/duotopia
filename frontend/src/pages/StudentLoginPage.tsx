@@ -8,7 +8,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 function StudentLoginPage() {
   const [step, setStep] = useState(1)
   const [teacherEmail, setTeacherEmail] = useState('')
-  const [teacherId, setTeacherId] = useState('')
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedStudent, setSelectedStudent] = useState('')
   const [password, setPassword] = useState('')
@@ -25,7 +24,7 @@ function StudentLoginPage() {
       const response = await axios.get(
         `${API_BASE_URL}/api/student-login/teachers/search?email=${teacherEmail}`
       )
-      setTeacherId(response.data.id)
+      // setTeacherId(response.data.id)
       
       // Get teacher's classrooms
       const classroomsResponse = await axios.get(

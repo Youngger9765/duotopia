@@ -23,5 +23,9 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
+    onConsoleLog(log) {
+      // 忽略測試中的 console.error
+      if (log.includes('Invalid credentials')) return false
+    },
   },
 })

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Users, UserPlus, School, Plus, Search, Edit2, X, Check } from 'lucide-react'
+import { Users, School, Plus, Search, Edit2, X, Check } from 'lucide-react'
 import { adminApi, teacherApi, api } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -19,15 +19,6 @@ interface Student {
   schoolName: string
 }
 
-interface Classroom {
-  id: string
-  name: string
-  teacher: string
-  students: number
-  grade: string
-  schoolId: string
-  schoolName: string
-}
 
 function StudentManagement() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -278,7 +269,7 @@ function StudentManagement() {
           classrooms={classrooms}
         />
       ) : (
-        <ClassroomListView 
+        <ClassListView 
           showAddClassroom={showAddClassroom} 
           setShowAddClassroom={setShowAddClassroom}
           selectedSchool={selectedSchool}
@@ -291,7 +282,6 @@ function StudentManagement() {
 
 function StudentListView({ 
   students,
-  loading,
   showAddStudent, 
   setShowAddStudent,
   editingStudent,
@@ -307,6 +297,7 @@ function StudentListView({
   schools,
   classrooms
 }: any) {
+  const { toast } = useToast()
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   
   const filteredStudents = (students || []).filter((student: any) => {
@@ -347,7 +338,7 @@ function StudentListView({
       {/* Student List */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {filteredStudents.map((student) => (
+          {filteredStudents.map((student: any) => (
             <li key={student.id} className="hover:bg-gray-50">
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
@@ -459,16 +450,16 @@ function StudentListView({
         <EditStudentModal 
           student={editingStudent}
           onClose={() => setEditingStudent(null)}
-          onSave={async (updatedStudent: Student) => {
+          onSave={async (updatedStudent: any) => {
             try {
               const updateData = {
                 name: updatedStudent.name,
                 email: updatedStudent.email,
-                phone: updatedStudent.phone,
+                // phone: updatedStudent.phone,
                 birth_date: updatedStudent.birthDate,
                 parent_email: updatedStudent.parentEmail,
                 parent_phone: updatedStudent.parentPhone,
-                grade: updatedStudent.grade
+                // grade: updatedStudent.grade
               }
               
               await adminApi.updateStudent(updatedStudent.id, updateData)
@@ -494,25 +485,15 @@ function StudentListView({
         <AssignClassModal
           studentIds={selectedStudentsForAssign}
           students={students}
-          classrooms={classrooms}
+          classes={classrooms}
           onClose={() => {
             setShowAssignClassroom(false)
             setSelectedStudentsForAssign([])
             setSelectedStudents([])
           }}
-          onAssign={async (classroomId: string, classroomName: string) => {
+          onAssign={async () => {
             // Update students with new class
-            setStudents(students.map(student => {
-              if (selectedStudentsForAssign.includes(student.id)) {
-                return {
-                  ...student,
-                  classroomName: classroomName,
-                  classroomId: classroomId,
-                  status: '已分班' as const
-                }
-              }
-              return student
-            }))
+            fetchStudents()
             setShowAssignClassroom(false)
             setSelectedStudentsForAssign([])
             setSelectedStudents([])
@@ -524,6 +505,15 @@ function StudentListView({
 }
 
 function ClassListView({ showAddClass, setShowAddClass, selectedSchool, searchTerm }: any) {
+  interface Class {
+    id: string
+    name: string
+    teacher: string
+    students: number
+    grade: string
+    schoolId: string
+    schoolName: string
+  }
   const classes: Class[] = [
     { id: '1', name: '六年一班', teacher: '王老師', students: 24, grade: '6', schoolId: '1', schoolName: '台北總校' },
     { id: '2', name: '六年二班', teacher: '王老師', students: 22, grade: '6', schoolId: '1', schoolName: '台北總校' },
@@ -817,8 +807,8 @@ function AddStudentModal({ onClose, onSave }: any) {
     onSave({
       ...formData,
       id: Date.now().toString(),
-      classroomName: assignToClassroom && formData.classroomId ? '已分配' : '未分班',
-      status: assignToClassroom && formData.classroomId ? '已分班' : '待分班'
+      classroomName: assignToClass && formData.classroomId ? '已分配' : '未分班',
+      status: assignToClass && formData.classroomId ? '已分班' : '待分班'
     })
   }
 

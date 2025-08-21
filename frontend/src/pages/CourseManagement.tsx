@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Plus, Search, BookOpen, Clock, Users, MoreVertical, Edit2, Trash2, Eye, Activity, X, FileText, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Search, Users, Edit2, Trash2, Eye, Activity, X, FileText, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { teacherApi, adminApi } from '@/lib/api'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -53,7 +53,6 @@ function CourseManagement() {
   const [selectedSchool, setSelectedSchool] = useState<string>('all')
   const [coursePanelCollapsed, setCoursePanelCollapsed] = useState(false)
   const [activityPanelCollapsed, setActivityPanelCollapsed] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [courses, setCourses] = useState<Course[]>([])
   const [schools, setSchools] = useState<any[]>([])
   const [activities, setActivities] = useState<CourseActivity[]>([])
@@ -68,7 +67,7 @@ function CourseManagement() {
 
   const fetchCourses = async () => {
     try {
-      setLoading(true)
+      // setLoading(true)
       const response = await teacherApi.getCourses()
       const formattedCourses = response.data.map((course: any) => ({
         id: course.id,
@@ -90,7 +89,7 @@ function CourseManagement() {
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      // setLoading(false)
     }
   }
 
@@ -685,7 +684,7 @@ function CourseManagement() {
           courseId={selectedCourse.id}
           courseName={selectedCourse.title}
           onClose={() => setShowAddActivity(false)}
-          onSave={async (newActivity) => {
+          onSave={async (newActivity: any) => {
             try {
               // Map Chinese activity types to backend enums
               const typeMapping: Record<string, string> = {
@@ -711,12 +710,14 @@ function CourseManagement() {
                 time_limit_minutes: 30
               }
               
-              await teacherApi.createLesson(selectedCourse.id, activityData)
+              await teacherApi.createLesson(selectedCourse?.id || '', activityData)
               toast({
                 title: "成功",
                 description: "活動已建立",
               })
-              fetchCourseActivities(selectedCourse.id)
+              if (selectedCourse?.id) {
+                fetchCourseActivities(selectedCourse.id)
+              }
               setShowAddActivity(false)
             } catch (error: any) {
               toast({
@@ -977,7 +978,6 @@ function EditCourseModal({
 }
 
 function AddActivityModal({ 
-  courseId,
   courseName,
   onClose, 
   onSave 
@@ -985,7 +985,7 @@ function AddActivityModal({
   courseId: string
   courseName: string
   onClose: () => void
-  onSave: (activity: Partial<CourseActivity>) => void 
+  onSave: (activity: Partial<CourseActivity>) => Promise<void>
 }) {
   const [formData, setFormData] = useState({
     title: '',

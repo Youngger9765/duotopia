@@ -62,7 +62,7 @@ describe('useStudents Hook', () => {
 
   describe('查詢學生列表', () => {
     it('應該成功載入學生列表', async () => {
-      (studentsApi.getStudents as vi.Mock).mockResolvedValueOnce(mockStudents);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockStudents);
 
       const { result } = renderHook(() => useStudents(), {
         wrapper: createWrapper(),
@@ -83,7 +83,7 @@ describe('useStudents Hook', () => {
 
     it('應該處理載入錯誤', async () => {
       const error = new Error('Failed to fetch students');
-      (studentsApi.getStudents as vi.Mock).mockRejectedValueOnce(error);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
 
       const { result } = renderHook(() => useStudents(), {
         wrapper: createWrapper(),
@@ -108,8 +108,8 @@ describe('useStudents Hook', () => {
 
       const createdStudent = { id: 3, ...newStudent, teacher_id: 1 };
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.createStudent as vi.Mock).mockResolvedValueOnce(createdStudent);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.createStudent as ReturnType<typeof vi.fn>).mockResolvedValueOnce(createdStudent);
 
       const { result } = renderHook(() => useStudents(), {
         wrapper: createWrapper(),
@@ -132,8 +132,8 @@ describe('useStudents Hook', () => {
         birth_date: '2010-03-20',
       };
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.createStudent as vi.Mock).mockRejectedValueOnce(
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.createStudent as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
         new Error('Failed to create student')
       );
 
@@ -165,8 +165,8 @@ describe('useStudents Hook', () => {
         email: 'new_xiaoming@test.com',
       };
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.updateStudent as vi.Mock).mockResolvedValueOnce({
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.updateStudent as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ...mockStudents[0],
         ...updatedData,
       });
@@ -189,8 +189,8 @@ describe('useStudents Hook', () => {
 
   describe('刪除學生', () => {
     it('應該成功刪除學生', async () => {
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.deleteStudent as vi.Mock).mockResolvedValueOnce(undefined);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.deleteStudent as ReturnType<typeof vi.fn>).mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useStudents(), {
         wrapper: createWrapper(),
@@ -210,8 +210,8 @@ describe('useStudents Hook', () => {
 
   describe('重置密碼', () => {
     it('應該成功重置學生密碼', async () => {
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.resetPassword as vi.Mock).mockResolvedValueOnce({
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.resetPassword as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         message: '密碼已重置',
         default_password: '20100101',
       });
@@ -237,8 +237,8 @@ describe('useStudents Hook', () => {
       const studentIds = [1, 2];
       const classId = 5;
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.bulkAssignToClass as vi.Mock).mockResolvedValueOnce({
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.bulkAssignToClass as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         success: true,
         assigned_count: 2,
       });
@@ -262,8 +262,8 @@ describe('useStudents Hook', () => {
       const studentIds = [1, 2, 3];
       const classId = 5;
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
-      (studentsApi.bulkAssignToClass as vi.Mock).mockRejectedValueOnce(
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
+      (studentsApi.bulkAssignToClass as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
         new Error('Class is full')
       );
 
@@ -289,7 +289,7 @@ describe('useStudents Hook', () => {
 
   describe('搜尋和篩選', () => {
     it('應該根據關鍵字篩選學生', () => {
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
 
       const { result } = renderHook(() => useStudents({ search: '小明' }), {
         wrapper: createWrapper(),
@@ -297,7 +297,7 @@ describe('useStudents Hook', () => {
 
       waitFor(() => {
         expect(result.current.filteredStudents).toHaveLength(1);
-        expect(result.current.filteredStudents[0].name).toBe('張小明');
+        expect(result.current.filteredStudents?.[0].name).toBe('張小明');
       });
     });
 
@@ -307,7 +307,7 @@ describe('useStudents Hook', () => {
         { ...mockStudents[1], class_id: 2 },
       ];
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(studentsWithClass);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(studentsWithClass);
 
       const { result } = renderHook(() => useStudents({ classId: 1 }), {
         wrapper: createWrapper(),
@@ -315,12 +315,12 @@ describe('useStudents Hook', () => {
 
       waitFor(() => {
         expect(result.current.filteredStudents).toHaveLength(1);
-        expect(result.current.filteredStudents[0].class_id).toBe(1);
+        expect(result.current.filteredStudents?.[0].class_id).toBe(1);
       });
     });
 
     it('應該根據密碼狀態篩選學生', () => {
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(mockStudents);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(mockStudents);
 
       const { result } = renderHook(
         () => useStudents({ passwordStatus: 'custom' }),
@@ -331,7 +331,7 @@ describe('useStudents Hook', () => {
 
       waitFor(() => {
         expect(result.current.filteredStudents).toHaveLength(1);
-        expect(result.current.filteredStudents[0].name).toBe('李小華');
+        expect(result.current.filteredStudents?.[0].name).toBe('李小華');
       });
     });
   });
@@ -345,7 +345,7 @@ describe('useStudents Hook', () => {
         teacher_id: 1,
       }));
 
-      (studentsApi.getStudents as vi.Mock).mockResolvedValue(manyStudents);
+      (studentsApi.getStudents as ReturnType<typeof vi.fn>).mockResolvedValue(manyStudents);
 
       const { result } = renderHook(
         () => useStudents({ page: 1, pageSize: 10 }),

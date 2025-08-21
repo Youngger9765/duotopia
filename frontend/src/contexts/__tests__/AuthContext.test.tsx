@@ -2,8 +2,7 @@
  * AuthContext 單元測試
  * 測試認證相關的 Context 功能
  */
-import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthContext';
@@ -61,7 +60,7 @@ describe('AuthContext', () => {
       localStorage.setItem('token', mockToken);
 
       // Mock API 驗證
-      (authApi.validateToken as vi.Mock).mockResolvedValueOnce(mockUser);
+      (authApi.validateToken as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockUser);
 
       render(
         <AuthProvider>
@@ -86,7 +85,7 @@ describe('AuthContext', () => {
         roles: ['teacher']
       };
 
-      (authApi.login as vi.Mock).mockResolvedValueOnce(mockResponse);
+      (authApi.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
       const user = userEvent.setup();
       
@@ -109,7 +108,7 @@ describe('AuthContext', () => {
 
     it('應該處理登入錯誤', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      (authApi.login as vi.Mock).mockRejectedValueOnce(new Error('Invalid credentials'));
+      (authApi.login as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Invalid credentials'));
 
       const user = userEvent.setup();
       
@@ -138,7 +137,7 @@ describe('AuthContext', () => {
       const mockUser = { id: 1, email: 'test@example.com' };
       localStorage.setItem('token', 'test-token');
       
-      (authApi.validateToken as vi.Mock).mockResolvedValueOnce(mockUser);
+      (authApi.validateToken as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockUser);
 
       const user = userEvent.setup();
 
@@ -170,10 +169,10 @@ describe('AuthContext', () => {
         roles: ['individual_teacher', 'institutional_teacher']
       };
 
-      (authApi.login as vi.Mock).mockResolvedValueOnce(mockResponse);
+      (authApi.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
       const TestRoleComponent = () => {
-        const { user, roles, currentRole, switchRole, login } = useAuth();
+        const { roles, currentRole, switchRole, login } = useAuth();
         
         return (
           <div>

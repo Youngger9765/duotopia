@@ -1,8 +1,18 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Home, Users, FileText, LogOut, Menu, X, BarChart, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, ClipboardList, FileEdit, UserCog, ChevronLeft } from 'lucide-react'
+import { Home, Users, LogOut, Menu, X, GraduationCap, BookOpen, Building2, ChevronDown, ChevronRight, Plus, UserPlus, School, UserCog, ChevronLeft } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { LucideIcon } from 'lucide-react'
 import StudentManagementOriginal from './StudentManagement'
+
+
+interface LegacyNavigationItem {
+  path?: string;
+  label: string;
+  icon?: LucideIcon;
+  type?: string;
+  subItems?: { label: string; icon: LucideIcon; action: () => void }[];
+}
 import { RoleSwitcher } from '@/components/RoleSwitcher'
 import { api } from '@/lib/api'
 
@@ -52,8 +62,8 @@ function TeacherDashboard() {
   }
 
   // Build navigation items based on role
-  const getNavItems = () => {
-    const items = [
+  const getNavItems = (): LegacyNavigationItem[] => {
+    const items: LegacyNavigationItem[] = [
       { path: '/teacher', label: '總覽', icon: Home },
     ]
     
@@ -61,7 +71,7 @@ function TeacherDashboard() {
     if (roleInfo?.current_role_context === 'institutional' || 
         (roleInfo?.effective_role === 'admin' && roleInfo?.current_role_context !== 'individual')) {
       items.push(
-        { type: 'section', label: '機構管理' },
+        { label: '機構管理', type: 'section' },
         { 
           path: '/teacher/institutions', 
           label: '學校管理', 
@@ -85,7 +95,7 @@ function TeacherDashboard() {
     
     // Both institutional and individual teacher items
     items.push(
-      { type: 'section', label: '教學管理' },
+      { label: '教學管理', type: 'section' },
       { 
         path: '/teacher/classrooms', 
         label: '教室管理', 
@@ -142,7 +152,7 @@ function TeacherDashboard() {
             {/* Navigation */}
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
               <nav className="flex-1 px-2 space-y-1">
-                {navItems.map((item, idx) => {
+                {navItems.map((item: LegacyNavigationItem, idx: number) => {
                   // Handle section headers
                   if (item.type === 'section') {
                     return (
@@ -156,7 +166,9 @@ function TeacherDashboard() {
                     )
                   }
                   
-                  const Icon = item.icon
+                  if (!item.path) return null
+                  
+                  const Icon = item.icon || Home
                   const isExpanded = expandedItems.includes(item.path)
                   const isActive = location.pathname === item.path || 
                                  location.pathname.startsWith(item.path + '/')
@@ -167,8 +179,10 @@ function TeacherDashboard() {
                         {item.subItems ? (
                           <button
                             onClick={() => {
-                              toggleExpand(item.path)
-                              navigate(item.path)
+                              if (item.path) {
+                                toggleExpand(item.path)
+                                navigate(item.path)
+                              }
                             }}
                             className={`group w-full flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                               isActive
@@ -196,7 +210,7 @@ function TeacherDashboard() {
                           </button>
                         ) : (
                           <Link
-                            to={item.path}
+                            to={item.path || '/teacher'}
                             className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                               isActive
                                 ? 'bg-blue-100 text-blue-700'
@@ -218,7 +232,7 @@ function TeacherDashboard() {
                       {/* Sub-items */}
                       {item.subItems && isExpanded && !sidebarCollapsed && (
                         <div className="ml-8 space-y-1 mt-1">
-                          {item.subItems.map((subItem, index) => {
+                          {item.subItems.map((subItem: any, index: number) => {
                             const SubIcon = subItem.icon
                             return (
                               <button
@@ -306,7 +320,7 @@ function TeacherDashboard() {
             
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
               <nav className="px-2 space-y-1">
-                {navItems.map((item, idx) => {
+                {navItems.map((item: LegacyNavigationItem, idx: number) => {
                   // Handle section headers
                   if (item.type === 'section') {
                     return (
@@ -320,7 +334,9 @@ function TeacherDashboard() {
                     )
                   }
                   
-                  const Icon = item.icon
+                  if (!item.path) return null
+                  
+                  const Icon = item.icon || Home
                   const isExpanded = expandedItems.includes(item.path)
                   const isActive = location.pathname === item.path || 
                                  location.pathname.startsWith(item.path + '/')
@@ -331,8 +347,10 @@ function TeacherDashboard() {
                         {item.subItems ? (
                           <button
                             onClick={() => {
-                              toggleExpand(item.path)
-                              navigate(item.path)
+                              if (item.path) {
+                                toggleExpand(item.path)
+                                navigate(item.path)
+                              }
                             }}
                             className={`group w-full flex items-center px-2 py-2 text-base font-medium rounded-md ${
                               isActive
@@ -356,7 +374,7 @@ function TeacherDashboard() {
                           </button>
                         ) : (
                           <Link
-                            to={item.path}
+                            to={item.path || '/teacher'}
                             onClick={() => setSidebarOpen(false)}
                             className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
                               isActive
@@ -379,7 +397,7 @@ function TeacherDashboard() {
                       {/* Sub-items */}
                       {item.subItems && isExpanded && (
                         <div className="ml-10 space-y-1 mt-1">
-                          {item.subItems.map((subItem, index) => {
+                          {item.subItems.map((subItem: any, index: number) => {
                             const SubIcon = subItem.icon
                             return (
                               <button
