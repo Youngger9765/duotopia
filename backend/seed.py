@@ -58,14 +58,21 @@ def create_test_data(db: Session):
         {"email": "teacher2@duotopia.com", "full_name": "李老師"},
         {"email": "teacher3@duotopia.com", "full_name": "張老師"},
         {"email": "admin@duotopia.com", "full_name": "系統管理員", "role": models.UserRole.ADMIN},
+        # Add the three test accounts from frontend
+        {"email": "teacher@individual.com", "full_name": "個體戶老師", "password": "test123"},
+        {"email": "admin@institution.com", "full_name": "機構管理員", "role": models.UserRole.ADMIN, "password": "test123"},
+        {"email": "hybrid@test.com", "full_name": "雙重身份用戶", "role": models.UserRole.ADMIN, "password": "test123"},
     ]
     
     for data in teacher_data:
+        # Use custom password if provided, otherwise use default
+        password = data.get("password", "password123")
+        
         teacher = models.User(
             id=str(uuid.uuid4()),
             email=data["email"],
             full_name=data["full_name"],
-            hashed_password=get_password_hash("password123"),  # Default password for all test users
+            hashed_password=get_password_hash(password),
             role=data.get("role", models.UserRole.TEACHER),
             is_active=True
         )
