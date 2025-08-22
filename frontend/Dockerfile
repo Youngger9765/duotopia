@@ -13,6 +13,7 @@ COPY . .
 # Build with API URL
 ARG VITE_API_URL=https://duotopia-backend-206313737181.asia-east1.run.app
 ENV VITE_API_URL=$VITE_API_URL
+RUN echo "Building with API URL: $VITE_API_URL"
 RUN npm run build
 
 # Production stage
