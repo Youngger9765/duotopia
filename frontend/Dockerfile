@@ -18,6 +18,9 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Install gettext for envsubst
+RUN apk add --no-cache gettext
+
 # Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
@@ -27,4 +30,5 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 # Cloud Run uses PORT environment variable
 EXPOSE 8080
 
-CMD ["sh", "-c", "envsubst '$$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Use envsubst to replace ${PORT} and then start nginx
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
