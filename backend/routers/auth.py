@@ -22,10 +22,6 @@ import models
 import schemas
 import os
 
-# Request model for JSON login
-class LoginRequest(BaseModel):
-    email: str
-    password: str
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 

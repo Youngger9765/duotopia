@@ -86,8 +86,8 @@ def authenticate_student(db: Session, email: str, birth_date: str):
     return student
 
 def authenticate_dual_user(db: Session, email: str, password: str):
-    """Authenticate user from dual system"""
-    user = db.query(DualUser).filter(DualUser.email == email).first()
+    """Authenticate user from dual system - uses regular User model"""
+    user = db.query(models.User).filter(models.User.email == email).first()
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
