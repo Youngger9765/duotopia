@@ -83,7 +83,8 @@ jobs:
     - name: 'Get Backend URL'
       id: backend_url
       run: |
-        URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} --region ${{ env.REGION }} --format='value(status.url)')
+        # Always use the fixed staging backend URL
+        URL="https://duotopia-backend-staging-206313737181.asia-east1.run.app"
         echo "url=$URL" >> $GITHUB_OUTPUT
     
     - name: 'Build and Push Frontend'
