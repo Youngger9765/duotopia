@@ -6,6 +6,7 @@ from typing import Dict, Any
 import httpx
 from google.auth import jwt as google_jwt
 from google.auth.transport import requests
+from pydantic import BaseModel
 
 from database import get_db
 from auth import (
@@ -20,6 +21,11 @@ from auth import (
 import models
 import schemas
 import os
+
+# Request model for JSON login
+class LoginRequest(BaseModel):
+    email: str
+    password: str
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
