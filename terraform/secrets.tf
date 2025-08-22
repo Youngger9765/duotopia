@@ -3,7 +3,7 @@ resource "google_secret_manager_secret" "jwt_secret" {
   secret_id = "jwt-secret"
   
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -17,7 +17,7 @@ resource "google_secret_manager_secret" "google_client_secret" {
   secret_id = "google-client-secret"
   
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -31,7 +31,7 @@ resource "google_secret_manager_secret" "openai_api_key" {
   secret_id = "openai-api-key"
   
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -45,7 +45,7 @@ resource "google_secret_manager_secret" "sendgrid_api_key" {
   secret_id = "sendgrid-api-key"
   
   replication {
-    automatic = true
+    auto {}
   }
 }
 

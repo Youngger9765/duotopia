@@ -34,6 +34,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ 絕對不要讓用戶一直幫你抓錯！每個修復都要自己先測試過！**
 
+## 🔧 GCloud 配置設定
+
+### 確保使用正確的 Duotopia 專案
+```bash
+# 切換到 Duotopia 配置
+gcloud config configurations activate duotopia
+
+# 驗證當前配置
+gcloud config list
+# 應該顯示：
+# account = purpleice9765@msn.com
+# project = duotopia-469413
+
+# 或直接設定專案
+gcloud config set project duotopia-469413
+```
+
+### 重要提醒
+- **部署前必須確認專案**: `gcloud config get-value project`
+- **應該顯示**: `duotopia-469413`
+- **區域**: `asia-east1`
+
+### 🛡️ 隔離環境部署（避免專案互相干擾）
+```bash
+# 使用 Duotopia 專屬的 gcloud 環境
+export CLOUDSDK_CONFIG=$HOME/.gcloud-duotopia
+export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.11
+
+# 驗證環境
+gcloud config list
+# 應該顯示：
+# account = terraform-deploy@duotopia-469413.iam.gserviceaccount.com
+# project = duotopia-469413
+```
+
 ## 🏗️ 平台開發核心原則 - 不要繞遠路
 
 ### 🎯 核心教訓：直接用生產級方案，避免技術債

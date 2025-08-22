@@ -5,28 +5,26 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY frontend/package*.json ./frontend/
-COPY shared/package*.json ./shared/
-
-# Install dependencies
 RUN npm ci
 
 # Copy source code
-COPY frontend/ ./frontend/
-COPY shared/ ./shared/
+COPY . .
 
-# Build the application
-RUN npm run build:frontend
+# Build with API URL
+ARG VITE_API_URL=https://duotopia-backend-206313737181.asia-east1.run.app
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
 # Copy built files
-COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config template
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Cloud Run uses PORT environment variable
+EXPOSE 8080
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "envsubst '$$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

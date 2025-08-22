@@ -7,11 +7,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
-  backend "gcs" {
-    bucket = "duotopia-terraform-state"
-    prefix = "terraform/state"
-  }
 }
 
 provider "google" {
@@ -19,20 +14,9 @@ provider "google" {
   region  = var.region
 }
 
-# Enable required APIs
-resource "google_project_service" "apis" {
-  for_each = toset([
-    "cloudrun.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "sqladmin.googleapis.com",
-    "secretmanager.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "iam.googleapis.com",
-    "compute.googleapis.com",
-    "storage-api.googleapis.com",
-    "artifactregistry.googleapis.com"
-  ])
-  
-  service = each.value
-  disable_on_destroy = false
+# First, just create a storage bucket
+resource "google_storage_bucket" "test" {
+  name          = "${var.project_id}-test-bucket"
+  location      = var.region
+  force_destroy = true
 }

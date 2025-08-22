@@ -26,11 +26,10 @@ resource "google_sql_database_instance" "main" {
     
     ip_configuration {
       ipv4_enabled    = true
-      private_network = google_compute_network.vpc.id
       
       authorized_networks {
-        name  = "cloud-run"
-        value = "0.0.0.0/0"  # Will be restricted to Cloud Run IPs in production
+        name  = "allow-all"
+        value = "0.0.0.0/0"  # 允許所有 IP（包括 Cloud Run）
       }
     }
     
@@ -68,12 +67,12 @@ resource "google_secret_manager_secret" "db_connection" {
   secret_id = "database-url"
   
   replication {
-    automatic = true
+    auto {}
   }
 }
 
 resource "google_secret_manager_secret_version" "db_connection" {
   secret = google_secret_manager_secret.db_connection.id
   
-  secret_data = "postgresql://${var.db_user}:${var.db_password}@${google_sql_database_instance.main.private_ip_address}:5432/${google_sql_database.main.name}"
+  secret_data = "postgresql://${var.db_user}:${var.db_password}@${google_sql_database_instance.main.public_ip_address}:5432/${google_sql_database.main.name}"
 }

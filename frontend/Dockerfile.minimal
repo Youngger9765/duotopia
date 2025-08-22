@@ -1,0 +1,8 @@
+FROM nginx:alpine
+
+# 創建一個簡單的 HTML 頁面
+RUN echo '<!DOCTYPE html><html><head><title>Duotopia</title></head><body><h1>Duotopia Frontend</h1><p>Status: OK</p></body></html>' > /usr/share/nginx/html/index.html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
