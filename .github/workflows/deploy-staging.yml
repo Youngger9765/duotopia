@@ -1,0 +1,105 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ staging, develop ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: duotopia-469413
+  REGION: asia-east1
+  BACKEND_SERVICE: duotopia-backend-staging
+  FRONTEND_SERVICE: duotopia-frontend-staging
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+    - uses: actions/checkout@v4
+    
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+    
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v2'
+    
+    - name: 'Configure Docker'
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+    
+    - name: 'Build and Push Backend'
+      run: |
+        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:staging-${{ github.sha }} -f backend/Dockerfile backend/
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:staging-${{ github.sha }}
+    
+    - name: 'Deploy Backend to Cloud Run'
+      run: |
+        # Get database IP from Cloud SQL
+        DB_IP=$(gcloud sql instances describe duotopia-db-staging --format='value(ipAddresses[0].ipAddress)')
+        
+        # Deploy with all necessary environment variables
+        gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:staging-${{ github.sha }} \
+          --region ${{ env.REGION }} \
+          --platform managed \
+          --allow-unauthenticated \
+          --service-account duotopia-backend@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+          --set-env-vars "ENVIRONMENT=staging" \
+          --set-env-vars "GCP_PROJECT_ID=${{ env.PROJECT_ID }}" \
+          --set-env-vars "GCS_BUCKET_NAME=duotopia-469413-uploads" \
+          --set-env-vars "DATABASE_URL=postgresql://duotopia_user:DuotopiaStaging2024@${DB_IP}:5432/duotopia" \
+          --set-secrets "JWT_SECRET=jwt-secret:latest" \
+          --set-secrets "GOOGLE_CLIENT_ID=google-client-id:latest" \
+          --set-secrets "GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
+          --set-secrets "OPENAI_API_KEY=openai-api-key:latest" \
+          --set-secrets "SENDGRID_API_KEY=sendgrid-api-key:latest" \
+          --set-secrets "SECRET_KEY=jwt-secret:latest" \
+          --memory 1Gi \
+          --cpu 2 \
+          --max-instances 10 \
+          --min-instances 0
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    environment: staging
+    steps:
+    - uses: actions/checkout@v4
+    
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+    
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v2'
+    
+    - name: 'Configure Docker'
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+    
+    - name: 'Get Backend URL'
+      id: backend_url
+      run: |
+        URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} --region ${{ env.REGION }} --format='value(status.url)')
+        echo "url=$URL" >> $GITHUB_OUTPUT
+    
+    - name: 'Build and Push Frontend'
+      run: |
+        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:staging-${{ github.sha }} \
+          --build-arg VITE_API_URL=${{ steps.backend_url.outputs.url }} \
+          -f frontend/Dockerfile frontend/
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:staging-${{ github.sha }}
+    
+    - name: 'Deploy Frontend to Cloud Run'
+      run: |
+        gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:staging-${{ github.sha }} \
+          --region ${{ env.REGION }} \
+          --platform managed \
+          --allow-unauthenticated \
+          --memory 512Mi \
+          --cpu 1 \
+          --max-instances 10 \
+          --min-instances 0
