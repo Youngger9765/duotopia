@@ -1,45 +1,32 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: email,
-          password: password,
-        }),
-      })
+      // Use AuthContext login method which handles everything
+      await login(email, password)
       
-      if (!response.ok) {
-        alert('登入失敗：電子郵件或密碼錯誤')
-        return
-      }
+      // Get the saved role to determine navigation
+      const userRole = localStorage.getItem('userRole')
       
-      const data = await response.json()
-      localStorage.setItem('token', data.access_token)
-      localStorage.setItem('userRole', data.user_type || 'teacher')
-      localStorage.setItem('userId', data.user_id)
-      
-      // Check if it's a dual system user
-      if (data.is_individual_teacher && data.is_institutional_admin) {
-        // User has both roles, redirect to role selection or default
+      // Navigate based on user role
+      if (userRole === 'hybrid') {
+        // User has both roles, could show role selection
         navigate('/teacher')
-      } else if (data.is_individual_teacher) {
+      } else if (userRole === 'individual_teacher') {
         // Individual teacher only
         navigate('/individual')
-      } else if (data.is_institutional_admin || data.user_type === 'admin') {
+      } else if (userRole === 'institutional_admin' || userRole === 'admin') {
         // Institutional admin
         navigate('/institutional')
       } else {
@@ -47,7 +34,8 @@ function LoginPage() {
         navigate('/teacher')
       }
     } catch (error) {
-      alert('登入失敗：請檢查網路連線')
+      console.error('Login error:', error)
+      alert('登入失敗：電子郵件或密碼錯誤')
     }
   }
 
@@ -121,7 +109,7 @@ function LoginPage() {
               type="button"
               onClick={() => {
                 setEmail('teacher@individual.com')
-                setPassword('test123')
+                setPassword('password123')
               }}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -132,7 +120,7 @@ function LoginPage() {
               type="button"
               onClick={() => {
                 setEmail('admin@institution.com')
-                setPassword('test123')
+                setPassword('password123')
               }}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -143,7 +131,7 @@ function LoginPage() {
               type="button"
               onClick={() => {
                 setEmail('hybrid@test.com')
-                setPassword('test123')
+                setPassword('password123')
               }}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >

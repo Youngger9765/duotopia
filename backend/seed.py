@@ -59,9 +59,9 @@ def create_test_data(db: Session):
         {"email": "teacher3@duotopia.com", "full_name": "張老師"},
         {"email": "admin@duotopia.com", "full_name": "系統管理員", "role": models.UserRole.ADMIN},
         # Add the three test accounts from frontend
-        {"email": "teacher@individual.com", "full_name": "個體戶老師", "password": "test123"},
-        {"email": "admin@institution.com", "full_name": "機構管理員", "role": models.UserRole.ADMIN, "password": "test123"},
-        {"email": "hybrid@test.com", "full_name": "雙重身份用戶", "role": models.UserRole.ADMIN, "password": "test123"},
+        {"email": "teacher@individual.com", "full_name": "個體戶老師", "password": "test123", "is_individual_teacher": True, "current_role_context": "individual"},
+        {"email": "admin@institution.com", "full_name": "機構管理員", "role": models.UserRole.ADMIN, "password": "test123", "is_institutional_admin": True, "current_role_context": "institutional"},
+        {"email": "hybrid@test.com", "full_name": "雙重身份用戶", "role": models.UserRole.ADMIN, "password": "test123", "is_individual_teacher": True, "is_institutional_admin": True, "current_role_context": "individual"},
     ]
     
     for data in teacher_data:
@@ -74,24 +74,49 @@ def create_test_data(db: Session):
             full_name=data["full_name"],
             hashed_password=get_password_hash(password),
             role=data.get("role", models.UserRole.TEACHER),
-            is_active=True
+            is_active=True,
+            is_individual_teacher=data.get("is_individual_teacher", False),
+            is_institutional_admin=data.get("is_institutional_admin", False),
+            current_role_context=data.get("current_role_context", "default")
         )
         teachers.append(teacher)
         db.add(teacher)
     
     db.commit()
     
-    # Create classrooms
+    # Create classrooms - ENSURE EVERY TEACHER HAS AT LEAST ONE
     print("🎓 Creating classrooms...")
     classrooms = []
-    classroom_data = [
-        {"name": "六年一班", "grade_level": "6", "teacher_id": teachers[0].id, "school_id": schools[0].id},
-        {"name": "六年二班", "grade_level": "6", "teacher_id": teachers[0].id, "school_id": schools[0].id},
-        {"name": "五年三班", "grade_level": "5", "teacher_id": teachers[1].id, "school_id": schools[0].id},
-        {"name": "國一甲班", "grade_level": "7", "teacher_id": teachers[2].id, "school_id": schools[1].id},
+    
+    # Give EVERY teacher at least one classroom
+    for i, teacher in enumerate(teachers):
+        # Skip pure admins who are not institutional admins or dual role users
+        if teacher.role == models.UserRole.ADMIN and not teacher.is_institutional_admin and teacher.email != "hybrid@test.com":
+            continue
+            
+        # Individual teachers may not have school_id
+        school_id = None
+        if not teacher.is_individual_teacher or teacher.is_institutional_admin:
+            school_idx = i % len(schools)
+            school_id = schools[school_idx].id
+            
+        classroom = models.Classroom(
+            id=str(uuid.uuid4()),
+            name=f"{teacher.full_name}的班級",
+            grade_level=str(5 + (i % 3)),  # Grades 5, 6, 7
+            teacher_id=teacher.id,
+            school_id=school_id
+        )
+        classrooms.append(classroom)
+        db.add(classroom)
+        
+    # Add some extra classrooms for variety
+    extra_classroom_data = [
+        {"name": "六年特優班", "grade_level": "6", "teacher_id": teachers[0].id, "school_id": schools[0].id},
+        {"name": "五年進階班", "grade_level": "5", "teacher_id": teachers[1].id, "school_id": schools[0].id},
     ]
     
-    for data in classroom_data:
+    for data in extra_classroom_data:
         classroom_obj = models.Classroom(
             id=str(uuid.uuid4()),
             **data
@@ -139,10 +164,10 @@ def create_test_data(db: Session):
     
     db.commit()
     
-    # Create courses
+    # Create courses - ENSURE EVERY TEACHER HAS COURSES
     print("📚 Creating courses...")
     courses = []
-    course_data = [
+    course_templates = [
         {
             "name": "基礎英語會話",
             "description": "培養日常英語對話能力",
@@ -169,35 +194,57 @@ def create_test_data(db: Session):
         }
     ]
     
-    for i, data in enumerate(course_data):
-        course = models.Course(
-            id=str(uuid.uuid4()),
-            title=data["name"],
-            description=data["description"],
-            course_code=f"MATH{101 + i}",  # Generate course codes MATH101, MATH102, etc.
-            grade_level=10,
-            subject="Mathematics",
-            max_students=30,
-            difficulty_level=data["difficulty_level"],
-            created_by=teachers[0].id,  # Created by first teacher
-            is_active=True
-        )
-        courses.append(course)
-        db.add(course)
+    # Each teacher creates at least one course
+    for teacher in teachers:
+        if teacher.role == models.UserRole.ADMIN and teacher.email not in ["admin@institution.com", "hybrid@test.com"]:
+            continue
+            
+        # Pick 1-2 templates for this teacher
+        num_courses = 2 if teacher.email in ["teacher1@duotopia.com", "teacher@individual.com"] else 1
+        for i in range(num_courses):
+            template_idx = (teachers.index(teacher) + i) % len(course_templates)
+            template = course_templates[template_idx]
+            
+            course = models.Course(
+                id=str(uuid.uuid4()),
+                title=f"{template['name']} - {teacher.full_name}",
+                description=template["description"],
+                course_code=f"ENG{len(courses) + 101}",
+                grade_level=10,
+                subject="English",
+                max_students=30,
+                difficulty_level=template["difficulty_level"],
+                created_by=teacher.id,
+                is_active=True
+            )
+            courses.append(course)
+            db.add(course)
     
     db.commit()
     
-    # Assign courses to classrooms
+    # Assign courses to classrooms - prioritize teacher's own courses
     print("🔗 Assigning courses to classrooms...")
-    for i, classroom_obj in enumerate(classrooms):
-        # Each classroom gets 2-3 courses
-        selected_courses = random.sample(courses, random.randint(2, 3))
-        for course in selected_courses:
-            mapping = models.ClassroomCourseMapping(
-                classroom_id=classroom_obj.id,
-                course_id=course.id
-            )
-            db.add(mapping)
+    for classroom_obj in classrooms:
+        # First, get courses created by this classroom's teacher
+        teacher_courses = [c for c in courses if c.created_by == classroom_obj.teacher_id]
+        
+        # If the teacher has courses, assign them to their classroom
+        if teacher_courses:
+            for course in teacher_courses[:2]:  # Assign up to 2 of teacher's own courses
+                mapping = models.ClassroomCourseMapping(
+                    classroom_id=classroom_obj.id,
+                    course_id=course.id
+                )
+                db.add(mapping)
+        else:
+            # If teacher has no courses (shouldn't happen now), assign random courses
+            selected_courses = random.sample(courses, min(2, len(courses)))
+            for course in selected_courses:
+                mapping = models.ClassroomCourseMapping(
+                    classroom_id=classroom_obj.id,
+                    course_id=course.id
+                )
+                db.add(mapping)
     
     db.commit()
     

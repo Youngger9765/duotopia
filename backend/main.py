@@ -6,7 +6,7 @@ import os
 
 from config import settings
 from database import engine, Base
-from routers import auth, teachers, students, admin, role_management, institutional, individual, student_login
+from routers import auth, teachers, students, admin, role_management, institutional, individual, individual_v2, student_login
 from db_init import DatabaseInitializer
 
 # Configure logging
@@ -58,7 +58,8 @@ app.include_router(students.router)
 app.include_router(admin.router)
 app.include_router(role_management.router)
 app.include_router(institutional.router)
-app.include_router(individual.router)
+# app.include_router(individual.router)  # 舊版本
+app.include_router(individual_v2.router)  # 新版本使用原始模型
 app.include_router(student_login.router)
 
 @app.get("/")

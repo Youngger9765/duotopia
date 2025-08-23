@@ -1,8 +1,11 @@
 export interface User {
   id: number
   email: string
+  full_name: string
   name?: string
   role?: string
+  has_multiple_roles?: boolean
+  is_individual_teacher?: boolean
 }
 
 export interface Student {

@@ -33,10 +33,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('token')
       if (token) {
         try {
-          const user = await authApi.validateToken(token)
-          setUser(user)
+          // For now, get user info from localStorage
+          const savedEmail = localStorage.getItem('userEmail')
+          const savedFullName = localStorage.getItem('userFullName')
+          const savedUserId = localStorage.getItem('userId')
+          const savedRole = localStorage.getItem('userRole')
+          
+          if (savedEmail) {
+            // Use saved data directly
+            const userData = {
+              id: parseInt(savedUserId || '1'),
+              email: savedEmail,
+              full_name: savedFullName || savedEmail,
+              name: savedFullName || savedEmail,
+              role: savedRole || 'teacher',
+              has_multiple_roles: savedRole === 'individual_teacher',
+              is_individual_teacher: savedRole === 'individual_teacher'
+            }
+            setUser(userData)
+            
+            // Set roles based on saved role
+            if (savedRole === 'individual_teacher') {
+              setRoles(['individual_teacher', 'teacher'])
+              setCurrentRole('individual_teacher')
+            } else {
+              setRoles([savedRole || 'teacher'])
+              setCurrentRole(savedRole || 'teacher')
+            }
+          } else {
+            // Try to validate token from API
+            try {
+              const user = await authApi.validateToken(token)
+              setUser(user)
+            } catch (error) {
+              // If API fails, clear token and force re-login
+              localStorage.removeItem('token')
+              localStorage.removeItem('userEmail')
+              localStorage.removeItem('userFullName')
+              localStorage.removeItem('userRole')
+            }
+          }
         } catch (error) {
           localStorage.removeItem('token')
+          localStorage.removeItem('userEmail')
+          localStorage.removeItem('userFullName')
+          localStorage.removeItem('userRole')
+          window.location.href = '/login'
         }
       }
       setIsLoading(false)
@@ -48,7 +90,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authApi.login(email, password)
       localStorage.setItem('token', response.access_token)
-      setUser(response.user)
+      localStorage.setItem('userEmail', email) // Save email for validateToken
+      if (response.user?.full_name) {
+        localStorage.setItem('userFullName', response.user.full_name)
+      }
+      if (response.user?.id) {
+        localStorage.setItem('userId', response.user.id.toString())
+      }
+      // Save the current role
+      if (response.roles && response.roles.length > 0) {
+        localStorage.setItem('userRole', response.roles[0])
+      }
+      
+      // Enhance user object with role information
+      const enhancedUser = {
+        ...response.user,
+        has_multiple_roles: response.roles && response.roles.length > 1,
+        is_individual_teacher: response.roles && response.roles.includes('individual_teacher')
+      }
+      
+      setUser(enhancedUser)
       setRoles(response.roles)
       setCurrentRole(response.roles[0] || null)
     } catch (error) {
@@ -58,6 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('userEmail')
+    localStorage.removeItem('userFullName')
+    localStorage.removeItem('userId')
+    localStorage.removeItem('userRole')
     setUser(null)
     setRoles([])
     setCurrentRole(null)

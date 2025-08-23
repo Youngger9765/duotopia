@@ -76,7 +76,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         "access_token": access_token, 
         "token_type": "bearer",
         "user_type": user.role.value,
-        "user_id": user.id
+        "user_id": user.id,
+        "full_name": user.full_name,
+        "email": user.email
     }
     
     # Add dual system specific fields if applicable
@@ -86,6 +88,19 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         response["current_role_context"] = user.current_role_context
     
     return response
+
+@router.get("/validate")
+async def validate_token(current_user: models.User = Depends(get_current_active_user)):
+    """Validate token and return user info"""
+    return {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "user_type": current_user.role.value,
+        "is_individual_teacher": current_user.is_individual_teacher if hasattr(current_user, 'is_individual_teacher') else False,
+        "is_institutional_admin": current_user.is_institutional_admin if hasattr(current_user, 'is_institutional_admin') else False,
+        "current_role_context": current_user.current_role_context if hasattr(current_user, 'current_role_context') else "default"
+    }
 
 @router.post("/google", response_model=schemas.Token)
 async def google_auth(request: schemas.GoogleAuthRequest, db: Session = Depends(get_db)):

@@ -3,6 +3,7 @@ import { Home, Users, GraduationCap, BookOpen, LogOut, Menu, X, ChevronLeft } fr
 import { useState, useEffect } from 'react'
 import { RoleSwitcher } from '@/components/RoleSwitcher'
 import { api } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 // 個體戶管理頁面組件
 import IndividualClassrooms from './individual/Classrooms'
@@ -13,9 +14,20 @@ import IndividualCourses from './individual/Courses'
 function IndividualDashboard() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
+  
+  // Debug: 顯示 user 資訊
+  useEffect(() => {
+    console.log('IndividualDashboard - AuthContext user:', user)
+    console.log('IndividualDashboard - localStorage:', {
+      token: localStorage.getItem('token'),
+      userEmail: localStorage.getItem('userEmail'),
+      userFullName: localStorage.getItem('userFullName')
+    })
+  }, [user])
   
   useEffect(() => {
     fetchUserInfo()
@@ -32,6 +44,15 @@ function IndividualDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch user info:', error)
+      // 如果 API 失敗，使用 AuthContext 的資料
+      if (user) {
+        setUserInfo({
+          full_name: user.full_name,
+          email: user.email,
+          is_individual_teacher: true,
+          has_multiple_roles: false
+        })
+      }
     }
   }
   
@@ -53,7 +74,7 @@ function IndividualDashboard() {
       {/* Sidebar - Desktop */}
       <aside className={`hidden lg:flex lg:flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
         <div className="flex flex-col w-full">
-          <div className="flex-1 flex flex-col bg-white shadow-sm h-full">
+          <div className="flex-1 flex flex-col bg-white shadow-sm h-full relative">
             {/* Logo section */}
             <div className="flex items-center justify-between h-16 flex-shrink-0 px-4 bg-white border-b border-gray-200">
               {!sidebarCollapsed && <h1 className="text-xl font-bold">個人教學平台</h1>}
@@ -106,18 +127,18 @@ function IndividualDashboard() {
                     <div className="flex items-center">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
-                          {userInfo?.full_name || '個體戶教師'}
+                          {user?.full_name || userInfo?.full_name || '個體戶教師'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {userInfo?.email}
+                          {user?.email || userInfo?.email || ''}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-400 mt-1">
                           個人教學模式
                         </div>
                       </div>
                     </div>
                     {/* Role Switcher */}
-                    {userInfo?.has_multiple_roles && (
+                    {(user?.has_multiple_roles || userInfo?.has_multiple_roles) && (
                       <div className="mt-3 mb-3">
                         <RoleSwitcher />
                       </div>
@@ -193,6 +214,32 @@ function IndividualDashboard() {
                 })}
               </nav>
             </div>
+            
+            {/* Mobile user info */}
+            <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+              <div className="flex-shrink-0 w-full">
+                <div className="flex items-center">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {user?.full_name || userInfo?.full_name || '個體戶教師'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {user?.email || userInfo?.email || ''}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      個人教學模式
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  登出
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -235,6 +282,7 @@ function IndividualDashboard() {
 }
 
 function IndividualOverview() {
+  const { user } = useAuth()
   const [stats, setStats] = useState({
     totalStudents: 0,
     activeClassrooms: 0,
@@ -262,7 +310,7 @@ function IndividualOverview() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">個人教學總覽</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">歡迎回來，{user?.full_name || '個體戶教師'}！</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
@@ -297,18 +345,28 @@ function IndividualOverview() {
       <div className="mt-8">
         <h3 className="text-lg font-medium text-gray-900 mb-4">快速操作</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Link to="/individual/classrooms?action=add">
-            <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
-              <Users className="h-8 w-8 text-purple-600 mb-3" />
-              <h4 className="text-base font-medium text-gray-900">建立新教室</h4>
-              <p className="text-sm text-gray-500 mt-1">開設新的教學班級</p>
+          <Link
+            to="/individual/classrooms?action=add"
+            className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-purple-600 mr-4" />
+              <div>
+                <h4 className="text-lg font-medium text-gray-900">新增教室</h4>
+                <p className="text-sm text-gray-500">建立新的教學班級</p>
+              </div>
             </div>
           </Link>
-          <Link to="/individual/students?action=add">
-            <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
-              <GraduationCap className="h-8 w-8 text-purple-600 mb-3" />
-              <h4 className="text-base font-medium text-gray-900">新增學生</h4>
-              <p className="text-sm text-gray-500 mt-1">加入新的學生</p>
+          <Link
+            to="/individual/students?action=add"
+            className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center">
+              <GraduationCap className="h-8 w-8 text-purple-600 mr-4" />
+              <div>
+                <h4 className="text-lg font-medium text-gray-900">新增學生</h4>
+                <p className="text-sm text-gray-500">加入新的學生</p>
+              </div>
             </div>
           </Link>
         </div>
