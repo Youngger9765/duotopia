@@ -9,6 +9,7 @@ import StudentDashboard from '@/pages/StudentDashboard'
 import TestAccounts from '@/pages/TestAccounts'
 import InstitutionalDashboard from '@/pages/InstitutionalDashboard'
 import IndividualDashboard from '@/pages/IndividualDashboard'
+import ReadingPracticeEditorPage from '@/pages/ReadingPracticeEditorPage'
 import { AuthProvider } from '@/contexts/AuthContext'
 
 const queryClient = new QueryClient()
@@ -27,6 +28,7 @@ function App() {
             <Route path="/student/*" element={<StudentDashboard />} />
             <Route path="/institutional/*" element={<InstitutionalDashboard />} />
             <Route path="/individual/*" element={<IndividualDashboard />} />
+            <Route path="/reading-practice-editor" element={<ReadingPracticeEditorPage />} />
           </Routes>
         </Router>
         <Toaster />

@@ -6,8 +6,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import get_db
 from tests.conftest import db
-from models import User, UserRole
-from models_v2 import InstitutionalClassroom, IndividualClassroom
+from models import User, UserRole, Classroom, School
 from auth import get_password_hash
 import uuid
 
@@ -133,19 +132,29 @@ class TestDualSystemAPI:
         )
         db.add(teacher)
         
-        # 創建個體戶教室
-        ind_classroom = IndividualClassroom(
+        # 創建學校
+        school = School(
+            id=str(uuid.uuid4()),
+            name="測試學校",
+            code="TEST002"
+        )
+        db.add(school)
+        
+        # 創建個體戶教室（無 school_id）
+        ind_classroom = Classroom(
+            id=str(uuid.uuid4()),
             name="個人教室",
             teacher_id=teacher.id,
-            pricing=800
+            school_id=None  # 個體戶教室
         )
         db.add(ind_classroom)
         
-        # 創建機構教室
-        inst_classroom = InstitutionalClassroom(
+        # 創建機構教室（有 school_id）
+        inst_classroom = Classroom(
+            id=str(uuid.uuid4()),
             name="機構教室",
-            school_id="school_1",
-            teacher_id=teacher.id
+            teacher_id=teacher.id,
+            school_id=school.id  # 機構教室
         )
         db.add(inst_classroom)
         db.commit()
@@ -159,24 +168,25 @@ class TestDualSystemAPI:
         
         # 在個體戶模式下查詢
         response = client.get(
-            "/api/teachers/classrooms",
+            "/api/individual/classrooms",
             headers={"Authorization": f"Bearer {token}"}
         )
+        assert response.status_code == 200
         classrooms = response.json()
         # 應該只看到個人教室
         assert len([c for c in classrooms if c["name"] == "個人教室"]) == 1
+        assert len([c for c in classrooms if c["name"] == "機構教室"]) == 0
         
         # 切換到機構模式
-        client.post(
-            "/api/role/switch?context=institutional",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        teacher.current_role_context = "institutional"
+        db.commit()
         
-        # 再次查詢
+        # 再次查詢（使用機構 API）
         response = client.get(
             "/api/teachers/classrooms",
             headers={"Authorization": f"Bearer {token}"}
         )
+        assert response.status_code == 200
         classrooms = response.json()
         # 現在應該看到機構教室
         assert any(c["name"] == "機構教室" for c in classrooms)

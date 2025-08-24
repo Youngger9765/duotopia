@@ -14,7 +14,7 @@ interface LegacyNavigationItem {
   subItems?: { label: string; icon: LucideIcon; action: () => void }[];
 }
 import { RoleSwitcher } from '@/components/RoleSwitcher'
-import { api } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 // 使用完整版本的 StudentManagement 組件
 function StudentManagement() {
@@ -29,23 +29,28 @@ import StaffManagement from './StaffManagement'
 function TeacherDashboard() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const [roleInfo, setRoleInfo] = useState<any>(null)
+  const [roleInfo] = useState<any>({
+    current_role_context: 'individual',
+    effective_role: 'teacher',
+    has_multiple_roles: false
+  })
   
   useEffect(() => {
-    fetchRoleInfo()
+    // fetchRoleInfo() // Disabled for now as API doesn't exist
   }, [])
   
-  const fetchRoleInfo = async () => {
-    try {
-      const response = await api.get('/api/role/current')
-      setRoleInfo(response.data)
-    } catch (error) {
-      console.error('Failed to fetch role info:', error)
-    }
-  }
+  // const fetchRoleInfo = async () => {
+  //   try {
+  //     const response = await api.get('/api/role/current')
+  //     setRoleInfo(response.data)
+  //   } catch (error) {
+  //     console.error('Failed to fetch role info:', error)
+  //   }
+  // }
   
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -261,13 +266,13 @@ function TeacherDashboard() {
                     <div className="flex items-center">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
-                          王老師
+                          {user?.full_name || '教師'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          teacher1@duotopia.com
+                          {user?.email || ''}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          教師
+                          {roleInfo?.effective_role === 'admin' ? '管理員' : '教師'}
                         </div>
                       </div>
                     </div>
@@ -427,13 +432,13 @@ function TeacherDashboard() {
                 <div className="flex items-center">
                   <div>
                     <div className="text-sm font-medium text-gray-900">
-                      王老師
+                      {user?.full_name || '教師'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      teacher1@duotopia.com
+                      {user?.email || ''}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      教師
+                      {roleInfo?.effective_role === 'admin' ? '管理員' : '教師'}
                     </div>
                   </div>
                 </div>
@@ -490,9 +495,11 @@ function TeacherDashboard() {
 }
 
 function TeacherOverview() {
+  const { user } = useAuth()
+  
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">歡迎回來，王老師！</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">歡迎回來，{user?.full_name || '老師'}！</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
