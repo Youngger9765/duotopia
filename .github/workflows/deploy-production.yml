@@ -70,20 +70,20 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-east1-docker.pkg.dev
       
       - name: Build and push Docker image
         run: |
-          docker build -f Dockerfile.backend -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
-          docker tag gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA gcr.io/$PROJECT_ID/$SERVICE_NAME:latest
-          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
-          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:latest
+          docker build -f Dockerfile.backend -t asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:$GITHUB_SHA .
+          docker tag asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:$GITHUB_SHA asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:latest
+          docker push asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:$GITHUB_SHA
+          docker push asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:latest
       
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy $SERVICE_NAME \
-            --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --image asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:$GITHUB_SHA \
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
