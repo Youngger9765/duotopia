@@ -1,0 +1,34 @@
+#!/bin/bash
+# Pre-push hook - 在 push 前執行完整測試
+
+echo "🚀 執行 pre-push 檢查..."
+
+# 獲取要推送的分支
+branch=$(git rev-parse --abbrev-ref HEAD)
+echo "📍 準備推送到分支: $branch"
+
+# TypeScript 檢查
+echo "📝 執行 TypeScript 檢查..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+    echo "❌ TypeScript 檢查失敗！請修正錯誤後再推送。"
+    exit 1
+fi
+
+# 建置測試
+echo "🔨 執行建置測試..."
+npm run build
+if [ $? -ne 0 ]; then
+    echo "❌ 建置失敗！請修正錯誤後再推送。"
+    exit 1
+fi
+
+# 後端測試（如果有的話）
+if [ -d "backend/tests" ]; then
+    echo "🧪 執行後端測試..."
+    cd backend
+    python -m pytest tests/ -v || true
+    cd ..
+fi
+
+echo "✅ 所有檢查通過！繼續推送..."
