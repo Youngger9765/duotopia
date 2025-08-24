@@ -1,5 +1,5 @@
 """
-Pytest fixtures for dual system testing
+Pytest fixtures for testing
 """
 import pytest
 from sqlalchemy import create_engine
@@ -7,7 +7,6 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 from database import Base
 from models import User, School, UserRole
-import models_v2  # 確保新模型的表也被創建
 import uuid
 
 # 使用內存資料庫進行測試
