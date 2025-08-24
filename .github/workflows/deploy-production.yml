@@ -2,112 +2,174 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 env:
   PROJECT_ID: duotopia-469413
   REGION: asia-east1
-  BACKEND_SERVICE: duotopia-backend
-  FRONTEND_SERVICE: duotopia-frontend
+  SERVICE_NAME: duotopia-backend
+  FRONTEND_BUCKET: duotopia-frontend
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      
+      - name: Run backend tests
+        working-directory: ./backend
+        run: |
+          pytest tests/ -v --cov=. --cov-report=xml
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install frontend dependencies
+        run: npm ci
+      
+      - name: Run frontend tests
+        run: |
+          npm run typecheck
+          npm run lint || true
+          npm run test --if-present
+          npm run build
+
   deploy-backend:
+    needs: test
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    
     steps:
-    - uses: actions/checkout@v4
-    
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-    
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
-    
-    - name: 'Configure Docker'
-      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-    
-    - name: 'Build and Push Backend'
-      run: |
-        cd backend
-        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:prod-${{ github.sha }} .
-        docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:prod-${{ github.sha }} \
-                   ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:latest
-        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:prod-${{ github.sha }}
-        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:latest
-    
-    - name: 'Deploy Backend to Cloud Run'
-      run: |
-        # Get database IP from Cloud SQL
-        DB_IP=$(gcloud sql instances describe duotopia-db-production --format='value(ipAddresses[0].ipAddress)')
-        
-        # Deploy with all necessary environment variables
-        gcloud run deploy ${{ env.BACKEND_SERVICE }} \
-          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/backend:prod-${{ github.sha }} \
-          --region ${{ env.REGION }} \
-          --platform managed \
-          --allow-unauthenticated \
-          --service-account duotopia-backend@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-          --set-env-vars "ENVIRONMENT=production" \
-          --set-env-vars "GCP_PROJECT_ID=${{ env.PROJECT_ID }}" \
-          --set-env-vars "GCS_BUCKET_NAME=duotopia-469413-uploads" \
-          --set-env-vars "DATABASE_URL=postgresql://duotopia_user:DuotopiaProd2024@${DB_IP}:5432/duotopia" \
-          --set-secrets "JWT_SECRET=jwt-secret:latest" \
-          --set-secrets "GOOGLE_CLIENT_ID=google-client-id:latest" \
-          --set-secrets "GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
-          --set-secrets "OPENAI_API_KEY=openai-api-key:latest" \
-          --set-secrets "SENDGRID_API_KEY=sendgrid-api-key:latest" \
-          --set-secrets "SECRET_KEY=jwt-secret:latest" \
-          --memory 1Gi \
-          --cpu 2 \
-          --max-instances 100 \
-          --min-instances 1
+      - uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+      
+      - name: Build and push Docker image
+        run: |
+          docker build -f Dockerfile.backend -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
+          docker tag gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA gcr.io/$PROJECT_ID/$SERVICE_NAME:latest
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --region $REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --timeout 60 \
+            --max-instances 50 \
+            --min-instances 1 \
+            --set-env-vars "ENVIRONMENT=production" \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            --set-env-vars "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --set-env-vars "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID"
+      
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          BACKEND_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)')
+          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+      
+      - name: Test deployment
+        run: |
+          sleep 10
+          curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
 
   deploy-frontend:
-    runs-on: ubuntu-latest
     needs: deploy-backend
+    runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    
     steps:
-    - uses: actions/checkout@v4
-    
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-    
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
-    
-    - name: 'Configure Docker'
-      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-    
-    - name: 'Get Backend URL'
-      id: backend_url
-      run: |
-        URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} --region ${{ env.REGION }} --format='value(status.url)')
-        echo "url=$URL" >> $GITHUB_OUTPUT
-    
-    - name: 'Build and Push Frontend'
-      run: |
-        cd frontend
-        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:prod-${{ github.sha }} \
-          --build-arg VITE_API_URL=${{ steps.backend_url.outputs.url }} \
-          .
-        docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:prod-${{ github.sha }} \
-                   ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:latest
-        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:prod-${{ github.sha }}
-        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:latest
-    
-    - name: 'Deploy Frontend to Cloud Run'
-      run: |
-        gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
-          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia/frontend:prod-${{ github.sha }} \
-          --region ${{ env.REGION }} \
-          --platform managed \
-          --allow-unauthenticated \
-          --memory 512Mi \
-          --cpu 1 \
-          --max-instances 100 \
-          --min-instances 1
+      - uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          BACKEND_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)')
+          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          echo "VITE_API_URL=${{ steps.backend-url.outputs.url }}" > .env.production
+          npm run build
+      
+      - name: Create bucket if not exists
+        run: |
+          gsutil ls -b gs://$FRONTEND_BUCKET || gsutil mb -l $REGION gs://$FRONTEND_BUCKET
+      
+      - name: Deploy to Cloud Storage
+        working-directory: ./frontend
+        run: |
+          gsutil -m rsync -r -d dist/ gs://$FRONTEND_BUCKET/
+          gsutil web set -m index.html -e 404.html gs://$FRONTEND_BUCKET
+          gsutil iam ch allUsers:objectViewer gs://$FRONTEND_BUCKET
+      
+      - name: Invalidate CDN cache
+        run: |
+          gcloud compute url-maps invalidate-cdn-cache duotopia-lb \
+            --path="/*" \
+            --global || true
+      
+      - name: Output URLs
+        run: |
+          echo "✅ Production deployment complete!"
+          echo "Backend: ${{ steps.backend-url.outputs.url }}"
+          echo "Frontend: https://storage.googleapis.com/$FRONTEND_BUCKET/index.html"
