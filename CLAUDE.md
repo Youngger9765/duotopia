@@ -179,28 +179,39 @@ npx playwright test --if-present
 ### 部署完成 ≠ 工作完成
 **部署只是第一步，測試通過才算完成！**
 
-### 每次部署後必須執行：
-1. **健康檢查**
+### 每次 git push 後必須：
+1. **立即監控部署進度**
    ```bash
-   curl https://your-service-url/health
+   # 查看最新部署
+   gh run list --workflow=deploy-staging.yml --limit=1
+   
+   # 持續監控直到完成
+   gh run watch <RUN_ID>
    ```
 
-2. **API 端點測試**
+2. **部署完成後立即測試**
    ```bash
    # 健康檢查
    curl https://your-service-url/health
    
    # API 測試
    curl https://your-service-url/api/auth/validate
-   curl -X POST https://your-service-url/api/auth/student/login \
-     -H "Content-Type: application/json" \
-     -d '{"email": "test@example.com", "birth_date": "20100101"}'
+   
+   # 功能測試（例如個人教師登入）
+   python test_individual_api.py
    ```
 
 3. **錯誤日誌檢查**
    ```bash
    gcloud run logs read duotopia-backend --limit=50 | grep -i error
    ```
+
+4. **測試失敗時立即修復**
+   - 不要等用戶發現問題
+   - 立即查看錯誤日誌
+   - 修復後重新部署並測試
+
+**⚠️ 絕對不要推完代碼就不管！每次部署都要監控到成功並測試通過！**
 
 ## 專案資訊
 
