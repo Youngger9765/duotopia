@@ -90,8 +90,7 @@ jobs:
             --set-env-vars "ENVIRONMENT=staging" \
             --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --update-secrets "JWT_SECRET=jwt-secret:latest" \
-            --set-env-vars "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --set-env-vars "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --update-secrets "GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
             --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID"
       
       - name: Get backend URL
