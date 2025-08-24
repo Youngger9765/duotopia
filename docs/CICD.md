@@ -72,6 +72,19 @@ gcloud run deploy ...  # 會使用 duotopia 的設定
 - `.github/workflows/deploy-production.yml` - 主分支自動部署到 production
 - `.github/workflows/deploy-staging.yml` - staging/develop 分支自動部署到 staging
 
+### 環境變數管理方式
+
+1. **Terraform** 負責建立和管理 Secret Manager 中的 secrets
+2. **Cloud Run** 從 Secret Manager 引用這些 secrets（使用 secret references）
+3. **GitHub Actions** 不應該直接設定環境變數，而是讓 Cloud Run 從 Secret Manager 讀取
+
+#### Secret Manager 中的 Secrets
+- `jwt-secret` - JWT 簽署密鑰
+- `google-client-id` - Google OAuth Client ID
+- `google-client-secret` - Google OAuth Client Secret
+- `openai-api-key` - OpenAI API Key（如需要）
+- `sendgrid-api-key` - SendGrid API Key（如需要）
+
 ### GitHub Secrets 設定
 
 請在 GitHub repository 設定以下 secret：
@@ -144,9 +157,16 @@ terraform apply
 ```
 
 ### 重要檔案
-- `terraform/terraform.tfvars` - 環境變數設定
+- `terraform/terraform.tfvars` - 環境變數設定（包含 secrets 的實際值）
+- `terraform/secrets.tf` - Secret Manager 資源定義
 - `~/terraform-key.json` - Terraform 服務帳號金鑰
 - `~/github-actions-key.json` - GitHub Actions 服務帳號金鑰
+
+### 更新 Secrets
+當需要更新密鑰時：
+1. 修改 `terraform/terraform.tfvars` 中的值
+2. 執行 `terraform apply` 更新 Secret Manager
+3. Cloud Run 會自動使用新的 secret 版本
 
 ## ⚠️ 注意事項
 
