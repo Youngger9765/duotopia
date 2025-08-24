@@ -30,12 +30,6 @@ gh secret set GOOGLE_CLIENT_SECRET --body "your-actual-client-secret"
    - `https://duotopia-backend-staging-731209836128.asia-east1.run.app/api/auth/google/callback`
    - `https://duotopia-backend-731209836128.asia-east1.run.app/api/auth/google/callback`
 
-### 2. OpenAI API Key
-從 [OpenAI Dashboard](https://platform.openai.com/api-keys) 獲取：
-
-```bash
-gh secret set OPENAI_API_KEY --body "sk-..."
-```
 
 ## 🔍 驗證設定
 
@@ -51,14 +45,13 @@ gh secret list
 - WIF_SERVICE_ACCOUNT
 - GOOGLE_CLIENT_ID
 - GOOGLE_CLIENT_SECRET
-- OPENAI_API_KEY
 
 ## 🚀 測試部署
 
 1. **確認所有 secrets 都已設定**
    ```bash
    gh secret list | wc -l
-   # 應該要有 7 個或以上
+   # 應該要有 6 個或以上
    ```
 
 2. **執行 Workload Identity 設定**

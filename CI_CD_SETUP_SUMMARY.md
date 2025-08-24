@@ -25,7 +25,6 @@
 - ✅ `WIF_SERVICE_ACCOUNT`
 - ⚠️ `GOOGLE_CLIENT_ID` (需手動設定)
 - ⚠️ `GOOGLE_CLIENT_SECRET` (需手動設定)
-- ⚠️ `OPENAI_API_KEY` (需手動設定)
 
 ### 4. Workload Identity Federation
 - 已建立 Service Account: `github-actions@duotopia-469413.iam.gserviceaccount.com`
@@ -66,7 +65,6 @@
    ```bash
    gh secret set GOOGLE_CLIENT_ID --body "your-client-id"
    gh secret set GOOGLE_CLIENT_SECRET --body "your-client-secret"
-   gh secret set OPENAI_API_KEY --body "sk-..."
    ```
 
 2. **設定 Environment Protection Rules**
