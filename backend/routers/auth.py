@@ -12,7 +12,6 @@ from database import get_db
 from auth import (
     authenticate_user, 
     authenticate_student,
-    authenticate_dual_user,
     create_access_token, 
     get_password_hash,
     get_current_active_user,
@@ -52,12 +51,8 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login for teachers/admins"""
-    # Try dual system authentication first
-    user = authenticate_dual_user(db, form_data.username, form_data.password)
-    
-    # If not found in dual system, try regular authentication
-    if not user:
-        user = authenticate_user(db, form_data.username, form_data.password)
+    # Authenticate user
+    user = authenticate_user(db, form_data.username, form_data.password)
     
     if not user:
         raise HTTPException(
