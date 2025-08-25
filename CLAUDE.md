@@ -213,6 +213,56 @@ npx playwright test --if-present
 
 **⚠️ 絕對不要推完代碼就不管！每次部署都要監控到成功並測試通過！**
 
+## 🔥 部署錯誤反思與預防
+
+### 常見部署錯誤模式
+1. **硬編碼 URL 錯誤**
+   - ❌ 錯誤：`fetch('http://localhost:8000/api/...')`
+   - ✅ 正確：使用環境變數 `import.meta.env.VITE_API_URL`
+   - **教訓**：所有 API URL 必須使用環境變數
+
+2. **PORT 配置錯誤**
+   - ❌ 錯誤：Dockerfile 設定 `ENV PORT=8000`
+   - ✅ 正確：Cloud Run 預設使用 `PORT=8080`
+   - **教訓**：了解部署平台的默認配置
+
+3. **Import 路徑錯誤**
+   - ❌ 錯誤：`from models_dual_system import DualUser`
+   - ✅ 正確：`from models import User`
+   - **教訓**：重構後徹底搜尋舊程式碼
+
+### 系統性預防措施
+1. **部署前檢查腳本**（已加入 git hooks）
+   ```bash
+   # 檢查硬編碼 URL
+   grep -r "localhost:[0-9]" frontend/src/ && exit 1
+   # 檢查舊的 import
+   grep -r "models_dual_system" backend/ && exit 1
+   ```
+
+2. **CI/CD 強化**（已實施）
+   - Docker 本地測試步驟
+   - 健康檢查重試機制（5次）
+   - 部署失敗自動顯示日誌
+
+3. **監控流程標準化**
+   ```bash
+   # 每次推送後立即執行
+   gh run watch
+   gh run view --log | grep -i error
+   ```
+
+4. **診斷優先順序**
+   - Container 無法啟動 → 先查 PORT 和 import
+   - API 呼叫失敗 → 先查環境變數
+   - 資料庫連線失敗 → 先查 DATABASE_URL
+
+### 部署黃金法則
+1. **推送前本地測試**：`docker run -p 8080:8080`
+2. **推送後立即監控**：`gh run watch`
+3. **部署後立即驗證**：`curl /health`
+4. **發現問題立即修復**：不要累積技術債
+
 ## 專案資訊
 
 ### Duotopia 概述

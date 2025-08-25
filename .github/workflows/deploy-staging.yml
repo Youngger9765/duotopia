@@ -70,6 +70,15 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker asia-east1-docker.pkg.dev
       
+      # 新增：本地測試 Docker 構建
+      - name: Test Docker build locally
+        run: |
+          echo "🐳 Testing Docker build with Cloud Run PORT..."
+          docker build -f Dockerfile.backend -t test-backend .
+          docker run -d --name test-container -p 8080:8080 -e PORT=8080 test-backend sleep 5
+          docker logs test-container
+          docker stop test-container && docker rm test-container
+      
       - name: Build and push Docker image
         run: |
           docker build -f Dockerfile.backend -t asia-east1-docker.pkg.dev/$PROJECT_ID/duotopia/$SERVICE_NAME:$GITHUB_SHA .
@@ -99,10 +108,30 @@ jobs:
           BACKEND_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)')
           echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
       
-      - name: Test deployment
+      # 新增：更詳細的健康檢查
+      - name: Test deployment health
         run: |
-          sleep 10
-          curl -f ${{ steps.backend-url.outputs.url }}/health || exit 1
+          echo "⏳ Waiting for service to be ready..."
+          sleep 15
+          
+          echo "🔍 Testing health endpoint..."
+          for i in {1..5}; do
+            if curl -f ${{ steps.backend-url.outputs.url }}/health; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "❌ Health check failed, attempt $i/5"
+              if [ $i -eq 5 ]; then
+                echo "🚨 Deployment health check failed!"
+                gcloud run logs read $SERVICE_NAME --limit=50 --region=$REGION
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+          
+          echo "🔍 Testing API endpoints..."
+          curl -f ${{ steps.backend-url.outputs.url }}/api/auth/validate || echo "Auth endpoint check failed"
 
   deploy-frontend:
     needs: deploy-backend
@@ -155,7 +184,7 @@ jobs:
           gsutil web set -m index.html -e 404.html gs://$FRONTEND_BUCKET
           gsutil iam ch allUsers:objectViewer gs://$FRONTEND_BUCKET
       
-      - name: Output URLs
+      - name: Output URLs and test
         run: |
           echo "✅ Deployment complete!"
           echo "Backend: ${{ steps.backend-url.outputs.url }}"
