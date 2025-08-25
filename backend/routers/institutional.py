@@ -10,10 +10,10 @@ import uuid
 from database import get_db
 from auth import get_current_active_user
 from models import User, UserRole
-from models_dual_system import (
-    DualSchool, InstitutionalClassroom, InstitutionalStudent,
-    InstitutionalCourse, InstitutionalLesson, InstitutionalEnrollment,
-    InstitutionalAssignment
+from models import (
+    School, Classroom, Student,
+    Course, Lesson, ClassroomStudent,
+    StudentAssignment
 )
 from pydantic import BaseModel, EmailStr
 
@@ -95,14 +95,14 @@ async def create_school(
 ):
     """創建新學校"""
     # 檢查學校代碼是否已存在
-    existing = db.query(DualSchool).filter(
-        DualSchool.code == school_data.code
+    existing = db.query(School).filter(
+        School.code == school_data.code
     ).first()
     
     if existing:
         raise HTTPException(status_code=400, detail="學校代碼已存在")
     
-    school = DualSchool(**school_data.dict())
+    school = School(**school_data.dict())
     db.add(school)
     db.commit()
     db.refresh(school)
@@ -123,7 +123,7 @@ async def get_schools(
     db: Session = Depends(get_db)
 ):
     """獲取所有學校"""
-    schools = db.query(DualSchool).all()
+    schools = db.query(School).all()
     
     return [{
         "id": school.id,
@@ -146,14 +146,14 @@ async def create_classroom(
 ):
     """創建機構教室"""
     # 驗證學校存在
-    school = db.query(DualSchool).filter(
-        DualSchool.id == classroom_data.school_id
+    school = db.query(School).filter(
+        School.id == classroom_data.school_id
     ).first()
     
     if not school:
         raise HTTPException(status_code=404, detail="學校不存在")
     
-    classroom = InstitutionalClassroom(**classroom_data.dict())
+    classroom = Classroom(**classroom_data.dict())
     db.add(classroom)
     db.commit()
     db.refresh(classroom)
@@ -178,19 +178,19 @@ async def get_classrooms(
     db: Session = Depends(get_db)
 ):
     """獲取機構教室列表"""
-    query = db.query(InstitutionalClassroom)
+    query = db.query(Classroom)
     
     if school_id:
-        query = query.filter(InstitutionalClassroom.school_id == school_id)
+        query = query.filter(Classroom.school_id == school_id)
     
     classrooms = query.all()
     
     result = []
     for classroom in classrooms:
         # 計算學生數
-        student_count = db.query(InstitutionalEnrollment).filter(
-            InstitutionalEnrollment.classroom_id == classroom.id,
-            InstitutionalEnrollment.is_active == True
+        student_count = db.query(ClassroomStudent).filter(
+            ClassroomStudent.classroom_id == classroom.id,
+            ClassroomStudent.is_active == True
         ).count()
         
         result.append({
@@ -218,8 +218,8 @@ async def create_student(
 ):
     """創建機構學生"""
     # 檢查 email 是否已存在
-    existing = db.query(InstitutionalStudent).filter(
-        InstitutionalStudent.email == student_data.email
+    existing = db.query(Student).filter(
+        Student.email == student_data.email
     ).first()
     
     if existing:
@@ -229,7 +229,7 @@ async def create_student(
     if not student_data.student_id:
         student_data.student_id = f"STU{datetime.now().year}{str(uuid.uuid4())[:8].upper()}"
     
-    student = InstitutionalStudent(**student_data.dict())
+    student = Student(**student_data.dict())
     db.add(student)
     db.commit()
     db.refresh(student)
@@ -255,19 +255,19 @@ async def get_students(
     db: Session = Depends(get_db)
 ):
     """獲取機構學生列表"""
-    query = db.query(InstitutionalStudent)
+    query = db.query(Student)
     
     if school_id:
-        query = query.filter(InstitutionalStudent.school_id == school_id)
+        query = query.filter(Student.school_id == school_id)
     
     students = query.all()
     
     result = []
     for student in students:
         # 獲取學生的教室信息
-        enrollment = db.query(InstitutionalEnrollment).filter(
-            InstitutionalEnrollment.student_id == student.id,
-            InstitutionalEnrollment.is_active == True
+        enrollment = db.query(ClassroomStudent).filter(
+            ClassroomStudent.student_id == student.id,
+            ClassroomStudent.is_active == True
         ).first()
         
         student_dict = {
@@ -310,8 +310,8 @@ async def enroll_students(
 ):
     """將學生加入教室"""
     # 驗證教室存在
-    classroom = db.query(InstitutionalClassroom).filter(
-        InstitutionalClassroom.id == enrollment_data.classroom_id
+    classroom = db.query(Classroom).filter(
+        Classroom.id == enrollment_data.classroom_id
     ).first()
     
     if not classroom:
@@ -320,24 +320,24 @@ async def enroll_students(
     enrolled_count = 0
     for student_id in enrollment_data.student_ids:
         # 檢查學生是否存在
-        student = db.query(InstitutionalStudent).filter(
-            InstitutionalStudent.id == student_id
+        student = db.query(Student).filter(
+            Student.id == student_id
         ).first()
         
         if not student:
             continue
         
         # 檢查是否已註冊
-        existing = db.query(InstitutionalEnrollment).filter(
-            InstitutionalEnrollment.student_id == student_id,
-            InstitutionalEnrollment.classroom_id == enrollment_data.classroom_id
+        existing = db.query(ClassroomStudent).filter(
+            ClassroomStudent.student_id == student_id,
+            ClassroomStudent.classroom_id == enrollment_data.classroom_id
         ).first()
         
         if existing:
             continue
         
         # 創建註冊記錄
-        enrollment = InstitutionalEnrollment(
+        enrollment = ClassroomStudent(
             student_id=student_id,
             classroom_id=enrollment_data.classroom_id
         )
@@ -361,7 +361,7 @@ async def create_course(
     db: Session = Depends(get_db)
 ):
     """創建機構課程"""
-    course = InstitutionalCourse(**course_data.dict())
+    course = Course(**course_data.dict())
     db.add(course)
     db.commit()
     db.refresh(course)
@@ -385,10 +385,10 @@ async def get_courses(
     db: Session = Depends(get_db)
 ):
     """獲取機構課程列表"""
-    query = db.query(InstitutionalCourse)
+    query = db.query(Course)
     
     if school_id:
-        query = query.filter(InstitutionalCourse.school_id == school_id)
+        query = query.filter(Course.school_id == school_id)
     
     courses = query.all()
     
@@ -414,14 +414,14 @@ async def create_lesson(
 ):
     """為課程創建課時"""
     # 驗證課程存在
-    course = db.query(InstitutionalCourse).filter(
-        InstitutionalCourse.id == course_id
+    course = db.query(Course).filter(
+        Course.id == course_id
     ).first()
     
     if not course:
         raise HTTPException(status_code=404, detail="課程不存在")
     
-    lesson = InstitutionalLesson(
+    lesson = Lesson(
         **lesson_data.dict(),
         course_id=course_id
     )

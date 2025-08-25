@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Dict
 from database import get_db
-from models_dual_system import (
-    DualUser, IndividualClassroom, IndividualStudent, 
-    IndividualEnrollment
+from models import (
+    User, Classroom, Student, 
+    ClassroomStudent
 )
 from pydantic import BaseModel
 import bcrypt
@@ -29,10 +29,10 @@ async def search_teachers_by_email(
     db: Session = Depends(get_db)
 ):
     """根據 email 查找個體戶老師"""
-    teacher = db.query(DualUser).filter(
-        DualUser.email == email,
-        DualUser.is_individual_teacher == True,
-        DualUser.is_active == True
+    teacher = db.query(User).filter(
+        User.email == email,
+        User.is_individual_teacher == True,
+        User.is_active == True
     ).first()
     
     if not teacher:
@@ -50,10 +50,10 @@ async def get_teacher_info(
     db: Session = Depends(get_db)
 ):
     """獲取老師的基本資訊"""
-    teacher = db.query(DualUser).filter(
-        DualUser.id == teacher_id,
-        DualUser.is_individual_teacher == True,
-        DualUser.is_active == True
+    teacher = db.query(User).filter(
+        User.id == teacher_id,
+        User.is_individual_teacher == True,
+        User.is_active == True
     ).first()
     
     if not teacher:
@@ -71,18 +71,18 @@ async def get_teacher_classrooms(
     db: Session = Depends(get_db)
 ):
     """獲取老師的所有教室"""
-    classrooms = db.query(IndividualClassroom).filter(
-        IndividualClassroom.teacher_id == teacher_id,
-        IndividualClassroom.is_active == True
+    classrooms = db.query(Classroom).filter(
+        Classroom.teacher_id == teacher_id,
+        Classroom.is_active == True
     ).all()
     
     return [{
         "id": classroom.id,
         "name": classroom.name,
         "grade_level": classroom.grade_level,
-        "student_count": db.query(IndividualEnrollment).filter(
-            IndividualEnrollment.classroom_id == classroom.id,
-            IndividualEnrollment.is_active == True
+        "student_count": db.query(ClassroomStudent).filter(
+            ClassroomStudent.classroom_id == classroom.id,
+            ClassroomStudent.is_active == True
         ).count()
     } for classroom in classrooms]
 
@@ -93,20 +93,20 @@ async def get_classroom_students(
 ):
     """獲取教室內的所有學生"""
     # 驗證教室存在
-    classroom = db.query(IndividualClassroom).filter(
-        IndividualClassroom.id == classroom_id,
-        IndividualClassroom.is_active == True
+    classroom = db.query(Classroom).filter(
+        Classroom.id == classroom_id,
+        Classroom.is_active == True
     ).first()
     
     if not classroom:
         raise HTTPException(status_code=404, detail="教室不存在")
     
     # 獲取學生列表
-    enrollments = db.query(IndividualEnrollment).options(
-        joinedload(IndividualEnrollment.student)
+    enrollments = db.query(ClassroomStudent).options(
+        joinedload(ClassroomStudent.student)
     ).filter(
-        IndividualEnrollment.classroom_id == classroom_id,
-        IndividualEnrollment.is_active == True
+        ClassroomStudent.classroom_id == classroom_id,
+        ClassroomStudent.is_active == True
     ).all()
     
     students = []
@@ -131,9 +131,9 @@ async def verify_student_password(
     from datetime import timedelta
     
     # 查找學生
-    student = db.query(IndividualStudent).filter(
-        IndividualStudent.id == request.student_id,
-        IndividualStudent.is_active == True
+    student = db.query(Student).filter(
+        Student.id == request.student_id,
+        Student.is_active == True
     ).first()
     
     if not student:
@@ -184,9 +184,9 @@ async def change_student_password(
 ):
     """學生修改密碼"""
     # 查找學生
-    student = db.query(IndividualStudent).filter(
-        IndividualStudent.id == request.student_id,
-        IndividualStudent.is_active == True
+    student = db.query(Student).filter(
+        Student.id == request.student_id,
+        Student.is_active == True
     ).first()
     
     if not student:

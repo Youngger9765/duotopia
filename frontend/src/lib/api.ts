@@ -30,29 +30,7 @@ api.interceptors.response.use(
   }
 )
 
-// Auth API
-export const authApi = {
-  login: (email: string, password: string) => {
-    const formData = new URLSearchParams({ username: email, password })
-    return api.post('/api/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      }
-    })
-  },
-  
-  googleLogin: (idToken: string) =>
-    api.post('/api/auth/google', { id_token: idToken }),
-  
-  studentLogin: (email: string, birthDate: string) =>
-    api.post('/api/auth/student/login', { email, birth_date: birthDate }),
-  
-  register: (data: any) =>
-    api.post('/api/auth/register', data),
-  
-  validate: () =>
-    api.get('/api/auth/validate'),
-}
+// Auth API 已移至 @/api/auth.ts
 
 // Teacher API
 export const teacherApi = {

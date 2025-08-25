@@ -2,23 +2,21 @@ import type { User } from '@/types'
 import { api } from '@/lib/api'
 
 export const authApi = {
+  // 主要登入方法，包含角色判斷邏輯
   login: async (email: string, password: string) => {
     // This is already implemented correctly in LoginPage.tsx
     // Just need to parse the response properly
-    const formData = new FormData()
+    const formData = new URLSearchParams()
     formData.append('username', email)
     formData.append('password', password)
     
-    const response = await fetch('http://localhost:8000/api/auth/login', {
-      method: 'POST',
-      body: formData,
+    const response = await api.post('/api/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }
     })
     
-    if (!response.ok) {
-      throw new Error('Login failed')
-    }
-    
-    const data = await response.json()
+    const data = response.data
     
     // Determine roles based on user type
     let roles = []
@@ -71,4 +69,31 @@ export const authApi = {
       throw new Error('Token validation failed')
     }
   },
+
+  // Google OAuth 登入
+  googleLogin: async (idToken: string) => {
+    const response = await api.post('/api/auth/google', { id_token: idToken })
+    return response.data
+  },
+
+  // 學生登入
+  studentLogin: async (email: string, birthDate: string) => {
+    const response = await api.post('/api/auth/student/login', { 
+      email, 
+      birth_date: birthDate 
+    })
+    return response.data
+  },
+
+  // 註冊新用戶
+  register: async (data: any) => {
+    const response = await api.post('/api/auth/register', data)
+    return response.data
+  },
+
+  // 驗證 token
+  validate: async () => {
+    const response = await api.get('/api/auth/validate')
+    return response.data
+  }
 }
