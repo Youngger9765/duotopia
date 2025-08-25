@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     database_url: str
     
     # Security
-    jwt_secret: str = os.getenv("JWT_SECRET", "")
-    secret_key: str = ""  # For backward compatibility
+    jwt_secret: Optional[str] = None
+    secret_key: Optional[str] = None
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
@@ -40,11 +40,11 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Use JWT_SECRET if secret_key is not set
-        if not self.secret_key and self.jwt_secret:
-            self.secret_key = self.jwt_secret
+        if not self.secret_key:
+            self.secret_key = self.jwt_secret or os.getenv("JWT_SECRET")
         # Validate critical settings
-        if not self.secret_key or self.secret_key == "your-secret-key-here":
-            raise ValueError("JWT_SECRET or SECRET_KEY must be set to a secure value")
+        if not self.secret_key:
+            raise ValueError("JWT_SECRET must be set to a secure value")
         if not self.database_url:
             raise ValueError("DATABASE_URL must be set")
 
