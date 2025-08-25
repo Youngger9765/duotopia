@@ -20,15 +20,15 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up Duotopia API server...")
     
-    # Run database initialization
-    try:
-        with DatabaseInitializer() as db_init:
-            db_init.initialize()
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-        # In production, we might want to exit here
-        if os.getenv("ENVIRONMENT") == "production":
-            raise
+    # Skip database initialization - handled by alembic migrations
+    # try:
+    #     with DatabaseInitializer() as db_init:
+    #         db_init.initialize()
+    # except Exception as e:
+    #     logger.error(f"Failed to initialize database: {e}")
+    #     # In production, we might want to exit here
+    #     if os.getenv("ENVIRONMENT") == "production":
+    #         raise
     
     yield
     # Shutdown
