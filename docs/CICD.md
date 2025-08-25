@@ -393,6 +393,9 @@ gcloud run logs tail [service]     # 追蹤日誌
 容器無法啟動？
 ├─ 檢查 PORT 環境變數
 ├─ 檢查 import 錯誤
+├─ 檢查啟動時是否有資料庫連線
+│  └─ main.py 頂層不能有 DB 操作
+│  └─ lifespan 不能立即連資料庫
 └─ 檢查 requirements.txt
 
 API 呼叫失敗？
@@ -405,6 +408,30 @@ API 呼叫失敗？
 ├─ 檢查 Cloud SQL 權限
 └─ 檢查網路設定
 ```
+
+### 啟動時資料庫連線陷阱
+
+#### 問題描述
+Cloud Run 容器在啟動時如果立即嘗試連接資料庫，很可能會失敗，因為：
+1. 環境變數可能還沒完全載入
+2. 網路連線可能還沒建立
+3. Cloud SQL proxy 可能還沒準備好
+
+#### 常見錯誤
+```python
+# ❌ main.py 頂層
+Base.metadata.create_all(bind=engine)
+
+# ❌ 在 __init__ 就連接資料庫
+class DatabaseInitializer:
+    def __init__(self):
+        self.db = SessionLocal()  # 立即連接！
+```
+
+#### 解決方案
+1. 資料表建立交給 alembic migrations
+2. 資料庫連線使用 FastAPI 的 Depends 機制（lazy loading）
+3. 健康檢查端點可以測試連線，但要處理失敗情況
 
 ### 部署前必做清單
 - [ ] 本地 Docker 測試：`docker run -p 8080:8080`

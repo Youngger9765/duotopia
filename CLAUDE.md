@@ -263,6 +263,45 @@ npx playwright test --if-present
 3. **部署後立即驗證**：`curl /health`
 4. **發現問題立即修復**：不要累積技術債
 
+### 啟動時資料庫連線問題
+**重要教訓**：絕對不要在應用頂層或啟動時立即連接資料庫！
+
+#### ❌ 錯誤模式（會導致 Cloud Run 失敗）
+```python
+# main.py 頂層
+Base.metadata.create_all(bind=engine)  # 立即連接資料庫！
+
+# lifespan 啟動時
+with DatabaseInitializer() as db_init:  # __init__ 就連接資料庫！
+    db_init.initialize()
+```
+
+#### ✅ 正確模式
+```python
+# 資料表建立交給 alembic migrations
+# 資料庫連線只在處理請求時才建立（透過 Depends(get_db)）
+```
+
+**為什麼會失敗**：
+- Cloud Run 啟動容器時，環境變數可能還沒完全準備好
+- 資料庫可能還在初始化或網路還沒連通
+- 任何啟動時的連線失敗都會導致容器無法啟動
+
+### 本地測試的重要性
+**絕對不要用假資料測試**：
+- ❌ `DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"`
+- ✅ 使用真實的本地資料庫：`docker-compose up -d`
+- ✅ 測試真實的連線：`DATABASE_URL="postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"`
+
+**每次修改後必須本地測試**：
+```bash
+# 1. 測試模組載入
+python -c "import sys; sys.path.append('backend'); import main"
+
+# 2. 測試服務啟動（如果有依賴）
+cd backend && uvicorn main:app --host 0.0.0.0 --port 8080
+```
+
 ## 專案資訊
 
 ### Duotopia 概述

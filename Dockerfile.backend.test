@@ -18,10 +18,9 @@ COPY shared/ /shared/
 
 # Run migrations and start server
 ENV PYTHONPATH=/app:/shared
-# Cloud Run sets PORT environment variable, default to 8080
 ENV PORT=8080
 
 EXPOSE 8080
 
-# 加入診斷資訊
-CMD ["sh", "-c", "echo '🚀 Starting Duotopia Backend...' && echo 'Environment variables:' && env | grep -E '(DATABASE_URL|JWT_SECRET|PORT)' | sed 's/=.*$/=***/' && echo 'Testing startup...' && python test_startup.py && echo 'Running migrations...' && alembic upgrade head && echo 'Starting server...' && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# 暫時跳過 alembic，直接啟動
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
