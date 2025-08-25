@@ -1,0 +1,154 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ staging ]
+  pull_request:
+    branches: [ staging ]
+
+env:
+  PROJECT_ID: duotopia-469413
+  REGION: asia-east1
+  BACKEND_SERVICE: duotopia-backend
+  FRONTEND_SERVICE: duotopia-frontend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run frontend type check
+      working-directory: ./frontend
+      run: npm run typecheck
+
+    - name: Run frontend lint
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Test backend import
+      working-directory: ./backend
+      run: python -c "import main; print('Backend imports successfully')"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for GCP
+      run: gcloud auth configure-docker
+
+    - name: Build and push backend image
+      working-directory: ./backend
+      run: |
+        docker build -t gcr.io/$PROJECT_ID/$BACKEND_SERVICE:$GITHUB_SHA .
+        docker push gcr.io/$PROJECT_ID/$BACKEND_SERVICE:$GITHUB_SHA
+
+    - name: Deploy backend to Cloud Run
+      run: |
+        gcloud run deploy $BACKEND_SERVICE \
+          --image gcr.io/$PROJECT_ID/$BACKEND_SERVICE:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 8080 \
+          --memory 512Mi \
+          --cpu 1 \
+          --max-instances 10
+
+    - name: Get backend URL
+      run: |
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
+        echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_ENV
+
+    - name: Build frontend image with backend URL
+      working-directory: ./frontend
+      run: |
+        # 替換 nginx.conf 中的 BACKEND_URL
+        sed "s|\${BACKEND_URL}|$BACKEND_URL|g" nginx.conf > nginx.conf.tmp
+        mv nginx.conf.tmp nginx.conf
+        
+        docker build -t gcr.io/$PROJECT_ID/$FRONTEND_SERVICE:$GITHUB_SHA .
+        docker push gcr.io/$PROJECT_ID/$FRONTEND_SERVICE:$GITHUB_SHA
+
+    - name: Deploy frontend to Cloud Run
+      run: |
+        gcloud run deploy $FRONTEND_SERVICE \
+          --image gcr.io/$PROJECT_ID/$FRONTEND_SERVICE:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 80 \
+          --memory 256Mi \
+          --cpu 1 \
+          --max-instances 5
+
+    - name: Health check
+      run: |
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
+        FRONTEND_URL=$(gcloud run services describe $FRONTEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
+        
+        echo "Backend URL: $BACKEND_URL"
+        echo "Frontend URL: $FRONTEND_URL"
+        
+        # 等待服務啟動
+        sleep 30
+        
+        # 測試後端健康檢查
+        for i in {1..5}; do
+          if curl -f "$BACKEND_URL/health"; then
+            echo "Backend health check passed"
+            break
+          else
+            echo "Backend health check failed, attempt $i/5"
+            sleep 10
+          fi
+        done
+        
+        # 測試前端
+        for i in {1..5}; do
+          if curl -f "$FRONTEND_URL"; then
+            echo "Frontend health check passed"
+            break
+          else
+            echo "Frontend health check failed, attempt $i/5"
+            sleep 10
+          fi
+        done
