@@ -13,8 +13,7 @@ from db_init import DatabaseInitializer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables (kept for backward compatibility)
-Base.metadata.create_all(bind=engine)
+# Note: Table creation is handled by alembic migrations
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
