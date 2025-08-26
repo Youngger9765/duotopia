@@ -18,13 +18,24 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# 安裝 envsubst (通常已包含在 nginx:alpine 中)
+RUN apk add --no-cache gettext
+
 # 複製建置結果
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# 複製 nginx 配置
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 複製 nginx 配置模板
+COPY nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
+
+# 複製啟動腳本
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 設定預設環境變數
+ENV BACKEND_URL=http://localhost:8000
 
 # 暴露端口
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# 使用自訂啟動腳本
+ENTRYPOINT ["/docker-entrypoint.sh"]
