@@ -470,3 +470,56 @@ python -m pytest    # 單元測試（如果有）
 - Project ID: duotopia-469413
 - Region: asia-east1
 - Support: 透過 GitHub Issues 回報問題
+
+## 💰 成本控制與優化措施 (2025-08-26 實施)
+
+### 問題診斷
+初始問題：開發階段每月成本高達 $300+ USD（~$10,000 TWD）
+- Cloud SQL: $272 USD (78%) - 主要問題
+- Cloud Run: $73 USD (21%)
+- Artifact Registry: $1.10 USD (<1%)
+
+### 已實施的成本優化
+| 優化項目 | 執行指令 | 每月節省 |
+|---------|---------|----------|
+| 停止 Production DB | `gcloud sql instances patch duotopia-db-production --activation-policy=NEVER` | $50 USD |
+| 停止 Staging DB | `gcloud sql instances patch duotopia-db-staging --activation-policy=NEVER` | $10 USD |
+| 降低 Cloud Run 實例 | 後端/前端 max-instances 降至 2，min-instances 設為 0 | $20 USD |
+| **總節省** | | **$80 USD/月** |
+
+### 開發階段最佳實踐
+
+#### 1. 資料庫管理
+```bash
+# 開發前啟動 staging DB
+gcloud sql instances patch duotopia-db-staging --activation-policy=ALWAYS
+
+# 開發完立即停止
+gcloud sql instances patch duotopia-db-staging --activation-policy=NEVER
+
+# 使用本地 Docker（完全免費）
+docker-compose up -d
+```
+
+#### 2. Cloud Run 設定
+- min-instances: 0（無流量時不收費）
+- max-instances: 2（開發階段足夠）
+- 容器大小目標: <500MB（目前 11GB 太大）
+
+#### 3. CI/CD 優化
+```yaml
+# 已修改 .github/workflows/deploy-staging.yml
+# 使用 npm 鏡像避免 429 錯誤
+npm config set registry https://registry.npmmirror.com
+npm ci --prefer-offline --no-audit
+```
+
+### 成本監控建議
+1. 設定 GCP 預算警報：$30 USD/月
+2. 定期檢查：`gcloud sql instances list`
+3. 確認服務狀態：`gcloud run services list`
+
+### 費用預估
+- 開發階段（資料庫停用）：~$20 USD/月
+- 測試階段（資料庫啟用）：~$30 USD/月
+- 生產環境：根據實際流量計費

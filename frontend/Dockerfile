@@ -34,5 +34,5 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 # 暴露端口
 EXPOSE 80
 
-# 使用啟動腳本
-CMD ["/start.sh"]
+# 使用 ENTRYPOINT 確保腳本一定會執行
+ENTRYPOINT ["/start.sh"]
