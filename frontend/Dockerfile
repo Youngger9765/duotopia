@@ -31,9 +31,6 @@ RUN chmod +x /start.sh
 # 移除預設的 nginx 配置
 RUN rm -f /etc/nginx/conf.d/default.conf
 
-# 設定預設環境變數
-ENV BACKEND_URL=http://localhost:8000
-
 # 暴露端口
 EXPOSE 80
 
