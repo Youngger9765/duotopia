@@ -134,42 +134,69 @@ def create_demo_data(db: Session):
     print("✅ 學生已加入班級")
     
     # ============ 5. Demo 課程（三層結構）============
-    # Program - 課程計畫 (在五年級A班內創建)
-    program = Program(
-        name="國小英語基礎課程",
-        description="適合國小學生的基礎英語課程",
+    # Program 1 - 五年級A班課程
+    program_5a = Program(
+        name="五年級英語基礎課程",
+        description="適合五年級學生的基礎英語課程",
         level=ProgramLevel.A1,
         teacher_id=demo_teacher.id,
         classroom_id=classroom_a.id,  # 在五年級A班內創建
         estimated_hours=20
     )
-    db.add(program)
+    
+    # Program 2 - 六年級B班課程  
+    program_6b = Program(
+        name="六年級英語進階課程",
+        description="適合六年級學生的進階英語課程",
+        level=ProgramLevel.A2,
+        teacher_id=demo_teacher.id,
+        classroom_id=classroom_b.id,  # 在六年級B班內創建
+        estimated_hours=25
+    )
+    
+    db.add_all([program_5a, program_6b])
     db.commit()
     
-    # Lesson 1 - Greetings
-    lesson1 = Lesson(
-        program_id=program.id,
+    # 五年級A班的 Lessons
+    lesson1_5a = Lesson(
+        program_id=program_5a.id,
         name="Unit 1: Greetings 打招呼",
         description="學習基本的英語問候語",
         order_index=1,
         estimated_minutes=30
     )
     
-    # Lesson 2 - Numbers
-    lesson2 = Lesson(
-        program_id=program.id,
+    lesson2_5a = Lesson(
+        program_id=program_5a.id,
         name="Unit 2: Numbers 數字",
         description="學習數字 1-10",
         order_index=2,
         estimated_minutes=30
     )
     
-    db.add_all([lesson1, lesson2])
+    # 六年級B班的 Lessons
+    lesson1_6b = Lesson(
+        program_id=program_6b.id,
+        name="Unit 1: Daily Conversation 日常對話",
+        description="學習日常英語對話",
+        order_index=1,
+        estimated_minutes=40
+    )
+    
+    lesson2_6b = Lesson(
+        program_id=program_6b.id,
+        name="Unit 2: My Family 我的家庭",
+        description="學習家庭成員相關詞彙",
+        order_index=2,
+        estimated_minutes=40
+    )
+    
+    db.add_all([lesson1_5a, lesson2_5a, lesson1_6b, lesson2_6b])
     db.commit()
     
-    # Content - 朗讀錄音集內容
-    content1 = Content(
-        lesson_id=lesson1.id,
+    # Content - 五年級A班朗讀錄音集內容
+    content1_5a = Content(
+        lesson_id=lesson1_5a.id,
         type=ContentType.READING_RECORDING,
         title="基礎問候語練習",
         order_index=1,
@@ -189,8 +216,8 @@ def create_demo_data(db: Session):
         time_limit_seconds=180
     )
     
-    content2 = Content(
-        lesson_id=lesson2.id,
+    content2_5a = Content(
+        lesson_id=lesson2_5a.id,
         type=ContentType.READING_RECORDING,
         title="數字 1-10 練習",
         order_index=1,
@@ -211,19 +238,58 @@ def create_demo_data(db: Session):
         time_limit_seconds=120
     )
     
-    db.add_all([content1, content2])
+    # Content - 六年級B班朗讀錄音集內容
+    content1_6b = Content(
+        lesson_id=lesson1_6b.id,
+        type=ContentType.READING_RECORDING,
+        title="日常對話練習",
+        order_index=1,
+        items=[
+            {"text": "What's your name?", "translation": "你叫什麼名字？"},
+            {"text": "My name is David", "translation": "我叫大衛"},
+            {"text": "Where are you from?", "translation": "你來自哪裡？"},
+            {"text": "I'm from Taiwan", "translation": "我來自台灣"},
+            {"text": "How old are you?", "translation": "你幾歲？"},
+            {"text": "I'm twelve years old", "translation": "我十二歲"},
+            {"text": "Nice to meet you", "translation": "很高興認識你"}
+        ],
+        target_wpm=70,
+        target_accuracy=0.85,
+        time_limit_seconds=180
+    )
+    
+    content2_6b = Content(
+        lesson_id=lesson2_6b.id,
+        type=ContentType.READING_RECORDING,
+        title="家庭成員練習",
+        order_index=1,
+        items=[
+            {"text": "Father", "translation": "爸爸"},
+            {"text": "Mother", "translation": "媽媽"},
+            {"text": "Brother", "translation": "哥哥/弟弟"},
+            {"text": "Sister", "translation": "姐姐/妹妹"},
+            {"text": "Grandfather", "translation": "爺爺"},
+            {"text": "Grandmother", "translation": "奶奶"},
+            {"text": "This is my family", "translation": "這是我的家人"}
+        ],
+        target_wpm=75,
+        target_accuracy=0.85,
+        time_limit_seconds=150
+    )
+    
+    db.add_all([content1_5a, content2_5a, content1_6b, content2_6b])
     db.commit()
-    print("✅ 建立課程: 國小英語基礎課程 (2個單元，每個單元有朗讀錄音集)")
+    print("✅ 建立課程: 五年級和六年級各有專屬課程 (各2個單元，每個單元有朗讀錄音集)")
     
     # 注意：課程直接關聯到班級，不再需要 ClassroomProgramMapping
-    print("✅ 課程已直接關聯到五年級A班")
+    print("✅ 課程已直接關聯到對應班級")
     
     # ============ 7. Demo 作業 ============
     # 給五年級A班派發 Greetings 作業
     for student in students_5a:
         assignment1 = StudentAssignment(
             student_id=student.id,
-            content_id=content1.id,
+            content_id=content1_5a.id,
             classroom_id=classroom_a.id,
             title="Greetings 問候語練習",
             instructions="請練習錄音以下問候語，注意發音準確度",
@@ -257,7 +323,7 @@ def create_demo_data(db: Session):
     for student in students_6b:
         assignment2 = StudentAssignment(
             student_id=student.id,
-            content_id=content2.id,
+            content_id=content1_6b.id,
             classroom_id=classroom_b.id,
             title="Numbers 數字練習",
             instructions="請練習錄音數字 1-10，注意語調",

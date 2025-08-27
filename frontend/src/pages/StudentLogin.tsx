@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import { authService } from '@/services/authService';
@@ -34,7 +34,7 @@ export default function StudentLogin() {
   // Multi-step form state
   const [step, setStep] = useState(1);
   const [teacherEmail, setTeacherEmail] = useState('');
-  const [selectedTeacher, setSelectedTeacher] = useState<TeacherHistory | null>(null);
+  const [, setSelectedTeacher] = useState<TeacherHistory | null>(null);
   const [teacherHistory, setTeacherHistory] = useState<TeacherHistory[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);

@@ -71,12 +71,14 @@ class Student(Base):
     name = Column(String(100), nullable=False)
     student_id = Column(String(50))  # 學號（選填）
     email = Column(String(255), unique=True, index=True)  # 系統生成
-    password_hash = Column(String(255), nullable=False)  # 預設生日
-    birthdate = Column(Date, nullable=False)
+    password_hash = Column(String(255), nullable=False)  # 密碼雜湊
+    birthdate = Column(Date, nullable=False)  # 生日（預設密碼來源）
+    password_changed = Column(Boolean, default=False)  # 是否已更改密碼
     parent_email = Column(String(255))  # Phase 2
     parent_phone = Column(String(20))   # Phase 2
     avatar_url = Column(String(500))
     is_active = Column(Boolean, default=True)
+    last_login = Column(DateTime(timezone=True))  # 最後登入時間
     
     # 學習目標設定
     target_wpm = Column(Integer, default=80)  # 目標每分鐘字數
@@ -88,6 +90,12 @@ class Student(Base):
     # Relationships
     classroom_enrollments = relationship("ClassroomStudent", back_populates="student")
     assignments = relationship("StudentAssignment", back_populates="student")
+    
+    def get_default_password(self):
+        """取得預設密碼（生日格式：YYYYMMDD）"""
+        if self.birthdate:
+            return self.birthdate.strftime("%Y%m%d")
+        return None
     
     def __repr__(self):
         return f"<Student {self.name}>"
