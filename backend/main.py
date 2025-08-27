@@ -4,7 +4,7 @@ import uvicorn
 import os
 
 # Import routers
-from routers import auth, students
+from routers import auth, students, teachers
 
 app = FastAPI(title="Duotopia API", version="1.0.0")
 
@@ -27,6 +27,7 @@ async def health_check():
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(teachers.router)
 app.include_router(students.router)
 
 if __name__ == "__main__":

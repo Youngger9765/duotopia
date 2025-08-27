@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from database import engine, Base
 from models import (
     Teacher, Student, Classroom, ClassroomStudent,
-    Program, Lesson, Content, ClassroomProgramMapping,
+    Program, Lesson, Content,
     StudentAssignment, AssignmentSubmission,
     ProgramLevel, ContentType, AssignmentStatus
 )
@@ -134,12 +134,13 @@ def create_demo_data(db: Session):
     print("✅ 學生已加入班級")
     
     # ============ 5. Demo 課程（三層結構）============
-    # Program - 課程計畫
+    # Program - 課程計畫 (在五年級A班內創建)
     program = Program(
         name="國小英語基礎課程",
         description="適合國小學生的基礎英語課程",
         level=ProgramLevel.A1,
         teacher_id=demo_teacher.id,
+        classroom_id=classroom_a.id,  # 在五年級A班內創建
         estimated_hours=20
     )
     db.add(program)
@@ -214,19 +215,8 @@ def create_demo_data(db: Session):
     db.commit()
     print("✅ 建立課程: 國小英語基礎課程 (2個單元，每個單元有朗讀錄音集)")
     
-    # ============ 6. 班級與課程關聯 ============
-    mapping1 = ClassroomProgramMapping(
-        classroom_id=classroom_a.id,
-        program_id=program.id
-    )
-    mapping2 = ClassroomProgramMapping(
-        classroom_id=classroom_b.id,
-        program_id=program.id
-    )
-    
-    db.add_all([mapping1, mapping2])
-    db.commit()
-    print("✅ 課程已分配給班級")
+    # 注意：課程直接關聯到班級，不再需要 ClassroomProgramMapping
+    print("✅ 課程已直接關聯到五年級A班")
     
     # ============ 7. Demo 作業 ============
     # 給五年級A班派發 Greetings 作業

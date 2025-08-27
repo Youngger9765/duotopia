@@ -53,6 +53,10 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 
 #### 課程內容（三層架構）
 - **Program**：課程計畫（如：國小五年級英語課程）
+  - **創建歸屬**：必須在特定班級內創建（teacher_id + classroom_id）
+  - **複製機制**：可被其他班級複製使用（source_from_id 追蹤原始來源）
+  - **原創課程**：source_from_id = null（原創課程）
+  - **複製課程**：source_from_id = 原始課程的 Program ID
   - 包含多個 Lesson
   - 設定整體學習目標
   - 定義課程期間
@@ -67,7 +71,7 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
   - 實際的練習內容
   - 朗讀錄音集：3-15 個文本項目
 
-- **ClassroomProgramMapping**：班級與課程計畫關聯
+**注意**：移除 ClassroomProgramMapping，因為 Program 已直接關聯到 Classroom
 
 #### 作業與評量
 - **StudentAssignment**：學生作業

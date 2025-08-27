@@ -110,7 +110,9 @@ class Classroom(Base):
     # Relationships
     teacher = relationship("Teacher", back_populates="classrooms")
     students = relationship("ClassroomStudent", back_populates="classroom", cascade="all, delete-orphan")
-    program_mappings = relationship("ClassroomProgramMapping", back_populates="classroom")
+    programs = relationship("Program", back_populates="classroom", cascade="all, delete-orphan")  # 直接關聯課程
+    
+    # 移除 program_mappings，因為 Program 已直接關聯到 Classroom
     
     def __repr__(self):
         return f"<Classroom {self.name}>"
@@ -136,7 +138,7 @@ class ClassroomStudent(Base):
 
 # ============ 課程系統（三層架構）============
 class Program(Base):
-    """課程計畫（最上層）"""
+    """課程計畫（最上層）- 在特定班級內創建"""
     __tablename__ = "programs"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -144,6 +146,7 @@ class Program(Base):
     description = Column(Text)
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=False)  # 課程歸屬班級
     estimated_hours = Column(Integer)  # 預計時數
     is_active = Column(Boolean, default=True)
     
@@ -152,8 +155,8 @@ class Program(Base):
     
     # Relationships
     teacher = relationship("Teacher", back_populates="programs")
+    classroom = relationship("Classroom", back_populates="programs")
     lessons = relationship("Lesson", back_populates="program", cascade="all, delete-orphan")
-    classroom_mappings = relationship("ClassroomProgramMapping", back_populates="program")
     
     def __repr__(self):
         return f"<Program {self.name}>"
@@ -207,18 +210,6 @@ class Content(Base):
     def __repr__(self):
         return f"<Content {self.title}>"
 
-class ClassroomProgramMapping(Base):
-    """班級與課程計畫關聯"""
-    __tablename__ = "classroom_program_mappings"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=False)
-    program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
-    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Relationships
-    classroom = relationship("Classroom", back_populates="program_mappings")
-    program = relationship("Program", back_populates="classroom_mappings")
 
 # ============ 作業系統 ============
 class StudentAssignment(Base):
