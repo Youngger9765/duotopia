@@ -75,11 +75,57 @@ logs-backend:
 logs-frontend:
 	gcloud run logs read duotopia-frontend --limit=50
 
+# 資料庫管理
+.PHONY: db-create
+db-create:
+	@echo "Creating Cloud SQL instance with cost-optimized settings..."
+	gcloud sql instances create duotopia-dev \
+		--tier=db-f1-micro \
+		--region=$(REGION) \
+		--database-version=POSTGRES_17 \
+		--storage-size=10GB \
+		--storage-type=SSD \
+		--no-backup \
+		--no-assign-ip \
+		--network=projects/$(PROJECT_ID)/global/networks/default \
+		--availability-type=ZONAL \
+		--activation-policy=NEVER \
+		--maintenance-release-channel=production \
+		--maintenance-window-day=SUN \
+		--maintenance-window-hour=03 \
+		--deletion-protection=false \
+		--project=$(PROJECT_ID)
+	@echo "✅ Database created with cost optimization:"
+	@echo "   - No public IP (saves $$9.49/month)"
+	@echo "   - No backup (saves $$2/month)" 
+	@echo "   - SSD storage (better performance)"
+	@echo "   - Default: STOPPED ($$0 until you start it)"
+	@echo "   - Total when running: ~$$11/month"
+	@echo ""
+	@echo "⚠️  Remember to run 'make db-start' to begin using it"
+
+.PHONY: db-start
+db-start:
+	@echo "Starting Cloud SQL..."
+	gcloud sql instances patch duotopia-dev --activation-policy=ALWAYS --project=$(PROJECT_ID)
+
+.PHONY: db-stop
+db-stop:
+	@echo "Stopping Cloud SQL..."
+	gcloud sql instances patch duotopia-dev --activation-policy=NEVER --project=$(PROJECT_ID)
+
+.PHONY: db-delete
+db-delete:
+	@echo "Deleting Cloud SQL instance..."
+	gcloud sql instances delete duotopia-dev --quiet --project=$(PROJECT_ID)
+
 # 狀態檢查
 .PHONY: status
 status:
 	@echo "Checking service status..."
 	gcloud run services list --platform managed --region $(REGION)
+	@echo "Checking database status..."
+	gcloud sql instances describe duotopia-dev --format="value(state,settings.activationPolicy)" 2>/dev/null || echo "No database"
 
 # 幫助
 .PHONY: help
