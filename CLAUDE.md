@@ -4,6 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 最高指導原則：修完要自己去測試過！
 
+## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
+
+### 在執行任何重要操作前，必須按順序檢查：
+1. **先查 Makefile** - `make help` 或 `cat Makefile | grep "^[a-z-]*:"`
+2. **先查 README** - 了解專案標準流程  
+3. **先查 CLAUDE.md** - 了解專案特定規則
+4. **先查 package.json/requirements.txt** - 了解已有的腳本命令
+5. **絕對不要自作主張創建資源** - 永遠使用專案既有的配置
+
+### 🔴 紅線規則 (絕對禁止)：
+- ❌ **不要手動 gcloud 命令創建資源** - 必須用 Makefile
+- ❌ **不要猜測版本號** - POSTGRES_15 vs POSTGRES_17 等必須查證
+- ❌ **不要忽略專案既有工具** - Makefile, npm scripts 優先
+- ❌ **不要在未讀取配置前就執行命令** - 先讀後做
+
+### ✅ 正確操作範例：
+```bash
+# 錯誤：直接創建 Cloud SQL
+gcloud sql instances create duotopia-db-staging --database-version=POSTGRES_15
+
+# 正確：使用 Makefile
+make help  # 先看有什麼命令
+make db-create  # 使用專案配置創建
+```
+
 ### ⚡ 每次修改後必須執行的測試流程：
 
 1. **立即編譯測試**
@@ -491,55 +516,90 @@ python -m pytest    # 單元測試（如果有）
 - Region: asia-east1
 - Support: 透過 GitHub Issues 回報問題
 
-## 💰 成本控制與優化措施 (2025-08-26 實施)
+## 💰 成本控制與優化措施 (2025-08-27 更新)
+
+### 🔴 重大教訓：Cloud SQL Tier 錯誤導致巨額帳單
+**事件**: 2025-08-21 創建了 **db-g1-small** 實例（應為 db-f1-micro）
+- 錯誤實例: duotopia-db-production (db-g1-small)
+- 運行時間: 112 小時
+- 產生費用: **$233.24 USD**（單日 $67）
+- 正確配置: db-f1-micro 只需 ~$11/月
+
+### ⚠️ Cloud SQL 創建紅線規則
+1. **絕對禁止手動創建 Cloud SQL**
+   ```bash
+   # ❌ 錯誤 - 絕對不要這樣做
+   gcloud sql instances create duotopia-xxx --tier=db-g1-small
+   
+   # ✅ 正確 - 永遠使用 Makefile
+   make db-create  # 已設定 db-f1-micro
+   ```
+
+2. **Tier 必須是 db-f1-micro**
+   - db-f1-micro: ~$11/月
+   - db-g1-small: ~$50/月（5倍價格！）
+   - 任何其他 tier 都太貴
+
+3. **Edition 必須指定 ENTERPRISE**
+   ```bash
+   --edition=ENTERPRISE  # 必須！不然 db-f1-micro 不能用
+   ```
 
 ### 問題診斷
 初始問題：開發階段每月成本高達 $300+ USD（~$10,000 TWD）
-- Cloud SQL: $272 USD (78%) - 主要問題
+- Cloud SQL: $272 USD (78%) - 主要問題（含錯誤的 Small 實例）
 - Cloud Run: $73 USD (21%)
 - Artifact Registry: $1.10 USD (<1%)
 
 ### 已實施的成本優化
 | 優化項目 | 執行指令 | 每月節省 |
 |---------|---------|----------|
+| 刪除錯誤 Small 實例 | `gcloud sql instances delete duotopia-db-production` | $200+ USD |
 | 停止 Production DB | `gcloud sql instances patch duotopia-db-production --activation-policy=NEVER` | $50 USD |
 | 停止 Staging DB | `gcloud sql instances patch duotopia-db-staging --activation-policy=NEVER` | $10 USD |
 | 降低 Cloud Run 實例 | 後端/前端 max-instances 降至 2，min-instances 設為 0 | $20 USD |
-| **總節省** | | **$80 USD/月** |
+| **總節省** | | **$280 USD/月** |
 
 ### 開發階段最佳實踐
 
-#### 1. 資料庫管理
+#### 1. 資料庫管理（嚴格遵守）
 ```bash
-# 開發前啟動 staging DB
-gcloud sql instances patch duotopia-db-staging --activation-policy=ALWAYS
+# 創建資料庫 - 只用 Makefile！
+make db-create  # 自動使用正確的 db-f1-micro 配置
 
-# 開發完立即停止
-gcloud sql instances patch duotopia-db-staging --activation-policy=NEVER
+# 開發前啟動
+make db-start
+
+# 開發完立即停止（省錢）
+make db-stop
+
+# 刪除不需要的實例
+make db-delete
 
 # 使用本地 Docker（完全免費）
 docker-compose up -d
 ```
 
-#### 2. Cloud Run 設定
+#### 2. 成本檢查 SOP
+```bash
+# 每天檢查一次
+gcloud sql instances list --format="table(name,tier,state)"
+
+# 看到任何非 db-f1-micro 立即刪除！
+# 看到任何 RUNNABLE 狀態但沒在用的立即停止！
+```
+
+#### 3. Cloud Run 設定
 - min-instances: 0（無流量時不收費）
 - max-instances: 2（開發階段足夠）
 - 容器大小目標: <500MB（目前 11GB 太大）
 
-#### 3. CI/CD 優化
-```yaml
-# 已修改 .github/workflows/deploy-staging.yml
-# 使用 npm 鏡像避免 429 錯誤
-npm config set registry https://registry.npmmirror.com
-npm ci --prefer-offline --no-audit
-```
-
 ### 成本監控建議
 1. 設定 GCP 預算警報：$30 USD/月
-2. 定期檢查：`gcloud sql instances list`
-3. 確認服務狀態：`gcloud run services list`
+2. 每日檢查：`gcloud sql instances list`
+3. 發現異常立即處理：任何 > $10/天 都是異常
 
-### 費用預估
+### 費用預估（正確配置下）
 - 開發階段（資料庫停用）：~$20 USD/月
 - 測試階段（資料庫啟用）：~$30 USD/月
 - 生產環境：根據實際流量計費
