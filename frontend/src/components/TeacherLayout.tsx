@@ -65,7 +65,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
       {/* Sidebar */}
-      <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} flex flex-col`}>
+      <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} flex flex-col h-screen sticky top-0`}>
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           {!sidebarCollapsed && (
