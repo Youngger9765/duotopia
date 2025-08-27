@@ -28,7 +28,6 @@ export interface Student {
 interface StudentTableProps {
   students: Student[];
   showClassroom?: boolean; // Show classroom column in all students view
-  showStatus?: boolean; // Show status column in all students view
   onAddStudent?: () => void;
   onEditStudent?: (student: Student) => void;
   onEmailStudent?: (student: Student) => void;
@@ -40,7 +39,6 @@ interface StudentTableProps {
 export default function StudentTable({
   students,
   showClassroom = false,
-  showStatus = false,
   onAddStudent,
   onEditStudent,
   onEmailStudent,
@@ -104,9 +102,7 @@ export default function StudentTable({
           )}
           <TableHead className="text-left">學號</TableHead>
           <TableHead className="text-left">密碼狀態</TableHead>
-          {showStatus && (
-            <TableHead className="text-left">狀態</TableHead>
-          )}
+          <TableHead className="text-left">狀態</TableHead>
           <TableHead className="text-left">最後登入</TableHead>
           <TableHead className="text-left">操作</TableHead>
         </TableRow>
@@ -158,9 +154,7 @@ export default function StudentTable({
                 </div>
               )}
             </TableCell>
-            {showStatus && (
-              <TableCell>{getStatusBadge(student.status)}</TableCell>
-            )}
+            <TableCell>{getStatusBadge(student.status)}</TableCell>
             <TableCell>
               {student.last_login ? (
                 <>

@@ -54,14 +54,16 @@ export default function TeacherStudents() {
     }
   };
 
-  // 過濾學生
-  const filteredStudents = allStudents.filter(student => {
-    const matchesClassroom = !selectedClassroom || student.classroom_id === selectedClassroom;
-    const matchesSearch = !searchTerm || 
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesClassroom && matchesSearch;
-  });
+  // 過濾並排序學生
+  const filteredStudents = allStudents
+    .filter(student => {
+      const matchesClassroom = !selectedClassroom || student.classroom_id === selectedClassroom;
+      const matchesSearch = !searchTerm || 
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesClassroom && matchesSearch;
+    })
+    .sort((a, b) => a.id - b.id); // 按 ID 排序
 
 
 
@@ -172,7 +174,6 @@ export default function TeacherStudents() {
           <StudentTable
             students={filteredStudents}
             showClassroom={true}
-            showStatus={true}
             onViewStudent={(student) => {
               // TODO: Implement view student details
               console.log('View student:', student);
