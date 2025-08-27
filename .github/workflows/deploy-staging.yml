@@ -98,7 +98,8 @@ jobs:
           --min-instances 0 \
           --cpu-throttling \
           --concurrency 80 \
-          --cpu-boost
+          --cpu-boost \
+          --set-env-vars="DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }},JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }},JWT_ALGORITHM=HS256,JWT_EXPIRE_MINUTES=30"
 
     - name: Get backend URL and create .env
       working-directory: ./frontend
