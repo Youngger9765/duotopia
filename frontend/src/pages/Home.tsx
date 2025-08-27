@@ -54,7 +54,7 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="border-white text-white hover:bg-white hover:text-blue-700 px-8 py-6 text-lg"
+                    className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all"
                   >
                     <Play className="mr-2 h-5 w-5" />
                     觀看介紹影片
