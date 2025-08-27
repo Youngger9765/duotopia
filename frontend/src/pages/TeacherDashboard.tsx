@@ -11,7 +11,7 @@ import {
   Clock,
   TrendingUp
 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '../lib/api';
 
 interface TeacherProfile {
   id: number;

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, User, Lock, Mail, Phone } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '../lib/api';
 
 export default function TeacherRegister() {
   const navigate = useNavigate();

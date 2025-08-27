@@ -10,6 +10,7 @@
     "lint": "echo 'Skipping lint for now'"
   },
   "dependencies": {
+    "@types/node": "^24.3.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.542.0",
     "react": "^18.2.0",
