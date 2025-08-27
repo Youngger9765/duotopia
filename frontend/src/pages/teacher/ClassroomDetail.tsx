@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
+import { StudentDialogs } from '@/components/StudentDialogs';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -36,6 +37,10 @@ export default function ClassroomDetail() {
   const [activeTab, setActiveTab] = useState('students');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<any>(null);
+  
+  // Student dialog states
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -84,6 +89,62 @@ export default function ClassroomDetail() {
   const closePanel = () => {
     setIsPanelOpen(false);
     setTimeout(() => setSelectedContent(null), 300);
+  };
+
+  // Student CRUD handlers
+  const handleCreateStudent = () => {
+    setSelectedStudent(null);
+    setDialogType('create');
+  };
+
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setDialogType('view');
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setDialogType('edit');
+  };
+
+  const handleEmailStudent = (student: Student) => {
+    // TODO: Implement email functionality
+    console.log('Email student:', student);
+  };
+
+  const handleResetPassword = async (student: Student) => {
+    if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
+      return;
+    }
+    
+    try {
+      await apiClient.resetStudentPassword(student.id);
+      // Refresh data
+      fetchClassroomDetail();
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      alert('重設密碼失敗，請稍後再試');
+    }
+  };
+
+  const handleSaveStudent = () => {
+    // Refresh data after save
+    fetchClassroomDetail();
+  };
+
+  const handleDeleteStudent = () => {
+    // Refresh data after delete
+    fetchClassroomDetail();
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedStudent(null);
+    setDialogType(null);
+  };
+
+  const handleSwitchToEdit = () => {
+    // Switch from view to edit mode
+    setDialogType('edit');
   };
 
   const getLevelBadge = (level?: string) => {
@@ -218,7 +279,7 @@ export default function ClassroomDetail() {
             <TabsContent value="students" className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">班級學生</h3>
-                <Button size="sm">
+                <Button size="sm" onClick={handleCreateStudent}>
                   <Plus className="h-4 w-4 mr-2" />
                   新增學生
                 </Button>
@@ -227,9 +288,11 @@ export default function ClassroomDetail() {
               <StudentTable
                 students={classroom.students}
                 showClassroom={false}
-                onAddStudent={() => console.log('Add student')}
-                onEditStudent={(student) => console.log('Edit student:', student)}
-                onEmailStudent={(student) => console.log('Email student:', student)}
+                onAddStudent={handleCreateStudent}
+                onViewStudent={handleViewStudent}
+                onEditStudent={handleEditStudent}
+                onEmailStudent={handleEmailStudent}
+                onResetPassword={handleResetPassword}
                 emptyMessage="此班級尚無學生"
               />
             </TabsContent>
@@ -505,6 +568,17 @@ export default function ClassroomDetail() {
           )}
         </div>
       </div>
+
+      {/* Student Dialogs */}
+      <StudentDialogs
+        student={selectedStudent}
+        dialogType={dialogType}
+        onClose={handleCloseDialog}
+        onSave={handleSaveStudent}
+        onDelete={handleDeleteStudent}
+        onSwitchToEdit={handleSwitchToEdit}
+        classrooms={classroom ? [classroom] : []}
+      />
     </TeacherLayout>
   );
 }

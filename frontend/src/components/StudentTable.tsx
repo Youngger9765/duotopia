@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Mail, Edit, Users, Plus, Eye } from 'lucide-react';
+import { Mail, Edit, Users, Plus, Eye, RotateCcw } from 'lucide-react';
 
 export interface Student {
   id: number;
@@ -32,6 +32,7 @@ interface StudentTableProps {
   onEditStudent?: (student: Student) => void;
   onEmailStudent?: (student: Student) => void;
   onViewStudent?: (student: Student) => void;
+  onResetPassword?: (student: Student) => void;
   emptyMessage?: string;
   emptyDescription?: string;
 }
@@ -43,6 +44,7 @@ export default function StudentTable({
   onEditStudent,
   onEmailStudent,
   onViewStudent,
+  onResetPassword,
   emptyMessage = '尚無學生',
   emptyDescription
 }: StudentTableProps) {
@@ -137,22 +139,37 @@ export default function StudentTable({
             )}
             <TableCell>{student.student_id || '-'}</TableCell>
             <TableCell>
-              {student.password_changed ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  已更改
-                </span>
-              ) : (
+              <div className="flex items-center space-x-2">
                 <div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    預設密碼
-                  </span>
-                  {student.birthdate && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {student.birthdate.replace(/-/g, '')}
-                    </p>
+                  {student.password_changed ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      已更改
+                    </span>
+                  ) : (
+                    <div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        預設密碼
+                      </span>
+                      {student.birthdate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {student.birthdate.replace(/-/g, '')}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+                {student.password_changed && onResetPassword && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="重設為預設密碼"
+                    onClick={() => onResetPassword(student)}
+                    className="h-7 px-2"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </TableCell>
             <TableCell>{getStatusBadge(student.status)}</TableCell>
             <TableCell>

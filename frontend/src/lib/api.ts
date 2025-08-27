@@ -146,6 +146,48 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ============ Student CRUD Methods ============
+  async createStudent(data: { 
+    name: string; 
+    email: string; 
+    student_id?: string;
+    birthdate: string;
+    phone?: string;
+    classroom_id?: number;
+  }) {
+    return this.request('/api/teachers/students', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStudent(studentId: number, data: {
+    name?: string;
+    email?: string;
+    student_id?: string;
+    birthdate?: string;
+    phone?: string;
+    classroom_id?: number;
+    status?: string;
+  }) {
+    return this.request(`/api/teachers/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStudent(studentId: number) {
+    return this.request(`/api/teachers/students/${studentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async resetStudentPassword(studentId: number) {
+    return this.request(`/api/teachers/students/${studentId}/reset-password`, {
+      method: 'POST',
+    });
+  }
 }
 
 // Export singleton instance

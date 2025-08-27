@@ -100,11 +100,12 @@ def create_demo_data(db: Session):
         Student(
             name="林靜香",
             email="student5@duotopia.com",
-            password_hash=common_password,
+            password_hash=get_password_hash("mynewpassword123"),  # 這個學生已經更改過密碼
             birthdate=common_birthdate,
             student_id="S005",
             target_wpm=75,
-            target_accuracy=0.88
+            target_accuracy=0.88,
+            password_changed=True  # 標記密碼已更改
         )
     ]
     
@@ -340,7 +341,9 @@ def create_demo_data(db: Session):
     print("="*50)
     print("\n📝 測試帳號：")
     print("教師登入: demo@duotopia.com / demo123")
-    print("學生登入: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生名字 → 密碼 20120101")
+    print("學生登入: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生名字")
+    print("  - 大部分學生密碼: 20120101")
+    print("  - 林靜香 (已更改密碼): mynewpassword123")
     print("="*50)
 
 def reset_database():

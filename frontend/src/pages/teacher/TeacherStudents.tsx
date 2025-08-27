@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
+import { StudentDialogs } from '@/components/StudentDialogs';
 import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -17,6 +18,8 @@ export default function TeacherStudents() {
   const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
 
   useEffect(() => {
     fetchClassrooms();
@@ -64,6 +67,61 @@ export default function TeacherStudents() {
       return matchesClassroom && matchesSearch;
     })
     .sort((a, b) => a.id - b.id); // 按 ID 排序
+
+  const handleCreateStudent = () => {
+    setSelectedStudent(null);
+    setDialogType('create');
+  };
+
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setDialogType('view');
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setDialogType('edit');
+  };
+
+  const handleEmailStudent = (student: Student) => {
+    // TODO: Implement email functionality
+    console.log('Email student:', student);
+  };
+
+  const handleResetPassword = async (student: Student) => {
+    if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
+      return;
+    }
+    
+    try {
+      await apiClient.resetStudentPassword(student.id);
+      // Refresh data
+      fetchClassrooms();
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      alert('重設密碼失敗，請稍後再試');
+    }
+  };
+
+  const handleSaveStudent = () => {
+    // Refresh data after save
+    fetchClassrooms();
+  };
+
+  const handleDeleteStudent = () => {
+    // Refresh data after delete
+    fetchClassrooms();
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedStudent(null);
+    setDialogType(null);
+  };
+
+  const handleSwitchToEdit = () => {
+    // Switch from view to edit mode
+    setDialogType('edit');
+  };
 
 
 
@@ -120,7 +178,7 @@ export default function TeacherStudents() {
               <Download className="h-4 w-4 mr-2" />
               匯出名單
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={handleCreateStudent}>
               <Plus className="h-4 w-4 mr-2" />
               新增學生
             </Button>
@@ -174,22 +232,11 @@ export default function TeacherStudents() {
           <StudentTable
             students={filteredStudents}
             showClassroom={true}
-            onViewStudent={(student) => {
-              // TODO: Implement view student details
-              console.log('View student:', student);
-            }}
-            onEditStudent={(student) => {
-              // TODO: Implement edit student
-              console.log('Edit student:', student);
-            }}
-            onEmailStudent={(student) => {
-              // TODO: Implement email student
-              console.log('Email student:', student);
-            }}
-            onAddStudent={() => {
-              // TODO: Implement add student
-              console.log('Add student');
-            }}
+            onViewStudent={handleViewStudent}
+            onEditStudent={handleEditStudent}
+            onEmailStudent={handleEmailStudent}
+            onResetPassword={handleResetPassword}
+            onAddStudent={handleCreateStudent}
             emptyMessage={
               searchTerm 
                 ? '找不到符合條件的學生'
@@ -200,6 +247,17 @@ export default function TeacherStudents() {
           />
         </div>
       </div>
+
+      {/* Student Dialogs */}
+      <StudentDialogs
+        student={selectedStudent}
+        dialogType={dialogType}
+        onClose={handleCloseDialog}
+        onSave={handleSaveStudent}
+        onDelete={handleDeleteStudent}
+        onSwitchToEdit={handleSwitchToEdit}
+        classrooms={classrooms}
+      />
     </TeacherLayout>
   );
 }

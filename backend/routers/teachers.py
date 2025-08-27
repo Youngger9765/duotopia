@@ -319,7 +319,11 @@ class StudentCreate(BaseModel):
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
+    email: Optional[str] = None
     student_id: Optional[str] = None
+    birthdate: Optional[str] = None
+    phone: Optional[str] = None
+    status: Optional[str] = None
     target_wpm: Optional[int] = None
     target_accuracy: Optional[float] = None
 
@@ -431,10 +435,30 @@ async def update_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
+    # Check if birthdate is being changed and student is using default password
+    if update_data.birthdate is not None and not student.password_changed:
+        from datetime import datetime
+        from auth import get_password_hash
+        
+        # Parse new birthdate
+        new_birthdate = datetime.strptime(update_data.birthdate, "%Y-%m-%d").date()
+        student.birthdate = new_birthdate
+        
+        # Update password to new birthdate (YYYYMMDD format)
+        new_default_password = new_birthdate.strftime("%Y%m%d")
+        student.password_hash = get_password_hash(new_default_password)
+    
+    # Update other fields
     if update_data.name is not None:
         student.name = update_data.name
+    if update_data.email is not None:
+        student.email = update_data.email
     if update_data.student_id is not None:
         student.student_id = update_data.student_id
+    if update_data.phone is not None:
+        student.phone = update_data.phone
+    if update_data.status is not None:
+        student.status = update_data.status
     if update_data.target_wpm is not None:
         student.target_wpm = update_data.target_wpm
     if update_data.target_accuracy is not None:
@@ -475,6 +499,42 @@ async def delete_student(
     db.commit()
     
     return {"message": "Student deleted successfully"}
+
+@router.post("/students/{student_id}/reset-password")
+async def reset_student_password(
+    student_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """重設學生密碼為預設值（生日）"""
+    # Get student and verify it belongs to teacher's classroom
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.classroom_enrollments.any(
+            ClassroomStudent.classroom.has(
+                Classroom.teacher_id == current_teacher.id
+            )
+        )
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    if not student.birthdate:
+        raise HTTPException(status_code=400, detail="Student birthdate not set")
+    
+    # Reset password to birthdate (YYYYMMDD format)
+    from auth import get_password_hash
+    default_password = student.birthdate.strftime("%Y%m%d")
+    student.password_hash = get_password_hash(default_password)
+    student.password_changed = False
+    
+    db.commit()
+    
+    return {
+        "message": "Password reset successfully",
+        "default_password": default_password
+    }
 
 @router.post("/classrooms/{classroom_id}/students/batch")
 async def batch_create_students(
