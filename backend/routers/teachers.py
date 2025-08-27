@@ -126,16 +126,36 @@ async def get_teacher_dashboard(current_teacher: Teacher = Depends(get_current_t
 @router.get("/classrooms")
 async def get_teacher_classrooms(current_teacher: Teacher = Depends(get_current_teacher), db: Session = Depends(get_db)):
     """取得教師的所有班級"""
+    from sqlalchemy import func
+    
+    # Get classrooms with students
     classrooms = db.query(Classroom).filter(
         Classroom.teacher_id == current_teacher.id
-    ).options(selectinload(Classroom.students).selectinload(ClassroomStudent.student)).all()
+    ).options(
+        selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+    ).all()
+    
+    # Get program counts in a single query for all classrooms
+    program_counts = db.query(
+        Program.classroom_id,
+        func.count(Program.id).label("count")
+    ).filter(
+        Program.classroom_id.in_([c.id for c in classrooms]),
+        Program.is_active == True
+    ).group_by(Program.classroom_id).all()
+    
+    # Convert to dict for easy lookup
+    program_count_map = {pc.classroom_id: pc.count for pc in program_counts}
     
     return [
         {
             "id": classroom.id,
             "name": classroom.name,
             "description": classroom.description,
-            "student_count": len(classroom.students),
+            "level": classroom.level.value if classroom.level else "A1",
+            "student_count": len([s for s in classroom.students if s.is_active]),
+            "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
+            "created_at": classroom.created_at.isoformat() if classroom.created_at else None,
             "students": [
                 {
                     "id": cs.student.id,
