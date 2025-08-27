@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -38,7 +38,6 @@ interface ClassroomDetail {
 }
 
 export default function TeacherClassrooms() {
-  const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<ClassroomDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingClassroom, setEditingClassroom] = useState<ClassroomDetail | null>(null);

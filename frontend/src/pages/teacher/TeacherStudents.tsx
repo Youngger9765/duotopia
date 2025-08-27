@@ -1,35 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import TeacherLayout from '@/components/TeacherLayout';
-import { Users, RefreshCw, Filter, Plus, Edit, Eye, Mail, UserCheck, UserX, Download } from 'lucide-react';
+import StudentTable, { Student } from '@/components/StudentTable';
+import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download } from 'lucide-react';
 import { apiClient } from '@/lib/api';
-
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  classroom_id?: number;
-  classroom_name?: string;
-  phone?: string;
-  birthdate?: string;  // 生日 (YYYY-MM-DD 格式，用於產生預設密碼 YYYYMMDD)
-  password_changed?: boolean;  // 是否已更改密碼
-  enrollment_date?: string;
-  status?: 'active' | 'inactive' | 'suspended';
-  last_login?: string | null;
-  total_assignments?: number;
-  completed_assignments?: number;
-  average_score?: number;
-  study_hours?: number;
-}
 
 interface Classroom {
   id: number;
@@ -89,28 +63,6 @@ export default function TeacherStudents() {
     return matchesClassroom && matchesSearch;
   });
 
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'active':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">活躍</span>;
-      case 'inactive':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">未活躍</span>;
-      case 'suspended':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">已停權</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">未知</span>;
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    });
-  };
 
 
   if (loading) {
@@ -217,120 +169,35 @@ export default function TeacherStudents() {
 
         {/* Students Table */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <Table>
-            <TableCaption>
-              共 {filteredStudents.length} 位學生
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px] text-left">ID</TableHead>
-                <TableHead className="text-left">學生姓名</TableHead>
-                <TableHead className="text-left">Email</TableHead>
-                <TableHead className="text-left">班級</TableHead>
-                <TableHead className="text-left">密碼狀態</TableHead>
-                <TableHead className="text-left">狀態</TableHead>
-                <TableHead className="text-left">最後登入</TableHead>
-                <TableHead className="text-left">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.id}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-blue-600">
-                            {student.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{student.name}</p>
-                          {student.phone && (
-                            <p className="text-xs text-gray-500">{student.phone}</p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Mail className="h-3 w-3 text-gray-400" />
-                        <span className="text-sm">{student.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{student.classroom_name || '-'}</TableCell>
-                    <TableCell>
-                      {/* 密碼狀態顯示 */}
-                      <div className="space-y-1">
-                        {student.password_changed ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            已更改
-                          </span>
-                        ) : (
-                          <div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              預設密碼
-                            </span>
-                            {student.birthdate && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {student.birthdate.replace(/-/g, '')}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(student.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {student.last_login ? (
-                          <>
-                            <p>{formatDate(student.last_login)}</p>
-                            <p className="text-xs text-gray-500">
-                              {Math.floor((Date.now() - new Date(student.last_login).getTime()) / (1000 * 60 * 60 * 24))} 天前
-                            </p>
-                          </>
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" title="查看詳情">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="編輯">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="發送郵件">
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Empty State */}
-        {filteredStudents.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
-              {searchTerm 
+          <StudentTable
+            students={filteredStudents}
+            showClassroom={true}
+            showStatus={true}
+            onViewStudent={(student) => {
+              // TODO: Implement view student details
+              console.log('View student:', student);
+            }}
+            onEditStudent={(student) => {
+              // TODO: Implement edit student
+              console.log('Edit student:', student);
+            }}
+            onEmailStudent={(student) => {
+              // TODO: Implement email student
+              console.log('Email student:', student);
+            }}
+            onAddStudent={() => {
+              // TODO: Implement add student
+              console.log('Add student');
+            }}
+            emptyMessage={
+              searchTerm 
                 ? '找不到符合條件的學生'
                 : selectedClassroom 
                   ? '此班級暫無學生' 
-                  : '尚未建立學生'}
-            </p>
-            {!searchTerm && (
-              <Button className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                新增第一位學生
-              </Button>
-            )}
-          </div>
-        )}
+                  : '尚未建立學生'
+            }
+          />
+        </div>
       </div>
     </TeacherLayout>
   );
