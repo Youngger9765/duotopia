@@ -100,6 +100,13 @@ jobs:
           --concurrency 80 \
           --cpu-boost
 
+    - name: Get backend URL and create .env
+      working-directory: ./frontend
+      run: |
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
+        echo "VITE_API_URL=$BACKEND_URL" > .env
+        echo "Created .env with VITE_API_URL=$BACKEND_URL"
+    
     - name: Build and push frontend image
       working-directory: ./frontend
       run: |

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { API_URL } from '../config/api'
 
 function Home() {
   const [apiStatus, setApiStatus] = useState<string>('checking...')
 
   useEffect(() => {
-    // 測試 API 連線
-    fetch('/api/health')
+    // 測試 API 連線（使用完整的後端 URL）
+    fetch(`${API_URL}/health`)
       .then(res => res.json())
       .then(data => setApiStatus(data.status))
       .catch(() => setApiStatus('offline'))
