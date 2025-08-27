@@ -103,8 +103,8 @@ jobs:
     - name: Get backend URL and create .env
       working-directory: ./frontend
       run: |
-        # 使用固定的 URL 格式（因為服務名稱是固定的）
-        BACKEND_URL="https://duotopia-staging-backend-206313737181.asia-east1.run.app"
+        # 獲取後端服務的實際 URL
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
         echo "VITE_API_URL=$BACKEND_URL" > .env
         echo "Created .env with VITE_API_URL=$BACKEND_URL"
     
@@ -132,6 +132,7 @@ jobs:
 
     - name: Health check
       run: |
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
         FRONTEND_URL=$(gcloud run services describe $FRONTEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
         
         echo "Backend URL: $BACKEND_URL"
