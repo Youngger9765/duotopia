@@ -1,16 +1,46 @@
 """
 Teacher API endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Dict, Any
 from database import get_db
 from models import Teacher, Classroom, Student, ClassroomStudent, Program, Lesson, Content, StudentAssignment
-from auth import get_current_teacher
+from auth import verify_token
 from pydantic import BaseModel
 from datetime import datetime
 
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
+
+# Dependency to get current teacher
+async def get_current_teacher(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Get current logged in teacher"""
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    
+    teacher_id = payload.get("sub")
+    teacher_type = payload.get("type")
+    
+    if teacher_type != "teacher":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a teacher"
+        )
+    
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found"
+        )
+    
+    return teacher
 
 # Response Models
 class TeacherProfile(BaseModel):

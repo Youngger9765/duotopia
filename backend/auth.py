@@ -36,10 +36,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def verify_token(token: str):
     """驗證 JWT token"""
+    if token is None:
+        return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except (JWTError, AttributeError):
         return None
 
 def authenticate_teacher(db: Session, email: str, password: str):
