@@ -18,6 +18,9 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# 移除預設配置
+RUN rm -f /etc/nginx/conf.d/default.conf
+
 # 複製建置結果
 COPY --from=builder /app/dist /usr/share/nginx/html
 
