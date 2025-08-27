@@ -112,6 +112,7 @@ db-staging-create:
 	@echo "   - Instance: duotopia-staging-0827"
 	@echo "   - Tier: db-f1-micro (~$$11/month)"
 	@echo "   - No backup (saves $$2/month)"
+	@echo "   - No high availability (saves $$5/month)"
 	@echo ""
 	@echo "⚠️  IMPORTANT: Run 'make db-staging-stop' NOW to save money!"
 	@echo "   The instance is RUNNING and charging you!"
@@ -177,6 +178,24 @@ status:
 	@echo "Checking database status..."
 	gcloud sql instances describe duotopia-staging-0827 --format="value(state,settings.activationPolicy)" 2>/dev/null || echo "No database"
 
+# 資料庫成本檢查
+.PHONY: db-staging-cost-check
+db-staging-cost-check:
+	@echo "🔍 檢查 Staging 資料庫成本設定..."
+	@echo ""
+	@gcloud sql instances describe duotopia-staging-0827 \
+		--format="table(name,settings.availabilityType,settings.tier,settings.backupConfiguration.enabled,state)" \
+		--project=$(PROJECT_ID) || echo "No database found"
+	@echo ""
+	@echo "✅ 成本優化檢查："
+	@echo "   - ZONAL = 單區域（省錢）"
+	@echo "   - db-f1-micro = 最小機器（約 $$11/月）"
+	@echo "   - Backup False = 無備份（省 $$2/月）"
+	@echo "   - STOPPED = 已停機（不收費）"
+	@echo ""
+	@echo "⚠️  高可用性（High Availability）狀態：未啟用"
+	@echo "   如果 Console 顯示可啟用，那是因為資料庫已停機"
+
 # 幫助
 .PHONY: help
 help:
@@ -197,6 +216,7 @@ help:
 	@echo "  db-staging-stop   - Stop staging database (save money)"
 	@echo "  db-staging-delete - Delete staging database"
 	@echo "  db-staging-env    - Update Cloud Run env vars (DB connection)"
+	@echo "  db-staging-cost-check - Check database cost optimization settings"
 	@echo ""
 	@echo "Database - Seed Data:"
 	@echo "  db-seed-local     - Seed local database with demo data"

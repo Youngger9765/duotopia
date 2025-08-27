@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, User, Lock, Zap } from 'lucide-react';
+import { Loader2, User, Lock, Zap, Home } from 'lucide-react';
 import { apiClient } from '../lib/api';
 
 export default function TeacherLogin() {
@@ -51,6 +51,16 @@ export default function TeacherLogin() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* Home link */}
+      <div className="absolute top-4 left-4">
+        <Link to="/">
+          <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+            <Home className="h-4 w-4" />
+            <span>返回首頁</span>
+          </Button>
+        </Link>
+      </div>
+      
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Duotopia</h1>

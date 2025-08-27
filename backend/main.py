@@ -4,7 +4,7 @@ import uvicorn
 import os
 
 # Import routers
-from routers import auth, students, teachers
+from routers import auth, students, teachers, public
 
 app = FastAPI(title="Duotopia API", version="1.0.0")
 
@@ -26,6 +26,7 @@ async def health_check():
     return {"status": "healthy", "service": "duotopia-backend"}
 
 # Include routers
+app.include_router(public.router)  # 公開路由優先，不需要認證
 app.include_router(auth.router)
 app.include_router(teachers.router)
 app.include_router(students.router)

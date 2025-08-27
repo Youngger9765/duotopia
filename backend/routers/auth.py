@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from models import Teacher
+from models import Teacher, Student
 from auth import verify_password, create_access_token, get_password_hash
 from datetime import timedelta
 
@@ -14,6 +14,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
 # ============ Request/Response Models ============
 class TeacherLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class StudentLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
@@ -118,6 +122,48 @@ async def teacher_register(request: TeacherRegisterRequest, db: Session = Depend
             "email": new_teacher.email,
             "name": new_teacher.name,
             "is_demo": False
+        }
+    }
+
+# ============ Student Authentication ============
+@router.post("/student/login", response_model=TokenResponse)
+async def student_login(request: StudentLoginRequest, db: Session = Depends(get_db)):
+    """學生登入"""
+    student = db.query(Student).filter(Student.email == request.email).first()
+    
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+    
+    # 驗證密碼
+    if not verify_password(request.password, student.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+    
+    # 創建 JWT token
+    access_token = create_access_token(
+        data={
+            "sub": str(student.id),
+            "email": student.email,
+            "type": "student",
+            "name": student.name,
+            "student_id": student.student_id
+        },
+        expires_delta=timedelta(hours=24)
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": student.id,
+            "email": student.email,
+            "name": student.name,
+            "student_id": student.student_id
         }
     }
 
