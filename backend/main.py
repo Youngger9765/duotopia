@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 
+# Import routers
+from routers import auth, students
+
 app = FastAPI(title="Duotopia API", version="1.0.0")
 
 # CORS 設定
@@ -21,6 +24,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "duotopia-backend"}
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(students.router)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
