@@ -54,76 +54,27 @@ export default function TeacherStudents() {
       const data = await apiClient.getTeacherClassrooms() as Classroom[];
       setClassrooms(data);
       
-      // TODO: Replace with real data from API
-      // MOCK DATA START - 以下為模擬資料，需要從後端 API 取得真實資料
+      // Extract real students from classrooms data
       const studentsWithDetails = data.flatMap(classroom => 
-        classroom.students.map(student => {
-          // MOCK: 模擬作業數據
-          const totalAssignments = Math.floor(Math.random() * 50) + 10;
-          const completedAssignments = Math.floor(Math.random() * totalAssignments);
-          
-          // MOCK: 生成隨機生日
-          const year = 2012 + Math.floor(Math.random() * 5);
-          const month = Math.floor(Math.random() * 12) + 1;
-          const day = Math.floor(Math.random() * 28) + 1;
-          const birthdate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-          
-          return {
-            ...student,
-            classroom_id: classroom.id,
-            classroom_name: classroom.name,
-            // MOCK: 模擬電話號碼
-            phone: `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
-            // MOCK: 模擬生日 (YYYY-MM-DD 格式)
-            birthdate: birthdate,
-            // MOCK: 模擬密碼更改狀態 (70% 學生還沒改密碼)
-            password_changed: Math.random() > 0.7,
-            // MOCK: 模擬註冊日期
-            enrollment_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-            // MOCK: 模擬學生狀態
-            status: (['active', 'inactive', 'suspended'] as const)[Math.floor(Math.random() * 3)],
-            // MOCK: 模擬最後登入時間
-            last_login: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-            // MOCK: 模擬作業統計
-            total_assignments: totalAssignments,
-            completed_assignments: completedAssignments,
-            // MOCK: 模擬平均分數
-            average_score: Math.floor(Math.random() * 30) + 70,
-            // MOCK: 模擬學習時數
-            study_hours: Math.floor(Math.random() * 100) + 10,
-          };
-        })
+        classroom.students.map(student => ({
+          ...student,
+          classroom_id: classroom.id,
+          classroom_name: classroom.name,
+          // Set default values for fields that might be missing
+          phone: student.phone || '',
+          birthdate: student.birthdate || '',
+          password_changed: student.password_changed || false,
+          enrollment_date: student.enrollment_date || '',
+          status: student.status || 'active' as const,
+          last_login: student.last_login || null,
+        }))
       );
-      // MOCK DATA END
       
       setAllStudents(studentsWithDetails);
     } catch (err) {
       console.error('Fetch classrooms error:', err);
-      // MOCK: Fallback 模擬資料 - API 失敗時使用
-      // TODO: 改善錯誤處理，使用真實的錯誤訊息
-      const mockStudents: Student[] = [
-        {
-          id: 1,
-          name: '王小明',
-          email: 'xiaoming@example.com',
-          classroom_name: '三年一班',
-          status: 'active',
-          total_assignments: 25,
-          completed_assignments: 20,
-          average_score: 85,
-        },
-        {
-          id: 2,
-          name: '李小華',
-          email: 'xiaohua@example.com',
-          classroom_name: '三年二班',
-          status: 'active',
-          total_assignments: 25,
-          completed_assignments: 22,
-          average_score: 92,
-        },
-      ];
-      setAllStudents(mockStudents);
+      // Don't use mock data - show real error
+      setAllStudents([]);
     } finally {
       setLoading(false);
     }

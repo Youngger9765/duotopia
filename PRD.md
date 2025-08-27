@@ -119,10 +119,22 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
   - 設定密碼
   - 輸入教師姓名
   - Email 驗證（Phase 2 再做）
+- **Demo 帳號**：demo@duotopia.com / demo123（含預設資料）
 - **個人工作區**：每位教師擁有獨立的班級和課程空間
 - **權限**：完全管理自己的班級、學生、課程
 
 #### 學生認證
+
+**密碼管理系統**：
+- **預設密碼**：生日（YYYYMMDD 格式）
+- **密碼欄位**：
+  - `birthdate`：生日（Date 格式，用於產生預設密碼）
+  - `password_hash`：密碼雜湊值
+  - `password_changed`：布林值，記錄是否已更改密碼
+- **教師檢視**：
+  - 可看到學生是否已更改密碼
+  - 若未更改，顯示預設密碼（生日格式）
+  - 若已更改，只顯示狀態，不顯示實際密碼
 
 **簡化登入流程**（Phase 1）：
 1. **輸入教師 Email**
@@ -144,11 +156,50 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 
 ### 3.2 教師端功能（Phase 1）
 
+#### 教師導航架構（Sidebar Navigation）
+
+**側邊欄功能模組**：
+1. **儀表板 (Dashboard)**
+   - URL: `/teacher/dashboard`
+   - 顯示統計摘要和快速操作入口
+   
+2. **我的班級 (Classrooms)**
+   - URL: `/teacher/classrooms`
+   - 顯示格式：**Table 表格檢視**
+   - 表格欄位：ID、班級名稱、描述、等級、學生數、課程數、建立時間、操作
+   - 點擊班級：進入班級詳情頁面 `/teacher/classroom/{id}`
+   - 班級詳情功能：
+     - 學生列表（可在班級內新增學生）
+     - 課程列表（可在班級內建立課程）
+     - 班級設定管理
+   
+3. **所有學生 (Students)**
+   - URL: `/teacher/students`
+   - 顯示格式：**Table 表格檢視**
+   - 表格欄位：ID、學生姓名、Email、班級、密碼狀態、狀態、最後登入、操作
+   - 密碼狀態顯示規則：
+     - 未更改：顯示「預設密碼」標籤 + 生日格式（如：20120101）
+     - 已更改：顯示「已更改」標籤（不顯示實際密碼）
+   - 資料來源：**真實資料庫資料**（非 Mock）
+   
+4. **所有課程 (Programs)**
+   - URL: `/teacher/programs`
+   - 顯示格式：**Table 表格檢視**
+   - 表格欄位：ID、課程名稱、所屬班級、等級、狀態、課程數、學生數、預計時數、更新時間、操作
+
+**側邊欄底部資訊**：
+- 顯示當前登入教師資訊
+- 教師頭像（姓名首字母）
+- 教師姓名
+- 教師 Email
+- 登出按鈕
+
 #### 教師核心工作流程
 
 **步驟 1：教師註冊/登入**
 - 使用 Email + 密碼登入
 - 新教師先註冊（Email、密碼、姓名）
+- Demo 帳號可快速體驗
 
 **步驟 2：建立班級**
 - 班級名稱設定（如：國小五年級A班）
@@ -503,41 +554,134 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
   - 排行榜
   - 虛擬獎勵
 
-## 六、技術規格與限制
+## 六、API 功能規格（Phase 1）
 
-### 6.1 系統需求
+### 6.1 教師 CRUD API
+
+#### 班級管理 API
+- **CREATE** `POST /api/teachers/classrooms`
+  - 建立新班級
+  - 必填：name, level
+  - 選填：description
+  
+- **READ** `GET /api/teachers/classrooms/{id}`
+  - 取得單一班級詳情
+  - 包含學生列表
+  
+- **UPDATE** `PUT /api/teachers/classrooms/{id}`
+  - 更新班級資訊
+  - 可更新：name, description, level
+  
+- **DELETE** `DELETE /api/teachers/classrooms/{id}`
+  - 軟刪除班級（設定 is_active = False）
+  
+- **LIST** `GET /api/teachers/classrooms`
+  - 列出教師所有班級
+
+#### 學生管理 API
+- **CREATE** `POST /api/teachers/students`
+  - 新增單一學生
+  - 必填：name, email, birthdate, classroom_id
+  - 選填：student_id
+  - 自動產生預設密碼（生日格式）
+  
+- **BATCH CREATE** `POST /api/teachers/classrooms/{id}/students/batch`
+  - 批量新增學生到特定班級
+  - 支援 CSV 格式資料
+  
+- **READ** `GET /api/teachers/students/{id}`
+  - 取得單一學生資料
+  - 包含密碼狀態但不包含實際密碼
+  
+- **UPDATE** `PUT /api/teachers/students/{id}`
+  - 更新學生資訊
+  - 可更新：name, student_id, target_wpm, target_accuracy
+  - 不可更新：password（需透過專門的密碼重設流程）
+  
+- **DELETE** `DELETE /api/teachers/students/{id}`
+  - 軟刪除學生（設定 is_active = False）
+
+#### 課程管理 API
+- **CREATE** `POST /api/teachers/programs`
+  - 建立新課程
+  - 必填：name, level, classroom_id
+  - 選填：description, estimated_hours
+  
+- **READ** `GET /api/teachers/programs/{id}`
+  - 取得單一課程詳情
+  - 包含 Lesson 列表
+  
+- **UPDATE** `PUT /api/teachers/programs/{id}`
+  - 更新課程資訊
+  - 可更新：name, description, estimated_hours
+  
+- **DELETE** `DELETE /api/teachers/programs/{id}`
+  - 軟刪除課程（設定 is_active = False）
+  
+- **ADD LESSON** `POST /api/teachers/programs/{id}/lessons`
+  - 為課程新增單元
+  - 必填：name, order_index
+  - 選填：description, estimated_minutes
+
+### 6.2 資料驗證規則
+
+#### 學生資料驗證
+- **Email**：必須唯一，格式驗證
+- **生日**：YYYY-MM-DD 格式，用於產生預設密碼
+- **密碼**：
+  - 預設：生日轉換為 YYYYMMDD
+  - 更改後：最少 8 位，需包含英數字
+  
+#### 班級資料驗證
+- **班級名稱**：最多 50 字元
+- **等級**：必須為預定義值之一（preA, A1, A2, B1, B2, C1, C2）
+- **班級人數**：最多 50 人
+
+#### 課程資料驗證
+- **課程名稱**：最多 100 字元
+- **單元數量**：建議不超過 20 個
+- **內容項目**：朗讀錄音集 3-15 句
+
+## 七、技術規格與限制
+
+### 7.1 系統需求
 - **瀏覽器**：Chrome 90+、Firefox 88+、Safari 14+、Edge 90+
 - **網路**：穩定的網路連線（建議 10Mbps 以上）
 - **裝置**：支援麥克風的裝置（口說練習必需）
 
-### 6.2 效能指標
+### 7.2 效能指標
 - 頁面載入時間：< 2 秒
 - API 回應時間：< 200ms
 - 音訊處理延遲：< 500ms
 - 並發用戶支援：1000+
 
-### 6.3 資料限制
+### 7.3 資料限制
 - 單次 CSV 匯入：最多 500 筆
 - 錄音長度：最長 5 分鐘
 - 檔案大小：最大 50MB
 - 班級人數：最多 50 人
 
-### 6.4 安全性要求
+### 7.4 安全性要求
 - HTTPS 加密傳輸
 - 資料隱私保護
 - 定期安全更新
 - 操作日誌記錄
 
-## 七、專案里程碑
+## 八、專案里程碑
 
 ### Phase 1：個體教師版（進行中）
-- □ 教師 Email 註冊/登入
-- □ 班級建立與管理
-- □ 學生新增（單筆/批量）
-- □ 三層課程架構（Program → Lesson → Content）
-- □ 朗讀錄音集內容建立
+- ✅ 教師 Email 註冊/登入
+- ✅ 班級建立與管理（CRUD API 完成）
+- ✅ 學生新增（單筆/批量）
+- ✅ 學生密碼管理系統（生日作為預設密碼）
+- ✅ 三層課程架構（Program → Lesson → Content）
+- ✅ 課程 CRUD API
+- ✅ 教師 Sidebar 導航系統
+- ✅ Table 格式檢視（班級、學生、課程）
+- □ 班級詳情頁面（班級內管理學生和課程）
+- □ 朗讀錄音集內容建立介面
 - □ 作業派發系統
-- □ 學生登入流程
+- ✅ 學生登入流程
 - □ 作業練習介面
 - □ AI 語音評分
 - □ 基礎批改功能
@@ -556,7 +700,7 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - □ 智能批改
 - □ 預測分析
 
-## 八、成功指標
+## 九、成功指標
 
 ### 8.1 技術指標
 - 系統可用性：> 99.9%
@@ -574,7 +718,7 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 準確率提升：> 15%
 - 學習動機提升：> 30%
 
-## 九、風險管理
+## 十、風險管理
 
 ### 9.1 技術風險
 - Base44 平台依賴性
@@ -591,7 +735,7 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 系統擴展性
 - 成本控制
 
-## 十、結論
+## 十一、結論
 
 Duotopia 致力於打造最適合台灣學生的英語學習平台，透過完整的功能設計、友善的使用介面、以及強大的 AI 技術，協助教師提升教學效率，幫助學生快樂學習。本 PRD 將持續更新，以反映產品發展的最新狀態。
 

@@ -3,9 +3,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
 from pydantic import BaseModel
 from database import get_db
-from models import Teacher, Classroom, Student, Program, ClassroomStudent
-from auth import verify_token
-from typing import List, Optional
+from models import Teacher, Classroom, Student, Program, ClassroomStudent, Lesson, Content, ContentType, ProgramLevel
+from auth import verify_token, get_password_hash
+from typing import List, Optional, Dict, Any
+from datetime import date
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -139,8 +140,14 @@ async def get_teacher_classrooms(current_teacher: Teacher = Depends(get_current_
                 {
                     "id": cs.student.id,
                     "name": cs.student.name,
-                    "email": cs.student.email
-                } for cs in classroom.students
+                    "email": cs.student.email,
+                    "student_id": cs.student.student_id,
+                    "birthdate": cs.student.birthdate.isoformat() if cs.student.birthdate else None,
+                    "password_changed": cs.student.password_changed,
+                    "last_login": cs.student.last_login.isoformat() if cs.student.last_login else None,
+                    "phone": "",  # Privacy: don't expose phone numbers in list
+                    "status": "active" if cs.student.is_active else "inactive"
+                } for cs in classroom.students if cs.is_active
             ]
         } for classroom in classrooms
     ]
@@ -165,3 +172,524 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
             "created_at": program.created_at.isoformat() if program.created_at else None
         } for program in programs
     ]
+
+# ============ CRUD Endpoints ============
+
+# ------------ Classroom CRUD ------------
+class ClassroomCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    level: str = "A1"
+
+class ClassroomUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    level: Optional[str] = None
+
+@router.post("/classrooms")
+async def create_classroom(
+    classroom_data: ClassroomCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """創建新班級"""
+    classroom = Classroom(
+        name=classroom_data.name,
+        description=classroom_data.description,
+        level=getattr(ProgramLevel, classroom_data.level.upper().replace("-", "_"), ProgramLevel.A1),
+        teacher_id=current_teacher.id,
+        is_active=True
+    )
+    db.add(classroom)
+    db.commit()
+    db.refresh(classroom)
+    
+    return {
+        "id": classroom.id,
+        "name": classroom.name,
+        "description": classroom.description,
+        "level": classroom.level.value,
+        "teacher_id": classroom.teacher_id
+    }
+
+@router.get("/classrooms/{classroom_id}")
+async def get_classroom(
+    classroom_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """取得單一班級資料"""
+    classroom = db.query(Classroom).filter(
+        Classroom.id == classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    return {
+        "id": classroom.id,
+        "name": classroom.name,
+        "description": classroom.description,
+        "level": classroom.level.value if classroom.level else "A1",
+        "teacher_id": classroom.teacher_id
+    }
+
+@router.put("/classrooms/{classroom_id}")
+async def update_classroom(
+    classroom_id: int,
+    update_data: ClassroomUpdate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新班級資料"""
+    classroom = db.query(Classroom).filter(
+        Classroom.id == classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    if update_data.name is not None:
+        classroom.name = update_data.name
+    if update_data.description is not None:
+        classroom.description = update_data.description
+    if update_data.level is not None:
+        classroom.level = getattr(ProgramLevel, update_data.level.upper().replace("-", "_"), ProgramLevel.A1)
+    
+    db.commit()
+    db.refresh(classroom)
+    
+    return {
+        "id": classroom.id,
+        "name": classroom.name,
+        "description": classroom.description,
+        "level": classroom.level.value
+    }
+
+@router.delete("/classrooms/{classroom_id}")
+async def delete_classroom(
+    classroom_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除班級"""
+    classroom = db.query(Classroom).filter(
+        Classroom.id == classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Soft delete by setting is_active = False
+    classroom.is_active = False
+    db.commit()
+    
+    return {"message": "Classroom deleted successfully"}
+
+# ------------ Student CRUD ------------
+class StudentCreate(BaseModel):
+    name: str
+    email: str
+    birthdate: str  # YYYY-MM-DD format
+    classroom_id: int
+    student_id: Optional[str] = None
+
+class StudentUpdate(BaseModel):
+    name: Optional[str] = None
+    student_id: Optional[str] = None
+    target_wpm: Optional[int] = None
+    target_accuracy: Optional[float] = None
+
+class BatchStudentCreate(BaseModel):
+    students: List[Dict[str, Any]]
+
+@router.post("/students")
+async def create_student(
+    student_data: StudentCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """創建新學生"""
+    # Verify classroom belongs to teacher
+    classroom = db.query(Classroom).filter(
+        Classroom.id == student_data.classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Parse birthdate
+    birthdate = date.fromisoformat(student_data.birthdate)
+    default_password = birthdate.strftime("%Y%m%d")
+    
+    # Create student
+    student = Student(
+        name=student_data.name,
+        email=student_data.email,
+        birthdate=birthdate,
+        password_hash=get_password_hash(default_password),
+        password_changed=False,
+        student_id=student_data.student_id,
+        target_wpm=80,
+        target_accuracy=0.8,
+        is_active=True
+    )
+    db.add(student)
+    db.commit()
+    db.refresh(student)
+    
+    # Add student to classroom
+    enrollment = ClassroomStudent(
+        classroom_id=student_data.classroom_id,
+        student_id=student.id,
+        is_active=True
+    )
+    db.add(enrollment)
+    db.commit()
+    
+    return {
+        "id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "birthdate": student.birthdate.isoformat(),
+        "default_password": default_password,
+        "password_changed": False,
+        "classroom_id": student_data.classroom_id
+    }
+
+@router.get("/students/{student_id}")
+async def get_student(
+    student_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """取得單一學生資料"""
+    # Get student with classroom verification
+    student = db.query(Student).join(
+        ClassroomStudent, Student.id == ClassroomStudent.student_id
+    ).join(
+        Classroom, ClassroomStudent.classroom_id == Classroom.id
+    ).filter(
+        Student.id == student_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    return {
+        "id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "birthdate": student.birthdate.isoformat(),
+        "password_changed": student.password_changed,
+        "student_id": student.student_id
+    }
+
+@router.put("/students/{student_id}")
+async def update_student(
+    student_id: int,
+    update_data: StudentUpdate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新學生資料"""
+    # Get student with classroom verification
+    student = db.query(Student).join(
+        ClassroomStudent, Student.id == ClassroomStudent.student_id
+    ).join(
+        Classroom, ClassroomStudent.classroom_id == Classroom.id
+    ).filter(
+        Student.id == student_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    if update_data.name is not None:
+        student.name = update_data.name
+    if update_data.student_id is not None:
+        student.student_id = update_data.student_id
+    if update_data.target_wpm is not None:
+        student.target_wpm = update_data.target_wpm
+    if update_data.target_accuracy is not None:
+        student.target_accuracy = update_data.target_accuracy
+    
+    db.commit()
+    db.refresh(student)
+    
+    return {
+        "id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "student_id": student.student_id
+    }
+
+@router.delete("/students/{student_id}")
+async def delete_student(
+    student_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除學生"""
+    # Get student with classroom verification
+    student = db.query(Student).join(
+        ClassroomStudent, Student.id == ClassroomStudent.student_id
+    ).join(
+        Classroom, ClassroomStudent.classroom_id == Classroom.id
+    ).filter(
+        Student.id == student_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Soft delete
+    student.is_active = False
+    db.commit()
+    
+    return {"message": "Student deleted successfully"}
+
+@router.post("/classrooms/{classroom_id}/students/batch")
+async def batch_create_students(
+    classroom_id: int,
+    batch_data: BatchStudentCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """批次創建學生"""
+    # Verify classroom belongs to teacher
+    classroom = db.query(Classroom).filter(
+        Classroom.id == classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    created_students = []
+    for student_data in batch_data.students:
+        birthdate = date.fromisoformat(student_data["birthdate"])
+        default_password = birthdate.strftime("%Y%m%d")
+        
+        student = Student(
+            name=student_data["name"],
+            email=student_data["email"],
+            birthdate=birthdate,
+            password_hash=get_password_hash(default_password),
+            password_changed=False,
+            student_id=student_data.get("student_id"),
+            target_wpm=80,
+            target_accuracy=0.8,
+            is_active=True
+        )
+        db.add(student)
+        db.flush()  # Get the ID
+        
+        # Add to classroom
+        enrollment = ClassroomStudent(
+            classroom_id=classroom_id,
+            student_id=student.id,
+            is_active=True
+        )
+        db.add(enrollment)
+        created_students.append(student)
+    
+    db.commit()
+    
+    return {
+        "created_count": len(created_students),
+        "students": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "email": s.email,
+                "default_password": s.birthdate.strftime("%Y%m%d")
+            } for s in created_students
+        ]
+    }
+
+# ------------ Program CRUD ------------
+class ProgramCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    level: str = "A1"
+    classroom_id: int
+    estimated_hours: Optional[int] = None
+
+class ProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    estimated_hours: Optional[int] = None
+
+class LessonCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    order_index: int = 0
+    estimated_minutes: Optional[int] = None
+
+@router.post("/programs")
+async def create_program(
+    program_data: ProgramCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """創建新課程"""
+    # Verify classroom belongs to teacher
+    classroom = db.query(Classroom).filter(
+        Classroom.id == program_data.classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    program = Program(
+        name=program_data.name,
+        description=program_data.description,
+        level=getattr(ProgramLevel, program_data.level.upper().replace("-", "_"), ProgramLevel.A1),
+        classroom_id=program_data.classroom_id,
+        teacher_id=current_teacher.id,
+        estimated_hours=program_data.estimated_hours,
+        is_active=True
+    )
+    db.add(program)
+    db.commit()
+    db.refresh(program)
+    
+    return {
+        "id": program.id,
+        "name": program.name,
+        "description": program.description,
+        "level": program.level.value,
+        "classroom_id": program.classroom_id,
+        "estimated_hours": program.estimated_hours
+    }
+
+@router.get("/programs/{program_id}")
+async def get_program(
+    program_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """取得單一課程資料"""
+    program = db.query(Program).filter(
+        Program.id == program_id,
+        Program.teacher_id == current_teacher.id
+    ).options(selectinload(Program.lessons)).first()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    return {
+        "id": program.id,
+        "name": program.name,
+        "description": program.description,
+        "level": program.level.value if program.level else "A1",
+        "classroom_id": program.classroom_id,
+        "estimated_hours": program.estimated_hours,
+        "lessons": [
+            {
+                "id": lesson.id,
+                "name": lesson.name,
+                "description": lesson.description,
+                "order_index": lesson.order_index,
+                "estimated_minutes": lesson.estimated_minutes
+            } for lesson in program.lessons
+        ]
+    }
+
+@router.put("/programs/{program_id}")
+async def update_program(
+    program_id: int,
+    update_data: ProgramUpdate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新課程資料"""
+    program = db.query(Program).filter(
+        Program.id == program_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if update_data.name is not None:
+        program.name = update_data.name
+    if update_data.description is not None:
+        program.description = update_data.description
+    if update_data.estimated_hours is not None:
+        program.estimated_hours = update_data.estimated_hours
+    
+    db.commit()
+    db.refresh(program)
+    
+    return {
+        "id": program.id,
+        "name": program.name,
+        "description": program.description,
+        "estimated_hours": program.estimated_hours
+    }
+
+@router.delete("/programs/{program_id}")
+async def delete_program(
+    program_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除課程"""
+    program = db.query(Program).filter(
+        Program.id == program_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    # Soft delete
+    program.is_active = False
+    db.commit()
+    
+    return {"message": "Program deleted successfully"}
+
+@router.post("/programs/{program_id}/lessons")
+async def add_lesson(
+    program_id: int,
+    lesson_data: LessonCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """新增課程單元"""
+    program = db.query(Program).filter(
+        Program.id == program_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    lesson = Lesson(
+        program_id=program_id,
+        name=lesson_data.name,
+        description=lesson_data.description,
+        order_index=lesson_data.order_index,
+        estimated_minutes=lesson_data.estimated_minutes
+    )
+    db.add(lesson)
+    db.commit()
+    db.refresh(lesson)
+    
+    return {
+        "id": lesson.id,
+        "name": lesson.name,
+        "description": lesson.description,
+        "order_index": lesson.order_index,
+        "estimated_minutes": lesson.estimated_minutes
+    }
