@@ -154,6 +154,25 @@ gcloud config list
 2. **自己測試** - 實際執行代碼驗證修復
 3. **驗證結果** - 確認看到正確的結果
 
+### ⚠️ 重要提醒 - 不要混淆前後端工具！
+**前端 (JavaScript/TypeScript)**：
+- `package.json` - Node.js 套件管理
+- `npm` / `yarn` - 套件安裝工具
+- `tsconfig.json` - TypeScript 設定
+- `vite.config.ts` - Vite 建置設定
+
+**後端 (Python)**：
+- `requirements.txt` - Python 套件管理
+- `pip` - Python 套件安裝工具
+- `pytest.ini` - pytest 測試設定
+- `setup.py` / `pyproject.toml` - Python 專案設定
+- **不要把 Python 設定寫在 package.json！**
+
+**通用工具**：
+- `Makefile` - 跨語言的快捷指令
+- `docker-compose.yml` - 容器編排
+- `.env` - 環境變數
+
 ### 測試流程：
 ```bash
 # 1. 型別檢查（最重要）
@@ -364,12 +383,13 @@ duotopia/
 - User (教師/管理者)
 - Student (學生)
 - School (學校)
-- Class (班級)
+- Classroom (班級) - ⚠️ 使用 Classroom 而非 Class（避免與 Python 保留字衝突）
 
 #### 課程系統
-- Course (課程)
-- Lesson (課文/活動)
-- ClassCourseMapping (班級課程關聯)
+- Program (課程計畫)
+- Lesson (課程單元)
+- Content (課程內容)
+- ClassroomProgramMapping (班級與課程關聯)
 
 #### 作業系統
 - StudentAssignment (學生作業)

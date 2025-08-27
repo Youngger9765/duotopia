@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
 from database import get_db
-from models import Student, Class
+from models import Student, Classroom
 from auth import create_access_token, verify_password, get_password_hash
 from datetime import timedelta, datetime
 
@@ -43,8 +43,9 @@ async def validate_student(request: StudentValidateRequest, db: Session = Depend
         expires_delta=timedelta(minutes=30)
     )
     
-    # 取得班級資訊
-    student_class = db.query(Class).filter(Class.id == student.class_id).first()
+    # 取得班級資訊 - 需要從 ClassroomStudent 關聯取得
+    # TODO: 實作取得學生班級資訊
+    student_class = None
     
     return {
         "access_token": access_token,
@@ -53,8 +54,8 @@ async def validate_student(request: StudentValidateRequest, db: Session = Depend
             "id": student.id,
             "name": student.name,
             "email": student.email,
-            "class_id": student.class_id,
-            "class_name": student_class.name if student_class else None
+            "class_id": None,  # TODO: Get from ClassroomStudent
+            "class_name": None  # TODO: Get from ClassroomStudent
         }
     }
 

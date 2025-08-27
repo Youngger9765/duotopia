@@ -27,10 +27,29 @@ dev-frontend:
 # 測試
 .PHONY: test
 test:
-	@echo "Running tests..."
+	@echo "Running all tests..."
+	cd $(BACKEND_DIR) && python -m pytest tests/ -v
+
+.PHONY: test-backend
+test-backend:
+	@echo "Running backend unit tests..."
+	cd $(BACKEND_DIR) && python -m pytest tests/ -v
+
+.PHONY: test-cov
+test-cov:
+	@echo "Running tests with coverage..."
+	cd $(BACKEND_DIR) && python -m pytest tests/ --cov=routers --cov=models --cov-report=term-missing
+
+.PHONY: test-auth
+test-auth:
+	@echo "Running auth tests..."
+	cd $(BACKEND_DIR) && python -m pytest tests/test_auth.py -v
+
+.PHONY: test-frontend
+test-frontend:
+	@echo "Running frontend tests..."
 	cd $(FRONTEND_DIR) && npm run typecheck
 	cd $(FRONTEND_DIR) && npm run lint
-	cd $(BACKEND_DIR) && python -c "import main; print('Backend imports successfully')"
 
 .PHONY: build
 build:
