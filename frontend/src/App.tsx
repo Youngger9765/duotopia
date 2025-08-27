@@ -7,6 +7,7 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherClassrooms from './pages/teacher/TeacherClassrooms'
 import TeacherStudents from './pages/teacher/TeacherStudents'
 import TeacherPrograms from './pages/teacher/TeacherPrograms'
+import ClassroomDetail from './pages/teacher/ClassroomDetail'
 import StudentLogin from './pages/StudentLogin'
 import StudentDashboard from './pages/StudentDashboard'
 
@@ -23,6 +24,7 @@ function App() {
       {/* New Teacher Routes with separate pages */}
       <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
       <Route path="/teacher/classrooms" element={<TeacherClassrooms />} />
+      <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
       <Route path="/teacher/students" element={<TeacherStudents />} />
       <Route path="/teacher/programs" element={<TeacherPrograms />} />
       

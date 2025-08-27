@@ -24,7 +24,7 @@ interface Student {
   password_changed?: boolean;  // 是否已更改密碼
   enrollment_date?: string;
   status?: 'active' | 'inactive' | 'suspended';
-  last_login?: string;
+  last_login?: string | null;
   total_assignments?: number;
   completed_assignments?: number;
   average_score?: number;

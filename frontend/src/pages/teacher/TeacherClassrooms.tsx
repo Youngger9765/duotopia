@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -10,8 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import TeacherLayout from '@/components/TeacherLayout';
-import { Users, BookOpen, Clock, Plus, Edit, Eye, Settings, RefreshCw, GraduationCap } from 'lucide-react';
+import { Users, BookOpen, Plus, Edit, RefreshCw, GraduationCap, Trash2, AlertTriangle } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
 interface ClassroomDetail {
@@ -33,6 +41,9 @@ export default function TeacherClassrooms() {
   const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<ClassroomDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingClassroom, setEditingClassroom] = useState<ClassroomDetail | null>(null);
+  const [editFormData, setEditFormData] = useState({ name: '', description: '', level: '' });
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchClassrooms();
@@ -42,7 +53,9 @@ export default function TeacherClassrooms() {
     try {
       setLoading(true);
       const data = await apiClient.getTeacherClassrooms() as ClassroomDetail[];
-      setClassrooms(data);
+      // Sort by ID to maintain consistent order
+      const sortedData = data.sort((a, b) => a.id - b.id);
+      setClassrooms(sortedData);
     } catch (err) {
       console.error('Fetch classrooms error:', err);
     } finally {
@@ -50,8 +63,46 @@ export default function TeacherClassrooms() {
     }
   };
 
-  const handleClassroomClick = (classroomId: number) => {
-    navigate(`/teacher/classroom/${classroomId}`);
+
+  const handleEdit = (classroom: ClassroomDetail) => {
+    setEditingClassroom(classroom);
+    setEditFormData({
+      name: classroom.name,
+      description: classroom.description || '',
+      level: classroom.level || 'A1'
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingClassroom) return;
+    
+    try {
+      // API call to update classroom
+      await apiClient.updateClassroom(editingClassroom.id, editFormData);
+      
+      // Refresh classrooms list
+      await fetchClassrooms();
+      setEditingClassroom(null);
+    } catch (err) {
+      console.error('Failed to update classroom:', err);
+      alert('更新班級失敗，請稍後再試');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return;
+    
+    try {
+      // API call to delete classroom
+      await apiClient.deleteClassroom(deleteConfirmId);
+      
+      // Refresh classrooms list
+      await fetchClassrooms();
+      setDeleteConfirmId(null);
+    } catch (err) {
+      console.error('Failed to delete classroom:', err);
+      alert('刪除班級失敗，請稍後再試');
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -110,7 +161,7 @@ export default function TeacherClassrooms() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
@@ -140,19 +191,6 @@ export default function TeacherClassrooms() {
               <BookOpen className="h-8 w-8 text-purple-500" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">平均班級人數</p>
-                <p className="text-2xl font-bold">
-                  {classrooms.length > 0 
-                    ? Math.round(classrooms.reduce((sum, c) => sum + c.student_count, 0) / classrooms.length)
-                    : 0}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-500" />
-            </div>
-          </div>
         </div>
 
         {/* Classrooms Table */}
@@ -177,8 +215,7 @@ export default function TeacherClassrooms() {
               {classrooms.map((classroom) => (
                 <TableRow 
                   key={classroom.id}
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleClassroomClick(classroom.id)}
+                  className="hover:bg-gray-50"
                 >
                   <TableCell className="font-medium">{classroom.id}</TableCell>
                   <TableCell>
@@ -186,7 +223,12 @@ export default function TeacherClassrooms() {
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <GraduationCap className="h-4 w-4 text-blue-600" />
                       </div>
-                      <p className="font-medium">{classroom.name}</p>
+                      <Link 
+                        to={`/teacher/classroom/${classroom.id}`}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {classroom.name}
+                      </Link>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -211,20 +253,23 @@ export default function TeacherClassrooms() {
                   </TableCell>
                   <TableCell>{formatDate(classroom.created_at)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center space-x-2">
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        title="進入班級"
-                        onClick={() => handleClassroomClick(classroom.id)}
+                        title="編輯"
+                        onClick={() => handleEdit(classroom)}
                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" title="編輯">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" title="設定">
-                        <Settings className="h-4 w-4" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        title="刪除"
+                        onClick={() => setDeleteConfirmId(classroom.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -246,6 +291,97 @@ export default function TeacherClassrooms() {
             </Button>
           </div>
         )}
+
+        {/* Edit Dialog */}
+        <Dialog open={!!editingClassroom} onOpenChange={(open) => !open && setEditingClassroom(null)}>
+          <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+            <DialogHeader>
+              <DialogTitle>編輯班級</DialogTitle>
+              <DialogDescription>
+                修改班級資訊
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="name" className="text-right">
+                  班級名稱
+                </label>
+                <input
+                  id="name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="col-span-3 px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="description" className="text-right">
+                  描述
+                </label>
+                <textarea
+                  id="description"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="col-span-3 px-3 py-2 border rounded-md"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="level" className="text-right">
+                  等級
+                </label>
+                <select
+                  id="level"
+                  value={editFormData.level}
+                  onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
+                  className="col-span-3 px-3 py-2 border rounded-md"
+                >
+                  <option value="preA">Pre-A</option>
+                  <option value="A1">A1</option>
+                  <option value="A2">A2</option>
+                  <option value="B1">B1</option>
+                  <option value="B2">B2</option>
+                  <option value="C1">C1</option>
+                  <option value="C2">C2</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingClassroom(null)}>
+                取消
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                儲存
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <span>確認刪除班級</span>
+              </DialogTitle>
+              <DialogDescription>
+                確定要刪除這個班級嗎？此操作無法復原。
+                班級內的學生和課程資料將會保留，但不再與此班級關聯。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+                取消
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDelete}
+              >
+                確認刪除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TeacherLayout>
   );

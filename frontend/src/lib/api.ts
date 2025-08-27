@@ -125,6 +125,27 @@ class ApiClient {
   async getTeacherPrograms() {
     return this.request('/api/teachers/programs');
   }
+
+  // ============ Classroom CRUD Methods ============
+  async updateClassroom(classroomId: number, data: { name?: string; description?: string; level?: string }) {
+    return this.request(`/api/teachers/classrooms/${classroomId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteClassroom(classroomId: number) {
+    return this.request(`/api/teachers/classrooms/${classroomId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async createClassroom(data: { name: string; description?: string; level: string }) {
+    return this.request('/api/teachers/classrooms', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Export singleton instance
