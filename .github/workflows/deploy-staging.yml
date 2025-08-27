@@ -94,18 +94,13 @@ jobs:
           --port 8080 \
           --memory 512Mi \
           --cpu 1 \
-          --max-instances 10
-
-    - name: Get backend URL
-      run: |
-        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
-        echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_ENV
-        echo "Backend URL: $BACKEND_URL"
+          --max-instances 10 \
+          --min-instances 0
 
     - name: Build and push frontend image
       working-directory: ./frontend
       run: |
-        docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA .
+        docker build -f Dockerfile.staging -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA
 
     - name: Deploy frontend to Cloud Run
@@ -119,7 +114,7 @@ jobs:
           --memory 256Mi \
           --cpu 1 \
           --max-instances 5 \
-          --set-env-vars BACKEND_URL=$BACKEND_URL
+          --min-instances 0
 
     - name: Health check
       run: |
