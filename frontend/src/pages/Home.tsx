@@ -8,7 +8,6 @@ import {
   Mic, 
   Trophy,
   BarChart3,
-  Globe,
   Shield,
   Zap,
   CheckCircle,

@@ -6,8 +6,19 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
-import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic } from 'lucide-react';
+import { ProgramDialog } from '@/components/ProgramDialog';
+import { LessonDialog } from '@/components/LessonDialog';
+import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, MoreVertical, GripVertical } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+
+interface Lesson {
+  id: number;
+  name: string;
+  description?: string;
+  order_index: number;
+  estimated_minutes?: number;
+  program_id: number;
+}
 
 interface Program {
   id: number;
@@ -16,6 +27,8 @@ interface Program {
   level?: string;
   estimated_hours?: number;
   created_at?: string;
+  order_index?: number;
+  lessons?: Lesson[];
 }
 
 interface ClassroomInfo {
@@ -41,6 +54,21 @@ export default function ClassroomDetail() {
   // Student dialog states
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
+  
+  // Program dialog states
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [programDialogType, setProgramDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
+  
+  // Lesson dialog states
+  const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [lessonDialogType, setLessonDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
+  const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(undefined);
+  
+  // Drag states
+  const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
+  const [draggedLesson, setDraggedLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
+  const [dropIndicatorProgram, setDropIndicatorProgram] = useState<number | null>(null);
+  const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -74,7 +102,26 @@ export default function ClassroomDetail() {
       const allPrograms = await apiClient.getTeacherPrograms() as any[];
       // Filter programs for this classroom
       const classroomPrograms = allPrograms.filter(p => p.classroom_id === Number(id));
-      setPrograms(classroomPrograms);
+      
+      // Fetch detailed info including lessons for each program
+      const programsWithLessons = await Promise.all(
+        classroomPrograms.map(async (program) => {
+          try {
+            const detail = await apiClient.getProgramDetail(program.id) as any;
+            return { 
+              ...program, 
+              lessons: detail.lessons ? detail.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index) : [] 
+            };
+          } catch (err) {
+            console.error(`Failed to fetch lessons for program ${program.id}:`, err);
+            return { ...program, lessons: [] };
+          }
+        })
+      );
+      
+      // Sort programs by order_index
+      programsWithLessons.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      setPrograms(programsWithLessons);
     } catch (err) {
       console.error('Fetch programs error:', err);
     }
@@ -147,6 +194,168 @@ export default function ClassroomDetail() {
     setDialogType('edit');
   };
 
+  const handleCreateProgram = () => {
+    setSelectedProgram(null);
+    setProgramDialogType('create');
+  };
+
+  const handleAddLesson = (programId: number) => {
+    setSelectedLesson(null);
+    setLessonProgramId(programId);
+    setLessonDialogType('create');
+  };
+
+  const handleEditProgram = (programId: number) => {
+    const program = programs.find(p => p.id === programId);
+    if (program) {
+      setSelectedProgram(program);
+      setProgramDialogType('edit');
+    }
+  };
+
+  const handleEditLesson = (programId: number, lessonId: number) => {
+    const program = programs.find(p => p.id === programId);
+    const lesson = program?.lessons?.find((l: Lesson) => l.id === lessonId);
+    if (lesson) {
+      setSelectedLesson(lesson);
+      setLessonProgramId(programId);
+      setLessonDialogType('edit');
+    }
+  };
+
+  const handleDeleteProgram = (programId: number) => {
+    const program = programs.find(p => p.id === programId);
+    if (program) {
+      setSelectedProgram(program);
+      setProgramDialogType('delete');
+    }
+  };
+
+  const handleDeleteLesson = (programId: number, lessonId: number) => {
+    const program = programs.find(p => p.id === programId);
+    const lesson = program?.lessons?.find((l: Lesson) => l.id === lessonId);
+    if (lesson) {
+      setSelectedLesson(lesson);
+      setLessonProgramId(programId);
+      setLessonDialogType('delete');
+    }
+  };
+
+  const handleSaveProgram = (program: Program) => {
+    if (programDialogType === 'create') {
+      setPrograms([...programs, program]);
+    } else if (programDialogType === 'edit') {
+      setPrograms(programs.map(p => p.id === program.id ? program : p));
+    }
+    fetchPrograms(); // Refresh data
+  };
+
+  const handleDeleteProgramConfirm = (programId: number) => {
+    setPrograms(programs.filter(p => p.id !== programId));
+    fetchPrograms(); // Refresh data
+  };
+
+  const handleSaveLesson = (lesson: any) => {
+    const programIndex = programs.findIndex(p => p.id === lesson.program_id);
+    if (programIndex !== -1) {
+      const updatedPrograms = [...programs];
+      if (!updatedPrograms[programIndex].lessons) {
+        updatedPrograms[programIndex].lessons = [];
+      }
+      
+      if (lessonDialogType === 'create') {
+        updatedPrograms[programIndex].lessons!.push(lesson);
+      } else if (lessonDialogType === 'edit') {
+        const lessonIndex = updatedPrograms[programIndex].lessons!.findIndex(l => l.id === lesson.id);
+        if (lessonIndex !== -1) {
+          updatedPrograms[programIndex].lessons![lessonIndex] = lesson;
+        }
+      }
+      
+      setPrograms(updatedPrograms);
+    }
+    // TODO: Call API to save lesson
+    console.log('Lesson saved:', lesson);
+  };
+
+  const handleDeleteLessonConfirm = (lessonId: number) => {
+    const updatedPrograms = programs.map(program => {
+      if (program.lessons) {
+        return {
+          ...program,
+          lessons: program.lessons.filter(l => l.id !== lessonId)
+        };
+      }
+      return program;
+    });
+    setPrograms(updatedPrograms);
+    // TODO: Call API to delete lesson
+    console.log('Lesson deleted:', lessonId);
+  };
+
+  const handleReorderPrograms = async (dragIndex: number, dropIndex: number) => {
+    const newPrograms = [...programs];
+    const [draggedItem] = newPrograms.splice(dragIndex, 1);
+    newPrograms.splice(dropIndex, 0, draggedItem);
+    
+    // Update order_index for each program
+    const updatedPrograms = newPrograms.map((program, index) => ({
+      ...program,
+      order_index: index + 1
+    }));
+    
+    setPrograms(updatedPrograms);
+    
+    // Save new order to backend
+    try {
+      const orderData = updatedPrograms.map((program, index) => ({
+        id: program.id,
+        order_index: index + 1
+      }));
+      await apiClient.reorderPrograms(orderData);
+      console.log('Programs reordered and saved');
+    } catch (error) {
+      console.error('Failed to save program order:', error);
+      // 可選：恢復原始順序
+      fetchPrograms();
+    }
+  };
+
+  const handleReorderLessons = async (programId: number, dragIndex: number, dropIndex: number) => {
+    const programIndex = programs.findIndex(p => p.id === programId);
+    if (programIndex !== -1 && programs[programIndex].lessons) {
+      const updatedPrograms = [...programs];
+      const lessons = [...updatedPrograms[programIndex].lessons!];
+      
+      // Reorder lessons
+      const [draggedItem] = lessons.splice(dragIndex, 1);
+      lessons.splice(dropIndex, 0, draggedItem);
+      
+      // Update order_index for each lesson
+      const reorderedLessons = lessons.map((lesson, index) => ({
+        ...lesson,
+        order_index: index + 1
+      }));
+      
+      updatedPrograms[programIndex].lessons = reorderedLessons;
+      setPrograms(updatedPrograms);
+      
+      // Save new order to backend
+      try {
+        const orderData = reorderedLessons.map((lesson, index) => ({
+          id: lesson.id,
+          order_index: index + 1
+        }));
+        await apiClient.reorderLessons(programId, orderData);
+        console.log(`Lessons reordered and saved for program ${programId}`);
+      } catch (error) {
+        console.error('Failed to save lesson order:', error);
+        // 可選：恢復原始順序
+        fetchPrograms();
+      }
+    }
+  };
+
   const getLevelBadge = (level?: string) => {
     const levelColors: Record<string, string> = {
       'PREA': 'bg-gray-100 text-gray-800',
@@ -193,7 +402,7 @@ export default function ClassroomDetail() {
   return (
     <TeacherLayout>
       <div className="relative">
-        <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-96' : ''}`}>
+        <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[50%]' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
@@ -301,7 +510,7 @@ export default function ClassroomDetail() {
             <TabsContent value="programs" className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">班級課程</h3>
-                <Button size="sm">
+                <Button size="sm" onClick={handleCreateProgram}>
                   <Plus className="h-4 w-4 mr-2" />
                   建立課程
                 </Button>
@@ -309,16 +518,95 @@ export default function ClassroomDetail() {
               
               {programs.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
-                  {programs.map((program) => (
-                    <AccordionItem key={program.id} value={`program-${program.id}`}>
-                      <AccordionTrigger className="hover:no-underline">
+                  {programs.map((program, programIndex) => (
+                    <div key={program.id} className="relative">
+                      {/* 插入指示器 - 顯示在項目上方 */}
+                      {dropIndicatorProgram === programIndex && (
+                        <div className="h-1 bg-blue-500 rounded-full mx-2 my-1 animate-pulse" />
+                      )}
+                      <AccordionItem 
+                        value={`program-${program.id}`}
+                        className={`
+                          transition-opacity duration-200
+                          ${draggedProgram === programIndex ? 'opacity-30' : ''}
+                        `}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedProgram === null) return;
+                          
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const y = e.clientY - rect.top;
+                          const height = rect.height;
+                          
+                          // 判斷是在上半部還是下半部
+                          if (y < height / 2) {
+                            // 在上半部，顯示在當前項目上方
+                            setDropIndicatorProgram(programIndex);
+                          } else {
+                            // 在下半部，顯示在下一個項目上方
+                            setDropIndicatorProgram(programIndex + 1);
+                          }
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          // 只有當離開整個項目時才清除指示器
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                            setDropIndicatorProgram(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedProgram !== null && dropIndicatorProgram !== null) {
+                            let targetIndex = dropIndicatorProgram;
+                            // 如果拖曳的項目原本在目標位置之前，需要調整目標索引
+                            if (draggedProgram < targetIndex) {
+                              targetIndex--;
+                            }
+                            if (draggedProgram !== targetIndex) {
+                              handleReorderPrograms(draggedProgram, targetIndex);
+                            }
+                          }
+                          setDraggedProgram(null);
+                          setDropIndicatorProgram(null);
+                        }}>
+                      <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center space-x-3">
+                            <button 
+                              className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="拖曳以重新排序"
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation();
+                                setDraggedProgram(programIndex);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedProgram(null);
+                                setDropIndicatorProgram(null);
+                              }}
+                            >
+                              <GripVertical className="h-5 w-5 text-gray-400" />
+                            </button>
                             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                               <BookOpen className="h-5 w-5 text-blue-600" />
                             </div>
                             <div className="text-left">
-                              <h4 className="font-semibold">{program.name}</h4>
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-semibold">{program.name}</h4>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-6 w-6 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditProgram(program.id);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
                               <p className="text-sm text-gray-500">{program.description || '暫無描述'}</p>
                             </div>
                           </div>
@@ -330,28 +618,128 @@ export default function ClassroomDetail() {
                                 <span>{program.estimated_hours} 小時</span>
                               </div>
                             )}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProgram(program.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
                           </div>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="pl-14 pr-4">
-                          {/* Mock Lessons - 實際應從 API 獲取 */}
                           <Accordion type="single" collapsible className="w-full">
-                            {[1, 2, 3].map((lessonNum) => (
-                              <AccordionItem key={lessonNum} value={`lesson-${program.id}-${lessonNum}`} className="border-l-2 border-gray-200 ml-2">
-                                <AccordionTrigger className="hover:no-underline pl-4">
+                            {(program.lessons || []).map((lesson, lessonIndex) => (
+                              <div key={lesson.id} className="relative">
+                                {/* 插入指示器 - 顯示在單元上方 */}
+                                {dropIndicatorLesson && 
+                                 dropIndicatorLesson.programId === program.id && 
+                                 dropIndicatorLesson.lessonIndex === lessonIndex && (
+                                  <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
+                                )}
+                                <AccordionItem 
+                                  value={`lesson-${program.id}-${lesson.id}`} 
+                                  className={`
+                                    border-l-2 border-gray-200 ml-2 transition-opacity duration-200
+                                    ${draggedLesson && draggedLesson.programId === program.id && draggedLesson.lessonIndex === lessonIndex ? 'opacity-30' : ''}
+                                  `}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!draggedLesson || draggedLesson.programId !== program.id) return;
+                                    
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const y = e.clientY - rect.top;
+                                    const height = rect.height;
+                                    
+                                    // 判斷是在上半部還是下半部
+                                    if (y < height / 2) {
+                                      setDropIndicatorLesson({ programId: program.id, lessonIndex });
+                                    } else {
+                                      setDropIndicatorLesson({ programId: program.id, lessonIndex: lessonIndex + 1 });
+                                    }
+                                  }}
+                                  onDragLeave={(e) => {
+                                    e.preventDefault();
+                                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                                      setDropIndicatorLesson(null);
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (draggedLesson && dropIndicatorLesson && 
+                                        draggedLesson.programId === program.id &&
+                                        dropIndicatorLesson.programId === program.id) {
+                                      let targetIndex = dropIndicatorLesson.lessonIndex;
+                                      if (draggedLesson.lessonIndex < targetIndex) {
+                                        targetIndex--;
+                                      }
+                                      if (draggedLesson.lessonIndex !== targetIndex) {
+                                        handleReorderLessons(program.id, draggedLesson.lessonIndex, targetIndex);
+                                      }
+                                    }
+                                    setDraggedLesson(null);
+                                    setDropIndicatorLesson(null);
+                                  }}>
+                                <AccordionTrigger className="hover:no-underline pl-4 group">
                                   <div className="flex items-center justify-between w-full pr-4">
                                     <div className="flex items-center space-x-3">
+                                      <button 
+                                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="拖曳以重新排序"
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          setDraggedLesson({ programId: program.id, lessonIndex });
+                                        }}
+                                        onDragEnd={() => {
+                                          setDraggedLesson(null);
+                                          setDropIndicatorLesson(null);
+                                        }}
+                                      >
+                                        <GripVertical className="h-4 w-4 text-gray-400" />
+                                      </button>
                                       <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                                         <ListOrdered className="h-4 w-4 text-green-600" />
                                       </div>
                                       <div className="text-left">
-                                        <h5 className="font-medium">第 {lessonNum} 課：基礎對話練習</h5>
-                                        <p className="text-sm text-gray-500">Greetings and Introductions</p>
+                                        <div className="flex items-center space-x-2">
+                                          <h5 className="font-medium">{lesson.name}</h5>
+                                          <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            className="h-5 w-5 p-0"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleEditLesson(program.id, lesson.id);
+                                            }}
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                        <p className="text-sm text-gray-500">{lesson.description || '暫無描述'}</p>
                                       </div>
                                     </div>
-                                    <div className="text-sm text-gray-500">
-                                      30 分鐘
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-500">{lesson.estimated_minutes || 30} 分鐘</span>
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-6 w-6 p-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteLesson(program.id, lesson.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3 text-red-500" />
+                                      </Button>
                                     </div>
                                   </div>
                                 </AccordionTrigger>
@@ -363,7 +751,14 @@ export default function ClassroomDetail() {
                                       { id: 2, type: '口說練習', items: 3, time: '10 分鐘' },
                                       { id: 3, type: '情境對話', items: 2, time: '10 分鐘' },
                                     ].map((content) => (
-                                      <div key={content.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                      <div 
+                                        key={content.id} 
+                                        className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
+                                        onClick={() => handleContentClick({
+                                          ...content,
+                                          lessonName: lesson.name,
+                                          programName: program.name
+                                        })}>
                                         <div className="flex items-center space-x-3">
                                           <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                                             <FileText className="h-4 w-4 text-purple-600" />
@@ -375,17 +770,9 @@ export default function ClassroomDetail() {
                                         </div>
                                         <div className="flex items-center space-x-2">
                                           <span className="text-sm text-gray-500">{content.time}</span>
-                                          <Button 
-                                            size="sm" 
-                                            variant="outline"
-                                            onClick={() => handleContentClick({
-                                              ...content,
-                                              lessonName: `第 ${lessonNum} 課：基礎對話練習`,
-                                              programName: program.name
-                                            })}
-                                          >
-                                            檢視
-                                          </Button>
+                                          <span className="text-xs text-gray-400 group-hover:text-gray-600">
+                                            點擊編輯 →
+                                          </span>
                                         </div>
                                       </div>
                                     ))}
@@ -403,11 +790,18 @@ export default function ClassroomDetail() {
                                   </div>
                                 </AccordionContent>
                               </AccordionItem>
+                              </div>
                             ))}
+                            {/* 最後位置的插入指示器（單元） */}
+                            {dropIndicatorLesson && 
+                             dropIndicatorLesson.programId === program.id && 
+                             dropIndicatorLesson.lessonIndex === (program.lessons?.length || 0) && (
+                              <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
+                            )}
                             
                             {/* Add Lesson Button */}
                             <div className="pl-6 pt-2">
-                              <Button size="sm" variant="outline" className="w-full">
+                              <Button size="sm" variant="outline" className="w-full" onClick={() => handleAddLesson(program.id)}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 新增單元
                               </Button>
@@ -416,14 +810,19 @@ export default function ClassroomDetail() {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
+                    </div>
                   ))}
+                  {/* 最後位置的插入指示器 */}
+                  {dropIndicatorProgram === programs.length && (
+                    <div className="h-1 bg-blue-500 rounded-full mx-2 my-1 animate-pulse" />
+                  )}
                 </Accordion>
               ) : (
                 <div className="text-center py-12">
                   <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500">尚未建立課程</p>
                   <p className="text-sm text-gray-400 mt-2">為班級建立課程內容，開始教學</p>
-                  <Button className="mt-4" size="sm">
+                  <Button className="mt-4" size="sm" onClick={handleCreateProgram}>
                     <Plus className="h-4 w-4 mr-2" />
                     建立第一個課程
                   </Button>
@@ -435,7 +834,7 @@ export default function ClassroomDetail() {
         </div>
 
         {/* Right Sliding Panel */}
-        <div className={`fixed right-0 top-0 h-full w-96 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
+        <div className={`fixed right-0 top-0 h-full w-1/2 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
           isPanelOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
           {selectedContent && (
@@ -578,6 +977,33 @@ export default function ClassroomDetail() {
         onDelete={handleDeleteStudent}
         onSwitchToEdit={handleSwitchToEdit}
         classrooms={classroom ? [classroom] : []}
+      />
+      
+      {/* Program Dialog */}
+      <ProgramDialog
+        program={selectedProgram}
+        dialogType={programDialogType}
+        classroomId={Number(id)}
+        onClose={() => {
+          setSelectedProgram(null);
+          setProgramDialogType(null);
+        }}
+        onSave={handleSaveProgram}
+        onDelete={handleDeleteProgramConfirm}
+      />
+      
+      {/* Lesson Dialog */}
+      <LessonDialog
+        lesson={selectedLesson}
+        dialogType={lessonDialogType}
+        programId={lessonProgramId}
+        onClose={() => {
+          setSelectedLesson(null);
+          setLessonDialogType(null);
+          setLessonProgramId(undefined);
+        }}
+        onSave={handleSaveLesson}
+        onDelete={handleDeleteLessonConfirm}
       />
     </TeacherLayout>
   );

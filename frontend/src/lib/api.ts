@@ -126,6 +126,10 @@ class ApiClient {
     return this.request('/api/teachers/programs');
   }
 
+  async getProgramDetail(programId: number) {
+    return this.request(`/api/teachers/programs/${programId}`);
+  }
+
   // ============ Classroom CRUD Methods ============
   async updateClassroom(classroomId: number, data: { name?: string; description?: string; level?: string }) {
     return this.request(`/api/teachers/classrooms/${classroomId}`, {
@@ -150,7 +154,7 @@ class ApiClient {
   // ============ Student CRUD Methods ============
   async createStudent(data: { 
     name: string; 
-    email: string; 
+    email?: string;  // Email 改為選填
     student_id?: string;
     birthdate: string;
     phone?: string;
@@ -186,6 +190,52 @@ class ApiClient {
   async resetStudentPassword(studentId: number) {
     return this.request(`/api/teachers/students/${studentId}/reset-password`, {
       method: 'POST',
+    });
+  }
+
+  // ============ Program CRUD Methods ============
+  async createProgram(data: { 
+    name: string; 
+    description?: string; 
+    level?: string;
+    classroom_id: number;
+    estimated_hours?: number;
+  }) {
+    return this.request('/api/teachers/programs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProgram(programId: number, data: {
+    name?: string;
+    description?: string;
+    level?: string;
+    estimated_hours?: number;
+  }) {
+    return this.request(`/api/teachers/programs/${programId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProgram(programId: number) {
+    return this.request(`/api/teachers/programs/${programId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderPrograms(orderData: { id: number; order_index: number }[]) {
+    return this.request('/api/teachers/programs/reorder', {
+      method: 'PUT',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  async reorderLessons(programId: number, orderData: { id: number; order_index: number }[]) {
+    return this.request(`/api/teachers/programs/${programId}/lessons/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify(orderData),
     });
   }
 }

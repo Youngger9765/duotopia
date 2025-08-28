@@ -60,11 +60,12 @@ def create_demo_data(db: Session):
         Student(
             name="王小明",
             email="student1@duotopia.com",
-            password_hash=common_password,
+            password_hash=get_password_hash("mynewpassword123"),  # 改過密碼
             birthdate=common_birthdate,
             student_id="S001",
             target_wpm=60,
-            target_accuracy=0.75
+            target_accuracy=0.75,
+            password_changed=True  # 標記密碼已更改
         ),
         Student(
             name="李小美",
@@ -78,11 +79,12 @@ def create_demo_data(db: Session):
         Student(
             name="陳大雄",
             email="student3@duotopia.com",
-            password_hash=common_password,
+            password_hash=get_password_hash("student456"),  # 改過密碼
             birthdate=common_birthdate,
             student_id="S003",
             target_wpm=55,
-            target_accuracy=0.70
+            target_accuracy=0.70,
+            password_changed=True  # 標記密碼已更改
         )
     ]
     
@@ -100,7 +102,7 @@ def create_demo_data(db: Session):
         Student(
             name="林靜香",
             email="student5@duotopia.com",
-            password_hash=get_password_hash("mynewpassword123"),  # 這個學生已經更改過密碼
+            password_hash=get_password_hash("password789"),  # 改過密碼
             birthdate=common_birthdate,
             student_id="S005",
             target_wpm=75,
@@ -112,7 +114,7 @@ def create_demo_data(db: Session):
     all_students = students_5a + students_6b
     db.add_all(all_students)
     db.commit()
-    print(f"✅ 建立 {len(all_students)} 位學生（密碼都是 20120101）")
+    print(f"✅ 建立 {len(all_students)} 位學生（2位使用預設密碼，3位已更改密碼）")
     
     # ============ 4. 學生加入班級 ============
     # 五年級A班
@@ -135,69 +137,163 @@ def create_demo_data(db: Session):
     print("✅ 學生已加入班級")
     
     # ============ 5. Demo 課程（三層結構）============
-    # Program 1 - 五年級A班課程
-    program_5a = Program(
+    # 五年級A班課程 - Program 1
+    program_5a_basic = Program(
         name="五年級英語基礎課程",
         description="適合五年級學生的基礎英語課程",
         level=ProgramLevel.A1,
         teacher_id=demo_teacher.id,
-        classroom_id=classroom_a.id,  # 在五年級A班內創建
-        estimated_hours=20
+        classroom_id=classroom_a.id,
+        estimated_hours=20,
+        order_index=1
     )
     
-    # Program 2 - 六年級B班課程  
-    program_6b = Program(
+    # 五年級A班課程 - Program 2
+    program_5a_conversation = Program(
+        name="五年級口語會話課程",
+        description="培養五年級學生的英語口語能力",
+        level=ProgramLevel.A1,
+        teacher_id=demo_teacher.id,
+        classroom_id=classroom_a.id,
+        estimated_hours=15,
+        order_index=2
+    )
+    
+    # 六年級B班課程 - Program 1
+    program_6b_advanced = Program(
         name="六年級英語進階課程",
         description="適合六年級學生的進階英語課程",
         level=ProgramLevel.A2,
         teacher_id=demo_teacher.id,
-        classroom_id=classroom_b.id,  # 在六年級B班內創建
-        estimated_hours=25
+        classroom_id=classroom_b.id,
+        estimated_hours=25,
+        order_index=1
     )
     
-    db.add_all([program_5a, program_6b])
+    # 六年級B班課程 - Program 2
+    program_6b_reading = Program(
+        name="六年級閱讀理解課程",
+        description="提升六年級學生的英語閱讀能力",
+        level=ProgramLevel.A2,
+        teacher_id=demo_teacher.id,
+        classroom_id=classroom_b.id,
+        estimated_hours=20,
+        order_index=2
+    )
+    
+    db.add_all([program_5a_basic, program_5a_conversation, program_6b_advanced, program_6b_reading])
     db.commit()
     
-    # 五年級A班的 Lessons
-    lesson1_5a = Lesson(
-        program_id=program_5a.id,
-        name="Unit 1: Greetings 打招呼",
-        description="學習基本的英語問候語",
-        order_index=1,
-        estimated_minutes=30
-    )
+    # 五年級基礎課程的 Lessons (3個單元)
+    lessons_5a_basic = [
+        Lesson(
+            program_id=program_5a_basic.id,
+            name="Unit 1: Greetings 打招呼",
+            description="學習基本的英語問候語",
+            order_index=1,
+            estimated_minutes=30
+        ),
+        Lesson(
+            program_id=program_5a_basic.id,
+            name="Unit 2: Numbers 數字",
+            description="學習數字 1-20",
+            order_index=2,
+            estimated_minutes=30
+        ),
+        Lesson(
+            program_id=program_5a_basic.id,
+            name="Unit 3: Colors 顏色",
+            description="學習各種顏色的英文",
+            order_index=3,
+            estimated_minutes=25
+        )
+    ]
     
-    lesson2_5a = Lesson(
-        program_id=program_5a.id,
-        name="Unit 2: Numbers 數字",
-        description="學習數字 1-10",
-        order_index=2,
-        estimated_minutes=30
-    )
+    # 五年級會話課程的 Lessons (3個單元)
+    lessons_5a_conversation = [
+        Lesson(
+            program_id=program_5a_conversation.id,
+            name="Unit 1: Self Introduction 自我介紹",
+            description="學習如何用英語自我介紹",
+            order_index=1,
+            estimated_minutes=35
+        ),
+        Lesson(
+            program_id=program_5a_conversation.id,
+            name="Unit 2: Asking Questions 提問技巧",
+            description="學習如何用英語提問",
+            order_index=2,
+            estimated_minutes=35
+        ),
+        Lesson(
+            program_id=program_5a_conversation.id,
+            name="Unit 3: Daily Routines 日常作息",
+            description="談論每日的活動安排",
+            order_index=3,
+            estimated_minutes=30
+        )
+    ]
     
-    # 六年級B班的 Lessons
-    lesson1_6b = Lesson(
-        program_id=program_6b.id,
-        name="Unit 1: Daily Conversation 日常對話",
-        description="學習日常英語對話",
-        order_index=1,
-        estimated_minutes=40
-    )
+    # 六年級進階課程的 Lessons (3個單元)
+    lessons_6b_advanced = [
+        Lesson(
+            program_id=program_6b_advanced.id,
+            name="Unit 1: Daily Conversation 日常對話",
+            description="學習日常英語對話",
+            order_index=1,
+            estimated_minutes=40
+        ),
+        Lesson(
+            program_id=program_6b_advanced.id,
+            name="Unit 2: My Family 我的家庭",
+            description="學習家庭成員相關詞彙",
+            order_index=2,
+            estimated_minutes=40
+        ),
+        Lesson(
+            program_id=program_6b_advanced.id,
+            name="Unit 3: Hobbies 興趣愛好",
+            description="談論個人興趣與嗜好",
+            order_index=3,
+            estimated_minutes=35
+        )
+    ]
     
-    lesson2_6b = Lesson(
-        program_id=program_6b.id,
-        name="Unit 2: My Family 我的家庭",
-        description="學習家庭成員相關詞彙",
-        order_index=2,
-        estimated_minutes=40
-    )
+    # 六年級閱讀課程的 Lessons (3個單元)
+    lessons_6b_reading = [
+        Lesson(
+            program_id=program_6b_reading.id,
+            name="Unit 1: Short Stories 短篇故事",
+            description="閱讀簡單的英文故事",
+            order_index=1,
+            estimated_minutes=45
+        ),
+        Lesson(
+            program_id=program_6b_reading.id,
+            name="Unit 2: News Articles 新聞文章",
+            description="閱讀適齡的新聞內容",
+            order_index=2,
+            estimated_minutes=45
+        ),
+        Lesson(
+            program_id=program_6b_reading.id,
+            name="Unit 3: Poems 詩歌欣賞",
+            description="欣賞簡單的英文詩歌",
+            order_index=3,
+            estimated_minutes=40
+        )
+    ]
     
-    db.add_all([lesson1_5a, lesson2_5a, lesson1_6b, lesson2_6b])
+    db.add_all(lessons_5a_basic + lessons_5a_conversation + lessons_6b_advanced + lessons_6b_reading)
     db.commit()
+    
+    # Content - 選擇第一個 lesson 來創建內容
+    first_lesson_5a = lessons_5a_basic[0]
+    first_lesson_6b = lessons_6b_advanced[0]
     
     # Content - 五年級A班朗讀錄音集內容
     content1_5a = Content(
-        lesson_id=lesson1_5a.id,
+        lesson_id=first_lesson_5a.id,
         type=ContentType.READING_RECORDING,
         title="基礎問候語練習",
         order_index=1,
@@ -218,7 +314,7 @@ def create_demo_data(db: Session):
     )
     
     content2_5a = Content(
-        lesson_id=lesson2_5a.id,
+        lesson_id=lessons_5a_basic[1].id,
         type=ContentType.READING_RECORDING,
         title="數字 1-10 練習",
         order_index=1,
@@ -241,7 +337,7 @@ def create_demo_data(db: Session):
     
     # Content - 六年級B班朗讀錄音集內容
     content1_6b = Content(
-        lesson_id=lesson1_6b.id,
+        lesson_id=first_lesson_6b.id,
         type=ContentType.READING_RECORDING,
         title="日常對話練習",
         order_index=1,
@@ -260,7 +356,7 @@ def create_demo_data(db: Session):
     )
     
     content2_6b = Content(
-        lesson_id=lesson2_6b.id,
+        lesson_id=lessons_6b_advanced[1].id,
         type=ContentType.READING_RECORDING,
         title="家庭成員練習",
         order_index=1,
@@ -280,7 +376,7 @@ def create_demo_data(db: Session):
     
     db.add_all([content1_5a, content2_5a, content1_6b, content2_6b])
     db.commit()
-    print("✅ 建立課程: 五年級和六年級各有專屬課程 (各2個單元，每個單元有朗讀錄音集)")
+    print("✅ 建立課程: 每個班級有2個課程，每個課程有3個單元")
     
     # 注意：課程直接關聯到班級，不再需要 ClassroomProgramMapping
     print("✅ 課程已直接關聯到對應班級")
@@ -342,8 +438,11 @@ def create_demo_data(db: Session):
     print("\n📝 測試帳號：")
     print("教師登入: demo@duotopia.com / demo123")
     print("學生登入: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生名字")
-    print("  - 大部分學生密碼: 20120101")
-    print("  - 林靜香 (已更改密碼): mynewpassword123")
+    print("  - 預設密碼: 20120101 (李小美、張志豪)")
+    print("  - 已更改密碼的學生:")
+    print("    * 王小明: mynewpassword123")
+    print("    * 陳大雄: student456")
+    print("    * 林靜香: password789")
     print("="*50)
 
 def reset_database():

@@ -51,7 +51,8 @@ export function StudentDialogs({
     student_id: '',
     birthdate: '',
     phone: '',
-    classroom_id: undefined,
+    // 如果只有一個班級（從班級頁面新增），自動設定為該班級
+    classroom_id: classrooms.length === 1 ? classrooms[0].id : undefined,
     status: 'active'
   });
   const [loading, setLoading] = useState(false);
@@ -75,11 +76,12 @@ export function StudentDialogs({
         student_id: '',
         birthdate: '',
         phone: '',
-        classroom_id: undefined,
+        // 如果只有一個班級（從班級頁面新增），自動設定為該班級
+        classroom_id: classrooms.length === 1 ? classrooms[0].id : undefined,
         status: 'active'
       });
     }
-  }, [student, dialogType]);
+  }, [student, dialogType, classrooms]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -88,9 +90,8 @@ export function StudentDialogs({
       newErrors.name = '姓名為必填';
     }
     
-    if (!formData.email?.trim()) {
-      newErrors.email = 'Email 為必填';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email 是選填，但如果有填寫則檢查格式
+    if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email 格式不正確';
     }
     
@@ -111,7 +112,7 @@ export function StudentDialogs({
         // Create new student - ensure required fields are present
         const createData = {
           name: formData.name || '',
-          email: formData.email || '',
+          email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
           birthdate: formData.birthdate || '',
           student_id: formData.student_id,
           phone: formData.phone,
@@ -335,7 +336,7 @@ export function StudentDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-gray-400">(選填)</span>
                 </label>
                 <input
                   id="email"
@@ -343,7 +344,7 @@ export function StudentDialogs({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.email ? 'border-red-500' : ''}`}
-                  placeholder="student@example.com"
+                  placeholder="student@example.com (選填)"
                 />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>

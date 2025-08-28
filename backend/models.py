@@ -156,6 +156,7 @@ class Program(Base):
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
     classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=False)  # 課程歸屬班級
     estimated_hours = Column(Integer)  # 預計時數
+    order_index = Column(Integer, default=1)  # 排序順序
     is_active = Column(Boolean, default=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

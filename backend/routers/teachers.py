@@ -312,7 +312,7 @@ async def delete_classroom(
 # ------------ Student CRUD ------------
 class StudentCreate(BaseModel):
     name: str
-    email: str
+    email: Optional[str] = None  # Email 改為選填
     birthdate: str  # YYYY-MM-DD format
     classroom_id: int
     student_id: Optional[str] = None
@@ -350,10 +350,19 @@ async def create_student(
     birthdate = date.fromisoformat(student_data.birthdate)
     default_password = birthdate.strftime("%Y%m%d")
     
+    # Generate unique email if not provided
+    if not student_data.email:
+        # Generate a unique email based on student_id or timestamp
+        import time
+        timestamp = int(time.time())
+        email = f"student_{timestamp}@duotopia.local"
+    else:
+        email = student_data.email
+    
     # Create student
     student = Student(
         name=student_data.name,
-        email=student_data.email,
+        email=email,
         birthdate=birthdate,
         password_hash=get_password_hash(default_password),
         password_changed=False,
@@ -652,6 +661,52 @@ async def create_program(
         "estimated_hours": program.estimated_hours
     }
 
+@router.put("/programs/reorder")
+async def reorder_programs(
+    order_data: List[Dict[str, int]],  # [{"id": 1, "order_index": 1}, ...]
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """重新排序課程"""
+    for item in order_data:
+        program = db.query(Program).filter(
+            Program.id == item["id"],
+            Program.teacher_id == current_teacher.id
+        ).first()
+        if program:
+            program.order_index = item["order_index"]
+    
+    db.commit()
+    return {"message": "Programs reordered successfully"}
+
+@router.put("/programs/{program_id}/lessons/reorder")
+async def reorder_lessons(
+    program_id: int,
+    order_data: List[Dict[str, int]],  # [{"id": 1, "order_index": 1}, ...]
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """重新排序單元"""
+    # 驗證 program 屬於當前教師
+    program = db.query(Program).filter(
+        Program.id == program_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    for item in order_data:
+        lesson = db.query(Lesson).filter(
+            Lesson.id == item["id"],
+            Lesson.program_id == program_id
+        ).first()
+        if lesson:
+            lesson.order_index = item["order_index"]
+    
+    db.commit()
+    return {"message": "Lessons reordered successfully"}
+
 @router.get("/programs/{program_id}")
 async def get_program(
     program_id: int,
@@ -717,6 +772,7 @@ async def update_program(
         "description": program.description,
         "estimated_hours": program.estimated_hours
     }
+
 
 @router.delete("/programs/{program_id}")
 async def delete_program(

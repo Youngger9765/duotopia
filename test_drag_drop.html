@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>測試拖曳重新排序</title>
+    <style>
+        .item {
+            padding: 10px;
+            margin: 5px;
+            background: #f0f0f0;
+            cursor: grab;
+            border: 2px solid transparent;
+        }
+        .item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .item.drag-over {
+            border-color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>測試拖曳重新排序</h1>
+    <div id="programs">
+        <h2>課程</h2>
+        <div class="item" draggable="true" data-id="1">課程 1: 五年級英語</div>
+        <div class="item" draggable="true" data-id="2">課程 2: 六年級英語</div>
+    </div>
+    
+    <div id="lessons">
+        <h2>單元</h2>
+        <div class="item" draggable="true" data-id="1">單元 1: 打招呼</div>
+        <div class="item" draggable="true" data-id="2">單元 2: 數字</div>
+    </div>
+    
+    <div id="log"></div>
+
+    <script>
+        function setupDragDrop(container) {
+            let draggedElement = null;
+            
+            container.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('item')) {
+                    draggedElement = e.target;
+                    e.target.classList.add('dragging');
+                }
+            });
+            
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (afterElement == null) {
+                    container.appendChild(draggedElement);
+                } else {
+                    container.insertBefore(draggedElement, afterElement);
+                }
+            });
+            
+            container.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('item')) {
+                    e.target.classList.remove('dragging');
+                    logOrder(container);
+                }
+            });
+            
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.item:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            function logOrder(container) {
+                const items = [...container.querySelectorAll('.item')];
+                const order = items.map((item, index) => `${index + 1}. ${item.textContent}`);
+                document.getElementById('log').innerHTML = `<h3>新順序:</h3><pre>${order.join('\n')}</pre>`;
+            }
+        }
+        
+        setupDragDrop(document.getElementById('programs'));
+        setupDragDrop(document.getElementById('lessons'));
+    </script>
+</body>
+</html>
