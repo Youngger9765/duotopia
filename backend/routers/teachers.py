@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func
 from pydantic import BaseModel
 from database import get_db
 from models import Teacher, Classroom, Student, Program, ClassroomStudent, Lesson, Content, ContentType, ProgramLevel
@@ -177,7 +178,7 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
     """取得教師的所有課程"""
     programs = db.query(Program).filter(
         Program.teacher_id == current_teacher.id
-    ).options(selectinload(Program.classroom), selectinload(Program.lessons)).all()
+    ).options(selectinload(Program.classroom), selectinload(Program.lessons)).order_by(Program.order_index).all()
     
     result = []
     for program in programs:
@@ -198,7 +199,8 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
             "created_at": program.created_at.isoformat() if program.created_at else None,
             "lesson_count": len(program.lessons),  # Real lesson count
             "student_count": student_count,  # Real student count
-            "status": "active" if program.is_active else "archived"  # Real status based on is_active
+            "status": "active" if program.is_active else "archived",  # Real status based on is_active
+            "order_index": program.order_index if hasattr(program, 'order_index') else 1
         })
     
     return result
@@ -649,6 +651,11 @@ async def create_program(
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
     
+    # Get the max order_index for programs in this classroom
+    max_order = db.query(func.max(Program.order_index)).filter(
+        Program.classroom_id == program_data.classroom_id
+    ).scalar() or 0
+    
     program = Program(
         name=program_data.name,
         description=program_data.description,
@@ -656,7 +663,8 @@ async def create_program(
         classroom_id=program_data.classroom_id,
         teacher_id=current_teacher.id,
         estimated_hours=program_data.estimated_hours,
-        is_active=True
+        is_active=True,
+        order_index=max_order + 1
     )
     db.add(program)
     db.commit()
@@ -668,7 +676,8 @@ async def create_program(
         "description": program.description,
         "level": program.level.value,
         "classroom_id": program.classroom_id,
-        "estimated_hours": program.estimated_hours
+        "estimated_hours": program.estimated_hours,
+        "order_index": program.order_index
     }
 
 @router.put("/programs/reorder")
@@ -744,6 +753,7 @@ async def get_program(
         "level": program.level.value if program.level else "A1",
         "classroom_id": program.classroom_id,
         "estimated_hours": program.estimated_hours,
+        "order_index": program.order_index if hasattr(program, 'order_index') else 1,
         "lessons": [
             {
                 "id": lesson.id,
