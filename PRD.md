@@ -606,22 +606,59 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
   - 建立新課程
   - 必填：name, level, classroom_id
   - 選填：description, estimated_hours
+  - 自動分配 order_index
   
 - **READ** `GET /api/teachers/programs/{id}`
   - 取得單一課程詳情
-  - 包含 Lesson 列表
+  - 包含 Lesson 列表（按 order_index 排序）
+  - 包含每個 Lesson 的 Content 列表
   
 - **UPDATE** `PUT /api/teachers/programs/{id}`
   - 更新課程資訊
-  - 可更新：name, description, estimated_hours
+  - 可更新：name, description, estimated_hours, level
   
 - **DELETE** `DELETE /api/teachers/programs/{id}`
-  - 軟刪除課程（設定 is_active = False）
+  - 刪除課程及其所有單元和內容
   
-- **ADD LESSON** `POST /api/teachers/programs/{id}/lessons`
+- **REORDER** `PUT /api/teachers/programs/reorder`
+  - 重新排序課程（拖曳功能）
+  - 接受課程 ID 和新的 order_index 陣列
+  
+- **LIST** `GET /api/teachers/programs`
+  - 列出教師所有課程
+  - 包含 lesson_count 和 student_count 統計
+
+#### 單元管理 API  
+- **CREATE** `POST /api/teachers/programs/{id}/lessons`
   - 為課程新增單元
-  - 必填：name, order_index
+  - 必填：name
   - 選填：description, estimated_minutes
+  - 自動分配 order_index
+  
+- **UPDATE** `PUT /api/teachers/lessons/{id}`
+  - 更新單元資訊
+  - 可更新：name, description, estimated_minutes
+  
+- **DELETE** `DELETE /api/teachers/lessons/{id}`
+  - 刪除單元及其所有內容
+  
+- **REORDER** `PUT /api/teachers/programs/{id}/lessons/reorder`
+  - 重新排序單元（拖曳功能）
+  - 接受單元 ID 和新的 order_index 陣列
+
+#### 內容管理 API
+- **CREATE** `POST /api/teachers/lessons/{id}/contents`
+  - 為單元新增內容
+  - 必填：type, title
+  - 選填：description, items_count, estimated_time
+  - 自動分配 order_index
+  
+- **UPDATE** `PUT /api/teachers/contents/{id}`
+  - 更新內容資訊
+  - 可更新所有欄位
+  
+- **DELETE** `DELETE /api/teachers/contents/{id}`
+  - 刪除內容
 
 ### 6.2 資料驗證規則
 
@@ -675,10 +712,12 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - ✅ 學生新增（單筆/批量）
 - ✅ 學生密碼管理系統（生日作為預設密碼）
 - ✅ 三層課程架構（Program → Lesson → Content）
-- ✅ 課程 CRUD API
+- ✅ 課程 CRUD API（完整建立、更新、刪除）
 - ✅ 教師 Sidebar 導航系統
 - ✅ Table 格式檢視（班級、學生、課程）
-- □ 班級詳情頁面（班級內管理學生和課程）
+- ✅ 班級詳情頁面（班級內管理學生和課程）
+- ✅ 拖曳重新排序功能（課程和單元）
+- ✅ Content CRUD API（建立、更新、刪除內容）
 - □ 朗讀錄音集內容建立介面
 - □ 作業派發系統
 - ✅ 學生登入流程
