@@ -51,24 +51,8 @@ export default function TeacherPrograms() {
         apiClient.getTeacherClassrooms() as Promise<any[]>
       ]);
       
-      // TODO: Replace with real data from API
-      // MOCK DATA START - 以下為模擬資料，需要從後端 API 取得真實資料
-      const enrichedPrograms = programsData.map(p => ({
-        ...p,
-        // MOCK: 模擬學生數量
-        student_count: Math.floor(Math.random() * 30) + 5,
-        // MOCK: 模擬課程單元數
-        lesson_count: Math.floor(Math.random() * 20) + 1,
-        // MOCK: 模擬課程狀態
-        status: (['active', 'draft', 'archived'] as const)[Math.floor(Math.random() * 3)],
-        // MOCK: 模擬建立時間
-        created_at: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-        // MOCK: 模擬更新時間
-        updated_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      }));
-      // MOCK DATA END
-      
-      setPrograms(enrichedPrograms);
+      // Now using real data from backend API
+      setPrograms(programsData);
       setClassrooms(classroomsData.map(c => ({ id: c.id, name: c.name })));
     } catch (err) {
       console.error('Fetch data error:', err);

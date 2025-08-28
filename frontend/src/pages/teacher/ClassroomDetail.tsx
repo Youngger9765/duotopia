@@ -8,8 +8,16 @@ import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
 import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
-import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, MoreVertical, GripVertical } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+
+interface Content {
+  id: number;
+  type?: string;
+  title: string;
+  items_count: number;
+  estimated_time?: string;
+}
 
 interface Lesson {
   id: number;
@@ -18,6 +26,7 @@ interface Lesson {
   order_index: number;
   estimated_minutes?: number;
   program_id: number;
+  contents?: Content[];
 }
 
 interface Program {
@@ -745,12 +754,9 @@ export default function ClassroomDetail() {
                                 </AccordionTrigger>
                                 <AccordionContent>
                                   <div className="pl-12 pr-4 space-y-3">
-                                    {/* Mock Contents - 實際應從 API 獲取 */}
-                                    {[
-                                      { id: 1, type: '朗讀錄音', items: 5, time: '10 分鐘' },
-                                      { id: 2, type: '口說練習', items: 3, time: '10 分鐘' },
-                                      { id: 3, type: '情境對話', items: 2, time: '10 分鐘' },
-                                    ].map((content) => (
+                                    {/* 實際 Content 資料 */}
+                                    {(lesson.contents && lesson.contents.length > 0) ? (
+                                      lesson.contents.map((content: any) => (
                                       <div 
                                         key={content.id} 
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
@@ -764,18 +770,23 @@ export default function ClassroomDetail() {
                                             <FileText className="h-4 w-4 text-purple-600" />
                                           </div>
                                           <div>
-                                            <p className="font-medium text-sm">{content.type}</p>
-                                            <p className="text-xs text-gray-500">{content.items} 個項目</p>
+                                            <p className="font-medium text-sm">{content.title || '未命名內容'}</p>
+                                            <p className="text-xs text-gray-500">{content.items_count || 0} 個項目</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                          <span className="text-sm text-gray-500">{content.time}</span>
+                                          <span className="text-sm text-gray-500">{content.estimated_time || '10 分鐘'}</span>
                                           <span className="text-xs text-gray-400 group-hover:text-gray-600">
                                             點擊編輯 →
                                           </span>
                                         </div>
                                       </div>
-                                    ))}
+                                    ))
+                                    ) : (
+                                      <div className="p-4 text-center text-gray-500 text-sm">
+                                        尚無內容，請新增內容
+                                      </div>
+                                    )}
                                     
                                     <div className="flex justify-end space-x-2 pt-2">
                                       <Button size="sm" variant="outline">
@@ -875,7 +886,7 @@ export default function ClassroomDetail() {
                     </div>
                   </div>
 
-                  {/* Mock Content Items */}
+                  {/* Content Items - 真實內容編輯介面 */}
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm">內容項目</h4>
                     {[1, 2, 3].map((item) => (

@@ -177,10 +177,16 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
     """取得教師的所有課程"""
     programs = db.query(Program).filter(
         Program.teacher_id == current_teacher.id
-    ).options(selectinload(Program.classroom)).all()
+    ).options(selectinload(Program.classroom), selectinload(Program.lessons)).all()
     
-    return [
-        {
+    result = []
+    for program in programs:
+        # Get student count for the classroom through ClassroomStudent relationship
+        student_count = db.query(ClassroomStudent).filter(
+            ClassroomStudent.classroom_id == program.classroom_id
+        ).count()
+        
+        result.append({
             "id": program.id,
             "name": program.name,
             "description": program.description,
@@ -189,9 +195,13 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
             "classroom_name": program.classroom.name,
             "estimated_hours": program.estimated_hours,
             "is_active": program.is_active,
-            "created_at": program.created_at.isoformat() if program.created_at else None
-        } for program in programs
-    ]
+            "created_at": program.created_at.isoformat() if program.created_at else None,
+            "lesson_count": len(program.lessons),  # Real lesson count
+            "student_count": student_count,  # Real student count
+            "status": "active" if program.is_active else "archived"  # Real status based on is_active
+        })
+    
+    return result
 
 # ============ CRUD Endpoints ============
 
@@ -714,10 +724,15 @@ async def get_program(
     db: Session = Depends(get_db)
 ):
     """取得單一課程資料"""
+    # Import selectinload for nested loading
+    from sqlalchemy.orm import selectinload
+    
     program = db.query(Program).filter(
         Program.id == program_id,
         Program.teacher_id == current_teacher.id
-    ).options(selectinload(Program.lessons)).first()
+    ).options(
+        selectinload(Program.lessons).selectinload(Lesson.contents)
+    ).first()
     
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -735,8 +750,17 @@ async def get_program(
                 "name": lesson.name,
                 "description": lesson.description,
                 "order_index": lesson.order_index,
-                "estimated_minutes": lesson.estimated_minutes
-            } for lesson in program.lessons
+                "estimated_minutes": lesson.estimated_minutes,
+                "contents": [
+                    {
+                        "id": content.id,
+                        "type": content.type.value if content.type else "reading_recording",
+                        "title": content.title,
+                        "items_count": len(content.items) if content.items else 0,
+                        "estimated_time": "10 分鐘"  # Can be calculated based on items
+                    } for content in sorted(lesson.contents or [], key=lambda x: x.order_index)
+                ]
+            } for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)
         ]
     }
 
@@ -829,3 +853,154 @@ async def add_lesson(
         "order_index": lesson.order_index,
         "estimated_minutes": lesson.estimated_minutes
     }
+
+# ------------ Content CRUD ------------
+
+class ContentCreate(BaseModel):
+    type: str = "reading_recording"
+    title: str
+    items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
+    target_wpm: Optional[int] = 60
+    target_accuracy: Optional[float] = 0.8
+    order_index: int = 0
+
+class ContentUpdate(BaseModel):
+    title: Optional[str]
+    items: Optional[List[Dict[str, Any]]]
+    target_wpm: Optional[int]
+    target_accuracy: Optional[float]
+    order_index: Optional[int]
+
+@router.get("/lessons/{lesson_id}/contents")
+async def get_lesson_contents(
+    lesson_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """取得單元的內容列表"""
+    # Verify the lesson belongs to the teacher
+    lesson = db.query(Lesson).join(Program).filter(
+        Lesson.id == lesson_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    
+    contents = db.query(Content).filter(
+        Content.lesson_id == lesson_id
+    ).order_by(Content.order_index).all()
+    
+    return [
+        {
+            "id": content.id,
+            "type": content.type.value if content.type else "reading_recording",
+            "title": content.title,
+            "items": content.items or [],
+            "target_wpm": content.target_wpm,
+            "target_accuracy": content.target_accuracy,
+            "order_index": content.order_index
+        } for content in contents
+    ]
+
+@router.post("/lessons/{lesson_id}/contents")
+async def create_content(
+    lesson_id: int,
+    content_data: ContentCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """建立新內容"""
+    # Verify the lesson belongs to the teacher
+    lesson = db.query(Lesson).join(Program).filter(
+        Lesson.id == lesson_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    
+    content = Content(
+        lesson_id=lesson_id,
+        type=ContentType.READING_RECORDING,  # Phase 1 only has this type
+        title=content_data.title,
+        items=content_data.items,
+        target_wpm=content_data.target_wpm,
+        target_accuracy=content_data.target_accuracy,
+        order_index=content_data.order_index
+    )
+    db.add(content)
+    db.commit()
+    db.refresh(content)
+    
+    return {
+        "id": content.id,
+        "type": content.type.value,
+        "title": content.title,
+        "items": content.items,
+        "target_wpm": content.target_wpm,
+        "target_accuracy": content.target_accuracy,
+        "order_index": content.order_index
+    }
+
+@router.put("/contents/{content_id}")
+async def update_content(
+    content_id: int,
+    update_data: ContentUpdate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新內容"""
+    # Verify the content belongs to the teacher
+    content = db.query(Content).join(Lesson).join(Program).filter(
+        Content.id == content_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    
+    if update_data.title is not None:
+        content.title = update_data.title
+    if update_data.items is not None:
+        content.items = update_data.items
+    if update_data.target_wpm is not None:
+        content.target_wpm = update_data.target_wpm
+    if update_data.target_accuracy is not None:
+        content.target_accuracy = update_data.target_accuracy
+    if update_data.order_index is not None:
+        content.order_index = update_data.order_index
+    
+    db.commit()
+    db.refresh(content)
+    
+    return {
+        "id": content.id,
+        "type": content.type.value,
+        "title": content.title,
+        "items": content.items,
+        "target_wpm": content.target_wpm,
+        "target_accuracy": content.target_accuracy,
+        "order_index": content.order_index
+    }
+
+@router.delete("/contents/{content_id}")
+async def delete_content(
+    content_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除內容"""
+    # Verify the content belongs to the teacher
+    content = db.query(Content).join(Lesson).join(Program).filter(
+        Content.id == content_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    
+    db.delete(content)
+    db.commit()
+    
+    return {"message": "Content deleted successfully"}
