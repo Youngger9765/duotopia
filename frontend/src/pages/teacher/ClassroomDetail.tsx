@@ -574,7 +574,7 @@ export default function ClassroomDetail() {
                       <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center space-x-3">
-                            <button 
+                            <div 
                               className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
                               title="拖曳以重新排序"
                               draggable
@@ -588,7 +588,7 @@ export default function ClassroomDetail() {
                               }}
                             >
                               <GripVertical className="h-5 w-5 text-gray-400" />
-                            </button>
+                            </div>
                             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                               <BookOpen className="h-5 w-5 text-blue-600" />
                             </div>
@@ -691,7 +691,7 @@ export default function ClassroomDetail() {
                                 <AccordionTrigger className="hover:no-underline pl-4 group">
                                   <div className="flex items-center justify-between w-full pr-4">
                                     <div className="flex items-center space-x-3">
-                                      <button 
+                                      <div 
                                         className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
                                         title="拖曳以重新排序"
                                         draggable
@@ -705,7 +705,7 @@ export default function ClassroomDetail() {
                                         }}
                                       >
                                         <GripVertical className="h-4 w-4 text-gray-400" />
-                                      </button>
+                                      </div>
                                       <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                                         <ListOrdered className="h-4 w-4 text-green-600" />
                                       </div>
