@@ -295,6 +295,23 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // ============ Content Methods ============
+  async createContent(lessonId: number, data: {
+    type: string;
+    title: string;
+    items: Array<{
+      text: string;
+      translation?: string;
+    }>;
+    target_wpm?: number;
+    target_accuracy?: number;
+  }) {
+    return this.request(`/api/teachers/lessons/${lessonId}/contents`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Export singleton instance

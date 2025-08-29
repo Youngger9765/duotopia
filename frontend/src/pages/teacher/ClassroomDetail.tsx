@@ -40,6 +40,7 @@ interface Program {
   estimated_hours?: number;
   created_at?: string;
   order_index?: number;
+  classroom_id?: number;
   lessons?: Lesson[];
 }
 
@@ -122,7 +123,7 @@ export default function ClassroomDetail() {
 
   const fetchPrograms = async () => {
     try {
-      const allPrograms = await apiClient.getTeacherPrograms() as any[];
+      const allPrograms = await apiClient.getTeacherPrograms() as Program[];
       // Filter programs for this classroom
       const classroomPrograms = allPrograms.filter(p => p.classroom_id === Number(id));
       
@@ -130,7 +131,7 @@ export default function ClassroomDetail() {
       const programsWithLessons = await Promise.all(
         classroomPrograms.map(async (program) => {
           try {
-            const detail = await apiClient.getProgramDetail(program.id) as any;
+            const detail = await apiClient.getProgramDetail(program.id) as Program;
             return { 
               ...program, 
               lessons: detail.lessons ? detail.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index) : [] 
@@ -151,7 +152,7 @@ export default function ClassroomDetail() {
   };
 
 
-  const handleContentClick = (content: any) => {
+  const handleContentClick = (content: Content) => {
     setSelectedContent(content);
     setIsPanelOpen(true);
   };
@@ -274,7 +275,7 @@ export default function ClassroomDetail() {
     fetchPrograms(); // Refresh data
   };
 
-  const handleSaveLesson = (lesson: any) => {
+  const handleSaveLesson = (lesson: Lesson) => {
     const programIndex = programs.findIndex(p => p.id === lesson.program_id);
     if (programIndex !== -1) {
       const updatedPrograms = [...programs];
@@ -375,8 +376,8 @@ export default function ClassroomDetail() {
     }
   };
 
-  const openPanel = (content: any) => {
-    if (content.type === 'new_content' && content.lessonId) {
+  const openPanel = (content: { type: string; lessonId?: number; programName?: string; lessonName?: string; }) => {
+    if (content.type === 'new_content' && content.lessonId && content.programName && content.lessonName) {
       setContentLessonInfo({
         programName: content.programName,
         lessonName: content.lessonName,
@@ -396,12 +397,31 @@ export default function ClassroomDetail() {
     programName: string;
     lessonName: string;
   }) => {
-    // TODO: Navigate to content editor with selected type
-    toast.success(`開始建立 ${selection.type} 內容`);
-    
-    // For now, just show a message
-    // In the future, this will navigate to the content editor
-    console.log('Selected content type:', selection);
+    try {
+      // Create a default title based on content type
+      const contentTypeNames: Record<string, string> = {
+        'reading_assessment': '朗讀錄音練習'
+      };
+      
+      const title = contentTypeNames[selection.type] || '新內容';
+      
+      // Create the content with correct structure for backend
+      await apiClient.createContent(selection.lessonId, {
+        type: selection.type,
+        title: title,
+        items: [], // Empty items array, will be edited later
+        target_wpm: 60,
+        target_accuracy: 0.8
+      });
+      
+      toast.success('內容已創建成功');
+      
+      // Refresh programs to show the new content
+      await fetchPrograms();
+    } catch (error) {
+      console.error('Failed to create content:', error);
+      toast.error('創建內容失敗，請稍後再試');
+    }
   };
 
   const getLevelBadge = (level?: string) => {
@@ -830,7 +850,7 @@ export default function ClassroomDetail() {
                                   <div className="pl-12 pr-4 space-y-3">
                                     {/* 實際 Content 資料 */}
                                     {(lesson.contents && lesson.contents.length > 0) ? (
-                                      lesson.contents.map((content: any) => (
+                                      lesson.contents.map((content) => (
                                       <div 
                                         key={content.id} 
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
