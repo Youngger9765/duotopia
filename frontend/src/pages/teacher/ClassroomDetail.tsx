@@ -584,14 +584,29 @@ export default function ClassroomDetail() {
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center space-x-3">
                             <div 
-                              className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
                               title="拖曳以重新排序"
                               draggable
                               onDragStart={(e) => {
                                 e.stopPropagation();
+                                e.dataTransfer.effectAllowed = 'move';
+                                // 創建自定義拖曳預覽
+                                const preview = document.createElement('div');
+                                preview.style.position = 'absolute';
+                                preview.style.top = '-1000px';
+                                preview.style.backgroundColor = '#3B82F6';
+                                preview.style.color = 'white';
+                                preview.style.padding = '4px 8px';
+                                preview.style.borderRadius = '4px';
+                                preview.style.fontSize = '12px';
+                                preview.textContent = `移動: ${program.name}`;
+                                document.body.appendChild(preview);
+                                e.dataTransfer.setDragImage(preview, 0, 0);
+                                setTimeout(() => document.body.removeChild(preview), 0);
                                 setDraggedProgram(programIndex);
                               }}
-                              onDragEnd={() => {
+                              onDragEnd={(e) => {
+                                e.stopPropagation();
                                 setDraggedProgram(null);
                                 setDropIndicatorProgram(null);
                               }}
@@ -701,14 +716,29 @@ export default function ClassroomDetail() {
                                   <div className="flex items-center justify-between w-full pr-4">
                                     <div className="flex items-center space-x-3">
                                       <div 
-                                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
                                         title="拖曳以重新排序"
                                         draggable
                                         onDragStart={(e) => {
                                           e.stopPropagation();
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          // 創建自定義拖曳預覽
+                                          const preview = document.createElement('div');
+                                          preview.style.position = 'absolute';
+                                          preview.style.top = '-1000px';
+                                          preview.style.backgroundColor = '#3B82F6';
+                                          preview.style.color = 'white';
+                                          preview.style.padding = '4px 8px';
+                                          preview.style.borderRadius = '4px';
+                                          preview.style.fontSize = '12px';
+                                          preview.textContent = `移動: ${lesson.name}`;
+                                          document.body.appendChild(preview);
+                                          e.dataTransfer.setDragImage(preview, 0, 0);
+                                          setTimeout(() => document.body.removeChild(preview), 0);
                                           setDraggedLesson({ programId: program.id, lessonIndex });
                                         }}
-                                        onDragEnd={() => {
+                                        onDragEnd={(e) => {
+                                          e.stopPropagation();
                                           setDraggedLesson(null);
                                           setDropIndicatorLesson(null);
                                         }}
