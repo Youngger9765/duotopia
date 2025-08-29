@@ -63,6 +63,7 @@ export default function ClassroomDetail() {
   const [activeTab, setActiveTab] = useState('students');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [editingContent, setEditingContent] = useState<any>(null);
   
   // Student dialog states
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -154,12 +155,84 @@ export default function ClassroomDetail() {
 
   const handleContentClick = (content: Content) => {
     setSelectedContent(content);
+    // Initialize editing content with existing data or defaults
+    setEditingContent({
+      ...content,
+      items: content.items || [],
+      target_wpm: content.target_wpm || 60,
+      target_accuracy: content.target_accuracy || 0.8,
+      time_limit_seconds: content.time_limit_seconds || 600
+    });
     setIsPanelOpen(true);
   };
 
   const closePanel = () => {
     setIsPanelOpen(false);
-    setTimeout(() => setSelectedContent(null), 300);
+    setTimeout(() => {
+      setSelectedContent(null);
+      setEditingContent(null);
+    }, 300);
+  };
+
+  const handleAddContentItem = () => {
+    if (!editingContent) return;
+    
+    const newItem = {
+      text: '',
+      translation: ''
+    };
+    
+    setEditingContent({
+      ...editingContent,
+      items: [...(editingContent.items || []), newItem]
+    });
+  };
+
+  const handleUpdateContentItem = (index: number, field: 'text' | 'translation', value: string) => {
+    if (!editingContent) return;
+    
+    const updatedItems = [...(editingContent.items || [])];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
+    
+    setEditingContent({
+      ...editingContent,
+      items: updatedItems
+    });
+  };
+
+  const handleDeleteContentItem = (index: number) => {
+    if (!editingContent) return;
+    
+    const updatedItems = editingContent.items.filter((_: any, i: number) => i !== index);
+    setEditingContent({
+      ...editingContent,
+      items: updatedItems
+    });
+  };
+
+  const handleSaveContent = async () => {
+    if (!editingContent || !selectedContent) return;
+    
+    try {
+      // Update content via API
+      await apiClient.updateContent(editingContent.id, {
+        title: editingContent.title,
+        items: editingContent.items,
+        target_wpm: parseInt(editingContent.target_wpm),
+        target_accuracy: parseFloat(editingContent.target_accuracy) / 100,
+        time_limit_seconds: parseInt(editingContent.time_limit_seconds)
+      });
+      
+      toast.success('內容已更新成功');
+      await fetchPrograms();
+      closePanel();
+    } catch (error) {
+      console.error('Failed to update content:', error);
+      toast.error('更新內容失敗，請稍後再試');
+    }
   };
 
   // Student CRUD handlers
@@ -405,19 +478,14 @@ export default function ClassroomDetail() {
       
       const title = contentTypeNames[selection.type] || '新內容';
       
-      // Create placeholder items for content
-      const placeholderItems = selection.type === 'reading_assessment' ? [
-        {
-          text: "[請輸入朗讀文字]",
-          translation: "[請輸入中文翻譯]"
-        }
-      ] : [];
+      // Create empty items array - no default content
+      const items: Array<{ text: string; translation?: string }> = [];
       
       // Create the content with correct structure for backend
       await apiClient.createContent(selection.lessonId, {
         type: selection.type,
         title: title,
-        items: placeholderItems,
+        items: items,
         target_wpm: 60,
         target_accuracy: 0.8
       });
@@ -1011,44 +1079,76 @@ export default function ClassroomDetail() {
                   {/* Content Items - 真實內容編輯介面 */}
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm">內容項目</h4>
-                    {[1, 2, 3].map((item) => (
-                      <div key={item} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">項目 {item}</span>
-                          <Button size="sm" variant="ghost">
-                            <Edit className="h-3 w-3" />
-                          </Button>
+                    {editingContent && editingContent.items && editingContent.items.length > 0 ? (
+                      editingContent.items.map((item: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">項目 {index + 1}</span>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleDeleteContentItem(index)}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-500" />
+                            </Button>
+                          </div>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md text-sm"
+                            placeholder="英文內容"
+                            value={item.text || ''}
+                            onChange={(e) => handleUpdateContentItem(index, 'text', e.target.value)}
+                          />
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 border rounded-md text-sm"
+                            placeholder="中文翻譯"
+                            value={item.translation || ''}
+                            onChange={(e) => handleUpdateContentItem(index, 'translation', e.target.value)}
+                          />
+                          <div className="flex items-center space-x-2">
+                            <Button size="sm" variant="outline" className="flex-1">
+                              <Mic className="h-4 w-4 mr-1" />
+                              錄音
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600"
+                              onClick={() => handleDeleteContentItem(index)}
+                            >
+                              刪除
+                            </Button>
+                          </div>
                         </div>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border rounded-md text-sm"
-                          placeholder="英文內容"
-                          defaultValue={`Hello, how are you? (Example ${item})`}
-                        />
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border rounded-md text-sm"
-                          placeholder="中文翻譯"
-                          defaultValue={`你好，你好嗎？（範例 ${item}）`}
-                        />
-                        <div className="flex items-center space-x-2">
-                          <Button size="sm" variant="outline" className="flex-1">
-                            <Mic className="h-4 w-4 mr-1" />
-                            錄音
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-600">
-                            刪除
-                          </Button>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>尚無內容項目</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="mt-2"
+                          onClick={handleAddContentItem}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          新增項目
+                        </Button>
                       </div>
-                    ))}
+                    )}
                   </div>
 
-                  {/* Add Item Button */}
-                  <Button variant="outline" className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    新增項目
-                  </Button>
+                  {/* Add Item Button - only show if there are items */}
+                  {editingContent && editingContent.items && editingContent.items.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={handleAddContentItem}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      新增項目
+                    </Button>
+                  )}
 
                   {/* Settings */}
                   <div className="space-y-3 pt-4 border-t">
@@ -1058,8 +1158,12 @@ export default function ClassroomDetail() {
                       <input
                         type="number"
                         className="w-full px-3 py-2 border rounded-md mt-1"
-                        placeholder="120"
-                        defaultValue="120"
+                        placeholder="60"
+                        value={editingContent?.target_wpm || 60}
+                        onChange={(e) => setEditingContent({
+                          ...editingContent,
+                          target_wpm: e.target.value
+                        })}
                       />
                     </div>
                     <div>
@@ -1068,7 +1172,11 @@ export default function ClassroomDetail() {
                         type="number"
                         className="w-full px-3 py-2 border rounded-md mt-1"
                         placeholder="80"
-                        defaultValue="80"
+                        value={editingContent ? Math.round(editingContent.target_accuracy * 100) : 80}
+                        onChange={(e) => setEditingContent({
+                          ...editingContent,
+                          target_accuracy: parseFloat(e.target.value) / 100
+                        })}
                       />
                     </div>
                     <div>
@@ -1077,7 +1185,11 @@ export default function ClassroomDetail() {
                         type="number"
                         className="w-full px-3 py-2 border rounded-md mt-1"
                         placeholder="600"
-                        defaultValue="600"
+                        value={editingContent?.time_limit_seconds || 600}
+                        onChange={(e) => setEditingContent({
+                          ...editingContent,
+                          time_limit_seconds: e.target.value
+                        })}
                       />
                     </div>
                   </div>
@@ -1090,7 +1202,7 @@ export default function ClassroomDetail() {
                   <Button variant="outline" className="flex-1" onClick={closePanel}>
                     取消
                   </Button>
-                  <Button className="flex-1">
+                  <Button className="flex-1" onClick={handleSaveContent}>
                     <Save className="h-4 w-4 mr-2" />
                     儲存變更
                   </Button>

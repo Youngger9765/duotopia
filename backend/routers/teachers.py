@@ -766,6 +766,7 @@ async def get_program(
                         "id": content.id,
                         "type": content.type.value if content.type else "reading_recording",
                         "title": content.title,
+                        "items": content.items or [],  # Include actual items
                         "items_count": len(content.items) if content.items else 0,
                         "estimated_time": "10 分鐘"  # Can be calculated based on items
                     } for content in sorted(lesson.contents or [], key=lambda x: x.order_index)
@@ -879,6 +880,7 @@ class ContentUpdate(BaseModel):
     items: Optional[List[Dict[str, Any]]]
     target_wpm: Optional[int]
     target_accuracy: Optional[float]
+    time_limit_seconds: Optional[int]
     order_index: Optional[int]
 
 @router.get("/lessons/{lesson_id}/contents")
@@ -978,6 +980,8 @@ async def update_content(
         content.target_wpm = update_data.target_wpm
     if update_data.target_accuracy is not None:
         content.target_accuracy = update_data.target_accuracy
+    if update_data.time_limit_seconds is not None:
+        content.time_limit_seconds = update_data.time_limit_seconds
     if update_data.order_index is not None:
         content.order_index = update_data.order_index
     

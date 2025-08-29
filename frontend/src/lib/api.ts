@@ -312,6 +312,28 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  async updateContent(contentId: number, data: {
+    title?: string;
+    items?: Array<{
+      text: string;
+      translation?: string;
+    }>;
+    target_wpm?: number;
+    target_accuracy?: number;
+    time_limit_seconds?: number;
+  }) {
+    return this.request(`/api/teachers/contents/${contentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteContent(contentId: number) {
+    return this.request(`/api/teachers/contents/${contentId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export singleton instance

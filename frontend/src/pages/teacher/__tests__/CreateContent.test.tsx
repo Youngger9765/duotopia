@@ -175,12 +175,14 @@ describe('Create Content', () => {
     const readingCard = screen.getByTestId('content-type-card-reading_assessment')
     fireEvent.click(readingCard)
     
-    // Verify API was called
+    // Verify API was called with empty items array
     await waitFor(() => {
       expect(apiClient.createContent).toHaveBeenCalledWith(1, {
         type: 'reading_assessment',
         title: '朗讀錄音練習',
-        content: {}
+        items: [],
+        target_wpm: 60,
+        target_accuracy: 0.8
       })
     })
     
