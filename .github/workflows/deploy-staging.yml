@@ -2,15 +2,6 @@ name: Deploy to Staging
 
 on:
   workflow_dispatch:  # 手動觸發
-    inputs:
-      database:
-        description: 'Database to use'
-        required: true
-        default: 'supabase'
-        type: choice
-        options:
-        - supabase
-        - cloudsql
   push:
     branches: [ staging ]
   pull_request:
@@ -88,39 +79,25 @@ jobs:
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker $REGION-docker.pkg.dev
 
-    # 新增：檢查並啟動 Cloud SQL（如果選擇）
-    - name: Check and Start Cloud SQL if needed
-      if: github.event.inputs.database == 'cloudsql'
-      run: |
-        echo "💰 Using Cloud SQL (costs $2.28/day)"
-        STATUS=$(gcloud sql instances describe duotopia-staging-0827 --format="value(settings.activationPolicy)" 2>/dev/null || echo "NOT_FOUND")
-        if [ "$STATUS" = "NEVER" ]; then
-          echo "Starting Cloud SQL instance..."
-          gcloud sql instances patch duotopia-staging-0827 --activation-policy=ALWAYS
-          echo "Waiting for Cloud SQL to be ready..."
-          sleep 30
-        elif [ "$STATUS" = "ALWAYS" ]; then
-          echo "Cloud SQL is already running"
-        else
-          echo "Cloud SQL status: $STATUS"
-        fi
+    # Cloud SQL 已停用 - 使用 Supabase
+    # - name: Check and Start Cloud SQL if needed
+    #   run: |
+    #     echo "Cloud SQL is disabled. Using Supabase for cost savings."
+    #     # If you need to re-enable Cloud SQL:
+    #     # 1. Uncomment this section
+    #     # 2. Run: gcloud sql instances patch duotopia-staging-0827 --activation-policy=ALWAYS
 
-    # 新增：設定資料庫環境變數
-    - name: Set Database Environment Variables
+    # 設定資料庫環境變數 - 只使用 Supabase
+    - name: Set Database Environment Variables (Supabase Only)
       id: db_env
       run: |
-        DATABASE_TYPE="${{ github.event.inputs.database || 'supabase' }}"
+        # 固定使用 Supabase (免費)
+        DATABASE_TYPE="supabase"
         echo "DATABASE_TYPE=$DATABASE_TYPE" >> $GITHUB_OUTPUT
-        
-        if [ "$DATABASE_TYPE" = "cloudsql" ]; then
-          echo "DATABASE_URL=${{ secrets.STAGING_CLOUDSQL_URL }}" >> $GITHUB_OUTPUT
-          echo "💰 Using Cloud SQL database"
-        else
-          echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
-          echo "🆓 Using Supabase (free tier)"
-        fi
+        echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+        echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+        echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+        echo "🆓 Using Supabase (free tier - saving $2.28/day)"
 
     - name: Build and push backend image
       working-directory: ./backend
@@ -130,19 +107,15 @@ jobs:
 
     - name: Deploy backend to Cloud Run
       run: |
-        # 基本環境變數
+        # 環境變數 - 使用 Supabase
         ENV_VARS="DATABASE_URL=${{ steps.db_env.outputs.DATABASE_URL }}"
-        ENV_VARS="$ENV_VARS,DATABASE_TYPE=${{ steps.db_env.outputs.DATABASE_TYPE }}"
+        ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
         ENV_VARS="$ENV_VARS,JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}"
         ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
         ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=30"
         ENV_VARS="$ENV_VARS,ENVIRONMENT=staging"
-        
-        # 如果是 Supabase，加入額外環境變數
-        if [ "${{ steps.db_env.outputs.DATABASE_TYPE }}" = "supabase" ]; then
-          ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
-          ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
-        fi
+        ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
+        ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
         
         gcloud run deploy $BACKEND_SERVICE \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA \
