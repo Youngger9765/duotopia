@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "description": "E2E and API tests for Duotopia",
   "scripts": {
-    "test:api": "cd tests/api && python test_teacher_api.py && python test_student_api.py",
+    "test:api": "python tests/run_all_tests.py",
+    "test:api:teacher": "python tests/api/test_teacher_api.py",
+    "test:api:student": "python tests/api/test_student_api.py",
+    "test:api:classroom": "python tests/api/test_classroom_api.py",
+    "test:api:reorder": "python tests/api/test_reorder_api.py",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",

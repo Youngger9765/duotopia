@@ -7,8 +7,8 @@ import json
 from typing import Dict, Any
 
 # 測試環境配置
-# BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"  # 正式環境
-BASE_URL = "http://localhost:8000"  # 本地測試
+BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"  # 正式環境
+# BASE_URL = "http://localhost:8000"  # 本地測試
 
 # 測試學生資料 (與 seed_data.py 一致)
 STUDENTS = [
