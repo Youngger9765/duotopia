@@ -3,10 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 
+# Import configuration
+from core.config import settings
+
 # Import routers
 from routers import auth, students, teachers, public
 
-app = FastAPI(title="Duotopia API", version="1.0.0")
+app = FastAPI(
+    title="Duotopia API", 
+    version="1.0.0",
+    description=f"Running on {settings.deployment_name}"
+)
 
 # CORS 設定
 app.add_middleware(
@@ -23,7 +30,11 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "duotopia-backend"}
+    return {
+        "status": "healthy", 
+        "service": "duotopia-backend",
+        "database": settings.get_database_info()
+    }
 
 # Include routers
 app.include_router(public.router)  # 公開路由優先，不需要認證

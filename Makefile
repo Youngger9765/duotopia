@@ -71,11 +71,63 @@ test-local:
 	docker rm duotopia-backend-test duotopia-frontend-test
 	@echo "Local tests passed!"
 
-# 部署
+# 部署 - 支援多資料庫選擇
+.PHONY: deploy-staging-supabase
+deploy-staging-supabase:
+	@echo "🚀 Deploying to Staging with Supabase (Free)..."
+	@echo "This will use Supabase free tier database"
+	@gh workflow run deploy-staging.yml -f database=supabase
+
+.PHONY: deploy-staging-cloudsql
+deploy-staging-cloudsql:
+	@echo "🚀 Deploying to Staging with Cloud SQL..."
+	@echo "💰 Warning: This will cost $$2.28/day!"
+	@read -p "Continue? (y/n) " -n 1 -r; echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		gh workflow run deploy-staging.yml -f database=cloudsql; \
+	else \
+		echo "Deployment cancelled."; \
+	fi
+
 .PHONY: deploy-staging
-deploy-staging:
-	@echo "Deploying to staging..."
-	git push origin staging
+deploy-staging: deploy-staging-supabase
+	@echo "Default staging deployment uses Supabase (free)"
+
+# 快速切換資料庫（不重新部署）
+.PHONY: switch-staging-supabase
+switch-staging-supabase:
+	@echo "Switching staging to Supabase (free tier)..."
+	gcloud run services update duotopia-staging-backend \
+		--region=$(REGION) \
+		--update-env-vars DATABASE_TYPE=supabase \
+		--update-env-vars DATABASE_URL="$${STAGING_SUPABASE_URL}"
+	@echo "✅ Switched to Supabase (Cost: $$0/day)"
+
+.PHONY: switch-staging-cloudsql
+switch-staging-cloudsql:
+	@echo "Switching staging to Cloud SQL..."
+	@echo "💰 This will cost $$2.28/day"
+	@read -p "Continue? (y/n) " -n 1 -r; echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		./scripts/manage-db.sh start; \
+		gcloud run services update duotopia-staging-backend \
+			--region=$(REGION) \
+			--update-env-vars DATABASE_TYPE=cloudsql \
+			--update-env-vars DATABASE_URL="$${STAGING_CLOUDSQL_URL}"; \
+		echo "✅ Switched to Cloud SQL (Cost: $$2.28/day)"; \
+	fi
+
+# 檢查當前資料庫狀態
+.PHONY: check-database
+check-database:
+	@echo "Checking current database configuration..."
+	@gcloud run services describe duotopia-staging-backend \
+		--region=$(REGION) \
+		--format="value(spec.template.spec.containers[0].env[?key=='DATABASE_TYPE'].value)" 2>/dev/null || echo "Not set"
+	@echo ""
+	@echo "Cloud SQL Status:"
+	@gcloud sql instances describe duotopia-staging-0827 \
+		--format="value(state,settings.activationPolicy)" 2>/dev/null || echo "Not found"
 
 # 清理
 .PHONY: clean
