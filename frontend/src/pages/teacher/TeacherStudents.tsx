@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
-import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download } from 'lucide-react';
+import { ClassroomAssignDialog } from '@/components/ClassroomAssignDialog';
+import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download, School, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface Classroom {
   id: number;
@@ -14,12 +16,14 @@ interface Classroom {
 
 export default function TeacherStudents() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
 
   useEffect(() => {
     fetchClassrooms();
@@ -83,11 +87,6 @@ export default function TeacherStudents() {
     setDialogType('edit');
   };
 
-  const handleEmailStudent = (student: Student) => {
-    // TODO: Implement email functionality
-    console.log('Email student:', student);
-  };
-
   const handleResetPassword = async (student: Student) => {
     if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
       return;
@@ -95,11 +94,12 @@ export default function TeacherStudents() {
     
     try {
       await apiClient.resetStudentPassword(student.id);
+      toast.success(`已重設 ${student.name} 的密碼為預設密碼`);
       // Refresh data
       fetchClassrooms();
     } catch (error) {
       console.error('Failed to reset password:', error);
-      alert('重設密碼失敗，請稍後再試');
+      toast.error('重設密碼失敗，請稍後再試');
     }
   };
 
@@ -108,9 +108,16 @@ export default function TeacherStudents() {
     fetchClassrooms();
   };
 
-  const handleDeleteStudent = () => {
-    // Refresh data after delete
-    fetchClassrooms();
+  const handleDeleteStudent = async (student: Student) => {
+    try {
+      await apiClient.deleteStudent(student.id);
+      toast.success(`已刪除學生：${student.name}`);
+      // Refresh data after delete
+      fetchClassrooms();
+    } catch (error) {
+      console.error('Failed to delete student:', error);
+      toast.error('刪除學生失敗，請稍後再試');
+    }
   };
 
   const handleCloseDialog = () => {
@@ -121,6 +128,34 @@ export default function TeacherStudents() {
   const handleSwitchToEdit = () => {
     // Switch from view to edit mode
     setDialogType('edit');
+  };
+  
+  const handleBulkAction = async (action: string, studentIds: number[]) => {
+    // Handle selection update
+    if (action === 'selection') {
+      setSelectedStudentIds(studentIds);
+      return;
+    }
+    
+    setSelectedStudentIds(studentIds);
+    
+    if (action === 'assign') {
+      // Show classroom selection dialog
+      setShowAssignDialog(true);
+    } else if (action === 'delete') {
+      if (confirm(`確定要刪除 ${studentIds.length} 位學生嗎？`)) {
+        try {
+          for (const studentId of studentIds) {
+            await apiClient.deleteStudent(studentId);
+          }
+          toast.success(`成功刪除 ${studentIds.length} 位學生`);
+          fetchClassrooms();
+        } catch (error) {
+          console.error('Failed to delete students:', error);
+          toast.error('刪除失敗，請稍後再試');
+        }
+      }
+    }
   };
 
 
@@ -145,6 +180,30 @@ export default function TeacherStudents() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold text-gray-900">所有學生</h2>
           <div className="flex items-center space-x-4">
+            {selectedStudentIds.length > 0 && (
+              <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-md">
+                <span className="text-sm font-medium text-blue-700">
+                  已選擇 {selectedStudentIds.length} 位學生
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('assign', selectedStudentIds)}
+                >
+                  <School className="h-4 w-4 mr-2" />
+                  批量分配班級
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 hover:bg-red-50"
+                  onClick={() => handleBulkAction('delete', selectedStudentIds)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  批量刪除
+                </Button>
+              </div>
+            )}
             {/* Search Input */}
             <input
               type="text"
@@ -234,9 +293,10 @@ export default function TeacherStudents() {
             showClassroom={true}
             onViewStudent={handleViewStudent}
             onEditStudent={handleEditStudent}
-            onEmailStudent={handleEmailStudent}
             onResetPassword={handleResetPassword}
+            onDeleteStudent={handleDeleteStudent}
             onAddStudent={handleCreateStudent}
+            onBulkAction={handleBulkAction}
             emptyMessage={
               searchTerm 
                 ? '找不到符合條件的學生'
@@ -254,9 +314,35 @@ export default function TeacherStudents() {
         dialogType={dialogType}
         onClose={handleCloseDialog}
         onSave={handleSaveStudent}
-        onDelete={handleDeleteStudent}
+        onDelete={() => {}} // 保留但不使用，因為刪除現在直接在列表處理
         onSwitchToEdit={handleSwitchToEdit}
         classrooms={classrooms}
+      />
+      
+      {/* Classroom Assignment Dialog */}
+      <ClassroomAssignDialog
+        open={showAssignDialog}
+        onClose={() => setShowAssignDialog(false)}
+        onConfirm={(classroomId) => {
+          // Handle classroom assignment
+          (async () => {
+            try {
+              for (const studentId of selectedStudentIds) {
+                await apiClient.updateStudent(studentId, { classroom_id: classroomId });
+              }
+              const classroom = classrooms.find(c => c.id === classroomId);
+              toast.success(`成功分配 ${selectedStudentIds.length} 位學生到「${classroom?.name}」`);
+              setSelectedStudentIds([]);
+              setShowAssignDialog(false);
+              fetchClassrooms();
+            } catch (error) {
+              console.error('Failed to assign students:', error);
+              toast.error('分配失敗，請稍後再試');
+            }
+          })();
+        }}
+        classrooms={classrooms}
+        studentCount={selectedStudentIds.length}
       />
     </TeacherLayout>
   );

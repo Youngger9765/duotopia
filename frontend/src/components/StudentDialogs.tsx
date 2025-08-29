@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle, Eye, Edit, Trash2, Plus, Mail, Phone, Calendar, School } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 
 export interface Student {
   id: number;
@@ -119,15 +120,30 @@ export function StudentDialogs({
           classroom_id: formData.classroom_id
         };
         const response = await apiClient.createStudent(createData);
+        // 如果有生日，顯示預設密碼
+        if (formData.birthdate) {
+          const defaultPassword = formData.birthdate.replace(/-/g, '');
+          toast.success(
+            <div>
+              <p>學生「{formData.name}」已成功新增</p>
+              <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{defaultPassword}</code></p>
+            </div>,
+            { duration: 5000 }
+          );
+        } else {
+          toast.success(`學生「${formData.name}」已成功新增`);
+        }
         onSave(response as Student);
       } else if (dialogType === 'edit' && student) {
         // Update existing student
         const response = await apiClient.updateStudent(student.id, formData);
+        toast.success(`學生「${student.name}」資料已更新`);
         onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
     } catch (error) {
       console.error('Error saving student:', error);
+      toast.error('儲存失敗，請稍後再試');
       setErrors({ submit: '儲存失敗，請稍後再試' });
     } finally {
       setLoading(false);
@@ -140,10 +156,12 @@ export function StudentDialogs({
     setLoading(true);
     try {
       await apiClient.deleteStudent(student.id);
+      toast.success(`學生「${student.name}」已刪除`);
       onDelete(student.id);
       onClose();
     } catch (error) {
       console.error('Error deleting student:', error);
+      toast.error('刪除失敗，請稍後再試');
       setErrors({ submit: '刪除失敗，請稍後再試' });
     } finally {
       setLoading(false);

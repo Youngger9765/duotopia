@@ -10,10 +10,18 @@ import TeacherPrograms from './pages/teacher/TeacherPrograms'
 import ClassroomDetail from './pages/teacher/ClassroomDetail'
 import StudentLogin from './pages/StudentLogin'
 import StudentDashboard from './pages/StudentDashboard'
+import { Toaster } from 'sonner'
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Toaster 
+        position="top-center"
+        richColors
+        closeButton
+        duration={3000}
+      />
+      <Routes>
       <Route path="/" element={<Home />} />
       
       {/* Teacher Routes */}
@@ -35,6 +43,7 @@ function App() {
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 

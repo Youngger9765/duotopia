@@ -1,4 +1,6 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -8,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Mail, Edit, Users, Plus, Eye, RotateCcw } from 'lucide-react';
+import { Edit, Users, Plus, Eye, RotateCcw, Trash2, Copy, CheckSquare, Square } from 'lucide-react';
 
 export interface Student {
   id: number;
@@ -30,11 +32,14 @@ interface StudentTableProps {
   showClassroom?: boolean; // Show classroom column in all students view
   onAddStudent?: () => void;
   onEditStudent?: (student: Student) => void;
-  onEmailStudent?: (student: Student) => void;
   onViewStudent?: (student: Student) => void;
   onResetPassword?: (student: Student) => void;
+  onDeleteStudent?: (student: Student) => void;
+  onBulkAction?: (action: string, studentIds: number[]) => void;
   emptyMessage?: string;
   emptyDescription?: string;
+  selectedIds?: Set<number>;
+  onSelectionChange?: (ids: Set<number>) => void;
 }
 
 export default function StudentTable({
@@ -42,12 +47,41 @@ export default function StudentTable({
   showClassroom = false,
   onAddStudent,
   onEditStudent,
-  onEmailStudent,
   onViewStudent,
   onResetPassword,
+  onDeleteStudent,
+  onBulkAction,
   emptyMessage = '尚無學生',
-  emptyDescription
+  emptyDescription,
+  selectedIds: externalSelectedIds,
+  onSelectionChange
 }: StudentTableProps) {
+  const [internalSelectedIds, setInternalSelectedIds] = React.useState<Set<number>>(new Set());
+  const selectedIds = externalSelectedIds || internalSelectedIds;
+  const setSelectedIds = onSelectionChange || setInternalSelectedIds;
+  
+  const toggleSelect = (id: number) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+    if (onBulkAction && newSelected.size > 0) {
+      // Notify parent about selection
+      onBulkAction('selection', Array.from(newSelected));
+    }
+  };
+  
+  const toggleSelectAll = () => {
+    if (selectedIds.size === students.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(students.map(s => s.id)));
+    }
+  };
+  
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -96,6 +130,22 @@ export default function StudentTable({
       </TableCaption>
       <TableHeader>
         <TableRow>
+          {onBulkAction && (
+            <TableHead className="w-[40px]">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="p-0 h-8 w-8"
+              >
+                {selectedIds.size === students.length && students.length > 0 ? (
+                  <CheckSquare className="h-4 w-4" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+              </Button>
+            </TableHead>
+          )}
           <TableHead className="w-[50px] text-left">ID</TableHead>
           <TableHead className="text-left">學生姓名</TableHead>
           <TableHead className="text-left">Email</TableHead>
@@ -112,6 +162,22 @@ export default function StudentTable({
       <TableBody>
         {students.map((student) => (
           <TableRow key={student.id}>
+            {onBulkAction && (
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleSelect(student.id)}
+                  className="p-0 h-8 w-8"
+                >
+                  {selectedIds.has(student.id) ? (
+                    <CheckSquare className="h-4 w-4" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                </Button>
+              </TableCell>
+            )}
             <TableCell className="font-medium">{student.id}</TableCell>
             <TableCell>
               <div className="flex items-center space-x-3">
@@ -129,10 +195,7 @@ export default function StudentTable({
               </div>
             </TableCell>
             <TableCell>
-              <div className="flex items-center space-x-1">
-                <Mail className="h-3 w-3 text-gray-400" />
-                <span className="text-sm">{student.email}</span>
-              </div>
+              <span className="text-sm">{student.email || '-'}</span>
             </TableCell>
             {showClassroom && (
               <TableCell>{student.classroom_name || '-'}</TableCell>
@@ -146,14 +209,29 @@ export default function StudentTable({
                       已更改
                     </span>
                   ) : (
-                    <div>
+                    <div className="flex items-center space-x-2">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         預設密碼
                       </span>
                       {student.birthdate && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {student.birthdate.replace(/-/g, '')}
-                        </p>
+                        <div className="flex items-center space-x-1">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {student.birthdate.replace(/-/g, '')}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="複製密碼"
+                            onClick={() => {
+                              const password = student.birthdate.replace(/-/g, '');
+                              navigator.clipboard.writeText(password);
+                              toast.success(`密碼 ${password} 已複製到剪貼簿`);
+                            }}
+                            className="h-6 px-1"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -204,14 +282,19 @@ export default function StudentTable({
                     <Edit className="h-4 w-4" />
                   </Button>
                 )}
-                {onEmailStudent && (
+                {onDeleteStudent && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    title="發送郵件"
-                    onClick={() => onEmailStudent(student)}
+                    title="刪除"
+                    onClick={() => {
+                      if (confirm(`確定要刪除學生「${student.name}」嗎？此操作無法復原。`)) {
+                        onDeleteStudent(student);
+                      }
+                    }}
+                    className="hover:bg-red-50 hover:text-red-600"
                   >
-                    <Mail className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
