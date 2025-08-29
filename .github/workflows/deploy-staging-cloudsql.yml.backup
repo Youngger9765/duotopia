@@ -1,0 +1,50 @@
+# Deploy to Staging with Cloud SQL
+# 使用 Cloud SQL 的版本 ($2.28/day)
+# 
+# 啟用方式：
+# 1. mv deploy-staging.yml deploy-staging-supabase.yml.backup
+# 2. mv deploy-staging-cloudsql.yml.backup deploy-staging.yml
+# 3. git add -A && git commit -m "Switch to Cloud SQL" && git push
+
+name: Deploy to Staging (Cloud SQL)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ staging ]
+  pull_request:
+    branches: [ staging ]
+
+env:
+  PROJECT_ID: duotopia-469413
+  REGION: asia-east1
+  BACKEND_SERVICE: duotopia-staging-backend
+  FRONTEND_SERVICE: duotopia-staging-frontend
+  REPOSITORY: duotopia-repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+    
+    - name: Start Cloud SQL
+      run: |
+        echo "💰 Starting Cloud SQL (costs $2.28/day)"
+        gcloud sql instances patch duotopia-staging-0827 --activation-policy=ALWAYS
+        sleep 30
+    
+    - name: Deploy with Cloud SQL
+      run: |
+        echo "DATABASE_TYPE=cloudsql"
+        # ... deployment steps with Cloud SQL ...

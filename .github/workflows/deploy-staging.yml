@@ -79,25 +79,16 @@ jobs:
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker $REGION-docker.pkg.dev
 
-    # Cloud SQL 已停用 - 使用 Supabase
-    # - name: Check and Start Cloud SQL if needed
-    #   run: |
-    #     echo "Cloud SQL is disabled. Using Supabase for cost savings."
-    #     # If you need to re-enable Cloud SQL:
-    #     # 1. Uncomment this section
-    #     # 2. Run: gcloud sql instances patch duotopia-staging-0827 --activation-policy=ALWAYS
-
-    # 設定資料庫環境變數 - 只使用 Supabase
-    - name: Set Database Environment Variables (Supabase Only)
+    # 設定資料庫環境變數 - Supabase
+    - name: Set Database Environment Variables
       id: db_env
       run: |
-        # 固定使用 Supabase (免費)
-        DATABASE_TYPE="supabase"
-        echo "DATABASE_TYPE=$DATABASE_TYPE" >> $GITHUB_OUTPUT
+        # 使用 Supabase (免費)
+        echo "DATABASE_TYPE=supabase" >> $GITHUB_OUTPUT
         echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
         echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
         echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
-        echo "🆓 Using Supabase (free tier - saving $2.28/day)"
+        echo "🆓 Using Supabase (free tier)"
 
     - name: Build and push backend image
       working-directory: ./backend
@@ -107,7 +98,7 @@ jobs:
 
     - name: Deploy backend to Cloud Run
       run: |
-        # 環境變數 - 使用 Supabase
+        # 環境變數設定
         ENV_VARS="DATABASE_URL=${{ steps.db_env.outputs.DATABASE_URL }}"
         ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
         ENV_VARS="$ENV_VARS,JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}"
@@ -207,7 +198,7 @@ jobs:
           fi
         done
 
-    # 新增：顯示部署摘要
+    # 顯示部署摘要
     - name: Deployment Summary
       if: success()
       run: |
@@ -215,12 +206,6 @@ jobs:
         echo "🚀 Deployment Successful!"
         echo "========================================="
         echo "Environment: Staging"
-        echo "Database: ${{ steps.db_env.outputs.DATABASE_TYPE }}"
-        if [ "${{ steps.db_env.outputs.DATABASE_TYPE }}" = "cloudsql" ]; then
-          echo "💰 Daily Cost: ~$2.28 USD"
-          echo "⚠️  Remember to stop Cloud SQL when not needed:"
-          echo "    ./scripts/manage-db.sh stop"
-        else
-          echo "🆓 Daily Cost: $0 (Supabase free tier)"
-        fi
+        echo "Database: Supabase"
+        echo "🆓 Daily Cost: $0 (Supabase free tier)"
         echo "========================================="
