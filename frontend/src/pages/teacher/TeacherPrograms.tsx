@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/table';
 import TeacherLayout from '@/components/TeacherLayout';
 import { BookOpen, RefreshCw, Filter, Plus, Edit, Eye, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ProgramDialogs } from '@/components/ProgramDialogs';
 import { apiClient } from '@/lib/api';
 
 interface Program {
@@ -38,6 +40,8 @@ export default function TeacherPrograms() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -64,6 +68,43 @@ export default function TeacherPrograms() {
   const filteredPrograms = selectedClassroom
     ? programs.filter(p => p.classroom_id === selectedClassroom)
     : programs;
+
+  const handleCreateProgram = () => {
+    setSelectedProgram(null);
+    setDialogType('create');
+  };
+
+  const handleViewProgram = (program: Program) => {
+    setSelectedProgram(program);
+    setDialogType('view');
+  };
+
+  const handleEditProgram = (program: Program) => {
+    setSelectedProgram(program);
+    setDialogType('edit');
+  };
+
+  const handleDeleteProgram = (program: Program) => {
+    setSelectedProgram(program);
+    setDialogType('delete');
+  };
+
+  const handleSaveProgram = () => {
+    fetchData();
+  };
+
+  const handleConfirmDelete = () => {
+    fetchData();
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedProgram(null);
+    setDialogType(null);
+  };
+
+  const handleSwitchToEdit = () => {
+    setDialogType('edit');
+  };
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -141,7 +182,7 @@ export default function TeacherPrograms() {
               重新載入
             </Button>
             {/* Add New Program Button */}
-            <Button size="sm">
+            <Button size="sm" onClick={handleCreateProgram}>
               <Plus className="h-4 w-4 mr-2" />
               新增課程
             </Button>
@@ -237,13 +278,29 @@ export default function TeacherPrograms() {
                   <TableCell>{formatDate(program.updated_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        title="查看"
+                        onClick={() => handleViewProgram(program)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        title="編輯"
+                        onClick={() => handleEditProgram(program)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        title="刪除"
+                        onClick={() => handleDeleteProgram(program)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -261,13 +318,24 @@ export default function TeacherPrograms() {
             <p className="text-gray-500">
               {selectedClassroom ? '此班級暫無課程' : '尚未建立課程'}
             </p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={handleCreateProgram}>
               <Plus className="h-4 w-4 mr-2" />
               建立第一個課程
             </Button>
           </div>
         )}
       </div>
+
+      {/* Program Dialogs */}
+      <ProgramDialogs
+        program={selectedProgram}
+        dialogType={dialogType}
+        onClose={handleCloseDialog}
+        onSave={handleSaveProgram}
+        onDelete={handleConfirmDelete}
+        onSwitchToEdit={handleSwitchToEdit}
+        classrooms={classrooms}
+      />
     </TeacherLayout>
   );
 }
