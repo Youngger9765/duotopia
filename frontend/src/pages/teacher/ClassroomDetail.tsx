@@ -9,8 +9,10 @@ import { StudentDialogs } from '@/components/StudentDialogs';
 import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
 import CopyProgramDialog from '@/components/CopyProgramDialog';
+import ContentTypeDialog from '@/components/ContentTypeDialog';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface Content {
   id: number;
@@ -76,6 +78,14 @@ export default function ClassroomDetail() {
   
   // Copy program dialog state
   const [showCopyDialog, setShowCopyDialog] = useState(false);
+  
+  // Content type dialog state
+  const [showContentTypeDialog, setShowContentTypeDialog] = useState(false);
+  const [contentLessonInfo, setContentLessonInfo] = useState<{
+    programName: string;
+    lessonName: string;
+    lessonId: number;
+  } | null>(null);
   
   // Drag states
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
@@ -363,6 +373,35 @@ export default function ClassroomDetail() {
         fetchPrograms();
       }
     }
+  };
+
+  const openPanel = (content: any) => {
+    if (content.type === 'new_content' && content.lessonId) {
+      setContentLessonInfo({
+        programName: content.programName,
+        lessonName: content.lessonName,
+        lessonId: content.lessonId
+      });
+      setShowContentTypeDialog(true);
+    } else {
+      // Handle other panel types if needed
+      setSelectedContent(content);
+      setIsPanelOpen(true);
+    }
+  };
+
+  const handleContentTypeSelect = async (selection: {
+    type: string;
+    lessonId: number;
+    programName: string;
+    lessonName: string;
+  }) => {
+    // TODO: Navigate to content editor with selected type
+    toast.success(`開始建立 ${selection.type} 內容`);
+    
+    // For now, just show a message
+    // In the future, this will navigate to the content editor
+    console.log('Selected content type:', selection);
   };
 
   const getLevelBadge = (level?: string) => {
@@ -824,11 +863,31 @@ export default function ClassroomDetail() {
                                     )}
                                     
                                     <div className="flex justify-end space-x-2 pt-2">
-                                      <Button size="sm" variant="outline">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditLesson(program.id, lesson.id);
+                                        }}
+                                      >
                                         <Edit className="h-4 w-4 mr-2" />
-                                        編輯課程
+                                        編輯單元
                                       </Button>
-                                      <Button size="sm" variant="outline">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // TODO: Implement add content functionality
+                                          openPanel({
+                                            type: 'new_content',
+                                            programName: program.name,
+                                            lessonName: lesson.name,
+                                            lessonId: lesson.id
+                                          });
+                                        }}
+                                      >
                                         <Plus className="h-4 w-4 mr-2" />
                                         新增內容
                                       </Button>
@@ -1043,6 +1102,11 @@ export default function ClassroomDetail() {
         lesson={selectedLesson}
         dialogType={lessonDialogType}
         programId={lessonProgramId}
+        currentLessonCount={
+          lessonProgramId 
+            ? programs.find(p => p.id === lessonProgramId)?.lessons?.length || 0
+            : 0
+        }
         onClose={() => {
           setSelectedLesson(null);
           setLessonDialogType(null);
@@ -1061,6 +1125,19 @@ export default function ClassroomDetail() {
         }}
         classroomId={Number(id)}
       />
+
+      {/* Content Type Dialog */}
+      {contentLessonInfo && (
+        <ContentTypeDialog
+          open={showContentTypeDialog}
+          onClose={() => {
+            setShowContentTypeDialog(false);
+            setContentLessonInfo(null);
+          }}
+          onSelect={handleContentTypeSelect}
+          lessonInfo={contentLessonInfo}
+        />
+      )}
     </TeacherLayout>
   );
 }

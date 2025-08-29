@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
+import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface Lesson {
   id?: number;
@@ -23,6 +25,7 @@ interface LessonDialogProps {
   lesson: Lesson | null;
   dialogType: 'create' | 'edit' | 'delete' | null;
   programId?: number;
+  currentLessonCount?: number;  // For auto-setting order
   onClose: () => void;
   onSave: (lesson: Lesson) => void;
   onDelete?: (lessonId: number) => void;
@@ -32,6 +35,7 @@ export function LessonDialog({
   lesson,
   dialogType,
   programId,
+  currentLessonCount = 0,
   onClose,
   onSave,
   onDelete
@@ -59,7 +63,7 @@ export function LessonDialog({
       setFormData({
         name: '',
         description: '',
-        order_index: 1,
+        order_index: currentLessonCount + 1,  // Auto-set to last position
         estimated_minutes: 30,
         program_id: programId
       });
@@ -86,18 +90,29 @@ export function LessonDialog({
     
     setLoading(true);
     try {
-      if (dialogType === 'create') {
-        // TODO: 實作 API 呼叫
-        console.log('Creating lesson:', formData);
-        onSave({ ...formData, id: Date.now() }); // Mock ID
-      } else if (dialogType === 'edit' && lesson) {
-        // TODO: 實作 API 呼叫
-        console.log('Updating lesson:', lesson.id, formData);
+      if (dialogType === 'create' && programId) {
+        const newLesson = await apiClient.createLesson(programId, {
+          name: formData.name,
+          description: formData.description,
+          order_index: formData.order_index,
+          estimated_minutes: formData.estimated_minutes
+        }) as any;
+        toast.success(`單元「${formData.name}」已新增`);
+        onSave(newLesson);
+      } else if (dialogType === 'edit' && lesson?.id && programId) {
+        const updatedLesson = await apiClient.updateLesson(programId, lesson.id, {
+          name: formData.name,
+          description: formData.description,
+          order_index: formData.order_index,
+          estimated_minutes: formData.estimated_minutes
+        }) as any;
+        toast.success(`單元「${formData.name}」已更新`);
         onSave({ ...lesson, ...formData });
       }
       onClose();
     } catch (error) {
       console.error('Failed to save lesson:', error);
+      toast.error('儲存失敗，請稍後再試');
       setErrors({ submit: '儲存失敗，請稍後再試' });
     } finally {
       setLoading(false);
@@ -105,17 +120,17 @@ export function LessonDialog({
   };
 
   const handleDelete = async () => {
-    if (!lesson?.id || !onDelete) return;
+    if (!lesson?.id || !onDelete || !programId) return;
     
     setLoading(true);
     try {
-      // TODO: 實作 API 呼叫
-      console.log('Deleting lesson:', lesson.id);
+      await apiClient.deleteLesson(programId, lesson.id);
+      toast.success(`單元「${lesson.name}」已刪除`);
       onDelete(lesson.id);
       onClose();
     } catch (error) {
       console.error('Failed to delete lesson:', error);
-      alert('刪除失敗，請稍後再試');
+      toast.error('刪除失敗，請稍後再試');
     } finally {
       setLoading(false);
     }
@@ -169,22 +184,7 @@ export function LessonDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="order" className="text-sm font-medium">
-                  順序
-                </label>
-                <input
-                  id="order"
-                  type="number"
-                  value={formData.order_index}
-                  onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 1 })}
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                  placeholder="1"
-                  min="1"
-                />
-              </div>
-              
+            <div>
               <div>
                 <label htmlFor="minutes" className="text-sm font-medium">
                   預估時間（分鐘）<span className="text-red-500">*</span>
@@ -201,6 +201,12 @@ export function LessonDialog({
                 {errors.estimated_minutes && <p className="text-xs text-red-500 mt-1">{errors.estimated_minutes}</p>}
               </div>
             </div>
+            
+            {dialogType === 'create' && (
+              <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
+                ℹ️ 單元將自動排在課程最後
+              </div>
+            )}
 
             {errors.submit && (
               <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>

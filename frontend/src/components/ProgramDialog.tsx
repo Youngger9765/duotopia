@@ -97,13 +97,15 @@ export function ProgramDialog({
         }) as any;
         onSave(newProgram);
       } else if (dialogType === 'edit' && program?.id) {
+        // For classroom programs, we might need different API endpoint
+        // TODO: Check if this is a classroom program update
         const updatedProgram = await apiClient.updateProgram(program.id!, {
           name: formData.name,
           description: formData.description,
           level: formData.level,
           estimated_hours: formData.estimated_hours
         }) as any;
-        onSave({ ...program, ...updatedProgram });
+        onSave({ ...program, ...formData, id: program.id });
       }
       onClose();
     } catch (error) {

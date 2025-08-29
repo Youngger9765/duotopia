@@ -246,6 +246,55 @@ class ApiClient {
       body: JSON.stringify({ program_ids: programIds }),
     });
   }
+
+  async updateClassroomProgram(classroomId: number, programId: number, data: {
+    name?: string;
+    description?: string;
+    level?: string;
+    estimated_hours?: number;
+  }) {
+    return this.request(`/api/teachers/classrooms/${classroomId}/programs/${programId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteClassroomProgram(classroomId: number, programId: number) {
+    return this.request(`/api/teachers/classrooms/${classroomId}/programs/${programId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ Lesson Methods ============
+  async createLesson(programId: number, data: {
+    name: string;
+    description?: string;
+    order_index?: number;
+    estimated_minutes?: number;
+  }) {
+    return this.request(`/api/teachers/programs/${programId}/lessons`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateLesson(programId: number, lessonId: number, data: {
+    name?: string;
+    description?: string;
+    order_index?: number;
+    estimated_minutes?: number;
+  }) {
+    return this.request(`/api/teachers/programs/${programId}/lessons/${lessonId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteLesson(programId: number, lessonId: number) {
+    return this.request(`/api/teachers/programs/${programId}/lessons/${lessonId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export singleton instance
