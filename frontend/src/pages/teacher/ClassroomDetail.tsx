@@ -405,11 +405,19 @@ export default function ClassroomDetail() {
       
       const title = contentTypeNames[selection.type] || '新內容';
       
+      // Create placeholder items for content
+      const placeholderItems = selection.type === 'reading_assessment' ? [
+        {
+          text: "[請輸入朗讀文字]",
+          translation: "[請輸入中文翻譯]"
+        }
+      ] : [];
+      
       // Create the content with correct structure for backend
       await apiClient.createContent(selection.lessonId, {
         type: selection.type,
         title: title,
-        items: [], // Empty items array, will be edited later
+        items: placeholderItems,
         target_wpm: 60,
         target_accuracy: 0.8
       });
