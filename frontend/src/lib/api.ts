@@ -238,6 +238,14 @@ class ApiClient {
       body: JSON.stringify(orderData),
     });
   }
+
+  // ============ Classroom Program Methods ============
+  async copyProgramToClassroom(classroomId: number, programIds: number[]) {
+    return this.request(`/api/teachers/classrooms/${classroomId}/programs/copy`, {
+      method: 'POST',
+      body: JSON.stringify({ program_ids: programIds }),
+    });
+  }
 }
 
 // Export singleton instance

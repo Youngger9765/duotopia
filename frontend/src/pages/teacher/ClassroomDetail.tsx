@@ -8,7 +8,8 @@ import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
 import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
-import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical } from 'lucide-react';
+import CopyProgramDialog from '@/components/CopyProgramDialog';
+import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
 interface Content {
@@ -72,6 +73,9 @@ export default function ClassroomDetail() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [lessonDialogType, setLessonDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
   const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(undefined);
+  
+  // Copy program dialog state
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
   
   // Drag states
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
@@ -163,10 +167,6 @@ export default function ClassroomDetail() {
     setDialogType('edit');
   };
 
-  const handleEmailStudent = (student: Student) => {
-    // TODO: Implement email functionality
-    console.log('Email student:', student);
-  };
 
   const handleResetPassword = async (student: Student) => {
     if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
@@ -509,7 +509,6 @@ export default function ClassroomDetail() {
                 onAddStudent={handleCreateStudent}
                 onViewStudent={handleViewStudent}
                 onEditStudent={handleEditStudent}
-                onEmailStudent={handleEmailStudent}
                 onResetPassword={handleResetPassword}
                 emptyMessage="此班級尚無學生"
               />
@@ -519,10 +518,16 @@ export default function ClassroomDetail() {
             <TabsContent value="programs" className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">班級課程</h3>
-                <Button size="sm" onClick={handleCreateProgram}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  建立課程
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button size="sm" variant="outline" onClick={() => setShowCopyDialog(true)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    從課程庫複製
+                  </Button>
+                  <Button size="sm" onClick={handleCreateProgram}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    建立課程
+                  </Button>
+                </div>
               </div>
               
               {programs.length > 0 ? (
@@ -1045,6 +1050,16 @@ export default function ClassroomDetail() {
         }}
         onSave={handleSaveLesson}
         onDelete={handleDeleteLessonConfirm}
+      />
+      
+      {/* Copy Program Dialog */}
+      <CopyProgramDialog
+        open={showCopyDialog}
+        onClose={() => setShowCopyDialog(false)}
+        onSuccess={() => {
+          fetchPrograms(); // Refresh programs after copying
+        }}
+        classroomId={Number(id)}
       />
     </TeacherLayout>
   );
