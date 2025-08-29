@@ -15,46 +15,53 @@ interface ContentType {
   description: string;
   icon: string;
   recommended?: boolean;
+  disabled?: boolean;
 }
 
 const contentTypes: ContentType[] = [
   {
     type: 'reading_assessment',
-    name: '朗讀評測',
-    description: '學生朗讀課文，AI 評測發音準確度',
+    name: '朗讀錄音',
+    description: '學生朗讀課文並錄音',
     icon: '📖',
-    recommended: true
+    recommended: true,
+    disabled: false
   },
   {
     type: 'speaking_practice',
     name: '口說練習',
     description: '自由口說練習，AI 提供即時回饋',
     icon: '🎙️',
-    recommended: true
+    recommended: true,
+    disabled: true
   },
   {
     type: 'speaking_scenario',
     name: '情境對話',
     description: '在特定情境下進行對話練習',
-    icon: '💬'
+    icon: '💬',
+    disabled: true
   },
   {
     type: 'listening_cloze',
     name: '聽力填空',
     description: '聽音檔後填入缺少的單字',
-    icon: '🎧'
+    icon: '🎧',
+    disabled: true
   },
   {
     type: 'sentence_making',
     name: '造句練習',
     description: '使用指定單字或句型造句',
-    icon: '✍️'
+    icon: '✍️',
+    disabled: true
   },
   {
     type: 'speaking_quiz',
     name: '口說測驗',
     description: '回答問題測試口說能力',
-    icon: '🎯'
+    icon: '🎯',
+    disabled: true
   }
 ];
 
@@ -83,6 +90,8 @@ export default function ContentTypeDialog({
   const [loading, setLoading] = useState(false);
 
   const handleSelect = (contentType: ContentType) => {
+    if (contentType.disabled) return;
+    
     setLoading(true);
     onSelect({
       type: contentType.type,
@@ -124,19 +133,29 @@ export default function ContentTypeDialog({
                 data-testid={`content-type-card-${contentType.type}`}
                 role="button"
                 aria-label={`選擇${contentType.name}`}
-                tabIndex={0}
+                aria-disabled={contentType.disabled}
+                tabIndex={contentType.disabled ? -1 : 0}
                 onClick={() => handleSelect(contentType)}
                 onKeyDown={(e) => handleKeyDown(e, contentType)}
-                className="p-4 border rounded-lg cursor-pointer transition-all hover:shadow-lg hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className={`p-4 border rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  contentType.disabled 
+                    ? 'opacity-50 cursor-not-allowed bg-gray-50' 
+                    : 'cursor-pointer hover:shadow-lg hover:border-blue-400'
+                }`}
               >
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">{contentType.icon}</span>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <h3 className="font-medium">{contentType.name}</h3>
-                      {contentType.recommended && (
+                      {contentType.recommended && !contentType.disabled && (
                         <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
                           推薦
+                        </span>
+                      )}
+                      {contentType.disabled && (
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          即將推出
                         </span>
                       )}
                     </div>

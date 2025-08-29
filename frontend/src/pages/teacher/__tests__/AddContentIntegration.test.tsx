@@ -150,12 +150,15 @@ describe('Add Content Integration', () => {
     
     // Verify all content types are displayed
     await waitFor(() => {
-      expect(screen.getByText('朗讀評測')).toBeInTheDocument()
+      expect(screen.getByText('朗讀錄音')).toBeInTheDocument()
       expect(screen.getByText('口說練習')).toBeInTheDocument()
       expect(screen.getByText('情境對話')).toBeInTheDocument()
       expect(screen.getByText('聽力填空')).toBeInTheDocument()
       expect(screen.getByText('造句練習')).toBeInTheDocument()
       expect(screen.getByText('口說測驗')).toBeInTheDocument()
+      
+      // Check that only reading is enabled
+      expect(screen.getAllByText('即將推出')).toHaveLength(5)
     })
   })
 

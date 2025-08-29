@@ -5,39 +5,45 @@ import ContentTypeDialog from '../ContentTypeDialog'
 const contentTypes = [
   {
     type: 'reading_assessment',
-    name: '朗讀評測',
-    description: '學生朗讀課文，AI 評測發音準確度',
-    icon: '📖'
+    name: '朗讀錄音',
+    description: '學生朗讀課文並錄音',
+    icon: '📖',
+    disabled: false
   },
   {
     type: 'speaking_practice',
     name: '口說練習',
     description: '自由口說練習，AI 提供即時回饋',
-    icon: '🎙️'
+    icon: '🎙️',
+    disabled: true
   },
   {
     type: 'speaking_scenario',
     name: '情境對話',
     description: '在特定情境下進行對話練習',
-    icon: '💬'
+    icon: '💬',
+    disabled: true
   },
   {
     type: 'listening_cloze',
     name: '聽力填空',
     description: '聽音檔後填入缺少的單字',
-    icon: '🎧'
+    icon: '🎧',
+    disabled: true
   },
   {
     type: 'sentence_making',
     name: '造句練習',
     description: '使用指定單字或句型造句',
-    icon: '✍️'
+    icon: '✍️',
+    disabled: true
   },
   {
     type: 'speaking_quiz',
     name: '口說測驗',
     description: '回答問題測試口說能力',
-    icon: '🎯'
+    icon: '🎯',
+    disabled: true
   }
 ]
 
@@ -98,14 +104,20 @@ describe('ContentTypeDialog', () => {
     expect(card).toHaveClass('hover:shadow-lg')
   })
 
-  it('should call onSelect when content type is clicked', () => {
+  it('should call onSelect only for enabled content types', () => {
     renderComponent()
     
-    const card = screen.getByTestId('content-type-card-speaking_practice')
-    fireEvent.click(card)
+    // Try clicking disabled content type
+    const disabledCard = screen.getByTestId('content-type-card-speaking_practice')
+    fireEvent.click(disabledCard)
+    expect(mockOnSelect).not.toHaveBeenCalled()
+    
+    // Click enabled content type
+    const enabledCard = screen.getByTestId('content-type-card-reading_assessment')
+    fireEvent.click(enabledCard)
     
     expect(mockOnSelect).toHaveBeenCalledWith({
-      type: 'speaking_practice',
+      type: 'reading_assessment',
       lessonId: 1,
       programName: 'Basic English',
       lessonName: 'Unit 1: Greetings'
@@ -115,7 +127,7 @@ describe('ContentTypeDialog', () => {
   it('should close dialog after selection', () => {
     renderComponent()
     
-    const card = screen.getByTestId('content-type-card-listening_cloze')
+    const card = screen.getByTestId('content-type-card-reading_assessment')
     fireEvent.click(card)
     
     expect(mockOnClose).toHaveBeenCalled()
@@ -145,15 +157,18 @@ describe('ContentTypeDialog', () => {
     expect(screen.queryByText('選擇內容類型')).not.toBeInTheDocument()
   })
 
-  it('should show recommended badge for common content types', () => {
+  it('should show disabled state for unavailable content types', () => {
     renderComponent()
     
-    // reading_assessment and speaking_practice are commonly used
+    // Only reading_assessment is enabled
     const readingCard = screen.getByTestId('content-type-card-reading_assessment')
     const speakingCard = screen.getByTestId('content-type-card-speaking_practice')
     
-    expect(readingCard.querySelector('.text-green-600')).toBeInTheDocument()
-    expect(speakingCard.querySelector('.text-green-600')).toBeInTheDocument()
+    expect(readingCard).not.toHaveClass('opacity-50')
+    expect(speakingCard).toHaveClass('opacity-50')
+    
+    // Check for "即將推出" badge on disabled items
+    expect(screen.getAllByText('即將推出')).toHaveLength(5)
   })
 
   it('should display content types in specific order', () => {
@@ -163,7 +178,7 @@ describe('ContentTypeDialog', () => {
     const names = cards.map(card => card.querySelector('h3')?.textContent)
     
     expect(names).toEqual([
-      '朗讀評測',
+      '朗讀錄音',
       '口說練習',
       '情境對話',
       '聽力填空',
@@ -197,13 +212,22 @@ describe('ContentTypeDialog', () => {
     vi.clearAllMocks()
     renderComponent()
     
-    const card2 = screen.getByTestId('content-type-card-speaking_practice')
+    const card2 = screen.getByTestId('content-type-card-reading_assessment')
     card2.focus()
     
     // Test Space key
     fireEvent.keyDown(card2, { key: ' ' })
     expect(mockOnSelect).toHaveBeenCalledTimes(1)
     expect(mockOnClose).toHaveBeenCalledTimes(1)
+    
+    // Test disabled card doesn't respond to keyboard
+    vi.clearAllMocks()
+    renderComponent()
+    
+    const disabledCard = screen.getByTestId('content-type-card-speaking_practice')
+    disabledCard.focus()
+    fireEvent.keyDown(disabledCard, { key: 'Enter' })
+    expect(mockOnSelect).not.toHaveBeenCalled()
   })
 
   it('should show loading state while processing selection', () => {
