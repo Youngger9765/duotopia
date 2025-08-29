@@ -1,0 +1,107 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - heading "Duotopia" [level=1] [ref=e7]
+        - paragraph [ref=e8]: 教師後台
+      - button [ref=e9] [cursor=pointer]:
+        - img [ref=e10] [cursor=pointer]
+    - navigation [ref=e12]:
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - link "儀表板" [ref=e15] [cursor=pointer]:
+            - /url: /teacher/dashboard
+            - button "儀表板" [ref=e16] [cursor=pointer]:
+              - img [ref=e17] [cursor=pointer]
+              - generic [ref=e20] [cursor=pointer]: 儀表板
+        - listitem [ref=e21]:
+          - link "我的班級" [ref=e22] [cursor=pointer]:
+            - /url: /teacher/classrooms
+            - button "我的班級" [ref=e23] [cursor=pointer]:
+              - img [ref=e24] [cursor=pointer]
+              - generic [ref=e27] [cursor=pointer]: 我的班級
+        - listitem [ref=e28]:
+          - link "所有學生" [ref=e29] [cursor=pointer]:
+            - /url: /teacher/students
+            - button "所有學生" [ref=e30] [cursor=pointer]:
+              - img [ref=e31] [cursor=pointer]
+              - generic [ref=e36] [cursor=pointer]: 所有學生
+        - listitem [ref=e37]:
+          - link "所有課程" [ref=e38] [cursor=pointer]:
+            - /url: /teacher/programs
+            - button "所有課程" [ref=e39] [cursor=pointer]:
+              - img [ref=e40] [cursor=pointer]
+              - generic [ref=e42] [cursor=pointer]: 所有課程
+    - generic [ref=e43]:
+      - generic [ref=e46]:
+        - generic [ref=e48]: D
+        - generic [ref=e49]:
+          - paragraph [ref=e50]: Demo 老師
+          - paragraph [ref=e51]: demo@duotopia.com
+      - button "登出" [ref=e52] [cursor=pointer]:
+        - img [ref=e53] [cursor=pointer]
+        - generic [ref=e56] [cursor=pointer]: 登出
+  - generic [ref=e58]:
+    - heading "歡迎回來，Demo 老師！" [level=2] [ref=e59]
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - heading "班級數量" [level=3] [ref=e63]
+          - img [ref=e64]
+        - generic [ref=e70]: "2"
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - heading "學生總數" [level=3] [ref=e73]
+          - img [ref=e74]
+        - generic [ref=e79]: "5"
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - heading "課程計畫" [level=3] [ref=e82]
+          - img [ref=e83]
+        - generic [ref=e86]: "4"
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - heading "班級概覽" [level=3] [ref=e90]
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - generic [ref=e94]:
+              - heading "五年級A班" [level=4] [ref=e95]
+              - paragraph [ref=e96]: 國小五年級英語基礎班
+            - paragraph [ref=e98]: 3 位學生
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - heading "六年級B班" [level=4] [ref=e101]
+              - paragraph [ref=e102]: 國小六年級英語進階班
+            - paragraph [ref=e104]: 2 位學生
+      - generic [ref=e105]:
+        - heading "最近活動學生" [level=3] [ref=e107]
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - generic [ref=e112]: 王
+            - generic [ref=e113]:
+              - paragraph [ref=e114]: 王小明
+              - paragraph [ref=e115]: 五年級A班
+          - generic [ref=e116]:
+            - generic [ref=e118]: 李
+            - generic [ref=e119]:
+              - paragraph [ref=e120]: 李小美
+              - paragraph [ref=e121]: 五年級A班
+          - generic [ref=e122]:
+            - generic [ref=e124]: 陳
+            - generic [ref=e125]:
+              - paragraph [ref=e126]: 陳大雄
+              - paragraph [ref=e127]: 五年級A班
+          - generic [ref=e128]:
+            - generic [ref=e130]: 張
+            - generic [ref=e131]:
+              - paragraph [ref=e132]: 張志豪
+              - paragraph [ref=e133]: 六年級B班
+          - generic [ref=e134]:
+            - generic [ref=e136]: 林
+            - generic [ref=e137]:
+              - paragraph [ref=e138]: 林靜香
+              - paragraph [ref=e139]: 六年級B班
+```
