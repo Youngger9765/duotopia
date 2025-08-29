@@ -129,6 +129,39 @@ export default function TeacherStudents() {
     // Switch from view to edit mode
     setDialogType('edit');
   };
+
+  const handleExportStudents = () => {
+    // 準備 CSV 資料
+    const headers = ['姓名', 'Email', '學號', '生日', '班級', '密碼狀態', '最後登入'];
+    const rows = filteredStudents.map(student => [
+      student.name,
+      student.email || '-',
+      student.student_id || '-',
+      student.birthdate || '-',
+      student.classroom_name || '未分配',
+      student.password_changed ? '已更改' : '預設密碼',
+      student.last_login || '從未登入'
+    ]);
+    
+    // 建立 CSV 內容
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // 建立下載連結
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `學生名單_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`已匯出 ${filteredStudents.length} 位學生資料`);
+  };
   
   const handleBulkAction = async (action: string, studentIds: number[]) => {
     // Handle selection update
@@ -233,7 +266,7 @@ export default function TeacherStudents() {
               <RefreshCw className="h-4 w-4 mr-2" />
               重新載入
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExportStudents}>
               <Download className="h-4 w-4 mr-2" />
               匯出名單
             </Button>
