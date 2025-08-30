@@ -101,6 +101,8 @@ jobs:
         DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
       working-directory: ./backend
       run: |
+        echo "🔍 Installing dependencies for migration check..."
+        pip install -r requirements.txt
         echo "🔍 Checking for uncommitted model changes..."
         if ! alembic check; then
           echo "❌ ERROR: Database models have changed but no migration was created!"
