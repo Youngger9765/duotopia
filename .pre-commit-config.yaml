@@ -36,11 +36,11 @@ repos:
     hooks:
       - id: alembic-check
         name: Check for missing Alembic migrations
-        entry: bash -c 'cd backend && if command -v alembic &> /dev/null; then alembic check || (echo "⚠️ Model changes detected! Run: cd backend && alembic revision --autogenerate -m \"your message\"" && exit 1); fi'
+        entry: bash -c 'if command -v alembic &> /dev/null; then alembic check || (echo "⚠️ Model changes detected! Run: alembic revision --autogenerate -m \"your message\"" && exit 1); fi'
         language: system
         pass_filenames: false
         always_run: true
-        files: ^backend/models\.py$
+        files: ^models\.py$
   
   # Prevent large files
   - repo: https://github.com/pre-commit/pre-commit-hooks
