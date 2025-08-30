@@ -249,15 +249,15 @@ db-seed-local:
 
 .PHONY: db-seed-staging
 db-seed-staging:
-	@echo "🌱 Seeding STAGING database with demo data..."
-	@echo "⚠️  Ensuring staging database is running..."
-	@make db-staging-start
-	@echo "Waiting for database to be ready..."
-	@sleep 5
-	@echo "Running seed script..."
-	cd $(BACKEND_DIR) && DATABASE_URL="postgresql://postgres:postgres@34.80.209.41/postgres" python seed_data.py
+	@echo "🌱 Seeding STAGING database with demo data (Supabase)..."
+	@echo "Running seed script with Supabase..."
+	@if [ -z "$$DATABASE_URL" ]; then \
+		echo "❌ Error: DATABASE_URL environment variable not set"; \
+		echo "Please set DATABASE_URL before running this command"; \
+		exit 1; \
+	fi
+	cd $(BACKEND_DIR) && python seed_data.py
 	@echo "✅ Staging database seeded!"
-	@echo "⚠️  Remember to stop the database: make db-staging-stop"
 
 # 狀態檢查
 .PHONY: status

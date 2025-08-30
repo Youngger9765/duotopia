@@ -294,7 +294,7 @@ def create_demo_data(db: Session):
     # Content - 五年級A班朗讀錄音集內容
     content1_5a = Content(
         lesson_id=first_lesson_5a.id,
-        type=ContentType.READING_RECORDING,
+        type=ContentType.READING_ASSESSMENT,
         title="基礎問候語練習",
         order_index=1,
         is_public=True,  # 公開內容，其他教師可以使用
@@ -316,7 +316,7 @@ def create_demo_data(db: Session):
     
     content2_5a = Content(
         lesson_id=lessons_5a_basic[1].id,
-        type=ContentType.READING_RECORDING,
+        type=ContentType.READING_ASSESSMENT,
         title="數字 1-10 練習",
         order_index=1,
         is_public=True,  # 公開內容
@@ -340,7 +340,7 @@ def create_demo_data(db: Session):
     # Content - 六年級B班朗讀錄音集內容
     content1_6b = Content(
         lesson_id=first_lesson_6b.id,
-        type=ContentType.READING_RECORDING,
+        type=ContentType.READING_ASSESSMENT,
         title="日常對話練習",
         order_index=1,
         is_public=False,  # 私人內容
@@ -360,7 +360,7 @@ def create_demo_data(db: Session):
     
     content2_6b = Content(
         lesson_id=lessons_6b_advanced[1].id,
-        type=ContentType.READING_RECORDING,
+        type=ContentType.READING_ASSESSMENT,
         title="家庭成員練習",
         order_index=1,
         is_public=False,  # 私人內容

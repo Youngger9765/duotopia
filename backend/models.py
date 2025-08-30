@@ -24,11 +24,11 @@ class ProgramLevel(str, enum.Enum):
     C2 = "C2"
 
 class AssignmentStatus(str, enum.Enum):
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    SUBMITTED = "submitted"
-    GRADED = "graded"
-    RETURNED = "returned"
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    SUBMITTED = "SUBMITTED"
+    GRADED = "GRADED"
+    RETURNED = "RETURNED"
 
 class ContentType(str, enum.Enum):
     READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
