@@ -96,6 +96,18 @@ jobs:
         docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
 
+    - name: Run Alembic database migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
+      working-directory: ./backend
+      run: |
+        echo "🔄 Running Alembic database migrations..."
+        echo "📊 Current migration status:"
+        alembic current
+        echo "🔄 Upgrading to latest migration..."
+        alembic upgrade head
+        echo "✅ Migrations completed"
+        
     - name: Deploy backend to Cloud Run
       run: |
         # 環境變數設定

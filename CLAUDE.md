@@ -420,6 +420,87 @@ duotopia/
 - StudentAssignment (學生作業)
 - ActivityResult (活動結果)
 
+## 🔧 資料庫 Migration (Alembic)
+
+### 重要原則
+**絕對不要手動修改資料庫！所有 schema 變更都必須透過 Alembic migration**
+
+### Alembic 標準工作流程
+
+#### 1. 修改 Model 後生成 Migration
+```bash
+# 修改 models.py 後
+cd backend
+
+# 自動生成 migration
+alembic revision --autogenerate -m "add_field_to_model"
+
+# ⚠️ 重要：檢查生成的檔案
+# 檢查 alembic/versions/xxx_add_field_to_model.py
+# Alembic autogenerate 不是完美的，必須手動檢查
+```
+
+#### 2. 執行 Migration
+```bash
+# 升級到最新版本
+alembic upgrade head
+
+# 查看當前版本
+alembic current
+
+# 查看歷史
+alembic history
+
+# 降級（緊急回滾用）
+alembic downgrade -1
+```
+
+#### 3. CI/CD 自動執行
+- GitHub Actions 在部署前自動執行 `alembic upgrade head`
+- 確保 DATABASE_URL 環境變數設定正確
+- Migration 失敗會阻止部署
+
+### 常見情境
+
+#### 新增欄位
+```python
+# models.py
+class Content(Base):
+    # ... existing fields ...
+    is_public = Column(Boolean, default=False)  # 新增欄位
+
+# 然後執行
+alembic revision --autogenerate -m "add_is_public_to_content"
+alembic upgrade head
+```
+
+#### 本地開發同步
+```bash
+# 拉取最新程式碼後
+git pull
+cd backend
+alembic upgrade head  # 同步資料庫到最新 schema
+```
+
+#### 檢查是否需要 Migration
+```bash
+# 使用 --sql 參數預覽會執行的 SQL
+alembic upgrade head --sql
+
+# 如果輸出為空，表示已經是最新
+```
+
+### ⚠️ 注意事項
+1. **永遠先在本地測試 migration**
+2. **生產環境 migration 前必須備份**
+3. **autogenerate 限制**：
+   - 不會偵測表名或欄位名變更
+   - 不會偵測匿名約束
+   - 某些索引變更可能遺漏
+4. **團隊協作**：
+   - Migration 檔案必須 commit 到 git
+   - 多人同時建立 migration 可能衝突，需要手動解決
+
 ### 開發指令
 
 #### 本地開發
