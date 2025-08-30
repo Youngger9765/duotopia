@@ -160,6 +160,14 @@ export default function ClassroomDetail() {
 
 
   const handleContentClick = (content: any) => {
+    // 如果點擊的是同一個 content，則關閉 panel
+    if (isPanelOpen && selectedContent?.id === content.id) {
+      setIsPanelOpen(false);
+      setSelectedContent(null);
+      setEditingContent(null);
+      return;
+    }
+
     // For reading_assessment type, use side panel for viewing/editing
     if (content.type === 'reading_assessment') {
       setSelectedContent(content);
@@ -238,9 +246,12 @@ export default function ClassroomDetail() {
       await apiClient.updateContent(editingContent.id, {
         title: editingContent.title,
         items: editingContent.items,
-        target_wpm: parseInt(editingContent.target_wpm),
-        target_accuracy: parseFloat(editingContent.target_accuracy) / 100,
-        time_limit_seconds: parseInt(editingContent.time_limit_seconds)
+        level: editingContent.level,
+        tags: editingContent.tags,
+        is_public: editingContent.is_public,
+        target_wpm: parseInt(editingContent.target_wpm || 60),
+        target_accuracy: parseFloat(editingContent.target_accuracy || 80) / 100,
+        time_limit_seconds: parseInt(editingContent.time_limit_seconds || 180)
       });
       
       toast.success('內容已更新成功');
@@ -974,13 +985,85 @@ export default function ClassroomDetail() {
                                   </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  <div className="pl-12 pr-4 space-y-3">
+                                  <div className="pl-16 pr-4 space-y-3">
                                     {/* 實際 Content 資料 */}
                                     {(lesson.contents && lesson.contents.length > 0) ? (
-                                      lesson.contents.map((content) => (
+                                      lesson.contents.map((content, contentIndex) => (
                                       <div 
                                         key={content.id} 
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          e.dataTransfer.setData('contentId', content.id.toString());
+                                          e.dataTransfer.setData('lessonId', lesson.id.toString());
+                                          e.dataTransfer.setData('contentIndex', contentIndex.toString());
+                                        }}
+                                        onDragOver={(e) => {
+                                          e.preventDefault();
+                                          e.currentTarget.classList.add('bg-blue-50');
+                                        }}
+                                        onDragLeave={(e) => {
+                                          e.currentTarget.classList.remove('bg-blue-50');
+                                        }}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          e.currentTarget.classList.remove('bg-blue-50');
+                                          const draggedContentId = e.dataTransfer.getData('contentId');
+                                          const draggedLessonId = e.dataTransfer.getData('lessonId');
+                                          const draggedIndex = parseInt(e.dataTransfer.getData('contentIndex'));
+                                          
+                                          if (draggedLessonId === lesson.id.toString() && draggedIndex !== contentIndex) {
+                                            // 重新排序內容
+                                            const newContents = [...lesson.contents];
+                                            const [draggedContent] = newContents.splice(draggedIndex, 1);
+                                            newContents.splice(contentIndex, 0, draggedContent);
+                                            
+                                            // 更新每個內容的 order_index
+                                            const contentsWithNewOrder = newContents.map((content, index) => ({
+                                              ...content,
+                                              order_index: index
+                                            }));
+                                            
+                                            // 更新本地狀態
+                                            const updatedPrograms = programs.map(p => {
+                                              if (p.id === program.id) {
+                                                return {
+                                                  ...p,
+                                                  lessons: p.lessons.map(l => {
+                                                    if (l.id === lesson.id) {
+                                                      return {
+                                                        ...l,
+                                                        contents: contentsWithNewOrder
+                                                      };
+                                                    }
+                                                    return l;
+                                                  })
+                                                };
+                                              }
+                                              return p;
+                                            });
+                                            setPrograms(updatedPrograms);
+                                            
+                                            // 呼叫 API 更新順序
+                                            const updateOrderPromises = contentsWithNewOrder.map(content => 
+                                              apiClient.updateContent(content.id, {
+                                                order_index: content.order_index
+                                              })
+                                            );
+                                            
+                                            Promise.all(updateOrderPromises)
+                                              .then(() => {
+                                                toast.success('內容順序已更新');
+                                              })
+                                              .catch((error) => {
+                                                console.error('Failed to update content order:', error);
+                                                toast.error('更新順序失敗');
+                                                // 重新載入以恢復正確順序
+                                                fetchPrograms();
+                                              });
+                                          }
+                                        }}
                                         onClick={() => handleContentClick({
                                           ...content,
                                           lesson_id: lesson.id,
@@ -988,19 +1071,26 @@ export default function ClassroomDetail() {
                                           programName: program.name
                                         })}>
                                         <div className="flex items-center space-x-3">
+                                          <div className="cursor-move opacity-50 hover:opacity-100 transition-opacity">
+                                            <GripVertical className="h-4 w-4 text-gray-400" />
+                                          </div>
                                           <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                                             <FileText className="h-4 w-4 text-purple-600" />
                                           </div>
                                           <div>
-                                            <p className="font-medium text-sm">{content.title || '未命名內容'}</p>
-                                            <p className="text-xs text-gray-500">{content.items_count || 0} 個項目</p>
+                                            <div className="flex items-center gap-2">
+                                              <p className="font-medium text-sm">{content.title || '未命名內容'}</p>
+                                              {content.is_public && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                  公開
+                                                </span>
+                                              )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">{content.items_count || content.items?.length || 0} 個項目</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
                                           <span className="text-sm text-gray-500">{content.estimated_time || '10 分鐘'}</span>
-                                          <span className="text-xs text-gray-400 group-hover:text-gray-600">
-                                            點擊編輯 →
-                                          </span>
                                         </div>
                                       </div>
                                     ))

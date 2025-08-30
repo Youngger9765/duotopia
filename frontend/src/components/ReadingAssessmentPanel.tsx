@@ -684,9 +684,10 @@ export default function ReadingAssessmentPanel({
       title,
       items,
       level,
-      tags
+      tags,
+      is_public: isPublic
     });
-  }, [rows, title, level, tags]);
+  }, [rows, title, level, tags, isPublic]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -1024,14 +1025,6 @@ export default function ReadingAssessmentPanel({
 
   return (
     <div className="space-y-4">
-      {/* Development Notice */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded text-sm">
-        <div className="flex items-center">
-          <span className="font-bold mr-2">💡 提示：</span>
-          <span>✅ 翻譯：OpenAI GPT-3.5 | ✅ TTS：Edge-TTS (免費) | ✅ 錄音：最長30秒/2MB</span>
-        </div>
-      </div>
-
       {/* Title Input - Only show in create mode */}
       {isCreating && (
         <div className="space-y-2">
