@@ -10,12 +10,16 @@ load_dotenv()
 
 class TranslationService:
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY not found in environment variables")
-        self.client = OpenAI(api_key=api_key)
-        # 使用最便宜的模型
+        self.client = None
         self.model = "gpt-3.5-turbo"
+    
+    def _ensure_client(self):
+        """Lazy initialization of OpenAI client"""
+        if self.client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY not found in environment variables")
+            self.client = OpenAI(api_key=api_key)
     
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
         """
@@ -28,6 +32,8 @@ class TranslationService:
         Returns:
             翻譯後的文本
         """
+        self._ensure_client()
+        
         try:
             # 根據目標語言設定 prompt
             if target_lang == "zh-TW":
@@ -62,6 +68,8 @@ class TranslationService:
         Returns:
             翻譯後的文本列表
         """
+        self._ensure_client()
+        
         try:
             # 將所有文本組合成一個請求以節省 API 呼叫
             combined_text = "\n---\n".join(texts)
