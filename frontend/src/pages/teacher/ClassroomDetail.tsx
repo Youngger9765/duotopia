@@ -10,6 +10,8 @@ import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
 import CopyProgramDialog from '@/components/CopyProgramDialog';
 import ContentTypeDialog from '@/components/ContentTypeDialog';
+import ReadingAssessmentEditor from '@/components/ReadingAssessmentEditor';
+import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
@@ -89,6 +91,11 @@ export default function ClassroomDetail() {
     lessonId: number;
   } | null>(null);
   
+  // Reading Assessment Editor state
+  const [showReadingEditor, setShowReadingEditor] = useState(false);
+  const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
+  const [editorContentId, setEditorContentId] = useState<number | null>(null);
+  
   // Drag states
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
   const [draggedLesson, setDraggedLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
@@ -153,17 +160,28 @@ export default function ClassroomDetail() {
   };
 
 
-  const handleContentClick = (content: Content) => {
-    setSelectedContent(content);
-    // Initialize editing content with existing data or defaults
-    setEditingContent({
-      ...content,
-      items: content.items || [],
-      target_wpm: content.target_wpm || 60,
-      target_accuracy: content.target_accuracy || 0.8,
-      time_limit_seconds: content.time_limit_seconds || 600
-    });
-    setIsPanelOpen(true);
+  const handleContentClick = (content: any) => {
+    // For reading_assessment type, use side panel for viewing/editing
+    if (content.type === 'reading_assessment') {
+      setSelectedContent(content);
+      setEditingContent({
+        ...content,
+        items: content.items || [],
+        lesson_id: content.lesson_id
+      });
+      setIsPanelOpen(true);
+    } else {
+      // For other content types, use the existing panel
+      setSelectedContent(content);
+      setEditingContent({
+        ...content,
+        items: content.items || [],
+        target_wpm: content.target_wpm || 60,
+        target_accuracy: content.target_accuracy || 0.8,
+        time_limit_seconds: content.time_limit_seconds || 600
+      });
+      setIsPanelOpen(true);
+    }
   };
 
   const closePanel = () => {
@@ -470,33 +488,76 @@ export default function ClassroomDetail() {
     programName: string;
     lessonName: string;
   }) => {
+    // For reading_assessment, use popup for new content creation
+    if (selection.type === 'reading_assessment') {
+      setEditorLessonId(selection.lessonId);
+      setEditorContentId(null); // null for new content
+      setShowReadingEditor(true);
+      setShowContentTypeDialog(false);
+    } else {
+      // For other content types, create directly
+      try {
+        const contentTypeNames: Record<string, string> = {
+          'reading_assessment': '朗讀錄音練習'
+        };
+        
+        const title = contentTypeNames[selection.type] || '新內容';
+        const items: Array<{ text: string; translation?: string }> = [];
+        
+        await apiClient.createContent(selection.lessonId, {
+          type: selection.type,
+          title: title,
+          items: items,
+          target_wpm: 60,
+          target_accuracy: 0.8
+        });
+        
+        toast.success('內容已創建成功');
+        await fetchPrograms();
+      } catch (error) {
+        console.error('Failed to create content:', error);
+        toast.error('創建內容失敗，請稍後再試');
+      }
+    }
+  };
+
+  const handleSaveReadingContent = async (data: any) => {
     try {
-      // Create a default title based on content type
-      const contentTypeNames: Record<string, string> = {
-        'reading_assessment': '朗讀錄音練習'
-      };
+      // Format data for API
+      const items = data.rows.map((row: any) => ({
+        text: row.text,
+        translation: row.definition,
+        audio_url: row.audioUrl || null
+      }));
+
+      if (data.contentId) {
+        // Update existing content
+        await apiClient.updateContent(data.contentId, {
+          title: data.title,
+          items: items,
+          level: data.level,
+          tags: data.tags
+        });
+        toast.success('內容已更新成功');
+      } else {
+        // Create new content
+        await apiClient.createContent(data.lessonId, {
+          type: 'reading_assessment',
+          title: data.title,
+          items: items,
+          target_wpm: 60,
+          target_accuracy: 0.8,
+          level: data.level,
+          tags: data.tags
+        });
+        toast.success('內容已創建成功');
+      }
       
-      const title = contentTypeNames[selection.type] || '新內容';
-      
-      // Create empty items array - no default content
-      const items: Array<{ text: string; translation?: string }> = [];
-      
-      // Create the content with correct structure for backend
-      await apiClient.createContent(selection.lessonId, {
-        type: selection.type,
-        title: title,
-        items: items,
-        target_wpm: 60,
-        target_accuracy: 0.8
-      });
-      
-      toast.success('內容已創建成功');
-      
-      // Refresh programs to show the new content
+      setShowReadingEditor(false);
       await fetchPrograms();
     } catch (error) {
-      console.error('Failed to create content:', error);
-      toast.error('創建內容失敗，請稍後再試');
+      console.error('Failed to save content:', error);
+      toast.error('保存內容失敗，請稍後再試');
     }
   };
 
@@ -759,17 +820,15 @@ export default function ClassroomDetail() {
                             <div className="text-left">
                               <div className="flex items-center space-x-2">
                                 <h4 className="font-semibold">{program.name}</h4>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost" 
-                                  className="h-6 w-6 p-0"
+                                <div 
+                                  className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditProgram(program.id);
                                   }}
                                 >
                                   <Edit className="h-3 w-3" />
-                                </Button>
+                                </div>
                               </div>
                               <p className="text-sm text-gray-500">{program.description || '暫無描述'}</p>
                             </div>
@@ -782,17 +841,15 @@ export default function ClassroomDetail() {
                                 <span>{program.estimated_hours} 小時</span>
                               </div>
                             )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 w-8 p-0"
+                            <div 
+                              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteProgram(program.id);
                               }}
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            </div>
                           </div>
                         </div>
                       </AccordionTrigger>
@@ -891,34 +948,30 @@ export default function ClassroomDetail() {
                                       <div className="text-left">
                                         <div className="flex items-center space-x-2">
                                           <h5 className="font-medium">{lesson.name}</h5>
-                                          <Button 
-                                            size="sm" 
-                                            variant="ghost" 
-                                            className="h-5 w-5 p-0"
+                                          <div 
+                                            className="h-5 w-5 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               handleEditLesson(program.id, lesson.id);
                                             }}
                                           >
                                             <Edit className="h-3 w-3" />
-                                          </Button>
+                                          </div>
                                         </div>
                                         <p className="text-sm text-gray-500">{lesson.description || '暫無描述'}</p>
                                       </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <span className="text-sm text-gray-500">{lesson.estimated_minutes || 30} 分鐘</span>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="h-6 w-6 p-0"
+                                      <div 
+                                        className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleDeleteLesson(program.id, lesson.id);
                                         }}
                                       >
                                         <Trash2 className="h-3 w-3 text-red-500" />
-                                      </Button>
+                                      </div>
                                     </div>
                                   </div>
                                 </AccordionTrigger>
@@ -932,6 +985,7 @@ export default function ClassroomDetail() {
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
                                         onClick={() => handleContentClick({
                                           ...content,
+                                          lesson_id: lesson.id,
                                           lessonName: lesson.name,
                                           programName: program.name
                                         })}>
@@ -1042,9 +1096,18 @@ export default function ClassroomDetail() {
             <div className="h-full flex flex-col">
               {/* Panel Header */}
               <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                <div>
-                  <h3 className="font-semibold text-lg">內容編輯器</h3>
-                  <p className="text-sm text-gray-500 mt-1">{selectedContent.type}</p>
+                <div className="flex-1 mr-4">
+                  <h3 className="font-semibold text-sm text-gray-600 mb-2">內容編輯器</h3>
+                  <input
+                    type="text"
+                    value={editingContent?.title || selectedContent.title || ''}
+                    onChange={(e) => setEditingContent({
+                      ...editingContent,
+                      title: e.target.value
+                    })}
+                    className="w-full px-3 py-1.5 border rounded-md text-lg font-medium"
+                    placeholder="輸入標題"
+                  />
                 </div>
                 <Button
                   variant="ghost"
@@ -1058,142 +1121,110 @@ export default function ClassroomDetail() {
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  {/* Content Info */}
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900">{selectedContent.programName}</p>
-                    <p className="text-xs text-blue-700 mt-1">{selectedContent.lessonName}</p>
-                  </div>
+                {selectedContent.type === 'reading_assessment' ? (
+                  <ReadingAssessmentPanel
+                    content={selectedContent}
+                    editingContent={editingContent}
+                    onUpdateContent={setEditingContent}
+                    onSave={handleSaveContent}
+                  />
+                ) : (
+                  /* Other Content Types */
+                  <div className="space-y-4">
+                      {/* Content Info */}
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-blue-900">{selectedContent.programName}</p>
+                        <p className="text-xs text-blue-700 mt-1">{selectedContent.lessonName}</p>
+                      </div>
 
-                  {/* Content Type Badge */}
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{selectedContent.type}</p>
-                      <p className="text-sm text-gray-500">{selectedContent.items} 個項目 • {selectedContent.time}</p>
-                    </div>
-                  </div>
+                      {/* Content Type Badge */}
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{selectedContent.type}</p>
+                          <p className="text-sm text-gray-500">
+                            {Array.isArray(selectedContent.items) ? selectedContent.items.length : selectedContent.items_count || 0} 個項目 • {selectedContent.estimated_time || '10 分鐘'}
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Content Items - 真實內容編輯介面 */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm">內容項目</h4>
-                    {editingContent && editingContent.items && editingContent.items.length > 0 ? (
-                      editingContent.items.map((item: any, index: number) => (
-                        <div key={index} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">項目 {index + 1}</span>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={() => handleDeleteContentItem(index)}
-                            >
-                              <Trash2 className="h-3 w-3 text-red-500" />
-                            </Button>
-                          </div>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 border rounded-md text-sm"
-                            placeholder="英文內容"
-                            value={item.text || ''}
-                            onChange={(e) => handleUpdateContentItem(index, 'text', e.target.value)}
-                          />
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 border rounded-md text-sm"
-                            placeholder="中文翻譯"
-                            value={item.translation || ''}
-                            onChange={(e) => handleUpdateContentItem(index, 'translation', e.target.value)}
-                          />
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" variant="outline" className="flex-1">
-                              <Mic className="h-4 w-4 mr-1" />
-                              錄音
-                            </Button>
+                      {/* Content Items - 真實內容編輯介面 */}
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm">內容項目</h4>
+                        {editingContent && editingContent.items && editingContent.items.length > 0 ? (
+                          editingContent.items.map((item: any, index: number) => (
+                            <div key={index} className="border rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">項目 {index + 1}</span>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  onClick={() => handleDeleteContentItem(index)}
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-500" />
+                                </Button>
+                              </div>
+                              <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-md text-sm"
+                                placeholder="英文內容"
+                                value={item.text || ''}
+                                onChange={(e) => handleUpdateContentItem(index, 'text', e.target.value)}
+                              />
+                              <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-md text-sm"
+                                placeholder="中文翻譯"
+                                value={item.translation || ''}
+                                onChange={(e) => handleUpdateContentItem(index, 'translation', e.target.value)}
+                              />
+                              <div className="flex items-center space-x-2">
+                                <Button size="sm" variant="outline" className="flex-1">
+                                  <Mic className="h-4 w-4 mr-1" />
+                                  錄音
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-600"
+                                  onClick={() => handleDeleteContentItem(index)}
+                                >
+                                  刪除
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <p>尚無內容項目</p>
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              className="text-red-600"
-                              onClick={() => handleDeleteContentItem(index)}
+                              className="mt-2"
+                              onClick={handleAddContentItem}
                             >
-                              刪除
+                              <Plus className="h-4 w-4 mr-1" />
+                              新增項目
                             </Button>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>尚無內容項目</p>
+                        )}
+                      </div>
+
+                      {/* Add Item Button - only show if there are items */}
+                      {editingContent && editingContent.items && editingContent.items.length > 0 && (
                         <Button 
-                          size="sm" 
                           variant="outline" 
-                          className="mt-2"
+                          className="w-full"
                           onClick={handleAddContentItem}
                         >
-                          <Plus className="h-4 w-4 mr-1" />
+                          <Plus className="h-4 w-4 mr-2" />
                           新增項目
                         </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Add Item Button - only show if there are items */}
-                  {editingContent && editingContent.items && editingContent.items.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={handleAddContentItem}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      新增項目
-                    </Button>
-                  )}
-
-                  {/* Settings */}
-                  <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-medium text-sm">設定</h4>
-                    <div>
-                      <label className="text-sm text-gray-600">目標 WPM (每分鐘字數)</label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-2 border rounded-md mt-1"
-                        placeholder="60"
-                        value={editingContent?.target_wpm || 60}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          target_wpm: e.target.value
-                        })}
-                      />
+                      )}
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">目標準確率 (%)</label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-2 border rounded-md mt-1"
-                        placeholder="80"
-                        value={editingContent ? Math.round(editingContent.target_accuracy * 100) : 80}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          target_accuracy: parseFloat(e.target.value) / 100
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">時間限制 (秒)</label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-2 border rounded-md mt-1"
-                        placeholder="600"
-                        value={editingContent?.time_limit_seconds || 600}
-                        onChange={(e) => setEditingContent({
-                          ...editingContent,
-                          time_limit_seconds: e.target.value
-                        })}
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Panel Footer */}
@@ -1277,6 +1308,24 @@ export default function ClassroomDetail() {
           onSelect={handleContentTypeSelect}
           lessonInfo={contentLessonInfo}
         />
+      )}
+
+      {/* Reading Assessment Editor */}
+      {showReadingEditor && editorLessonId && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto">
+          <div className="relative w-full max-w-7xl my-8">
+            <ReadingAssessmentEditor
+              lessonId={editorLessonId}
+              contentId={editorContentId || undefined}
+              onSave={handleSaveReadingContent}
+              onCancel={() => {
+                setShowReadingEditor(false);
+                setEditorLessonId(null);
+                setEditorContentId(null);
+              }}
+            />
+          </div>
+        </div>
       )}
     </TeacherLayout>
   );
