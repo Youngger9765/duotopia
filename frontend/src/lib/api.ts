@@ -297,6 +297,12 @@ class ApiClient {
   }
 
   // ============ Content Methods ============
+  async getContentDetail(contentId: number) {
+    return this.request(`/api/teachers/contents/${contentId}`, {
+      method: 'GET',
+    });
+  }
+
   async createContent(lessonId: number, data: {
     type: string;
     title: string;
@@ -333,6 +339,73 @@ class ApiClient {
     return this.request(`/api/teachers/contents/${contentId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ============ Translation Methods ============
+  async translateText(text: string, targetLang: string = 'zh-TW') {
+    return this.request('/api/teachers/translate', {
+      method: 'POST',
+      body: JSON.stringify({ text, target_lang: targetLang }),
+    });
+  }
+
+  async batchTranslate(texts: string[], targetLang: string = 'zh-TW') {
+    return this.request('/api/teachers/translate/batch', {
+      method: 'POST',
+      body: JSON.stringify({ texts, target_lang: targetLang }),
+    });
+  }
+
+  // ============ TTS Methods ============
+  async generateTTS(text: string, voice?: string, rate?: string, volume?: string) {
+    return this.request('/api/teachers/tts', {
+      method: 'POST',
+      body: JSON.stringify({ text, voice, rate, volume }),
+    });
+  }
+
+  async batchGenerateTTS(texts: string[], voice?: string, rate?: string, volume?: string) {
+    return this.request('/api/teachers/tts/batch', {
+      method: 'POST',
+      body: JSON.stringify({ texts, voice, rate, volume }),
+    });
+  }
+
+  async getTTSVoices(language: string = 'en') {
+    return this.request(`/api/teachers/tts/voices?language=${language}`, {
+      method: 'GET',
+    });
+  }
+
+  // ============ Audio Upload Methods ============
+  async uploadAudio(audioBlob: Blob, duration: number, contentId?: number, itemIndex?: number) {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'recording.webm');
+    formData.append('duration', duration.toString());
+    
+    // 加入 content_id 和 item_index 以便追蹤和替換舊檔案
+    if (contentId) {
+      formData.append('content_id', contentId.toString());
+    }
+    if (itemIndex !== undefined) {
+      formData.append('item_index', itemIndex.toString());
+    }
+    
+    const response = await fetch(`${this.baseUrl}/api/teachers/upload/audio`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Upload error:', errorText);
+      throw new Error(`Upload failed: ${response.status} - ${errorText || response.statusText}`);
+    }
+    
+    return response.json();
   }
 }
 

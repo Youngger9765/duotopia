@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
@@ -764,7 +764,7 @@ async def get_program(
                 "contents": [
                     {
                         "id": content.id,
-                        "type": content.type.value if content.type else "reading_recording",
+                        "type": content.type.value if content.type else "reading_assessment",
                         "title": content.title,
                         "items": content.items or [],  # Include actual items
                         "items_count": len(content.items) if content.items else 0,
@@ -868,7 +868,7 @@ async def add_lesson(
 # ------------ Content CRUD ------------
 
 class ContentCreate(BaseModel):
-    type: str = "reading_recording"
+    type: str = "reading_assessment"
     title: str
     items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
     target_wpm: Optional[int] = 60
@@ -876,12 +876,14 @@ class ContentCreate(BaseModel):
     order_index: int = 0
 
 class ContentUpdate(BaseModel):
-    title: Optional[str]
-    items: Optional[List[Dict[str, Any]]]
-    target_wpm: Optional[int]
-    target_accuracy: Optional[float]
-    time_limit_seconds: Optional[int]
-    order_index: Optional[int]
+    title: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    target_wpm: Optional[int] = None
+    target_accuracy: Optional[float] = None
+    time_limit_seconds: Optional[int] = None
+    order_index: Optional[int] = None
+    level: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 @router.get("/lessons/{lesson_id}/contents")
 async def get_lesson_contents(
@@ -906,7 +908,7 @@ async def get_lesson_contents(
     return [
         {
             "id": content.id,
-            "type": content.type.value if content.type else "reading_recording",
+            "type": content.type.value if content.type else "reading_assessment",
             "title": content.title,
             "items": content.items or [],
             "target_wpm": content.target_wpm,
@@ -934,7 +936,7 @@ async def create_content(
     
     content = Content(
         lesson_id=lesson_id,
-        type=ContentType.READING_RECORDING,  # Phase 1 only has this type
+        type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
         title=content_data.title,
         items=content_data.items,
         target_wpm=content_data.target_wpm,
@@ -952,7 +954,40 @@ async def create_content(
         "items": content.items,
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
-        "order_index": content.order_index
+        "order_index": content.order_index,
+        "level": content.level if hasattr(content, 'level') else "A1",
+        "tags": content.tags if hasattr(content, 'tags') else []
+    }
+
+@router.get("/contents/{content_id}")
+async def get_content_detail(
+    content_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """獲取內容詳情"""
+    # Verify the content belongs to the teacher
+    content = db.query(Content).join(Lesson).join(Program).filter(
+        Content.id == content_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+    
+    return {
+        "id": content.id,
+        "type": content.type.value if content.type else "reading_assessment",
+        "title": content.title,
+        "items": content.items or [],
+        "target_wpm": content.target_wpm,
+        "target_accuracy": content.target_accuracy,
+        "time_limit_seconds": content.time_limit_seconds,
+        "level": "A1",  # 可以從 lesson 或 program 獲取
+        "tags": ["public"],  # 可以從其他地方獲取
+        "order_index": content.order_index,
+        "level": content.level if hasattr(content, 'level') else "A1",
+        "tags": content.tags if hasattr(content, 'tags') else []
     }
 
 @router.put("/contents/{content_id}")
@@ -972,9 +1007,31 @@ async def update_content(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
     
+    # 引入音檔管理器
+    from services.audio_manager import get_audio_manager
+    audio_manager = get_audio_manager()
+    
     if update_data.title is not None:
         content.title = update_data.title
     if update_data.items is not None:
+        # 處理音檔更新（刪除舊的）
+        if content.items and update_data.items:
+            old_items = content.items if isinstance(content.items, list) else []
+            new_items = update_data.items
+            
+            # 建立新音檔 URL 的集合
+            new_audio_urls = set()
+            for item in new_items:
+                if isinstance(item, dict) and 'audio_url' in item and item['audio_url']:
+                    new_audio_urls.add(item['audio_url'])
+            
+            # 刪除不再使用的舊音檔
+            for old_item in old_items:
+                if isinstance(old_item, dict) and 'audio_url' in old_item:
+                    old_url = old_item['audio_url']
+                    if old_url and old_url not in new_audio_urls:
+                        audio_manager.delete_old_audio(old_url)
+        
         content.items = update_data.items
     if update_data.target_wpm is not None:
         content.target_wpm = update_data.target_wpm
@@ -984,6 +1041,10 @@ async def update_content(
         content.time_limit_seconds = update_data.time_limit_seconds
     if update_data.order_index is not None:
         content.order_index = update_data.order_index
+    if update_data.level is not None:
+        content.level = update_data.level
+    if update_data.tags is not None:
+        content.tags = update_data.tags
     
     db.commit()
     db.refresh(content)
@@ -995,7 +1056,9 @@ async def update_content(
         "items": content.items,
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
-        "order_index": content.order_index
+        "order_index": content.order_index,
+        "level": content.level if hasattr(content, 'level') else "A1",
+        "tags": content.tags if hasattr(content, 'tags') else []
     }
 
 @router.delete("/contents/{content_id}")
@@ -1018,3 +1081,185 @@ async def delete_content(
     db.commit()
     
     return {"message": "Content deleted successfully"}
+
+# ------------ Translation API ------------
+from services.translation import translation_service
+
+class TranslateRequest(BaseModel):
+    text: str
+    target_lang: str = "zh-TW"
+
+class BatchTranslateRequest(BaseModel):
+    texts: List[str]
+    target_lang: str = "zh-TW"
+
+@router.post("/translate")
+async def translate_text(
+    request: TranslateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """翻譯單一文本"""
+    try:
+        translation = await translation_service.translate_text(
+            request.text, 
+            request.target_lang
+        )
+        return {
+            "original": request.text,
+            "translation": translation
+        }
+    except Exception as e:
+        print(f"Translation error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+@router.post("/translate/batch")
+async def batch_translate(
+    request: BatchTranslateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """批次翻譯多個文本"""
+    try:
+        translations = await translation_service.batch_translate(
+            request.texts,
+            request.target_lang
+        )
+        return {
+            "originals": request.texts,
+            "translations": translations
+        }
+    except Exception as e:
+        print(f"Batch translation error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+# ============ TTS Endpoints ============
+class TTSRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "en-US-JennyNeural"
+    rate: Optional[str] = "+0%"
+    volume: Optional[str] = "+0%"
+
+class BatchTTSRequest(BaseModel):
+    texts: List[str]
+    voice: Optional[str] = "en-US-JennyNeural"
+    rate: Optional[str] = "+0%"
+    volume: Optional[str] = "+0%"
+
+@router.post("/tts")
+async def generate_tts(
+    request: TTSRequest,
+    current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """生成單一 TTS 音檔"""
+    try:
+        from services.tts import get_tts_service
+        
+        tts_service = get_tts_service()
+        
+        # 直接使用 await，因為 FastAPI 已經在異步環境中
+        audio_url = await tts_service.generate_tts(
+            text=request.text,
+            voice=request.voice,
+            rate=request.rate,
+            volume=request.volume
+        )
+        
+        return {"audio_url": audio_url}
+    except Exception as e:
+        print(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail="TTS generation failed")
+
+@router.post("/tts/batch")
+async def batch_generate_tts(
+    request: BatchTTSRequest,
+    current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """批次生成 TTS 音檔"""
+    try:
+        from services.tts import get_tts_service
+        
+        tts_service = get_tts_service()
+        
+        # 直接使用 await，因為 FastAPI 已經在異步環境中
+        audio_urls = await tts_service.batch_generate_tts(
+            texts=request.texts,
+            voice=request.voice,
+            rate=request.rate,
+            volume=request.volume
+        )
+        
+        return {"audio_urls": audio_urls}
+    except Exception as e:
+        print(f"Batch TTS error: {e}")
+        raise HTTPException(status_code=500, detail="Batch TTS generation failed")
+
+@router.get("/tts/voices")
+async def get_tts_voices(
+    language: str = "en",
+    current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """取得可用的 TTS 語音列表"""
+    try:
+        from services.tts import get_tts_service
+        
+        tts_service = get_tts_service()
+        
+        # 直接使用 await，因為 FastAPI 已經在異步環境中
+        voices = await tts_service.get_available_voices(language)
+        
+        return {"voices": voices}
+    except Exception as e:
+        print(f"Get voices error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get voices")
+
+# ============ Audio Upload Endpoints ============
+@router.post("/upload/audio")
+async def upload_audio(
+    file: UploadFile = File(...),
+    duration: int = Form(30),
+    content_id: Optional[int] = Form(None),
+    item_index: Optional[int] = Form(None),
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """上傳錄音檔案
+    
+    Args:
+        file: 音檔檔案
+        duration: 錄音長度（秒）
+        content_id: 內容 ID（用於識別要替換的音檔）
+        item_index: 項目索引（用於識別是哪個項目的音檔）
+    """
+    try:
+        from services.audio_upload import get_audio_upload_service
+        from services.audio_manager import get_audio_manager
+        
+        audio_service = get_audio_upload_service()
+        audio_manager = get_audio_manager()
+        
+        # 如果提供了 content_id 和 item_index，先刪除舊音檔
+        if content_id and item_index is not None:
+            content = db.query(Content).filter(
+                Content.id == content_id,
+                Content.lesson.has(Lesson.program.has(Program.teacher_id == current_teacher.id))
+            ).first()
+            
+            if content and content.items and item_index < len(content.items):
+                old_audio_url = content.items[item_index].get("audio_url")
+                if old_audio_url:
+                    # 刪除舊音檔
+                    audio_manager.delete_old_audio(old_audio_url)
+        
+        # 上傳新音檔（包含 content_id 和 item_index 在檔名中）
+        audio_url = await audio_service.upload_audio(
+            file, 
+            duration,
+            content_id=content_id,
+            item_index=item_index
+        )
+        
+        return {"audio_url": audio_url}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Audio upload error: {e}")
+        raise HTTPException(status_code=500, detail="Audio upload failed")

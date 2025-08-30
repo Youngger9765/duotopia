@@ -31,7 +31,7 @@ class AssignmentStatus(str, enum.Enum):
     RETURNED = "returned"
 
 class ContentType(str, enum.Enum):
-    READING_RECORDING = "reading_recording"  # Phase 1 只有這個
+    READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
     # Phase 2 擴展
     # SPEAKING_PRACTICE = "speaking_practice"
     # SPEAKING_SCENARIO = "speaking_scenario"
@@ -197,7 +197,7 @@ class Content(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-    type = Column(Enum(ContentType), default=ContentType.READING_RECORDING)
+    type = Column(Enum(ContentType), default=ContentType.READING_ASSESSMENT)
     title = Column(String(200), nullable=False)
     order_index = Column(Integer, default=0)
     
@@ -208,6 +208,10 @@ class Content(Base):
     target_wpm = Column(Integer)  # 目標 WPM
     target_accuracy = Column(Float)  # 目標準確率
     time_limit_seconds = Column(Integer)  # 時間限制
+    
+    # 新增欄位
+    level = Column(String(10), default="A1")  # 等級 (PreA, A1, A2, B1, B2, C1, C2)
+    tags = Column(JSON, default=list)  # 標籤列表
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
