@@ -3,8 +3,8 @@
 ## 問題
 Supabase 新專案只提供 IPv6 地址，GitHub Actions 不支援 IPv6，導致 CI/CD 無法連接資料庫。
 
-## 解決方案
-使用 Supabase Pooler (Supavisor) 連線，它提供 IPv4 地址。
+## 解決方案（必須設定）
+使用 Supabase Pooler (Supavisor) 連線，它提供 IPv4 地址。**這是 CI/CD 正常運作的必要設定！**
 
 ## 設定步驟
 

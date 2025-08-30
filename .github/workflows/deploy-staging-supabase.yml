@@ -97,11 +97,6 @@ jobs:
       run: |
         docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
-
-    - name: Setup CloudFlare WARP for IPv6
-      uses: fscarmen/warp-on-actions@v1.3
-      with:
-        stack: dual  # Support both IPv4 and IPv6
     
     - name: Setup Python for migrations
       uses: actions/setup-python@v4
