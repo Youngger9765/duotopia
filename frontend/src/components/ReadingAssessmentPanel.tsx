@@ -167,17 +167,12 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
           recordingTimerRef.current = null;
         }
         
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        // 使用基本的 MIME type，去掉 codec 信息
+        const basicMimeType = mimeType.split(';')[0];
+        const audioBlob = new Blob(audioChunksRef.current, { type: basicMimeType });
         
         // 使用 ref 來獲取當前的錄音時長
         const currentDuration = recordingDurationRef.current || recordingDuration;
-        
-        console.log('Audio blob created:', {
-          size: audioBlob.size,
-          type: audioBlob.type,
-          duration: currentDuration,
-          chunks: audioChunksRef.current.length
-        });
         
         // 檢查檔案大小 (2MB 限制)
         if (audioBlob.size > 2 * 1024 * 1024) {
@@ -199,15 +194,16 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
         
         // 創建本地 URL 供預覽播放
         const localUrl = URL.createObjectURL(audioBlob);
-        console.log('Setting recorded audio URL:', localUrl);
         setRecordedAudio(localUrl);
         toast.success('錄音完成！可以試聽或重新錄製');
         
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      // 使用 timeslice 參數，每100ms收集一次數據
+      mediaRecorder.start(100);
       setIsRecording(true);
+      toast.success('開始錄音');
     } catch (error) {
       toast.error('無法啟動錄音，請檢查麥克風權限');
     }
@@ -479,52 +475,16 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          console.log('Play button clicked');
-                          console.log('Recorded audio URL:', recordedAudio);
-                          
                           if (!recordedAudio) {
-                            console.error('No recorded audio URL');
                             toast.error('沒有錄音可播放');
                             return;
                           }
                           
-                          try {
-                            const audio = new Audio(recordedAudio);
-                            console.log('Audio object created:', audio);
-                            
-                            audio.onloadedmetadata = () => {
-                              console.log('Audio metadata loaded, duration:', audio.duration);
-                            };
-                            
-                            audio.onplay = () => {
-                              console.log('Audio started playing');
-                            };
-                            
-                            audio.onended = () => {
-                              console.log('Audio playback ended');
-                            };
-                            
-                            audio.onerror = (e) => {
-                              console.error('Audio error event:', e);
-                              console.error('Audio error code:', audio.error);
-                              toast.error('播放失敗，請重新錄製');
-                            };
-                            
-                            const playPromise = audio.play();
-                            console.log('Play promise:', playPromise);
-                            
-                            playPromise.then(() => {
-                              console.log('Audio playing successfully');
-                            }).catch(err => {
-                              console.error('Play failed:', err);
-                              console.error('Error name:', err.name);
-                              console.error('Error message:', err.message);
-                              toast.error('無法播放錄音: ' + err.message);
-                            });
-                          } catch (error) {
-                            console.error('Failed to create audio:', error);
-                            toast.error('創建音頻播放器失敗');
-                          }
+                          const audio = new Audio(recordedAudio);
+                          audio.play().catch(err => {
+                            console.error('Play failed:', err);
+                            toast.error('無法播放錄音');
+                          });
                         }}
                       >
                         <Play className="h-4 w-4" />
