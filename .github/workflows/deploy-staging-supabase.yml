@@ -96,6 +96,11 @@ jobs:
         docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
 
+    - name: Setup Python for migrations
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
     - name: Check for missing migrations
       env:
         DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
@@ -103,6 +108,16 @@ jobs:
       run: |
         echo "🔍 Installing dependencies for migration check..."
         pip install -r requirements.txt
+        
+        # Force IPv4 for Supabase connection in GitHub Actions
+        export PGHOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+        echo "Resolving $PGHOST to IPv4..."
+        IPV4_HOST=$(getent hosts $PGHOST | awk '{ print $1 }' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+        if [ -n "$IPV4_HOST" ]; then
+          echo "Using IPv4 address: $IPV4_HOST"
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed "s/@$PGHOST/@$IPV4_HOST/")
+        fi
+        
         echo "🔍 Checking for uncommitted model changes..."
         if ! alembic check; then
           echo "❌ ERROR: Database models have changed but no migration was created!"
@@ -118,6 +133,15 @@ jobs:
         DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
       working-directory: ./backend
       run: |
+        # Force IPv4 for Supabase connection in GitHub Actions
+        export PGHOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+        echo "Resolving $PGHOST to IPv4..."
+        IPV4_HOST=$(getent hosts $PGHOST | awk '{ print $1 }' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+        if [ -n "$IPV4_HOST" ]; then
+          echo "Using IPv4 address: $IPV4_HOST"
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed "s/@$PGHOST/@$IPV4_HOST/")
+        fi
+        
         echo "🔄 Running Alembic database migrations..."
         echo "📊 Current migration status:"
         alembic current
