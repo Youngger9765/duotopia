@@ -143,6 +143,7 @@ jobs:
         ENV_VARS="$ENV_VARS,ENVIRONMENT=staging"
         ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
         ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
+        ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
         
         gcloud run deploy $BACKEND_SERVICE \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA \
