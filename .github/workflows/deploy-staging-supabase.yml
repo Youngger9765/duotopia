@@ -92,6 +92,19 @@ jobs:
         echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
         echo "🆓 Using Supabase (free tier)"
 
+    - name: Debug - Check file structure
+      run: |
+        echo "=== Current directory ==="
+        pwd
+        echo "=== Files in root ==="
+        ls -la | head -20
+        echo "=== Check requirements.txt ==="
+        ls -la requirements.txt || echo "requirements.txt not found"
+        echo "=== Check alembic ==="
+        ls -la alembic.ini alembic/ || echo "alembic files not found"
+        echo "=== Check backend directory ==="
+        ls -la backend/ || echo "backend directory not found"
+    
     - name: Build and push backend image
       run: |
         docker build -f backend/Dockerfile -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
