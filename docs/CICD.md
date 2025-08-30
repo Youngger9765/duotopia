@@ -3,6 +3,37 @@
 ## 概述
 本專案使用 GitHub Actions 進行持續整合與部署，自動化測試、建置和部署流程。
 
+## 🛡️ 防呆機制（三層防護）
+
+### 第一層：本地 Pre-commit Hook
+安裝後，每次 commit 時自動檢查：
+```bash
+# 安裝
+pip install pre-commit
+pre-commit install
+
+# 自動執行 alembic check
+# 如果 model 有變更但沒有 migration，會阻止 commit
+```
+
+### 第二層：Makefile 快捷指令
+```bash
+# 檢查是否需要 migration
+make db-check
+
+# 生成 migration（有提示）
+make db-migrate MSG="add new field"
+
+# 執行 migration
+make db-upgrade
+```
+
+### 第三層：CI/CD 強制檢查
+GitHub Actions 會：
+1. 執行 `alembic check` 檢查是否有遺漏的 migration
+2. 如果有遺漏，**部署會失敗**並顯示錯誤訊息
+3. 強制開發者生成 migration 才能部署
+
 ## 部署流程
 
 ### 觸發條件

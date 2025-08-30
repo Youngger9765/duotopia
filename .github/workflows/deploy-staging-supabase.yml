@@ -96,6 +96,21 @@ jobs:
         docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
 
+    - name: Check for missing migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
+      working-directory: ./backend
+      run: |
+        echo "🔍 Checking for uncommitted model changes..."
+        if ! alembic check; then
+          echo "❌ ERROR: Database models have changed but no migration was created!"
+          echo "📝 Please run the following command locally:"
+          echo "   cd backend && alembic revision --autogenerate -m 'describe your changes'"
+          echo "   Then commit the generated migration file."
+          exit 1
+        fi
+        echo "✅ No pending model changes detected"
+    
     - name: Run Alembic database migrations
       env:
         DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}

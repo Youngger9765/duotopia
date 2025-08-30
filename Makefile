@@ -6,6 +6,39 @@ FRONTEND_DIR = frontend
 PROJECT_ID = duotopia-469413
 REGION = asia-east1
 
+# 資料庫 Migration 指令
+.PHONY: db-check
+db-check:
+	@echo "🔍 Checking for uncommitted model changes..."
+	@cd $(BACKEND_DIR) && alembic check || (echo "❌ Model changes detected! Run: make db-migrate MSG='your message'" && exit 1)
+
+.PHONY: db-migrate
+db-migrate:
+	@if [ -z "$(MSG)" ]; then \
+		echo "❌ Error: Please provide a migration message"; \
+		echo "Usage: make db-migrate MSG='add new field'"; \
+		exit 1; \
+	fi
+	@echo "🔄 Generating migration: $(MSG)"
+	@cd $(BACKEND_DIR) && alembic revision --autogenerate -m "$(MSG)"
+	@echo "✅ Migration generated. Please review the file and run: make db-upgrade"
+
+.PHONY: db-upgrade
+db-upgrade:
+	@echo "⬆️ Upgrading database to latest migration..."
+	@cd $(BACKEND_DIR) && alembic upgrade head
+	@echo "✅ Database upgraded successfully"
+
+.PHONY: db-history
+db-history:
+	@echo "📜 Migration history:"
+	@cd $(BACKEND_DIR) && alembic history
+
+.PHONY: db-current
+db-current:
+	@echo "📍 Current database version:"
+	@cd $(BACKEND_DIR) && alembic current
+
 # 開發環境
 .PHONY: dev-setup
 dev-setup:
@@ -13,6 +46,10 @@ dev-setup:
 	docker-compose up -d
 	cd $(FRONTEND_DIR) && npm install
 	cd $(BACKEND_DIR) && pip install -r requirements.txt
+	@echo "Installing pre-commit hooks..."
+	pip install pre-commit
+	pre-commit install
+	@echo "✅ Development environment ready!"
 
 .PHONY: dev-backend
 dev-backend:
