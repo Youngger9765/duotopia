@@ -102,13 +102,25 @@ jobs:
       with:
         python-version: '3.11'
     
+    - name: Run Alembic database migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
+      run: |
+        echo "🔍 Installing dependencies for migrations..."
+        pip install -r backend/requirements.txt
+        
+        echo "🔄 Running Alembic database migrations..."
+        cd backend
+        echo "📊 Current migration status:"
+        alembic current
+        echo "🔄 Upgrading to latest migration..."
+        alembic upgrade head
+        echo "✅ Migrations completed"
+        
     - name: Check for missing migrations
       env:
         DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
       run: |
-        echo "🔍 Installing dependencies for migration check..."
-        pip install -r backend/requirements.txt
-        
         echo "🔍 Checking for uncommitted model changes..."
         cd backend
         if ! alembic check; then
@@ -119,18 +131,6 @@ jobs:
           exit 1
         fi
         echo "✅ No pending model changes detected"
-    
-    - name: Run Alembic database migrations
-      env:
-        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
-      run: |
-        echo "🔄 Running Alembic database migrations..."
-        cd backend
-        echo "📊 Current migration status:"
-        alembic current
-        echo "🔄 Upgrading to latest migration..."
-        alembic upgrade head
-        echo "✅ Migrations completed"
         
     - name: Deploy backend to Cloud Run
       run: |
