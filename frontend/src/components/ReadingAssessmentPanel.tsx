@@ -713,8 +713,10 @@ export default function ReadingAssessmentPanel({
       toast.error('最多只能新增 15 列');
       return;
     }
+    // 找出最大的 ID 數字，然後加 1
+    const maxId = Math.max(...rows.map(r => parseInt(r.id) || 0));
     const newRow: ContentRow = {
-      id: Date.now().toString(),
+      id: (maxId + 1).toString(),
       text: '',
       definition: ''
     };
@@ -736,9 +738,11 @@ export default function ReadingAssessmentPanel({
       return;
     }
     const rowToCopy = rows[index];
+    // 找出最大的 ID 數字，然後加 1
+    const maxId = Math.max(...rows.map(r => parseInt(r.id) || 0));
     const newRow: ContentRow = {
       ...rowToCopy,
-      id: Date.now().toString()
+      id: (maxId + 1).toString()
     };
     const newRows = [...rows];
     newRows.splice(index + 1, 0, newRow);
@@ -1028,34 +1032,19 @@ export default function ReadingAssessmentPanel({
         </div>
       </div>
 
-      {/* Title Input and Public Setting - Only show in create mode */}
+      {/* Title Input - Only show in create mode */}
       {isCreating && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              標題 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="請輸入內容標題"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label htmlFor="isPublic" className="text-sm font-medium text-gray-700">
-              公開內容（允許其他教師使用）
-            </label>
-          </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">
+            標題 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="請輸入內容標題"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
       )}
 
@@ -1291,10 +1280,24 @@ export default function ReadingAssessmentPanel({
           </Button>
           <Button
             onClick={async () => {
-              // 收集所有資料
-              const items = rows.map(row => ({
-                text: row.text,
-                translation: row.definition,
+              // 檢查必填欄位
+              if (!title) {
+                toast.error('請輸入標題');
+                return;
+              }
+              
+              // 過濾掉空白的項目，只保留有內容的
+              const validRows = rows.filter(r => r.text && r.definition);
+              
+              if (validRows.length === 0) {
+                toast.error('請至少填寫一個完整的項目（包含文字和翻譯）');
+                return;
+              }
+              
+              // 收集有效的資料
+              const items = validRows.map(row => ({
+                text: row.text.trim(),
+                translation: row.definition.trim(),
                 audio_url: row.audioUrl || ''
               }));
               
@@ -1314,7 +1317,6 @@ export default function ReadingAssessmentPanel({
                 await onSave(contentData);
               }
             }}
-            disabled={!title || rows.length === 0 || rows.some(r => !r.text || !r.definition)}
           >
             儲存
           </Button>
