@@ -86,6 +86,8 @@ jobs:
         # 使用 Supabase (免費)
         echo "DATABASE_TYPE=supabase" >> $GITHUB_OUTPUT
         echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+        # Use Supavisor pooler URL for Alembic (IPv4 compatible)
+        echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL || secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
         echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
         echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
         echo "🆓 Using Supabase (free tier)"
@@ -96,26 +98,45 @@ jobs:
         docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
 
+    - name: Setup CloudFlare WARP for IPv6
+      uses: fscarmen/warp-on-actions@v1.3
+      with:
+        stack: dual  # Support both IPv4 and IPv6
+    
     - name: Setup Python for migrations
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
     
-    # Skipping alembic check due to Supabase IPv6 issues in GitHub Actions
-    # The pre-commit hook will ensure migrations are created locally
+    - name: Check for missing migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
+      working-directory: ./backend
+      run: |
+        echo "🔍 Installing dependencies for migration check..."
+        pip install -r requirements.txt
+        
+        echo "🔍 Checking for uncommitted model changes..."
+        if ! alembic check; then
+          echo "❌ ERROR: Database models have changed but no migration was created!"
+          echo "📝 Please run the following command locally:"
+          echo "   cd backend && alembic revision --autogenerate -m 'describe your changes'"
+          echo "   Then commit the generated migration file."
+          exit 1
+        fi
+        echo "✅ No pending model changes detected"
     
     - name: Run Alembic database migrations
       env:
-        DATABASE_URL: ${{ steps.db_env.outputs.DATABASE_URL }}
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
       working-directory: ./backend
       run: |
-        echo "🔄 Installing Alembic and dependencies..."
-        pip install -r requirements.txt
-        
         echo "🔄 Running Alembic database migrations..."
-        # Note: May fail due to IPv6 issues, but will retry on next deployment
-        alembic upgrade head || echo "⚠️ Migration failed (likely network issue), will retry on next deployment"
-        echo "✅ Migration step completed"
+        echo "📊 Current migration status:"
+        alembic current
+        echo "🔄 Upgrading to latest migration..."
+        alembic upgrade head
+        echo "✅ Migrations completed"
         
     - name: Deploy backend to Cloud Run
       run: |
