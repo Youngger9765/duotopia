@@ -874,6 +874,9 @@ class ContentCreate(BaseModel):
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
     order_index: int = 0
+    level: Optional[str] = "A1"
+    tags: Optional[List[str]] = []
+    is_public: Optional[bool] = False
 
 class ContentUpdate(BaseModel):
     title: Optional[str] = None
@@ -884,6 +887,7 @@ class ContentUpdate(BaseModel):
     order_index: Optional[int] = None
     level: Optional[str] = None
     tags: Optional[List[str]] = None
+    is_public: Optional[bool] = None
 
 @router.get("/lessons/{lesson_id}/contents")
 async def get_lesson_contents(

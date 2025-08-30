@@ -212,6 +212,7 @@ class Content(Base):
     # 新增欄位
     level = Column(String(10), default="A1")  # 等級 (PreA, A1, A2, B1, B2, C1, C2)
     tags = Column(JSON, default=list)  # 標籤列表
+    is_public = Column(Boolean, default=False)  # 是否公開（給其他老師使用）
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

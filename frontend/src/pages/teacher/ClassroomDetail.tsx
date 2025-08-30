@@ -10,7 +10,6 @@ import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
 import CopyProgramDialog from '@/components/CopyProgramDialog';
 import ContentTypeDialog from '@/components/ContentTypeDialog';
-import ReadingAssessmentEditor from '@/components/ReadingAssessmentEditor';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
@@ -523,32 +522,31 @@ export default function ClassroomDetail() {
 
   const handleSaveReadingContent = async (data: any) => {
     try {
-      // Format data for API
-      const items = data.rows.map((row: any) => ({
-        text: row.text,
-        translation: row.definition,
-        audio_url: row.audioUrl || null
-      }));
+      // Data from ReadingAssessmentPanel already has formatted items
+      const items = data.items || [];
 
-      if (data.contentId) {
+      if (editorContentId) {
         // Update existing content
-        await apiClient.updateContent(data.contentId, {
+        await apiClient.updateContent(editorContentId, {
           title: data.title,
           items: items,
           level: data.level,
-          tags: data.tags
+          tags: data.tags,
+          is_public: data.is_public
         });
         toast.success('內容已更新成功');
       } else {
         // Create new content
-        await apiClient.createContent(data.lessonId, {
+        await apiClient.createContent(editorLessonId, {
           type: 'reading_assessment',
           title: data.title,
           items: items,
-          target_wpm: 60,
-          target_accuracy: 0.8,
+          target_wpm: data.target_wpm || 60,
+          target_accuracy: data.target_accuracy || 0.8,
+          time_limit_seconds: data.time_limit_seconds || 180,
           level: data.level,
-          tags: data.tags
+          tags: data.tags,
+          is_public: data.is_public
         });
         toast.success('內容已創建成功');
       }
@@ -1313,16 +1311,35 @@ export default function ClassroomDetail() {
       {/* Reading Assessment Editor */}
       {showReadingEditor && editorLessonId && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto">
-          <div className="relative w-full max-w-7xl my-8">
-            <ReadingAssessmentEditor
-              lessonId={editorLessonId}
-              contentId={editorContentId || undefined}
+          <div className="relative w-full max-w-7xl my-8 bg-white rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">朗讀評測設定</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <ReadingAssessmentPanel
+              content={null}
+              editingContent={{ id: editorContentId }}
+              onUpdateContent={(updatedContent) => {
+                // Handle content update if needed
+                console.log('Content updated:', updatedContent);
+              }}
               onSave={handleSaveReadingContent}
               onCancel={() => {
                 setShowReadingEditor(false);
                 setEditorLessonId(null);
                 setEditorContentId(null);
               }}
+              isCreating={!editorContentId}
             />
           </div>
         </div>

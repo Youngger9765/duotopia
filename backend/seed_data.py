@@ -297,6 +297,7 @@ def create_demo_data(db: Session):
         type=ContentType.READING_RECORDING,
         title="基礎問候語練習",
         order_index=1,
+        is_public=True,  # 公開內容，其他教師可以使用
         items=[
             {"text": "Hello", "translation": "你好"},
             {"text": "Good morning", "translation": "早安"},
@@ -318,6 +319,7 @@ def create_demo_data(db: Session):
         type=ContentType.READING_RECORDING,
         title="數字 1-10 練習",
         order_index=1,
+        is_public=True,  # 公開內容
         items=[
             {"text": "One", "translation": "一"},
             {"text": "Two", "translation": "二"},
@@ -341,6 +343,7 @@ def create_demo_data(db: Session):
         type=ContentType.READING_RECORDING,
         title="日常對話練習",
         order_index=1,
+        is_public=False,  # 私人內容
         items=[
             {"text": "What's your name?", "translation": "你叫什麼名字？"},
             {"text": "My name is David", "translation": "我叫大衛"},
@@ -360,6 +363,7 @@ def create_demo_data(db: Session):
         type=ContentType.READING_RECORDING,
         title="家庭成員練習",
         order_index=1,
+        is_public=False,  # 私人內容
         items=[
             {"text": "Father", "translation": "爸爸"},
             {"text": "Mother", "translation": "媽媽"},

@@ -43,9 +43,10 @@ interface TTSModalProps {
   onConfirm: (audioUrl: string, settings: any) => void;
   contentId?: number;
   itemIndex?: number;
+  isCreating?: boolean; // 是否為新增模式
 }
 
-const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSModalProps) => {
+const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreating = false }: TTSModalProps) => {
   const [text, setText] = useState(row.text);
   const [accent, setAccent] = useState(row.audioSettings?.accent || 'American English');
   const [gender, setGender] = useState(row.audioSettings?.gender || 'Male');
@@ -233,7 +234,21 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
         return;
       }
       
-      // 如果選擇錄音且還沒上傳（URL 是 blob:// 開頭），現在上傳
+      // 新增模式：不上傳，只傳遞本地 URL
+      if (isCreating) {
+        const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
+        onConfirm(finalUrl, { 
+          accent, 
+          gender, 
+          speed, 
+          source: selectedSource,
+          audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null 
+        });
+        onClose();
+        return;
+      }
+      
+      // 編輯模式：如果選擇錄音且還沒上傳（URL 是 blob:// 開頭），現在上傳
       if (selectedSource === 'recording' && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
         try {
@@ -269,7 +284,21 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
         return;
       }
       
-      // 如果是錄音且還沒上傳，現在上傳
+      // 新增模式：不上傳，只傳遞本地 URL
+      if (isCreating) {
+        const source = recordedAudio ? 'recording' : 'tts';
+        onConfirm(finalAudioUrl, { 
+          accent, 
+          gender, 
+          speed, 
+          source,
+          audioBlob: source === 'recording' ? audioBlobRef.current : null 
+        });
+        onClose();
+        return;
+      }
+      
+      // 編輯模式：如果是錄音且還沒上傳，現在上傳
       if (recordedAudio && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
         try {
@@ -563,26 +592,38 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSMo
 };
 
 interface ReadingAssessmentPanelProps {
-  content: any;
-  editingContent: any;
-  onUpdateContent: (content: any) => void;
-  onSave: () => void;
+  content?: any;
+  editingContent?: any;
+  onUpdateContent?: (content: any) => void;
+  onSave?: () => void;
+  // Alternative props for ClassroomDetail usage
+  lessonId?: number;
+  contentId?: number;
+  onCancel?: () => void;
+  isOpen?: boolean;
+  isCreating?: boolean; // 是否為新增模式
 }
 
 export default function ReadingAssessmentPanel({
   content,
   editingContent,
   onUpdateContent,
-  onSave
+  onSave,
+  lessonId,
+  contentId,
+  onCancel,
+  isOpen = true,
+  isCreating = false
 }: ReadingAssessmentPanelProps) {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('朗讀評測內容');
   const [rows, setRows] = useState<ContentRow[]>([
     { id: '1', text: '', definition: '' },
     { id: '2', text: '', definition: '' },
     { id: '3', text: '', definition: '' }
   ]);
   const [level, setLevel] = useState('A1');
-  const [tags, setTags] = useState<string[]>(['public']);
+  const [tags, setTags] = useState<string[]>([]);
+  const [isPublic, setIsPublic] = useState(false);  // 獨立的 isPublic 狀態
   const [tagInput, setTagInput] = useState('');
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
@@ -618,7 +659,8 @@ export default function ReadingAssessmentPanel({
       }
       
       setLevel(data.level || 'A1');
-      setTags(data.tags || ['public']);
+      setTags(data.tags || []);
+      setIsPublic(data.is_public || false);
     } catch (error) {
       console.error('Failed to load content:', error);
       toast.error('載入內容失敗');
@@ -629,6 +671,8 @@ export default function ReadingAssessmentPanel({
 
   // Update parent when data changes
   useEffect(() => {
+    if (!onUpdateContent) return;
+    
     const items = rows.map(row => ({
       text: row.text,
       translation: row.definition,
@@ -732,44 +776,59 @@ export default function ReadingAssessmentPanel({
           audio_url: row.audioUrl || ''
         }));
         
-        // 直接呼叫 API 更新，不要用 onSave（會關閉 panel）
-        try {
-          const updateData = {
-            title: title || editingContent.title,
-            items,
-            level,
-            tags
-          };
-          
-          console.log('Updating content with new audio:', audioUrl);
-          await apiClient.updateContent(editingContent.id, updateData);
-          
-          // 更新成功後，重新從後端載入內容以確保同步
-          const response = await apiClient.getContentDetail(editingContent.id);
-          if (response && response.items) {
-            const updatedRows = response.items.map((item: any, index: number) => ({
-              id: String(index + 1),
-              text: item.text || '',
-              definition: item.translation || '',
-              audioUrl: item.audio_url || ''
-            }));
-            setRows(updatedRows);
-            console.log('Updated rows with new audio URLs:', updatedRows);
-          }
-          
+        // 新增模式：只更新本地狀態
+        if (isCreating) {
           // 更新本地狀態
-          onUpdateContent({
-            ...editingContent,
-            title,
-            items,
-            level,
-            tags
-          });
-          
-          toast.success('音檔已更新並儲存');
-        } catch (error) {
-          console.error('Update failed:', error);
-          toast.error('儲存失敗，請重試');
+          if (onUpdateContent) {
+            onUpdateContent({
+              ...editingContent,
+              title,
+              items,
+              level,
+              tags
+            });
+          }
+          console.log('Audio URL saved locally (will upload on final save):', audioUrl);
+        } else {
+          // 編輯模式：直接呼叫 API 更新
+          try {
+            const updateData = {
+              title: title || editingContent.title,
+              items,
+              level,
+              tags
+            };
+            
+            console.log('Updating content with new audio:', audioUrl);
+            await apiClient.updateContent(editingContent.id, updateData);
+            
+            // 更新成功後，重新從後端載入內容以確保同步
+            const response = await apiClient.getContentDetail(editingContent.id);
+            if (response && response.items) {
+              const updatedRows = response.items.map((item: any, index: number) => ({
+                id: String(index + 1),
+                text: item.text || '',
+                definition: item.translation || '',
+                audioUrl: item.audio_url || ''
+              }));
+              setRows(updatedRows);
+              console.log('Updated rows with new audio URLs:', updatedRows);
+            }
+            
+            // 更新本地狀態
+            if (onUpdateContent) {
+              onUpdateContent({
+                ...editingContent,
+                title,
+                items,
+                level,
+                tags
+              });
+            }
+          } catch (error) {
+            console.error('Failed to update content:', error);
+            toast.error('更新失敗，但音檔已生成');
+          }
         }
         
         // 關閉 modal 但不要關閉 panel
@@ -826,30 +885,48 @@ export default function ReadingAssessmentPanel({
           audio_url: row.audioUrl || ''
         }));
         
-        // 直接呼叫 API 更新
-        try {
-          const updateData = {
-            title: title || editingContent.title,
-            items,
-            level,
-            tags
-          };
-          
-          await apiClient.updateContent(editingContent.id, updateData);
-          
+        // 新增模式：只更新本地狀態，不呼叫 API
+        if (isCreating) {
           // 更新本地狀態
-          onUpdateContent({
-            ...editingContent,
-            title,
-            items,
-            level,
-            tags
-          });
+          if (onUpdateContent) {
+            onUpdateContent({
+              ...editingContent,
+              title,
+              items,
+              level,
+              tags
+            });
+          }
           
-          toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
-        } catch (error) {
-          console.error('Failed to save TTS:', error);
-          toast.error('儲存失敗，但音檔已生成');
+          toast.success(`成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`);
+        } else {
+          // 編輯模式：直接呼叫 API 更新
+          try {
+            const updateData = {
+              title: title || editingContent.title,
+              items,
+              level,
+              tags
+            };
+            
+            await apiClient.updateContent(editingContent.id, updateData);
+            
+            // 更新本地狀態
+            if (onUpdateContent) {
+              onUpdateContent({
+                ...editingContent,
+                title,
+                items,
+                level,
+                tags
+              });
+            }
+            
+            toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
+          } catch (error) {
+            console.error('Failed to save TTS:', error);
+            toast.error('儲存失敗，但音檔已生成');
+          }
         }
       }
     } catch (error) {
@@ -950,6 +1027,37 @@ export default function ReadingAssessmentPanel({
           <span>✅ 翻譯：OpenAI GPT-3.5 | ✅ TTS：Edge-TTS (免費) | ✅ 錄音：最長30秒/2MB</span>
         </div>
       </div>
+
+      {/* Title Input and Public Setting - Only show in create mode */}
+      {isCreating && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              標題 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="請輸入內容標題"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isPublic"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label htmlFor="isPublic" className="text-sm font-medium text-gray-700">
+              公開內容（允許其他教師使用）
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* Batch Actions - RWD adjusted */}
       <div className="flex flex-wrap gap-2">
@@ -1126,6 +1234,19 @@ export default function ReadingAssessmentPanel({
               placeholder="按 Enter 新增標籤"
             />
           </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isPublicEdit"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label htmlFor="isPublicEdit" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              公開內容
+            </label>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -1155,7 +1276,49 @@ export default function ReadingAssessmentPanel({
           onConfirm={handleTTSConfirm}
           contentId={editingContent?.id}
           itemIndex={rows.findIndex(r => r.id === selectedRow.id)}
+          isCreating={isCreating}
         />
+      )}
+      
+      {/* 底部按鈕（新增模式時顯示） */}
+      {isCreating && (
+        <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+          >
+            取消
+          </Button>
+          <Button
+            onClick={async () => {
+              // 收集所有資料
+              const items = rows.map(row => ({
+                text: row.text,
+                translation: row.definition,
+                audio_url: row.audioUrl || ''
+              }));
+              
+              const contentData = {
+                title,
+                items,
+                level,
+                tags,
+                target_wpm: 60,
+                target_accuracy: 0.8,
+                time_limit_seconds: 180,
+                is_public: isPublic
+              };
+              
+              // 呼叫 onSave 並傳遞資料
+              if (onSave) {
+                await onSave(contentData);
+              }
+            }}
+            disabled={!title || rows.length === 0 || rows.some(r => !r.text || !r.definition)}
+          >
+            儲存
+          </Button>
+        </div>
       )}
     </div>
   );
