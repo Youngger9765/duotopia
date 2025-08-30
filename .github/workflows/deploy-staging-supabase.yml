@@ -93,9 +93,8 @@ jobs:
         echo "🆓 Using Supabase (free tier)"
 
     - name: Build and push backend image
-      working-directory: ./backend
       run: |
-        docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
+        docker build -f backend/Dockerfile -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
     
     - name: Setup Python for migrations

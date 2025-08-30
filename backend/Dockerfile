@@ -9,7 +9,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 複製應用程式碼
-COPY . .
+COPY *.py .
+COPY alembic ./alembic
+COPY alembic.ini .
+COPY services ./services
 
 # 暴露端口 (Cloud Run 使用 8080)
 EXPOSE 8080
