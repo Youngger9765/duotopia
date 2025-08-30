@@ -41,9 +41,11 @@ interface TTSModalProps {
   onClose: () => void;
   row: ContentRow;
   onConfirm: (audioUrl: string, settings: any) => void;
+  contentId?: number;
+  itemIndex?: number;
 }
 
-const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
+const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex }: TTSModalProps) => {
   const [text, setText] = useState(row.text);
   const [accent, setAccent] = useState(row.audioSettings?.accent || 'American English');
   const [gender, setGender] = useState(row.audioSettings?.gender || 'Male');
@@ -60,6 +62,8 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioBlobRef = useRef<Blob | null>(null);
+  const recordingDurationRef = useRef<number>(0);
 
   const accents = ['American English', 'British English', 'Indian English', 'Australian English'];
   const genders = ['Male', 'Female'];
@@ -111,17 +115,28 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // 檢查支援的 MIME 類型
+      // 檢查支援的 MIME 類型 - 優先使用 opus 編碼
       let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
+      const possibleTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        'audio/mp4'
+      ];
+      
+      for (const type of possibleTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
         }
       }
+      
       console.log('Using MIME type:', mimeType);
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream, { 
+        mimeType,
+        audioBitsPerSecond: 128000  // 設定位元率
+      });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       setRecordingDuration(0);
@@ -145,7 +160,7 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
         }
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         // 清理計時器
         if (recordingTimerRef.current) {
           clearInterval(recordingTimerRef.current);
@@ -154,10 +169,14 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
         
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         
+        // 使用 ref 來獲取當前的錄音時長
+        const currentDuration = recordingDurationRef.current || recordingDuration;
+        
         console.log('Audio blob created:', {
           size: audioBlob.size,
           type: audioBlob.type,
-          duration: recordingDuration
+          duration: currentDuration,
+          chunks: audioChunksRef.current.length
         });
         
         // 檢查檔案大小 (2MB 限制)
@@ -174,41 +193,15 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
           return;
         }
         
-        // 上傳到伺服器（包含 content_id 和 item_index）
-        setIsUploading(true);
-        try {
-          // 找出當前選中項目的索引
-          const itemIndex = selectedRow ? rows.findIndex(r => r.id === selectedRow.id) : undefined;
-          
-          const result = await apiClient.uploadAudio(
-            audioBlob, 
-            recordingDuration || 1,
-            editingContent?.id,  // content_id
-            itemIndex  // item_index
-          );
-          
-          if (result && result.audio_url) {
-            // GCS URL 不需要加 localhost
-            const fullUrl = result.audio_url;
-            setRecordedAudio(fullUrl);
-            toast.success('錄音上傳成功！');
-          } else {
-            throw new Error('No audio URL returned');
-          }
-        } catch (error) {
-          console.error('Upload failed:', error);
-          // 更詳細的錯誤訊息
-          if (error instanceof Error) {
-            toast.error(`上傳失敗：${error.message}`);
-          } else {
-            toast.error('上傳失敗，請重試');
-          }
-          // 作為備援，創建本地 URL
-          const localUrl = URL.createObjectURL(audioBlob);
-          setRecordedAudio(localUrl);
-        } finally {
-          setIsUploading(false);
-        }
+        // 儲存 blob 以便之後上傳
+        audioBlobRef.current = audioBlob;
+        recordingDurationRef.current = currentDuration;
+        
+        // 創建本地 URL 供預覽播放
+        const localUrl = URL.createObjectURL(audioBlob);
+        console.log('Setting recorded audio URL:', localUrl);
+        setRecordedAudio(localUrl);
+        toast.success('錄音完成！可以試聽或重新錄製');
         
         stream.getTracks().forEach(track => track.stop());
       };
@@ -222,6 +215,9 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
 
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // 先儲存當前的錄音時長到 ref
+      recordingDurationRef.current = recordingDuration;
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
@@ -233,13 +229,40 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     // 如果兩種音源都有，需要用戶選擇
     if (audioUrl && recordedAudio) {
       if (!selectedSource) {
         toast.warning('請選擇要使用的音源（TTS 或錄音）');
         return;
       }
+      
+      // 如果選擇錄音且還沒上傳（URL 是 blob:// 開頭），現在上傳
+      if (selectedSource === 'recording' && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
+        setIsUploading(true);
+        try {
+          const result = await apiClient.uploadAudio(
+            audioBlobRef.current,
+            recordingDurationRef.current || 1,
+            contentId,
+            itemIndex
+          );
+          
+          if (result && result.audio_url) {
+            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onClose();
+          } else {
+            throw new Error('No audio URL returned');
+          }
+        } catch (error) {
+          console.error('Upload failed:', error);
+          toast.error('上傳失敗，請重試');
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+      
       const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
       onConfirm(finalUrl, { accent, gender, speed, source: selectedSource });
     } else {
@@ -249,6 +272,33 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
         toast.error('請先生成或錄製音檔');
         return;
       }
+      
+      // 如果是錄音且還沒上傳，現在上傳
+      if (recordedAudio && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
+        setIsUploading(true);
+        try {
+          const result = await apiClient.uploadAudio(
+            audioBlobRef.current,
+            recordingDurationRef.current || 1,
+            contentId,
+            itemIndex
+          );
+          
+          if (result && result.audio_url) {
+            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onClose();
+          } else {
+            throw new Error('No audio URL returned');
+          }
+        } catch (error) {
+          console.error('Upload failed:', error);
+          toast.error('上傳失敗，請重試');
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+      
       const source = recordedAudio ? 'recording' : 'tts';
       onConfirm(finalAudioUrl, { accent, gender, speed, source });
     }
@@ -356,7 +406,7 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
                 className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
                 title="使用免費的 Microsoft Edge TTS 生成語音"
               >
-                {isGenerating ? 'Generating...' : 'Generate (MOCK)'}
+                {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
               {audioUrl && (
                 <Button
@@ -422,7 +472,68 @@ const TTSModal = ({ open, onClose, row, onConfirm }: TTSModalProps) => {
 
               {recordedAudio && !isRecording && (
                 <div className="space-y-4">
-                  <audio controls src={recordedAudio} className="w-full" />
+                  {/* 使用自定義播放按鈕避免瀏覽器相容性問題 */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          console.log('Play button clicked');
+                          console.log('Recorded audio URL:', recordedAudio);
+                          
+                          if (!recordedAudio) {
+                            console.error('No recorded audio URL');
+                            toast.error('沒有錄音可播放');
+                            return;
+                          }
+                          
+                          try {
+                            const audio = new Audio(recordedAudio);
+                            console.log('Audio object created:', audio);
+                            
+                            audio.onloadedmetadata = () => {
+                              console.log('Audio metadata loaded, duration:', audio.duration);
+                            };
+                            
+                            audio.onplay = () => {
+                              console.log('Audio started playing');
+                            };
+                            
+                            audio.onended = () => {
+                              console.log('Audio playback ended');
+                            };
+                            
+                            audio.onerror = (e) => {
+                              console.error('Audio error event:', e);
+                              console.error('Audio error code:', audio.error);
+                              toast.error('播放失敗，請重新錄製');
+                            };
+                            
+                            const playPromise = audio.play();
+                            console.log('Play promise:', playPromise);
+                            
+                            playPromise.then(() => {
+                              console.log('Audio playing successfully');
+                            }).catch(err => {
+                              console.error('Play failed:', err);
+                              console.error('Error name:', err.name);
+                              console.error('Error message:', err.message);
+                              toast.error('無法播放錄音: ' + err.message);
+                            });
+                          } catch (error) {
+                            console.error('Failed to create audio:', error);
+                            toast.error('創建音頻播放器失敗');
+                          }
+                        }}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-gray-600">
+                        錄音長度: {recordingDuration}秒
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <Button onClick={handleStartRecording} variant="outline">
                       <RefreshCw className="h-4 w-4 mr-2" />
@@ -1082,6 +1193,8 @@ export default function ReadingAssessmentPanel({
           onClose={() => setTtsModalOpen(false)}
           row={selectedRow}
           onConfirm={handleTTSConfirm}
+          contentId={editingContent?.id}
+          itemIndex={rows.findIndex(r => r.id === selectedRow.id)}
         />
       )}
     </div>
