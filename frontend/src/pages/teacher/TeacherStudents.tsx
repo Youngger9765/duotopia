@@ -32,24 +32,29 @@ export default function TeacherStudents() {
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getTeacherClassrooms() as Classroom[];
-      setClassrooms(data);
       
-      // Extract real students from classrooms data
-      const studentsWithDetails = data.flatMap(classroom => 
-        classroom.students.map(student => ({
-          ...student,
-          classroom_id: classroom.id,
-          classroom_name: classroom.name,
-          // Set default values for fields that might be missing
-          phone: student.phone || '',
-          birthdate: student.birthdate || '',
-          password_changed: student.password_changed || false,
-          enrollment_date: student.enrollment_date || '',
-          status: student.status || 'active' as const,
-          last_login: student.last_login || null,
-        }))
-      );
+      // Fetch classrooms for the dropdown
+      const classroomData = await apiClient.getTeacherClassrooms() as Classroom[];
+      setClassrooms(classroomData);
+      
+      // Fetch all students (including those without classroom)
+      const studentsData = await apiClient.getAllStudents();
+      
+      // Format students data
+      const studentsWithDetails = studentsData.map((student: any) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        student_id: student.student_id || '',
+        birthdate: student.birthdate || '',
+        phone: student.phone || '',
+        password_changed: student.password_changed || false,
+        enrollment_date: student.enrollment_date || '',
+        status: student.status || 'active' as const,
+        last_login: student.last_login || null,
+        classroom_id: student.classroom_id,
+        classroom_name: student.classroom_name || '未分配',
+      }));
       
       setAllStudents(studentsWithDetails);
     } catch (err) {
@@ -64,7 +69,19 @@ export default function TeacherStudents() {
   // 過濾並排序學生
   const filteredStudents = allStudents
     .filter(student => {
-      const matchesClassroom = !selectedClassroom || student.classroom_id === selectedClassroom;
+      // 班級篩選邏輯
+      let matchesClassroom = true;
+      if (selectedClassroom === null) {
+        // 顯示所有學生
+        matchesClassroom = true;
+      } else if (selectedClassroom === 0) {
+        // 只顯示未分配班級的學生
+        matchesClassroom = !student.classroom_id;
+      } else {
+        // 顯示特定班級的學生
+        matchesClassroom = student.classroom_id === selectedClassroom;
+      }
+      
       const matchesSearch = !searchTerm || 
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -249,11 +266,20 @@ export default function TeacherStudents() {
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-500" />
               <select
-                value={selectedClassroom || ''}
-                onChange={(e) => setSelectedClassroom(e.target.value ? Number(e.target.value) : null)}
+                value={selectedClassroom === null ? '' : (selectedClassroom === 0 ? '0' : selectedClassroom.toString())}
+                onChange={(e) => {
+                  if (e.target.value === '') {
+                    setSelectedClassroom(null); // 所有班級
+                  } else if (e.target.value === '0') {
+                    setSelectedClassroom(0); // 未分配
+                  } else {
+                    setSelectedClassroom(Number(e.target.value));
+                  }
+                }}
                 className="px-3 py-2 border rounded-md text-sm"
               >
                 <option value="">所有班級</option>
+                <option value="0">未分配</option>
                 {classrooms.map((classroom) => (
                   <option key={classroom.id} value={classroom.id}>
                     {classroom.name}

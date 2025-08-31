@@ -59,7 +59,8 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+      // Pass the full error object as JSON string for better error handling
+      throw new Error(JSON.stringify(error));
     }
 
     return response.json();
@@ -374,6 +375,47 @@ class ApiClient {
   async getTTSVoices(language: string = 'en') {
     return this.request(`/api/teachers/tts/voices?language=${language}`, {
       method: 'GET',
+    });
+  }
+
+  // ============ Student Management Methods ============
+  async getAllStudents() {
+    return this.request('/api/teachers/students', {
+      method: 'GET',
+    });
+  }
+
+  async createStudent(data: {
+    name: string;
+    email?: string;
+    birthdate: string;
+    classroom_id?: number;
+    student_id?: string;
+    phone?: string;
+  }) {
+    return this.request('/api/teachers/students', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStudent(studentId: number, data: {
+    name?: string;
+    email?: string;
+    student_id?: string;
+    birthdate?: string;
+    phone?: string;
+    classroom_id?: number;
+  }) {
+    return this.request(`/api/teachers/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStudent(studentId: number) {
+    return this.request(`/api/teachers/students/${studentId}`, {
+      method: 'DELETE',
     });
   }
 

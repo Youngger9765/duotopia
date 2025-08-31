@@ -111,14 +111,19 @@ export function StudentDialogs({
     try {
       if (dialogType === 'create') {
         // Create new student - ensure required fields are present
-        const createData = {
+        const createData: any = {
           name: formData.name || '',
           email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
           birthdate: formData.birthdate || '',
           student_id: formData.student_id,
-          phone: formData.phone,
-          classroom_id: formData.classroom_id
+          phone: formData.phone
         };
+        
+        // classroom_id 是可選的，只有在選擇了班級時才傳送
+        if (formData.classroom_id) {
+          createData.classroom_id = formData.classroom_id;
+        }
+        
         const response = await apiClient.createStudent(createData);
         // 如果有生日，顯示預設密碼
         if (formData.birthdate) {
@@ -133,7 +138,18 @@ export function StudentDialogs({
         } else {
           toast.success(`學生「${formData.name}」已成功新增`);
         }
-        onSave(response as Student);
+        // 只傳遞 Student interface 需要的字段
+        const newStudent: Student = {
+          id: response.id,
+          name: response.name,
+          email: response.email,
+          student_id: response.student_id,
+          birthdate: response.birthdate,
+          password_changed: response.password_changed,
+          classroom_id: response.classroom_id,
+          status: 'active'
+        };
+        onSave(newStudent);
       } else if (dialogType === 'edit' && student) {
         // Update existing student
         const response = await apiClient.updateStudent(student.id, formData);
@@ -141,10 +157,74 @@ export function StudentDialogs({
         onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving student:', error);
-      toast.error('儲存失敗，請稍後再試');
-      setErrors({ submit: '儲存失敗，請稍後再試' });
+      
+      // Parse error message
+      let errorMessage = '儲存失敗，請稍後再試';
+      
+      if (error.message) {
+        try {
+          // Try to parse JSON error response
+          const errorData = JSON.parse(error.message);
+          
+          // Handle Pydantic validation errors
+          if (Array.isArray(errorData.detail)) {
+            const validationErrors = errorData.detail;
+            const fieldErrors: Record<string, string> = {};
+            
+            validationErrors.forEach((err: any) => {
+              const field = err.loc?.[1]; // Get field name from location
+              const msg = err.msg;
+              
+              if (field === 'classroom_id') {
+                // classroom_id is optional, skip this error
+                return;
+              } else if (field === 'name') {
+                fieldErrors.name = '姓名為必填';
+              } else if (field === 'birthdate') {
+                fieldErrors.birthdate = '生日為必填（用作預設密碼）';
+              } else if (field === 'email') {
+                fieldErrors.email = err.msg || 'Email格式錯誤';
+              } else {
+                errorMessage = msg || '資料驗證失敗';
+              }
+            });
+            
+            if (Object.keys(fieldErrors).length > 0) {
+              setErrors(fieldErrors);
+              errorMessage = '請修正標示的欄位';
+            }
+          } else if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail;
+          } else {
+            errorMessage = errorData.detail || errorMessage;
+          }
+        } catch {
+          // If not JSON, use the message directly
+          errorMessage = error.message;
+        }
+      }
+      
+      // Handle specific error cases
+      if (typeof errorMessage === 'string') {
+        if (errorMessage.includes('already registered')) {
+          errorMessage = 'Email已被使用，請使用其他Email';
+          setErrors({ email: errorMessage });
+        } else if (errorMessage.includes('Invalid birthdate format')) {
+          errorMessage = '生日格式錯誤，請使用YYYY-MM-DD格式';
+          setErrors({ birthdate: errorMessage });
+        } else if (errorMessage.includes('Field required')) {
+          errorMessage = '請填寫所有必填欄位';
+        }
+      }
+      
+      // Ensure errorMessage is a string before showing toast
+      if (typeof errorMessage === 'string') {
+        toast.error(errorMessage);
+      } else {
+        toast.error('儲存失敗，請稍後再試');
+      }
     } finally {
       setLoading(false);
     }

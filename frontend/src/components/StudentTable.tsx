@@ -147,16 +147,12 @@ export default function StudentTable({
             </TableHead>
           )}
           <TableHead className="w-[50px] text-left">ID</TableHead>
-          <TableHead className="text-left">學生姓名</TableHead>
-          <TableHead className="text-left">Email</TableHead>
-          {showClassroom && (
-            <TableHead className="text-left">班級</TableHead>
-          )}
-          <TableHead className="text-left">學號</TableHead>
-          <TableHead className="text-left">密碼狀態</TableHead>
-          <TableHead className="text-left">狀態</TableHead>
-          <TableHead className="text-left">最後登入</TableHead>
-          <TableHead className="text-left">操作</TableHead>
+          <TableHead className="text-left min-w-[120px]">學生姓名</TableHead>
+          <TableHead className="text-left min-w-[250px]">聯絡資訊</TableHead>
+          <TableHead className="text-left min-w-[100px] whitespace-nowrap">密碼狀態</TableHead>
+          <TableHead className="text-left w-[80px]">狀態</TableHead>
+          <TableHead className="text-left min-w-[100px] whitespace-nowrap">最後登入</TableHead>
+          <TableHead className="text-left w-[120px]">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -195,47 +191,57 @@ export default function StudentTable({
               </div>
             </TableCell>
             <TableCell>
-              <span className="text-sm">{student.email || '-'}</span>
-            </TableCell>
-            {showClassroom && (
-              <TableCell>{student.classroom_name || '-'}</TableCell>
-            )}
-            <TableCell>{student.student_id || '-'}</TableCell>
-            <TableCell>
-              <div className="flex items-center space-x-2">
-                <div>
-                  {student.password_changed ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      已更改
-                    </span>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        預設密碼
+              <div>
+                <div className="text-sm">{student.email || '-'}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  {showClassroom && (
+                    student.classroom_name ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                        {student.classroom_name}
                       </span>
-                      {student.birthdate && (
-                        <div className="flex items-center space-x-1">
-                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            {student.birthdate.replace(/-/g, '')}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="複製密碼"
-                            onClick={() => {
-                              const password = student.birthdate.replace(/-/g, '');
-                              navigator.clipboard.writeText(password);
-                              toast.success(`密碼 ${password} 已複製到剪貼簿`);
-                            }}
-                            className="h-6 px-1"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                        未分配
+                      </span>
+                    )
+                  )}
+                  {student.student_id && (
+                    <span className="text-xs text-gray-500">#{student.student_id}</span>
                   )}
                 </div>
+              </div>
+            </TableCell>
+            <TableCell className="whitespace-nowrap">
+              <div className="inline-flex items-center space-x-1">
+                {student.password_changed ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 whitespace-nowrap">
+                    已更改
+                  </span>
+                ) : (
+                  <>
+                    <span 
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 cursor-help whitespace-nowrap"
+                      title={student.birthdate ? `預設: ${student.birthdate.replace(/-/g, '')}` : '預設密碼'}
+                    >
+                      預設
+                    </span>
+                    {student.birthdate && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={`複製密碼: ${student.birthdate.replace(/-/g, '')}`}
+                        onClick={() => {
+                          const password = student.birthdate.replace(/-/g, '');
+                          navigator.clipboard.writeText(password);
+                          toast.success(`密碼已複製`);
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </>
+                )}
                 {student.password_changed && onResetPassword && (
                   <Button
                     variant="ghost"
@@ -249,15 +255,15 @@ export default function StudentTable({
                 )}
               </div>
             </TableCell>
-            <TableCell>{getStatusBadge(student.status)}</TableCell>
-            <TableCell>
+            <TableCell className="whitespace-nowrap">{getStatusBadge(student.status)}</TableCell>
+            <TableCell className="whitespace-nowrap">
               {student.last_login ? (
-                <>
-                  <p className="text-sm">{formatDate(student.last_login)}</p>
-                  <p className="text-xs text-gray-500">
+                <div>
+                  <div className="text-sm">{formatDate(student.last_login)}</div>
+                  <div className="text-xs text-gray-500">
                     {Math.floor((Date.now() - new Date(student.last_login).getTime()) / (1000 * 60 * 60 * 24))} 天前
-                  </p>
-                </>
+                  </div>
+                </div>
               ) : '-'}
             </TableCell>
             <TableCell>

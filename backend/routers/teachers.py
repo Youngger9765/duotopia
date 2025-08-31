@@ -326,8 +326,9 @@ class StudentCreate(BaseModel):
     name: str
     email: Optional[str] = None  # Email 改為選填
     birthdate: str  # YYYY-MM-DD format
-    classroom_id: int
+    classroom_id: Optional[int] = None  # 班級改為選填，可以之後再分配
     student_id: Optional[str] = None
+    phone: Optional[str] = None  # 新增 phone 欄位
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
@@ -342,6 +343,73 @@ class StudentUpdate(BaseModel):
 class BatchStudentCreate(BaseModel):
     students: List[Dict[str, Any]]
 
+@router.get("/students")
+async def get_all_students(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """取得教師的所有學生（包含未分配班級的）"""
+    # Get all students created by this teacher or in their classrooms
+    # First, get students in teacher's classrooms
+    students_in_classrooms = db.query(Student).join(
+        ClassroomStudent, Student.id == ClassroomStudent.student_id
+    ).join(
+        Classroom, ClassroomStudent.classroom_id == Classroom.id
+    ).filter(
+        Classroom.teacher_id == current_teacher.id
+    ).all()
+    
+    # Also get students without classroom (created by this teacher)
+    # We need to track which teacher created a student - for now, get all unassigned
+    students_without_classroom = db.query(Student).outerjoin(
+        ClassroomStudent, Student.id == ClassroomStudent.student_id
+    ).filter(
+        ClassroomStudent.id == None
+    ).all()
+    
+    # Combine and deduplicate
+    all_students = list({s.id: s for s in students_in_classrooms + students_without_classroom}.values())
+    
+    # Build response with classroom info
+    result = []
+    for student in all_students:
+        # Get classroom info if exists
+        classroom_student = db.query(ClassroomStudent).filter(
+            ClassroomStudent.student_id == student.id,
+            ClassroomStudent.is_active == True
+        ).join(
+            Classroom
+        ).filter(
+            Classroom.teacher_id == current_teacher.id
+        ).first()
+        
+        classroom_info = None
+        if classroom_student:
+            classroom = db.query(Classroom).filter(
+                Classroom.id == classroom_student.classroom_id
+            ).first()
+            if classroom:
+                classroom_info = {
+                    "id": classroom.id,
+                    "name": classroom.name
+                }
+        
+        result.append({
+            "id": student.id,
+            "name": student.name,
+            "email": student.email,
+            "student_id": student.student_id,
+            "birthdate": student.birthdate.isoformat() if student.birthdate else None,
+            "phone": getattr(student, 'phone', ''),
+            "password_changed": student.password_changed,
+            "last_login": student.last_login.isoformat() if student.last_login else None,
+            "status": "active" if student.is_active else "inactive",
+            "classroom_id": classroom_info["id"] if classroom_info else None,
+            "classroom_name": classroom_info["name"] if classroom_info else "未分配"
+        })
+    
+    return result
+
 @router.post("/students")
 async def create_student(
     student_data: StudentCreate,
@@ -349,17 +417,32 @@ async def create_student(
     db: Session = Depends(get_db)
 ):
     """創建新學生"""
-    # Verify classroom belongs to teacher
-    classroom = db.query(Classroom).filter(
-        Classroom.id == student_data.classroom_id,
-        Classroom.teacher_id == current_teacher.id
-    ).first()
+    # Verify classroom belongs to teacher (only if classroom_id is provided)
+    if student_data.classroom_id:
+        classroom = db.query(Classroom).filter(
+            Classroom.id == student_data.classroom_id,
+            Classroom.teacher_id == current_teacher.id
+        ).first()
+        
+        if not classroom:
+            raise HTTPException(status_code=404, detail="Classroom not found")
     
-    if not classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
+    # Parse birthdate with error handling
+    try:
+        # Try to parse the birthdate
+        birthdate = date.fromisoformat(student_data.birthdate)
+    except ValueError:
+        # If format is wrong, try to handle common formats
+        try:
+            # Try format with slashes
+            from datetime import datetime
+            birthdate = datetime.strptime(student_data.birthdate, "%Y/%m/%d").date()
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid birthdate format. Please use YYYY-MM-DD format"
+            )
     
-    # Parse birthdate
-    birthdate = date.fromisoformat(student_data.birthdate)
     default_password = birthdate.strftime("%Y%m%d")
     
     # Generate unique email if not provided
@@ -370,6 +453,14 @@ async def create_student(
         email = f"student_{timestamp}@duotopia.local"
     else:
         email = student_data.email
+    
+    # Check if email already exists
+    existing_student = db.query(Student).filter(Student.email == email).first()
+    if existing_student:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Email '{email}' is already registered. Please use a different email."
+        )
     
     # Create student
     student = Student(
@@ -383,18 +474,30 @@ async def create_student(
         target_accuracy=0.8,
         is_active=True
     )
-    db.add(student)
-    db.commit()
-    db.refresh(student)
     
-    # Add student to classroom
-    enrollment = ClassroomStudent(
-        classroom_id=student_data.classroom_id,
-        student_id=student.id,
-        is_active=True
-    )
-    db.add(enrollment)
-    db.commit()
+    try:
+        db.add(student)
+        db.commit()
+        db.refresh(student)
+    except Exception as e:
+        db.rollback()
+        # Check if it's a unique constraint violation
+        if "duplicate key" in str(e):
+            raise HTTPException(
+                status_code=422,
+                detail="Email or student ID already exists"
+            )
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    # Add student to classroom (only if classroom_id is provided)
+    if student_data.classroom_id:
+        enrollment = ClassroomStudent(
+            classroom_id=student_data.classroom_id,
+            student_id=student.id,
+            is_active=True
+        )
+        db.add(enrollment)
+        db.commit()
     
     return {
         "id": student.id,
@@ -403,7 +506,9 @@ async def create_student(
         "birthdate": student.birthdate.isoformat(),
         "default_password": default_password,
         "password_changed": False,
-        "classroom_id": student_data.classroom_id
+        "classroom_id": student_data.classroom_id,
+        "student_id": student.student_id,
+        "phone": student_data.phone
     }
 
 @router.get("/students/{student_id}")

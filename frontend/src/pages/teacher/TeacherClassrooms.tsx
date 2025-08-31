@@ -43,6 +43,12 @@ export default function TeacherClassrooms() {
   const [editingClassroom, setEditingClassroom] = useState<ClassroomDetail | null>(null);
   const [editFormData, setEditFormData] = useState({ name: '', description: '', level: '' });
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createFormData, setCreateFormData] = useState({ 
+    name: '', 
+    description: '', 
+    level: 'A1' 
+  });
 
   useEffect(() => {
     fetchClassrooms();
@@ -104,6 +110,18 @@ export default function TeacherClassrooms() {
     }
   };
 
+  const handleCreate = async () => {
+    try {
+      const response = await apiClient.createClassroom(createFormData);
+      // Refresh the list after creation
+      await fetchClassrooms();
+      setShowCreateDialog(false);
+      setCreateFormData({ name: '', description: '', level: 'A1' });
+    } catch (error) {
+      console.error('Error creating classroom:', error);
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -152,7 +170,7 @@ export default function TeacherClassrooms() {
               <RefreshCw className="h-4 w-4 mr-2" />
               重新載入
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               新增班級
             </Button>
@@ -377,6 +395,63 @@ export default function TeacherClassrooms() {
                 onClick={handleDelete}
               >
                 確認刪除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Classroom Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>新增班級</DialogTitle>
+              <DialogDescription>
+                建立新的班級
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">班級名稱</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={createFormData.name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                  placeholder="例如：五年級A班"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">描述</label>
+                <textarea
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                  placeholder="班級描述（選填）"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">級別</label>
+                <select
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  value={createFormData.level}
+                  onChange={(e) => setCreateFormData({ ...createFormData, level: e.target.value })}
+                >
+                  <option value="A1">A1 - 初級</option>
+                  <option value="A2">A2 - 基礎</option>
+                  <option value="B1">B1 - 中級</option>
+                  <option value="B2">B2 - 中高級</option>
+                  <option value="C1">C1 - 高級</option>
+                  <option value="C2">C2 - 精通</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                取消
+              </Button>
+              <Button onClick={handleCreate}>
+                建立
               </Button>
             </DialogFooter>
           </DialogContent>
