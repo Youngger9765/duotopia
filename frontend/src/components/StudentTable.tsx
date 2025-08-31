@@ -229,7 +229,7 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title={`複製密碼: ${student.birthdate.replace(/-/g, '')}`}
+                        title={`複製密碼: ${student.birthdate?.replace(/-/g, '')}`}
                         onClick={() => {
                           const password = student.birthdate.replace(/-/g, '');
                           navigator.clipboard.writeText(password);

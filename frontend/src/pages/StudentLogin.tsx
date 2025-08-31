@@ -83,7 +83,7 @@ export default function StudentLogin() {
       } else {
         setError('找不到此教師帳號');
       }
-    } catch (err) {
+    } catch {
       setError('無法驗證教師帳號，請稍後再試');
     } finally {
       setLoading(false);
@@ -100,7 +100,7 @@ export default function StudentLogin() {
       const studentsData = await teacherService.getClassroomStudents(classroom.id);
       setStudents(studentsData);
       setStep(3);
-    } catch (err) {
+    } catch {
       setError('無法載入班級學生資料');
     } finally {
       setLoading(false);
@@ -129,7 +129,7 @@ export default function StudentLogin() {
         login(response.access_token, response.user);
         navigate('/student/dashboard');
       }
-    } catch (err) {
+    } catch {
       setError('密碼錯誤，請重新輸入');
     } finally {
       setLoading(false);

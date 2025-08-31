@@ -32,7 +32,7 @@ interface AssignmentContent {
   target_accuracy?: number;
 }
 
-interface AssignmentDetail {
+interface AssignmentDetailData {
   id: number;
   title: string;
   instructions?: string;
@@ -47,7 +47,7 @@ export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
+  const [assignment, setAssignment] = useState<AssignmentDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);

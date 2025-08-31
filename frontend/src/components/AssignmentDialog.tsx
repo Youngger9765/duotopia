@@ -273,7 +273,7 @@ export function AssignmentDialog({
       });
 
       const results = await Promise.all(promises);
-      const totalCreated = results.reduce((sum, r: any) => sum + (r.count || 0), 0);
+      const totalCreated = results.reduce((sum, r: { count?: number }) => sum + (r.count || 0), 0);
 
       toast.success(`成功創建 ${totalCreated} 份作業`);
       onSuccess?.();

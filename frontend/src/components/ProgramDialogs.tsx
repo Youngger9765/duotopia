@@ -100,7 +100,7 @@ export function ProgramDialogs({
     setLoading(true);
     try {
       if (dialogType === 'create') {
-        const response = await apiClient.createProgram({
+        await apiClient.createProgram({
           name: formData.name!,
           description: formData.description,
           classroom_id: formData.classroom_id!,
@@ -110,7 +110,7 @@ export function ProgramDialogs({
         toast.success(`課程「${formData.name}」已成功新增`);
         onSave();
       } else if (dialogType === 'edit' && program) {
-        const response = await apiClient.updateProgram(program.id, formData);
+        await apiClient.updateProgram(program.id, formData);
         toast.success(`課程「${formData.name}」已更新`);
         onSave();
       }
@@ -379,7 +379,7 @@ export function ProgramDialogs({
                   <select
                     id="status"
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'archived' })}
                     className="w-full mt-1 px-3 py-2 border rounded-md"
                   >
                     <option value="draft">草稿</option>

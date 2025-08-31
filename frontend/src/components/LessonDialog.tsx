@@ -96,16 +96,16 @@ export function LessonDialog({
           description: formData.description,
           order_index: formData.order_index,
           estimated_minutes: formData.estimated_minutes
-        }) as any;
+        });
         toast.success(`單元「${formData.name}」已新增`);
         onSave(newLesson);
       } else if (dialogType === 'edit' && lesson?.id && programId) {
-        const updatedLesson = await apiClient.updateLesson(programId, lesson.id, {
+        await apiClient.updateLesson(programId, lesson.id, {
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,
           estimated_minutes: formData.estimated_minutes
-        }) as any;
+        });
         toast.success(`單元「${formData.name}」已更新`);
         onSave({ ...lesson, ...formData });
       }

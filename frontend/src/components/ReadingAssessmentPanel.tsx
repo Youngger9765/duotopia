@@ -40,7 +40,7 @@ interface TTSModalProps {
   open: boolean;
   onClose: () => void;
   row: ContentRow;
-  onConfirm: (audioUrl: string, settings: any) => void;
+  onConfirm: (audioUrl: string, settings: { voice?: string; speed?: number }) => void;
   contentId?: number;
   itemIndex?: number;
   isCreating?: boolean; // 是否為新增模式
@@ -99,7 +99,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         setAudioUrl(fullUrl);
         toast.success('音檔生成成功！');
       }
-    } catch (error) {
+    } catch {
       console.error('TTS generation failed:', error);
       toast.error('生成失敗，請重試');
     } finally {
@@ -205,7 +205,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       mediaRecorder.start(100);
       setIsRecording(true);
       toast.success('開始錄音');
-    } catch (error) {
+    } catch {
       toast.error('無法啟動錄音，請檢查麥克風權限');
     }
   };
@@ -265,7 +265,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           } else {
             throw new Error('No audio URL returned');
           }
-        } catch (error) {
+        } catch {
           console.error('Upload failed:', error);
           toast.error('上傳失敗，請重試');
         } finally {
@@ -315,7 +315,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           } else {
             throw new Error('No audio URL returned');
           }
-        } catch (error) {
+        } catch {
           console.error('Upload failed:', error);
           toast.error('上傳失敗，請重試');
         } finally {
@@ -592,9 +592,9 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
 };
 
 interface ReadingAssessmentPanelProps {
-  content?: any;
-  editingContent?: any;
-  onUpdateContent?: (content: any) => void;
+  content?: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
+  editingContent?: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
+  onUpdateContent?: (content: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number }) => void;
   onSave?: () => void;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
@@ -609,10 +609,7 @@ export default function ReadingAssessmentPanel({
   editingContent,
   onUpdateContent,
   onSave,
-  lessonId,
-  contentId,
   onCancel,
-  isOpen = true,
   isCreating = false
 }: ReadingAssessmentPanelProps) {
   const [title, setTitle] = useState('朗讀評測內容');
@@ -649,7 +646,7 @@ export default function ReadingAssessmentPanel({
       
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map((item: any, index: number) => ({
+        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
           id: (index + 1).toString(),
           text: item.text || '',
           definition: item.translation || item.definition || '',
@@ -661,7 +658,7 @@ export default function ReadingAssessmentPanel({
       setLevel(data.level || 'A1');
       setTags(data.tags || []);
       setIsPublic(data.is_public || false);
-    } catch (error) {
+    } catch {
       console.error('Failed to load content:', error);
       toast.error('載入內容失敗');
     } finally {
@@ -761,7 +758,7 @@ export default function ReadingAssessmentPanel({
     setTtsModalOpen(true);
   };
 
-  const handleTTSConfirm = async (audioUrl: string, settings: any) => {
+  const handleTTSConfirm = async (audioUrl: string, settings: { voice?: string; speed?: number }) => {
     if (selectedRow) {
       const index = rows.findIndex(r => r.id === selectedRow.id);
       if (index !== -1) {
@@ -810,7 +807,7 @@ export default function ReadingAssessmentPanel({
             // 更新成功後，重新從後端載入內容以確保同步
             const response = await apiClient.getContentDetail(editingContent.id);
             if (response && response.items) {
-              const updatedRows = response.items.map((item: any, index: number) => ({
+              const updatedRows = response.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
                 id: String(index + 1),
                 text: item.text || '',
                 definition: item.translation || '',
@@ -830,7 +827,7 @@ export default function ReadingAssessmentPanel({
                 tags
               });
             }
-          } catch (error) {
+          } catch {
             console.error('Failed to update content:', error);
             toast.error('更新失敗，但音檔已生成');
           }
@@ -928,13 +925,13 @@ export default function ReadingAssessmentPanel({
             }
             
             toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
-          } catch (error) {
+          } catch {
             console.error('Failed to save TTS:', error);
             toast.error('儲存失敗，但音檔已生成');
           }
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Batch TTS generation failed:', error);
       toast.error('批次生成失敗，請重試');
     }
@@ -957,7 +954,7 @@ export default function ReadingAssessmentPanel({
       newRows[index].definition = response.translation;
       setRows(newRows);
       toast.success('翻譯生成完成');
-    } catch (error) {
+    } catch {
       console.error('Translation error:', error);
       toast.error('翻譯失敗，請稍後再試');
     }
@@ -995,7 +992,7 @@ export default function ReadingAssessmentPanel({
       
       setRows(newRows);
       toast.success('批次翻譯生成完成');
-    } catch (error) {
+    } catch {
       console.error('Batch translation error:', error);
       toast.error('批次翻譯失敗，請稍後再試');
     }

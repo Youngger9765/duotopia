@@ -25,7 +25,7 @@ export default function TeacherLogin() {
     try {
       await apiClient.teacherLogin(formData);
       navigate('/teacher/dashboard');
-    } catch (err) {
+    } catch {
       setError(err instanceof Error ? err.message : '登入失敗，請檢查帳號密碼');
     } finally {
       setIsLoading(false);
@@ -42,7 +42,7 @@ export default function TeacherLogin() {
         password: 'demo123',
       });
       navigate('/teacher/dashboard');
-    } catch (err) {
+    } catch {
       setError('Demo 帳號登入失敗');
     } finally {
       setIsLoading(false);

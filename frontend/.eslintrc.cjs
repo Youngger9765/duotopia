@@ -28,11 +28,11 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
-    
+
     // React rules
     'react/react-in-jsx-scope': 'off', // Not needed in React 17+
     'react/prop-types': 'off', // We use TypeScript for prop validation
-    
+
     // General rules
     'no-undef': 'off', // TypeScript handles this
   },
