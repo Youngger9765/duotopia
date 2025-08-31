@@ -275,18 +275,54 @@ duotopia/
 - ❌ **錯誤**: `test_phase2_api.py`（語意不清）
 - ❌ **錯誤**: `student_test.py`（不符合 pytest 慣例）
 
-### 🔧 測試執行指令
+### 🔧 業界標準測試執行指令
+
+#### NPM Scripts (推薦使用)
 ```bash
-# 執行所有測試
-cd backend && python -m pytest tests/
+# API 測試
+npm run test:api                 # 所有 API 整合測試
+npm run test:api:unit            # 單元測試
+npm run test:api:integration     # 整合測試
+npm run test:api:e2e             # E2E 測試
+npm run test:api:all             # 所有 Python 測試
+npm run test:api:coverage        # 測試覆蓋率報告
 
-# 執行特定類型測試
-cd backend && python -m pytest tests/unit/           # 單元測試
-cd backend && python -m pytest tests/integration/    # 整合測試
-cd backend && python -m pytest tests/e2e/           # E2E 測試
+# 前端測試
+npm run test:e2e                 # Playwright E2E 測試
+npm run test:e2e:ui              # Playwright UI 模式
 
-# 執行特定測試檔案
-cd backend && python -m pytest tests/integration/api/test_student_classroom_assignment.py
+# 完整測試
+npm run test:all                 # 所有測試（Python + Playwright）
+```
+
+#### 直接使用 pytest（進階用法）
+```bash
+cd backend
+
+# 基本測試執行
+pytest                                    # 所有測試（289個）
+pytest -v                                # 詳細輸出
+pytest tests/unit/                       # 只執行單元測試
+pytest tests/integration/api/            # 只執行 API 測試
+
+# 特定測試
+pytest tests/integration/api/test_student_classroom_assignment.py -v
+
+# 測試分類執行
+pytest -m "unit"                         # 執行標記為 unit 的測試
+pytest -m "api and not slow"             # 執行 API 測試但排除慢測試
+
+# 測試覆蓋率
+pytest --cov=. --cov-report=html        # 生成 HTML 覆蓋率報告
+
+# 平行執行（需安裝 pytest-xdist）
+pytest -n auto                          # 自動偵測 CPU 核心數平行執行
+```
+
+#### CI/CD 使用
+```bash
+# GitHub Actions 使用
+pytest --junitxml=test-results.xml
 ```
 
 ### 📋 檢查清單

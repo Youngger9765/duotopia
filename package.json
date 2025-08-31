@@ -3,17 +3,19 @@
   "version": "1.0.0",
   "description": "E2E and API tests for Duotopia",
   "scripts": {
-    "test:api": "python tests/run_all_tests.py",
-    "test:api:teacher": "python tests/api/test_teacher_api.py",
-    "test:api:student": "python tests/api/test_student_api.py",
-    "test:api:classroom": "python tests/api/test_classroom_api.py",
-    "test:api:reorder": "python tests/api/test_reorder_api.py",
+    "test:api": "cd backend && pytest tests/integration/api/ -v",
+    "test:api:unit": "cd backend && pytest tests/unit/ -v",
+    "test:api:integration": "cd backend && pytest tests/integration/ -v",
+    "test:api:e2e": "cd backend && pytest tests/e2e/ -v",
+    "test:api:all": "cd backend && pytest -v",
+    "test:api:coverage": "cd backend && pytest --cov=. --cov-report=html",
+    "test:api:specific": "cd backend && pytest tests/integration/api/test_student_classroom_assignment.py -v",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "test:install": "playwright install",
-    "test:all": "npm run test:api && npm run test:e2e"
+    "test:all": "npm run test:api:all && npm run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"
