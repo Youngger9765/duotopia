@@ -129,9 +129,10 @@ async def get_teacher_classrooms(current_teacher: Teacher = Depends(get_current_
     """取得教師的所有班級"""
     from sqlalchemy import func
     
-    # Get classrooms with students
+    # Get classrooms with students (only active classrooms)
     classrooms = db.query(Classroom).filter(
-        Classroom.teacher_id == current_teacher.id
+        Classroom.teacher_id == current_teacher.id,
+        Classroom.is_active == True  # Only show active classrooms
     ).options(
         selectinload(Classroom.students).selectinload(ClassroomStudent.student)
     ).all()
