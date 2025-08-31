@@ -4,7 +4,7 @@ Phase 1: 基礎指派功能
 """
 
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -13,9 +13,9 @@ from database import get_db
 from models import (
     Teacher, Student, Classroom, ClassroomStudent,
     Content, Lesson, Program,
-    StudentAssignment, AssignmentStatus
+    StudentAssignment, AssignmentStatus, AssignmentSubmission
 )
-from .auth import get_current_user as get_current_teacher
+from .auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["assignments"])
 
@@ -78,7 +78,7 @@ class ContentResponse(BaseModel):
 async def create_assignment(
     request: CreateAssignmentRequest,
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher)
+    current_teacher = Depends(get_current_user)
 ):
     """
     建立作業
@@ -187,7 +187,7 @@ async def create_assignment(
 async def get_classroom_students(
     classroom_id: int,
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher)
+    current_teacher = Depends(get_current_user)
 ):
     """取得班級的學生列表"""
     
@@ -222,7 +222,7 @@ async def get_classroom_students(
 async def get_available_contents(
     classroom_id: Optional[int] = Query(None, description="Filter by classroom"),
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher)
+    current_teacher = Depends(get_current_user)
 ):
     """
     取得可用的 Content 列表
@@ -276,7 +276,7 @@ async def get_teacher_assignments(
     classroom_id: Optional[int] = Query(None, description="Filter by classroom"),
     status: Optional[str] = Query(None, description="Filter by status"),
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher)
+    current_teacher = Depends(get_current_user)
 ):
     """
     取得教師的作業列表
@@ -303,26 +303,26 @@ async def get_teacher_assignments(
     assignments = query.order_by(StudentAssignment.assigned_at.desc()).all()
     
     # 統計資訊
-    from sqlalchemy import func
+    from sqlalchemy import func, case
     stats = db.query(
         StudentAssignment.content_id,
         StudentAssignment.classroom_id,
         StudentAssignment.title,
         func.count(StudentAssignment.id).label("total_count"),
         func.sum(
-            (StudentAssignment.status == AssignmentStatus.NOT_STARTED).cast(int)
+            case((StudentAssignment.status == AssignmentStatus.NOT_STARTED, 1), else_=0)
         ).label("not_started"),
         func.sum(
-            (StudentAssignment.status == AssignmentStatus.IN_PROGRESS).cast(int)
+            case((StudentAssignment.status == AssignmentStatus.IN_PROGRESS, 1), else_=0)
         ).label("in_progress"),
         func.sum(
-            (StudentAssignment.status == AssignmentStatus.SUBMITTED).cast(int)
+            case((StudentAssignment.status == AssignmentStatus.SUBMITTED, 1), else_=0)
         ).label("submitted"),
         func.sum(
-            (StudentAssignment.status == AssignmentStatus.GRADED).cast(int)
+            case((StudentAssignment.status == AssignmentStatus.GRADED, 1), else_=0)
         ).label("graded"),
         func.sum(
-            (StudentAssignment.status == AssignmentStatus.RETURNED).cast(int)
+            case((StudentAssignment.status == AssignmentStatus.RETURNED, 1), else_=0)
         ).label("returned")
     ).join(Classroom).filter(
         Classroom.teacher_id == current_teacher.id
@@ -355,3 +355,231 @@ async def get_teacher_assignments(
         })
     
     return result
+
+
+# ============ Student APIs ============
+
+@router.get("/assignments/student")
+async def get_student_assignments(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    取得學生的作業列表
+    學生只能看到自己的作業
+    """
+    
+    # 確認是學生身份
+    if not isinstance(current_user, Student):
+        raise HTTPException(
+            status_code=403,
+            detail="Only students can access this endpoint"
+        )
+    
+    # 建立查詢
+    query = db.query(StudentAssignment).filter(
+        StudentAssignment.student_id == current_user.id
+    )
+    
+    # 套用篩選條件
+    if status:
+        try:
+            status_enum = AssignmentStatus[status.upper()]
+            query = query.filter(StudentAssignment.status == status_enum)
+        except KeyError:
+            raise HTTPException(status_code=400, detail="Invalid status")
+    
+    # 排序：最新的在前，但即將到期的優先
+    assignments = query.order_by(
+        StudentAssignment.due_date.asc().nullsfirst(),
+        StudentAssignment.assigned_at.desc()
+    ).all()
+    
+    # 組合回應，加入 Content 資訊
+    result = []
+    for assignment in assignments:
+        # 取得 Content 資訊
+        content = db.query(Content).filter(Content.id == assignment.content_id).first()
+        
+        # 計算剩餘時間
+        time_remaining = None
+        is_overdue = False
+        if assignment.due_date:
+            now = datetime.now(timezone.utc)
+            if assignment.due_date < now:
+                is_overdue = True
+                time_remaining = "已過期"
+            else:
+                delta = assignment.due_date - now
+                if delta.days > 0:
+                    time_remaining = f"剩餘 {delta.days} 天"
+                else:
+                    hours = delta.seconds // 3600
+                    if hours > 0:
+                        time_remaining = f"剩餘 {hours} 小時"
+                    else:
+                        minutes = (delta.seconds % 3600) // 60
+                        time_remaining = f"剩餘 {minutes} 分鐘"
+        
+        result.append({
+            "id": assignment.id,
+            "title": assignment.title,
+            "instructions": assignment.instructions,
+            "status": assignment.status.value,
+            "assigned_at": assignment.assigned_at.isoformat() if assignment.assigned_at else None,
+            "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
+            "submitted_at": assignment.submitted_at.isoformat() if assignment.submitted_at else None,
+            "score": assignment.score,
+            "feedback": assignment.feedback,
+            "time_remaining": time_remaining,
+            "is_overdue": is_overdue,
+            "content": {
+                "id": content.id,
+                "title": content.title,
+                "type": content.type.value if hasattr(content.type, 'value') else str(content.type),
+                "items_count": len(content.items) if content.items else 0
+            } if content else None
+        })
+    
+    return result
+
+
+@router.post("/assignments/{assignment_id}/submit")
+async def submit_assignment(
+    assignment_id: int,
+    submission_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    提交作業
+    學生只能提交自己的作業
+    """
+    
+    # 確認是學生身份
+    if not isinstance(current_user, Student):
+        raise HTTPException(
+            status_code=403,
+            detail="Only students can submit assignments"
+        )
+    
+    # 取得作業
+    assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id,
+        StudentAssignment.student_id == current_user.id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found or you don't have permission"
+        )
+    
+    # 檢查作業狀態
+    if assignment.status == AssignmentStatus.GRADED:
+        raise HTTPException(
+            status_code=400,
+            detail="Assignment has already been graded"
+        )
+    
+    # 檢查是否過期（但仍允許提交）
+    is_late = False
+    if assignment.due_date and assignment.due_date < datetime.now(timezone.utc):
+        is_late = True
+    
+    # 更新作業狀態
+    assignment.status = AssignmentStatus.SUBMITTED
+    assignment.submitted_at = datetime.now(timezone.utc)
+    
+    # 檢查是否已有提交記錄
+    submission = db.query(AssignmentSubmission).filter(
+        AssignmentSubmission.assignment_id == assignment_id
+    ).first()
+    
+    if submission:
+        # 更新現有提交
+        submission.submission_data = submission_data
+        submission.submitted_at = datetime.now(timezone.utc)
+    else:
+        # 建立新提交
+        submission = AssignmentSubmission(
+            assignment_id=assignment_id,
+            submission_data=submission_data
+        )
+        db.add(submission)
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "作業提交成功" + ("（遲交）" if is_late else ""),
+        "submission_time": datetime.now().isoformat(),
+        "is_late": is_late
+    }
+
+
+@router.get("/assignments/{assignment_id}/detail")
+async def get_assignment_detail(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    取得作業詳細資訊
+    學生只能查看自己的作業
+    """
+    
+    # 確認是學生身份
+    if not isinstance(current_user, Student):
+        raise HTTPException(
+            status_code=403,
+            detail="Only students can access this endpoint"
+        )
+    
+    # 取得作業
+    assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id,
+        StudentAssignment.student_id == current_user.id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found or you don't have permission"
+        )
+    
+    # 取得 Content 詳細資訊
+    content = db.query(Content).filter(Content.id == assignment.content_id).first()
+    
+    # 取得提交記錄
+    submission = db.query(AssignmentSubmission).filter(
+        AssignmentSubmission.assignment_id == assignment_id
+    ).first()
+    
+    return {
+        "assignment": {
+            "id": assignment.id,
+            "title": assignment.title,
+            "instructions": assignment.instructions,
+            "status": assignment.status.value,
+            "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
+            "score": assignment.score,
+            "feedback": assignment.feedback
+        },
+        "content": {
+            "id": content.id,
+            "title": content.title,
+            "type": content.type.value if hasattr(content.type, 'value') else str(content.type),
+            "items": content.items,
+            "level": content.level,
+            "tags": content.tags
+        } if content else None,
+        "submission": {
+            "id": submission.id,
+            "submitted_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
+            "submission_data": submission.submission_data,
+            "ai_scores": submission.ai_scores,
+            "ai_feedback": submission.ai_feedback
+        } if submission else None
+    }
