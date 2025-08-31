@@ -1321,20 +1321,6 @@ export default function ClassroomDetail() {
                     </tbody>
                   </table>
 
-                  {/* Empty State */}
-                  {false && (
-                    <div className="text-center py-12">
-                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500 mb-4">尚未指派任何作業</p>
-                      <Button
-                        onClick={() => toast.info('作業創建功能開發中...')}
-                        className="bg-blue-500 hover:bg-blue-600"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        指派第一個作業
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             </TabsContent>
