@@ -993,7 +993,9 @@ async def delete_program(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
-    """刪除課程"""
+    """刪除課程 - 使用軟刪除保護資料完整性"""
+    from models import StudentAssignment, Content, Lesson
+    
     program = db.query(Program).filter(
         Program.id == program_id,
         Program.teacher_id == current_teacher.id
@@ -1002,11 +1004,31 @@ async def delete_program(
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
     
-    # Soft delete
+    # 檢查相關資料
+    lesson_count = db.query(Lesson).filter(Lesson.program_id == program_id).count()
+    content_count = db.query(Content).join(Lesson).filter(Lesson.program_id == program_id).count()
+    assignment_count = db.query(StudentAssignment).join(Content).join(Lesson).filter(
+        Lesson.program_id == program_id
+    ).count()
+    
+    # 軟刪除 - 保留資料以供日後參考
     program.is_active = False
     db.commit()
     
-    return {"message": "Program deleted successfully"}
+    return {
+        "message": "Program successfully deactivated (soft delete)",
+        "details": {
+            "program_id": program_id,
+            "program_name": program.name,
+            "deactivated": True,
+            "related_data": {
+                "lessons": lesson_count,
+                "contents": content_count,
+                "assignments": assignment_count
+            },
+            "note": "課程已停用但資料保留，可聯繫管理員恢復"
+        }
+    }
 
 @router.post("/programs/{program_id}/lessons")
 async def add_lesson(
