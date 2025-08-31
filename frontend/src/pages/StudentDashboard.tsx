@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
+import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 import { 
   BookOpen, 
   Trophy, 
@@ -17,10 +19,16 @@ import {
 interface Assignment {
   id: number;
   title: string;
-  type: string;
-  dueDate: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  content_id: number;
+  content?: {
+    type: string;
+    title: string;
+  };
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'RETURNED';
+  due_date?: string;
   score?: number;
+  instructions?: string;
+  created_at: string;
 }
 
 export default function StudentDashboard() {
@@ -44,31 +52,53 @@ export default function StudentDashboard() {
   }, [user, navigate]);
 
   const loadAssignments = async () => {
-    // Mock data - replace with API call
-    setAssignments([
-      {
-        id: 1,
-        title: 'Unit 1: Greetings 問候語練習',
-        type: 'reading_recording',
-        dueDate: '2025-09-01',
-        status: 'pending'
-      },
-      {
-        id: 2,
-        title: 'Unit 2: Numbers 數字練習',
-        type: 'reading_recording',
-        dueDate: '2025-09-05',
-        status: 'pending'
-      },
-      {
-        id: 3,
-        title: 'Daily Conversation 日常對話',
-        type: 'speaking_scenario',
-        dueDate: '2025-08-28',
-        status: 'completed',
-        score: 85
-      }
-    ]);
+    try {
+      const response = await apiClient.get('/api/assignments/student');
+      setAssignments(response.data);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+      toast.error('無法載入作業列表');
+      // Use mock data as fallback
+      setAssignments([
+        {
+          id: 1,
+          title: 'Unit 1: Greetings 問候語練習',
+          content_id: 1,
+          content: {
+            type: 'reading_assessment',
+            title: 'Greetings'
+          },
+          status: 'NOT_STARTED',
+          due_date: '2025-09-01',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: 'Unit 2: Numbers 數字練習',
+          content_id: 2,
+          content: {
+            type: 'reading_assessment',
+            title: 'Numbers'
+          },
+          status: 'NOT_STARTED',
+          due_date: '2025-09-05',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 3,
+          title: 'Daily Conversation 日常對話',
+          content_id: 3,
+          content: {
+            type: 'speaking_scenario',
+            title: 'Daily Conversation'
+          },
+          status: 'GRADED',
+          due_date: '2025-08-28',
+          score: 85,
+          created_at: new Date().toISOString()
+        }
+      ]);
+    }
   };
 
   const loadStats = async () => {
@@ -92,19 +122,22 @@ export default function StudentDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'GRADED': 
+      case 'RETURNED': return 'bg-green-100 text-green-800';
+      case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800';
+      case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
+      case 'NOT_STARTED': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'completed': return '已完成';
-      case 'in_progress': return '進行中';
-      case 'overdue': return '已逾期';
-      case 'pending': return '待完成';
+      case 'NOT_STARTED': return '待完成';
+      case 'IN_PROGRESS': return '進行中';
+      case 'SUBMITTED': return '已提交';
+      case 'GRADED': return '已評分';
+      case 'RETURNED': return '已退回';
       default: return status;
     }
   };
@@ -202,22 +235,32 @@ export default function StudentDashboard() {
                       <Badge className={getStatusColor(assignment.status)}>
                         {getStatusText(assignment.status)}
                       </Badge>
+                      {assignment.content && (
+                        <span className="text-xs text-gray-500">
+                          ({assignment.content.type === 'reading_assessment' ? '朗讀評測' : assignment.content.type})
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        截止日期：{new Date(assignment.dueDate).toLocaleDateString('zh-TW')}
-                      </span>
-                      {assignment.score && (
+                      {assignment.due_date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          截止日期：{new Date(assignment.due_date).toLocaleDateString('zh-TW')}
+                        </span>
+                      )}
+                      {assignment.score !== undefined && (
                         <span className="flex items-center gap-1">
                           <Trophy className="h-3 w-3" />
                           得分：{assignment.score}分
                         </span>
                       )}
                     </div>
+                    {assignment.instructions && (
+                      <p className="text-sm text-gray-500 mt-1">{assignment.instructions}</p>
+                    )}
                   </div>
                   
-                  {assignment.status !== 'completed' && (
+                  {(assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS') && (
                     <Button
                       onClick={() => handleStartAssignment(assignment.id)}
                       className="ml-4"
@@ -227,7 +270,7 @@ export default function StudentDashboard() {
                     </Button>
                   )}
                   
-                  {assignment.status === 'completed' && (
+                  {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
                     <Button
                       variant="outline"
                       onClick={() => handleStartAssignment(assignment.id)}

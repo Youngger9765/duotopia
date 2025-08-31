@@ -3,6 +3,7 @@ Seed data for Duotopia
 建立 Demo 教師、學生、班級、課程、作業
 """
 from datetime import datetime, date, timedelta
+import random
 from sqlalchemy.orm import Session
 from database import engine, Base
 from models import (
@@ -385,56 +386,159 @@ def create_demo_data(db: Session):
     # 注意：課程直接關聯到班級，不再需要 ClassroomProgramMapping
     print("✅ 課程已直接關聯到對應班級")
     
-    # ============ 7. Demo 作業 ============
-    # 給五年級A班派發 Greetings 作業
-    for student in students_5a:
-        assignment1 = StudentAssignment(
-            student_id=student.id,
-            content_id=content1_5a.id,
-            classroom_id=classroom_a.id,
-            title="Greetings 問候語練習",
-            instructions="請練習錄音以下問候語，注意發音準確度",
-            status=AssignmentStatus.NOT_STARTED if student.name != "王小明" else AssignmentStatus.SUBMITTED,
-            due_date=datetime.now() + timedelta(days=7)
-        )
-        db.add(assignment1)
-        
-        # 王小明已完成作業 - 先 flush 以取得 assignment id
-        if student.name == "王小明":
-            db.flush()  # 確保 assignment1 有 id
-            submission = AssignmentSubmission(
-                assignment_id=assignment1.id,
-                submission_data={
-                    "recordings": [
-                        {"text": "Hello", "audio_url": "demo_audio_1.mp3"},
-                        {"text": "Good morning", "audio_url": "demo_audio_2.mp3"}
-                    ]
-                },
-                ai_scores={
-                    "wpm": 65,
-                    "accuracy": 0.82,
-                    "fluency": 0.78
-                },
-                ai_feedback="很好！發音清楚，繼續保持！"
-            )
-            db.add(submission)
-            assignment1.submitted_at = datetime.now()
+    # ============ 7. Demo 作業 (更豐富的測試資料) ============
+    print("📝 建立作業測試資料...")
     
-    # 給六年級B班派發 Numbers 作業
-    for student in students_6b:
-        assignment2 = StudentAssignment(
-            student_id=student.id,
-            content_id=content1_6b.id,
-            classroom_id=classroom_b.id,
-            title="Numbers 數字練習",
-            instructions="請練習錄音數字 1-10，注意語調",
-            status=AssignmentStatus.NOT_STARTED,
-            due_date=datetime.now() + timedelta(days=5)
-        )
-        db.add(assignment2)
+    # 清除舊的作業資料
+    db.query(AssignmentSubmission).delete()
+    db.query(StudentAssignment).delete()
+    db.commit()
+    
+    assignment_count = 0
+    
+    # 五年級A班的作業
+    contents_5a = [content1_5a, content2_5a]
+    for i, content in enumerate(contents_5a):
+        # 決定作業的時間和狀態
+        if i == 0:
+            # 已過期的作業
+            due_date = datetime.now() - timedelta(days=2)
+            title = f"[已過期] {content.title}"
+            instructions = "這是一個已過期的作業測試"
+        else:
+            # 即將到期的作業（24小時內）
+            due_date = datetime.now() + timedelta(hours=20)
+            title = f"[即將到期] {content.title}"
+            instructions = "請盡快完成此作業，即將到期！"
+        
+        # 為每個學生建立作業
+        for j, student in enumerate(students_5a):
+            # 設定不同的狀態
+            if i == 0:  # 過期作業
+                if j == 0:  # 王小明
+                    status = AssignmentStatus.GRADED
+                    score = random.randint(80, 95)
+                    feedback = "做得很好！繼續加油！"
+                elif j == 1:  # 李小美
+                    status = AssignmentStatus.SUBMITTED
+                    score = None
+                    feedback = None
+                else:
+                    status = AssignmentStatus.NOT_STARTED
+                    score = None
+                    feedback = None
+            else:  # 即將到期
+                if j == 0:  # 王小明
+                    status = AssignmentStatus.SUBMITTED
+                    score = None
+                    feedback = None
+                elif j == 1:  # 李小美
+                    status = AssignmentStatus.IN_PROGRESS
+                    score = None
+                    feedback = None
+                else:
+                    status = AssignmentStatus.NOT_STARTED
+                    score = None
+                    feedback = None
+            
+            # 建立作業
+            assignment = StudentAssignment(
+                student_id=student.id,
+                content_id=content.id,
+                classroom_id=classroom_a.id,
+                title=title,
+                instructions=instructions,
+                status=status,
+                due_date=due_date,
+                score=score,
+                feedback=feedback
+            )
+            
+            # 如果是已提交或已批改的，設定提交時間
+            if status in [AssignmentStatus.SUBMITTED, AssignmentStatus.GRADED]:
+                assignment.submitted_at = datetime.now() - timedelta(days=1)
+            
+            # 如果是已批改的，設定批改時間
+            if status == AssignmentStatus.GRADED:
+                assignment.graded_at = datetime.now() - timedelta(hours=12)
+            
+            db.add(assignment)
+            assignment_count += 1
+            
+            # 如果作業已提交，建立提交記錄
+            if status in [AssignmentStatus.SUBMITTED, AssignmentStatus.GRADED]:
+                db.flush()  # 確保 assignment 有 id
+                
+                submission = AssignmentSubmission(
+                    assignment_id=assignment.id,
+                    submission_data={
+                        "audio_urls": [
+                            f"gs://duotopia-audio/demo/{student.id}/recording_{k}.mp3"
+                            for k in range(3)
+                        ]
+                    },
+                    ai_scores={
+                        "wpm": random.randint(60, 120),
+                        "accuracy": round(random.uniform(0.7, 0.95), 2),
+                        "fluency": round(random.uniform(0.6, 0.9), 2),
+                        "pronunciation": round(random.uniform(0.65, 0.95), 2)
+                    } if status == AssignmentStatus.GRADED else None,
+                    ai_feedback="AI 評分：發音清晰，語調自然。建議加強連音練習。" if status == AssignmentStatus.GRADED else None
+                )
+                db.add(submission)
+    
+    # 六年級B班的作業
+    contents_6b = [content1_6b, content2_6b]
+    for content in contents_6b[:1]:  # 只用第一個 Content
+        # 正常的作業（7天後到期）
+        due_date = datetime.now() + timedelta(days=7)
+        title = f"{content.title} - 練習作業"
+        instructions = "請認真完成練習，注意發音準確度"
+        
+        for j, student in enumerate(students_6b):
+            if j == 0:
+                status = AssignmentStatus.RETURNED  # 需修正
+                score = 65
+                feedback = "請重新錄音第2和第3題，注意發音"
+            elif j == 1:
+                status = AssignmentStatus.IN_PROGRESS
+                score = None
+                feedback = None
+            else:
+                status = AssignmentStatus.NOT_STARTED
+                score = None
+                feedback = None
+            
+            assignment = StudentAssignment(
+                student_id=student.id,
+                content_id=content.id,
+                classroom_id=classroom_b.id,
+                title=title,
+                instructions=instructions,
+                status=status,
+                due_date=due_date,
+                score=score,
+                feedback=feedback
+            )
+            
+            if status == AssignmentStatus.RETURNED:
+                assignment.submitted_at = datetime.now() - timedelta(days=2)
+                assignment.graded_at = datetime.now() - timedelta(days=1)
+            
+            db.add(assignment)
+            assignment_count += 1
     
     db.commit()
-    print("✅ 建立作業並派發給學生")
+    print(f"✅ 建立 {assignment_count} 個作業記錄")
+    
+    # 顯示統計
+    print("\n📊 作業統計：")
+    for status in AssignmentStatus:
+        count = db.query(StudentAssignment).filter(
+            StudentAssignment.status == status
+        ).count()
+        if count > 0:
+            print(f"  - {status.value}: {count} 個")
     
     print("\n" + "="*50)
     print("🎉 Demo 資料建立完成！")

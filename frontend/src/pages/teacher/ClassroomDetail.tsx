@@ -11,6 +11,7 @@ import { LessonDialog } from '@/components/LessonDialog';
 import CopyProgramDialog from '@/components/CopyProgramDialog';
 import ContentTypeDialog from '@/components/ContentTypeDialog';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
+import { AssignmentDialog } from '@/components/AssignmentDialog';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
@@ -98,6 +99,10 @@ export default function ClassroomDetail() {
   // Drag states
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
   const [draggedLesson, setDraggedLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
+  
+  // Assignment states
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [dropIndicatorProgram, setDropIndicatorProgram] = useState<number | null>(null);
   const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
 
@@ -105,6 +110,7 @@ export default function ClassroomDetail() {
     if (id) {
       fetchClassroomDetail();
       fetchPrograms();
+      fetchAssignments();
     }
   }, [id]);
 
@@ -158,6 +164,15 @@ export default function ClassroomDetail() {
     }
   };
 
+  const fetchAssignments = async () => {
+    try {
+      const response = await apiClient.get(`/api/assignments/teacher?classroom_id=${id}`);
+      setAssignments(response.data);
+    } catch (err) {
+      console.error('Failed to fetch assignments:', err);
+      setAssignments([]);
+    }
+  };
 
   const handleContentClick = (content: any) => {
     // 如果點擊的是同一個 content，則關閉 panel
@@ -680,7 +695,7 @@ export default function ClassroomDetail() {
         <div className="bg-white rounded-lg shadow-sm border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b bg-gray-50 px-6 py-3">
-              <TabsList className="grid w-full max-w-[500px] grid-cols-2 h-12 bg-white border">
+              <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-12 bg-white border">
                 <TabsTrigger 
                   value="students" 
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
@@ -694,6 +709,13 @@ export default function ClassroomDetail() {
                 >
                   <BookOpen className="h-5 w-5 mr-2" />
                   課程列表
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="assignments"
+                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  作業管理
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1172,6 +1194,128 @@ export default function ClassroomDetail() {
                 </div>
               )}
             </TabsContent>
+
+            {/* Assignments Tab */}
+            <TabsContent value="assignments" className="p-6">
+              <div className="space-y-6">
+                {/* Header with Create Button */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">作業列表</h3>
+                  <Button 
+                    onClick={() => setShowAssignmentDialog(true)}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    指派新作業
+                  </Button>
+                </div>
+
+                {/* Assignment Stats */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">總作業數</div>
+                    <div className="text-2xl font-bold text-blue-600">12</div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">已完成</div>
+                    <div className="text-2xl font-bold text-green-600">8</div>
+                  </div>
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">進行中</div>
+                    <div className="text-2xl font-bold text-yellow-600">3</div>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">已逾期</div>
+                    <div className="text-2xl font-bold text-red-600">1</div>
+                  </div>
+                </div>
+
+                {/* Assignment List */}
+                <div className="border rounded-lg">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">作業標題</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">內容類型</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">指派對象</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">截止日期</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">完成狀態</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="font-medium">Unit 1 朗讀練習</div>
+                          <div className="text-sm text-gray-500">請朗讀課文第一段</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            朗讀評測
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">全班</td>
+                        <td className="px-4 py-3 text-sm">2025-09-05</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-green-500 h-2 rounded-full" style={{width: '75%'}}></div>
+                            </div>
+                            <span className="text-sm text-gray-600">75%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                            查看詳情
+                          </Button>
+                        </td>
+                      </tr>
+                      <tr className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="font-medium">Daily Conversation 對話練習</div>
+                          <div className="text-sm text-gray-500">與 AI 進行日常對話</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            口說練習
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">個人 (5人)</td>
+                        <td className="px-4 py-3 text-sm">2025-09-10</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-green-500 h-2 rounded-full" style={{width: '40%'}}></div>
+                            </div>
+                            <span className="text-sm text-gray-600">40%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                            查看詳情
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  
+                  {/* Empty State */}
+                  {false && (
+                    <div className="text-center py-12">
+                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500 mb-4">尚未指派任何作業</p>
+                      <Button 
+                        onClick={() => toast.info('作業創建功能開發中...')}
+                        className="bg-blue-500 hover:bg-blue-600"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        指派第一個作業
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
         </div>
@@ -1383,6 +1527,17 @@ export default function ClassroomDetail() {
           fetchPrograms(); // Refresh programs after copying
         }}
         classroomId={Number(id)}
+      />
+
+      {/* Assignment Dialog */}
+      <AssignmentDialog
+        open={showAssignmentDialog}
+        onClose={() => setShowAssignmentDialog(false)}
+        classroomId={Number(id)}
+        students={students}
+        onSuccess={() => {
+          fetchAssignments(); // Refresh assignments after creating
+        }}
       />
 
       {/* Content Type Dialog */}

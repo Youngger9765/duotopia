@@ -54,6 +54,11 @@ logs/
 # Coverage
 coverage/
 *.lcov
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+.pytest_cache/
 
 # Dependencies
 .yarn/
