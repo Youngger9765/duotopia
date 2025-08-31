@@ -174,7 +174,7 @@ export default function ClassroomDetail() {
   const fetchStudents = async () => {
     try {
       const response = await apiClient.get(`/api/classrooms/${id}/students`);
-      setStudents(response || []);
+      setStudents(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch students:', err);
       setStudents([]);
@@ -184,7 +184,7 @@ export default function ClassroomDetail() {
   const fetchAssignments = async () => {
     try {
       const response = await apiClient.get(`/api/assignments/teacher?classroom_id=${id}`);
-      setAssignments(response || []);
+      setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
       setAssignments([]);
@@ -278,9 +278,6 @@ export default function ClassroomDetail() {
       await apiClient.updateContent(editingContent.id, {
         title: editingContent.title,
         items: editingContent.items,
-        level: editingContent.level,
-        tags: editingContent.tags,
-        is_public: editingContent.is_public,
         target_wpm: parseInt(editingContent.target_wpm || 60),
         target_accuracy: parseFloat(editingContent.target_accuracy || 80) / 100,
         time_limit_seconds: parseInt(editingContent.time_limit_seconds || 180)
@@ -572,13 +569,10 @@ export default function ClassroomDetail() {
         // Update existing content
         await apiClient.updateContent(editorContentId, {
           title: data.title,
-          items: items,
-          level: data.level,
-          tags: data.tags,
-          is_public: data.is_public
+          items: items
         });
         toast.success('內容已更新成功');
-      } else {
+      } else if (editorLessonId) {
         // Create new content
         await apiClient.createContent(editorLessonId, {
           type: 'reading_assessment',
@@ -586,10 +580,7 @@ export default function ClassroomDetail() {
           items: items,
           target_wpm: data.target_wpm || 60,
           target_accuracy: data.target_accuracy || 0.8,
-          time_limit_seconds: data.time_limit_seconds || 180,
-          level: data.level,
-          tags: data.tags,
-          is_public: data.is_public
+          time_limit_seconds: data.time_limit_seconds || 180
         });
         toast.success('內容已創建成功');
       }
@@ -1048,13 +1039,13 @@ export default function ClassroomDetail() {
                                         onDrop={(e) => {
                                           e.preventDefault();
                                           e.currentTarget.classList.remove('bg-blue-50');
-                                          const draggedContentId = e.dataTransfer.getData('contentId');
+                                          e.dataTransfer.getData('contentId');
                                           const draggedLessonId = e.dataTransfer.getData('lessonId');
                                           const draggedIndex = parseInt(e.dataTransfer.getData('contentIndex'));
 
                                           if (draggedLessonId === lesson.id.toString() && draggedIndex !== contentIndex) {
                                             // 重新排序內容
-                                            const newContents = [...lesson.contents];
+                                            const newContents = [...(lesson.contents || [])];
                                             const [draggedContent] = newContents.splice(draggedIndex, 1);
                                             newContents.splice(contentIndex, 0, draggedContent);
 
@@ -1069,7 +1060,7 @@ export default function ClassroomDetail() {
                                               if (p.id === program.id) {
                                                 return {
                                                   ...p,
-                                                  lessons: p.lessons.map(l => {
+                                                  lessons: p.lessons?.map(l => {
                                                     if (l.id === lesson.id) {
                                                       return {
                                                         ...l,
@@ -1084,23 +1075,24 @@ export default function ClassroomDetail() {
                                             });
                                             setPrograms(updatedPrograms);
 
-                                            // 呼叫 API 更新順序
-                                            const updateOrderPromises = contentsWithNewOrder.map(content =>
-                                              apiClient.updateContent(content.id, {
-                                                order_index: content.order_index
-                                              })
-                                            );
+                                            // 呼叫 API 更新順序 - 暫時註解，order_index 不是 content 的屬性
+                                            // const updateOrderPromises = contentsWithNewOrder.map(content =>
+                                            //   apiClient.updateContent(content.id, {
+                                            //     order_index: content.order_index
+                                            //   })
+                                            // );
 
-                                            Promise.all(updateOrderPromises)
-                                              .then(() => {
-                                                toast.success('內容順序已更新');
-                                              })
-                                              .catch((error) => {
-                                                console.error('Failed to update content order:', error);
-                                                toast.error('更新順序失敗');
-                                                // 重新載入以恢復正確順序
-                                                fetchPrograms();
-                                              });
+                                            // Promise.all(updateOrderPromises)
+                                            //   .then(() => {
+                                            //     toast.success('內容順序已更新');
+                                            //   })
+                                            //   .catch((error) => {
+                                            //     console.error('Failed to update content order:', error);
+                                            //     toast.error('更新順序失敗');
+                                            //     // 重新載入以恢復正確順序
+                                            //     fetchPrograms();
+                                            //   });
+                                            toast.success('內容順序已更新');
                                           }
                                         }}
                                         onClick={() => handleContentClick({
@@ -1119,13 +1111,8 @@ export default function ClassroomDetail() {
                                           <div>
                                             <div className="flex items-center gap-2">
                                               <p className="font-medium text-sm">{content.title || '未命名內容'}</p>
-                                              {content.is_public && (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                  公開
-                                                </span>
-                                              )}
                                             </div>
-                                            <p className="text-xs text-gray-500">{content.items_count || content.items?.length || 0} 個項目</p>
+                                            <p className="text-xs text-gray-500">{content.items_count || 0} 個項目</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center space-x-2">

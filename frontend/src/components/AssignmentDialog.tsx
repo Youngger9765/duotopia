@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
@@ -16,13 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import {
-  CalendarIcon,
   Users,
-  User,
   ChevronRight,
   ChevronDown,
   BookOpen,
@@ -34,7 +30,6 @@ import {
   ChevronLeft,
   ArrowRight,
   Check,
-  AlertCircle,
   Calendar as CalendarIconAlt,
   Clock,
   MessageSquare
@@ -278,12 +273,12 @@ export function AssignmentDialog({
       });
 
       const results = await Promise.all(promises);
-      const totalCreated = results.reduce((sum, r) => sum + (r.count || 0), 0);
+      const totalCreated = results.reduce((sum, r: any) => sum + (r.count || 0), 0);
 
       toast.success(`成功創建 ${totalCreated} 份作業`);
       onSuccess?.();
       handleClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create assignments:', error);
       toast.error('創建作業失敗');
     } finally {
