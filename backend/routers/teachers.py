@@ -340,6 +340,7 @@ class StudentUpdate(BaseModel):
     status: Optional[str] = None
     target_wpm: Optional[int] = None
     target_accuracy: Optional[float] = None
+    classroom_id: Optional[int] = None  # 新增班級分配功能
 
 class BatchStudentCreate(BaseModel):
     students: List[Dict[str, Any]]
@@ -357,7 +358,8 @@ async def get_all_students(
     ).join(
         Classroom, ClassroomStudent.classroom_id == Classroom.id
     ).filter(
-        Classroom.teacher_id == current_teacher.id
+        Classroom.teacher_id == current_teacher.id,
+        Student.is_active == True  # Only show active students
     ).all()
     
     # Also get students without classroom (created by this teacher)
@@ -365,7 +367,8 @@ async def get_all_students(
     students_without_classroom = db.query(Student).outerjoin(
         ClassroomStudent, Student.id == ClassroomStudent.student_id
     ).filter(
-        ClassroomStudent.id == None
+        ClassroomStudent.id == None,
+        Student.is_active == True  # Only show active students
     ).all()
     
     # Combine and deduplicate
@@ -519,8 +522,11 @@ async def get_student(
     db: Session = Depends(get_db)
 ):
     """取得單一學生資料"""
-    # First check if student exists
-    student = db.query(Student).filter(Student.id == student_id).first()
+    # First check if student exists and is active
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.is_active == True
+    ).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -559,8 +565,11 @@ async def update_student(
     db: Session = Depends(get_db)
 ):
     """更新學生資料"""
-    # First check if student exists
-    student = db.query(Student).filter(Student.id == student_id).first()
+    # First check if student exists and is active
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.is_active == True
+    ).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -609,6 +618,37 @@ async def update_student(
     if update_data.target_accuracy is not None:
         student.target_accuracy = update_data.target_accuracy
     
+    # Handle classroom assignment
+    if update_data.classroom_id is not None:
+        # First, remove student from current classroom (if any)
+        existing_enrollment = db.query(ClassroomStudent).filter(
+            ClassroomStudent.student_id == student_id,
+            ClassroomStudent.is_active == True
+        ).first()
+        
+        if existing_enrollment:
+            existing_enrollment.is_active = False
+        
+        # If classroom_id is provided (not 0 or empty), assign to new classroom
+        if update_data.classroom_id > 0:
+            # Verify classroom belongs to teacher
+            classroom = db.query(Classroom).filter(
+                Classroom.id == update_data.classroom_id,
+                Classroom.teacher_id == current_teacher.id,
+                Classroom.is_active == True
+            ).first()
+            
+            if not classroom:
+                raise HTTPException(status_code=404, detail="Classroom not found")
+            
+            # Create new enrollment
+            new_enrollment = ClassroomStudent(
+                classroom_id=update_data.classroom_id,
+                student_id=student_id,
+                is_active=True
+            )
+            db.add(new_enrollment)
+    
     db.commit()
     db.refresh(student)
     
@@ -626,8 +666,11 @@ async def delete_student(
     db: Session = Depends(get_db)
 ):
     """刪除學生"""
-    # First check if student exists
-    student = db.query(Student).filter(Student.id == student_id).first()
+    # First check if student exists and is active
+    student = db.query(Student).filter(
+        Student.id == student_id,
+        Student.is_active == True
+    ).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
