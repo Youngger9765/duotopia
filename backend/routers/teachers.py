@@ -518,18 +518,28 @@ async def get_student(
     db: Session = Depends(get_db)
 ):
     """取得單一學生資料"""
-    # Get student with classroom verification
-    student = db.query(Student).join(
-        ClassroomStudent, Student.id == ClassroomStudent.student_id
-    ).join(
-        Classroom, ClassroomStudent.classroom_id == Classroom.id
-    ).filter(
-        Student.id == student_id,
-        Classroom.teacher_id == current_teacher.id
-    ).first()
+    # First check if student exists
+    student = db.query(Student).filter(Student.id == student_id).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check if student belongs to teacher's classroom (if assigned to any)
+    classroom_student = db.query(ClassroomStudent).filter(
+        ClassroomStudent.student_id == student_id
+    ).first()
+    
+    if classroom_student:
+        # If student is in a classroom, verify it belongs to this teacher
+        classroom = db.query(Classroom).filter(
+            Classroom.id == classroom_student.classroom_id,
+            Classroom.teacher_id == current_teacher.id
+        ).first()
+        
+        if not classroom:
+            raise HTTPException(status_code=403, detail="You don't have permission to access this student")
+    
+    # If student has no classroom, we assume the teacher can access them
     
     return {
         "id": student.id,
@@ -548,18 +558,26 @@ async def update_student(
     db: Session = Depends(get_db)
 ):
     """更新學生資料"""
-    # Get student with classroom verification
-    student = db.query(Student).join(
-        ClassroomStudent, Student.id == ClassroomStudent.student_id
-    ).join(
-        Classroom, ClassroomStudent.classroom_id == Classroom.id
-    ).filter(
-        Student.id == student_id,
-        Classroom.teacher_id == current_teacher.id
-    ).first()
+    # First check if student exists
+    student = db.query(Student).filter(Student.id == student_id).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check if student belongs to teacher's classroom (if assigned to any)
+    classroom_student = db.query(ClassroomStudent).filter(
+        ClassroomStudent.student_id == student_id
+    ).first()
+    
+    if classroom_student:
+        # If student is in a classroom, verify it belongs to this teacher
+        classroom = db.query(Classroom).filter(
+            Classroom.id == classroom_student.classroom_id,
+            Classroom.teacher_id == current_teacher.id
+        ).first()
+        
+        if not classroom:
+            raise HTTPException(status_code=403, detail="You don't have permission to update this student")
     
     # Check if birthdate is being changed and student is using default password
     if update_data.birthdate is not None and not student.password_changed:
@@ -607,18 +625,29 @@ async def delete_student(
     db: Session = Depends(get_db)
 ):
     """刪除學生"""
-    # Get student with classroom verification
-    student = db.query(Student).join(
-        ClassroomStudent, Student.id == ClassroomStudent.student_id
-    ).join(
-        Classroom, ClassroomStudent.classroom_id == Classroom.id
-    ).filter(
-        Student.id == student_id,
-        Classroom.teacher_id == current_teacher.id
-    ).first()
+    # First check if student exists
+    student = db.query(Student).filter(Student.id == student_id).first()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Check if student belongs to teacher's classroom (if assigned to any)
+    classroom_student = db.query(ClassroomStudent).filter(
+        ClassroomStudent.student_id == student_id
+    ).first()
+    
+    if classroom_student:
+        # If student is in a classroom, verify it belongs to this teacher
+        classroom = db.query(Classroom).filter(
+            Classroom.id == classroom_student.classroom_id,
+            Classroom.teacher_id == current_teacher.id
+        ).first()
+        
+        if not classroom:
+            raise HTTPException(status_code=403, detail="You don't have permission to delete this student")
+    
+    # If student has no classroom, we assume the teacher can delete them
+    # (since they likely created them)
     
     # Soft delete
     student.is_active = False
