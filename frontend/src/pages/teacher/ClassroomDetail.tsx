@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
@@ -104,6 +107,8 @@ export default function ClassroomDetail() {
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [dropIndicatorProgram, setDropIndicatorProgram] = useState<number | null>(null);
   const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
 
@@ -168,8 +173,8 @@ export default function ClassroomDetail() {
 
   const fetchStudents = async () => {
     try {
-      const response = await apiClient.get(`/api/teachers/classrooms/${id}/students`);
-      setStudents(response.data || []);
+      const response = await apiClient.get(`/api/classrooms/${id}/students`);
+      setStudents(response || []);
     } catch (err) {
       console.error('Failed to fetch students:', err);
       setStudents([]);
@@ -179,7 +184,7 @@ export default function ClassroomDetail() {
   const fetchAssignments = async () => {
     try {
       const response = await apiClient.get(`/api/assignments/teacher?classroom_id=${id}`);
-      setAssignments(response.data);
+      setAssignments(response || []);
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
       setAssignments([]);
@@ -1222,23 +1227,29 @@ export default function ClassroomDetail() {
                   </Button>
                 </div>
 
-                {/* Assignment Stats */}
+                {/* Assignment Stats - Using Real Data */}
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-blue-50 rounded-lg p-4">
                     <div className="text-sm text-gray-600">總作業數</div>
-                    <div className="text-2xl font-bold text-blue-600">12</div>
+                    <div className="text-2xl font-bold text-blue-600">{assignments.length}</div>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <div className="text-sm text-gray-600">已完成</div>
-                    <div className="text-2xl font-bold text-green-600">8</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {assignments.filter(a => a.status === 'completed').length}
+                    </div>
                   </div>
                   <div className="bg-yellow-50 rounded-lg p-4">
                     <div className="text-sm text-gray-600">進行中</div>
-                    <div className="text-2xl font-bold text-yellow-600">3</div>
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {assignments.filter(a => a.status === 'in_progress' || a.status === 'not_started').length}
+                    </div>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4">
                     <div className="text-sm text-gray-600">已逾期</div>
-                    <div className="text-2xl font-bold text-red-600">1</div>
+                    <div className="text-2xl font-bold text-red-600">
+                      {assignments.filter(a => a.status === 'overdue').length}
+                    </div>
                   </div>
                 </div>
 
@@ -1256,58 +1267,70 @@ export default function ClassroomDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="font-medium">Unit 1 朗讀練習</div>
-                          <div className="text-sm text-gray-500">請朗讀課文第一段</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            朗讀評測
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">全班</td>
-                        <td className="px-4 py-3 text-sm">2025-09-05</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-green-500 h-2 rounded-full" style={{width: '75%'}}></div>
-                            </div>
-                            <span className="text-sm text-gray-600">75%</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                            查看詳情
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="font-medium">Daily Conversation 對話練習</div>
-                          <div className="text-sm text-gray-500">與 AI 進行日常對話</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            口說練習
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">個人 (5人)</td>
-                        <td className="px-4 py-3 text-sm">2025-09-10</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-green-500 h-2 rounded-full" style={{width: '40%'}}></div>
-                            </div>
-                            <span className="text-sm text-gray-600">40%</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                            查看詳情
-                          </Button>
-                        </td>
-                      </tr>
+                      {assignments.length > 0 ? (
+                        assignments.map((assignment) => {
+                          const completionRate = assignment.completion_rate || 0;
+                          const contentTypeLabels: Record<string, { label: string; color: string }> = {
+                            'READING_ASSESSMENT': { label: '朗讀評測', color: 'bg-blue-100 text-blue-800' },
+                            'SPEAKING_PRACTICE': { label: '口說練習', color: 'bg-purple-100 text-purple-800' },
+                            'SPEAKING_SCENARIO': { label: '情境對話', color: 'bg-green-100 text-green-800' },
+                            'LISTENING_CLOZE': { label: '聽力填空', color: 'bg-orange-100 text-orange-800' },
+                            'SENTENCE_MAKING': { label: '造句練習', color: 'bg-indigo-100 text-indigo-800' },
+                            'SPEAKING_QUIZ': { label: '口說測驗', color: 'bg-red-100 text-red-800' },
+                          };
+                          const typeInfo = contentTypeLabels[assignment.content_type] || { label: assignment.content_type, color: 'bg-gray-100 text-gray-800' };
+
+                          return (
+                            <tr key={assignment.id} className="border-b hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <div className="font-medium">{assignment.title}</div>
+                                <div className="text-sm text-gray-500">{assignment.instructions || '無說明'}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>
+                                  {typeInfo.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {assignment.student_count ? `${assignment.student_count} 人` : '全班'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('zh-TW') : '無期限'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-green-500 h-2 rounded-full"
+                                      style={{width: `${completionRate}%`}}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm text-gray-600">{completionRate}%</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-blue-700"
+                                  onClick={() => {
+                                    setSelectedAssignment(assignment);
+                                    setShowAssignmentDetails(true);
+                                  }}
+                                >
+                                  查看詳情
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                            尚未指派任何作業
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
 
@@ -1551,6 +1574,153 @@ export default function ClassroomDetail() {
           fetchAssignments(); // Refresh assignments after creating
         }}
       />
+
+      {/* Assignment Details Dialog */}
+      {showAssignmentDetails && selectedAssignment && (
+        <Dialog open={showAssignmentDetails} onOpenChange={setShowAssignmentDetails}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                作業詳情：{selectedAssignment.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-600">內容類型</Label>
+                  <p className="font-medium">
+                    {(() => {
+                      const contentTypeLabels: Record<string, string> = {
+                        'READING_ASSESSMENT': '朗讀評測',
+                        'SPEAKING_PRACTICE': '口說練習',
+                        'SPEAKING_SCENARIO': '情境對話',
+                        'LISTENING_CLOZE': '聽力填空',
+                        'SENTENCE_MAKING': '造句練習',
+                        'SPEAKING_QUIZ': '口說測驗',
+                      };
+                      return contentTypeLabels[selectedAssignment.content_type] || selectedAssignment.content_type;
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">指派日期</Label>
+                  <p className="font-medium">
+                    {selectedAssignment.assigned_at ? new Date(selectedAssignment.assigned_at).toLocaleDateString('zh-TW') : '未設定'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">截止日期</Label>
+                  <p className="font-medium">
+                    {selectedAssignment.due_date ? new Date(selectedAssignment.due_date).toLocaleDateString('zh-TW') : '無期限'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">指派學生數</Label>
+                  <p className="font-medium">{selectedAssignment.student_count || 0} 人</p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {selectedAssignment.instructions && (
+                <div>
+                  <Label className="text-sm text-gray-600">作業說明</Label>
+                  <Card className="p-4 mt-2 bg-gray-50">
+                    <p className="text-sm">{selectedAssignment.instructions}</p>
+                  </Card>
+                </div>
+              )}
+
+              {/* Progress */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-3 block">完成進度</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">整體完成率</span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {selectedAssignment.completion_rate || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all"
+                      style={{width: `${selectedAssignment.completion_rate || 0}%`}}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Distribution */}
+              {selectedAssignment.status_distribution && (
+                <div>
+                  <Label className="text-sm text-gray-600 mb-3 block">狀態分佈</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Card className="p-3 bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">未開始</span>
+                        <span className="font-bold">{selectedAssignment.status_distribution.not_started || 0}</span>
+                      </div>
+                    </Card>
+                    <Card className="p-3 bg-yellow-50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">進行中</span>
+                        <span className="font-bold">{selectedAssignment.status_distribution.in_progress || 0}</span>
+                      </div>
+                    </Card>
+                    <Card className="p-3 bg-blue-50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">已提交</span>
+                        <span className="font-bold">{selectedAssignment.status_distribution.submitted || 0}</span>
+                      </div>
+                    </Card>
+                    <Card className="p-3 bg-green-50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">已批改</span>
+                        <span className="font-bold">{selectedAssignment.status_distribution.graded || 0}</span>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // TODO: Implement view student submissions
+                    toast.info('查看學生提交功能尚在開發中');
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  查看學生提交
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // TODO: Implement edit assignment
+                    toast.info('編輯作業功能尚在開發中');
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  編輯作業
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    // TODO: Implement delete assignment
+                    toast.info('刪除作業功能尚在開發中');
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  刪除作業
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Content Type Dialog */}
       {contentLessonInfo && (

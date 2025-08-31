@@ -381,6 +381,104 @@ def create_demo_data(db: Session):
     
     db.add_all([content1_5a, content2_5a, content1_6b, content2_6b])
     db.commit()
+    
+    # ============ 6.5 為所有沒有內容的 Lessons 建立內容 ============
+    print("📚 為所有 Lessons 建立完整內容...")
+    
+    # 取得所有 lessons
+    all_lessons = db.query(Lesson).all()
+    content_created = 0
+    
+    for lesson in all_lessons:
+        # 檢查是否已有內容
+        existing_content = db.query(Content).filter(Content.lesson_id == lesson.id).first()
+        
+        if not existing_content:
+            # 根據 lesson 名稱生成相關的內容
+            if "Introduction" in lesson.name or "自我介紹" in lesson.name:
+                items = [
+                    {"text": "Hello, my name is Alice.", "translation": "你好，我的名字是 Alice。"},
+                    {"text": "I am ten years old.", "translation": "我十歲了。"},
+                    {"text": "I like to play basketball.", "translation": "我喜歡打籃球。"},
+                    {"text": "Nice to meet you!", "translation": "很高興認識你！"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Question" in lesson.name or "提問" in lesson.name:
+                items = [
+                    {"text": "What is your name?", "translation": "你叫什麼名字？"},
+                    {"text": "Where are you from?", "translation": "你來自哪裡？"},
+                    {"text": "How old are you?", "translation": "你幾歲？"},
+                    {"text": "What do you like to do?", "translation": "你喜歡做什麼？"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Daily" in lesson.name or "日常" in lesson.name:
+                items = [
+                    {"text": "I wake up at seven o'clock.", "translation": "我七點起床。"},
+                    {"text": "I eat breakfast at home.", "translation": "我在家吃早餐。"},
+                    {"text": "I go to school by bus.", "translation": "我搭公車去學校。"},
+                    {"text": "I do my homework after dinner.", "translation": "我晚餐後做作業。"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Family" in lesson.name or "家庭" in lesson.name:
+                items = [
+                    {"text": "This is my father.", "translation": "這是我的爸爸。"},
+                    {"text": "My mother is a teacher.", "translation": "我媽媽是老師。"},
+                    {"text": "I have one brother and one sister.", "translation": "我有一個哥哥和一個妹妹。"},
+                    {"text": "We live together.", "translation": "我們住在一起。"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Color" in lesson.name or "顏色" in lesson.name:
+                items = [
+                    {"text": "Red", "translation": "紅色"},
+                    {"text": "Blue", "translation": "藍色"},
+                    {"text": "Green", "translation": "綠色"},
+                    {"text": "Yellow", "translation": "黃色"},
+                    {"text": "The sky is blue.", "translation": "天空是藍色的。"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Hobbies" in lesson.name or "興趣" in lesson.name:
+                items = [
+                    {"text": "I like reading books.", "translation": "我喜歡讀書。"},
+                    {"text": "She enjoys playing piano.", "translation": "她喜歡彈鋼琴。"},
+                    {"text": "We love watching movies.", "translation": "我們喜歡看電影。"},
+                    {"text": "Do you like sports?", "translation": "你喜歡運動嗎？"}
+                ]
+                title = f"{lesson.name} - 練習"
+            elif "Stories" in lesson.name or "故事" in lesson.name:
+                items = [
+                    {"text": "Once upon a time, there was a little girl.", "translation": "從前有一個小女孩。"},
+                    {"text": "She lived in a small house.", "translation": "她住在一個小房子裡。"},
+                    {"text": "Every day she went to the forest.", "translation": "她每天都去森林。"},
+                    {"text": "The end.", "translation": "結束。"}
+                ]
+                title = f"{lesson.name} - 練習"
+            else:
+                # 通用內容
+                items = [
+                    {"text": f"This is lesson {lesson.order_index}.", "translation": f"這是第 {lesson.order_index} 課。"},
+                    {"text": "Let's practice together.", "translation": "讓我們一起練習。"},
+                    {"text": "Good job!", "translation": "做得好！"},
+                    {"text": "Keep going!", "translation": "繼續加油！"}
+                ]
+                title = f"{lesson.name} - 練習"
+            
+            # 建立內容
+            new_content = Content(
+                lesson_id=lesson.id,
+                type=ContentType.READING_ASSESSMENT,
+                title=title,
+                items=items,
+                target_wpm=60,
+                target_accuracy=80,
+                time_limit_seconds=180,
+                order_index=1,
+                is_active=True
+            )
+            db.add(new_content)
+            content_created += 1
+    
+    db.commit()
+    print(f"✅ 建立 {content_created} 個新內容，所有 Lessons 現在都有內容了")
     print("✅ 建立課程: 每個班級有2個課程，每個課程有3個單元")
     
     # 注意：課程直接關聯到班級，不再需要 ClassroomProgramMapping

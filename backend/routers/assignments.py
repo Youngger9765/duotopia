@@ -7,9 +7,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from pydantic import BaseModel
-import openai
 import os
 from difflib import SequenceMatcher
 import re
@@ -180,7 +179,7 @@ async def create_assignment(
             and_(
                 Classroom.id == request.classroom_id,
                 Classroom.teacher_id == current_teacher.id,
-                Classroom.is_active == True,
+                Classroom.is_active.is_(True),
             )
         )
         .first()
@@ -201,8 +200,8 @@ async def create_assignment(
                 and_(
                     ClassroomStudent.classroom_id == request.classroom_id,
                     Student.id.in_(request.student_ids),
-                    Student.is_active == True,
-                    ClassroomStudent.is_active == True,
+                    Student.is_active.is_(True),
+                    ClassroomStudent.is_active.is_(True),
                 )
             )
             .all()
@@ -220,8 +219,8 @@ async def create_assignment(
             .filter(
                 and_(
                     ClassroomStudent.classroom_id == request.classroom_id,
-                    Student.is_active == True,
-                    ClassroomStudent.is_active == True,
+                    Student.is_active.is_(True),
+                    ClassroomStudent.is_active.is_(True),
                 )
             )
             .all()
@@ -298,7 +297,7 @@ async def get_classroom_students(
             and_(
                 Classroom.id == classroom_id,
                 Classroom.teacher_id == current_teacher.id,
-                Classroom.is_active == True,
+                Classroom.is_active.is_(True),
             )
         )
         .first()
@@ -352,7 +351,7 @@ async def get_available_contents(
                 and_(
                     Classroom.id == classroom_id,
                     Classroom.teacher_id == current_teacher.id,
-                    Classroom.is_active == True,
+                    Classroom.is_active.is_(True),
                 )
             )
             .first()
@@ -429,10 +428,10 @@ async def get_teacher_assignments(
         except KeyError:
             raise HTTPException(status_code=400, detail="Invalid status")
 
-    # 排序：最新的在前
-    assignments = query.order_by(StudentAssignment.assigned_at.desc()).all()
+    # 排序：最新的在前 (變數未使用，移除)
+    # assignments = query.order_by(StudentAssignment.assigned_at.desc()).all()
 
-    # 統計資訊
+    # 統計資訊 - 群組化作業資料
     from sqlalchemy import func, case
 
     stats = (
@@ -440,6 +439,9 @@ async def get_teacher_assignments(
             StudentAssignment.content_id,
             StudentAssignment.classroom_id,
             StudentAssignment.title,
+            StudentAssignment.instructions,
+            StudentAssignment.due_date,
+            StudentAssignment.assigned_at,
             func.count(StudentAssignment.id).label("total_count"),
             func.sum(
                 case(
@@ -474,21 +476,56 @@ async def get_teacher_assignments(
     if classroom_id:
         stats = stats.filter(StudentAssignment.classroom_id == classroom_id)
 
-    stats = stats.group_by(
-        StudentAssignment.content_id,
-        StudentAssignment.classroom_id,
-        StudentAssignment.title,
-    ).all()
+    stats = (
+        stats.group_by(
+            StudentAssignment.content_id,
+            StudentAssignment.classroom_id,
+            StudentAssignment.title,
+            StudentAssignment.instructions,
+            StudentAssignment.due_date,
+            StudentAssignment.assigned_at,
+        )
+        .order_by(StudentAssignment.assigned_at.desc())
+        .all()
+    )
 
-    # 組合回應
+    # 組合回應 - 包含前端需要的所有欄位
     result = []
     for stat in stats:
+        # 取得 Content 資訊
+        content = db.query(Content).filter(Content.id == stat.content_id).first()
+
+        # 計算完成率
+        completed = (stat.submitted or 0) + (stat.graded or 0) + (stat.returned or 0)
+        completion_rate = (
+            int((completed / stat.total_count * 100)) if stat.total_count > 0 else 0
+        )
+
+        # 判斷狀態
+        if stat.due_date and stat.due_date < datetime.now(timezone.utc):
+            status = "overdue"
+        elif completed == stat.total_count:
+            status = "completed"
+        elif (stat.in_progress or 0) > 0 or completed > 0:
+            status = "in_progress"
+        else:
+            status = "not_started"
+
         result.append(
             {
+                "id": f"{stat.content_id}_{stat.classroom_id}",  # 組合 ID
                 "content_id": stat.content_id,
                 "classroom_id": stat.classroom_id,
                 "title": stat.title,
-                "total_students": stat.total_count,
+                "instructions": stat.instructions,
+                "content_type": content.type if content else "UNKNOWN",
+                "student_count": stat.total_count,
+                "due_date": stat.due_date.isoformat() if stat.due_date else None,
+                "assigned_at": stat.assigned_at.isoformat()
+                if stat.assigned_at
+                else None,
+                "completion_rate": completion_rate,
+                "status": status,
                 "status_distribution": {
                     "not_started": stat.not_started or 0,
                     "in_progress": stat.in_progress or 0,
