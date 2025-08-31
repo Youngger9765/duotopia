@@ -180,6 +180,7 @@ class Lesson(Base):
     description = Column(Text)
     order_index = Column(Integer, default=0)  # 排序
     estimated_minutes = Column(Integer)  # 預計分鐘數
+    is_active = Column(Boolean, default=True)  # 軟刪除標記
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -200,6 +201,7 @@ class Content(Base):
     type = Column(Enum(ContentType), default=ContentType.READING_ASSESSMENT)
     title = Column(String(200), nullable=False)
     order_index = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)  # 軟刪除標記
     
     # 朗讀錄音集資料（3-15個項目）
     items = Column(JSON)  # [{"text": "Hello", "translation": "你好", "audio_url": "..."}, ...]

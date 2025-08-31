@@ -665,15 +665,53 @@ OPENAI_API_KEY=your-openai-api-key
 GCP_PROJECT_ID=duotopia-469413
 ```
 
-### 測試策略
+### 測試策略與組織架構
 
-#### 單元測試
-- 前端: Jest + React Testing Library
-- 後端: pytest
+#### 測試目錄結構
+```
+backend/tests/
+├── unit/                      # 單元測試 (快速、無依賴)
+│   ├── test_models.py        # 資料模型測試
+│   ├── test_schemas.py       # Pydantic schema 測試
+│   └── test_utils.py         # 工具函數測試
+│
+├── integration/               # 整合測試 (需要資料庫或伺服器)
+│   ├── auth/                 # 認證相關測試
+│   │   ├── test_teacher_auth.py
+│   │   └── test_student_auth.py
+│   │
+│   ├── api/                  # API 端點測試 (需要 HTTP 請求)
+│   │   ├── test_lesson_crud.py          # Lesson CRUD API
+│   │   ├── test_soft_delete_program.py  # 軟刪除 API
+│   │   └── test_assignments_api.py      # 作業 API
+│   │
+│   ├── test_database_comprehensive.py   # 資料庫關聯測試
+│   └── test_cascade_deletion.py        # CASCADE 行為測試
+│
+└── e2e/                       # 端到端測試 (完整流程)
+    └── workflows/
+        └── test_teacher_workflow.py
+```
 
-#### E2E 測試
-- Playwright for browser automation
-- 測試關鍵用戶流程
+#### 測試類型區分
+
+**Unit Tests（單元測試）**
+- 位置: `tests/unit/`
+- 不需要資料庫、不需要啟動伺服器
+- 使用 mock/patch 隔離依賴
+- 執行速度 < 0.1 秒/測試
+
+**Integration Tests - API（API 整合測試）**
+- 位置: `tests/integration/api/`
+- 測試 HTTP 端點，需要啟動伺服器
+- 使用 requests 或 TestClient
+- 涉及真實資料庫操作
+
+**Integration Tests - Database（資料庫整合測試）**
+- 位置: `tests/integration/`（非 api/ 子目錄）
+- 直接操作 SQLAlchemy models
+- 測試資料庫關聯、CASCADE、觸發器
+- 不經過 HTTP 層
 
 #### 測試指令
 ```bash
@@ -684,8 +722,21 @@ npm test            # 單元測試（如果有）
 
 # 後端測試
 cd backend
-python -m pytest    # 單元測試（如果有）
+pytest                           # 執行所有測試
+pytest tests/unit/               # 只執行單元測試（快速）
+pytest tests/integration/api/    # 只執行 API 測試
+pytest --cov=routers --cov-report=term-missing  # 測試覆蓋率
+pytest -v -s                     # 顯示詳細輸出
+
+# 特定檔案測試
+python tests/integration/api/test_lesson_crud.py
 ```
+
+#### 測試命名規範
+- 檔案: `test_*.py`
+- 函數: `test_<action>_<expected_result>`
+  - `test_create_student_success`
+  - `test_login_with_invalid_password_fails`
 
 ### 安全最佳實踐
 - 所有密碼存在 Secret Manager

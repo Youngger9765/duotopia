@@ -113,7 +113,10 @@ async def get_teacher_dashboard(current_teacher: Teacher = Depends(get_current_t
                 ))
     
     # Get program count (programs created by this teacher)
-    program_count = db.query(Program).filter(Program.teacher_id == current_teacher.id).count()
+    program_count = db.query(Program).filter(
+        Program.teacher_id == current_teacher.id,
+        Program.is_active == True
+    ).count()
     
     return TeacherDashboard(
         teacher=TeacherProfile.from_orm(current_teacher),
@@ -178,7 +181,8 @@ async def get_teacher_classrooms(current_teacher: Teacher = Depends(get_current_
 async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_teacher), db: Session = Depends(get_db)):
     """取得教師的所有課程"""
     programs = db.query(Program).filter(
-        Program.teacher_id == current_teacher.id
+        Program.teacher_id == current_teacher.id,
+        Program.is_active == True
     ).options(selectinload(Program.classroom), selectinload(Program.lessons)).order_by(Program.order_index).all()
     
     result = []
@@ -198,7 +202,7 @@ async def get_teacher_programs(current_teacher: Teacher = Depends(get_current_te
             "estimated_hours": program.estimated_hours,
             "is_active": program.is_active,
             "created_at": program.created_at.isoformat() if program.created_at else None,
-            "lesson_count": len(program.lessons),  # Real lesson count
+            "lesson_count": len([l for l in program.lessons if l.is_active]),  # Count only active lessons
             "student_count": student_count,  # Real student count
             "status": "active" if program.is_active else "archived",  # Real status based on is_active
             "order_index": program.order_index if hasattr(program, 'order_index') else 1
@@ -947,9 +951,11 @@ async def get_program(
                         "items": content.items or [],  # Include actual items
                         "items_count": len(content.items) if content.items else 0,
                         "estimated_time": "10 分鐘"  # Can be calculated based on items
-                    } for content in sorted(lesson.contents or [], key=lambda x: x.order_index)
+                    } for content in sorted(lesson.contents or [], key=lambda x: x.order_index) 
+                    if content.is_active  # Filter by is_active
                 ]
-            } for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)
+            } for lesson in sorted(program.lessons or [], key=lambda x: x.order_index) 
+            if lesson.is_active  # Filter by is_active
         ]
     }
 
@@ -1065,6 +1071,92 @@ async def add_lesson(
         "estimated_minutes": lesson.estimated_minutes
     }
 
+@router.put("/lessons/{lesson_id}")
+async def update_lesson(
+    lesson_id: int,
+    lesson_data: LessonCreate,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """更新課程單元"""
+    # 驗證 lesson 屬於當前教師
+    lesson = db.query(Lesson).join(Program).filter(
+        Lesson.id == lesson_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    
+    # 更新資料
+    lesson.name = lesson_data.name
+    lesson.description = lesson_data.description
+    lesson.order_index = lesson_data.order_index
+    lesson.estimated_minutes = lesson_data.estimated_minutes
+    
+    db.commit()
+    db.refresh(lesson)
+    
+    return {
+        "id": lesson.id,
+        "name": lesson.name,
+        "description": lesson.description,
+        "order_index": lesson.order_index,
+        "estimated_minutes": lesson.estimated_minutes
+    }
+
+@router.delete("/lessons/{lesson_id}")
+async def delete_lesson(
+    lesson_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    """刪除課程單元 - 使用軟刪除保護資料完整性"""
+    from models import StudentAssignment, Content
+    
+    # 驗證 lesson 屬於當前教師
+    lesson = db.query(Lesson).join(Program).filter(
+        Lesson.id == lesson_id,
+        Program.teacher_id == current_teacher.id
+    ).first()
+    
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    
+    # 檢查相關資料
+    content_count = db.query(Content).filter(
+        Content.lesson_id == lesson_id,
+        Content.is_active == True
+    ).count()
+    
+    assignment_count = db.query(StudentAssignment).join(Content).filter(
+        Content.lesson_id == lesson_id
+    ).count()
+    
+    # 軟刪除 lesson
+    lesson.is_active = False
+    
+    # 同時軟刪除相關的 contents
+    db.query(Content).filter(
+        Content.lesson_id == lesson_id
+    ).update({"is_active": False})
+    
+    db.commit()
+    
+    return {
+        "message": "Lesson successfully deactivated (soft delete)",
+        "details": {
+            "lesson_id": lesson_id,
+            "lesson_name": lesson.name,
+            "deactivated": True,
+            "related_data": {
+                "contents": content_count,
+                "assignments": assignment_count
+            },
+            "note": "單元已停用但資料保留，可聯繫管理員恢復"
+        }
+    }
+
 # ------------ Content CRUD ------------
 
 class ContentCreate(BaseModel):
@@ -1106,7 +1198,8 @@ async def get_lesson_contents(
         raise HTTPException(status_code=404, detail="Lesson not found")
     
     contents = db.query(Content).filter(
-        Content.lesson_id == lesson_id
+        Content.lesson_id == lesson_id,
+        Content.is_active == True
     ).order_by(Content.order_index).all()
     
     return [
@@ -1271,7 +1364,7 @@ async def delete_content(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
-    """刪除內容"""
+    """刪除內容（軟刪除）"""
     # Verify the content belongs to the teacher
     content = db.query(Content).join(Lesson).join(Program).filter(
         Content.id == content_id,
@@ -1281,10 +1374,28 @@ async def delete_content(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
     
-    db.delete(content)
+    # 檢查是否有相關的作業
+    from models import StudentAssignment
+    assignment_count = db.query(StudentAssignment).filter(
+        StudentAssignment.content_id == content_id
+    ).count()
+    
+    # 軟刪除
+    content.is_active = False
     db.commit()
     
-    return {"message": "Content deleted successfully"}
+    return {
+        "message": "Content deactivated successfully",
+        "details": {
+            "content_title": content.title,
+            "deactivated": True,
+            "related_data": {
+                "assignments": assignment_count
+            },
+            "reason": "soft_delete",
+            "note": "內容已停用但資料保留，相關作業仍可查看"
+        }
+    }
 
 # ------------ Translation API ------------
 from services.translation import translation_service

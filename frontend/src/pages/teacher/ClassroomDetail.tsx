@@ -67,23 +67,23 @@ export default function ClassroomDetail() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [editingContent, setEditingContent] = useState<any>(null);
-  
+
   // Student dialog states
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
-  
+
   // Program dialog states
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programDialogType, setProgramDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
-  
+
   // Lesson dialog states
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [lessonDialogType, setLessonDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
   const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(undefined);
-  
+
   // Copy program dialog state
   const [showCopyDialog, setShowCopyDialog] = useState(false);
-  
+
   // Content type dialog state
   const [showContentTypeDialog, setShowContentTypeDialog] = useState(false);
   const [contentLessonInfo, setContentLessonInfo] = useState<{
@@ -91,16 +91,16 @@ export default function ClassroomDetail() {
     lessonName: string;
     lessonId: number;
   } | null>(null);
-  
+
   // Reading Assessment Editor state
   const [showReadingEditor, setShowReadingEditor] = useState(false);
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
-  
+
   // Drag states
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
   const [draggedLesson, setDraggedLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
-  
+
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -121,7 +121,7 @@ export default function ClassroomDetail() {
       setLoading(true);
       const classrooms = await apiClient.getTeacherClassrooms() as ClassroomInfo[];
       const currentClassroom = classrooms.find(c => c.id === Number(id));
-      
+
       if (currentClassroom) {
         setClassroom(currentClassroom);
       } else {
@@ -141,15 +141,15 @@ export default function ClassroomDetail() {
       const allPrograms = await apiClient.getTeacherPrograms() as Program[];
       // Filter programs for this classroom
       const classroomPrograms = allPrograms.filter(p => p.classroom_id === Number(id));
-      
+
       // Fetch detailed info including lessons for each program
       const programsWithLessons = await Promise.all(
         classroomPrograms.map(async (program) => {
           try {
             const detail = await apiClient.getProgramDetail(program.id) as Program;
-            return { 
-              ...program, 
-              lessons: detail.lessons ? detail.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index) : [] 
+            return {
+              ...program,
+              lessons: detail.lessons ? detail.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index) : []
             };
           } catch (err) {
             console.error(`Failed to fetch lessons for program ${program.id}:`, err);
@@ -157,7 +157,7 @@ export default function ClassroomDetail() {
           }
         })
       );
-      
+
       // Sort programs by order_index
       programsWithLessons.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       setPrograms(programsWithLessons);
@@ -228,12 +228,12 @@ export default function ClassroomDetail() {
 
   const handleAddContentItem = () => {
     if (!editingContent) return;
-    
+
     const newItem = {
       text: '',
       translation: ''
     };
-    
+
     setEditingContent({
       ...editingContent,
       items: [...(editingContent.items || []), newItem]
@@ -242,13 +242,13 @@ export default function ClassroomDetail() {
 
   const handleUpdateContentItem = (index: number, field: 'text' | 'translation', value: string) => {
     if (!editingContent) return;
-    
+
     const updatedItems = [...(editingContent.items || [])];
     updatedItems[index] = {
       ...updatedItems[index],
       [field]: value
     };
-    
+
     setEditingContent({
       ...editingContent,
       items: updatedItems
@@ -257,7 +257,7 @@ export default function ClassroomDetail() {
 
   const handleDeleteContentItem = (index: number) => {
     if (!editingContent) return;
-    
+
     const updatedItems = editingContent.items.filter((_: any, i: number) => i !== index);
     setEditingContent({
       ...editingContent,
@@ -267,7 +267,7 @@ export default function ClassroomDetail() {
 
   const handleSaveContent = async () => {
     if (!editingContent || !selectedContent) return;
-    
+
     try {
       // Update content via API
       await apiClient.updateContent(editingContent.id, {
@@ -280,7 +280,7 @@ export default function ClassroomDetail() {
         target_accuracy: parseFloat(editingContent.target_accuracy || 80) / 100,
         time_limit_seconds: parseInt(editingContent.time_limit_seconds || 180)
       });
-      
+
       toast.success('內容已更新成功');
       await fetchPrograms();
       closePanel();
@@ -311,7 +311,7 @@ export default function ClassroomDetail() {
     if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
       return;
     }
-    
+
     try {
       await apiClient.resetStudentPassword(student.id);
       // Refresh data
@@ -410,7 +410,7 @@ export default function ClassroomDetail() {
       if (!updatedPrograms[programIndex].lessons) {
         updatedPrograms[programIndex].lessons = [];
       }
-      
+
       if (lessonDialogType === 'create') {
         updatedPrograms[programIndex].lessons!.push(lesson);
       } else if (lessonDialogType === 'edit') {
@@ -419,7 +419,7 @@ export default function ClassroomDetail() {
           updatedPrograms[programIndex].lessons![lessonIndex] = lesson;
         }
       }
-      
+
       setPrograms(updatedPrograms);
     }
     // TODO: Call API to save lesson
@@ -445,15 +445,15 @@ export default function ClassroomDetail() {
     const newPrograms = [...programs];
     const [draggedItem] = newPrograms.splice(dragIndex, 1);
     newPrograms.splice(dropIndex, 0, draggedItem);
-    
+
     // Update order_index for each program
     const updatedPrograms = newPrograms.map((program, index) => ({
       ...program,
       order_index: index + 1
     }));
-    
+
     setPrograms(updatedPrograms);
-    
+
     // Save new order to backend
     try {
       const orderData = updatedPrograms.map((program, index) => ({
@@ -474,20 +474,20 @@ export default function ClassroomDetail() {
     if (programIndex !== -1 && programs[programIndex].lessons) {
       const updatedPrograms = [...programs];
       const lessons = [...updatedPrograms[programIndex].lessons!];
-      
+
       // Reorder lessons
       const [draggedItem] = lessons.splice(dragIndex, 1);
       lessons.splice(dropIndex, 0, draggedItem);
-      
+
       // Update order_index for each lesson
       const reorderedLessons = lessons.map((lesson, index) => ({
         ...lesson,
         order_index: index + 1
       }));
-      
+
       updatedPrograms[programIndex].lessons = reorderedLessons;
       setPrograms(updatedPrograms);
-      
+
       // Save new order to backend
       try {
         const orderData = reorderedLessons.map((lesson, index) => ({
@@ -537,10 +537,10 @@ export default function ClassroomDetail() {
         const contentTypeNames: Record<string, string> = {
           'reading_assessment': '朗讀錄音練習'
         };
-        
+
         const title = contentTypeNames[selection.type] || '新內容';
         const items: Array<{ text: string; translation?: string }> = [];
-        
+
         await apiClient.createContent(selection.lessonId, {
           type: selection.type,
           title: title,
@@ -548,7 +548,7 @@ export default function ClassroomDetail() {
           target_wpm: 60,
           target_accuracy: 0.8
         });
-        
+
         toast.success('內容已創建成功');
         await fetchPrograms();
       } catch (error) {
@@ -588,7 +588,7 @@ export default function ClassroomDetail() {
         });
         toast.success('內容已創建成功');
       }
-      
+
       setShowReadingEditor(false);
       await fetchPrograms();
     } catch (error) {
@@ -629,7 +629,7 @@ export default function ClassroomDetail() {
       <TeacherLayout>
         <div className="text-center py-12">
           <p className="text-gray-500">找不到班級資料</p>
-          <Button 
+          <Button
             className="mt-4"
             onClick={() => navigate('/teacher/classrooms')}
           >
@@ -708,21 +708,21 @@ export default function ClassroomDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b bg-gray-50 px-6 py-3">
               <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-12 bg-white border">
-                <TabsTrigger 
-                  value="students" 
+                <TabsTrigger
+                  value="students"
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
                 >
                   <Users className="h-5 w-5 mr-2" />
                   學生列表
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="programs"
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
                 >
                   <BookOpen className="h-5 w-5 mr-2" />
                   課程列表
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="assignments"
                   className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
                 >
@@ -741,7 +741,7 @@ export default function ClassroomDetail() {
                   新增學生
                 </Button>
               </div>
-              
+
               <StudentTable
                 students={classroom.students}
                 showClassroom={false}
@@ -768,7 +768,7 @@ export default function ClassroomDetail() {
                   </Button>
                 </div>
               </div>
-              
+
               {programs.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
                   {programs.map((program, programIndex) => (
@@ -777,7 +777,7 @@ export default function ClassroomDetail() {
                       {dropIndicatorProgram === programIndex && (
                         <div className="h-1 bg-blue-500 rounded-full mx-2 my-1 animate-pulse" />
                       )}
-                      <AccordionItem 
+                      <AccordionItem
                         value={`program-${program.id}`}
                         className={`
                           transition-opacity duration-200
@@ -787,11 +787,11 @@ export default function ClassroomDetail() {
                           e.preventDefault();
                           e.stopPropagation();
                           if (draggedProgram === null) return;
-                          
+
                           const rect = e.currentTarget.getBoundingClientRect();
                           const y = e.clientY - rect.top;
                           const height = rect.height;
-                          
+
                           // 判斷是在上半部還是下半部
                           if (y < height / 2) {
                             // 在上半部，顯示在當前項目上方
@@ -827,7 +827,7 @@ export default function ClassroomDetail() {
                       <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center space-x-3">
-                            <div 
+                            <div
                               className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
                               title="拖曳以重新排序"
                               draggable
@@ -863,7 +863,7 @@ export default function ClassroomDetail() {
                             <div className="text-left">
                               <div className="flex items-center space-x-2">
                                 <h4 className="font-semibold">{program.name}</h4>
-                                <div 
+                                <div
                                   className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -884,7 +884,7 @@ export default function ClassroomDetail() {
                                 <span>{program.estimated_hours} 小時</span>
                               </div>
                             )}
-                            <div 
+                            <div
                               className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -902,13 +902,13 @@ export default function ClassroomDetail() {
                             {(program.lessons || []).map((lesson, lessonIndex) => (
                               <div key={lesson.id} className="relative">
                                 {/* 插入指示器 - 顯示在單元上方 */}
-                                {dropIndicatorLesson && 
-                                 dropIndicatorLesson.programId === program.id && 
+                                {dropIndicatorLesson &&
+                                 dropIndicatorLesson.programId === program.id &&
                                  dropIndicatorLesson.lessonIndex === lessonIndex && (
                                   <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
                                 )}
-                                <AccordionItem 
-                                  value={`lesson-${program.id}-${lesson.id}`} 
+                                <AccordionItem
+                                  value={`lesson-${program.id}-${lesson.id}`}
                                   className={`
                                     border-l-2 border-gray-200 ml-2 transition-opacity duration-200
                                     ${draggedLesson && draggedLesson.programId === program.id && draggedLesson.lessonIndex === lessonIndex ? 'opacity-30' : ''}
@@ -917,11 +917,11 @@ export default function ClassroomDetail() {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     if (!draggedLesson || draggedLesson.programId !== program.id) return;
-                                    
+
                                     const rect = e.currentTarget.getBoundingClientRect();
                                     const y = e.clientY - rect.top;
                                     const height = rect.height;
-                                    
+
                                     // 判斷是在上半部還是下半部
                                     if (y < height / 2) {
                                       setDropIndicatorLesson({ programId: program.id, lessonIndex });
@@ -938,7 +938,7 @@ export default function ClassroomDetail() {
                                   onDrop={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    if (draggedLesson && dropIndicatorLesson && 
+                                    if (draggedLesson && dropIndicatorLesson &&
                                         draggedLesson.programId === program.id &&
                                         dropIndicatorLesson.programId === program.id) {
                                       let targetIndex = dropIndicatorLesson.lessonIndex;
@@ -955,7 +955,7 @@ export default function ClassroomDetail() {
                                 <AccordionTrigger className="hover:no-underline pl-4 group">
                                   <div className="flex items-center justify-between w-full pr-4">
                                     <div className="flex items-center space-x-3">
-                                      <div 
+                                      <div
                                         className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
                                         title="拖曳以重新排序"
                                         draggable
@@ -991,7 +991,7 @@ export default function ClassroomDetail() {
                                       <div className="text-left">
                                         <div className="flex items-center space-x-2">
                                           <h5 className="font-medium">{lesson.name}</h5>
-                                          <div 
+                                          <div
                                             className="h-5 w-5 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -1006,7 +1006,7 @@ export default function ClassroomDetail() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <span className="text-sm text-gray-500">{lesson.estimated_minutes || 30} 分鐘</span>
-                                      <div 
+                                      <div
                                         className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -1023,8 +1023,8 @@ export default function ClassroomDetail() {
                                     {/* 實際 Content 資料 */}
                                     {(lesson.contents && lesson.contents.length > 0) ? (
                                       lesson.contents.map((content, contentIndex) => (
-                                      <div 
-                                        key={content.id} 
+                                      <div
+                                        key={content.id}
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
                                         draggable
                                         onDragStart={(e) => {
@@ -1046,19 +1046,19 @@ export default function ClassroomDetail() {
                                           const draggedContentId = e.dataTransfer.getData('contentId');
                                           const draggedLessonId = e.dataTransfer.getData('lessonId');
                                           const draggedIndex = parseInt(e.dataTransfer.getData('contentIndex'));
-                                          
+
                                           if (draggedLessonId === lesson.id.toString() && draggedIndex !== contentIndex) {
                                             // 重新排序內容
                                             const newContents = [...lesson.contents];
                                             const [draggedContent] = newContents.splice(draggedIndex, 1);
                                             newContents.splice(contentIndex, 0, draggedContent);
-                                            
+
                                             // 更新每個內容的 order_index
                                             const contentsWithNewOrder = newContents.map((content, index) => ({
                                               ...content,
                                               order_index: index
                                             }));
-                                            
+
                                             // 更新本地狀態
                                             const updatedPrograms = programs.map(p => {
                                               if (p.id === program.id) {
@@ -1078,14 +1078,14 @@ export default function ClassroomDetail() {
                                               return p;
                                             });
                                             setPrograms(updatedPrograms);
-                                            
+
                                             // 呼叫 API 更新順序
-                                            const updateOrderPromises = contentsWithNewOrder.map(content => 
+                                            const updateOrderPromises = contentsWithNewOrder.map(content =>
                                               apiClient.updateContent(content.id, {
                                                 order_index: content.order_index
                                               })
                                             );
-                                            
+
                                             Promise.all(updateOrderPromises)
                                               .then(() => {
                                                 toast.success('內容順序已更新');
@@ -1133,10 +1133,10 @@ export default function ClassroomDetail() {
                                         尚無內容，請新增內容
                                       </div>
                                     )}
-                                    
+
                                     <div className="flex justify-end space-x-2 pt-2">
-                                      <Button 
-                                        size="sm" 
+                                      <Button
+                                        size="sm"
                                         variant="outline"
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -1146,8 +1146,8 @@ export default function ClassroomDetail() {
                                         <Edit className="h-4 w-4 mr-2" />
                                         編輯單元
                                       </Button>
-                                      <Button 
-                                        size="sm" 
+                                      <Button
+                                        size="sm"
                                         variant="outline"
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -1170,12 +1170,12 @@ export default function ClassroomDetail() {
                               </div>
                             ))}
                             {/* 最後位置的插入指示器（單元） */}
-                            {dropIndicatorLesson && 
-                             dropIndicatorLesson.programId === program.id && 
+                            {dropIndicatorLesson &&
+                             dropIndicatorLesson.programId === program.id &&
                              dropIndicatorLesson.lessonIndex === (program.lessons?.length || 0) && (
                               <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
                             )}
-                            
+
                             {/* Add Lesson Button */}
                             <div className="pl-6 pt-2">
                               <Button size="sm" variant="outline" className="w-full" onClick={() => handleAddLesson(program.id)}>
@@ -1213,7 +1213,7 @@ export default function ClassroomDetail() {
                 {/* Header with Create Button */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">作業列表</h3>
-                  <Button 
+                  <Button
                     onClick={() => setShowAssignmentDialog(true)}
                     className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
@@ -1310,13 +1310,13 @@ export default function ClassroomDetail() {
                       </tr>
                     </tbody>
                   </table>
-                  
+
                   {/* Empty State */}
                   {false && (
                     <div className="text-center py-12">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 mb-4">尚未指派任何作業</p>
-                      <Button 
+                      <Button
                         onClick={() => toast.info('作業創建功能開發中...')}
                         className="bg-blue-500 hover:bg-blue-600"
                       >
@@ -1402,8 +1402,8 @@ export default function ClassroomDetail() {
                             <div key={index} className="border rounded-lg p-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">項目 {index + 1}</span>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="ghost"
                                   onClick={() => handleDeleteContentItem(index)}
                                 >
@@ -1429,9 +1429,9 @@ export default function ClassroomDetail() {
                                   <Mic className="h-4 w-4 mr-1" />
                                   錄音
                                 </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
+                                <Button
+                                  size="sm"
+                                  variant="outline"
                                   className="text-red-600"
                                   onClick={() => handleDeleteContentItem(index)}
                                 >
@@ -1443,9 +1443,9 @@ export default function ClassroomDetail() {
                         ) : (
                           <div className="text-center py-8 text-gray-500">
                             <p>尚無內容項目</p>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="mt-2"
                               onClick={handleAddContentItem}
                             >
@@ -1458,8 +1458,8 @@ export default function ClassroomDetail() {
 
                       {/* Add Item Button - only show if there are items */}
                       {editingContent && editingContent.items && editingContent.items.length > 0 && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full"
                           onClick={handleAddContentItem}
                         >
@@ -1498,7 +1498,7 @@ export default function ClassroomDetail() {
         onSwitchToEdit={handleSwitchToEdit}
         classrooms={classroom ? [classroom] : []}
       />
-      
+
       {/* Program Dialog */}
       <ProgramDialog
         program={selectedProgram}
@@ -1511,14 +1511,14 @@ export default function ClassroomDetail() {
         onSave={handleSaveProgram}
         onDelete={handleDeleteProgramConfirm}
       />
-      
+
       {/* Lesson Dialog */}
       <LessonDialog
         lesson={selectedLesson}
         dialogType={lessonDialogType}
         programId={lessonProgramId}
         currentLessonCount={
-          lessonProgramId 
+          lessonProgramId
             ? programs.find(p => p.id === lessonProgramId)?.lessons?.length || 0
             : 0
         }
@@ -1530,7 +1530,7 @@ export default function ClassroomDetail() {
         onSave={handleSaveLesson}
         onDelete={handleDeleteLessonConfirm}
       />
-      
+
       {/* Copy Program Dialog */}
       <CopyProgramDialog
         open={showCopyDialog}

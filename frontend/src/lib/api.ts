@@ -42,7 +42,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -180,8 +180,8 @@ class ApiClient {
   }
 
   // ============ Student CRUD Methods ============
-  async createStudent(data: { 
-    name: string; 
+  async createStudent(data: {
+    name: string;
     email?: string;  // Email 改為選填
     student_id?: string;
     birthdate: string;
@@ -222,9 +222,9 @@ class ApiClient {
   }
 
   // ============ Program CRUD Methods ============
-  async createProgram(data: { 
-    name: string; 
-    description?: string; 
+  async createProgram(data: {
+    name: string;
+    description?: string;
     level?: string;
     classroom_id: number;
     estimated_hours?: number;
@@ -417,7 +417,7 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', audioBlob, 'recording.webm');
     formData.append('duration', duration.toString());
-    
+
     // 加入 content_id 和 item_index 以便追蹤和替換舊檔案
     if (contentId) {
       formData.append('content_id', contentId.toString());
@@ -425,7 +425,7 @@ class ApiClient {
     if (itemIndex !== undefined) {
       formData.append('item_index', itemIndex.toString());
     }
-    
+
     const response = await fetch(`${this.baseUrl}/api/teachers/upload/audio`, {
       method: 'POST',
       headers: {
@@ -433,13 +433,13 @@ class ApiClient {
       },
       body: formData,
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Upload error:', errorText);
       throw new Error(`Upload failed: ${response.status} - ${errorText || response.statusText}`);
     }
-    
+
     return response.json();
   }
 }

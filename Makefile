@@ -25,9 +25,21 @@ db-migrate:
 
 .PHONY: db-upgrade
 db-upgrade:
-	@echo "⬆️ Upgrading database to latest migration..."
+	@echo "⬆️ Upgrading LOCAL database to latest migration..."
 	@cd $(BACKEND_DIR) && alembic upgrade head
 	@echo "✅ Database upgraded successfully"
+
+.PHONY: db-upgrade-staging
+db-upgrade-staging:
+	@echo "⬆️ Upgrading STAGING database to latest migration..."
+	@if [ ! -f backend/.env.staging ]; then \
+		echo "❌ Error: backend/.env.staging not found"; \
+		exit 1; \
+	fi
+	@cd $(BACKEND_DIR) && \
+		source .env.staging && \
+		DATABASE_URL="$$DATABASE_URL" alembic upgrade head
+	@echo "✅ Staging database upgraded successfully"
 
 .PHONY: db-history
 db-history:
@@ -36,8 +48,20 @@ db-history:
 
 .PHONY: db-current
 db-current:
-	@echo "📍 Current database version:"
+	@echo "📍 Current LOCAL database version:"
 	@cd $(BACKEND_DIR) && alembic current
+
+.PHONY: db-current-staging
+db-current-staging:
+	@echo "📍 Current STAGING database version:"
+	@cd $(BACKEND_DIR) && \
+		source .env.staging && \
+		DATABASE_URL="$$DATABASE_URL" alembic current
+
+.PHONY: db-fix-migration
+db-fix-migration:
+	@echo "🔧 Auto-fixing migration revision issues..."
+	@cd $(BACKEND_DIR) && python fix_migration.py
 
 # 開發環境
 .PHONY: dev-setup
@@ -294,6 +318,15 @@ help:
 	@echo "  dev-setup      - Set up development environment"
 	@echo "  dev-backend    - Start backend dev server"
 	@echo "  dev-frontend   - Start frontend dev server"
+	@echo ""
+	@echo "Database Migration:"
+	@echo "  db-migrate MSG='msg' - Generate new migration"
+	@echo "  db-upgrade     - Upgrade LOCAL database to latest"
+	@echo "  db-upgrade-staging - Upgrade STAGING database to latest"
+	@echo "  db-current     - Show current LOCAL migration version"
+	@echo "  db-current-staging - Show current STAGING migration version"
+	@echo "  db-history     - Show migration history"
+	@echo "  db-fix-migration - Auto-fix migration revision issues"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test           - Run all tests"

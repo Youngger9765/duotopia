@@ -73,3 +73,4 @@ htmlcov/
 # Test databases
 *.db
 test.db
+test-results/
