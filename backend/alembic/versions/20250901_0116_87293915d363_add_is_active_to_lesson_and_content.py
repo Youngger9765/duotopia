@@ -1,7 +1,7 @@
 """add_is_active_to_lesson_and_content
 
 Revision ID: 87293915d363
-Revises: 001
+Revises: 624bfd9ff075
 Create Date: 2025-09-01 01:16:03.158120
 
 """
