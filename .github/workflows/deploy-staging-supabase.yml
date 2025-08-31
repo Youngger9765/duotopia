@@ -39,7 +39,7 @@ jobs:
 
     - name: Run frontend lint
       working-directory: ./frontend
-      run: npm run lint
+      run: npm run lint:ci
 
     - name: Build frontend
       working-directory: ./frontend
