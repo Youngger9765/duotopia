@@ -93,9 +93,8 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 
 系統 Phase 1 支援一種核心活動類型：
 
-1. **朗讀錄音集 (reading_recording)**
+1. **朗讀評測 (reading_assessment)**
    - 評估指標：WPM（每分鐘字數）、準確率、流暢度、發音
-   - 目標設定：可設定個人化 WPM 和準確率目標
    - AI 分析：提供詳細的發音錯誤分析
    - 文本內容：3-15 句的單字、片語或句子
    - 教師功能：可為每個文本錄製示範音檔
@@ -226,13 +225,13 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 單元目標
 - 預計課時
 
-4.3 建立朗讀錄音集內容 (Content)
-- 內容標題
+4.3 建立朗讀評測內容 (Content)
+- 內容標題（title）
+- 內容描述（description，選填）
 - 文本項目（3-15 句）：
   - 英文文本（必填）
-  - 中文翻譯或解釋（選填）
-  - 難度級別
-- 教師示範錄音（選填）
+  - 中文翻譯（選填，可使用翻譯 API）
+- TTS 語音生成（批量生成所有項目的語音）
 
 **步驟 5：作業派發**
 - 選擇課程計畫 (Program)
@@ -253,17 +252,23 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 課程搜尋與篩選
 - 課程複製功能
 
-**朗讀練習（錄音集）建立**
-- 支援 3-15 句的單字、片語或句子輸入
-- 每個項目包含三個欄位：
-  - 文本（必填）：輸入英文單字、片語或句子
-  - 翻譯或英翻英：提供中文翻譯或英文解釋
-  - 級數（必填）：設定難度等級
-- 動態新增/刪除項目功能
-- 批次輸入支援（按 Enter 新增下一個項目）
-- 音檔圖示標記錄音功能
-- 圖片圖示支援視覺輔助
-- 刪除按鈕移除單一項目
+**Content 管理功能（在班級詳情頁）**
+- 位置：`/teacher/classroom/{id}` → 課程標籤頁
+- 三層結構顯示：Program → Lesson → Content
+- Content 建立功能：
+  - 標題（title）：Content 名稱
+  - 描述（description）：選填說明
+  - 類型選擇：朗讀評測（reading_assessment）
+  - 項目管理（items）：
+    - 支援 3-15 個朗讀項目
+    - 每個項目包含英文文本
+    - 支援中文翻譯（選填）
+    - 動態新增/刪除項目
+- API 輔助功能：
+  - 翻譯 API：自動翻譯英文句子為中文
+  - TTS API：批量生成語音檔案
+- 編輯面板：點擊 Content 展開右側編輯面板
+- 即時儲存：修改後即時更新
 
 **快速操作區**
 - 快速派發作業
@@ -649,16 +654,34 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 #### 內容管理 API
 - **CREATE** `POST /api/teachers/lessons/{id}/contents`
   - 為單元新增內容
-  - 必填：type, title
-  - 選填：description, items_count, estimated_time
+  - 必填：type, title, items（朗讀項目陣列）
+  - 選填：description
+  - items 格式：`[{text: string, translation?: string}]`
   - 自動分配 order_index
+  
+- **READ** `GET /api/teachers/contents/{id}`
+  - 取得單一內容詳情
+  - 包含所有朗讀項目
   
 - **UPDATE** `PUT /api/teachers/contents/{id}`
   - 更新內容資訊
-  - 可更新所有欄位
+  - 可更新：title, description, items
   
 - **DELETE** `DELETE /api/teachers/contents/{id}`
-  - 刪除內容
+  - 刪除內容及相關資源
+
+#### 輔助功能 API
+- **TRANSLATE** `POST /api/teachers/translate`
+  - 翻譯英文文本為中文
+  - 輸入：`{text: string}`
+  - 輸出：`{translation: string}`
+  - 使用 OpenAI API
+  
+- **TTS BATCH** `POST /api/teachers/tts/batch`
+  - 批量生成語音檔案
+  - 輸入：`{texts: string[]}`
+  - 輸出：`{audio_urls: string[]}`
+  - 使用 OpenAI TTS API
 
 ### 6.2 資料驗證規則
 
@@ -677,7 +700,11 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 #### 課程資料驗證
 - **課程名稱**：最多 100 字元
 - **單元數量**：建議不超過 20 個
-- **內容項目**：朗讀錄音集 3-15 句
+- **Content 驗證**：
+  - 標題（title）：必填，最多 200 字元
+  - 描述（description）：選填
+  - 朗讀項目（items）：3-15 個項目
+  - 每個項目文本：最多 500 字元
 
 ## 七、技術規格與限制
 
@@ -718,7 +745,9 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - ✅ 班級詳情頁面（班級內管理學生和課程）
 - ✅ 拖曳重新排序功能（課程和單元）
 - ✅ Content CRUD API（建立、更新、刪除內容）
-- □ 朗讀錄音集內容建立介面
+- ✅ Content 建立編輯介面（在班級詳情頁）
+- ✅ 翻譯 API 整合（OpenAI）
+- ✅ TTS API 整合（批量語音生成）
 - □ 作業派發系統
 - ✅ 學生登入流程
 - □ 作業練習介面
