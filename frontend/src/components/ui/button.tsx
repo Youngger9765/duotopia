@@ -7,7 +7,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        default: '',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -35,13 +35,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          buttonVariants({ variant, size, className }),
-          // Default styles for Tailwind (fallback)
-          variant === 'default' && 'bg-blue-600 text-white hover:bg-blue-700',
-          variant === 'outline' && 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-          variant === 'secondary' && 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-          variant === 'ghost' && 'hover:bg-gray-100',
-          variant === 'destructive' && 'bg-red-600 text-white hover:bg-red-700'
+          buttonVariants({ variant, size }),
+          // Default fallback styles for when CSS variables don't work
+          (variant === 'default' || !variant) && !className?.includes('bg-') && 'bg-blue-600 text-white hover:bg-blue-700',
+          variant === 'outline' && !className?.includes('bg-') && 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+          variant === 'secondary' && !className?.includes('bg-') && 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+          variant === 'ghost' && !className?.includes('bg-') && 'hover:bg-gray-100',
+          variant === 'destructive' && !className?.includes('bg-') && 'bg-red-600 text-white hover:bg-red-700',
+          className
         )}
         ref={ref}
         {...props}

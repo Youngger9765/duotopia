@@ -1016,3 +1016,198 @@ async def ai_grade_assignment(
             status_code=500,
             detail=f"AI grading failed: {str(e)}"
         )
+
+
+@router.get("/{assignment_id}/detail")
+async def get_assignment_detail(
+    assignment_id: int,
+    current_user: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """獲取作業詳情（學生用）"""
+    # 檢查是否為學生
+    student = db.query(Student).filter(Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=403, detail="Only students can access this endpoint")
+    
+    # 獲取作業
+    assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id,
+        StudentAssignment.student_id == student.id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # 獲取內容詳情
+    content = db.query(Content).filter(Content.id == assignment.content_id).first()
+    
+    return {
+        "id": assignment.id,
+        "title": assignment.title,
+        "instructions": assignment.instructions,
+        "status": assignment.status.value,
+        "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
+        "score": assignment.score,
+        "feedback": assignment.feedback,
+        "content": {
+            "id": content.id,
+            "type": content.type.value,
+            "title": content.title,
+            "items": content.items or [],
+            "target_wpm": content.target_wpm,
+            "target_accuracy": content.target_accuracy
+        } if content else None
+    }
+
+
+@router.get("/{assignment_id}/submissions")
+async def get_assignment_submissions(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """獲取作業的所有提交（教師用）"""
+    # 獲取基礎作業資訊
+    base_assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id
+    ).first()
+    
+    if not base_assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # 獲取同一內容的所有學生作業
+    submissions = db.query(StudentAssignment).join(Student).filter(
+        StudentAssignment.content_id == base_assignment.content_id,
+        StudentAssignment.classroom_id == base_assignment.classroom_id
+    ).all()
+    
+    result = []
+    for sub in submissions:
+        student = db.query(Student).filter(Student.id == sub.student_id).first()
+        submission_record = db.query(AssignmentSubmission).filter(
+            AssignmentSubmission.assignment_id == sub.id
+        ).first()
+        
+        result.append({
+            "id": submission_record.id if submission_record else None,
+            "assignment_id": sub.id,
+            "student_id": student.id,
+            "student_name": student.name,
+            "status": sub.status.value,
+            "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None,
+            "score": sub.score,
+            "feedback": sub.feedback,
+            "submission_data": submission_record.submission_data if submission_record else None
+        })
+    
+    return result
+
+
+@router.post("/{assignment_id}/submit")
+async def submit_assignment(
+    assignment_id: int,
+    submission: dict,
+    current_user: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """提交作業（學生用）"""
+    # 檢查是否為學生
+    student = db.query(Student).filter(Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=403, detail="Only students can submit assignments")
+    
+    # 獲取作業
+    assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id,
+        StudentAssignment.student_id == student.id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # 檢查作業狀態
+    if assignment.status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
+        raise HTTPException(status_code=400, detail="Assignment already graded")
+    
+    # 創建或更新提交記錄
+    submission_record = db.query(AssignmentSubmission).filter(
+        AssignmentSubmission.assignment_id == assignment_id
+    ).first()
+    
+    if not submission_record:
+        submission_record = AssignmentSubmission(
+            assignment_id=assignment_id,
+            submission_data=submission,
+            submitted_at=datetime.now(timezone.utc)
+        )
+        db.add(submission_record)
+    else:
+        submission_record.submission_data = submission
+        submission_record.submitted_at = datetime.now(timezone.utc)
+    
+    # 更新作業狀態
+    assignment.status = AssignmentStatus.SUBMITTED
+    assignment.submitted_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    
+    return {
+        "id": assignment.id,
+        "status": assignment.status.value,
+        "submitted_at": assignment.submitted_at.isoformat(),
+        "message": "Assignment submitted successfully"
+    }
+
+
+@router.post("/{assignment_id}/manual-grade")
+async def manual_grade_assignment(
+    assignment_id: int,
+    grade_data: dict,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """手動評分（教師用）"""
+    # 獲取作業
+    assignment = db.query(StudentAssignment).filter(
+        StudentAssignment.id == assignment_id
+    ).first()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # 驗證教師權限（檢查作業是否屬於教師的班級）
+    classroom = db.query(Classroom).filter(
+        Classroom.id == assignment.classroom_id,
+        Classroom.teacher_id == current_teacher.id
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=403, detail="Not authorized to grade this assignment")
+    
+    # 更新評分
+    assignment.score = grade_data.get("score")
+    assignment.feedback = grade_data.get("feedback")
+    assignment.status = AssignmentStatus.GRADED
+    assignment.graded_at = datetime.now(timezone.utc)
+    
+    # 更新提交記錄（如果有詳細評分）
+    if "detailed_scores" in grade_data:
+        submission = db.query(AssignmentSubmission).filter(
+            AssignmentSubmission.assignment_id == assignment_id
+        ).first()
+        
+        if submission:
+            submission.ai_scores = grade_data["detailed_scores"]
+            submission.ai_feedback = grade_data.get("feedback")
+    
+    db.commit()
+    
+    return {
+        "id": assignment.id,
+        "status": assignment.status.value,
+        "score": assignment.score,
+        "feedback": assignment.feedback,
+        "graded_at": assignment.graded_at.isoformat(),
+        "message": "Assignment graded successfully"
+    }

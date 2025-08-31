@@ -61,6 +61,7 @@ export default function ClassroomDetail() {
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('students');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -110,6 +111,7 @@ export default function ClassroomDetail() {
     if (id) {
       fetchClassroomDetail();
       fetchPrograms();
+      fetchStudents();
       fetchAssignments();
     }
   }, [id]);
@@ -161,6 +163,16 @@ export default function ClassroomDetail() {
       setPrograms(programsWithLessons);
     } catch (err) {
       console.error('Fetch programs error:', err);
+    }
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const response = await apiClient.get(`/api/teachers/classrooms/${id}/students`);
+      setStudents(response.data || []);
+    } catch (err) {
+      console.error('Failed to fetch students:', err);
+      setStudents([]);
     }
   };
 
@@ -1203,9 +1215,9 @@ export default function ClassroomDetail() {
                   <h3 className="text-lg font-semibold">作業列表</h3>
                   <Button 
                     onClick={() => setShowAssignmentDialog(true)}
-                    className="bg-blue-500 hover:bg-blue-600"
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2 text-white" />
                     指派新作業
                   </Button>
                 </div>
