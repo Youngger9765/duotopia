@@ -170,8 +170,45 @@ async def student_login(request: StudentLoginRequest, db: Session = Depends(get_
 @router.get("/me")
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """取得當前登入的使用者資訊"""
-    # TODO: Decode token and get user
-    return {"message": "Current user info"}
+    from auth import verify_token
+    
+    # 解碼 token
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 取得使用者類型和 ID
+    user_id = payload.get("sub")
+    user_type = payload.get("type")
+    
+    if not user_id or not user_type:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # 根據類型取得使用者
+    if user_type == "teacher":
+        user = db.query(Teacher).filter(Teacher.id == int(user_id)).first()
+    elif user_type == "student":
+        user = db.query(Student).filter(Student.id == int(user_id)).first()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user type"
+        )
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user
 
 @router.get("/validate")
 async def validate_token():
