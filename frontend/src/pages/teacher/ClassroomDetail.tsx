@@ -406,26 +406,10 @@ export default function ClassroomDetail() {
   };
 
   const handleSaveLesson = (lesson: Lesson) => {
-    const programIndex = programs.findIndex(p => p.id === lesson.program_id);
-    if (programIndex !== -1) {
-      const updatedPrograms = [...programs];
-      if (!updatedPrograms[programIndex].lessons) {
-        updatedPrograms[programIndex].lessons = [];
-      }
-
-      if (lessonDialogType === 'create') {
-        updatedPrograms[programIndex].lessons!.push(lesson);
-      } else if (lessonDialogType === 'edit') {
-        const lessonIndex = updatedPrograms[programIndex].lessons!.findIndex(l => l.id === lesson.id);
-        if (lessonIndex !== -1) {
-          updatedPrograms[programIndex].lessons![lessonIndex] = lesson;
-        }
-      }
-
-      setPrograms(updatedPrograms);
-    }
-    // TODO: Call API to save lesson
-    console.log('Lesson saved:', lesson);
+    // 重新載入所有課程資料以確保同步
+    // 這樣可以獲得正確的 ID、順序和所有關聯資料
+    fetchPrograms();
+    toast.success(lessonDialogType === 'create' ? '單元已新增' : '單元已更新');
   };
 
   const handleDeleteLessonConfirm = (lessonId: number) => {
