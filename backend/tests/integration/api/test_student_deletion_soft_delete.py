@@ -30,7 +30,7 @@ def test_student_soft_deletion():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -50,7 +50,7 @@ def test_student_soft_deletion():
     
     if response.status_code != 200:
         print(f"❌ 建立學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     student_id = student["id"]
@@ -66,14 +66,14 @@ def test_student_soft_deletion():
     
     if response.status_code != 200:
         print(f"❌ 取得學生列表失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     students = response.json()
     test_student = next((s for s in students if s['id'] == student_id), None)
     
     if not test_student:
         print(f"❌ 新建學生未出現在列表中")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 確認學生出現在列表中 - 狀態: {test_student['status']}")
     student_count_before = len(students)
@@ -87,7 +87,7 @@ def test_student_soft_deletion():
     
     if response.status_code != 200:
         print(f"❌ 刪除學生失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 刪除學生成功")
     
@@ -100,14 +100,14 @@ def test_student_soft_deletion():
     
     if response.status_code != 200:
         print(f"❌ 取得學生列表失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     students_after = response.json()
     deleted_student = next((s for s in students_after if s['id'] == student_id), None)
     
     if deleted_student:
         print(f"❌ 學生仍出現在列表中！狀態: {deleted_student['status']}")
-        return False
+        assert False, "Test failed"
     
     student_count_after = len(students_after)
     print(f"✅ 確認學生已從列表中移除")
@@ -141,9 +141,9 @@ def test_student_soft_deletion():
         print(f"✅ 刪除不存在學生正確返回 404")
     else:
         print(f"❌ 刪除不存在學生返回: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
-    return True
+    # Test passed
 
 def test_student_with_classroom_deletion():
     """測試有班級的學生刪除"""
@@ -153,7 +153,7 @@ def test_student_with_classroom_deletion():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -173,7 +173,7 @@ def test_student_with_classroom_deletion():
     
     if response.status_code != 200:
         print(f"❌ 建立班級失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     classroom = response.json()
     classroom_id = classroom["id"]
@@ -196,7 +196,7 @@ def test_student_with_classroom_deletion():
     
     if response.status_code != 200:
         print(f"❌ 建立學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     student_id = student["id"]
@@ -211,7 +211,7 @@ def test_student_with_classroom_deletion():
     
     if response.status_code != 200:
         print(f"❌ 刪除學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 刪除有班級的學生成功")
     
@@ -230,12 +230,12 @@ def test_student_with_classroom_deletion():
             print(f"✅ 有班級的學生也正確從列表中消失")
         else:
             print(f"❌ 有班級的學生仍在列表中")
-            return False
+            assert False, "Test failed"
     
     # 清理：刪除測試班級
     requests.delete(f"{BASE_URL}/teachers/classrooms/{classroom_id}", headers=headers)
     
-    return True
+    # Test passed
 
 def main():
     """執行所有測試"""

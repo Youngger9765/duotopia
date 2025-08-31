@@ -26,7 +26,7 @@ def test_add_student_without_classroom():
     if response.status_code != 200:
         print(f"❌ 教師登入失敗: {response.status_code}")
         print(response.text)
-        return False
+        assert False, "Test failed"
     
     teacher_data = response.json()
     token = teacher_data["access_token"]
@@ -60,11 +60,11 @@ def test_add_student_without_classroom():
         print(f"   Email: {result['email']}")
         print(f"   班級ID: {result.get('classroom_id', '無')}")
         print(f"   預設密碼: {result.get('default_password', 'N/A')}")
-        return True
+        # Test passed
     else:
         print(f"❌ 新增學生失敗: {response.status_code}")
         print(f"   錯誤訊息: {response.text}")
-        return False
+        assert False, "Test failed"
 
 if __name__ == "__main__":
     print("=" * 60)

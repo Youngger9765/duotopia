@@ -30,7 +30,7 @@ def test_delete_empty_classroom():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -50,7 +50,7 @@ def test_delete_empty_classroom():
     
     if response.status_code != 200:
         print(f"❌ 建立班級失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     classroom = response.json()
     classroom_id = classroom["id"]
@@ -65,7 +65,7 @@ def test_delete_empty_classroom():
     
     if response.status_code != 200:
         print(f"❌ 刪除班級失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 刪除班級成功")
     
@@ -83,9 +83,9 @@ def test_delete_empty_classroom():
             print(f"✅ 確認班級已從列表中移除")
         else:
             print(f"❌ 班級仍在列表中")
-            return False
+            assert False, "Test failed"
     
-    return True
+    # Test passed
 
 def test_delete_classroom_with_students():
     """測試刪除有學生的班級"""
@@ -95,7 +95,7 @@ def test_delete_classroom_with_students():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -115,7 +115,7 @@ def test_delete_classroom_with_students():
     
     if response.status_code != 200:
         print(f"❌ 建立班級失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     classroom = response.json()
     classroom_id = classroom["id"]
@@ -138,7 +138,7 @@ def test_delete_classroom_with_students():
     
     if response.status_code != 200:
         print(f"❌ 新增學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     print(f"✅ 新增學生成功 - ID: {student['id']}")
@@ -171,12 +171,12 @@ def test_delete_classroom_with_students():
     elif response.status_code == 400:
         print(f"⚠️  系統拒絕刪除有學生的班級: {response.json()}")
         # 這也是合理的業務邏輯
-        return True
+        # Test passed
     else:
         print(f"❌ 未預期的錯誤: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
-    return True
+    # Test passed
 
 def test_delete_nonexistent_classroom():
     """測試刪除不存在的班級"""
@@ -186,7 +186,7 @@ def test_delete_nonexistent_classroom():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -199,10 +199,10 @@ def test_delete_nonexistent_classroom():
     
     if response.status_code == 404:
         print(f"✅ 正確返回 404 錯誤")
-        return True
+        # Test passed
     else:
         print(f"❌ 未預期的回應: {response.status_code}")
-        return False
+        assert False, "Test failed"
 
 def test_delete_other_teacher_classroom():
     """測試刪除其他教師的班級（權限測試）"""
@@ -214,7 +214,7 @@ def test_delete_other_teacher_classroom():
     print("⚠️  需要第二個教師帳號來完整測試權限控制")
     print("   目前假設 API 會正確檢查權限")
     
-    return True
+    # Test passed
 
 def main():
     """執行所有測試"""

@@ -29,8 +29,7 @@ def test_student_classroom_assignment():
     print("=" * 60)
     
     token = get_teacher_token()
-    if not token:
-        return False
+    assert token is not None, "教師登入失敗"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -48,9 +47,7 @@ def test_student_classroom_assignment():
         headers=headers
     )
     
-    if response.status_code != 200:
-        print(f"❌ 建立班級失敗: {response.status_code}")
-        return False
+    assert response.status_code == 200, f"建立班級失敗: {response.status_code}"
     
     classroom = response.json()
     classroom_id = classroom["id"]
@@ -73,7 +70,7 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 建立學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     student_id = student["id"]
@@ -88,18 +85,18 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 取得學生列表失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     students = response.json()
     test_student = next((s for s in students if s['id'] == student_id), None)
     
     if not test_student:
         print(f"❌ 找不到測試學生")
-        return False
+        assert False, "Test failed"
     
     if test_student['classroom_name'] != '未分配':
         print(f"❌ 學生應該顯示為未分配，實際: {test_student['classroom_name']}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 確認學生顯示為未分配")
     
@@ -117,7 +114,7 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 分配學生到班級失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 分配學生到班級成功")
     
@@ -136,7 +133,7 @@ def test_student_classroom_assignment():
             print(f"✅ 確認學生已分配到班級: {test_student['classroom_name']}")
         else:
             print(f"❌ 學生分配失敗 - classroom_id: {test_student['classroom_id'] if test_student else 'None'}")
-            return False
+            assert False, "Test failed"
     
     # 6. 建立第二個班級測試重新分配
     print("\n6. 建立第二個班級...")
@@ -154,7 +151,7 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 建立第二個班級失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     classroom2 = response.json()
     classroom2_id = classroom2["id"]
@@ -174,7 +171,7 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 重新分配學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 重新分配學生成功")
     
@@ -193,7 +190,7 @@ def test_student_classroom_assignment():
             print(f"✅ 確認學生已重新分配到班級: {test_student['classroom_name']}")
         else:
             print(f"❌ 學生重新分配失敗")
-            return False
+            assert False, "Test failed"
     
     # 9. 取消班級分配（設為未分配）
     print("\n9. 取消班級分配...")
@@ -209,7 +206,7 @@ def test_student_classroom_assignment():
     
     if response.status_code != 200:
         print(f"❌ 取消班級分配失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 取消班級分配成功")
     
@@ -228,14 +225,14 @@ def test_student_classroom_assignment():
             print(f"✅ 確認學生回到未分配狀態")
         else:
             print(f"❌ 學生未回到未分配狀態: {test_student['classroom_name'] if test_student else 'None'}")
-            return False
+            assert False, "Test failed"
     
     # 清理：刪除測試資料
     requests.delete(f"{BASE_URL}/teachers/students/{student_id}", headers=headers)
     requests.delete(f"{BASE_URL}/teachers/classrooms/{classroom_id}", headers=headers)
     requests.delete(f"{BASE_URL}/teachers/classrooms/{classroom2_id}", headers=headers)
     
-    return True
+    # Test passed
 
 def main():
     """執行測試"""

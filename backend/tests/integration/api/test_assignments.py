@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 from typing import Dict, List
+import time
 
 from main import app
 from database import get_db
@@ -119,11 +120,12 @@ def test_data(db_session: Session) -> Dict:
     )
     db_session.add(classroom)
     
-    # 建立學生
+    # 建立學生（使用時間戳避免重複）
+    timestamp = int(time.time())
     students = []
     for i in range(3):
         student = Student(
-            email=f"student{i}@test.local",
+            email=f"student{i}_test_{timestamp}@test.local",
             password_hash=get_password_hash("test123"),
             name=f"Student {i}",
             birthdate=datetime(2010, 1, 1).date(),

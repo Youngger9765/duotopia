@@ -30,7 +30,7 @@ def test_crud_unassigned_student():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -52,7 +52,7 @@ def test_crud_unassigned_student():
     
     if response.status_code != 200:
         print(f"❌ 建立學生失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     student_id = student["id"]
@@ -67,7 +67,7 @@ def test_crud_unassigned_student():
     
     if response.status_code != 200:
         print(f"❌ 取得學生失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     student_info = response.json()
     print(f"✅ 取得學生成功 - 姓名: {student_info['name']}")
@@ -87,7 +87,7 @@ def test_crud_unassigned_student():
     
     if response.status_code != 200:
         print(f"❌ 更新學生失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 更新學生成功")
     
@@ -100,7 +100,7 @@ def test_crud_unassigned_student():
     
     if response.status_code != 200:
         print(f"❌ 刪除學生失敗: {response.status_code} - {response.text}")
-        return False
+        assert False, "Test failed"
     
     print(f"✅ 刪除學生成功")
     
@@ -119,7 +119,7 @@ def test_crud_unassigned_student():
         else:
             print(f"⚠️  學生可能未正確標記為 inactive")
     
-    return True
+    # Test passed
 
 def test_permission_control():
     """測試權限控制 - 不同教師不能操作其他教師的學生"""
@@ -130,7 +130,7 @@ def test_permission_control():
     # 這個測試需要第二個教師帳號
     # 暫時跳過，但在生產環境中應該要測試
     print("⚠️  需要第二個教師帳號來測試權限控制")
-    return True
+    # Test passed
 
 def test_assign_classroom_after_creation():
     """測試建立學生後分配班級"""
@@ -140,7 +140,7 @@ def test_assign_classroom_after_creation():
     
     token = get_teacher_token()
     if not token:
-        return False
+        assert False, "Test failed"
     
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -160,7 +160,7 @@ def test_assign_classroom_after_creation():
     
     if response.status_code != 200:
         print(f"❌ 建立學生失敗: {response.status_code}")
-        return False
+        assert False, "Test failed"
     
     student = response.json()
     student_id = student["id"]
@@ -175,7 +175,7 @@ def test_assign_classroom_after_creation():
     
     if response.status_code != 200 or not response.json():
         print(f"❌ 無法取得班級列表")
-        return False
+        assert False, "Test failed"
     
     classroom_id = response.json()[0]["id"]
     classroom_name = response.json()[0]["name"]
@@ -191,7 +191,7 @@ def test_assign_classroom_after_creation():
     # 清理：刪除測試學生
     requests.delete(f"{BASE_URL}/teachers/students/{student_id}", headers=headers)
     
-    return True
+    # Test passed
 
 def main():
     """執行所有測試"""
