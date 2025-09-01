@@ -259,27 +259,23 @@ export function AssignmentDialog({
 
     setLoading(true);
     try {
-      // Create assignments for each selected content
-      const promises = Array.from(selectedContents).map(contentId => {
-        const payload = {
-          content_id: contentId,
-          classroom_id: classroomId,
-          title: formData.title,
-          instructions: formData.instructions || undefined,
-          student_ids: formData.assign_to_all ? [] : formData.student_ids,
-          due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
-        };
-        return apiClient.post('/api/assignments/create', payload);
-      });
+      // Create one assignment with multiple contents (新架構)
+      const payload = {
+        title: formData.title,
+        description: formData.instructions || undefined,  // 欄位名稱改為 description
+        classroom_id: classroomId,
+        content_ids: Array.from(selectedContents),  // 多個內容 ID
+        student_ids: formData.assign_to_all ? [] : formData.student_ids,
+        due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
+      };
 
-      const results = await Promise.all(promises);
-      const totalCreated = results.reduce((sum: number, r: any) => sum + (r?.count || 0), 0);
+      const result = await apiClient.post('/api/assignments/create', payload);
 
-      toast.success(`成功創建 ${totalCreated} 份作業`);
+      toast.success(`成功創建作業，已指派給 ${result.student_count || 0} 位學生`);
       onSuccess?.();
       handleClose();
     } catch (error) {
-      console.error('Failed to create assignments:', error);
+      console.error('Failed to create assignment:', error);
       toast.error('創建作業失敗');
     } finally {
       setLoading(false);

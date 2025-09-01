@@ -20,12 +20,43 @@ import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, List
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 
+interface ContentItem {
+  text: string;
+  translation: string;
+}
+
 interface Content {
   id: number;
   type?: string;
   title: string;
   items_count: number;
   estimated_time?: string;
+  items?: ContentItem[];
+  lesson_id?: number;
+  target_wpm?: number;
+  target_accuracy?: number;
+  time_limit_seconds?: number;
+}
+
+interface Assignment {
+  id: number;
+  title: string;
+  description?: string;
+  status?: string;
+  classroom_id?: number;
+  content_id?: number;
+  due_date?: string;
+  created_at?: string;
+  submissions?: AssignmentSubmission[];
+}
+
+interface AssignmentSubmission {
+  id: number;
+  student_id: number;
+  assignment_id: number;
+  status: string;
+  score?: number;
+  feedback?: string;
 }
 
 interface Lesson {
@@ -65,12 +96,12 @@ export default function ClassroomDetail() {
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('students');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<any>(null);
-  const [editingContent, setEditingContent] = useState<any>(null);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
 
   // Student dialog states
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -81,7 +112,7 @@ export default function ClassroomDetail() {
   const [programDialogType, setProgramDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
 
   // Lesson dialog states
-  const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonDialogType, setLessonDialogType] = useState<'create' | 'edit' | 'delete' | null>(null);
   const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(undefined);
 
@@ -107,8 +138,8 @@ export default function ClassroomDetail() {
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [dropIndicatorProgram, setDropIndicatorProgram] = useState<number | null>(null);
   const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
@@ -184,7 +215,7 @@ export default function ClassroomDetail() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await apiClient.get(`/api/assignments/teacher?classroom_id=${id}`);
+      const response = await apiClient.get(`/api/assignments?classroom_id=${id}`);
       setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
@@ -192,7 +223,7 @@ export default function ClassroomDetail() {
     }
   };
 
-  const handleEditAssignment = (assignment: any) => {
+  const handleEditAssignment = (assignment: Assignment) => {
     // TODO: Open edit dialog with assignment data
     toast.info(`準備編輯作業: ${assignment.title}`);
     setShowAssignmentDetails(false);
@@ -201,7 +232,7 @@ export default function ClassroomDetail() {
     // setShowEditAssignmentDialog(true);
   };
 
-  const handleDeleteAssignment = async (assignment: any) => {
+  const handleDeleteAssignment = async (assignment: Assignment) => {
     if (confirm(`確定要刪除作業「${assignment.title}」嗎？此操作將進行軟刪除，資料仍會保留。`)) {
       try {
         await apiClient.delete(`/api/assignments/${assignment.id}`);
@@ -215,7 +246,7 @@ export default function ClassroomDetail() {
     }
   };
 
-  const handleContentClick = (content: any) => {
+  const handleContentClick = (content: Content) => {
     // 如果點擊的是同一個 content，則關閉 panel
     if (isPanelOpen && selectedContent?.id === content.id) {
       setIsPanelOpen(false);
@@ -287,7 +318,7 @@ export default function ClassroomDetail() {
   const handleDeleteContentItem = (index: number) => {
     if (!editingContent) return;
 
-    const updatedItems = editingContent.items.filter((_: any, i: number) => i !== index);
+    const updatedItems = editingContent.items.filter((_: ContentItem, i: number) => i !== index);
     setEditingContent({
       ...editingContent,
       items: updatedItems
@@ -429,7 +460,7 @@ export default function ClassroomDetail() {
     fetchPrograms(); // Refresh data
   };
 
-  const handleSaveLesson = (_lesson: Lesson) => {
+  const handleSaveLesson = () => {
     // 重新載入所有課程資料以確保同步
     // 這樣可以獲得正確的 ID、順序和所有關聯資料
     fetchPrograms();
