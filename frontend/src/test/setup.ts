@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Mock fetch globally
 global.fetch = vi.fn()
@@ -6,7 +7,7 @@ global.fetch = vi.fn()
 // Mock window.matchMedia for responsive components
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: any) => ({
     matches: false,
     media: query,
     onchange: null,

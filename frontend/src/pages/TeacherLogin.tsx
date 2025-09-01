@@ -25,7 +25,7 @@ export default function TeacherLogin() {
     try {
       await apiClient.teacherLogin(formData);
       navigate('/teacher/dashboard');
-    } catch {
+    } catch (err) {
       setError(err instanceof Error ? err.message : '登入失敗，請檢查帳號密碼');
     } finally {
       setIsLoading(false);
@@ -60,7 +60,7 @@ export default function TeacherLogin() {
           </Button>
         </Link>
       </div>
-      
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Duotopia</h1>
@@ -117,9 +117,9 @@ export default function TeacherLogin() {
                 </Alert>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? (

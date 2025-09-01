@@ -15,6 +15,7 @@ import CopyProgramDialog from '@/components/CopyProgramDialog';
 import ContentTypeDialog from '@/components/ContentTypeDialog';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { AssignmentDialog } from '@/components/AssignmentDialog';
+import { StudentCompletionDashboard } from '@/components/StudentCompletionDashboard';
 import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
@@ -188,6 +189,29 @@ export default function ClassroomDetail() {
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
       setAssignments([]);
+    }
+  };
+
+  const handleEditAssignment = (assignment: any) => {
+    // TODO: Open edit dialog with assignment data
+    toast.info(`準備編輯作業: ${assignment.title}`);
+    setShowAssignmentDetails(false);
+    // In production: open edit dialog
+    // setEditingAssignment(assignment);
+    // setShowEditAssignmentDialog(true);
+  };
+
+  const handleDeleteAssignment = async (assignment: any) => {
+    if (confirm(`確定要刪除作業「${assignment.title}」嗎？此操作將進行軟刪除，資料仍會保留。`)) {
+      try {
+        await apiClient.delete(`/api/assignments/${assignment.id}`);
+        toast.success(`作業「${assignment.title}」已刪除`);
+        setShowAssignmentDetails(false);
+        fetchAssignments(); // Refresh the list
+      } catch (error) {
+        console.error('Failed to delete assignment:', error);
+        toast.error('刪除作業失敗，請稍後再試');
+      }
     }
   };
 
@@ -405,7 +429,7 @@ export default function ClassroomDetail() {
     fetchPrograms(); // Refresh data
   };
 
-  const handleSaveLesson = (lesson: Lesson) => {
+  const handleSaveLesson = (_lesson: Lesson) => {
     // 重新載入所有課程資料以確保同步
     // 這樣可以獲得正確的 ID、順序和所有關聯資料
     fetchPrograms();
@@ -1535,7 +1559,7 @@ export default function ClassroomDetail() {
       {/* Assignment Details Dialog */}
       {showAssignmentDetails && selectedAssignment && (
         <Dialog open={showAssignmentDetails} onOpenChange={setShowAssignmentDetails}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">
                 作業詳情：{selectedAssignment.title}
@@ -1608,38 +1632,15 @@ export default function ClassroomDetail() {
                 </div>
               </div>
 
-              {/* Status Distribution */}
-              {selectedAssignment.status_distribution && (
-                <div>
-                  <Label className="text-sm text-gray-600 mb-3 block">狀態分佈</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card className="p-3 bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">未開始</span>
-                        <span className="font-bold">{selectedAssignment.status_distribution.not_started || 0}</span>
-                      </div>
-                    </Card>
-                    <Card className="p-3 bg-yellow-50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">進行中</span>
-                        <span className="font-bold">{selectedAssignment.status_distribution.in_progress || 0}</span>
-                      </div>
-                    </Card>
-                    <Card className="p-3 bg-blue-50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">已提交</span>
-                        <span className="font-bold">{selectedAssignment.status_distribution.submitted || 0}</span>
-                      </div>
-                    </Card>
-                    <Card className="p-3 bg-green-50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">已批改</span>
-                        <span className="font-bold">{selectedAssignment.status_distribution.graded || 0}</span>
-                      </div>
-                    </Card>
-                  </div>
-                </div>
-              )}
+              {/* Student Completion Dashboard */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-3 block">學生列表</Label>
+                <StudentCompletionDashboard
+                  assignmentId={selectedAssignment.id}
+                  classroomId={Number(id)}
+                  onRefresh={fetchAssignments}
+                />
+              </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -1655,20 +1656,14 @@ export default function ClassroomDetail() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    // TODO: Implement edit assignment
-                    toast.info('編輯作業功能尚在開發中');
-                  }}
+                  onClick={() => handleEditAssignment(selectedAssignment)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   編輯作業
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => {
-                    // TODO: Implement delete assignment
-                    toast.info('刪除作業功能尚在開發中');
-                  }}
+                  onClick={() => handleDeleteAssignment(selectedAssignment)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   刪除作業

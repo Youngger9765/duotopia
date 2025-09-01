@@ -69,22 +69,22 @@ export function ProgramDialog({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name?.trim()) {
       newErrors.name = '課程名稱為必填';
     }
-    
+
     if (!formData.level) {
       newErrors.level = '程度為必填';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       if (dialogType === 'create') {
@@ -95,7 +95,7 @@ export function ProgramDialog({
           classroom_id: formData.classroom_id || classroomId!,
           estimated_hours: formData.estimated_hours
         });
-        onSave(newProgram);
+        onSave(newProgram as Program);
       } else if (dialogType === 'edit' && program?.id) {
         // For classroom programs, we might need different API endpoint
         // TODO: Check if this is a classroom program update
@@ -118,7 +118,7 @@ export function ProgramDialog({
 
   const handleDelete = async () => {
     if (!program?.id || !onDelete) return;
-    
+
     setLoading(true);
     try {
       await apiClient.deleteProgram(program.id);
@@ -144,12 +144,12 @@ export function ProgramDialog({
               {dialogType === 'create' ? '建立新課程' : '編輯課程'}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create' 
-                ? '為班級建立新的課程內容' 
+              {dialogType === 'create'
+                ? '為班級建立新的課程內容'
                 : '修改課程資訊'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium">
@@ -165,7 +165,7 @@ export function ProgramDialog({
               />
               {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
-            
+
             <div>
               <label htmlFor="description" className="text-sm font-medium">
                 課程描述
@@ -201,7 +201,7 @@ export function ProgramDialog({
                 </select>
                 {errors.level && <p className="text-xs text-red-500 mt-1">{errors.level}</p>}
               </div>
-              
+
               <div>
                 <label htmlFor="hours" className="text-sm font-medium">
                   預估時數
@@ -222,7 +222,7 @@ export function ProgramDialog({
               <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
@@ -250,7 +250,7 @@ export function ProgramDialog({
               確定要刪除課程「{program.name}」嗎？此操作將同時刪除所有相關的單元。
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">課程資料：</p>
@@ -260,14 +260,14 @@ export function ProgramDialog({
               )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete} 
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
               disabled={loading}
             >
               {loading ? '刪除中...' : '確認刪除'}

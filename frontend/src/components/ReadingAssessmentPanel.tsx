@@ -8,13 +8,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Mic, 
-  Volume2, 
-  GripVertical, 
-  Copy, 
-  Trash2, 
-  Plus, 
+import {
+  Mic,
+  Volume2,
+  GripVertical,
+  Copy,
+  Trash2,
+  Plus,
   Globe,
   X,
   Play,
@@ -75,7 +75,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     try {
       // 根據選擇的口音和性別選擇適當的語音
       let voice = 'en-US-JennyNeural'; // 預設美國女聲
-      
+
       if (accent === 'American English') {
         voice = gender === 'Male' ? 'en-US-ChristopherNeural' : 'en-US-JennyNeural';
       } else if (accent === 'British English') {
@@ -83,24 +83,24 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       } else if (accent === 'Australian English') {
         voice = gender === 'Male' ? 'en-AU-WilliamNeural' : 'en-AU-NatashaNeural';
       }
-      
+
       // 轉換速度設定
       let rate = '+0%';
       if (speed === 'Slow x0.75') rate = '-25%';
       else if (speed === 'Fast x1.5') rate = '+50%';
-      
-      const result = await apiClient.generateTTS(text, voice, rate, '+0%');
-      
-      if (result.audio_url) {
+
+      const result = await apiClient.generateTTS(text, voice, rate, '+0%') as any;
+
+      if (result?.audio_url) {
         // 如果是相對路徑，加上 API base URL
-        const fullUrl = result.audio_url.startsWith('http') 
-          ? result.audio_url 
+        const fullUrl = result.audio_url.startsWith('http')
+          ? result.audio_url
           : `http://localhost:8000${result.audio_url}`;
         setAudioUrl(fullUrl);
         toast.success('音檔生成成功！');
       }
-    } catch {
-      console.error('TTS generation failed:', error);
+    } catch (err) {
+      console.error('TTS generation failed:', err);
       toast.error('生成失敗，請重試');
     } finally {
       setIsGenerating(false);
@@ -125,16 +125,16 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         'audio/ogg',
         'audio/mp4'
       ];
-      
+
       for (const type of possibleTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
           mimeType = type;
           break;
         }
       }
-      
+
       console.log('Using MIME type:', mimeType);
-      const mediaRecorder = new MediaRecorder(stream, { 
+      const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000  // 設定位元率
       });
@@ -167,37 +167,37 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           clearInterval(recordingTimerRef.current);
           recordingTimerRef.current = null;
         }
-        
+
         // 使用基本的 MIME type，去掉 codec 信息
         const basicMimeType = mimeType.split(';')[0];
         const audioBlob = new Blob(audioChunksRef.current, { type: basicMimeType });
-        
+
         // 使用 ref 來獲取當前的錄音時長
         const currentDuration = recordingDurationRef.current || recordingDuration;
-        
+
         // 檢查檔案大小 (2MB 限制)
         if (audioBlob.size > 2 * 1024 * 1024) {
           toast.error('錄音檔案太大，請縮短錄音時間');
           stream.getTracks().forEach(track => track.stop());
           return;
         }
-        
+
         // 確保有錄音資料
         if (audioBlob.size === 0) {
           toast.error('錄音失敗，請檢查麥克風權限');
           stream.getTracks().forEach(track => track.stop());
           return;
         }
-        
+
         // 儲存 blob 以便之後上傳
         audioBlobRef.current = audioBlob;
         recordingDurationRef.current = currentDuration;
-        
+
         // 創建本地 URL 供預覽播放
         const localUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio(localUrl);
         toast.success('錄音完成！可以試聽或重新錄製');
-        
+
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -214,10 +214,10 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     if (mediaRecorderRef.current && isRecording) {
       // 先儲存當前的錄音時長到 ref
       recordingDurationRef.current = recordingDuration;
-      
+
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      
+
       // 清理計時器
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
@@ -233,21 +233,21 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         toast.warning('請選擇要使用的音源（TTS 或錄音）');
         return;
       }
-      
+
       // 新增模式：不上傳，只傳遞本地 URL
       if (isCreating) {
         const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
-        onConfirm(finalUrl, { 
-          accent, 
-          gender, 
-          speed, 
+        onConfirm(finalUrl, {
+          accent,
+          gender,
+          speed,
           source: selectedSource,
-          audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null 
+          audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null
         });
         onClose();
         return;
       }
-      
+
       // 編輯模式：如果選擇錄音且還沒上傳（URL 是 blob:// 開頭），現在上傳
       if (selectedSource === 'recording' && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
@@ -255,25 +255,25 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           const result = await apiClient.uploadAudio(
             audioBlobRef.current,
             recordingDurationRef.current || 1,
-            contentId,
-            itemIndex
+            Number(contentId),
+            Number(itemIndex)
           );
-          
+
           if (result && result.audio_url) {
             onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
           }
-        } catch {
-          console.error('Upload failed:', error);
+        } catch (err) {
+          console.error('Upload failed:', err);
           toast.error('上傳失敗，請重試');
         } finally {
           setIsUploading(false);
         }
         return;
       }
-      
+
       const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
       onConfirm(finalUrl, { accent, gender, speed, source: selectedSource });
     } else {
@@ -283,21 +283,21 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         toast.error('請先生成或錄製音檔');
         return;
       }
-      
+
       // 新增模式：不上傳，只傳遞本地 URL
       if (isCreating) {
         const source = recordedAudio ? 'recording' : 'tts';
-        onConfirm(finalAudioUrl, { 
-          accent, 
-          gender, 
-          speed, 
+        onConfirm(finalAudioUrl, {
+          accent,
+          gender,
+          speed,
           source,
-          audioBlob: source === 'recording' ? audioBlobRef.current : null 
+          audioBlob: source === 'recording' ? audioBlobRef.current : null
         });
         onClose();
         return;
       }
-      
+
       // 編輯模式：如果是錄音且還沒上傳，現在上傳
       if (recordedAudio && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
@@ -305,25 +305,25 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           const result = await apiClient.uploadAudio(
             audioBlobRef.current,
             recordingDurationRef.current || 1,
-            contentId,
-            itemIndex
+            Number(contentId),
+            Number(itemIndex)
           );
-          
+
           if (result && result.audio_url) {
             onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
           }
-        } catch {
-          console.error('Upload failed:', error);
+        } catch (err) {
+          console.error('Upload failed:', err);
           toast.error('上傳失敗，請重試');
         } finally {
           setIsUploading(false);
         }
         return;
       }
-      
+
       const source = recordedAudio ? 'recording' : 'tts';
       onConfirm(finalAudioUrl, { accent, gender, speed, source });
     }
@@ -343,13 +343,13 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           <DialogTitle>音檔設定</DialogTitle>
         </DialogHeader>
 
-        <Tabs 
-          value={activeTab} 
+        <Tabs
+          value={activeTab}
           onValueChange={setActiveTab}
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger 
+            <TabsTrigger
               value="generate"
               className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-md transition-all"
             >
@@ -359,7 +359,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                 <span className="ml-1 text-xs">✓</span>
               )}
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="record"
               className="data-[state=active]:bg-red-500 data-[state=active]:text-white rounded-md transition-all"
             >
@@ -425,8 +425,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                onClick={handleGenerate} 
+              <Button
+                onClick={handleGenerate}
                 disabled={isGenerating}
                 className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
                 title="使用免費的 Microsoft Edge TTS 生成語音"
@@ -508,7 +508,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                             toast.error('沒有錄音可播放');
                             return;
                           }
-                          
+
                           const audio = new Audio(recordedAudio);
                           audio.play().catch(err => {
                             console.error('Play failed:', err);
@@ -545,8 +545,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               <button
                 onClick={() => setSelectedSource('tts')}
                 className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedSource === 'tts' 
-                    ? 'border-blue-500 bg-blue-50' 
+                  selectedSource === 'tts'
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-300 bg-white hover:border-gray-400'
                 }`}
               >
@@ -556,12 +556,12 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                 <div className="text-sm font-medium">TTS 語音</div>
                 <div className="text-xs text-gray-500">AI 生成</div>
               </button>
-              
+
               <button
                 onClick={() => setSelectedSource('recording')}
                 className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedSource === 'recording' 
-                    ? 'border-red-500 bg-red-50' 
+                  selectedSource === 'recording'
+                    ? 'border-red-500 bg-red-50'
                     : 'border-gray-300 bg-white hover:border-gray-400'
                 }`}
               >
@@ -638,12 +638,12 @@ export default function ReadingAssessmentPanel({
 
   const loadContentData = async () => {
     if (!content?.id) return;
-    
+
     setIsLoading(true);
     try {
       const data = await apiClient.getContentDetail(content.id);
       setTitle(data.title || '');
-      
+
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
         const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
@@ -654,7 +654,7 @@ export default function ReadingAssessmentPanel({
         }));
         setRows(convertedRows);
       }
-      
+
       setLevel(data.level || 'A1');
       setTags(data.tags || []);
       setIsPublic(data.is_public || false);
@@ -669,13 +669,13 @@ export default function ReadingAssessmentPanel({
   // Update parent when data changes
   useEffect(() => {
     if (!onUpdateContent) return;
-    
+
     const items = rows.map(row => ({
       text: row.text,
       translation: row.definition,
       audio_url: row.audioUrl
     }));
-    
+
     onUpdateContent({
       ...editingContent,
       title,
@@ -770,14 +770,14 @@ export default function ReadingAssessmentPanel({
           audioSettings: settings
         };
         setRows(newRows);
-        
+
         // 立即更新 content 並儲存到後端
         const items = newRows.map(row => ({
           text: row.text,
           translation: row.definition,
           audio_url: row.audioUrl || ''
         }));
-        
+
         // 新增模式：只更新本地狀態
         if (isCreating) {
           // 更新本地狀態
@@ -800,10 +800,10 @@ export default function ReadingAssessmentPanel({
               level,
               tags
             };
-            
+
             console.log('Updating content with new audio:', audioUrl);
             await apiClient.updateContent(editingContent.id, updateData);
-            
+
             // 更新成功後，重新從後端載入內容以確保同步
             const response = await apiClient.getContentDetail(editingContent.id);
             if (response && response.items) {
@@ -816,7 +816,7 @@ export default function ReadingAssessmentPanel({
               setRows(updatedRows);
               console.log('Updated rows with new audio URLs:', updatedRows);
             }
-            
+
             // 更新本地狀態
             if (onUpdateContent) {
               onUpdateContent({
@@ -832,7 +832,7 @@ export default function ReadingAssessmentPanel({
             toast.error('更新失敗，但音檔已生成');
           }
         }
-        
+
         // 關閉 modal 但不要關閉 panel
         setTtsModalOpen(false);
         setSelectedRow(null);
@@ -846,14 +846,14 @@ export default function ReadingAssessmentPanel({
       const textsToGenerate = rows
         .filter(row => row.text && !row.audioUrl)
         .map(row => row.text);
-      
+
       if (textsToGenerate.length === 0) {
         toast.info('所有項目都已有音檔');
         return;
       }
-      
+
       toast.info(`正在生成 ${textsToGenerate.length} 個音檔...`);
-      
+
       // 批次生成 TTS
       const result = await apiClient.batchGenerateTTS(
         textsToGenerate,
@@ -861,32 +861,32 @@ export default function ReadingAssessmentPanel({
         '+0%',
         '+0%'
       );
-      
+
       if (result.audio_urls) {
         // 更新 rows 的 audioUrl
         const newRows = [...rows];
         let audioIndex = 0;
-        
+
         for (let i = 0; i < newRows.length; i++) {
           if (newRows[i].text && !newRows[i].audioUrl) {
             const audioUrl = result.audio_urls[audioIndex];
             // 如果是相對路徑，加上 API base URL
-            newRows[i].audioUrl = audioUrl.startsWith('http') 
-              ? audioUrl 
+            newRows[i].audioUrl = audioUrl.startsWith('http')
+              ? audioUrl
               : `http://localhost:8000${audioUrl}`;
             audioIndex++;
           }
         }
-        
+
         setRows(newRows);
-        
+
         // 立即更新 content 並儲存到後端（不要用 onSave 避免關閉 panel）
         const items = newRows.map(row => ({
           text: row.text,
           translation: row.definition,
           audio_url: row.audioUrl || ''
         }));
-        
+
         // 新增模式：只更新本地狀態，不呼叫 API
         if (isCreating) {
           // 更新本地狀態
@@ -899,7 +899,7 @@ export default function ReadingAssessmentPanel({
               tags
             });
           }
-          
+
           toast.success(`成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`);
         } else {
           // 編輯模式：直接呼叫 API 更新
@@ -910,9 +910,9 @@ export default function ReadingAssessmentPanel({
               level,
               tags
             };
-            
+
             await apiClient.updateContent(editingContent.id, updateData);
-            
+
             // 更新本地狀態
             if (onUpdateContent) {
               onUpdateContent({
@@ -923,7 +923,7 @@ export default function ReadingAssessmentPanel({
                 tags
               });
             }
-            
+
             toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
           } catch {
             console.error('Failed to save TTS:', error);
@@ -943,14 +943,14 @@ export default function ReadingAssessmentPanel({
       toast.error('請先輸入文本');
       return;
     }
-    
+
     toast.info(`生成翻譯中...`);
     try {
       const response = await apiClient.translateText(
         newRows[index].text,
         translationType === 'chinese' ? 'zh-TW' : 'en'
       );
-      
+
       newRows[index].definition = response.translation;
       setRows(newRows);
       toast.success('翻譯生成完成');
@@ -965,31 +965,31 @@ export default function ReadingAssessmentPanel({
     const textsToTranslate = rows
       .filter(row => row.text && !row.definition)
       .map(row => row.text);
-    
+
     if (textsToTranslate.length === 0) {
       toast.info('沒有需要翻譯的項目');
       return;
     }
-    
+
     toast.info(`開始批次生成${translationType === 'chinese' ? '中文' : '英文'}翻譯...`);
-    
+
     try {
       const response = await apiClient.batchTranslate(
         textsToTranslate,
         translationType === 'chinese' ? 'zh-TW' : 'en'
       );
-      
+
       // 更新翻譯結果
       const newRows = [...rows];
       let translationIndex = 0;
-      
+
       for (let i = 0; i < newRows.length; i++) {
         if (newRows[i].text && !newRows[i].definition) {
           newRows[i].definition = response.translations[translationIndex];
           translationIndex++;
         }
       }
-      
+
       setRows(newRows);
       toast.success('批次翻譯生成完成');
     } catch {
@@ -1099,15 +1099,15 @@ export default function ReadingAssessmentPanel({
                           toast.error('沒有音檔可播放');
                           return;
                         }
-                        
+
                         console.log('Playing audio:', row.audioUrl);
                         const audio = new Audio(row.audioUrl);
-                        
+
                         audio.onerror = (e) => {
                           console.error('Audio playback error:', e);
                           toast.error('音檔播放失敗，請檢查音檔格式');
                         };
-                        
+
                         audio.play().catch(error => {
                           console.error('Play failed:', error);
                           toast.error('無法播放音檔');
@@ -1169,7 +1169,7 @@ export default function ReadingAssessmentPanel({
             </div>
           </div>
         ))}
-        
+
         {/* Add Row Button */}
         <button
           onClick={handleAddRow}
@@ -1213,7 +1213,7 @@ export default function ReadingAssessmentPanel({
               placeholder="按 Enter 新增標籤"
             />
           </div>
-          
+
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -1258,7 +1258,7 @@ export default function ReadingAssessmentPanel({
           isCreating={isCreating}
         />
       )}
-      
+
       {/* 底部按鈕（新增模式時顯示） */}
       {isCreating && (
         <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
@@ -1275,22 +1275,22 @@ export default function ReadingAssessmentPanel({
                 toast.error('請輸入標題');
                 return;
               }
-              
+
               // 過濾掉空白的項目，只保留有內容的
               const validRows = rows.filter(r => r.text && r.definition);
-              
+
               if (validRows.length === 0) {
                 toast.error('請至少填寫一個完整的項目（包含文字和翻譯）');
                 return;
               }
-              
+
               // 收集有效的資料
               const items = validRows.map(row => ({
                 text: row.text.trim(),
                 translation: row.definition.trim(),
                 audio_url: row.audioUrl || ''
               }));
-              
+
               const contentData = {
                 title,
                 items,
@@ -1301,7 +1301,7 @@ export default function ReadingAssessmentPanel({
                 time_limit_seconds: 180,
                 is_public: isPublic
               };
-              
+
               // 呼叫 onSave 並傳遞資料
               if (onSave) {
                 await onSave(contentData);

@@ -72,22 +72,22 @@ export function LessonDialog({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name?.trim()) {
       newErrors.name = '單元名稱為必填';
     }
-    
+
     if (!formData.estimated_minutes || formData.estimated_minutes < 1) {
       newErrors.estimated_minutes = '預估時間必須大於 0';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       if (dialogType === 'create' && programId) {
@@ -98,7 +98,7 @@ export function LessonDialog({
           estimated_minutes: formData.estimated_minutes
         });
         toast.success(`單元「${formData.name}」已新增`);
-        onSave(newLesson);
+        onSave(newLesson as Lesson);
       } else if (dialogType === 'edit' && lesson?.id && programId) {
         await apiClient.updateLesson(programId, lesson.id, {
           name: formData.name,
@@ -121,7 +121,7 @@ export function LessonDialog({
 
   const handleDelete = async () => {
     if (!lesson?.id || !onDelete || !programId) return;
-    
+
     setLoading(true);
     try {
       await apiClient.deleteLesson(programId, lesson.id);
@@ -148,12 +148,12 @@ export function LessonDialog({
               {dialogType === 'create' ? '新增單元' : '編輯單元'}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create' 
-                ? '為課程新增學習單元' 
+              {dialogType === 'create'
+                ? '為課程新增學習單元'
                 : '修改單元資訊'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium">
@@ -169,7 +169,7 @@ export function LessonDialog({
               />
               {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
-            
+
             <div>
               <label htmlFor="description" className="text-sm font-medium">
                 單元描述
@@ -201,7 +201,7 @@ export function LessonDialog({
                 {errors.estimated_minutes && <p className="text-xs text-red-500 mt-1">{errors.estimated_minutes}</p>}
               </div>
             </div>
-            
+
             {dialogType === 'create' && (
               <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
                 ℹ️ 單元將自動排在課程最後
@@ -212,7 +212,7 @@ export function LessonDialog({
               <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
@@ -240,7 +240,7 @@ export function LessonDialog({
               確定要刪除單元「{lesson.name}」嗎？此操作無法復原。
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">單元資料：</p>
@@ -253,14 +253,14 @@ export function LessonDialog({
               )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete} 
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
               disabled={loading}
             >
               {loading ? '刪除中...' : '確認刪除'}
