@@ -6,7 +6,7 @@ Seed data for Duotopia - 新作業系統架構
 from datetime import datetime, date, timedelta
 import random
 from sqlalchemy.orm import Session
-from database import engine, Base
+from database import engine
 from models import (
     Teacher,
     Student,
@@ -68,71 +68,114 @@ def create_demo_data(db: Session):
     common_birthdate = date(2012, 1, 1)
     common_password = get_password_hash("20120101")
 
-    # 五年級A班學生
-    students_5a = [
-        Student(
-            name="王小明",
-            email="student1@duotopia.com",
-            password_hash=get_password_hash("mynewpassword123"),  # 改過密碼
-            birthdate=common_birthdate,
-            student_id="S001",
-            target_wpm=60,
-            target_accuracy=0.75,
-            password_changed=True,
-            is_active=True,
-        ),
-        Student(
-            name="李小美",
-            email="student2@duotopia.com",
-            password_hash=common_password,  # 使用預設密碼
-            birthdate=common_birthdate,
-            student_id="S002",
-            target_wpm=65,
-            target_accuracy=0.80,
-            is_active=True,
-        ),
-        Student(
-            name="陳大雄",
-            email="student3@duotopia.com",
-            password_hash=get_password_hash("student456"),  # 改過密碼
-            birthdate=common_birthdate,
-            student_id="S003",
-            target_wpm=55,
-            target_accuracy=0.70,
-            password_changed=True,
-            is_active=True,
-        ),
+    # 五年級A班學生（增加到12位）
+    students_5a_names = [
+        "王小明",
+        "李小美",
+        "陳大雄",
+        "黃小華",
+        "劉心怡",
+        "吳志明",
+        "許雅婷",
+        "鄭建國",
+        "林佳慧",
+        "張偉強",
+        "蔡雅芳",
+        "謝志偉",
     ]
 
-    # 六年級B班學生
-    students_6b = [
-        Student(
-            name="張志豪",
-            email="student4@duotopia.com",
-            password_hash=common_password,  # 使用預設密碼
+    students_5a = []
+    for i, name in enumerate(students_5a_names):
+        # 保持原有學生的特殊密碼設定
+        if name == "王小明":
+            password_hash = get_password_hash("mynewpassword123")
+            password_changed = True
+        elif name == "陳大雄":
+            password_hash = get_password_hash("student456")
+            password_changed = True
+        elif name == "劉心怡":
+            password_hash = get_password_hash("newpass123")
+            password_changed = True
+        elif name == "許雅婷":
+            password_hash = get_password_hash("pass456")
+            password_changed = True
+        else:
+            password_hash = common_password
+            password_changed = False
+
+        student = Student(
+            name=name,
+            email=f"student{i+1}@duotopia.com",
+            password_hash=password_hash,
             birthdate=common_birthdate,
-            student_id="S004",
-            target_wpm=70,
-            target_accuracy=0.85,
+            student_id=f"S{i+1:03d}",
+            target_wpm=random.randint(50, 70),
+            target_accuracy=round(random.uniform(0.70, 0.85), 2),
+            password_changed=password_changed,
             is_active=True,
-        ),
-        Student(
-            name="林靜香",
-            email="student5@duotopia.com",
-            password_hash=get_password_hash("password789"),  # 改過密碼
-            birthdate=common_birthdate,
-            student_id="S005",
-            target_wpm=75,
-            target_accuracy=0.88,
-            password_changed=True,
-            is_active=True,
-        ),
+        )
+        students_5a.append(student)
+
+    # 六年級B班學生（增加到15位）
+    students_6b_names = [
+        "張志豪",
+        "林靜香",
+        "測試學生",
+        "蔡文傑",
+        "謝佩琪",
+        "楊智凱",
+        "周美玲",
+        "高俊宇",
+        "羅曉晴",
+        "洪志峰",
+        "鍾雅筑",
+        "施建成",
+        "賴文芳",
+        "簡志明",
+        "余佳蓉",
     ]
+
+    students_6b = []
+    for i, name in enumerate(students_6b_names):
+        # 保持原有學生的特殊密碼設定
+        if name == "林靜香":
+            password_hash = get_password_hash("password789")
+            password_changed = True
+        elif name == "蔡文傑":
+            password_hash = get_password_hash("mypass789")
+            password_changed = True
+        elif name == "楊智凱":
+            password_hash = get_password_hash("smart123")
+            password_changed = True
+        elif name == "高俊宇":
+            password_hash = get_password_hash("junior456")
+            password_changed = True
+        elif name == "洪志峰":
+            password_hash = get_password_hash("peak789")
+            password_changed = True
+        else:
+            password_hash = common_password
+            password_changed = False
+
+        student = Student(
+            name=name,
+            email=f"student{i+13}@duotopia.com",
+            password_hash=password_hash,
+            birthdate=common_birthdate,
+            student_id=f"S{i+13:03d}",
+            target_wpm=random.randint(65, 85),
+            target_accuracy=round(random.uniform(0.80, 0.95), 2),
+            password_changed=password_changed,
+            is_active=True,
+        )
+        students_6b.append(student)
 
     all_students = students_5a + students_6b
     db.add_all(all_students)
     db.commit()
-    print(f"✅ 建立 {len(all_students)} 位學生（2位使用預設密碼，3位已更改密碼）")
+    print(
+        f"✅ 建立 {len(all_students)} 位學生（五年級A班{len(students_5a)}位，六年級B班{len(students_6b)}位）"
+    )
 
     # ============ 4. 學生加入班級 ============
     # 五年級A班
@@ -462,13 +505,13 @@ def create_demo_data(db: Session):
     # ============ 7. 新作業系統（Assignment + StudentAssignment + StudentContentProgress）============
     print("\n📝 建立新作業系統測試資料...")
 
-    # === 作業情境 1: 單一內容作業（已完成批改）===
+    # === 作業情境 1: 五年級A班 - 展示所有狀態 ===
     assignment1 = Assignment(
         title="第一週基礎問候語練習",
         description="請完成基礎問候語的朗讀練習，注意發音準確度",
         classroom_id=classroom_a.id,
         teacher_id=demo_teacher.id,
-        due_date=datetime.now() - timedelta(days=2),  # 已過期
+        due_date=datetime.now() + timedelta(days=7),  # 7天後到期
         is_active=True,
     )
     db.add(assignment1)
@@ -480,20 +523,114 @@ def create_demo_data(db: Session):
     )
     db.add(assignment1_content)
 
-    # 指派給五年級A班所有學生
+    # 指派給五年級A班所有學生 - 展示所有狀態
+    assignment1_statuses = {
+        "王小明": {
+            "status": AssignmentStatus.NOT_STARTED,
+            "score": None,
+            "feedback": None,
+        },
+        "李小美": {
+            "status": AssignmentStatus.IN_PROGRESS,
+            "score": None,
+            "feedback": None,
+            "started_at": datetime.now() - timedelta(hours=2),
+        },
+        "陳大雄": {
+            "status": AssignmentStatus.SUBMITTED,
+            "score": None,
+            "feedback": None,
+            "started_at": datetime.now() - timedelta(days=1),
+            "submitted_at": datetime.now() - timedelta(hours=3),
+        },
+        "黃小華": {
+            "status": AssignmentStatus.SUBMITTED,
+            "score": None,
+            "feedback": None,
+            "started_at": datetime.now() - timedelta(days=2),
+            "submitted_at": datetime.now() - timedelta(hours=6),
+        },
+        "劉心怡": {
+            "status": AssignmentStatus.GRADED,
+            "score": 85,
+            "feedback": "表現良好，發音清晰！",
+            "started_at": datetime.now() - timedelta(days=3),
+            "submitted_at": datetime.now() - timedelta(days=2),
+            "graded_at": datetime.now() - timedelta(days=1),
+        },
+        "吳志明": {
+            "status": AssignmentStatus.GRADED,
+            "score": 92,
+            "feedback": "優秀！語調自然流暢！",
+            "started_at": datetime.now() - timedelta(days=3),
+            "submitted_at": datetime.now() - timedelta(days=2, hours=12),
+            "graded_at": datetime.now() - timedelta(days=1, hours=6),
+        },
+        "許雅婷": {
+            "status": AssignmentStatus.RETURNED,
+            "score": 65,
+            "feedback": "第2和第3句需要重新錄製，注意發音",
+            "started_at": datetime.now() - timedelta(days=3),
+            "submitted_at": datetime.now() - timedelta(days=2),
+            "graded_at": datetime.now() - timedelta(days=1),
+            "returned_at": datetime.now() - timedelta(days=1),  # 退回時間
+        },
+        "鄭建國": {
+            "status": AssignmentStatus.RETURNED,
+            "score": 70,
+            "feedback": "語速太快，請放慢速度重新錄製",
+            "started_at": datetime.now() - timedelta(days=4),
+            "submitted_at": datetime.now() - timedelta(days=3),
+            "graded_at": datetime.now() - timedelta(hours=12),
+            "returned_at": datetime.now() - timedelta(hours=12),  # 退回時間
+        },
+        "林佳慧": {
+            "status": AssignmentStatus.RESUBMITTED,
+            "score": None,
+            "feedback": None,
+            "started_at": datetime.now() - timedelta(days=4),
+            "submitted_at": datetime.now() - timedelta(days=3),  # 第一次提交
+            "graded_at": datetime.now() - timedelta(days=2),
+            "returned_at": datetime.now() - timedelta(days=2),  # 被退回
+            "resubmitted_at": datetime.now() - timedelta(hours=4),  # 重新提交
+        },
+        "張偉強": {
+            "status": AssignmentStatus.RESUBMITTED,
+            "score": None,
+            "feedback": None,
+            "started_at": datetime.now() - timedelta(days=5),
+            "submitted_at": datetime.now() - timedelta(days=4),  # 第一次提交
+            "graded_at": datetime.now() - timedelta(days=3),
+            "returned_at": datetime.now() - timedelta(days=3),  # 被退回
+            "resubmitted_at": datetime.now() - timedelta(hours=8),  # 重新提交
+        },
+        "蔡雅芳": {
+            "status": AssignmentStatus.GRADED,
+            "score": 88,
+            "feedback": "訂正後表現很好！進步明顯！",
+            "started_at": datetime.now() - timedelta(days=5),
+            "submitted_at": datetime.now() - timedelta(days=4),  # 第一次提交
+            "returned_at": datetime.now() - timedelta(days=3),  # 被退回
+            "resubmitted_at": datetime.now() - timedelta(days=2),  # 重新提交
+            "graded_at": datetime.now() - timedelta(days=1),  # 批改完成
+        },
+        "謝志偉": {
+            "status": AssignmentStatus.GRADED,
+            "score": 90,
+            "feedback": "重新錄製後效果很好！",
+            "started_at": datetime.now() - timedelta(days=6),
+            "submitted_at": datetime.now() - timedelta(days=5),  # 第一次提交
+            "returned_at": datetime.now() - timedelta(days=4),  # 被退回
+            "resubmitted_at": datetime.now() - timedelta(days=3),  # 重新提交
+            "graded_at": datetime.now() - timedelta(days=2),  # 批改完成
+        },
+    }
+
     for student in students_5a:
-        if student.name == "王小明":
-            status = AssignmentStatus.GRADED
-            score = 92.5
-            feedback = "發音清晰，語調自然！繼續保持！"
-        elif student.name == "李小美":
-            status = AssignmentStatus.SUBMITTED
-            score = None
-            feedback = None
-        else:
-            status = AssignmentStatus.NOT_STARTED
-            score = None
-            feedback = None
+        student_data = assignment1_statuses.get(
+            student.name,
+            {"status": AssignmentStatus.NOT_STARTED, "score": None, "feedback": None},
+        )
 
         student_assignment1 = StudentAssignment(
             assignment_id=assignment1.id,
@@ -502,19 +639,23 @@ def create_demo_data(db: Session):
             title=assignment1.title,  # 暫時保留以兼容
             instructions=assignment1.description,
             due_date=assignment1.due_date,
-            status=status,
-            score=score,
-            feedback=feedback,
+            status=student_data["status"],
+            score=student_data.get("score"),
+            feedback=student_data.get("feedback"),
             is_active=True,
         )
 
-        if status == AssignmentStatus.GRADED:
-            student_assignment1.submitted_at = datetime.now() - timedelta(days=3)
-            student_assignment1.graded_at = datetime.now() - timedelta(days=2, hours=12)
-        elif status == AssignmentStatus.SUBMITTED:
-            student_assignment1.submitted_at = datetime.now() - timedelta(
-                days=2, hours=6
-            )
+        # 設定時間戳記
+        if "started_at" in student_data:
+            student_assignment1.started_at = student_data["started_at"]
+        if "submitted_at" in student_data:
+            student_assignment1.submitted_at = student_data["submitted_at"]
+        if "graded_at" in student_data:
+            student_assignment1.graded_at = student_data["graded_at"]
+        if "returned_at" in student_data:
+            student_assignment1.returned_at = student_data["returned_at"]
+        if "resubmitted_at" in student_data:
+            student_assignment1.resubmitted_at = student_data["resubmitted_at"]
 
         db.add(student_assignment1)
         db.flush()
@@ -523,23 +664,34 @@ def create_demo_data(db: Session):
         progress = StudentContentProgress(
             student_assignment_id=student_assignment1.id,
             content_id=content1_5a.id,
-            status=status,
-            score=score if status == AssignmentStatus.GRADED else None,
+            status=student_data["status"],
+            score=student_data.get("score")
+            if student_data["status"] == AssignmentStatus.GRADED
+            else None,
             order_index=1,
             is_locked=False,
-            checked=True if status == AssignmentStatus.GRADED else None,
-            feedback=feedback if status == AssignmentStatus.GRADED else None,
+            checked=True if student_data["status"] == AssignmentStatus.GRADED else None,
+            feedback=student_data.get("feedback")
+            if student_data["status"] == AssignmentStatus.GRADED
+            else None,
         )
 
-        if status in [AssignmentStatus.SUBMITTED, AssignmentStatus.GRADED]:
-            progress.started_at = datetime.now() - timedelta(days=3, hours=2)
-            progress.completed_at = datetime.now() - timedelta(days=3)
+        if student_data["status"] in [
+            AssignmentStatus.SUBMITTED,
+            AssignmentStatus.GRADED,
+            AssignmentStatus.RETURNED,
+            AssignmentStatus.RESUBMITTED,
+        ]:
+            progress.started_at = student_data.get(
+                "started_at", datetime.now() - timedelta(days=3)
+            )
+            progress.completed_at = student_data.get("submitted_at")
             progress.response_data = {
                 "recordings": [f"recording_{i}.webm" for i in range(5)],
                 "duration": 156,
             }
 
-            if status == AssignmentStatus.GRADED:
+            if student_data["status"] == AssignmentStatus.GRADED:
                 progress.ai_scores = {
                     "wpm": 68,
                     "accuracy": 0.92,
@@ -552,7 +704,7 @@ def create_demo_data(db: Session):
 
         db.add(progress)
 
-    # === 作業情境 2: 多內容作業（進行中）===
+    # === 作業情境 2: 五年級A班 - 待批改和待訂正 ===
     assignment2 = Assignment(
         title="期中綜合練習",
         description="請完成所有指定的朗讀練習，這是期中考核的一部分",
@@ -565,20 +717,20 @@ def create_demo_data(db: Session):
     db.flush()
 
     # 關聯多個內容
-    for idx, content in enumerate([content1_5a, content2_5a, content3_5a], 1):
+    for idx, content in enumerate([content2_5a, content3_5a], 1):
         assignment_content = AssignmentContent(
             assignment_id=assignment2.id, content_id=content.id, order_index=idx
         )
         db.add(assignment_content)
 
-    # 指派給五年級A班所有學生
+    # 指派給五年級A班所有學生 - 展示更多狀態
     for student in students_5a:
         if student.name == "王小明":
-            status = AssignmentStatus.IN_PROGRESS
+            status = AssignmentStatus.SUBMITTED  # 待批改
         elif student.name == "李小美":
-            status = AssignmentStatus.IN_PROGRESS
+            status = AssignmentStatus.RETURNED  # 待訂正
         else:
-            status = AssignmentStatus.NOT_STARTED
+            status = AssignmentStatus.RESUBMITTED  # 重新提交（待批改訂正）
 
         student_assignment2 = StudentAssignment(
             assignment_id=assignment2.id,
@@ -591,37 +743,43 @@ def create_demo_data(db: Session):
             is_active=True,
         )
 
-        if status == AssignmentStatus.IN_PROGRESS:
-            student_assignment2.started_at = datetime.now() - timedelta(hours=2)
+        if status == AssignmentStatus.SUBMITTED:
+            student_assignment2.submitted_at = datetime.now() - timedelta(hours=6)
+        elif status == AssignmentStatus.RETURNED:
+            student_assignment2.submitted_at = datetime.now() - timedelta(days=1)
+            student_assignment2.graded_at = datetime.now() - timedelta(hours=12)
+            student_assignment2.returned_at = datetime.now() - timedelta(
+                hours=12
+            )  # 🔥 設置 returned_at
+        elif status == AssignmentStatus.RESUBMITTED:
+            student_assignment2.submitted_at = datetime.now() - timedelta(
+                days=2
+            )  # 第一次提交
+            student_assignment2.returned_at = datetime.now() - timedelta(
+                days=1
+            )  # 🔥 被退回
+            student_assignment2.resubmitted_at = datetime.now() - timedelta(
+                hours=3
+            )  # 🔥 重新提交
+            student_assignment2.graded_at = datetime.now() - timedelta(hours=1)  # 批改完成
 
         db.add(student_assignment2)
         db.flush()
 
         # 建立多個內容的進度
-        for idx, content in enumerate([content1_5a, content2_5a, content3_5a], 1):
+        for idx, content in enumerate([content2_5a, content3_5a], 1):
             if student.name == "王小明":
-                # 王小明完成了前兩個內容
-                if idx <= 2:
-                    content_status = AssignmentStatus.SUBMITTED
-                    is_locked = False
-                else:
-                    content_status = AssignmentStatus.NOT_STARTED
-                    is_locked = False  # 第三個已解鎖但未開始
+                # 王小明已提交所有內容
+                content_status = AssignmentStatus.SUBMITTED
+                is_locked = False
             elif student.name == "李小美":
-                # 李小美只完成第一個
-                if idx == 1:
-                    content_status = AssignmentStatus.SUBMITTED
-                    is_locked = False
-                elif idx == 2:
-                    content_status = AssignmentStatus.IN_PROGRESS
-                    is_locked = False
-                else:
-                    content_status = AssignmentStatus.NOT_STARTED
-                    is_locked = True  # 第三個還鎖著
+                # 李小美被退回需要訂正
+                content_status = AssignmentStatus.RETURNED
+                is_locked = False
             else:
-                # 其他學生都還沒開始
-                content_status = AssignmentStatus.NOT_STARTED
-                is_locked = idx > 1  # 只有第一個解鎖
+                # 陳大雄重新提交了
+                content_status = AssignmentStatus.RESUBMITTED
+                is_locked = False
 
             progress = StudentContentProgress(
                 student_assignment_id=student_assignment2.id,
@@ -675,6 +833,9 @@ def create_demo_data(db: Session):
     )
     student_assignment3.submitted_at = datetime.now() - timedelta(days=1)
     student_assignment3.graded_at = datetime.now() - timedelta(hours=12)
+    student_assignment3.returned_at = datetime.now() - timedelta(
+        hours=12
+    )  # 🔥 設置 returned_at
 
     db.add(student_assignment3)
     db.flush()
@@ -703,7 +864,7 @@ def create_demo_data(db: Session):
     }
     db.add(progress3)
 
-    # === 作業情境 4: 六年級的多內容進階作業 ===
+    # === 作業情境 4: 六年級B班 - 進行中與待批改 ===
     assignment4 = Assignment(
         title="日常對話綜合練習",
         description="完成所有日常對話練習，準備口語測驗",
@@ -725,9 +886,11 @@ def create_demo_data(db: Session):
     # 指派給六年級B班所有學生
     for student in students_6b:
         if student.name == "張志豪":
-            status = AssignmentStatus.SUBMITTED
-        else:
-            status = AssignmentStatus.IN_PROGRESS
+            status = AssignmentStatus.IN_PROGRESS  # 進行中
+        elif student.name == "林靜香":
+            status = AssignmentStatus.SUBMITTED  # 待批改
+        else:  # 測試學生
+            status = AssignmentStatus.GRADED  # 已完成
 
         student_assignment4 = StudentAssignment(
             assignment_id=assignment4.id,
@@ -740,10 +903,15 @@ def create_demo_data(db: Session):
             is_active=True,
         )
 
-        if status == AssignmentStatus.SUBMITTED:
-            student_assignment4.submitted_at = datetime.now() - timedelta(hours=6)
-        else:
+        if status == AssignmentStatus.IN_PROGRESS:
             student_assignment4.started_at = datetime.now() - timedelta(days=1)
+        elif status == AssignmentStatus.SUBMITTED:
+            student_assignment4.submitted_at = datetime.now() - timedelta(hours=6)
+        else:  # GRADED
+            student_assignment4.submitted_at = datetime.now() - timedelta(days=2)
+            student_assignment4.graded_at = datetime.now() - timedelta(days=1)
+            student_assignment4.score = 88
+            student_assignment4.feedback = "做得很好！繼續保持！"
 
         db.add(student_assignment4)
         db.flush()
@@ -751,15 +919,19 @@ def create_demo_data(db: Session):
         # 建立內容進度
         for idx, content in enumerate([content1_6b, content2_6b], 1):
             if student.name == "張志豪":
-                # 張志豪完成了所有內容
-                content_status = AssignmentStatus.SUBMITTED
-                is_locked = False
-            else:
-                # 林靜香完成第一個，正在做第二個
+                # 張志豪進行中
                 if idx == 1:
                     content_status = AssignmentStatus.SUBMITTED
                 else:
                     content_status = AssignmentStatus.IN_PROGRESS
+                is_locked = False
+            elif student.name == "林靜香":
+                # 林靜香完成所有內容
+                content_status = AssignmentStatus.SUBMITTED
+                is_locked = False
+            else:  # 測試學生
+                # 已批改完成
+                content_status = AssignmentStatus.GRADED
                 is_locked = False
 
             progress = StudentContentProgress(
@@ -792,46 +964,45 @@ def create_demo_data(db: Session):
 
             db.add(progress)
 
-    # === 作業情境 5: 即將到期的緊急作業 ===
+    # === 作業情境 5: 六年級B班 - 部分未指派 ===
     assignment5 = Assignment(
-        title="【緊急】顏色單字測驗",
-        description="明天要進行顏色單字測驗，請務必完成練習",
-        classroom_id=classroom_a.id,
+        title="家庭成員練習作業",
+        description="學習家庭成員相關詞彙，錄製介紹家人的句子",
+        classroom_id=classroom_b.id,
         teacher_id=demo_teacher.id,
-        due_date=datetime.now() + timedelta(hours=20),  # 20小時後到期
+        due_date=datetime.now() + timedelta(days=4),
         is_active=True,
     )
     db.add(assignment5)
     db.flush()
 
     assignment5_content = AssignmentContent(
-        assignment_id=assignment5.id, content_id=content4_5a.id, order_index=1
+        assignment_id=assignment5.id, content_id=content3_6b.id, order_index=1
     )
     db.add(assignment5_content)
 
-    # 指派給五年級A班部分學生（模擬選擇性指派）
-    for student in students_5a[:2]:  # 只指派給前兩個學生
-        student_assignment5 = StudentAssignment(
-            assignment_id=assignment5.id,
-            student_id=student.id,
-            classroom_id=classroom_a.id,
-            title=assignment5.title,
-            instructions=assignment5.description,
-            due_date=assignment5.due_date,
-            status=AssignmentStatus.NOT_STARTED,
-            is_active=True,
-        )
-        db.add(student_assignment5)
-        db.flush()
+    # 只指派給張志豪（林靜香未被指派）
+    student_assignment5 = StudentAssignment(
+        assignment_id=assignment5.id,
+        student_id=students_6b[0].id,  # 張志豪
+        classroom_id=classroom_b.id,
+        title=assignment5.title,
+        instructions=assignment5.description,
+        due_date=assignment5.due_date,
+        status=AssignmentStatus.NOT_STARTED,
+        is_active=True,
+    )
+    db.add(student_assignment5)
+    db.flush()
 
-        progress5 = StudentContentProgress(
-            student_assignment_id=student_assignment5.id,
-            content_id=content4_5a.id,
-            status=AssignmentStatus.NOT_STARTED,
-            order_index=1,
-            is_locked=False,
-        )
-        db.add(progress5)
+    progress5 = StudentContentProgress(
+        student_assignment_id=student_assignment5.id,
+        content_id=content3_6b.id,
+        status=AssignmentStatus.NOT_STARTED,
+        order_index=1,
+        is_locked=False,
+    )
+    db.add(progress5)
 
     # === 作業情境 6: 重新提交的作業（RESUBMITTED）===
     assignment6 = Assignment(
@@ -861,8 +1032,10 @@ def create_demo_data(db: Session):
         status=AssignmentStatus.RESUBMITTED,
         is_active=True,
     )
-    student_assignment6.submitted_at = datetime.now() - timedelta(days=2)
-    student_assignment6.graded_at = datetime.now() - timedelta(days=1)
+    student_assignment6.submitted_at = datetime.now() - timedelta(days=3)  # 第一次提交
+    student_assignment6.returned_at = datetime.now() - timedelta(days=2)  # 🔥 被退回
+    student_assignment6.resubmitted_at = datetime.now() - timedelta(hours=6)  # 🔥 重新提交
+    student_assignment6.graded_at = datetime.now() - timedelta(hours=2)  # 批改完成
 
     db.add(student_assignment6)
     db.flush()
@@ -882,9 +1055,345 @@ def create_demo_data(db: Session):
     }
     db.add(progress6)
 
-    db.commit()
+    # === 作業情境 7: 六年級B班 - 待訂正狀態 ===
+    assignment7 = Assignment(
+        title="興趣愛好對話練習",
+        description="練習談論個人興趣與嗜好的對話",
+        classroom_id=classroom_b.id,
+        teacher_id=demo_teacher.id,
+        due_date=datetime.now() + timedelta(days=2),
+        is_active=True,
+    )
+    db.add(assignment7)
+    db.flush()
 
-    # ============ 8. 統計顯示 ============
+    # 使用 Lesson 3 的內容
+    lesson_6b_3 = lessons_6b_advanced[2]  # Unit 3: Hobbies
+
+    # 為這個 lesson 創建新的 content
+    content_hobby = Content(
+        lesson_id=lesson_6b_3.id,
+        type=ContentType.READING_ASSESSMENT,
+        title="興趣愛好對話",
+        order_index=1,
+        is_public=False,
+        items=[
+            {"text": "What are your hobbies?", "translation": "你的興趣是什麼？"},
+            {"text": "I enjoy playing sports", "translation": "我喜歡運動"},
+            {"text": "Reading is my favorite", "translation": "閱讀是我的最愛"},
+            {"text": "I like listening to music", "translation": "我喜歡聽音樂"},
+            {"text": "Let's play together", "translation": "我們一起玩吧"},
+        ],
+        target_wpm=70,
+        target_accuracy=0.85,
+        time_limit_seconds=180,
+        level="A2",
+        tags=["hobbies", "conversation"],
+        is_active=True,
+    )
+    db.add(content_hobby)
+    db.flush()
+
+    assignment7_content = AssignmentContent(
+        assignment_id=assignment7.id, content_id=content_hobby.id, order_index=1
+    )
+    db.add(assignment7_content)
+
+    # 指派給測試學生（展示 RETURNED 狀態）
+    student_assignment7 = StudentAssignment(
+        assignment_id=assignment7.id,
+        student_id=students_6b[2].id,  # 測試學生
+        classroom_id=classroom_b.id,
+        title=assignment7.title,
+        instructions=assignment7.description,
+        due_date=assignment7.due_date,
+        status=AssignmentStatus.RETURNED,  # 待訂正
+        score=70,
+        feedback="第2句和第4句的發音需要加強，請重新錄製",
+        is_active=True,
+    )
+    student_assignment7.submitted_at = datetime.now() - timedelta(days=1)
+    student_assignment7.graded_at = datetime.now() - timedelta(hours=8)
+    student_assignment7.returned_at = datetime.now() - timedelta(
+        hours=8
+    )  # 🔥 設置 returned_at
+
+    db.add(student_assignment7)
+    db.flush()
+
+    progress7 = StudentContentProgress(
+        student_assignment_id=student_assignment7.id,
+        content_id=content_hobby.id,
+        status=AssignmentStatus.RETURNED,
+        score=70,
+        order_index=1,
+        is_locked=False,
+        checked=False,  # 未通過
+        feedback="請注意 'sports' 和 'music' 的發音",
+    )
+    progress7.started_at = datetime.now() - timedelta(days=2)
+    progress7.completed_at = datetime.now() - timedelta(days=1)
+    db.add(progress7)
+
+    # ============ 8. 增強作業資料：全面展示所有狀態組合 ============
+    print("\n📝 建立增強作業資料：全面狀態展示...")
+
+    # 所有可能的狀態
+    all_statuses = [
+        AssignmentStatus.NOT_STARTED,
+        AssignmentStatus.IN_PROGRESS,
+        AssignmentStatus.SUBMITTED,
+        AssignmentStatus.GRADED,
+        AssignmentStatus.RETURNED,
+        AssignmentStatus.RESUBMITTED,
+    ]
+
+    # 為五年級A班創建更多作業（8個作業，展示所有狀態）
+    additional_assignments_5a = []
+    for i in range(8):
+        assignment = Assignment(
+            title=f"五年級作業{i+8} - 狀態測試",
+            description=f"測試作業 {i+8}：展示 {all_statuses[i % len(all_statuses)].value} 狀態",
+            classroom_id=classroom_a.id,
+            teacher_id=demo_teacher.id,
+            due_date=datetime.now() + timedelta(days=random.randint(1, 7)),
+            is_active=True,
+        )
+        additional_assignments_5a.append(assignment)
+
+    db.add_all(additional_assignments_5a)
+    db.flush()
+
+    # 關聯基本內容
+    for assignment in additional_assignments_5a:
+        assignment_content = AssignmentContent(
+            assignment_id=assignment.id,
+            content_id=content1_5a.id,  # 使用基礎問候語練習
+            order_index=1,
+        )
+        db.add(assignment_content)
+
+    # 為五年級A班學生指派作業（展示所有狀態）
+    for i, assignment in enumerate(additional_assignments_5a):
+        for j, student in enumerate(students_5a):
+            # 前6個作業確保每種狀態都有代表
+            if i < 6:
+                if j == i:
+                    status = all_statuses[i]
+                elif j == (i + 6) % len(students_5a):  # 每個作業再加一個已完成學生
+                    status = AssignmentStatus.GRADED
+                else:
+                    # 增加 GRADED 狀態的機率
+                    status_pool = all_statuses + [
+                        AssignmentStatus.GRADED,
+                        AssignmentStatus.GRADED,
+                    ]
+                    status = random.choice(status_pool)
+            else:
+                # 後面的作業也增加已完成的機率
+                status_pool = all_statuses + [
+                    AssignmentStatus.GRADED,
+                    AssignmentStatus.GRADED,
+                ]
+                status = random.choice(status_pool)
+
+            # 根據狀態設定分數和回饋
+            score = None
+            feedback = None
+            if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
+                # 30% 機率已完成但沒有分數（不需要評分的作業）
+                if random.random() < 0.3:
+                    score = None
+                    feedback = (
+                        "作業已完成，表現良好！"
+                        if status == AssignmentStatus.GRADED
+                        else "需要訂正部分內容"
+                    )
+                else:
+                    score = random.randint(65, 95)
+                    if status == AssignmentStatus.GRADED:
+                        feedback = (
+                            f"做得很好！分數：{score}" if score >= 80 else f"有進步空間，分數：{score}"
+                        )
+                    else:
+                        feedback = f"分數：{score}，請根據回饋訂正後重新提交"
+
+            student_assignment = StudentAssignment(
+                assignment_id=assignment.id,
+                student_id=student.id,
+                classroom_id=classroom_a.id,
+                title=assignment.title,
+                instructions=assignment.description,
+                due_date=assignment.due_date,
+                status=status,
+                score=score,
+                feedback=feedback,
+                is_active=True,
+            )
+
+            # 設定時間戳記 - 這是關鍵！
+            if status != AssignmentStatus.NOT_STARTED:
+                student_assignment.started_at = datetime.now() - timedelta(
+                    days=random.randint(1, 5)
+                )
+            if status in [
+                AssignmentStatus.SUBMITTED,
+                AssignmentStatus.GRADED,
+                AssignmentStatus.RETURNED,
+                AssignmentStatus.RESUBMITTED,
+            ]:
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(0, 3)
+                )
+            if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
+                student_assignment.graded_at = datetime.now() - timedelta(
+                    days=random.randint(0, 2)
+                )
+            if status == AssignmentStatus.RETURNED:
+                student_assignment.returned_at = (
+                    student_assignment.graded_at
+                )  # 關鍵：returned_at 時間戳
+            if status == AssignmentStatus.RESUBMITTED:
+                # RESUBMITTED 表示經過 RETURNED 狀態，所以也要有 returned_at
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(2, 4)
+                )  # 第一次提交
+                student_assignment.returned_at = datetime.now() - timedelta(
+                    days=random.randint(1, 2)
+                )  # 被退回
+                student_assignment.resubmitted_at = datetime.now() - timedelta(
+                    hours=random.randint(1, 24)
+                )  # 🔥 重新提交
+
+            db.add(student_assignment)
+
+    # 為六年級B班創建更多作業（10個作業）
+    additional_assignments_6b = []
+    for i in range(10):
+        assignment = Assignment(
+            title=f"六年級作業{i+8} - 進階測試",
+            description=f"進階測試作業 {i+8}",
+            classroom_id=classroom_b.id,
+            teacher_id=demo_teacher.id,
+            due_date=datetime.now() + timedelta(days=random.randint(2, 10)),
+            is_active=True,
+        )
+        additional_assignments_6b.append(assignment)
+
+    db.add_all(additional_assignments_6b)
+    db.flush()
+
+    # 關聯內容
+    for assignment in additional_assignments_6b:
+        assignment_content = AssignmentContent(
+            assignment_id=assignment.id,
+            content_id=content1_6b.id,  # 使用日常對話練習
+            order_index=1,
+        )
+        db.add(assignment_content)
+
+    # 為六年級B班學生指派作業
+    for i, assignment in enumerate(additional_assignments_6b):
+        for j, student in enumerate(students_6b):
+            # 前6個作業確保每種狀態都有代表
+            if i < 6:
+                if j == i:
+                    status = all_statuses[i]
+                elif j == (i + 1) % len(students_6b):
+                    status = all_statuses[(i + 1) % len(all_statuses)]
+                elif j == (i + 8) % len(students_6b):  # 增加已完成學生
+                    status = AssignmentStatus.GRADED
+                else:
+                    # 增加 GRADED 狀態的機率
+                    status_pool = all_statuses + [
+                        AssignmentStatus.GRADED,
+                        AssignmentStatus.GRADED,
+                        AssignmentStatus.GRADED,
+                    ]
+                    status = random.choice(status_pool)
+            else:
+                # 後面的作業也增加已完成的機率
+                status_pool = all_statuses + [
+                    AssignmentStatus.GRADED,
+                    AssignmentStatus.GRADED,
+                    AssignmentStatus.GRADED,
+                ]
+                status = random.choice(status_pool)
+
+            # 設定分數和回饋
+            score = None
+            feedback = None
+            if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
+                # 25% 機率已完成但沒有分數
+                if random.random() < 0.25:
+                    score = None
+                    feedback = (
+                        "作業完成度良好" if status == AssignmentStatus.GRADED else "請根據建議進行修改"
+                    )
+                else:
+                    score = random.randint(70, 98)
+                    if status == AssignmentStatus.GRADED:
+                        feedback = (
+                            f"優秀表現！繼續保持！分數：{score}"
+                            if score >= 85
+                            else f"不錯的表現，分數：{score}"
+                        )
+                    else:
+                        feedback = f"分數：{score}，有些地方需要加強，請重新練習"
+
+            student_assignment = StudentAssignment(
+                assignment_id=assignment.id,
+                student_id=student.id,
+                classroom_id=classroom_b.id,
+                title=assignment.title,
+                instructions=assignment.description,
+                due_date=assignment.due_date,
+                status=status,
+                score=score,
+                feedback=feedback,
+                is_active=True,
+            )
+
+            # 設定時間戳記 - 重點是 returned_at 和 submitted_at 的邏輯
+            if status != AssignmentStatus.NOT_STARTED:
+                student_assignment.started_at = datetime.now() - timedelta(
+                    days=random.randint(1, 6)
+                )
+            if status in [
+                AssignmentStatus.SUBMITTED,
+                AssignmentStatus.GRADED,
+                AssignmentStatus.RETURNED,
+                AssignmentStatus.RESUBMITTED,
+            ]:
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(0, 4)
+                )
+            if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
+                student_assignment.graded_at = datetime.now() - timedelta(
+                    days=random.randint(0, 3)
+                )
+            if status == AssignmentStatus.RETURNED:
+                student_assignment.returned_at = student_assignment.graded_at
+            if status == AssignmentStatus.RESUBMITTED:
+                # RESUBMITTED 必須先經過 RETURNED，所以要有 returned_at
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(3, 5)
+                )  # 第一次提交
+                student_assignment.returned_at = datetime.now() - timedelta(
+                    days=random.randint(1, 2)
+                )  # 被退回
+                student_assignment.resubmitted_at = datetime.now() - timedelta(
+                    hours=random.randint(1, 48)
+                )  # 🔥 重新提交
+
+            db.add(student_assignment)
+
+    db.commit()
+    print(
+        f"✅ 增強作業資料建立完成：五年級A班額外 {len(additional_assignments_5a)} 個作業，六年級B班額外 {len(additional_assignments_6b)} 個作業"
+    )
+
+    # ============ 9. 統計顯示 ============
     print("\n📊 作業系統統計：")
 
     # 統計 Assignments

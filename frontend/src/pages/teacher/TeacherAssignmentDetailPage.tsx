@@ -69,6 +69,15 @@ interface StudentProgress {
   attempts?: number;
   last_activity?: string;
   is_assigned?: boolean;
+  // 🔥 新增時間戳欄位用於狀態進度判斷（方案C）
+  timestamps?: {
+    started_at?: string;
+    submitted_at?: string;
+    graded_at?: string;
+    returned_at?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
 }
 
 export default function TeacherAssignmentDetailPage() {
@@ -221,6 +230,7 @@ export default function TeacherAssignmentDetailPage() {
             score: item.score,
             attempts: item.attempts || 0,
             last_activity: item.last_activity || item.updated_at,
+            timestamps: item.timestamps,  // 🔥 加入 timestamps
             is_assigned: true
           });
         });
@@ -497,8 +507,9 @@ export default function TeacherAssignmentDetailPage() {
     total: assignedProgress.length,
     notStarted: assignedProgress.filter(p => p.status === 'NOT_STARTED').length,
     inProgress: assignedProgress.filter(p => p.status === 'IN_PROGRESS').length,
-    submitted: assignedProgress.filter(p => p.status === 'SUBMITTED' || p.status === 'RESUBMITTED').length,
+    submitted: assignedProgress.filter(p => p.status === 'SUBMITTED').length,
     returned: assignedProgress.filter(p => p.status === 'RETURNED').length,
+    resubmitted: assignedProgress.filter(p => p.status === 'RESUBMITTED').length,
     graded: assignedProgress.filter(p => p.status === 'GRADED').length,
     unassigned: studentProgress.filter(p => p.status === 'unassigned').length
   };
@@ -758,7 +769,7 @@ export default function TeacherAssignmentDetailPage() {
                   </div>
                 </div>
                 <div className="text-xs text-gray-600 mt-2 font-medium">已指派</div>
-                <div className="text-xs text-gray-400">{students.length || 0} 人</div>
+                <div className="text-xs text-gray-400">{stats.total} 人</div>
               </div>
 
               {/* Arrow */}
@@ -796,37 +807,50 @@ export default function TeacherAssignmentDetailPage() {
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </div>
 
-              {/* 待批改 */}
+              {/* 已提交 */}
               <div className="flex flex-col items-center flex-1">
                 <div className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? 'bg-orange-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
                   <div className={`text-xl font-bold ${stats.submitted > 0 ? 'text-orange-600' : 'text-gray-300'}`}>
                     {stats.submitted}
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">待批改</div>
+                <div className="text-xs text-gray-600 mt-2 font-medium">已提交</div>
               </div>
 
-              {/* Arrow with fork for returned path */}
+              {/* Arrow */}
               <div className="flex-shrink-0 flex items-center pt-6">
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </div>
 
-              {/* 待訂正 (branching path) */}
-              {stats.returned > 0 && (
-                <>
-                  <div className="flex flex-col items-center flex-1">
-                    <div className="w-16 h-16 rounded-full bg-red-100 border-4 border-white shadow-sm flex items-center justify-center relative z-10">
-                      <div className="text-xl font-bold text-red-600">
-                        {stats.returned}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-2 font-medium">待訂正</div>
+              {/* 待訂正 */}
+              <div className="flex flex-col items-center flex-1">
+                <div className={`w-16 h-16 rounded-full ${stats.returned > 0 ? 'bg-red-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
+                  <div className={`text-xl font-bold ${stats.returned > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+                    {stats.returned}
                   </div>
-                  <div className="flex-shrink-0 flex items-center pt-6">
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+                <div className="text-xs text-gray-600 mt-2 font-medium">待訂正</div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex-shrink-0 flex items-center pt-6">
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              </div>
+
+              {/* 重新提交 */}
+              <div className="flex flex-col items-center flex-1">
+                <div className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? 'bg-purple-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
+                  <div className={`text-xl font-bold ${stats.resubmitted > 0 ? 'text-purple-600' : 'text-gray-300'}`}>
+                    {stats.resubmitted}
                   </div>
-                </>
-              )}
+                </div>
+                <div className="text-xs text-gray-600 mt-2 font-medium">重新提交</div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex-shrink-0 flex items-center pt-6">
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              </div>
 
               {/* 已完成 */}
               <div className="flex flex-col items-center flex-1">
@@ -858,6 +882,10 @@ export default function TeacherAssignmentDetailPage() {
                     <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 animate-ping" />
                   </div>
                   <span className="text-gray-600">當前狀態</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="text-gray-600">已完成</span>
                 </div>
               </div>
             </div>
@@ -899,8 +927,9 @@ export default function TeacherAssignmentDetailPage() {
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">已指派</th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">未開始</th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">進行中</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">待批改</th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">已提交</th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">待訂正</th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">重新提交</th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">已完成</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 w-20">分數</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 w-20">查看</th>
@@ -915,9 +944,102 @@ export default function TeacherAssignmentDetailPage() {
 
                     // Status indicator function
                     const getStatusIndicator = (statusName: string) => {
-                      const isActive = currentStatus === statusName;
-                      const isPassed = ['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'RETURNED', 'RESUBMITTED', 'GRADED'].indexOf(currentStatus) >
-                                       ['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'RETURNED', 'RESUBMITTED', 'GRADED'].indexOf(statusName);
+                      const timestamps = progress.timestamps;
+
+                      // 🔥 重新設計：根據當前狀態和時間戳決定每個圓點狀態
+                      let isActive = false;  // 當前狀態
+                      let isPassed = false;   // 已經過的狀態
+
+                      // Debug for specific students
+                      if (progress.student_name === '蔡雅芳' || progress.student_name === '謝志偉') {
+                        console.log(`${progress.student_name} - ${statusName}:`, {
+                          currentStatus,
+                          timestamps,
+                          returned_at: timestamps?.returned_at,
+                          resubmitted_at: timestamps?.resubmitted_at
+                        });
+                      }
+
+                      // 根據 currentStatus 和時間戳判斷
+                      switch (statusName) {
+                        case 'ASSIGNED':
+                          // 已指派：一定會走過
+                          isPassed = true;
+                          isActive = currentStatus === 'unassigned';
+                          break;
+
+                        case 'NOT_STARTED':
+                          // 未開始
+                          isActive = currentStatus === 'NOT_STARTED';
+                          isPassed = ['IN_PROGRESS', 'SUBMITTED', 'GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          break;
+
+                        case 'IN_PROGRESS':
+                          // 進行中
+                          isActive = currentStatus === 'IN_PROGRESS';
+                          isPassed = ['SUBMITTED', 'GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          break;
+
+                        case 'SUBMITTED':
+                          // 已提交
+                          isActive = currentStatus === 'SUBMITTED';
+                          isPassed = ['GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          break;
+
+                        case 'RETURNED':
+                          // 🔥 待訂正：根據當前狀態和時間戳判斷
+                          if (currentStatus === 'RETURNED') {
+                            // 當前狀態就是 RETURNED
+                            isActive = true;
+                            isPassed = false;
+                          } else if (currentStatus === 'RESUBMITTED') {
+                            // 如果當前是 RESUBMITTED，表示已經過 RETURNED
+                            isActive = false;
+                            isPassed = true;
+                          } else if (currentStatus === 'GRADED' && timestamps?.returned_at) {
+                            // 如果已完成且有 returned_at，表示經過訂正流程
+                            isActive = false;
+                            isPassed = true;
+                          } else {
+                            isActive = false;
+                            isPassed = false;
+                          }
+                          break;
+
+                        case 'RESUBMITTED':
+                          // 🔥 重新提交：當前狀態是 RESUBMITTED
+                          if (currentStatus === 'RESUBMITTED') {
+                            isActive = true;
+                            isPassed = false;
+                          } else if (timestamps?.resubmitted_at && timestamps?.returned_at) {
+                            const returnedTime = new Date(timestamps.returned_at).getTime();
+                            const resubmittedTime = new Date(timestamps.resubmitted_at).getTime();
+                            if (resubmittedTime > returnedTime && currentStatus === 'GRADED') {
+                              // 已經批改完成，RESUBMITTED 是過去式
+                              isActive = false;
+                              isPassed = true;
+                            } else {
+                              isActive = false;
+                              isPassed = false;
+                            }
+                          } else {
+                            isActive = false;
+                            isPassed = false;
+                          }
+                          break;
+
+                        case 'GRADED':
+                          // 已完成
+                          isActive = currentStatus === 'GRADED';
+                          isPassed = false;
+                          break;
+
+                        default:
+                          isActive = false;
+                          isPassed = false;
+                      }
+
+                      let actuallyPassed = isPassed;
 
                       if (!isAssigned && statusName !== 'ASSIGNED') {
                         return <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />;
@@ -930,26 +1052,27 @@ export default function TeacherAssignmentDetailPage() {
                       }
 
                       if (isActive) {
-                        // Current status - animated pulse
-                        return (
-                          <div className="relative w-3 h-3 mx-auto">
-                            <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-500" />
-                            <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 animate-ping" />
-                          </div>
-                        );
+                        // Current status - special handling for GRADED (completed)
+                        if (statusName === 'GRADED') {
+                          // Completed status - static green circle
+                          return <div className="w-3 h-3 rounded-full bg-green-500 mx-auto" />;
+                        } else {
+                          // Other current statuses - animated pulse
+                          return (
+                            <div className="relative w-3 h-3 mx-auto">
+                              <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-500" />
+                              <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 animate-ping" />
+                            </div>
+                          );
+                        }
                       }
 
-                      if (isPassed && statusName !== 'RETURNED') {
-                        // Passed status
+                      if (actuallyPassed) {
+                        // Actually passed through this status
                         return <div className="w-3 h-3 rounded-full bg-green-400 mx-auto" />;
                       }
 
-                      if (statusName === 'RETURNED' && (currentStatus === 'RETURNED' || currentStatus === 'RESUBMITTED')) {
-                        // Special case for returned/resubmitted
-                        return <div className="w-3 h-3 rounded-full bg-orange-500 mx-auto" />;
-                      }
-
-                      // Not reached yet
+                      // Not reached yet or skipped
                       return <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />;
                     };
 
@@ -984,6 +1107,9 @@ export default function TeacherAssignmentDetailPage() {
                         </td>
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator('RETURNED')}
+                        </td>
+                        <td className="px-2 py-3 text-center w-20">
+                          {getStatusIndicator('RESUBMITTED')}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator('GRADED')}

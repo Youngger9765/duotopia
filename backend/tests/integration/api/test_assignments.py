@@ -18,6 +18,7 @@ from models import (
     StudentAssignment,
     AssignmentStatus,
     ClassroomStudent,
+    ProgramLevel,
 )
 from auth import create_access_token
 
@@ -80,7 +81,7 @@ def test_classroom(test_db: Session, test_teacher):
     classroom = Classroom(
         name="Test Classroom",
         description="Test classroom for testing",
-        level="beginner",
+        level=ProgramLevel.A1,
         teacher_id=test_teacher.id,
         is_active=True,
     )

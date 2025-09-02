@@ -10,7 +10,7 @@ BASE_URL = "http://localhost:8000"
 # Login as demo teacher
 login_response = requests.post(
     f"{BASE_URL}/api/auth/teacher/login",
-    json={"email": "demo@duotopia.com", "password": "demo123"}
+    json={"email": "demo@duotopia.com", "password": "demo123"},
 )
 
 if login_response.status_code != 200:
@@ -35,14 +35,14 @@ print(f"Found {len(classrooms)} classrooms\n")
 for classroom in classrooms:
     print(f"📚 Classroom: {classroom['name']}")
     print(f"   Students: {len(classroom['students'])}")
-    
-    for student in classroom['students'][:3]:  # Show first 3 students
+
+    for student in classroom["students"][:3]:  # Show first 3 students
         print(f"   - {student['name']} ({student['email']})")
         print(f"     Birthdate: {student.get('birthdate', 'N/A')}")
         print(f"     Password Changed: {student.get('password_changed', False)}")
         print(f"     Status: {student.get('status', 'unknown')}")
-    
-    if len(classroom['students']) > 3:
+
+    if len(classroom["students"]) > 3:
         print(f"   ... and {len(classroom['students']) - 3} more students")
     print()
 

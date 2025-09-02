@@ -358,6 +358,8 @@ class StudentAssignment(Base):
     started_at = Column(DateTime(timezone=True))  # 首次開始時間
     submitted_at = Column(DateTime(timezone=True))  # 全部完成時間
     graded_at = Column(DateTime(timezone=True))  # 批改完成時間
+    returned_at = Column(DateTime(timezone=True))  # 🔥 退回訂正時間
+    resubmitted_at = Column(DateTime(timezone=True))  # 🔥 重新提交時間
 
     # 成績與回饋
     score = Column(Float, nullable=True)  # 總分（選填，保留但不強制使用）

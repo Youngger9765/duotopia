@@ -902,6 +902,28 @@ async def get_assignment_progress(
                     else sa.created_at.isoformat()
                     if sa.created_at
                     else None,
+                    # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
+                    "timestamps": {
+                        "started_at": sa.started_at.isoformat()
+                        if sa.started_at
+                        else None,
+                        "submitted_at": sa.submitted_at.isoformat()
+                        if sa.submitted_at
+                        else None,
+                        "graded_at": sa.graded_at.isoformat() if sa.graded_at else None,
+                        "returned_at": sa.returned_at.isoformat()
+                        if sa.returned_at
+                        else None,
+                        "resubmitted_at": sa.resubmitted_at.isoformat()
+                        if sa.resubmitted_at
+                        else None,
+                        "created_at": sa.created_at.isoformat()
+                        if sa.created_at
+                        else None,
+                        "updated_at": sa.updated_at.isoformat()
+                        if sa.updated_at
+                        else None,
+                    },
                 }
             )
 
