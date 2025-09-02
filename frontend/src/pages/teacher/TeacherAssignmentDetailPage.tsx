@@ -124,7 +124,7 @@ export default function TeacherAssignmentDetailPage() {
   const fetchAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/assignments/${assignmentId}`);
+      const response = await apiClient.get(`/api/teachers/assignments/${assignmentId}`);
       console.log('Assignment detail response:', response);
 
       // Handle different possible date field names
@@ -187,7 +187,7 @@ export default function TeacherAssignmentDetailPage() {
 
   const fetchStudents = async () => {
     try {
-      const response = await apiClient.get(`/api/classrooms/${classroomId}/students`);
+      const response = await apiClient.get(`/api/teachers/classrooms/${classroomId}/students`);
       console.log('Fetched students:', response);
       const studentList = Array.isArray(response) ? response : [];
       setStudents(studentList);
@@ -202,7 +202,7 @@ export default function TeacherAssignmentDetailPage() {
       // Try to get progress data from API
       let response;
       try {
-        response = await apiClient.get(`/api/assignments/${assignmentId}/progress`);
+        response = await apiClient.get(`/api/teachers/assignments/${assignmentId}/progress`);
         console.log('Student progress response:', response);
       } catch (apiError) {
         console.log('Progress API not available, using student list');
@@ -321,7 +321,7 @@ export default function TeacherAssignmentDetailPage() {
         due_date: editingData.due_date ? `${editingData.due_date}T00:00:00` : null
       };
 
-      await apiClient.patch(`/api/assignments/${assignmentId}`, updateData);
+      await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, updateData);
       toast.success('作業資訊已更新');
       setIsEditing(false);
 
@@ -360,7 +360,7 @@ export default function TeacherAssignmentDetailPage() {
       const updatedStudentIds = [...currentAssignedIds, studentId];
 
       // Update assignment with new student list
-      await apiClient.patch(`/api/assignments/${assignmentId}`, {
+      await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, {
         student_ids: updatedStudentIds
       });
 
@@ -402,7 +402,7 @@ export default function TeacherAssignmentDetailPage() {
       }
 
       // Call unassign API
-      const response = await apiClient.post(`/api/assignments/${assignmentId}/unassign`, {
+      const response = await apiClient.post(`/api/teachers/assignments/${assignmentId}/unassign`, {
         student_ids: [studentId],
         force: status === 'in_progress'
       });

@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
-import { 
-  Mic, 
-  MicOff, 
-  Play, 
-  Pause, 
+import {
+  Mic,
+  MicOff,
+  Play,
+  Pause,
   RotateCcw,
   Send,
   Clock,
@@ -46,7 +46,7 @@ interface AssignmentDetailData {
 export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [assignment, setAssignment] = useState<AssignmentDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -54,7 +54,7 @@ export default function AssignmentDetail() {
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
   const [isPlaying, setIsPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -66,7 +66,7 @@ export default function AssignmentDetail() {
   const loadAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/assignments/${id}/detail`);
+      const response = await apiClient.get(`/api/teachers/assignments/${id}/detail`);
       setAssignment(response.data);
     } catch (error) {
       console.error('Failed to load assignment:', error);
@@ -83,25 +83,25 @@ export default function AssignmentDetail() {
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm'
       });
-      
+
       audioChunksRef.current = [];
-      
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-      
+
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setRecordings(prev => new Map(prev).set(currentItemIndex, audioBlob));
         stream.getTracks().forEach(track => track.stop());
       };
-      
+
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
       setIsRecording(true);
-      
+
     } catch (error) {
       console.error('Failed to start recording:', error);
       toast.error('無法啟動錄音，請檢查麥克風權限');
@@ -119,13 +119,13 @@ export default function AssignmentDetail() {
   const playRecording = (index: number) => {
     const recording = recordings.get(index);
     if (!recording) return;
-    
+
     const url = URL.createObjectURL(recording);
     if (audioRef.current) {
       audioRef.current.src = url;
       audioRef.current.play();
       setIsPlaying(true);
-      
+
       audioRef.current.onended = () => {
         setIsPlaying(false);
         URL.revokeObjectURL(url);
@@ -144,17 +144,17 @@ export default function AssignmentDetail() {
 
   const submitAssignment = async () => {
     if (!assignment) return;
-    
+
     // 檢查是否所有項目都有錄音
     const missingRecordings = assignment.content.items.length - recordings.size;
     if (missingRecordings > 0) {
       toast.warning(`還有 ${missingRecordings} 個項目未錄音`);
       return;
     }
-    
+
     try {
       setSubmitting(true);
-      
+
       // 這裡應該要上傳錄音檔案到雲端儲存
       // 然後提交作業資料
       const submissionData = {
@@ -166,12 +166,12 @@ export default function AssignmentDetail() {
         })),
         completed_at: new Date().toISOString()
       };
-      
-      await apiClient.post(`/api/assignments/${id}/submit`, submissionData);
-      
+
+      await apiClient.post(`/api/teachers/assignments/${id}/submit`, submissionData);
+
       toast.success('作業提交成功！');
       navigate('/student/dashboard');
-      
+
     } catch (error) {
       console.error('Failed to submit assignment:', error);
       toast.error('提交失敗，請稍後再試');
@@ -210,7 +210,7 @@ export default function AssignmentDetail() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
       <audio ref={audioRef} className="hidden" />
-      
+
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-6">
         <Button
@@ -221,7 +221,7 @@ export default function AssignmentDetail() {
           <ChevronLeft className="h-4 w-4 mr-2" />
           返回作業列表
         </Button>
-        
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -242,7 +242,7 @@ export default function AssignmentDetail() {
                  assignment.status === 'GRADED' ? '已評分' : assignment.status}
               </Badge>
             </div>
-            
+
             {/* 目標指標 */}
             <div className="flex gap-4 mt-4">
               {assignment.content.target_wpm && (
@@ -405,3 +405,4 @@ export default function AssignmentDetail() {
     </div>
   );
 }
+

@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
-import { 
-  BookOpen, 
-  Trophy, 
-  Clock, 
+import {
+  BookOpen,
+  Trophy,
+  Clock,
   Target,
   LogOut,
   ChevronRight,
@@ -53,7 +53,7 @@ export default function StudentDashboard() {
 
   const loadAssignments = async () => {
     try {
-      const response = await apiClient.get('/api/assignments/student');
+      const response = await apiClient.get('/api/teachers/assignments/student');
       setAssignments(response.data);
     } catch (error) {
       console.error('Failed to load assignments:', error);
@@ -122,7 +122,7 @@ export default function StudentDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'GRADED': 
+      case 'GRADED':
       case 'RETURNED': return 'bg-green-100 text-green-800';
       case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800';
       case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
@@ -259,7 +259,7 @@ export default function StudentDashboard() {
                       <p className="text-sm text-gray-500 mt-1">{assignment.instructions}</p>
                     )}
                   </div>
-                  
+
                   {(assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS') && (
                     <Button
                       onClick={() => handleStartAssignment(assignment.id)}
@@ -269,7 +269,7 @@ export default function StudentDashboard() {
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   )}
-                  
+
                   {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
                     <Button
                       variant="outline"
@@ -305,7 +305,7 @@ export default function StudentDashboard() {
                   <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">口說準確度</span>
@@ -315,7 +315,7 @@ export default function StudentDashboard() {
                   <div className="bg-green-500 h-2 rounded-full" style={{ width: '82%' }}></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">流暢度</span>
@@ -332,3 +332,4 @@ export default function StudentDashboard() {
     </div>
   );
 }
+

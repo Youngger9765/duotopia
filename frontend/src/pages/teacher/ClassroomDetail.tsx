@@ -215,7 +215,7 @@ export default function ClassroomDetail() {
 
   const fetchStudents = async () => {
     try {
-      const response = await apiClient.get(`/api/classrooms/${id}/students`);
+      const response = await apiClient.get(`/api/teachers/classrooms/${id}/students`);
       setStudents(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch students:', err);
@@ -225,7 +225,7 @@ export default function ClassroomDetail() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await apiClient.get(`/api/assignments?classroom_id=${id}`);
+      const response = await apiClient.get(`/api/teachers/assignments?classroom_id=${id}`);
       setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
@@ -245,7 +245,7 @@ export default function ClassroomDetail() {
   const handleDeleteAssignment = async (assignment: Assignment) => {
     if (confirm(`確定要刪除作業「${assignment.title}」嗎？此操作將進行軟刪除，資料仍會保留。`)) {
       try {
-        await apiClient.delete(`/api/assignments/${assignment.id}`);
+        await apiClient.delete(`/api/teachers/assignments/${assignment.id}`);
         toast.success(`作業「${assignment.title}」已刪除`);
         setShowAssignmentDetails(false);
         fetchAssignments(); // Refresh the list
