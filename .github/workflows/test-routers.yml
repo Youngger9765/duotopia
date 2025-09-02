@@ -1,0 +1,39 @@
+name: Test Router Configuration
+
+on:
+  push:
+    paths:
+      - 'backend/routers/**'
+      - 'backend/main.py'
+  pull_request:
+    paths:
+      - 'backend/routers/**'
+      - 'backend/main.py'
+
+jobs:
+  test-routers:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install pytest
+
+    - name: Run Router Configuration Tests
+      run: |
+        cd backend
+        PYTHONPATH=. pytest tests/unit/test_router_configuration.py -v
+
+    - name: Check for duplicate routes
+      run: |
+        cd backend
+        python -c "from main import app; routes = {}; [routes.update({f'{m} {r.path}': r}) if f'{m} {r.path}' not in routes else print(f'Duplicate: {m} {r.path}') for r in app.routes if hasattr(r, 'path') for m in getattr(r, 'methods', [])]"

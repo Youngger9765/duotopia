@@ -29,7 +29,7 @@ from models import (
 )
 from .auth import get_current_user
 
-router = APIRouter(prefix="/api", tags=["assignments"])
+router = APIRouter(prefix="/api/teachers", tags=["assignments"])
 
 
 # ============ Pydantic Models ============

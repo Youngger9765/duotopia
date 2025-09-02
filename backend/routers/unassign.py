@@ -21,7 +21,7 @@ from models import (
 )
 from routers.auth import get_current_user
 
-router = APIRouter(prefix="/api", tags=["unassign"])
+router = APIRouter(prefix="/api/teachers", tags=["unassign"])
 
 
 class UnassignRequest(BaseModel):
