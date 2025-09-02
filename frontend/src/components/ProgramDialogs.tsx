@@ -81,22 +81,22 @@ export function ProgramDialogs({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name?.trim()) {
       newErrors.name = '課程名稱為必填';
     }
-    
+
     if (!formData.classroom_id) {
       newErrors.classroom_id = '請選擇班級';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       if (dialogType === 'create') {
@@ -126,7 +126,7 @@ export function ProgramDialogs({
 
   const handleDelete = async () => {
     if (!program) return;
-    
+
     setLoading(true);
     try {
       await apiClient.deleteProgram(program.id);
@@ -172,7 +172,7 @@ export function ProgramDialogs({
               <span>課程詳情</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="flex items-start space-x-4">
               <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -213,7 +213,7 @@ export function ProgramDialogs({
                     <p className="text-sm font-medium">{program.classroom_name}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-gray-400" />
                   <div>
@@ -231,7 +231,7 @@ export function ProgramDialogs({
                     <p className="text-sm font-medium">{program.lesson_count || 0} 個課程單元</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-gray-400" />
                   <div>
@@ -242,7 +242,7 @@ export function ProgramDialogs({
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>關閉</Button>
             {onSwitchToEdit && (
@@ -277,12 +277,12 @@ export function ProgramDialogs({
               )}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create' 
+              {dialogType === 'create'
                 ? '建立新的課程計畫'
                 : '更新課程資訊'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium">
@@ -394,7 +394,7 @@ export function ProgramDialogs({
               <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
@@ -422,7 +422,7 @@ export function ProgramDialogs({
               確定要刪除課程「{program.name}」嗎？此操作無法復原。
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">課程資料：</p>
@@ -434,18 +434,18 @@ export function ProgramDialogs({
                 </p>
               )}
             </div>
-            
+
             {errors.submit && (
               <p className="text-sm text-red-500 mt-4">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDelete}
               disabled={loading}
             >

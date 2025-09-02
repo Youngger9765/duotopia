@@ -99,7 +99,7 @@ describe('StudentTable', () => {
 
     // Check formatted date (Alice's last login)
     expect(screen.getByText('2024/01/15')).toBeInTheDocument()
-    
+
     // Should show days ago
     const daysAgo = Math.floor((Date.now() - new Date('2024-01-15T10:30:00Z').getTime()) / (1000 * 60 * 60 * 24))
     expect(screen.getByText(`${daysAgo} 天前`)).toBeInTheDocument()
@@ -139,8 +139,8 @@ describe('StudentTable', () => {
   it('calls onEditStudent when edit button is clicked', () => {
     const mockOnEditStudent = vi.fn()
     render(
-      <StudentTable 
-        students={mockStudents} 
+      <StudentTable
+        students={mockStudents}
         onEditStudent={mockOnEditStudent}
       />
     )
@@ -154,8 +154,8 @@ describe('StudentTable', () => {
   it('calls onViewStudent when view button is clicked', () => {
     const mockOnViewStudent = vi.fn()
     render(
-      <StudentTable 
-        students={mockStudents} 
+      <StudentTable
+        students={mockStudents}
         onViewStudent={mockOnViewStudent}
       />
     )
@@ -169,8 +169,8 @@ describe('StudentTable', () => {
   it('calls onEmailStudent when email button is clicked', () => {
     const mockOnEmailStudent = vi.fn()
     render(
-      <StudentTable 
-        students={mockStudents} 
+      <StudentTable
+        students={mockStudents}
         onEditStudent={mockOnEmailStudent}
       />
     )
@@ -191,10 +191,10 @@ describe('StudentTable', () => {
   it('shows custom empty message and description', () => {
     const customMessage = '這個班級還沒有學生'
     const customDescription = '請先新增學生到這個班級'
-    
+
     render(
-      <StudentTable 
-        students={[]} 
+      <StudentTable
+        students={[]}
         emptyMessage={customMessage}
         emptyDescription={customDescription}
       />
@@ -207,8 +207,8 @@ describe('StudentTable', () => {
   it('shows add student button in empty state when callback provided', () => {
     const mockOnAddStudent = vi.fn()
     render(
-      <StudentTable 
-        students={[]} 
+      <StudentTable
+        students={[]}
         onAddStudent={mockOnAddStudent}
       />
     )
@@ -247,8 +247,8 @@ describe('StudentTable', () => {
   it('shows only provided action buttons', () => {
     const mockOnEditStudent = vi.fn()
     render(
-      <StudentTable 
-        students={mockStudents} 
+      <StudentTable
+        students={mockStudents}
         onEditStudent={mockOnEditStudent}
       />
     )

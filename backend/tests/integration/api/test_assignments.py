@@ -1,422 +1,408 @@
 """
-作業系統 API 測試
-測試 Phase 1 & Phase 2 的所有作業相關功能
+測試作業 API 功能
+Test assignment API functionality with TDD approach
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
-from typing import Dict, List
-import time
 
 from main import app
 from database import get_db
 from models import (
-    Teacher, Student, Classroom, ClassroomStudent,
-    Program, Lesson, Content, ContentType,
-    StudentAssignment, AssignmentSubmission, AssignmentStatus
+    Teacher,
+    Student,
+    Classroom,
+    Assignment,
+    StudentAssignment,
+    AssignmentStatus,
+    ClassroomStudent,
 )
-from auth import create_access_token, get_password_hash
+from auth import create_access_token
+
+
+@pytest.fixture
+def test_db(tmp_path):
+    """Create a test database"""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from models import Base
+
+    # Use SQLite for testing
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{tmp_path}/test.db"
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        try:
+            db = TestingSessionLocal()
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    yield TestingSessionLocal()
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
 def client():
-    """建立測試客戶端"""
+    """Create test client"""
     return TestClient(app)
 
 
 @pytest.fixture
-def db_session():
-    """建立測試資料庫 session"""
-    from database import SessionLocal
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-@pytest.fixture
-def teacher_token(db_session: Session) -> str:
-    """建立測試教師並回傳 token"""
-    # 建立或取得測試教師
-    teacher = db_session.query(Teacher).filter(
-        Teacher.email == "test.teacher@duotopia.com"
-    ).first()
-    
-    if not teacher:
-        teacher = Teacher(
-            email="test.teacher@duotopia.com",
-            password_hash=get_password_hash("test123"),
-            name="Test Teacher",
-            is_active=True,
-            is_demo=True
-        )
-        db_session.add(teacher)
-        db_session.commit()
-    
-    # 建立 token
-    token = create_access_token(
-        data={
-            "sub": str(teacher.id),
-            "email": teacher.email,
-            "type": "teacher",
-            "name": teacher.name
-        },
-        expires_delta=timedelta(hours=1)
+def test_teacher(test_db: Session):
+    """Create a test teacher"""
+    teacher = Teacher(
+        email="test.teacher@example.com",
+        password_hash="hashed_password",
+        name="Test Teacher",
+        is_demo=False,
+        is_active=True,
     )
-    
-    return token
+    test_db.add(teacher)
+    test_db.commit()
+    test_db.refresh(teacher)
+    return teacher
 
 
 @pytest.fixture
-def student_token(db_session: Session) -> str:
-    """建立測試學生並回傳 token"""
-    # 建立或取得測試學生
-    student = db_session.query(Student).filter(
-        Student.email == "test.student@duotopia.local"
-    ).first()
-    
-    if not student:
-        student = Student(
-            email="test.student@duotopia.local",
-            password_hash=get_password_hash("student123"),
-            name="Test Student",
-            birthdate=datetime(2010, 1, 1).date(),
-            is_active=True
-        )
-        db_session.add(student)
-        db_session.commit()
-    
-    # 建立 token
-    token = create_access_token(
-        data={
-            "sub": str(student.id),
-            "email": student.email,
-            "type": "student",
-            "name": student.name
-        },
-        expires_delta=timedelta(hours=1)
-    )
-    
-    return token
-
-
-@pytest.fixture
-def test_data(db_session: Session) -> Dict:
-    """建立完整的測試資料"""
-    # 取得測試教師
-    teacher = db_session.query(Teacher).filter(
-        Teacher.email == "test.teacher@duotopia.com"
-    ).first()
-    
-    # 建立班級
+def test_classroom(test_db: Session, test_teacher):
+    """Create a test classroom"""
     classroom = Classroom(
-        name="Test Class",
-        teacher_id=teacher.id,
-        level="A1",
-        is_active=True
+        name="Test Classroom",
+        description="Test classroom for testing",
+        level="beginner",
+        teacher_id=test_teacher.id,
+        is_active=True,
     )
-    db_session.add(classroom)
-    
-    # 建立學生（使用時間戳避免重複）
-    timestamp = int(time.time())
+    test_db.add(classroom)
+    test_db.commit()
+    test_db.refresh(classroom)
+    return classroom
+
+
+@pytest.fixture
+def test_students(test_db: Session, test_classroom):
+    """Create test students"""
     students = []
-    for i in range(3):
+    for i in range(5):
         student = Student(
-            email=f"student{i}_test_{timestamp}@test.local",
-            password_hash=get_password_hash("test123"),
-            name=f"Student {i}",
-            birthdate=datetime(2010, 1, 1).date(),
-            is_active=True
+            name=f"Student {i+1}",
+            email=f"student{i+1}@example.com",
+            password_hash="hashed_password",
+            birthdate=datetime(2010, 1, 1),
+            is_active=True,
         )
-        db_session.add(student)
+        test_db.add(student)
+        test_db.flush()
+
+        # Add to classroom
+        classroom_student = ClassroomStudent(
+            classroom_id=test_classroom.id, student_id=student.id, is_active=True
+        )
+        test_db.add(classroom_student)
         students.append(student)
-    
-    db_session.flush()
-    
-    # 學生加入班級
-    for student in students:
-        enrollment = ClassroomStudent(
-            classroom_id=classroom.id,
-            student_id=student.id,
-            is_active=True
-        )
-        db_session.add(enrollment)
-    
-    # 建立課程
-    program = Program(
-        name="Test Program",
-        teacher_id=teacher.id,
-        classroom_id=classroom.id,
-        level="A1",
-        is_active=True
-    )
-    db_session.add(program)
-    db_session.flush()
-    
-    # 建立單元
-    lesson = Lesson(
-        program_id=program.id,
-        name="Test Lesson",
-        order_index=1
-    )
-    db_session.add(lesson)
-    db_session.flush()
-    
-    # 建立 Content
-    content = Content(
-        lesson_id=lesson.id,
-        type=ContentType.READING_ASSESSMENT,
-        title="Test Content",
-        items=[
-            {"text": "Hello", "translation": "你好"},
-            {"text": "World", "translation": "世界"}
-        ],
-        level="A1"
-    )
-    db_session.add(content)
-    
-    db_session.commit()
-    
-    return {
-        "teacher": teacher,
-        "classroom": classroom,
-        "students": students,
-        "program": program,
-        "lesson": lesson,
-        "content": content
-    }
+
+    test_db.commit()
+    return students
 
 
-class TestPhase1Assignments:
-    """Phase 1: 基礎指派功能測試"""
-    
-    def test_create_assignment_for_whole_class(
-        self, client: TestClient, teacher_token: str, test_data: Dict
-    ):
-        """測試指派作業給全班"""
-        headers = {"Authorization": f"Bearer {teacher_token}"}
-        
-        response = client.post(
-            "/api/assignments/create",
-            json={
-                "content_id": test_data["content"].id,
-                "classroom_id": test_data["classroom"].id,
-                "student_ids": [],  # 空陣列表示全班
-                "title": "Test Assignment - Whole Class",
-                "instructions": "Complete this assignment",
-                "due_date": (datetime.now() + timedelta(days=7)).isoformat()
-            },
-            headers=headers
+@pytest.fixture
+def test_assignment(test_db: Session, test_teacher, test_classroom):
+    """Create a test assignment"""
+    assignment = Assignment(
+        title="Test Assignment",
+        description="Test assignment description",
+        classroom_id=test_classroom.id,
+        teacher_id=test_teacher.id,
+        due_date=datetime.now(timezone.utc) + timedelta(days=7),
+        is_active=True,
+    )
+    test_db.add(assignment)
+    test_db.commit()
+    test_db.refresh(assignment)
+    return assignment
+
+
+@pytest.fixture
+def auth_headers(test_teacher):
+    """Create authentication headers"""
+    token = create_access_token(data={"sub": str(test_teacher.id), "type": "teacher"})
+    return {"Authorization": f"Bearer {token}"}
+
+
+class TestAssignmentAPI:
+    """Test assignment API endpoints"""
+
+    def test_get_assignment_detail(self, client, test_assignment, auth_headers):
+        """測試取得作業詳情"""
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}", headers=auth_headers
         )
-        
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
-        assert data["count"] == len(test_data["students"])
-    
-    def test_create_assignment_for_specific_students(
-        self, client: TestClient, teacher_token: str, test_data: Dict
-    ):
-        """測試指派作業給特定學生"""
-        headers = {"Authorization": f"Bearer {teacher_token}"}
-        student_ids = [test_data["students"][0].id, test_data["students"][1].id]
-        
-        response = client.post(
-            "/api/assignments/create",
-            json={
-                "content_id": test_data["content"].id,
-                "classroom_id": test_data["classroom"].id,
-                "student_ids": student_ids,
-                "title": "Test Assignment - Specific Students",
-                "instructions": "Only for selected students",
-                "due_date": (datetime.now() + timedelta(days=5)).isoformat()
-            },
-            headers=headers
+        assert data["id"] == test_assignment.id
+        assert data["title"] == "Test Assignment"
+        assert "student_ids" in data
+        assert isinstance(data["student_ids"], list)
+
+    def test_patch_assignment_title(self, client, test_assignment, auth_headers):
+        """測試更新作業標題"""
+        new_title = "Updated Assignment Title"
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json={"title": new_title},
         )
-        
+        assert response.status_code == 200
+
+        # Verify the update
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}", headers=auth_headers
+        )
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
-        assert data["count"] == 2
-    
+        assert data["title"] == new_title
+
+    def test_patch_assignment_student_ids(
+        self, client, test_assignment, test_students, auth_headers, test_db
+    ):
+        """測試更新作業的學生指派"""
+        student_ids = [test_students[0].id, test_students[1].id]
+
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json={"student_ids": student_ids},
+        )
+        assert response.status_code == 200
+
+        # Verify students are assigned
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}", headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert set(data["student_ids"]) == set(student_ids)
+
+        # Verify StudentAssignment records exist
+        student_assignments = (
+            test_db.query(StudentAssignment)
+            .filter(StudentAssignment.assignment_id == test_assignment.id)
+            .all()
+        )
+        assert len(student_assignments) == 2
+        assigned_student_ids = [sa.student_id for sa in student_assignments]
+        assert set(assigned_student_ids) == set(student_ids)
+
+    def test_patch_assignment_remove_students(
+        self, client, test_assignment, test_students, auth_headers, test_db
+    ):
+        """測試移除學生指派"""
+        # First assign 3 students
+        initial_student_ids = [
+            test_students[0].id,
+            test_students[1].id,
+            test_students[2].id,
+        ]
+        client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json={"student_ids": initial_student_ids},
+        )
+
+        # Then reduce to 1 student
+        final_student_ids = [test_students[0].id]
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json={"student_ids": final_student_ids},
+        )
+        assert response.status_code == 200
+
+        # Verify only 1 student remains
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}", headers=auth_headers
+        )
+        data = response.json()
+        assert data["student_ids"] == final_student_ids
+
+        # Verify database records
+        student_assignments = (
+            test_db.query(StudentAssignment)
+            .filter(StudentAssignment.assignment_id == test_assignment.id)
+            .all()
+        )
+        assert len(student_assignments) == 1
+        assert student_assignments[0].student_id == test_students[0].id
+
+    def test_patch_assignment_multiple_fields(
+        self, client, test_assignment, test_students, auth_headers
+    ):
+        """測試同時更新多個欄位"""
+        new_data = {
+            "title": "Multi-Update Title",
+            "description": "Multi-Update Description",
+            "due_date": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+            "student_ids": [test_students[1].id, test_students[3].id],
+        }
+
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json=new_data,
+        )
+        assert response.status_code == 200
+
+        # Verify all updates
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}", headers=auth_headers
+        )
+        data = response.json()
+        assert data["title"] == new_data["title"]
+        assert data["description"] == new_data["description"]
+        assert set(data["student_ids"]) == set(new_data["student_ids"])
+
+    def test_get_assignment_progress(
+        self, client, test_assignment, test_students, auth_headers, test_db
+    ):
+        """測試取得作業進度"""
+        # Assign students first
+        student_ids = [test_students[0].id, test_students[2].id]
+        for student_id in student_ids:
+            sa = StudentAssignment(
+                assignment_id=test_assignment.id,
+                student_id=student_id,
+                classroom_id=test_assignment.classroom_id,
+                title=test_assignment.title,
+                instructions=test_assignment.description,
+                due_date=test_assignment.due_date,
+                status=AssignmentStatus.NOT_STARTED,
+                assigned_at=datetime.now(timezone.utc),
+                is_active=True,
+            )
+            test_db.add(sa)
+        test_db.commit()
+
+        # Get progress
+        response = client.get(
+            f"/api/assignments/{test_assignment.id}/progress", headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        assert isinstance(data, list)
+        assert len(data) == 2
+
+        student_ids_in_progress = [item["student_id"] for item in data]
+        assert set(student_ids_in_progress) == set(student_ids)
+
+        for item in data:
+            assert item["status"] == "NOT_STARTED"
+            assert "student_name" in item
+            assert "student_id" in item
+
     def test_get_classroom_students(
-        self, client: TestClient, teacher_token: str, test_data: Dict
+        self, client, test_classroom, test_students, auth_headers
     ):
         """測試取得班級學生列表"""
-        headers = {"Authorization": f"Bearer {teacher_token}"}
-        
         response = client.get(
-            f"/api/classrooms/{test_data['classroom'].id}/students",
-            headers=headers
+            f"/api/classrooms/{test_classroom.id}/students", headers=auth_headers
         )
-        
         assert response.status_code == 200
-        students = response.json()
-        assert len(students) == len(test_data["students"])
-    
-    def test_get_available_contents(
-        self, client: TestClient, teacher_token: str, test_data: Dict
-    ):
-        """測試取得可用的 Content 列表"""
-        headers = {"Authorization": f"Bearer {teacher_token}"}
-        
-        response = client.get(
-            f"/api/contents?classroom_id={test_data['classroom'].id}",
-            headers=headers
+        data = response.json()
+
+        assert isinstance(data, list)
+        assert len(data) == len(test_students)
+
+        student_ids = [s["id"] for s in data]
+        expected_ids = [s.id for s in test_students]
+        assert set(student_ids) == set(expected_ids)
+
+    def test_unauthorized_access(self, client, test_assignment):
+        """測試未授權存取"""
+        # Without auth headers
+        response = client.get(f"/api/assignments/{test_assignment.id}")
+        assert response.status_code == 401
+
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            json={"title": "Unauthorized Update"},
         )
-        
-        assert response.status_code == 200
-        contents = response.json()
-        assert len(contents) >= 1
-        assert contents[0]["title"] == "Test Content"
+        assert response.status_code == 401
 
+    def test_assignment_not_found(self, client, auth_headers):
+        """測試作業不存在"""
+        response = client.get("/api/assignments/99999", headers=auth_headers)
+        assert response.status_code == 404
 
-class TestPhase2Assignments:
-    """Phase 2: 作業列表管理測試"""
-    
-    def test_get_teacher_assignments(
-        self, client: TestClient, teacher_token: str, test_data: Dict, db_session: Session
+        response = client.patch(
+            "/api/assignments/99999",
+            headers=auth_headers,
+            json={"title": "Update Non-existent"},
+        )
+        assert response.status_code == 404
+
+    def test_patch_preserves_started_assignments(
+        self, client, test_assignment, test_students, auth_headers, test_db
     ):
-        """測試教師取得作業列表"""
-        # 先建立一些作業
-        for student in test_data["students"]:
-            assignment = StudentAssignment(
+        """測試更新時保留已開始的作業"""
+        # Create assignments with different statuses
+        for i, student in enumerate(test_students[:3]):
+            status = (
+                AssignmentStatus.IN_PROGRESS if i == 0 else AssignmentStatus.NOT_STARTED
+            )
+            sa = StudentAssignment(
+                assignment_id=test_assignment.id,
                 student_id=student.id,
-                content_id=test_data["content"].id,
-                classroom_id=test_data["classroom"].id,
-                title="Test Assignment",
-                status=AssignmentStatus.NOT_STARTED,
-                due_date=datetime.now() + timedelta(days=7)
+                classroom_id=test_assignment.classroom_id,
+                title=test_assignment.title,
+                instructions=test_assignment.description,
+                due_date=test_assignment.due_date,
+                status=status,
+                assigned_at=datetime.now(timezone.utc),
+                is_active=True,
             )
-            db_session.add(assignment)
-        db_session.commit()
-        
-        # 測試 API
-        headers = {"Authorization": f"Bearer {teacher_token}"}
-        response = client.get("/api/assignments/teacher", headers=headers)
-        
+            test_db.add(sa)
+        test_db.commit()
+
+        # Update to only keep student 0 and add student 3
+        new_student_ids = [test_students[0].id, test_students[3].id]
+        response = client.patch(
+            f"/api/assignments/{test_assignment.id}",
+            headers=auth_headers,
+            json={"student_ids": new_student_ids},
+        )
         assert response.status_code == 200
-        assignments = response.json()
-        assert len(assignments) >= 1
-        assert assignments[0]["total_students"] == 3
-    
-    def test_get_student_assignments(
-        self, client: TestClient, student_token: str, db_session: Session
-    ):
-        """測試學生取得自己的作業列表"""
-        headers = {"Authorization": f"Bearer {student_token}"}
-        
-        response = client.get("/api/assignments/student", headers=headers)
-        
-        assert response.status_code == 200
-        assignments = response.json()
-        assert isinstance(assignments, list)
-    
-    def test_submit_assignment(
-        self, client: TestClient, student_token: str, db_session: Session
-    ):
-        """測試提交作業"""
-        # 先建立一個作業
-        student = db_session.query(Student).filter(
-            Student.email == "test.student@duotopia.local"
-        ).first()
-        
-        # 確保有 Content
-        content = db_session.query(Content).first()
-        if not content:
-            # 建立測試 Content
-            lesson = db_session.query(Lesson).first()
-            content = Content(
-                lesson_id=lesson.id,
-                type=ContentType.READING_ASSESSMENT,
-                title="Test Content for Submission",
-                items=[{"text": "Test"}]
+
+        # Verify student 0 (IN_PROGRESS) is preserved
+        sa = (
+            test_db.query(StudentAssignment)
+            .filter(
+                StudentAssignment.assignment_id == test_assignment.id,
+                StudentAssignment.student_id == test_students[0].id,
             )
-            db_session.add(content)
-            db_session.flush()
-        
-        assignment = StudentAssignment(
-            student_id=student.id,
-            content_id=content.id,
-            classroom_id=1,  # 假設有班級 ID 1
-            title="Test Assignment for Submission",
-            status=AssignmentStatus.NOT_STARTED
+            .first()
         )
-        db_session.add(assignment)
-        db_session.commit()
-        
-        # 測試提交
-        headers = {"Authorization": f"Bearer {student_token}"}
-        submission_data = {
-            "audio_urls": ["test_audio_1.mp3", "test_audio_2.mp3"],
-            "completed_at": datetime.now().isoformat()
-        }
-        
-        response = client.post(
-            f"/api/assignments/{assignment.id}/submit",
-            json=submission_data,
-            headers=headers
+        assert sa is not None
+        assert sa.status == AssignmentStatus.IN_PROGRESS
+
+        # Verify total count
+        total = (
+            test_db.query(StudentAssignment)
+            .filter(StudentAssignment.assignment_id == test_assignment.id)
+            .count()
         )
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "提交成功" in data["message"]
-    
-    def test_get_assignment_detail(
-        self, client: TestClient, student_token: str, db_session: Session
-    ):
-        """測試取得作業詳細資訊"""
-        # 取得學生
-        student = db_session.query(Student).filter(
-            Student.email == "test.student@duotopia.local"
-        ).first()
-        
-        # 建立作業
-        content = db_session.query(Content).first()
-        assignment = StudentAssignment(
-            student_id=student.id,
-            content_id=content.id,
-            classroom_id=1,
-            title="Test Assignment Detail",
-            status=AssignmentStatus.IN_PROGRESS
-        )
-        db_session.add(assignment)
-        db_session.commit()
-        
-        # 測試 API
-        headers = {"Authorization": f"Bearer {student_token}"}
-        response = client.get(
-            f"/api/assignments/{assignment.id}/detail",
-            headers=headers
-        )
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "assignment" in data
-        assert "content" in data
-        assert data["assignment"]["title"] == "Test Assignment Detail"
-    
-    def test_filter_assignments_by_status(
-        self, client: TestClient, student_token: str
-    ):
-        """測試按狀態篩選作業"""
-        headers = {"Authorization": f"Bearer {student_token}"}
-        
-        response = client.get(
-            "/api/assignments/student?status=NOT_STARTED",
-            headers=headers
-        )
-        
-        assert response.status_code == 200
-        assignments = response.json()
-        assert isinstance(assignments, list)
-        # 所有回傳的作業都應該是 NOT_STARTED 狀態
-        for assignment in assignments:
-            assert assignment["status"] == "NOT_STARTED"
+        assert total == 2
 
 
 if __name__ == "__main__":

@@ -46,6 +46,16 @@ class CreateAssignmentRequest(BaseModel):
     due_date: Optional[datetime] = None
 
 
+class UpdateAssignmentRequest(BaseModel):
+    """更新作業請求（部分更新）"""
+
+    title: Optional[str] = None
+    description: Optional[str] = None
+    instructions: Optional[str] = None  # Alias for description
+    due_date: Optional[datetime] = None
+    student_ids: Optional[List[int]] = None
+
+
 class AssignmentResponse(BaseModel):
     """作業回應"""
 
@@ -441,6 +451,127 @@ async def update_assignment(
     }
 
 
+@router.patch("/assignments/{assignment_id}")
+async def patch_assignment(
+    assignment_id: int,
+    request: UpdateAssignmentRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    部分更新作業（只更新提供的欄位）
+    """
+    if not isinstance(current_user, Teacher):
+        raise HTTPException(
+            status_code=403, detail="Only teachers can update assignments"
+        )
+
+    # 取得並驗證作業
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_user.id,
+            Assignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404, detail="Assignment not found or you don't have permission"
+        )
+
+    # 只更新提供的欄位
+    if request.title is not None:
+        assignment.title = request.title
+
+    if request.description is not None:
+        assignment.description = request.description
+    elif request.instructions is not None:  # Support 'instructions' as alias
+        assignment.description = request.instructions
+
+    if request.due_date is not None:
+        assignment.due_date = request.due_date
+
+    # 更新 StudentAssignment 記錄
+    update_fields = {}
+    if request.title is not None:
+        update_fields["title"] = request.title
+    if request.description is not None or request.instructions is not None:
+        update_fields["instructions"] = request.description or request.instructions
+    if request.due_date is not None:
+        update_fields["due_date"] = request.due_date
+
+    if update_fields:
+        db.query(StudentAssignment).filter(
+            StudentAssignment.assignment_id == assignment_id
+        ).update(update_fields)
+
+    # 如果要更新 student_ids
+    if request.student_ids is not None:
+        # 先找出要刪除的 StudentAssignment IDs
+        assignments_to_delete = (
+            db.query(StudentAssignment.id)
+            .filter(
+                StudentAssignment.assignment_id == assignment_id,
+                StudentAssignment.status == AssignmentStatus.NOT_STARTED,
+            )
+            .all()
+        )
+
+        assignment_ids_to_delete = [a.id for a in assignments_to_delete]
+
+        if assignment_ids_to_delete:
+            # 先刪除相關的 StudentContentProgress 記錄
+            from models import StudentContentProgress
+
+            db.query(StudentContentProgress).filter(
+                StudentContentProgress.student_assignment_id.in_(
+                    assignment_ids_to_delete
+                )
+            ).delete(synchronize_session=False)
+
+            # 再刪除 StudentAssignment 記錄
+            db.query(StudentAssignment).filter(
+                StudentAssignment.id.in_(assignment_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+        # 為新的學生列表創建 StudentAssignment
+        for student_id in request.student_ids:
+            # 檢查是否已存在（可能有些學生已經開始作業）
+            existing = (
+                db.query(StudentAssignment)
+                .filter(
+                    StudentAssignment.assignment_id == assignment_id,
+                    StudentAssignment.student_id == student_id,
+                )
+                .first()
+            )
+
+            if not existing:
+                student_assignment = StudentAssignment(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    classroom_id=assignment.classroom_id,
+                    title=assignment.title,
+                    instructions=assignment.description,
+                    due_date=assignment.due_date,
+                    status=AssignmentStatus.NOT_STARTED,
+                    assigned_at=datetime.now(timezone.utc),
+                    is_active=True,
+                )
+                db.add(student_assignment)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "assignment_id": assignment_id,
+        "message": "Assignment updated successfully",
+    }
+
+
 @router.delete("/assignments/{assignment_id}")
 async def delete_assignment(
     assignment_id: int,
@@ -648,6 +779,9 @@ async def get_assignment_detail(
         .all()
     )
 
+    # 收集已指派的學生 IDs
+    student_ids = [sa.student_id for sa in student_assignments]
+
     students_progress = []
     for sa in student_assignments:
         student = db.query(Student).filter(Student.id == sa.student_id).first()
@@ -702,8 +836,76 @@ async def get_assignment_detail(
         if assignment.created_at
         else None,
         "contents": contents,
+        "student_ids": student_ids,  # 已指派的學生 IDs
         "students_progress": students_progress,
     }
+
+
+@router.get("/assignments/{assignment_id}/progress")
+async def get_assignment_progress(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    取得作業的學生進度
+    """
+    if not isinstance(current_user, Teacher):
+        raise HTTPException(
+            status_code=403, detail="Only teachers can access assignment progress"
+        )
+
+    # 確認作業存在且屬於當前教師
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_user.id,
+            Assignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404, detail="Assignment not found or you don't have permission"
+        )
+
+    # 取得學生作業進度
+    student_assignments = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .all()
+    )
+
+    progress_list = []
+    for sa in student_assignments:
+        # 取得學生資訊
+        student = db.query(Student).filter(Student.id == sa.student_id).first()
+
+        if student:
+            progress_list.append(
+                {
+                    "student_id": student.id,
+                    "student_name": student.name,
+                    "status": sa.status.value if sa.status else "NOT_STARTED",
+                    "submission_date": sa.submitted_at.isoformat()
+                    if sa.submitted_at
+                    else None,
+                    "score": sa.score,
+                    "attempts": 1 if sa.submitted_at else 0,  # Simple attempt count
+                    "last_activity": sa.updated_at.isoformat()
+                    if sa.updated_at
+                    else sa.created_at.isoformat()
+                    if sa.created_at
+                    else None,
+                }
+            )
+
+    return progress_list
 
 
 @router.get("/classrooms/{classroom_id}/students", response_model=List[StudentResponse])

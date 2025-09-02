@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -94,6 +94,7 @@ interface ClassroomInfo {
 export default function ClassroomDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -152,6 +153,15 @@ export default function ClassroomDetail() {
       fetchAssignments();
     }
   }, [id]);
+
+  useEffect(() => {
+    // Check URL parameters for tab switching
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab === 'assignments') {
+      setActiveTab('assignments');
+    }
+  }, [location.search]);
 
   const fetchClassroomDetail = async () => {
     try {
@@ -1340,8 +1350,7 @@ export default function ClassroomDetail() {
                                   size="sm"
                                   className="text-blue-600 hover:text-blue-700"
                                   onClick={() => {
-                                    setSelectedAssignment(assignment);
-                                    setShowAssignmentDetails(true);
+                                    navigate(`/teacher/classroom/${id}/assignment/${assignment.id}`);
                                   }}
                                 >
                                   查看詳情

@@ -374,10 +374,51 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"    # 重新提交（訂正後待批改）
 ```
 
+**作業生命週期（教師視角）**：
+
+1. **未指派** → 顯示「指派」按鈕
+   - 學生尚未被指派此作業
+   - 教師可選擇將作業指派給該學生
+
+2. **未開始 (NOT_STARTED)** → 學生已被指派但未開始
+   - 作業已指派給學生
+   - 學生尚未開始做作業
+   - 教師可取消指派（學生不會有進度損失）
+
+3. **進行中 (IN_PROGRESS)** → 學生正在做作業
+   - 學生已開始練習
+   - 可能已完成部分內容
+   - 教師需確認才能取消指派（避免學生進度損失）
+
+4. **待批改 (SUBMITTED)** → 學生已提交，等待教師批改
+   - 學生已完成並提交作業
+   - 等待教師批改
+   - 教師不可取消指派（保護學生成果）
+
+5. **待訂正 (RETURNED)** → 教師退回，要求學生訂正
+   - 教師已批改並發現需要改進
+   - 退回給學生進行訂正
+   - 學生需重新練習未通過的內容
+
+6. **待批改(訂正) (RESUBMITTED)** → 學生重新提交訂正後的作業
+   - 學生已完成訂正並重新提交
+   - 等待教師再次批改
+   - 可能需要多次訂正循環
+
+7. **已完成 (GRADED)** → 教師已批改完成
+   - 作業已完成所有流程
+   - 分數已確定
+   - 教師不可取消指派（保護學生成績）
+
 **狀態流轉規則**：
 1. 正常流程：NOT_STARTED → IN_PROGRESS → SUBMITTED → GRADED
 2. 需要訂正：SUBMITTED/GRADED → RETURNED → RESUBMITTED → GRADED
 3. 可多次訂正：GRADED → RETURNED → RESUBMITTED → GRADED（循環）
+
+**取消指派保護機制**：
+- **NOT_STARTED**：可直接取消，刪除相關記錄
+- **IN_PROGRESS**：需要教師確認（force=true），執行軟刪除
+- **SUBMITTED/GRADED/RETURNED/RESUBMITTED**：完全禁止取消，保護學生成果
 
 #### 作業建立流程
 
