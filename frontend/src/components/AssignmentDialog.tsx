@@ -271,7 +271,7 @@ export function AssignmentDialog({
 
       const result = await apiClient.post('/api/assignments/create', payload);
 
-      toast.success(`成功創建作業，已指派給 ${result.student_count || 0} 位學生`);
+      toast.success(`成功創建作業，已指派給 ${(result as any).student_count || 0} 位學生`);
       onSuccess?.();
       handleClose();
     } catch (error) {

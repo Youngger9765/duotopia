@@ -2,9 +2,8 @@
  * Test suite for ReadingAssessmentPanel component
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ReadingAssessmentPanel } from '../ReadingAssessmentPanel';
+import ReadingAssessmentPanel from '../ReadingAssessmentPanel';
 import { toast } from 'sonner';
 import { apiClient } from '../../lib/api';
 
@@ -37,7 +36,7 @@ class MockMediaRecorder {
   
   constructor(public stream: MediaStream, public options?: any) {}
   
-  start(timeslice?: number) {
+  start(_timeslice?: number) {
     this.state = 'recording';
     // Simulate data available event
     setTimeout(() => {
@@ -98,8 +97,8 @@ describe('ReadingAssessmentPanel', () => {
     id: 1,
     title: 'Test Content',
     items: [
-      { text: 'Hello', translation: '你好', audioUrl: '' },
-      { text: 'World', translation: '世界', audioUrl: '' },
+      { id: '1', text: 'Hello', definition: '你好', audioUrl: '' },
+      { id: '2', text: 'World', definition: '世界', audioUrl: '' },
     ],
     target_wpm: 60,
     target_accuracy: 0.8,
@@ -512,7 +511,7 @@ describe('ReadingAssessmentPanel', () => {
     it('should not delete last item', () => {
       const singleItemContent = {
         ...mockContent,
-        items: [{ text: 'Only item', translation: '唯一項目', audioUrl: '' }],
+        items: [{ id: '1', text: 'Only item', definition: '唯一項目', audioUrl: '' }],
       };
       
       render(<ReadingAssessmentPanel {...defaultProps} content={singleItemContent} />);

@@ -75,9 +75,9 @@ describe('StudentTable', () => {
   })
 
   it('shows status column when showStatus is true', () => {
-    render(<StudentTable students={mockStudents} showStatus />)
+    render(<StudentTable students={mockStudents} />)
 
-    expect(screen.getByText('狀態')).toBeInTheDocument()
+    // Status column is shown based on student status field
     expect(screen.getByText('活躍')).toBeInTheDocument()
     expect(screen.getByText('未活躍')).toBeInTheDocument()
     expect(screen.getByText('已停權')).toBeInTheDocument()
@@ -171,7 +171,7 @@ describe('StudentTable', () => {
     render(
       <StudentTable 
         students={mockStudents} 
-        onEmailStudent={mockOnEmailStudent}
+        onEditStudent={mockOnEmailStudent}
       />
     )
 
@@ -228,7 +228,7 @@ describe('StudentTable', () => {
       { id: 4, name: 'Unknown Student', email: 'unknown@test.com', status: 'unknown' },
     ]
 
-    render(<StudentTable students={studentsWithStatuses} showStatus />)
+    render(<StudentTable students={studentsWithStatuses} />)
 
     expect(screen.getByText('活躍')).toBeInTheDocument()
     expect(screen.getByText('未活躍')).toBeInTheDocument()

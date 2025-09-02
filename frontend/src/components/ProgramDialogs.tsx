@@ -379,7 +379,7 @@ export function ProgramDialogs({
                   <select
                     id="status"
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'archived' })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'draft' | 'archived' })}
                     className="w-full mt-1 px-3 py-2 border rounded-md"
                   >
                     <option value="draft">草稿</option>

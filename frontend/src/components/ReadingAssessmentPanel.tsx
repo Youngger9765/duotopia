@@ -240,7 +240,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         onConfirm(finalUrl, {
           accent,
           gender,
-          speed,
+          speed: speed.toString(),
           source: selectedSource,
           audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null
         });
@@ -260,7 +260,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onConfirm(result.audio_url, { accent, gender, speed: speed.toString(), source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
@@ -275,7 +275,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       }
 
       const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
-      onConfirm(finalUrl, { accent, gender, speed, source: selectedSource });
+      onConfirm(finalUrl, { accent, gender, speed: speed.toString(), source: selectedSource });
     } else {
       // 只有一種音源
       const finalAudioUrl = recordedAudio || audioUrl;
@@ -290,7 +290,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         onConfirm(finalAudioUrl, {
           accent,
           gender,
-          speed,
+          speed: speed.toString(),
           source,
           audioBlob: source === 'recording' ? audioBlobRef.current : null
         });
@@ -310,7 +310,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onConfirm(result.audio_url, { accent, gender, speed: speed.toString(), source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
@@ -325,7 +325,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       }
 
       const source = recordedAudio ? 'recording' : 'tts';
-      onConfirm(finalAudioUrl, { accent, gender, speed, source });
+      onConfirm(finalAudioUrl, { accent, gender, speed: speed.toString(), source });
     }
     onClose();
   };
@@ -592,9 +592,9 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
 };
 
 interface ReadingAssessmentPanelProps {
-  content?: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
-  editingContent?: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
-  onUpdateContent?: (content: { title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number }) => void;
+  content?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
+  editingContent?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
+  onUpdateContent?: (content: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number }) => void;
   onSave?: () => void;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
@@ -641,7 +641,7 @@ export default function ReadingAssessmentPanel({
 
     setIsLoading(true);
     try {
-      const data = await apiClient.getContentDetail(content.id);
+      const data = await apiClient.getContentDetail(content.id) as any;
       setTitle(data.title || '');
 
       // Convert items to rows format
@@ -658,7 +658,7 @@ export default function ReadingAssessmentPanel({
       setLevel(data.level || 'A1');
       setTags(data.tags || []);
       setIsPublic(data.is_public || false);
-    } catch {
+    } catch (error) {
       console.error('Failed to load content:', error);
       toast.error('載入內容失敗');
     } finally {
@@ -862,7 +862,7 @@ export default function ReadingAssessmentPanel({
         '+0%'
       );
 
-      if (result.audio_urls) {
+      if (result && result.audio_urls) {
         // 更新 rows 的 audioUrl
         const newRows = [...rows];
         let audioIndex = 0;
