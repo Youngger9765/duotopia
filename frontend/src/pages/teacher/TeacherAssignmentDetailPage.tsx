@@ -76,6 +76,7 @@ interface StudentProgress {
     submitted_at?: string;
     graded_at?: string;
     returned_at?: string;
+    resubmitted_at?: string;
     created_at?: string;
     updated_at?: string;
   };
@@ -245,7 +246,7 @@ export default function TeacherAssignmentDetailPage() {
               return {
                 student_id: student.id,
                 student_name: student.name,
-                status: isAssigned ? 'not_started' : 'unassigned',
+                status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
                 submission_date: undefined,
                 score: undefined,
                 attempts: 0,
@@ -283,7 +284,7 @@ export default function TeacherAssignmentDetailPage() {
         return {
           student_id: student.id,
           student_name: student.name,
-          status: isAssigned ? 'not_started' as const : 'unassigned' as const,
+          status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
           submission_date: undefined,
           score: undefined,
           attempts: 0,
@@ -308,7 +309,7 @@ export default function TeacherAssignmentDetailPage() {
       const updateData = {
         title: editingData.title,
         instructions: editingData.instructions || '',
-        due_date: editingData.due_date ? `${editingData.due_date}T00:00:00` : null
+        due_date: editingData.due_date ? `${editingData.due_date}T00:00:00` : undefined
       };
 
       await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, updateData);
@@ -366,7 +367,7 @@ export default function TeacherAssignmentDetailPage() {
       // Update student progress
       setStudentProgress(prev => prev.map(p =>
         p.student_id === studentId
-          ? { ...p, status: 'not_started' as const, is_assigned: true }
+          ? { ...p, status: 'NOT_STARTED' as const, is_assigned: true }
           : p
       ));
 
@@ -397,7 +398,7 @@ export default function TeacherAssignmentDetailPage() {
         force: status === 'in_progress'
       });
 
-      if (response.protected && response.protected.length > 0) {
+      if (response && 'protected' in response && response.protected && Array.isArray(response.protected) && response.protected.length > 0) {
         toast.warning(response.protected[0].reason);
         return;
       }
@@ -428,31 +429,6 @@ export default function TeacherAssignmentDetailPage() {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'NOT_STARTED': '未開始',
-      'IN_PROGRESS': '進行中',
-      'SUBMITTED': '待批改',
-      'GRADED': '已完成',
-      'RETURNED': '待訂正',
-      'RESUBMITTED': '待批改(訂正)',
-      'unassigned': '未指派'
-    };
-    return labels[status] || status;
-  };
-
-  const getStatusStyle = (status: string) => {
-    const styles: Record<string, string> = {
-      'NOT_STARTED': 'bg-gray-100 text-gray-600',
-      'IN_PROGRESS': 'bg-blue-100 text-blue-600',
-      'SUBMITTED': 'bg-orange-100 text-orange-600',
-      'GRADED': 'bg-green-100 text-green-600',
-      'RETURNED': 'bg-red-100 text-red-600',
-      'RESUBMITTED': 'bg-yellow-100 text-yellow-600',
-      'unassigned': 'bg-gray-50 text-gray-400'
-    };
-    return styles[status] || 'bg-gray-100 text-gray-600';
-  };
 
   const getContentTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -466,30 +442,6 @@ export default function TeacherAssignmentDetailPage() {
     return labels[type] || type;
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'not_started': 'bg-gray-100 text-gray-800',
-      'in_progress': 'bg-yellow-100 text-yellow-800',
-      'submitted': 'bg-blue-100 text-blue-800',
-      'completed': 'bg-green-100 text-green-800',
-      'overdue': 'bg-red-100 text-red-800',
-      'unassigned': 'bg-gray-50 text-gray-400'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4" />;
-      case 'overdue':
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
 
   // Calculate statistics (only for assigned students)
   const assignedProgress = studentProgress.filter(p => p.status !== 'unassigned');

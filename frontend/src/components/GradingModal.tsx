@@ -14,15 +14,12 @@ import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   User,
-  Calendar,
   Clock,
   ChevronLeft,
   ChevronRight,
   Save,
   X,
-  FileText,
   Volume2,
-  CheckCircle,
   AlertCircle
 } from 'lucide-react';
 
@@ -124,14 +121,14 @@ export default function GradingModal({
   const loadSubmission = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(
+      const response = await apiClient.get<StudentSubmission>(
         `/api/teachers/assignments/${assignmentId}/submissions/${studentId}`
       );
 
       setSubmission(response);
 
       // 如果已經有分數，預填
-      if (response.current_score !== undefined && response.current_score !== null) {
+      if (response && response.current_score !== undefined && response.current_score !== null) {
         setScore(response.current_score);
         setFeedback(response.current_feedback || '');
       } else {
@@ -277,7 +274,7 @@ export default function GradingModal({
             </DialogTitle>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-500">
-                {currentIndex} / {totalStudents} 位學生
+                學生：{studentName} ({currentIndex} / {totalStudents})
               </span>
               <div className="flex gap-1">
                 <Button
