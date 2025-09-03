@@ -8,10 +8,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
-import os
-from difflib import SequenceMatcher
-import re
 from database import get_db
 from models import (
     Teacher,
@@ -658,8 +656,8 @@ async def get_student_assignments(
     # 組合回應，加入 Content 資訊
     result = []
     for assignment in assignments:
-        # 取得 Content 資訊
-        content = db.query(Content).filter(Content.id == assignment.content_id).first()
+        # 簡化版 - 不查詢 Content
+        content = None
 
         # 計算剩餘時間
         time_remaining = None
@@ -1115,258 +1113,6 @@ async def submit_assignment(
     }
 
 
-@router.get("/assignments/{assignment_id}/detail")
-async def get_assignment_detail(
-    assignment_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """
-    取得作業詳細資訊
-    學生只能查看自己的作業
-    """
-
-    # 0. 驗證是學生身份
-    if not isinstance(current_user, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can access assignment details"
-        )
-    current_student = current_user
-
-    # 取得作業
-    assignment = (
-        db.query(StudentAssignment)
-        .filter(
-            StudentAssignment.id == assignment_id,
-            StudentAssignment.student_id == current_student.id,
-        )
-        .first()
-    )
-
-    if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
-
-    # 取得 Content 詳細資訊
-    content = db.query(Content).filter(Content.id == assignment.content_id).first()
-
-    # 取得提交記錄（新架構使用 StudentContentProgress）
-    submission = None  # 暫時設為 None，後續完善
-
-    return {
-        "assignment": {
-            "id": assignment.id,
-            "title": assignment.title,
-            "instructions": assignment.instructions,
-            "status": assignment.status.value,
-            "due_date": assignment.due_date.isoformat()
-            if assignment.due_date
-            else None,
-            "score": assignment.score,
-            "feedback": assignment.feedback,
-        },
-        "content": {
-            "id": content.id,
-            "title": content.title,
-            "type": content.type.value
-            if hasattr(content.type, "value")
-            else str(content.type),
-            "items": content.items,
-            "level": content.level,
-            "tags": content.tags,
-        }
-        if content
-        else None,
-        "submission": {
-            "id": submission.id,
-            "submitted_at": submission.submitted_at.isoformat()
-            if submission.submitted_at
-            else None,
-            "submission_data": submission.submission_data,
-            "ai_scores": submission.ai_scores,
-            "ai_feedback": submission.ai_feedback,
-        }
-        if submission
-        else None,
-    }
-
-
-# ============ AI Grading Functions (Phase 3) ============
-
-
-def calculate_text_similarity(expected: str, actual: str) -> float:
-    """計算文字相似度 (0-1)"""
-    # 清理文字，移除標點符號並轉小寫
-    expected_clean = re.sub(r"[^\w\s]", "", expected.lower()).strip()
-    actual_clean = re.sub(r"[^\w\s]", "", actual.lower()).strip()
-
-    # 使用 SequenceMatcher 計算相似度
-    similarity = SequenceMatcher(None, expected_clean, actual_clean).ratio()
-    return similarity
-
-
-def calculate_pronunciation_score(word_analysis: List[Dict[str, Any]]) -> float:
-    """根據單字信心度計算發音評分"""
-    if not word_analysis:
-        return 0.0
-
-    total_confidence = sum(word.get("confidence", 0.0) for word in word_analysis)
-    avg_confidence = total_confidence / len(word_analysis)
-
-    # 將信心度 (0-1) 轉換為評分 (0-100)
-    return min(100.0, avg_confidence * 100)
-
-
-def calculate_fluency_score(audio_analysis: Dict[str, Any]) -> float:
-    """根據音訊分析計算流暢度評分"""
-    total_duration = audio_analysis.get("total_duration", 0)
-    speaking_duration = audio_analysis.get("speaking_duration", 0)
-    pause_count = audio_analysis.get("pause_count", 0)
-    avg_pause_duration = audio_analysis.get("average_pause_duration", 0)
-
-    if total_duration == 0:
-        return 0.0
-
-    # 計算講話時間比例
-    speaking_ratio = speaking_duration / total_duration
-
-    # 計算暫停懲罰（過多或過長的暫停會降低流暢度）
-    pause_penalty = 0
-    if pause_count > 5:  # 超過5次暫停開始扣分
-        pause_penalty += (pause_count - 5) * 5
-    if avg_pause_duration > 1.0:  # 平均暫停超過1秒開始扣分
-        pause_penalty += (avg_pause_duration - 1.0) * 10
-
-    # 基礎分數根據講話時間比例
-    base_score = speaking_ratio * 100
-
-    # 扣除暫停懲罰
-    final_score = max(0, base_score - pause_penalty)
-
-    return min(100.0, final_score)
-
-
-def calculate_wpm(transcribed_text: str, duration_seconds: float) -> float:
-    """計算每分鐘字數 (Words Per Minute)"""
-    if duration_seconds <= 0:
-        return 0.0
-
-    # 計算單字數量
-    words = re.findall(r"\b\w+\b", transcribed_text.lower())
-    word_count = len(words)
-
-    # 計算 WPM
-    minutes = duration_seconds / 60
-    if minutes <= 0:
-        return 0.0
-
-    wpm = word_count / minutes
-    return round(wpm, 1)
-
-
-def generate_ai_feedback(
-    ai_scores: AIScores, detailed_results: List[Dict[str, Any]]
-) -> str:
-    """根據 AI 評分生成回饋"""
-    feedback_parts = []
-
-    # 整體表現評價
-    overall = (
-        ai_scores.pronunciation * 0.3
-        + ai_scores.fluency * 0.3
-        + ai_scores.accuracy * 0.4
-    )
-
-    if overall >= 85:
-        feedback_parts.append("🌟 優秀的表現！您的英語朗讀能力很出色。")
-    elif overall >= 70:
-        feedback_parts.append("👍 很好的表現！您已經掌握了基礎技巧。")
-    elif overall >= 50:
-        feedback_parts.append("💪 不錯的嘗試！持續練習會更進步。")
-    else:
-        feedback_parts.append("🌱 很好的開始！每一次練習都是進步的機會。")
-
-    # 具體項目回饋
-    if ai_scores.pronunciation >= 80:
-        feedback_parts.append(f"發音表現優秀 ({ai_scores.pronunciation:.0f}/100)，發音清晰準確。")
-    elif ai_scores.pronunciation >= 60:
-        feedback_parts.append(f"發音基本準確 ({ai_scores.pronunciation:.0f}/100)，建議多練習困難音節。")
-    else:
-        feedback_parts.append(
-            f"發音需要改進 ({ai_scores.pronunciation:.0f}/100)，建議跟著示範音訊多練習。"
-        )
-
-    if ai_scores.fluency >= 80:
-        feedback_parts.append(f"語音流暢度很好 ({ai_scores.fluency:.0f}/100)，節奏掌握得宜。")
-    elif ai_scores.fluency >= 60:
-        feedback_parts.append(f"語音流暢度尚可 ({ai_scores.fluency:.0f}/100)，可以練習減少不必要的停頓。")
-    else:
-        feedback_parts.append(f"建議提高語音流暢度 ({ai_scores.fluency:.0f}/100)，練習連貫朗讀。")
-
-    if ai_scores.accuracy >= 90:
-        feedback_parts.append(f"內容準確度極高 ({ai_scores.accuracy:.0f}/100)，每個單字都很清楚。")
-    elif ai_scores.accuracy >= 70:
-        feedback_parts.append(f"內容準確度良好 ({ai_scores.accuracy:.0f}/100)，大部分內容都正確。")
-    else:
-        feedback_parts.append(f"建議提高準確度 ({ai_scores.accuracy:.0f}/100)，仔細聆聽每個單字的發音。")
-
-    # 語速回饋
-    if ai_scores.wpm > 150:
-        feedback_parts.append(f"語速較快 ({ai_scores.wpm:.0f} WPM)，可以嘗試稍微放慢以提高清晰度。")
-    elif ai_scores.wpm < 80:
-        feedback_parts.append(f"語速較慢 ({ai_scores.wpm:.0f} WPM)，可以嘗試提高語速以增加流暢感。")
-    else:
-        feedback_parts.append(f"語速適中 ({ai_scores.wpm:.0f} WPM)，保持這個節奏很好。")
-
-    return " ".join(feedback_parts)
-
-
-async def process_audio_with_whisper(
-    audio_urls: List[str], expected_texts: List[str]
-) -> Dict[str, Any]:
-    """使用 OpenAI Whisper 處理音訊"""
-    # 設定 OpenAI API
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-
-    # 這裡應該實際呼叫 OpenAI Whisper API
-    # 由於測試環境限制，我們先返回模擬資料
-    mock_transcriptions = []
-
-    for i, (audio_url, expected_text) in enumerate(zip(audio_urls, expected_texts)):
-        # 模擬 Whisper 轉錄結果
-        # 在實際實作中，這裡會呼叫真正的 OpenAI Whisper API
-        mock_transcriptions.append(
-            {
-                "item_id": i + 1,
-                "expected_text": expected_text,
-                "transcribed_text": expected_text,  # 假設完美轉錄
-                "confidence": 0.92,
-                "words": [
-                    {
-                        "word": word,
-                        "start": j * 0.5,
-                        "end": (j + 1) * 0.5,
-                        "confidence": 0.85 + (j % 3) * 0.05,  # 模擬不同信心度
-                    }
-                    for j, word in enumerate(expected_text.split())
-                ],
-            }
-        )
-
-    return {
-        "transcriptions": mock_transcriptions,
-        "audio_analysis": {
-            "total_duration": len(expected_texts) * 3.0,  # 假設每句3秒
-            "speaking_duration": len(expected_texts) * 2.5,  # 假設實際說話2.5秒
-            "pause_count": len(expected_texts) - 1,  # 句子間的暫停
-            "average_pause_duration": 0.3,
-        },
-    }
-
-
 @router.post("/assignments/{assignment_id}/ai-grade", response_model=AIGradingResponse)
 async def ai_grade_assignment(
     assignment_id: int,
@@ -1411,14 +1157,11 @@ async def ai_grade_assignment(
             status_code=400, detail="Assignment must be submitted before grading"
         )
 
-    # 3. 取得作業內容
-    content = db.query(Content).filter(Content.id == assignment.content_id).first()
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+    # 3. 簡化版 - 不查詢 Content
+    content = None
 
     # 4. 取得提交資料（新架構從 StudentContentProgress 取得）
     # 暫時簡化處理
-    submission = None
 
     try:
         # 5. 處理批改邏輯
@@ -1544,57 +1287,6 @@ async def ai_grade_assignment(
         raise HTTPException(status_code=500, detail=f"AI grading failed: {str(e)}")
 
 
-@router.get("/{assignment_id}/detail")
-async def get_assignment_detail(
-    assignment_id: int,
-    current_user: Teacher = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """獲取作業詳情（學生用）"""
-    # 檢查是否為學生
-    student = db.query(Student).filter(Student.email == current_user.email).first()
-    if not student:
-        raise HTTPException(
-            status_code=403, detail="Only students can access this endpoint"
-        )
-
-    # 獲取作業
-    assignment = (
-        db.query(StudentAssignment)
-        .filter(
-            StudentAssignment.id == assignment_id,
-            StudentAssignment.student_id == student.id,
-        )
-        .first()
-    )
-
-    if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-
-    # 獲取內容詳情
-    content = db.query(Content).filter(Content.id == assignment.content_id).first()
-
-    return {
-        "id": assignment.id,
-        "title": assignment.title,
-        "instructions": assignment.instructions,
-        "status": assignment.status.value,
-        "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
-        "score": assignment.score,
-        "feedback": assignment.feedback,
-        "content": {
-            "id": content.id,
-            "type": content.type.value,
-            "title": content.title,
-            "items": content.items or [],
-            "target_wpm": content.target_wpm,
-            "target_accuracy": content.target_accuracy,
-        }
-        if content
-        else None,
-    }
-
-
 @router.get("/{assignment_id}/submissions")
 async def get_assignment_submissions(
     assignment_id: int,
@@ -1617,8 +1309,9 @@ async def get_assignment_submissions(
         db.query(StudentAssignment)
         .join(Student)
         .filter(
-            StudentAssignment.content_id == base_assignment.content_id,
-            StudentAssignment.classroom_id == base_assignment.classroom_id,
+            # StudentAssignment.content_id == base_assignment.content_id,  # 簡化版 - 不使用 content_id
+            StudentAssignment.classroom_id
+            == base_assignment.classroom_id,
         )
         .all()
     )
@@ -1719,6 +1412,541 @@ async def submit_assignment(
         "status": assignment.status.value,
         "submitted_at": assignment.submitted_at.isoformat(),
         "message": "Assignment submitted successfully",
+    }
+
+
+@router.get("/assignments/{assignment_id}/students")
+async def get_assignment_students(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    獲取作業的所有學生列表
+    """
+    # 驗證教師身份
+    if not isinstance(current_teacher, Teacher):
+        raise HTTPException(
+            status_code=403, detail="Only teachers can access this endpoint"
+        )
+
+    # 查詢作業
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id, Assignment.teacher_id == current_teacher.id
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 獲取此作業的所有學生
+    student_assignments = (
+        db.query(StudentAssignment, Student)
+        .join(Student, StudentAssignment.student_id == Student.id)
+        .filter(StudentAssignment.assignment_id == assignment_id)
+        .order_by(Student.name)
+        .all()
+    )
+
+    students = []
+    for sa, student in student_assignments:
+        students.append(
+            {
+                "student_id": student.id,
+                "student_name": student.name,
+                "status": sa.status.value if sa.status else "NOT_STARTED",
+            }
+        )
+
+    return {"students": students}
+
+
+@router.get("/assignments/{assignment_id}/submissions/{student_id}")
+async def get_student_submission(
+    assignment_id: int,
+    student_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """獲取單個學生的作業提交詳情（教師批改用）- 簡化版 v2"""
+
+    # Verify user is a teacher (get_current_user returns a Teacher object from routers/auth.py)
+    if not isinstance(current_user, Teacher):
+        raise HTTPException(
+            status_code=403, detail="Only teachers can access this endpoint"
+        )
+
+    # 直接查詢學生作業
+    assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 獲取學生資訊
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 從資料庫獲取真實的 content 題目資料
+    # 使用 assignment (StudentAssignment) 的 assignment_id 來查詢
+    actual_assignment_id = assignment.assignment_id
+
+    # 查詢作業關聯的 contents (按 order_index 排序)
+    assignment_contents = (
+        db.query(AssignmentContent, Content)
+        .join(Content)
+        .filter(AssignmentContent.assignment_id == actual_assignment_id)
+        .order_by(AssignmentContent.order_index)
+        .all()
+    )
+
+    submissions = []
+    content_groups = []  # 用於儲存分組資訊
+
+    # 獲取所有內容進度記錄（包含個別題目的批改資訊）
+    progress_records = (
+        db.query(StudentContentProgress)
+        .filter(StudentContentProgress.student_assignment_id == assignment.id)
+        .order_by(StudentContentProgress.order_index)
+        .all()
+    )
+
+    # 建立 progress 的索引對應
+    progress_by_content = {}
+    for progress in progress_records:
+        progress_by_content[progress.content_id] = progress
+
+    # 如果有真實的 content 資料
+    if assignment_contents:
+        item_index = 0  # 全局題目索引
+        for ac, content in assignment_contents:
+            if content.items:
+                # 建立內容群組
+                group = {
+                    "content_id": content.id,
+                    "content_title": content.title,
+                    "content_type": content.type.value
+                    if content.type
+                    else "READING_ASSESSMENT",
+                    "submissions": [],
+                }
+
+                # 獲取對應的 progress 記錄
+                progress = progress_by_content.get(content.id)
+
+                # items 是 JSON 格式的題目列表
+                items_data = content.items if isinstance(content.items, list) else []
+                for local_item_index, item in enumerate(items_data):
+                    submission = {
+                        "content_id": content.id,
+                        "content_title": content.title,
+                        "question_text": item.get("text", ""),
+                        "question_translation": item.get("translation", ""),
+                        "question_audio_url": item.get("audio_url", ""),  # 題目參考音檔
+                        "student_answer": "",  # 預設空字串
+                        "student_audio_url": "",  # 學生錄音檔案
+                        "transcript": "",  # 語音辨識結果
+                        "duration": 0,
+                        "item_index": item_index,  # 加入全局索引
+                        "feedback": "",  # 預設空字串
+                        "passed": None,  # 預設未評
+                    }
+
+                    # 從 progress 的 response_data 獲取學生答案和錄音
+                    if progress and progress.response_data:
+                        # 獲取學生錄音檔案
+                        recordings = progress.response_data.get("recordings", [])
+                        if local_item_index < len(recordings):
+                            # 這裡需要完整的 URL 或路徑
+                            recording_file = recordings[local_item_index]
+                            # 假設錄音檔案存在某個路徑下，需要根據實際情況調整
+                            submission["student_audio_url"] = (
+                                f"/api/files/recordings/{recording_file}"
+                                if recording_file
+                                else ""
+                            )
+
+                        # 獲取學生文字答案（如果有）
+                        answers = progress.response_data.get("answers", [])
+                        if local_item_index < len(answers):
+                            submission["student_answer"] = answers[local_item_index]
+
+                        # 獲取語音辨識結果（如果有）
+                        transcripts = progress.response_data.get("transcripts", [])
+                        if local_item_index < len(transcripts):
+                            submission["transcript"] = transcripts[local_item_index]
+
+                        # 獲取個別題目的批改資訊
+                        item_feedbacks = progress.response_data.get(
+                            "item_feedbacks", []
+                        )
+                        if local_item_index < len(item_feedbacks):
+                            item_feedback = item_feedbacks[local_item_index]
+                            submission["feedback"] = item_feedback.get("feedback", "")
+                            submission["passed"] = item_feedback.get("passed")
+
+                    submissions.append(submission)
+                    group["submissions"].append(submission)
+                    item_index += 1
+
+                content_groups.append(group)
+
+    # 如果沒有真實資料，使用模擬資料 (標記為 MOCK)
+    if not submissions:
+        print(
+            f"WARNING: No real content found for assignment_id={actual_assignment_id}, using MOCK data"
+        )
+        # 通用 MOCK 資料 - 所有作業都使用相同的後備資料
+        submissions = [
+            {
+                "question_text": "[MOCK] How are you today?",
+                "question_translation": "[MOCK] 你今天好嗎？",
+                "question_audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                "student_answer": "I am fine, thank you!",
+                "student_audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+                "transcript": "I am fine thank you",
+                "duration": 3.5,
+                "feedback": "",
+                "passed": None,
+            },
+            {
+                "question_text": "[MOCK] What is your favorite color?",
+                "question_translation": "[MOCK] 你最喜歡的顏色是什麼？",
+                "student_answer": "My favorite color is blue.",
+                "transcript": "My favorite color is blue",
+                "duration": 4.2,
+            },
+            {
+                "question_text": "[MOCK] Can you introduce yourself?",
+                "question_translation": "[MOCK] 你能自我介紹嗎？",
+                "student_answer": "My name is " + student.name + ". I am a student.",
+                "transcript": "My name is " + student.name + " I am a student",
+                "duration": 5.8,
+            },
+            {
+                "question_text": "[MOCK] What do you like to do in your free time?",
+                "question_translation": "[MOCK] 你空閒時喜歡做什麼？",
+                "student_answer": "I like to read books and play games.",
+                "transcript": "I like to read books and play games",
+                "duration": 4.5,
+            },
+            {
+                "question_text": "[MOCK] Tell me about your family.",
+                "question_translation": "[MOCK] 告訴我關於你的家人。",
+                "student_answer": "I have a father, mother, and one sister.",
+                "transcript": "I have a father mother and one sister",
+                "duration": 5.2,
+            },
+        ]
+
+    return {
+        "student_id": student.id,
+        "student_name": student.name,
+        "student_email": student.email,
+        "status": assignment.status.value,
+        "submitted_at": assignment.submitted_at.isoformat()
+        if assignment.submitted_at
+        else None,
+        "content_type": "SPEAKING_PRACTICE",
+        "submissions": submissions,
+        "content_groups": content_groups,  # 新增：按 content 分組的資料
+        "current_score": assignment.score,
+        "current_feedback": assignment.feedback,
+    }
+
+
+@router.post("/assignments/{assignment_id}/grade")
+async def grade_student_assignment(
+    assignment_id: int,
+    grade_data: dict,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """教師批改學生作業"""
+    # 獲取學生ID
+    student_id = grade_data.get("student_id")
+    if not student_id:
+        raise HTTPException(status_code=400, detail="Student ID is required")
+
+    # 使用 assignment_id (主作業ID) 和 student_id 查詢學生作業
+    assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認教師有權限批改（檢查班級關聯）
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == assignment.classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to grade this assignment"
+        )
+
+    # 更新評分資訊
+    assignment.score = grade_data.get("score")
+    assignment.feedback = grade_data.get("feedback")
+
+    # 只有在 update_status 為 True 時才更新狀態
+    if grade_data.get("update_status", True):  # 預設為 True 保持向後相容
+        assignment.status = AssignmentStatus.GRADED
+        assignment.graded_at = datetime.now(timezone.utc)
+
+    # 更新個別題目的評分和回饋
+    if "item_results" in grade_data:
+        # 獲取所有內容進度記錄
+        progress_records = (
+            db.query(StudentContentProgress)
+            .filter(StudentContentProgress.student_assignment_id == assignment.id)
+            .order_by(StudentContentProgress.order_index)
+            .all()
+        )
+
+        # 建立 item 結果的索引映射
+        # 因為每個 content 可能有多個 items，我們需要正確對應
+        item_feedback_map = {}
+        for item_result in grade_data["item_results"]:
+            item_feedback_map[item_result.get("item_index")] = item_result
+
+        # 對每個 progress record，儲存其對應的所有 item 回饋
+        current_item_index = 0
+        for progress in progress_records:
+            # 獲取此 content 的所有項目數量
+            content = (
+                db.query(Content).filter(Content.id == progress.content_id).first()
+            )
+            if content and content.items:
+                items_count = (
+                    len(content.items) if isinstance(content.items, list) else 0
+                )
+
+                # 收集此 content 的所有 item 回饋
+                items_feedback = []
+                for i in range(items_count):
+                    if current_item_index in item_feedback_map:
+                        item_data = item_feedback_map[current_item_index]
+                        items_feedback.append(
+                            {
+                                "feedback": item_data.get("feedback", ""),
+                                "passed": item_data.get("passed"),
+                                "score": item_data.get("score"),
+                            }
+                        )
+                    else:
+                        items_feedback.append(
+                            {"feedback": "", "passed": None, "score": None}
+                        )
+                    current_item_index += 1
+
+                # 將所有 item 回饋儲存在 response_data JSON 欄位中
+                # 確保 response_data 是一個新的字典，這樣 SQLAlchemy 會偵測到變更
+                new_response_data = (
+                    progress.response_data.copy() if progress.response_data else {}
+                )
+                new_response_data["item_feedbacks"] = items_feedback
+                progress.response_data = new_response_data
+                # 明確標記欄位已修改，確保 SQLAlchemy 偵測到 JSON 欄位的變更
+                flag_modified(progress, "response_data")
+
+                # 更新整體的 checked 狀態（如果所有 items 都評過）
+                all_passed = all(
+                    item.get("passed") is True
+                    for item in items_feedback
+                    if item.get("passed") is not None
+                )
+                any_failed = any(item.get("passed") is False for item in items_feedback)
+                if any_failed:
+                    progress.checked = False
+                elif all_passed and len(items_feedback) > 0:
+                    progress.checked = True
+
+    db.commit()
+
+    return {
+        "message": "Assignment graded successfully",
+        "assignment_id": assignment.id,
+        "student_id": student_id,
+        "score": assignment.score,
+        "feedback": assignment.feedback,
+        "graded_at": assignment.graded_at.isoformat() if assignment.graded_at else None,
+    }
+
+
+@router.post("/assignments/{assignment_id}/set-in-progress")
+async def set_assignment_in_progress(
+    assignment_id: int,
+    data: dict,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """設定為批改中狀態"""
+    # 獲取學生ID
+    student_id = data.get("student_id")
+    if not student_id:
+        raise HTTPException(status_code=400, detail="Student ID is required")
+
+    # 使用 assignment_id (主作業ID) 和 student_id 查詢學生作業
+    assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認教師有權限（檢查班級關聯）
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == assignment.classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to modify this assignment"
+        )
+
+    # 檢查當前狀態
+    if assignment.status in [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]:
+        return {
+            "message": "Assignment is already in progress",
+            "assignment_id": assignment.id,
+            "student_id": student_id,
+            "status": assignment.status.value,
+        }
+
+    # 根據之前的狀態決定要設定成哪種批改中狀態
+    if assignment.status == AssignmentStatus.RETURNED:
+        # 如果是從「要求訂正」回到批改中，檢查是否有重新提交
+        if assignment.resubmitted_at and (
+            not assignment.submitted_at
+            or assignment.resubmitted_at > assignment.submitted_at
+        ):
+            assignment.status = AssignmentStatus.RESUBMITTED
+        else:
+            assignment.status = AssignmentStatus.SUBMITTED
+    elif assignment.status == AssignmentStatus.GRADED:
+        # 從「已完成」回到批改中
+        if assignment.resubmitted_at and (
+            not assignment.submitted_at
+            or assignment.resubmitted_at > assignment.submitted_at
+        ):
+            assignment.status = AssignmentStatus.RESUBMITTED
+        else:
+            assignment.status = AssignmentStatus.SUBMITTED
+        # 清除批改時間
+        assignment.graded_at = None
+
+    db.commit()
+
+    return {
+        "message": "Assignment set to in progress",
+        "assignment_id": assignment.id,
+        "student_id": student_id,
+        "status": assignment.status.value,
+    }
+
+
+@router.post("/assignments/{assignment_id}/return-for-revision")
+async def return_for_revision(
+    assignment_id: int,
+    data: dict,
+    current_teacher: Teacher = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """要求訂正 - 要求學生修改作業"""
+    # 獲取學生ID
+    student_id = data.get("student_id")
+    if not student_id:
+        raise HTTPException(status_code=400, detail="Student ID is required")
+
+    # 使用 assignment_id (主作業ID) 和 student_id 查詢學生作業
+    assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認教師有權限（檢查班級關聯）
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == assignment.classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to return this assignment"
+        )
+
+    # 檢查是否已經是要求訂正狀態
+    if assignment.status == AssignmentStatus.RETURNED:
+        return {
+            "message": "Assignment is already in returned status",
+            "assignment_id": assignment.id,
+            "student_id": student_id,
+            "status": assignment.status.value,
+            "returned_at": assignment.returned_at.isoformat()
+            if assignment.returned_at
+            else None,
+        }
+
+    # 更新狀態為 RETURNED（要求訂正）
+    assignment.status = AssignmentStatus.RETURNED
+    assignment.returned_at = datetime.now(timezone.utc)
+
+    # 可選：儲存退回訊息
+    message = data.get("message", "")
+    if message and hasattr(assignment, "return_message"):
+        assignment.return_message = message
+
+    db.commit()
+
+    return {
+        "message": "Assignment returned for revision",
+        "assignment_id": assignment.id,
+        "student_id": student_id,
+        "status": assignment.status.value,
+        "returned_at": assignment.returned_at.isoformat(),
     }
 
 

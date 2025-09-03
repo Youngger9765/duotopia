@@ -9,6 +9,8 @@ import TeacherStudents from './pages/teacher/TeacherStudents'
 import TeacherPrograms from './pages/teacher/TeacherPrograms'
 import ClassroomDetail from './pages/teacher/ClassroomDetail'
 import TeacherAssignmentDetailPage from './pages/teacher/TeacherAssignmentDetailPage'
+import StudentGradingPage from './pages/teacher/StudentGradingPage'
+import GradingPage from './pages/teacher/GradingPage'
 import StudentLogin from './pages/StudentLogin'
 import StudentDashboard from './pages/StudentDashboard'
 import { Toaster } from 'sonner'
@@ -35,6 +37,9 @@ function App() {
       <Route path="/teacher/classrooms" element={<TeacherClassrooms />} />
       <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
       <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId" element={<TeacherAssignmentDetailPage />} />
+      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId/grading" element={<GradingPage />} />
+      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId/grade/:studentId" element={<StudentGradingPage />} />
+
       <Route path="/teacher/students" element={<TeacherStudents />} />
       <Route path="/teacher/programs" element={<TeacherPrograms />} />
 

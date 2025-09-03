@@ -7,7 +7,7 @@ import os
 from core.config import settings
 
 # Import routers
-from routers import auth, students, teachers, public, assignments, unassign
+from routers import auth, students, teachers, public, assignments, unassign, files
 
 app = FastAPI(
     title="Duotopia API",
@@ -46,6 +46,7 @@ app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(assignments.router)
 app.include_router(unassign.router)
+app.include_router(files.router)  # 檔案服務路由
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TeacherLayout from '@/components/TeacherLayout';
+import GradingModal from '@/components/GradingModal';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -95,6 +96,12 @@ export default function TeacherAssignmentDetailPage() {
   const [showContent, setShowContent] = useState(false);
   const [expandedContent, setExpandedContent] = useState(false);
 
+  // Modal 狀態
+  const [isGradingModalOpen, setIsGradingModalOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState<string>('');
+  const [gradingStudentIndex, setGradingStudentIndex] = useState<number>(0);
+
   useEffect(() => {
     if (classroomId && assignmentId) {
       fetchData();
@@ -104,7 +111,6 @@ export default function TeacherAssignmentDetailPage() {
   // Re-fetch progress when students are loaded
   useEffect(() => {
     if (students.length > 0 && assignment) {
-      console.log('Students loaded, refreshing progress data');
       fetchStudentProgress();
     }
   }, [students, assignment]);
@@ -117,7 +123,6 @@ export default function TeacherAssignmentDetailPage() {
     try {
       await fetchStudentProgress();
     } catch (error) {
-      console.log('Progress API failed, using fallback data');
     }
   };
 
@@ -125,7 +130,6 @@ export default function TeacherAssignmentDetailPage() {
     try {
       setLoading(true);
       const response = await apiClient.get(`/api/teachers/assignments/${assignmentId}`);
-      console.log('Assignment detail response:', response);
 
       // Handle different possible date field names
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
@@ -134,7 +138,6 @@ export default function TeacherAssignmentDetailPage() {
       let studentIds = [];
       if (response.students_progress && Array.isArray(response.students_progress)) {
         studentIds = response.students_progress.map((sp: any) => sp.student_id).filter((id: any) => id !== null);
-        console.log('Extracted student IDs from students_progress:', studentIds);
       } else if (response.student_ids && Array.isArray(response.student_ids)) {
         studentIds = response.student_ids;
       } else if (response.students && Array.isArray(response.students)) {
@@ -149,7 +152,6 @@ export default function TeacherAssignmentDetailPage() {
         instructions: response.description || response.instructions, // API returns 'description'
       };
 
-      console.log('Final assignment data:', assignmentData);
 
       setAssignment(assignmentData);
       setEditingData({
@@ -188,10 +190,8 @@ export default function TeacherAssignmentDetailPage() {
   const fetchStudents = async () => {
     try {
       const response = await apiClient.get(`/api/teachers/classrooms/${classroomId}/students`);
-      console.log('Fetched students:', response);
       const studentList = Array.isArray(response) ? response : [];
       setStudents(studentList);
-      console.log('Set students state to:', studentList);
     } catch (error) {
       console.error('Failed to fetch students:', error);
     }
@@ -203,9 +203,7 @@ export default function TeacherAssignmentDetailPage() {
       let response;
       try {
         response = await apiClient.get(`/api/teachers/assignments/${assignmentId}/progress`);
-        console.log('Student progress response:', response);
       } catch (apiError) {
-        console.log('Progress API not available, using student list');
         // If API doesn't exist, create empty response
         response = [];
       }
@@ -236,7 +234,6 @@ export default function TeacherAssignmentDetailPage() {
         });
 
         // Add all classroom students
-        console.log('Building progress with students:', students);
 
         // Check if students are loaded
         if (students && students.length > 0) {
@@ -259,12 +256,10 @@ export default function TeacherAssignmentDetailPage() {
           });
 
           setStudentProgress(allProgress);
-          console.log('Set student progress to:', allProgress);
         } else {
           // If students not loaded yet, just use the progress data we have
           const progressList = Array.from(progressMap.values());
           setStudentProgress(progressList);
-          console.log('Students not loaded, using progress data only:', progressList);
         }
       } else {
         // No progress data from API, create mock
@@ -279,12 +274,9 @@ export default function TeacherAssignmentDetailPage() {
 
   const createMockProgress = () => {
     // Show all classroom students
-    console.log('createMockProgress called, students:', students);
-    console.log('assignment data:', assignment);
 
     if (students && students.length > 0) {
       const assignedIds = assignment?.student_ids || [];
-      console.log('Assigned student IDs:', assignedIds);
 
       const mockProgress = students.map(student => {
         const isAssigned = assignedIds.includes(student.id);
@@ -300,9 +292,7 @@ export default function TeacherAssignmentDetailPage() {
         };
       });
       setStudentProgress(mockProgress);
-      console.log('Created progress for all classroom students:', mockProgress);
     } else {
-      console.log('No students data available, students:', students);
       setStudentProgress([]);
     }
   };
@@ -582,6 +572,14 @@ export default function TeacherAssignmentDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {/* 批改作業按鈕 */}
+            <Button
+              onClick={() => navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              批改作業
+            </Button>
             {isEditing ? (
               <>
                 <Button variant="outline" onClick={handleCancel}>
@@ -658,12 +656,11 @@ export default function TeacherAssignmentDetailPage() {
                       count = assignedProgressCount;
                     }
 
-                    console.log('Student count calculation:', {
-                      student_count: assignment.student_count,
-                      assignedStudentIds: assignedStudentIds.length,
-                      assignedProgressCount,
-                      final: count
-                    });
+                    // Student count calculation
+                    // student_count: assignment.student_count,
+                    // assignedStudentIds: assignedStudentIds.length,
+                    // assignedProgressCount,
+                    // final: count
 
                     return `${count} 人`;
                   })()}
@@ -952,12 +949,11 @@ export default function TeacherAssignmentDetailPage() {
 
                       // Debug for specific students
                       if (progress.student_name === '蔡雅芳' || progress.student_name === '謝志偉') {
-                        console.log(`${progress.student_name} - ${statusName}:`, {
-                          currentStatus,
-                          timestamps,
-                          returned_at: timestamps?.returned_at,
-                          resubmitted_at: timestamps?.resubmitted_at
-                        });
+                        // Debug: student status check
+                        // currentStatus,
+                        // timestamps,
+                        // returned_at: timestamps?.returned_at,
+                        // resubmitted_at: timestamps?.resubmitted_at
                       }
 
                       // 根據 currentStatus 和時間戳判斷
@@ -1149,7 +1145,16 @@ export default function TeacherAssignmentDetailPage() {
                                     variant="outline"
                                     className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
                                     onClick={() => {
-                                      toast.info('開始批改作業');
+                                      // 開啟 Modal 批改
+                                      setSelectedStudentId(progress.student_id);
+                                      setSelectedStudentName(progress.student_name);
+                                      // 找出這個學生在列表中的位置
+                                      const submittedStudents = filteredProgress.filter(p =>
+                                        p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
+                                      );
+                                      const currentIndex = submittedStudents.findIndex(p => p.student_id === progress.student_id);
+                                      setGradingStudentIndex(currentIndex);
+                                      setIsGradingModalOpen(true);
                                     }}
                                   >
                                     批改
@@ -1192,6 +1197,79 @@ export default function TeacherAssignmentDetailPage() {
           </div>
         </Card>
       </div>
+
+      {/* Grading Modal */}
+      {isGradingModalOpen && selectedStudentId && assignment && (
+        <GradingModal
+          isOpen={isGradingModalOpen}
+          onClose={() => {
+            setIsGradingModalOpen(false);
+            setSelectedStudentId(null);
+            setSelectedStudentName('');
+            // 重新載入進度資料
+            fetchStudentProgress();
+          }}
+          studentId={selectedStudentId}
+          studentName={selectedStudentName}
+          assignmentId={Number(assignmentId)}
+          assignmentTitle={assignment.title}
+          currentIndex={gradingStudentIndex + 1}
+          totalStudents={filteredProgress.filter(p =>
+            p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
+          ).length}
+          onSaveAndNext={() => {
+            // 找到下一個需要批改的學生
+            const submittedStudents = filteredProgress.filter(p =>
+              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
+            );
+            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+
+            if (currentIndex < submittedStudents.length - 1) {
+              // 有下一個學生
+              const nextStudent = submittedStudents[currentIndex + 1];
+              setSelectedStudentId(nextStudent.student_id);
+              setSelectedStudentName(nextStudent.student_name);
+              setGradingStudentIndex(currentIndex + 1);
+            } else {
+              // 沒有下一個學生，關閉 Modal
+              setIsGradingModalOpen(false);
+              setSelectedStudentId(null);
+              setSelectedStudentName('');
+              toast.success('所有學生作業已批改完成！');
+            }
+            // 重新載入進度資料
+            fetchStudentProgress();
+          }}
+          onPrevious={() => {
+            // 找到上一個需要批改的學生
+            const submittedStudents = filteredProgress.filter(p =>
+              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
+            );
+            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+
+            if (currentIndex > 0) {
+              const prevStudent = submittedStudents[currentIndex - 1];
+              setSelectedStudentId(prevStudent.student_id);
+              setSelectedStudentName(prevStudent.student_name);
+              setGradingStudentIndex(currentIndex - 1);
+            }
+          }}
+          onNext={() => {
+            // 找到下一個需要批改的學生
+            const submittedStudents = filteredProgress.filter(p =>
+              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
+            );
+            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+
+            if (currentIndex < submittedStudents.length - 1) {
+              const nextStudent = submittedStudents[currentIndex + 1];
+              setSelectedStudentId(nextStudent.student_id);
+              setSelectedStudentName(nextStudent.student_name);
+              setGradingStudentIndex(currentIndex + 1);
+            }
+          }}
+        />
+      )}
     </TeacherLayout>
   );
 }
