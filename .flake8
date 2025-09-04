@@ -1,0 +1,29 @@
+[flake8]
+max-line-length = 120
+ignore = E203, W503
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info,
+    migrations,
+    .pytest_cache,
+    node_modules
+
+# Per-file ignores for test files (業界最佳實踐)
+per-file-ignores =
+    # Test files often have unused imports for fixtures and test data setup
+    backend/tests/*/test_*.py: F401, F841
+    backend/tests/*/*/test_*.py: F401, F841
+    backend/tests/*/*/*/test_*.py: F401, F841
+    backend/scripts/test_*.py: F401
+    # conftest.py imports fixtures that are auto-discovered by pytest
+    backend/tests/conftest.py: E402
+    # Alembic env.py needs sys.path manipulation before imports
+    backend/alembic/env.py: E402
+    # Test files with specific issues
+    backend/tests/integration/auth/test_auth_comprehensive.py: F401, F811
+    backend/tests/integration/api/test_manual_grading.py: E501
