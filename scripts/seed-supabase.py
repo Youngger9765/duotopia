@@ -21,20 +21,20 @@ os.environ['DATABASE_URL'] = os.getenv('DATABASE_URL')
 def seed_database():
     """執行資料庫 seed"""
     print("🌱 開始 Seed Supabase 資料庫...")
-    
+
     DATABASE_URL = os.getenv('DATABASE_URL')
     if not DATABASE_URL:
         print("❌ DATABASE_URL 未設定")
         return False
-    
+
     print(f"📊 連接到: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'N/A'}")
-    
+
     # 切換到 backend 目錄執行 seed
     os.chdir(backend_path)
-    
+
     # 執行原本的 seed_data.py
     os.system("python seed_data.py")
-    
+
     print("✅ Supabase 資料庫 Seed 完成！")
     return True
 

@@ -59,7 +59,7 @@ export default function StudentTable({
   const [internalSelectedIds, setInternalSelectedIds] = React.useState<Set<number>>(new Set());
   const selectedIds = externalSelectedIds || internalSelectedIds;
   const setSelectedIds = onSelectionChange || setInternalSelectedIds;
-  
+
   const toggleSelect = (id: number) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -73,7 +73,7 @@ export default function StudentTable({
       onBulkAction('selection', Array.from(newSelected));
     }
   };
-  
+
   const toggleSelectAll = () => {
     if (selectedIds.size === students.length) {
       setSelectedIds(new Set());
@@ -81,14 +81,14 @@ export default function StudentTable({
       setSelectedIds(new Set(students.map(s => s.id)));
     }
   };
-  
+
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
     });
   };
 
@@ -219,7 +219,7 @@ export default function StudentTable({
                   </span>
                 ) : (
                   <>
-                    <span 
+                    <span
                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 cursor-help whitespace-nowrap"
                       title={student.birthdate ? `預設: ${student.birthdate.replace(/-/g, '')}` : '預設密碼'}
                     >
@@ -269,9 +269,9 @@ export default function StudentTable({
             <TableCell>
               <div className="flex items-center space-x-2">
                 {onViewStudent && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     title="查看詳情"
                     onClick={() => onViewStudent(student)}
                   >
@@ -279,9 +279,9 @@ export default function StudentTable({
                   </Button>
                 )}
                 {onEditStudent && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     title="編輯"
                     onClick={() => onEditStudent(student)}
                   >
@@ -289,9 +289,9 @@ export default function StudentTable({
                   </Button>
                 )}
                 {onDeleteStudent && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     title="刪除"
                     onClick={() => {
                       if (confirm(`確定要刪除學生「${student.name}」嗎？此操作無法復原。`)) {

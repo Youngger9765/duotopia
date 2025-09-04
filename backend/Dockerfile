@@ -13,7 +13,7 @@ COPY *.py ./
 COPY alembic ./alembic/
 COPY alembic.ini ./
 # 複製其他目錄（如果存在）
-COPY service[s] ./services/ 
+COPY service[s] ./services/
 COPY router[s] ./routers/
 COPY cor[e] ./core/
 

@@ -64,7 +64,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
-    
+
     steps:
     - uses: actions/checkout@v4
 
@@ -96,19 +96,19 @@ jobs:
       run: |
         cd backend && docker build -f Dockerfile -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA
-    
+
     - name: Setup Python for migrations
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Run Alembic database migrations
       env:
         DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
       run: |
         echo "🔍 Installing dependencies for migrations..."
         pip install -r backend/requirements.txt
-        
+
         echo "🔄 Running Alembic database migrations..."
         cd backend
         echo "📊 Current migration status:"
@@ -116,7 +116,7 @@ jobs:
         echo "🔄 Upgrading to latest migration..."
         alembic upgrade head
         echo "✅ Migrations completed"
-        
+
     - name: Check for missing migrations
       env:
         DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
@@ -131,7 +131,7 @@ jobs:
           exit 1
         fi
         echo "✅ No pending model changes detected"
-        
+
     - name: Deploy backend to Cloud Run
       run: |
         # 環境變數設定
@@ -144,7 +144,7 @@ jobs:
         ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
         ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
         ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
-        
+
         gcloud run deploy $BACKEND_SERVICE \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA \
           --platform managed \
@@ -167,7 +167,7 @@ jobs:
         BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
         echo "VITE_API_URL=$BACKEND_URL" > .env
         echo "Created .env with VITE_API_URL=$BACKEND_URL"
-    
+
     - name: Build and push frontend image
       working-directory: ./frontend
       run: |
@@ -194,14 +194,14 @@ jobs:
       run: |
         BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
         FRONTEND_URL=$(gcloud run services describe $FRONTEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
-        
+
         echo "Backend URL: $BACKEND_URL"
         echo "Frontend URL: $FRONTEND_URL"
         echo "Database Type: ${{ steps.db_env.outputs.DATABASE_TYPE }}"
-        
+
         # 等待服務啟動
         sleep 30
-        
+
         # 測試後端健康檢查
         for i in {1..5}; do
           if curl -f "$BACKEND_URL/health"; then
@@ -212,7 +212,7 @@ jobs:
             sleep 10
           fi
         done
-        
+
         # 測試前端
         for i in {1..5}; do
           if curl -f "$FRONTEND_URL"; then

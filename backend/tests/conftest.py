@@ -24,6 +24,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(scope="function")
 def db():
     """Create a fresh database for each test"""
@@ -33,18 +34,21 @@ def db():
     db.close()
     Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
 def client(db):
     """Create test client with test database"""
+
     def override_get_db():
         try:
             yield db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
 
 @pytest.fixture
 def demo_teacher(db):
@@ -54,12 +58,13 @@ def demo_teacher(db):
         password_hash=get_password_hash("test123"),
         name="Test Teacher",
         is_active=True,
-        is_demo=False
+        is_demo=False,
     )
     db.add(teacher)
     db.commit()
     db.refresh(teacher)
     return teacher
+
 
 @pytest.fixture
 def inactive_teacher(db):
@@ -69,7 +74,7 @@ def inactive_teacher(db):
         password_hash=get_password_hash("test123"),
         name="Inactive Teacher",
         is_active=False,
-        is_demo=False
+        is_demo=False,
     )
     db.add(teacher)
     db.commit()

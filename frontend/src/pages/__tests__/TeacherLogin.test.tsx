@@ -60,14 +60,14 @@ describe('TeacherLogin', () => {
 
   it('validates required fields', async () => {
     render(<TeacherLogin />)
-    
+
     const submitButton = screen.getByRole('button', { name: '登入' })
     fireEvent.click(submitButton)
 
     // Form should have required validation
     const emailInput = screen.getByLabelText('Email')
     const passwordInput = screen.getByLabelText('密碼')
-    
+
     expect(emailInput).toBeRequired()
     expect(passwordInput).toBeRequired()
   })
@@ -109,7 +109,7 @@ describe('TeacherLogin', () => {
   it('handles login error', async () => {
     const user = userEvent.setup()
     const errorMessage = '登入失敗，帳號或密碼錯誤'
-    
+
     vi.mocked(apiClient.teacherLogin).mockRejectedValue(new Error(errorMessage))
 
     render(<TeacherLogin />)
@@ -131,7 +131,7 @@ describe('TeacherLogin', () => {
 
   it('shows loading state during login', async () => {
     const user = userEvent.setup()
-    
+
     // Create a promise that we can control
     let resolveLogin: (value: any) => void
     const loginPromise = new Promise((resolve) => {
@@ -250,7 +250,7 @@ describe('TeacherLogin', () => {
 
   it('disables buttons during loading', async () => {
     const user = userEvent.setup()
-    
+
     // Create a promise that we can control
     let resolveLogin: (value: any) => void
     const loginPromise = new Promise((resolve) => {
@@ -284,7 +284,7 @@ describe('TeacherLogin', () => {
 
   it('displays demo credentials hint', () => {
     render(<TeacherLogin />)
-    
+
     expect(screen.getByText('Demo 帳號：demo@duotopia.com / demo123')).toBeInTheDocument()
   })
 })

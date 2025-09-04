@@ -46,7 +46,7 @@ export function ClassroomAssignDialog({
             為選中的 {studentCount} 位學生分配班級
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           <label htmlFor="classroom-select" className="text-sm font-medium mb-2 block">
             選擇班級
@@ -65,12 +65,12 @@ export function ClassroomAssignDialog({
             ))}
           </select>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             取消
           </Button>
-          <Button 
+          <Button
             onClick={handleConfirm}
             disabled={!selectedClassroomId}
           >

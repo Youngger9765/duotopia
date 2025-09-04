@@ -12,7 +12,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   timeout: 30 * 1000,
-  
+
   use: {
     baseURL: 'https://duotopia-staging-frontend-qchnzlfpda-de.a.run.app',
     trace: 'on-first-retry',

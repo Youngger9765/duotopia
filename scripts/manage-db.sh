@@ -8,18 +8,18 @@ case "$1" in
     echo "✅ Cloud SQL 已啟動（每天 $2.28）"
     echo "⚠️  記得用完要停止！使用: ./scripts/manage-db.sh stop"
     ;;
-  
+
   stop)
     echo "🛑 停止 Cloud SQL..."
     gcloud sql instances patch duotopia-staging-0827 --activation-policy=NEVER
     echo "✅ Cloud SQL 已停止（不再收費）"
     ;;
-  
+
   status)
     echo "📊 檢查 Cloud SQL 狀態..."
     gcloud sql instances describe duotopia-staging-0827 --format="value(state,settings.activationPolicy)"
     ;;
-  
+
   cost)
     echo "💰 成本預估："
     STATUS=$(gcloud sql instances describe duotopia-staging-0827 --format="value(settings.activationPolicy)")
@@ -34,7 +34,7 @@ case "$1" in
       echo "💡 提示: 需要時執行 ./scripts/manage-db.sh start"
     fi
     ;;
-  
+
   *)
     echo "使用方法："
     echo "  ./scripts/manage-db.sh start  - 啟動資料庫"

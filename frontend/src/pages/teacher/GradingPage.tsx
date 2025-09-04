@@ -1174,7 +1174,7 @@ export default function GradingPage() {
                     </label>
                     <div className="p-3 bg-gray-100 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
                       <pre className="whitespace-pre-wrap text-xs text-gray-700 font-mono">
-{submission?.submissions?.map((item, index) => {
+{submission?.submissions?.map((_item, index) => {
   const result = itemFeedbacks[index];
   return `題目 ${index + 1} ${result?.passed === true ? '✅' : result?.passed === false ? '❌' : '⬜'}: ${result?.feedback || '(尚無評語)'}
 `;

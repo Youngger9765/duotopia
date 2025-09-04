@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
+import {
+  Users,
+  GraduationCap,
+  BookOpen,
   LogOut,
   UserCheck,
   TrendingUp,
@@ -79,11 +79,11 @@ export default function TeacherDashboardWithSidebar() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Sidebar state
   const [currentView, setCurrentView] = useState<SidebarView>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+
   // Data for different views
   const [classroomsDetail, setClassroomsDetail] = useState<ClassroomDetail[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -171,11 +171,11 @@ export default function TeacherDashboardWithSidebar() {
   if (!dashboardData) return null;
 
   // Filter students by selected classroom
-  const filteredStudents = selectedClassroom 
+  const filteredStudents = selectedClassroom
     ? classroomsDetail.find(c => c.id === selectedClassroom)?.students || []
     : classroomsDetail.flatMap(c => c.students);
 
-  // Filter programs by selected classroom  
+  // Filter programs by selected classroom
   const filteredPrograms = selectedClassroom
     ? programs.filter(p => p.classroom_id === selectedClassroom)
     : programs;
@@ -243,7 +243,7 @@ export default function TeacherDashboardWithSidebar() {
             </div>
           )}
           <Button
-            variant="ghost" 
+            variant="ghost"
             size="sm"
             className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
             onClick={handleLogout}
@@ -259,25 +259,25 @@ export default function TeacherDashboardWithSidebar() {
         {currentView === 'dashboard' && (
           <DashboardContent dashboardData={dashboardData} />
         )}
-        
+
         {currentView === 'classrooms' && (
-          <ClassroomsContent 
+          <ClassroomsContent
             classrooms={classroomsDetail}
             onRefresh={fetchClassroomsDetail}
           />
         )}
-        
+
         {currentView === 'students' && (
-          <StudentsContent 
+          <StudentsContent
             students={filteredStudents}
             classrooms={classroomsDetail}
             selectedClassroom={selectedClassroom}
             onClassroomFilter={setSelectedClassroom}
           />
         )}
-        
+
         {currentView === 'programs' && (
-          <ProgramsContent 
+          <ProgramsContent
             programs={filteredPrograms}
             classrooms={classroomsDetail}
             selectedClassroom={selectedClassroom}
@@ -382,11 +382,11 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
 }
 
 // Classrooms Content Component
-function ClassroomsContent({ 
-  classrooms, 
-  onRefresh 
-}: { 
-  classrooms: ClassroomDetail[]; 
+function ClassroomsContent({
+  classrooms,
+  onRefresh
+}: {
+  classrooms: ClassroomDetail[];
   onRefresh: () => void;
 }) {
   return (
@@ -437,12 +437,12 @@ function ClassroomsContent({
 }
 
 // Students Content Component
-function StudentsContent({ 
-  students, 
+function StudentsContent({
+  students,
   classrooms,
   selectedClassroom,
   onClassroomFilter
-}: { 
+}: {
   students: StudentDetail[];
   classrooms: ClassroomDetail[];
   selectedClassroom: number | null;
@@ -501,14 +501,14 @@ function StudentsContent({
   );
 }
 
-// Programs Content Component  
-function ProgramsContent({ 
+// Programs Content Component
+function ProgramsContent({
   programs,
-  classrooms, 
+  classrooms,
   selectedClassroom,
   onClassroomFilter,
   onRefresh
-}: { 
+}: {
   programs: Program[];
   classrooms: ClassroomDetail[];
   selectedClassroom: number | null;

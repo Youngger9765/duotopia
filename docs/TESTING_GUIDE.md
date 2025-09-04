@@ -115,23 +115,23 @@
 1. **朗讀評測** (reading_assessment)
    - 錄音朗讀文章
    - AI 評分反饋
-   
+
 2. **口說練習** (speaking_practice)
    - 自由口說練習
    - 即時反饋
-   
+
 3. **情境對話** (speaking_scenario)
    - 角色扮演對話
    - 互動式練習
-   
+
 4. **聽力填空** (listening_cloze)
    - 聽音頻填空
    - 自動評分
-   
+
 5. **造句練習** (sentence_making)
    - 使用關鍵字造句
    - 文法檢查
-   
+
 6. **口說測驗** (speaking_quiz)
    - 限時口說測驗
    - 綜合評分

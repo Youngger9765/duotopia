@@ -10,8 +10,10 @@ BASE_URL = "http://localhost:8000/api"
 
 # 1. 教師登入
 print("1. 教師登入...")
-response = requests.post(f"{BASE_URL}/auth/teacher/login", 
-    json={"email": "demo@duotopia.com", "password": "demo123"})
+response = requests.post(
+    f"{BASE_URL}/auth/teacher/login",
+    json={"email": "demo@duotopia.com", "password": "demo123"},
+)
 token = response.json()["access_token"]
 headers = {"Authorization": f"Bearer {token}"}
 print(f"✅ 登入成功，取得 token")

@@ -14,7 +14,7 @@ make dev-setup
 # Terminal 1 - 後端
 make dev-backend
 
-# Terminal 2 - 前端  
+# Terminal 2 - 前端
 make dev-frontend
 ```
 

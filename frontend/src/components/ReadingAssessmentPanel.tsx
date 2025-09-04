@@ -25,10 +25,12 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 
 interface ContentRow {
-  id: string;
+  id: string | number;
   text: string;
   definition: string;
   audioUrl?: string;
+  audio_url?: string;
+  translation?: string;
   audioSettings?: {
     accent: string;
     gender: string;
@@ -89,13 +91,13 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       if (speed === 'Slow x0.75') rate = '-25%';
       else if (speed === 'Fast x1.5') rate = '+50%';
 
-      const result = await apiClient.generateTTS(text, voice, rate, '+0%') as any;
+      const result = await apiClient.generateTTS(text, voice, rate, '+0%');
 
       if (result?.audio_url) {
         // 如果是相對路徑，加上 API base URL
         const fullUrl = result.audio_url.startsWith('http')
           ? result.audio_url
-          : `http://localhost:8000${result.audio_url}`;
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${result.audio_url}`;
         setAudioUrl(fullUrl);
         toast.success('音檔生成成功！');
       }
@@ -641,7 +643,7 @@ export default function ReadingAssessmentPanel({
 
     setIsLoading(true);
     try {
-      const data = await apiClient.getContentDetail(content.id) as any;
+      const data = await apiClient.getContentDetail(content.id);
       setTitle(data.title || '');
 
       // Convert items to rows format
@@ -747,7 +749,7 @@ export default function ReadingAssessmentPanel({
     setRows(newRows);
   };
 
-  const handleUpdateRow = (index: number, field: keyof ContentRow, value: string) => {
+  const handleUpdateRow = (index: number, field: 'text' | 'definition', value: string) => {
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], [field]: value };
     setRows(newRows);
@@ -873,7 +875,7 @@ export default function ReadingAssessmentPanel({
             // 如果是相對路徑，加上 API base URL
             newRows[i].audioUrl = audioUrl.startsWith('http')
               ? audioUrl
-              : `http://localhost:8000${audioUrl}`;
+              : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${audioUrl}`;
             audioIndex++;
           }
         }

@@ -1,10 +1,10 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
+import {
+  Users,
+  GraduationCap,
+  BookOpen,
   LogOut,
   Home,
   ChevronLeft,
@@ -38,7 +38,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
 
   const fetchTeacherProfile = async () => {
     try {
-      const data = await apiClient.getTeacherDashboard() as any;
+      const data = await apiClient.getTeacherDashboard();
       setTeacherProfile(data.teacher);
     } catch (err) {
       console.error('Failed to fetch teacher profile:', err);
@@ -142,7 +142,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             </div>
           )}
           <Button
-            variant="ghost" 
+            variant="ghost"
             size="sm"
             className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
             onClick={handleLogout}

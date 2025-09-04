@@ -56,14 +56,14 @@ uvicorn main:app --reload --port 8000
 ### 將改用 Alembic Migration
 - **已準備**: Alembic 已設置完成
 - **migration 檔案**: 在 `alembic/versions/` 資料夾
-- **執行方式**: 
+- **執行方式**:
   ```bash
   # 建立新的 migration
   alembic revision --autogenerate -m "描述"
-  
+
   # 執行 migration
   alembic upgrade head
-  
+
   # 回滾
   alembic downgrade -1
   ```

@@ -177,7 +177,7 @@ A: 檢查以下項目：
 4. 是否有衝突的 migration（多人同時開發）
 
 ### Q: 如何回滾 Migration
-A: 
+A:
 ```bash
 # 本地回滾
 cd backend
@@ -190,7 +190,7 @@ alembic downgrade -1
 ```
 
 ### Q: 多人開發 Migration 衝突
-A: 
+A:
 1. 溝通協調 migration 順序
 2. 使用 branch protection rules
 3. Code review migration 檔案

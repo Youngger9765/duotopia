@@ -44,10 +44,10 @@ export default function TeacherClassrooms() {
   const [editFormData, setEditFormData] = useState({ name: '', description: '', level: '' });
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [createFormData, setCreateFormData] = useState({ 
-    name: '', 
-    description: '', 
-    level: 'A1' 
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    level: 'A1'
   });
 
   useEffect(() => {
@@ -80,11 +80,11 @@ export default function TeacherClassrooms() {
 
   const handleSaveEdit = async () => {
     if (!editingClassroom) return;
-    
+
     try {
       // API call to update classroom
       await apiClient.updateClassroom(editingClassroom.id, editFormData);
-      
+
       // Refresh classrooms list
       await fetchClassrooms();
       setEditingClassroom(null);
@@ -96,11 +96,11 @@ export default function TeacherClassrooms() {
 
   const handleDelete = async () => {
     if (!deleteConfirmId) return;
-    
+
     try {
       // API call to delete classroom
       await apiClient.deleteClassroom(deleteConfirmId);
-      
+
       // Refresh classrooms list
       await fetchClassrooms();
       setDeleteConfirmId(null);
@@ -112,7 +112,7 @@ export default function TeacherClassrooms() {
 
   const handleCreate = async () => {
     try {
-      const response = await apiClient.createClassroom(createFormData);
+      await apiClient.createClassroom(createFormData);
       // Refresh the list after creation
       await fetchClassrooms();
       setShowCreateDialog(false);
@@ -125,10 +125,10 @@ export default function TeacherClassrooms() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
     });
   };
 
@@ -230,7 +230,7 @@ export default function TeacherClassrooms() {
             </TableHeader>
             <TableBody>
               {classrooms.map((classroom) => (
-                <TableRow 
+                <TableRow
                   key={classroom.id}
                   className="hover:bg-gray-50"
                 >
@@ -240,7 +240,7 @@ export default function TeacherClassrooms() {
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <GraduationCap className="h-4 w-4 text-blue-600" />
                       </div>
-                      <Link 
+                      <Link
                         to={`/teacher/classroom/${classroom.id}`}
                         className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       >
@@ -271,17 +271,17 @@ export default function TeacherClassrooms() {
                   <TableCell>{formatDate(classroom.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         title="編輯"
                         onClick={() => handleEdit(classroom)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         title="刪除"
                         onClick={() => setDeleteConfirmId(classroom.id)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -390,8 +390,8 @@ export default function TeacherClassrooms() {
               <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
                 取消
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleDelete}
               >
                 確認刪除

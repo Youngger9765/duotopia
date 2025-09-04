@@ -168,8 +168,8 @@ export default function CopyProgramDialog({
                 <div
                   key={program.id}
                   className={`border rounded-lg p-4 transition-colors ${
-                    program.already_in_classroom 
-                      ? 'bg-gray-50 opacity-60' 
+                    program.already_in_classroom
+                      ? 'bg-gray-50 opacity-60'
                       : selectedPrograms.includes(program.id)
                         ? 'bg-blue-50 border-blue-300'
                         : 'hover:bg-gray-50'
@@ -225,8 +225,8 @@ export default function CopyProgramDialog({
           <Button variant="outline" onClick={onClose} disabled={copying}>
             取消
           </Button>
-          <Button 
-            onClick={handleCopyPrograms} 
+          <Button
+            onClick={handleCopyPrograms}
             disabled={selectedPrograms.length === 0 || copying}
           >
             {copying ? (

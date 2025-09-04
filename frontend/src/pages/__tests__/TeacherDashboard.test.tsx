@@ -137,12 +137,12 @@ describe('TeacherDashboard', () => {
       // Check classrooms section
       expect(screen.getByText('我的班級')).toBeInTheDocument()
       expect(screen.getByText('目前管理的班級列表')).toBeInTheDocument()
-      
+
       // Check individual classrooms
       expect(screen.getByText('六年級甲班')).toBeInTheDocument()
       expect(screen.getByText('六年級英語班')).toBeInTheDocument()
       expect(screen.getByText('25 位學生')).toBeInTheDocument()
-      
+
       expect(screen.getByText('五年級乙班')).toBeInTheDocument()
       expect(screen.getByText('五年級英語班')).toBeInTheDocument()
       expect(screen.getByText('20 位學生')).toBeInTheDocument()
@@ -158,11 +158,11 @@ describe('TeacherDashboard', () => {
       // Check recent students section
       expect(screen.getByText('最近活動學生')).toBeInTheDocument()
       expect(screen.getByText('各班級的學生列表')).toBeInTheDocument()
-      
+
       // Check individual students
       expect(screen.getByText('Alice')).toBeInTheDocument()
       expect(screen.getByText('Bob')).toBeInTheDocument()
-      
+
       // Check avatar initials
       expect(screen.getByText('A')).toBeInTheDocument()
       expect(screen.getByText('B')).toBeInTheDocument()
@@ -205,7 +205,7 @@ describe('TeacherDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('快速動作')).toBeInTheDocument()
       expect(screen.getByText('常用功能快捷入口')).toBeInTheDocument()
-      
+
       // Check action buttons
       expect(screen.getByText('建立課程')).toBeInTheDocument()
       expect(screen.getByText('管理學生')).toBeInTheDocument()
@@ -282,7 +282,7 @@ describe('TeacherDashboard', () => {
       // Classroom management buttons
       expect(screen.getAllByText('管理')).toHaveLength(2) // One for each classroom
       expect(screen.getByText('建立新班級')).toBeInTheDocument()
-      
+
       // Student management buttons
       expect(screen.getByText('查看所有學生')).toBeInTheDocument()
     })

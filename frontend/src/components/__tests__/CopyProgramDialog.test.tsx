@@ -53,7 +53,7 @@ describe('CopyProgramDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(apiClient.getTeacherPrograms as any).mockResolvedValue(mockTeacherPrograms)
+    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue(mockTeacherPrograms)
   })
 
   const renderComponent = (open = true) => {
@@ -69,7 +69,7 @@ describe('CopyProgramDialog', () => {
 
   it('should display dialog title and description', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       expect(screen.getByText('從課程庫複製')).toBeInTheDocument()
       expect(screen.getByText('選擇要複製到此班級的課程')).toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('CopyProgramDialog', () => {
 
   it('should load and display teacher programs', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       expect(screen.getByText('Basic English Course')).toBeInTheDocument()
       expect(screen.getByText('Advanced Speaking')).toBeInTheDocument()
@@ -88,7 +88,7 @@ describe('CopyProgramDialog', () => {
 
   it('should display program details', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       expect(screen.getByText('Basic English Course')).toBeInTheDocument()
       expect(screen.getByText('Foundation course for beginners')).toBeInTheDocument()
@@ -99,21 +99,21 @@ describe('CopyProgramDialog', () => {
 
   it('should show loading state while fetching programs', () => {
     renderComponent()
-    
+
     expect(screen.getByText('載入課程中...')).toBeInTheDocument()
   })
 
   it('should allow selecting multiple programs', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const checkboxes = screen.getAllByRole('checkbox')
       expect(checkboxes).toHaveLength(3)
-      
+
       // Select first two programs
       fireEvent.click(checkboxes[0])
       fireEvent.click(checkboxes[1])
-      
+
       expect(checkboxes[0]).toBeChecked()
       expect(checkboxes[1]).toBeChecked()
       expect(checkboxes[2]).not.toBeChecked()
@@ -122,45 +122,45 @@ describe('CopyProgramDialog', () => {
 
   it('should display selected count', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const checkboxes = screen.getAllByRole('checkbox')
-      
+
       fireEvent.click(checkboxes[0])
       fireEvent.click(checkboxes[1])
-      
+
       expect(screen.getByText('已選擇 2 個課程')).toBeInTheDocument()
     })
   })
 
   it('should enable copy button only when programs are selected', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const copyButton = screen.getByRole('button', { name: /複製到班級/i })
       expect(copyButton).toBeDisabled()
-      
+
       const checkbox = screen.getAllByRole('checkbox')[0]
       fireEvent.click(checkbox)
-      
+
       expect(copyButton).not.toBeDisabled()
     })
   })
 
   it('should copy selected programs on submit', async () => {
-    ;(apiClient.copyProgramToClassroom as any).mockResolvedValue({ success: true })
-    
+    vi.mocked(apiClient.copyProgramToClassroom).mockResolvedValue({ success: true })
+
     renderComponent()
-    
+
     await waitFor(() => {
       const checkboxes = screen.getAllByRole('checkbox')
       fireEvent.click(checkboxes[0])
       fireEvent.click(checkboxes[1])
-      
+
       const copyButton = screen.getByRole('button', { name: /複製到班級/i })
       fireEvent.click(copyButton)
     })
-    
+
     await waitFor(() => {
       expect(apiClient.copyProgramToClassroom).toHaveBeenCalledWith(classroomId, [1, 2])
       expect(toast.success).toHaveBeenCalledWith('成功複製 2 個課程到班級')
@@ -170,18 +170,18 @@ describe('CopyProgramDialog', () => {
   })
 
   it('should handle copy error', async () => {
-    ;(apiClient.copyProgramToClassroom as any).mockRejectedValue(new Error('Copy failed'))
-    
+    vi.mocked(apiClient.copyProgramToClassroom).mockRejectedValue(new Error('Copy failed'))
+
     renderComponent()
-    
+
     await waitFor(() => {
       const checkbox = screen.getAllByRole('checkbox')[0]
       fireEvent.click(checkbox)
-      
+
       const copyButton = screen.getByRole('button', { name: /複製到班級/i })
       fireEvent.click(copyButton)
     })
-    
+
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('複製失敗，請稍後再試')
       expect(mockOnSuccess).not.toHaveBeenCalled()
@@ -190,22 +190,22 @@ describe('CopyProgramDialog', () => {
 
   it('should close dialog on cancel', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const cancelButton = screen.getByRole('button', { name: /取消/i })
       fireEvent.click(cancelButton)
-      
+
       expect(mockOnClose).toHaveBeenCalled()
     })
   })
 
   it('should filter programs by search term', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const searchInput = screen.getByPlaceholderText('搜尋課程名稱...')
       fireEvent.change(searchInput, { target: { value: 'Advanced' } })
-      
+
       expect(screen.getByText('Advanced Speaking')).toBeInTheDocument()
       expect(screen.queryByText('Basic English Course')).not.toBeInTheDocument()
       expect(screen.queryByText('Business English')).not.toBeInTheDocument()
@@ -213,10 +213,10 @@ describe('CopyProgramDialog', () => {
   })
 
   it('should show empty state when no programs available', async () => {
-    ;(apiClient.getTeacherPrograms as any).mockResolvedValue([])
-    
+    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue([])
+
     renderComponent()
-    
+
     await waitFor(() => {
       expect(screen.getByText('目前沒有可複製的課程')).toBeInTheDocument()
       expect(screen.getByText('請先到「所有課程」頁面建立課程')).toBeInTheDocument()
@@ -225,12 +225,12 @@ describe('CopyProgramDialog', () => {
 
   it('should show level badge with correct color', async () => {
     renderComponent()
-    
+
     await waitFor(() => {
       const beginnerBadge = screen.getByText('beginner')
       const intermediateBadge = screen.getByText('intermediate')
       const advancedBadge = screen.getByText('advanced')
-      
+
       expect(beginnerBadge).toHaveClass('bg-green-100')
       expect(intermediateBadge).toHaveClass('bg-blue-100')
       expect(advancedBadge).toHaveClass('bg-purple-100')
@@ -242,16 +242,16 @@ describe('CopyProgramDialog', () => {
       ...p,
       already_in_classroom: i === 0 // First program is already in classroom
     }))
-    ;(apiClient.getTeacherPrograms as any).mockResolvedValue(programsWithStatus)
-    
+    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue(programsWithStatus)
+
     renderComponent()
-    
+
     await waitFor(() => {
       const checkboxes = screen.getAllByRole('checkbox')
       expect(checkboxes[0]).toBeDisabled()
       expect(checkboxes[1]).not.toBeDisabled()
       expect(checkboxes[2]).not.toBeDisabled()
-      
+
       expect(screen.getByText('(已存在)')).toBeInTheDocument()
     })
   })

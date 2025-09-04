@@ -9,7 +9,7 @@
    ```bash
    # ✅ 正確
    make db-create
-   
+
    # ❌ 錯誤 - 絕對禁止
    gcloud sql instances create ...
    ```
@@ -119,7 +119,7 @@ curl https://duotopia-frontend-staging-xxx.run.app
 ### 1. PORT 配置錯誤
 **錯誤**: Container failed to start
 **原因**: Cloud Run 需要 PORT=8080
-**解決**: 
+**解決**:
 ```python
 # main.py
 port = int(os.environ.get("PORT", 8080))
@@ -128,7 +128,7 @@ port = int(os.environ.get("PORT", 8080))
 ### 2. 資料庫連線失敗
 **錯誤**: Connection refused
 **原因**: 啟動時立即連接資料庫
-**解決**: 
+**解決**:
 ```python
 # 不要在頂層連接
 # 使用 Depends(get_db) 延遲連接
@@ -207,10 +207,10 @@ git push origin staging
 - **版本**: v1.x.x
 - **環境**: staging/production
 - **部署者**: [姓名]
-- **變更內容**: 
+- **變更內容**:
   - Feature: xxx
   - Fix: xxx
-- **測試結果**: 
+- **測試結果**:
   - [ ] 健康檢查通過
   - [ ] API 測試通過
   - [ ] 前端測試通過

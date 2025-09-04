@@ -14,33 +14,33 @@ def test_connection():
     try:
         # Supabase 連接字串
         DATABASE_URL = os.getenv('DATABASE_URL')
-        
+
         if not DATABASE_URL:
             print("❌ DATABASE_URL 未設定")
             return False
-            
+
         print(f"🔄 連接到 Supabase...")
         print(f"   URL: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'N/A'}")
-        
+
         # 建立連接
         conn = psycopg2.connect(DATABASE_URL)
         cursor = conn.cursor()
-        
+
         # 測試查詢
         cursor.execute("SELECT version();")
         version = cursor.fetchone()
         print(f"✅ 連接成功！")
         print(f"   PostgreSQL 版本: {version[0].split(',')[0]}")
-        
+
         # 檢查現有表格
         cursor.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
+            SELECT table_name
+            FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name;
         """)
         tables = cursor.fetchall()
-        
+
         if tables:
             print(f"\n📊 現有表格 ({len(tables)} 個):")
             for table in tables:
@@ -49,15 +49,15 @@ def test_connection():
                 print(f"   - {table[0]}: {count} 筆資料")
         else:
             print("\n📊 資料庫是空的（需要初始化）")
-        
+
         # 關閉連接
         cursor.close()
         conn.close()
-        
+
         print("\n🎉 Supabase 連接測試成功！")
         print("💡 提示：這是免費的 Supabase，不會產生費用")
         return True
-        
+
     except Exception as e:
         print(f"❌ 連接失敗: {e}")
         return False

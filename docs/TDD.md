@@ -8,7 +8,7 @@
 - 驗證方式：開啟任何內容編輯面板，不應再看到藍色提示框
 
 ### 2. 修復 level、tags 和 is_public 儲存 ✅
-**檔案**: 
+**檔案**:
 - `frontend/src/components/ReadingAssessmentPanel.tsx`
 - `frontend/src/pages/teacher/ClassroomDetail.tsx`
 
@@ -97,7 +97,7 @@ npx playwright test --ui
    ```bash
    # Terminal 1 - 前端
    npm run dev
-   
+
    # Terminal 2 - 後端
    cd backend && uvicorn main:app --reload --port 8000
    ```

@@ -10,14 +10,14 @@
             max-width: 600px;
             margin: 0 auto;
         }
-        
+
         .container {
             border: 1px solid #ddd;
             border-radius: 8px;
             padding: 16px;
             background: #f9fafb;
         }
-        
+
         .item {
             background: white;
             border: 1px solid #e5e7eb;
@@ -28,15 +28,15 @@
             transition: opacity 0.2s;
             position: relative;
         }
-        
+
         .item:active {
             cursor: grabbing;
         }
-        
+
         .item.dragging {
             opacity: 0.3;
         }
-        
+
         .drop-indicator {
             height: 3px;
             background: #3b82f6;
@@ -45,28 +45,28 @@
             animation: pulse 1s infinite;
             display: none;
         }
-        
+
         .drop-indicator.active {
             display: block;
         }
-        
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        
+
         .grip {
             display: inline-block;
             margin-right: 12px;
             color: #9ca3af;
             vertical-align: middle;
         }
-        
+
         h2 {
             color: #1f2937;
             margin-bottom: 16px;
         }
-        
+
         .info {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
@@ -79,11 +79,11 @@
 </head>
 <body>
     <h1>改進的拖曳體驗</h1>
-    
+
     <div class="info">
         ✨ 新的拖曳效果：拖曳到兩個項目之間時會顯示藍色插入指示線，表示釋放後項目會插入到該位置。
     </div>
-    
+
     <div class="container">
         <h2>課程列表</h2>
         <div id="list">
@@ -110,36 +110,36 @@
             <div class="drop-indicator"></div>
         </div>
     </div>
-    
+
     <script>
         let draggedElement = null;
         const items = document.querySelectorAll('.item');
         const indicators = document.querySelectorAll('.drop-indicator');
-        
+
         items.forEach(item => {
             item.addEventListener('dragstart', (e) => {
                 draggedElement = e.target;
                 e.target.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             });
-            
+
             item.addEventListener('dragend', (e) => {
                 e.target.classList.remove('dragging');
                 indicators.forEach(ind => ind.classList.remove('active'));
                 draggedElement = null;
             });
-            
+
             item.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 if (!draggedElement || draggedElement === e.currentTarget) return;
-                
+
                 const rect = e.currentTarget.getBoundingClientRect();
                 const y = e.clientY - rect.top;
                 const height = rect.height;
-                
+
                 // 隱藏所有指示器
                 indicators.forEach(ind => ind.classList.remove('active'));
-                
+
                 // 根據滑鼠位置決定顯示哪個指示器
                 if (y < height / 2) {
                     // 在上半部，顯示在當前項目上方的指示器
@@ -149,21 +149,21 @@
                     e.currentTarget.nextElementSibling.classList.add('active');
                 }
             });
-            
+
             item.addEventListener('dragleave', (e) => {
                 // 當離開項目時，可選擇性地隱藏指示器
             });
-            
+
             item.addEventListener('drop', (e) => {
                 e.preventDefault();
                 if (!draggedElement || draggedElement === e.currentTarget) return;
-                
+
                 const rect = e.currentTarget.getBoundingClientRect();
                 const y = e.clientY - rect.top;
                 const height = rect.height;
-                
+
                 const list = document.getElementById('list');
-                
+
                 if (y < height / 2) {
                     // 插入到當前項目之前
                     list.insertBefore(draggedElement, e.currentTarget);
@@ -173,11 +173,11 @@
                     list.insertBefore(draggedElement, e.currentTarget.nextElementSibling.nextElementSibling);
                     list.insertBefore(draggedElement.nextElementSibling, draggedElement.nextElementSibling.nextElementSibling);
                 }
-                
+
                 indicators.forEach(ind => ind.classList.remove('active'));
             });
         });
-        
+
         // 防止拖曳到容器外
         document.addEventListener('dragover', (e) => {
             if (draggedElement) {

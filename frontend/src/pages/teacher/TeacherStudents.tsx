@@ -32,14 +32,14 @@ export default function TeacherStudents() {
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch classrooms for the dropdown
       const classroomData = await apiClient.getTeacherClassrooms() as Classroom[];
       setClassrooms(classroomData);
-      
+
       // Fetch all students (including those without classroom)
-      const studentsData = await apiClient.getAllStudents();
-      
+      const studentsData = await apiClient.getAllStudents() as any[];
+
       // Format students data
       const studentsWithDetails = studentsData.map((student: any) => ({
         id: student.id,
@@ -55,7 +55,7 @@ export default function TeacherStudents() {
         classroom_id: student.classroom_id,
         classroom_name: student.classroom_name || '未分配',
       }));
-      
+
       setAllStudents(studentsWithDetails);
     } catch (err) {
       console.error('Fetch classrooms error:', err);
@@ -81,8 +81,8 @@ export default function TeacherStudents() {
         // 顯示特定班級的學生
         matchesClassroom = student.classroom_id === selectedClassroom;
       }
-      
-      const matchesSearch = !searchTerm || 
+
+      const matchesSearch = !searchTerm ||
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesClassroom && matchesSearch;
@@ -108,7 +108,7 @@ export default function TeacherStudents() {
     if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
       return;
     }
-    
+
     try {
       await apiClient.resetStudentPassword(student.id);
       toast.success(`已重設 ${student.name} 的密碼為預設密碼`);
@@ -159,13 +159,13 @@ export default function TeacherStudents() {
       student.password_changed ? '已更改' : '預設密碼',
       student.last_login || '從未登入'
     ]);
-    
+
     // 建立 CSV 內容
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
-    
+
     // 建立下載連結
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -176,19 +176,19 @@ export default function TeacherStudents() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success(`已匯出 ${filteredStudents.length} 位學生資料`);
   };
-  
+
   const handleBulkAction = async (action: string, studentIds: number[]) => {
     // Handle selection update
     if (action === 'selection') {
       setSelectedStudentIds(studentIds);
       return;
     }
-    
+
     setSelectedStudentIds(studentIds);
-    
+
     if (action === 'assign') {
       // Show classroom selection dialog
       setShowAssignDialog(true);
@@ -357,10 +357,10 @@ export default function TeacherStudents() {
             onAddStudent={handleCreateStudent}
             onBulkAction={handleBulkAction}
             emptyMessage={
-              searchTerm 
+              searchTerm
                 ? '找不到符合條件的學生'
-                : selectedClassroom 
-                  ? '此班級暫無學生' 
+                : selectedClassroom
+                  ? '此班級暫無學生'
                   : '尚未建立學生'
             }
           />
@@ -377,7 +377,7 @@ export default function TeacherStudents() {
         onSwitchToEdit={handleSwitchToEdit}
         classrooms={classrooms}
       />
-      
+
       {/* Classroom Assignment Dialog */}
       <ClassroomAssignDialog
         open={showAssignDialog}

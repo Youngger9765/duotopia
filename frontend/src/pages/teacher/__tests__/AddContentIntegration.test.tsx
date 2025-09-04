@@ -88,34 +88,34 @@ describe('Add Content Integration', () => {
 
   it('should open content type dialog when clicking add content button', async () => {
     renderComponent()
-    
+
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Classroom')).toBeInTheDocument()
     })
-    
+
     // Switch to programs tab
     const programsTab = screen.getByText('課程內容')
     fireEvent.click(programsTab)
-    
+
     // Wait for programs to load
     await waitFor(() => {
       expect(screen.getByText('Test Program')).toBeInTheDocument()
     })
-    
+
     // Expand the program accordion
     const programAccordion = screen.getByText('Test Program')
     fireEvent.click(programAccordion)
-    
+
     // Wait for lessons to be visible
     await waitFor(() => {
       expect(screen.getByText('Unit 1: Greetings')).toBeInTheDocument()
     })
-    
+
     // Click add content button
     const addContentButton = screen.getByRole('button', { name: /新增內容/i })
     fireEvent.click(addContentButton)
-    
+
     // Verify content type dialog opens
     await waitFor(() => {
       expect(screen.getByText('選擇內容類型')).toBeInTheDocument()
@@ -125,29 +125,29 @@ describe('Add Content Integration', () => {
 
   it('should display all content types in the dialog', async () => {
     renderComponent()
-    
+
     // Navigate to add content dialog
     await waitFor(() => {
       expect(screen.getByText('Test Classroom')).toBeInTheDocument()
     })
-    
+
     const programsTab = screen.getByText('課程內容')
     fireEvent.click(programsTab)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Program')).toBeInTheDocument()
     })
-    
+
     const programAccordion = screen.getByText('Test Program')
     fireEvent.click(programAccordion)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Unit 1: Greetings')).toBeInTheDocument()
     })
-    
+
     const addContentButton = screen.getByRole('button', { name: /新增內容/i })
     fireEvent.click(addContentButton)
-    
+
     // Verify all content types are displayed
     await waitFor(() => {
       expect(screen.getByText('朗讀錄音')).toBeInTheDocument()
@@ -156,7 +156,7 @@ describe('Add Content Integration', () => {
       expect(screen.getByText('聽力填空')).toBeInTheDocument()
       expect(screen.getByText('造句練習')).toBeInTheDocument()
       expect(screen.getByText('口說測驗')).toBeInTheDocument()
-      
+
       // Check that only reading is enabled
       expect(screen.getAllByText('即將推出')).toHaveLength(5)
     })
@@ -164,37 +164,37 @@ describe('Add Content Integration', () => {
 
   it('should show success toast when selecting content type', async () => {
     renderComponent()
-    
+
     // Navigate to add content dialog
     await waitFor(() => {
       expect(screen.getByText('Test Classroom')).toBeInTheDocument()
     })
-    
+
     const programsTab = screen.getByText('課程內容')
     fireEvent.click(programsTab)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Program')).toBeInTheDocument()
     })
-    
+
     const programAccordion = screen.getByText('Test Program')
     fireEvent.click(programAccordion)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Unit 1: Greetings')).toBeInTheDocument()
     })
-    
+
     const addContentButton = screen.getByRole('button', { name: /新增內容/i })
     fireEvent.click(addContentButton)
-    
+
     // Select a content type
     await waitFor(() => {
       expect(screen.getByText('朗讀評測')).toBeInTheDocument()
     })
-    
+
     const readingAssessmentCard = screen.getByTestId('content-type-card-reading_assessment')
     fireEvent.click(readingAssessmentCard)
-    
+
     // Verify success toast
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('開始建立 reading_assessment 內容')
@@ -203,37 +203,37 @@ describe('Add Content Integration', () => {
 
   it('should close dialog after selecting content type', async () => {
     renderComponent()
-    
+
     // Navigate to add content dialog
     await waitFor(() => {
       expect(screen.getByText('Test Classroom')).toBeInTheDocument()
     })
-    
+
     const programsTab = screen.getByText('課程內容')
     fireEvent.click(programsTab)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Program')).toBeInTheDocument()
     })
-    
+
     const programAccordion = screen.getByText('Test Program')
     fireEvent.click(programAccordion)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Unit 1: Greetings')).toBeInTheDocument()
     })
-    
+
     const addContentButton = screen.getByRole('button', { name: /新增內容/i })
     fireEvent.click(addContentButton)
-    
+
     // Select a content type
     await waitFor(() => {
       expect(screen.getByText('口說練習')).toBeInTheDocument()
     })
-    
+
     const speakingPracticeCard = screen.getByTestId('content-type-card-speaking_practice')
     fireEvent.click(speakingPracticeCard)
-    
+
     // Verify dialog closes
     await waitFor(() => {
       expect(screen.queryByText('選擇內容類型')).not.toBeInTheDocument()
@@ -242,37 +242,37 @@ describe('Add Content Integration', () => {
 
   it('should allow canceling content type selection', async () => {
     renderComponent()
-    
+
     // Navigate to add content dialog
     await waitFor(() => {
       expect(screen.getByText('Test Classroom')).toBeInTheDocument()
     })
-    
+
     const programsTab = screen.getByText('課程內容')
     fireEvent.click(programsTab)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Program')).toBeInTheDocument()
     })
-    
+
     const programAccordion = screen.getByText('Test Program')
     fireEvent.click(programAccordion)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Unit 1: Greetings')).toBeInTheDocument()
     })
-    
+
     const addContentButton = screen.getByRole('button', { name: /新增內容/i })
     fireEvent.click(addContentButton)
-    
+
     // Click cancel button
     await waitFor(() => {
       expect(screen.getByText('選擇內容類型')).toBeInTheDocument()
     })
-    
+
     const cancelButton = screen.getByRole('button', { name: /取消/i })
     fireEvent.click(cancelButton)
-    
+
     // Verify dialog closes without showing toast
     await waitFor(() => {
       expect(screen.queryByText('選擇內容類型')).not.toBeInTheDocument()

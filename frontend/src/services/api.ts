@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${state.token}`;
     }
   }
-  
+
   // Check for student token
   const studentAuth = localStorage.getItem('student-auth-storage');
   if (studentAuth) {
@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${state.token}`;
     }
   }
-  
+
   return config;
 });
 

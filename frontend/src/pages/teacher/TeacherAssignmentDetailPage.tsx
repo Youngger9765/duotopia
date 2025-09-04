@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import TeacherLayout from '@/components/TeacherLayout';
 import GradingModal from '@/components/GradingModal';
 import { apiClient } from '@/lib/api';
@@ -19,8 +19,6 @@ import {
   Users,
   FileText,
   CheckCircle,
-  Clock,
-  AlertCircle,
   ChevronDown,
   ChevronUp,
   ChevronRight,
@@ -124,13 +122,14 @@ export default function TeacherAssignmentDetailPage() {
     try {
       await fetchStudentProgress();
     } catch (error) {
+      // Progress API might not exist yet, which is okay
     }
   };
 
   const fetchAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/teachers/assignments/${assignmentId}`);
+      const response = await apiClient.get<any>(`/api/teachers/assignments/${assignmentId}`);
 
       // Handle different possible date field names
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;

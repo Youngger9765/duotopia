@@ -269,9 +269,9 @@ export function AssignmentDialog({
         due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
       };
 
-      const result = await apiClient.post('/api/teachers/assignments/create', payload);
+      const result = await apiClient.post<{ student_count: number }>('/api/teachers/assignments/create', payload);
 
-      toast.success(`成功創建作業，已指派給 ${(result as any).student_count || 0} 位學生`);
+      toast.success(`成功創建作業，已指派給 ${result.student_count || 0} 位學生`);
       onSuccess?.();
       handleClose();
     } catch (error) {

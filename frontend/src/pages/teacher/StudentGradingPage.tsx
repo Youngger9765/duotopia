@@ -90,7 +90,7 @@ export default function StudentGradingPage() {
       const url = `/api/teachers/teachers/assignments/${assignmentId}/submissions/${studentId}`;
       console.log('Fetching submission from:', url);
 
-      const response = await apiClient.get(url);
+      const response = await apiClient.get<StudentSubmission>(url);
       console.log('API Response:', response);
 
       // apiClient 直接返回資料，不是 { data: ... } 格式
@@ -100,7 +100,7 @@ export default function StudentGradingPage() {
         return;
       }
 
-      setSubmission(response);
+      setSubmission(response as StudentSubmission);
 
       // 如果已經有分數，預填
       if (response.current_score !== undefined && response.current_score !== null) {
@@ -116,7 +116,7 @@ export default function StudentGradingPage() {
         setItemResults(response.item_results);
       } else {
         // 初始化空的評語結果
-        const initialResults = response.submissions.map((_, index) => ({
+        const initialResults = response.submissions?.map((_, index: number) => ({
           item_index: index,
           feedback: '',
           passed: false

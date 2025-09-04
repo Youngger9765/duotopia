@@ -1,7 +1,7 @@
 # 📋 Duotopia 人工測試手冊
 
-**測試環境**: https://duotopia-staging-frontend-qchnzlfpda-de.a.run.app  
-**測試日期**: 2025-08-29  
+**測試環境**: https://duotopia-staging-frontend-qchnzlfpda-de.a.run.app
+**測試日期**: 2025-08-29
 **測試帳號**: demo@duotopia.com / demo123
 
 ---
@@ -103,7 +103,7 @@ screencapture -x teacher_login_success.png
 ### ✅ 預期結果：
 - 看到三層式介面：
   - 第一層：課程列表（Program）
-  - 第二層：單元列表（Lesson）  
+  - 第二層：單元列表（Lesson）
   - 第三層：內容（Content）
 
 ### 4.2 新增課程
@@ -267,12 +267,12 @@ screencapture -x teacher_login_success.png
 
 ## 📝 測試完成確認
 
-測試人員：_______________  
-測試日期：_______________  
-測試結果：□ 全部通過 □ 部分失敗  
+測試人員：_______________
+測試日期：_______________
+測試結果：□ 全部通過 □ 部分失敗
 備註：_______________
 
 ---
 
-*測試手冊版本：v1.0*  
+*測試手冊版本：v1.0*
 *更新日期：2025-08-29*

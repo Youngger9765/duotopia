@@ -12,10 +12,10 @@ export const apiCall = async (endpoint: string, options?: RequestInit) => {
       ...options?.headers,
     },
   })
-  
+
   if (!response.ok) {
     throw new Error(`API call failed: ${response.status}`)
   }
-  
+
   return response.json()
 }

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { 
-  GraduationCap, 
-  Users, 
-  Sparkles, 
-  Brain, 
-  Mic, 
+import {
+  GraduationCap,
+  Users,
+  Sparkles,
+  Brain,
+  Mic,
   Trophy,
   BarChart3,
   Shield,
@@ -24,7 +24,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-black opacity-10"></div>
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-        
+
         <div className="relative container mx-auto px-4 py-24 lg:py-32">
           <div className="max-w-6xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -50,9 +50,9 @@ export default function Home() {
                       免費試用
                     </Button>
                   </Link>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
+                  <Button
+                    size="lg"
+                    variant="outline"
                     className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all"
                   >
                     <Play className="mr-2 h-5 w-5" />
@@ -74,9 +74,9 @@ export default function Home() {
               <div className="hidden lg:block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-3xl transform rotate-3"></div>
-                  <img 
-                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600" 
-                    alt="Students learning" 
+                  <img
+                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
+                    alt="Students learning"
                     className="relative rounded-3xl shadow-2xl"
                   />
                   <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">

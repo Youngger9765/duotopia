@@ -25,20 +25,24 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
+
 # Get database URL from environment
 def get_url():
     """Get database URL from environment or use default."""
     database_url = os.getenv("DATABASE_URL")
-    
+
     if not database_url:
         # Default to local development database
-        database_url = "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
-    
+        database_url = (
+            "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
+        )
+
     # For production/staging, replace postgres:// with postgresql://
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
-    
+
     return database_url
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -70,8 +74,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
     """
     configuration = config.get_section(config.config_ini_section)
-    configuration['sqlalchemy.url'] = get_url()
-    
+    configuration["sqlalchemy.url"] = get_url()
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -79,10 +83,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, 
-            target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

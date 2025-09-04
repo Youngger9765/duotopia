@@ -176,10 +176,10 @@ describe('StudentLogin', () => {
     // Go through steps 1-3
     await user.type(screen.getByPlaceholderText('teacher@example.com'), 'test@teacher.com')
     fireEvent.click(screen.getByRole('button', { name: '下一步' }))
-    
+
     await waitFor(() => screen.getByText('Class A'))
     fireEvent.click(screen.getByText('Class A'))
-    
+
     await waitFor(() => screen.getByText('Alice'))
     fireEvent.click(screen.getByText('Alice'))
 
@@ -211,13 +211,13 @@ describe('StudentLogin', () => {
     // Go through all steps
     await user.type(screen.getByPlaceholderText('teacher@example.com'), 'test@teacher.com')
     fireEvent.click(screen.getByRole('button', { name: '下一步' }))
-    
+
     await waitFor(() => screen.getByText('Class A'))
     fireEvent.click(screen.getByText('Class A'))
-    
+
     await waitFor(() => screen.getByText('Alice'))
     fireEvent.click(screen.getByText('Alice'))
-    
+
     await waitFor(() => screen.getByPlaceholderText('請輸入你的密碼'))
     await user.type(screen.getByPlaceholderText('請輸入你的密碼'), '20120101')
     fireEvent.click(screen.getByRole('button', { name: '登入' }))
@@ -249,13 +249,13 @@ describe('StudentLogin', () => {
     // Go through all steps to login
     await user.type(screen.getByPlaceholderText('teacher@example.com'), 'test@teacher.com')
     fireEvent.click(screen.getByRole('button', { name: '下一步' }))
-    
+
     await waitFor(() => screen.getByText('Class A'))
     fireEvent.click(screen.getByText('Class A'))
-    
+
     await waitFor(() => screen.getByText('Alice'))
     fireEvent.click(screen.getByText('Alice'))
-    
+
     await waitFor(() => screen.getByPlaceholderText('請輸入你的密碼'))
     await user.type(screen.getByPlaceholderText('請輸入你的密碼'), 'wrongpassword')
     fireEvent.click(screen.getByRole('button', { name: '登入' }))
@@ -312,12 +312,12 @@ describe('StudentLogin', () => {
   it('loads and displays teacher history', async () => {
     // Clear everything and start fresh
     localStorage.clear()
-    
+
     const teacherHistory = [
       { email: 'teacher1@test.com', name: 'Teacher 1', lastUsed: new Date() },
       { email: 'teacher2@test.com', name: 'Teacher 2', lastUsed: new Date() },
     ]
-    
+
     localStorage.setItem('teacherHistory', JSON.stringify(teacherHistory))
 
     render(<StudentLogin />)
@@ -340,12 +340,12 @@ describe('StudentLogin', () => {
 
   it('filters out demo teacher from history display', () => {
     localStorage.clear()
-    
+
     const teacherHistory = [
       { email: 'demo@duotopia.com', name: 'Demo Teacher', lastUsed: new Date() },
       { email: 'teacher1@test.com', name: 'Teacher 1', lastUsed: new Date() },
     ]
-    
+
     localStorage.setItem('teacherHistory', JSON.stringify(teacherHistory))
 
     render(<StudentLogin />)
@@ -403,7 +403,7 @@ describe('StudentLogin', () => {
     // Go to student selection step
     await user.type(screen.getByPlaceholderText('teacher@example.com'), 'test@teacher.com')
     fireEvent.click(screen.getByRole('button', { name: '下一步' }))
-    
+
     await waitFor(() => screen.getByText('Class A'))
     fireEvent.click(screen.getByText('Class A'))
 
@@ -411,7 +411,7 @@ describe('StudentLogin', () => {
       // Check that avatars are rendered with first letters
       const aliceAvatar = screen.getByText('A')
       const bobAvatar = screen.getByText('B')
-      
+
       expect(aliceAvatar).toBeInTheDocument()
       expect(bobAvatar).toBeInTheDocument()
     })

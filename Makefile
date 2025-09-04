@@ -80,7 +80,7 @@ dev-backend:
 	@echo "Starting backend development server..."
 	cd $(BACKEND_DIR) && uvicorn main:app --reload --port 8000
 
-.PHONY: dev-frontend  
+.PHONY: dev-frontend
 dev-frontend:
 	@echo "Starting frontend development server..."
 	cd $(FRONTEND_DIR) && npm run dev

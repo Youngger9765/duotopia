@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/table';
 import TeacherLayout from '@/components/TeacherLayout';
 import { BookOpen, RefreshCw, Filter, Plus, Edit, Eye, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { ProgramDialogs } from '@/components/ProgramDialogs';
 import { apiClient } from '@/lib/api';
 
@@ -54,7 +53,7 @@ export default function TeacherPrograms() {
         apiClient.getTeacherPrograms() as Promise<Program[]>,
         apiClient.getTeacherClassrooms() as Promise<any[]>
       ]);
-      
+
       // Now using real data from backend API
       setPrograms(programsData);
       setClassrooms(classroomsData.map(c => ({ id: c.id, name: c.name })));
@@ -133,10 +132,10 @@ export default function TeacherPrograms() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
     });
   };
 
@@ -278,25 +277,25 @@ export default function TeacherPrograms() {
                   <TableCell>{formatDate(program.updated_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         title="查看"
                         onClick={() => handleViewProgram(program)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         title="編輯"
                         onClick={() => handleEditProgram(program)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-red-600 hover:text-red-700"
                         title="刪除"
                         onClick={() => handleDeleteProgram(program)}

@@ -30,7 +30,7 @@ interface Student {
 export default function StudentLogin() {
   const navigate = useNavigate();
   const { login } = useStudentAuthStore();
-  
+
   // Multi-step form state
   const [step, setStep] = useState(1);
   const [teacherEmail, setTeacherEmail] = useState('');
@@ -65,17 +65,17 @@ export default function StudentLogin() {
           name: response.name,
           lastUsed: new Date()
         };
-        
+
         // Save to history
         const updatedHistory = [
           teacher,
           ...teacherHistory.filter(t => t.email !== teacherEmail)
         ].slice(0, 5); // Keep last 5 teachers
-        
+
         localStorage.setItem('teacherHistory', JSON.stringify(updatedHistory));
         setTeacherHistory(updatedHistory);
         setSelectedTeacher(teacher);
-        
+
         // Load classrooms for this teacher
         const classroomsData = await teacherService.getPublicClassrooms(teacherEmail);
         setClassrooms(classroomsData);
@@ -116,7 +116,7 @@ export default function StudentLogin() {
   // Step 4: Password submission
   const handleLogin = async () => {
     if (!selectedStudent) return;
-    
+
     setLoading(true);
     setError('');
     try {
@@ -124,7 +124,7 @@ export default function StudentLogin() {
         email: selectedStudent.email,
         password: password
       });
-      
+
       if (response.access_token) {
         login(response.access_token, response.user);
         navigate('/student/dashboard');
@@ -148,7 +148,7 @@ export default function StudentLogin() {
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-yellow-500'];
     const colorIndex = name.charCodeAt(0) % colors.length;
     const sizeClasses = size === 'small' ? 'w-12 h-12 text-lg' : 'w-20 h-20 text-2xl';
-    
+
     return (
       <div className={`${sizeClasses} ${colors[colorIndex]} rounded-full flex items-center justify-center text-white font-bold`}>
         {name.charAt(0).toUpperCase()}
@@ -167,7 +167,7 @@ export default function StudentLogin() {
           </Button>
         </Link>
       </div>
-      
+
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-blue-600 flex items-center justify-center gap-2">
           <span className="text-4xl">🚀</span>
@@ -194,7 +194,7 @@ export default function StudentLogin() {
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-center">請輸入老師 Email</h2>
-              
+
               <div className="space-y-4">
                 <Input
                   type="email"
@@ -204,7 +204,7 @@ export default function StudentLogin() {
                   className="text-lg py-6"
                   onKeyPress={(e) => e.key === 'Enter' && handleTeacherSubmit()}
                 />
-                
+
                 <Button
                   onClick={handleTeacherSubmit}
                   disabled={!teacherEmail || loading}
@@ -257,7 +257,7 @@ export default function StudentLogin() {
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-center">請選擇你的班級和名字</h2>
-              
+
               <div className="space-y-3">
                 {classrooms.map((classroom) => (
                   <Button
@@ -283,7 +283,7 @@ export default function StudentLogin() {
                 <h2 className="text-xl font-semibold">{selectedClassroom.name}</h2>
                 <p className="text-gray-600 mt-1">請選擇你的名字</p>
               </div>
-              
+
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                 {students.map((student) => (
                   <button
@@ -317,7 +317,7 @@ export default function StudentLogin() {
                   className="text-lg py-6"
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
-                
+
                 <Button
                   onClick={handleLogin}
                   disabled={!password || loading}
@@ -337,7 +337,7 @@ export default function StudentLogin() {
               </div>
 
               {error && <p className="text-red-500 text-center">{error}</p>}
-              
+
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800 font-medium mb-1">💡 測試提示</p>
                 <p className="text-xs text-yellow-700">

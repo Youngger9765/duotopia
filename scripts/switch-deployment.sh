@@ -32,7 +32,7 @@ if [ -f "$TARGET" ]; then
     echo "✅ Activating $ENV-$DB configuration"
     cp "$TARGET" "$WORKFLOW_DIR/deploy-$ENV.yml"
     echo "✅ Switched to $ENV with $DB"
-    
+
     if [ "$DB" = "cloudsql" ]; then
         echo "💰 WARNING: Cloud SQL costs $2.28/day ($68.40/month)"
     else

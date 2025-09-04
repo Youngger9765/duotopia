@@ -91,7 +91,7 @@ export default function ContentTypeDialog({
 
   const handleSelect = (contentType: ContentType) => {
     if (contentType.disabled) return;
-    
+
     setLoading(true);
     onSelect({
       type: contentType.type,
@@ -120,7 +120,7 @@ export default function ContentTypeDialog({
             為 「{lessonInfo.lessonName}」 選擇要新增的內容類型
           </DialogDescription>
         </DialogHeader>
-        
+
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <span className="text-gray-500">處理中...</span>
@@ -138,8 +138,8 @@ export default function ContentTypeDialog({
                 onClick={() => handleSelect(contentType)}
                 onKeyDown={(e) => handleKeyDown(e, contentType)}
                 className={`p-4 border rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  contentType.disabled 
-                    ? 'opacity-50 cursor-not-allowed bg-gray-50' 
+                  contentType.disabled
+                    ? 'opacity-50 cursor-not-allowed bg-gray-50'
                     : 'cursor-pointer hover:shadow-lg hover:border-blue-400'
                 }`}
               >
@@ -168,7 +168,7 @@ export default function ContentTypeDialog({
             ))}
           </div>
         )}
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
             取消

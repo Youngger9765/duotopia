@@ -22,10 +22,10 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Deploy Production with Supabase
       run: |
         echo "🚀 Deploying to Production with Supabase (Free)"

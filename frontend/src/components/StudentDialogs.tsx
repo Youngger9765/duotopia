@@ -86,44 +86,44 @@ export function StudentDialogs({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name?.trim()) {
       newErrors.name = '姓名為必填';
     }
-    
+
     // Email 是選填，但如果有填寫則檢查格式
     if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email 格式不正確';
     }
-    
+
     if (!formData.birthdate) {
       newErrors.birthdate = '生日為必填（用作預設密碼）';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       if (dialogType === 'create') {
         // Create new student - ensure required fields are present
-        const createData: any = {
+        const createData: Partial<Student> & { classroom_id?: number } = {
           name: formData.name || '',
           email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
           birthdate: formData.birthdate || '',
           student_id: formData.student_id,
           phone: formData.phone
         };
-        
+
         // classroom_id 是可選的，只有在選擇了班級時才傳送
         if (formData.classroom_id) {
           createData.classroom_id = formData.classroom_id;
         }
-        
+
         const response = await apiClient.createStudent(createData);
         // 如果有生日，顯示預設密碼
         if (formData.birthdate) {
@@ -157,26 +157,26 @@ export function StudentDialogs({
         onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving student:', error);
-      
+
       // Parse error message
       let errorMessage = '儲存失敗，請稍後再試';
-      
+
       if (error.message) {
         try {
           // Try to parse JSON error response
           const errorData = JSON.parse(error.message);
-          
+
           // Handle Pydantic validation errors
           if (Array.isArray(errorData.detail)) {
             const validationErrors = errorData.detail;
             const fieldErrors: Record<string, string> = {};
-            
-            validationErrors.forEach((err: any) => {
+
+            validationErrors.forEach((err: { loc?: string[]; msg: string }) => {
               const field = err.loc?.[1]; // Get field name from location
               const msg = err.msg;
-              
+
               if (field === 'classroom_id') {
                 // classroom_id is optional, skip this error
                 return;
@@ -190,7 +190,7 @@ export function StudentDialogs({
                 errorMessage = msg || '資料驗證失敗';
               }
             });
-            
+
             if (Object.keys(fieldErrors).length > 0) {
               setErrors(fieldErrors);
               errorMessage = '請修正標示的欄位';
@@ -205,7 +205,7 @@ export function StudentDialogs({
           errorMessage = error.message;
         }
       }
-      
+
       // Handle specific error cases
       if (typeof errorMessage === 'string') {
         if (errorMessage.includes('already registered')) {
@@ -218,7 +218,7 @@ export function StudentDialogs({
           errorMessage = '請填寫所有必填欄位';
         }
       }
-      
+
       // Ensure errorMessage is a string before showing toast
       if (typeof errorMessage === 'string') {
         toast.error(errorMessage);
@@ -232,7 +232,7 @@ export function StudentDialogs({
 
   const handleDelete = async () => {
     if (!student) return;
-    
+
     setLoading(true);
     try {
       await apiClient.deleteStudent(student.id);
@@ -251,10 +251,10 @@ export function StudentDialogs({
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
     });
   };
 
@@ -282,7 +282,7 @@ export function StudentDialogs({
               <span>學生詳細資料</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             {/* Student Avatar and Basic Info */}
             <div className="flex items-start space-x-4">
@@ -311,7 +311,7 @@ export function StudentDialogs({
                     <p className="text-sm font-medium">{student.email}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-gray-400" />
                   <div>
@@ -319,7 +319,7 @@ export function StudentDialogs({
                     <p className="text-sm font-medium">{student.phone || '-'}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <div>
@@ -337,7 +337,7 @@ export function StudentDialogs({
                     <p className="text-sm font-medium">{student.classroom_name || '-'}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <p className="text-xs text-gray-500">密碼狀態</p>
                   <p className="text-sm font-medium">
@@ -348,7 +348,7 @@ export function StudentDialogs({
                     )}
                   </p>
                 </div>
-                
+
                 <div>
                   <p className="text-xs text-gray-500">最後登入</p>
                   <p className="text-sm font-medium">
@@ -358,7 +358,7 @@ export function StudentDialogs({
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>關閉</Button>
             <Button onClick={() => {
@@ -395,12 +395,12 @@ export function StudentDialogs({
               )}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create' 
+              {dialogType === 'create'
                 ? '填寫學生資料以新增學生。生日將作為預設密碼。'
                 : '更新學生資料'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -416,7 +416,7 @@ export function StudentDialogs({
                 />
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
-              
+
               <div>
                 <label htmlFor="student_id" className="text-sm font-medium">
                   學號
@@ -446,7 +446,7 @@ export function StudentDialogs({
                 />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
-              
+
               <div>
                 <label htmlFor="phone" className="text-sm font-medium">
                   電話
@@ -481,7 +481,7 @@ export function StudentDialogs({
                   </p>
                 )}
               </div>
-              
+
               <div>
                 <label htmlFor="classroom" className="text-sm font-medium">
                   班級
@@ -524,7 +524,7 @@ export function StudentDialogs({
               <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
@@ -552,7 +552,7 @@ export function StudentDialogs({
               確定要刪除學生「{student.name}」嗎？此操作無法復原。
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">學生資料：</p>
@@ -562,18 +562,18 @@ export function StudentDialogs({
                 <p className="text-sm text-gray-500">班級：{student.classroom_name}</p>
               )}
             </div>
-            
+
             {errors.submit && (
               <p className="text-sm text-red-500 mt-4">{errors.submit}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
               取消
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDelete}
               disabled={loading}
             >

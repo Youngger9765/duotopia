@@ -332,7 +332,17 @@ class ApiClient {
   }
 
   // ============ Content Methods ============
-  async getContentDetail(contentId: number) {
+  async getContentDetail(contentId: number): Promise<{
+    id: number;
+    title: string;
+    items: Array<{
+      text: string;
+      translation?: string;
+      definition?: string;
+      audio_url?: string;
+    }>;
+    audio_urls?: string[];
+  }> {
     return this.request(`/api/teachers/contents/${contentId}`, {
       method: 'GET',
     });
@@ -392,7 +402,9 @@ class ApiClient {
   }
 
   // ============ TTS Methods ============
-  async generateTTS(text: string, voice?: string, rate?: string, volume?: string) {
+  async generateTTS(text: string, voice?: string, rate?: string, volume?: string): Promise<{
+    audio_url: string;
+  }> {
     return this.request('/api/teachers/tts', {
       method: 'POST',
       body: JSON.stringify({ text, voice, rate, volume }),

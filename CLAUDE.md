@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 在執行任何重要操作前，必須按順序檢查：
 1. **先查 Makefile** - `make help` 或 `cat Makefile | grep "^[a-z-]*:"`
-2. **先查 README** - 了解專案標準流程  
+2. **先查 README** - 了解專案標準流程
 3. **先查 CLAUDE.md** - 了解專案特定規則
 4. **先查 package.json/requirements.txt** - 了解已有的腳本命令
 5. **絕對不要自作主張創建資源** - 永遠使用專案既有的配置
@@ -344,7 +344,7 @@ pytest --junitxml=test-results.xml
    ```bash
    # 查看最新部署
    gh run list --workflow=deploy-staging.yml --limit=1
-   
+
    # 持續監控直到完成
    gh run watch <RUN_ID>
    ```
@@ -353,10 +353,10 @@ pytest --junitxml=test-results.xml
    ```bash
    # 健康檢查
    curl https://your-service-url/health
-   
+
    # API 測試
    curl https://your-service-url/api/auth/validate
-   
+
    # 功能測試（例如個人教師登入）
    python test_individual_api.py
    ```
@@ -778,7 +778,7 @@ python tests/integration/api/test_lesson_crud.py
    ```bash
    # ❌ 錯誤 - 絕對不要這樣做
    gcloud sql instances create duotopia-xxx --tier=db-g1-small
-   
+
    # ✅ 正確 - 永遠使用 Makefile
    make db-create  # 已設定 db-f1-micro
    ```
