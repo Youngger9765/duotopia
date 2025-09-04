@@ -231,7 +231,7 @@ class TestManualGrading:
     def test_manual_score_adjustment(self):
         """測試手動調整分數"""
         assignment_id = self.test_data["assignment_id"]
-        original_score = self.test_data["ai_result"]["overall_score"]
+        self.test_data["ai_result"]["overall_score"]
 
         # 手動調整分數
         manual_adjustment = {
@@ -272,7 +272,7 @@ class TestManualGrading:
 
         # 編輯回饋內容
         feedback_update = {
-            "manual_feedback": "你的朗讀表現很棒！以下是具體建議：\\n1. 發音清晰，特別是 'beautiful' 這個字\\n2. 可以嘗試稍微放慢語速\\n3. 句子間的停頓很自然\\n\\n繼續保持這樣的練習！下次可以挑戰更長的文章。",
+            "manual_feedback": "你的朗讀表現很棒！以下是具體建議：\\n1. 發音清晰，特別是 'beautiful' 這個字\\n2. 可以嘗試稍微放慢語速\\n3. 句子間的停頓很自然\\n\\n繼續保持！",  # noqa: E501
             "feedback_tags": ["pronunciation_good", "speed_improvement", "encourage"],
             "teacher_notes": "學生進步明顯，給予正向鼓勵。",
         }

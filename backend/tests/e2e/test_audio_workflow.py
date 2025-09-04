@@ -99,7 +99,7 @@ class TestAudioWorkflow:
         contents = response.json()
         if not contents:
             # 建立一個測試內容
-            content_data = {
+            _ = {
                 "title": "Audio Test Content",
                 "description": "用於測試音檔持久化",
                 "content_type": "reading_assessment",

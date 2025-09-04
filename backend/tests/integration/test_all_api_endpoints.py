@@ -5,10 +5,6 @@ API Endpoints 整合測試
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import get_db, SessionLocal
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import os
 
 client = TestClient(app)
 

@@ -4,7 +4,6 @@ Router 配置測試
 """
 import pytest
 import importlib
-import os
 import sys
 from pathlib import Path
 

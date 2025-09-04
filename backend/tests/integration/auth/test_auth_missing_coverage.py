@@ -186,7 +186,7 @@ class TestAuthEdgeCases:
         assert result1 is not None
 
         # Test different case
-        result2 = authenticate_teacher(db, "casetest@duotopia.com", password)
+        authenticate_teacher(db, "casetest@duotopia.com", password)
         # This depends on database collation - might be None or the teacher
         # Both outcomes are valid depending on setup
 

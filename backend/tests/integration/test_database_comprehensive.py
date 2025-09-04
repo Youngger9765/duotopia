@@ -3,11 +3,9 @@ Comprehensive tests for database operations to improve coverage
 """
 import pytest
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from database import SessionLocal, engine, get_db, Base
-import os
-from contextlib import contextmanager
+from database import SessionLocal, engine, get_db
 
 
 class TestDatabaseConnection:
@@ -51,7 +49,7 @@ class TestDatabaseConnection:
             for session in sessions:
                 try:
                     session.close()
-                except:
+                except Exception:
                     pass
 
     def test_session_isolation(self):
@@ -126,7 +124,6 @@ class TestDatabaseOperations:
             except SQLAlchemyError:
                 db.rollback()
                 # This is expected behavior
-                pass
 
         finally:
             try:
@@ -204,7 +201,7 @@ class TestErrorScenarios:
             # Cause an error
             try:
                 db.execute(text("INVALID SQL"))
-            except:
+            except Exception:
                 pass
 
             # Session should still be usable for cleanup
@@ -221,7 +218,6 @@ class TestConcurrency:
 
     def test_concurrent_sessions(self):
         """Test multiple concurrent database sessions"""
-        import threading
         import concurrent.futures
 
         def create_session():

@@ -19,10 +19,7 @@ from models import (
     Lesson,
     Content,
     ContentType,
-    Assignment,
-    AssignmentContent,
     StudentAssignment,
-    AssignmentStatus,
     ProgramLevel,
 )
 from auth import get_password_hash

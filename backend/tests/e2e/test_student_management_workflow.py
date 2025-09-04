@@ -54,7 +54,7 @@ class TestStudentManagementWorkflow:
 
         classroom = classrooms[0]
         classroom_id = classroom["id"]
-        classroom_name = classroom["name"]
+        classroom["name"]
 
         # 3. 建立測試學生（無班級）
         timestamp = int(datetime.now().timestamp())

@@ -2,7 +2,6 @@
 """完整功能測試"""
 
 import requests
-import json
 import time
 import sys
 
@@ -214,7 +213,7 @@ def main():
     try:
         # 檢查服務狀態
         backend_ok = test_backend_health()
-        frontend_ok = test_frontend_health()
+        test_frontend_health()
 
         if not backend_ok:
             print("\n❌ 後端服務未正常運行，請先啟動後端")

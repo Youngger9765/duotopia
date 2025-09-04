@@ -16,9 +16,6 @@ from schemas import (
     StudentContentProgressUpdate,
     AssignmentWithDetails,
     StudentAssignmentWithProgress,
-    StudentAssignmentResponse,
-    StudentContentProgressResponse,
-    AssignmentStatusEnum,
 )
 
 

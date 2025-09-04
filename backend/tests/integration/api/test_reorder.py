@@ -110,7 +110,9 @@ def test_reorder_lessons():
     assert len(lessons) >= 2, f"課程需要至少 2 個單元進行測試，目前只有 {len(lessons)} 個"
 
     # 記錄原始順序
-    original_order = [(l["id"], l.get("order_index", 0)) for l in lessons[:2]]
+    original_order = [
+        (lesson["id"], lesson.get("order_index", 0)) for lesson in lessons[:2]
+    ]
     print(f"原始單元順序: {original_order}")
 
     # 3. 交換前兩個單元的順序

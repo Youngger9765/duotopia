@@ -3,8 +3,6 @@ Comprehensive tests for routers/teachers.py
 Testing all endpoints and error conditions to improve coverage from 51% to 90%+
 """
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 from models import Teacher, Classroom, Student, ClassroomStudent, Program, ProgramLevel
 from auth import get_password_hash, create_access_token
 from datetime import datetime, timedelta  # noqa: F401

@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from main import app
-from models import Student, Classroom, Teacher, ClassroomStudent
+from models import Student, Classroom, ClassroomStudent
 from auth import create_access_token
 import json  # noqa: F401
 
@@ -225,7 +225,6 @@ class TestErrorHandling:
 
     def test_concurrent_requests(self, student_token: str):
         """Test handling multiple concurrent requests"""
-        import threading
         import concurrent.futures
 
         def make_request():

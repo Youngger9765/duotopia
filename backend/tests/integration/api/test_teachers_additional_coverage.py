@@ -375,7 +375,7 @@ class TestAuthorizationAndErrors:
 
     def test_expired_token(self):
         """Test accessing with expired token"""
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         expired_token = create_access_token(
             {"sub": "1", "type": "teacher"},
