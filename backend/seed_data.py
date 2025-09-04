@@ -666,15 +666,19 @@ def create_demo_data(db: Session):
             student_assignment_id=student_assignment1.id,
             content_id=content1_5a.id,
             status=student_data["status"],
-            score=student_data.get("score")
-            if student_data["status"] == AssignmentStatus.GRADED
-            else None,
+            score=(
+                student_data.get("score")
+                if student_data["status"] == AssignmentStatus.GRADED
+                else None
+            ),
             order_index=1,
             is_locked=False,
             checked=True if student_data["status"] == AssignmentStatus.GRADED else None,
-            feedback=student_data.get("feedback")
-            if student_data["status"] == AssignmentStatus.GRADED
-            else None,
+            feedback=(
+                student_data.get("feedback")
+                if student_data["status"] == AssignmentStatus.GRADED
+                else None
+            ),
         )
 
         if student_data["status"] in [

@@ -41,7 +41,7 @@ import { cn } from '@/lib/utils';
 interface Student {
   id: number;
   name: string;
-  email: string;
+  email?: string; // Make email optional to match global Student type
 }
 
 interface Content {

@@ -199,6 +199,7 @@ describe('StudentLogin', () => {
     const mockStudents = [{ id: 1, name: 'Alice', email: 'alice@student.com' }]
     const mockLoginResponse = {
       access_token: 'student-token',
+      token_type: 'bearer',
       user: { id: 1, name: 'Alice', email: 'alice@student.com' },
     }
 

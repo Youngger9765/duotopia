@@ -20,6 +20,34 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { Assignment } from "@/types";
+
+interface AssignmentInfo extends Assignment {
+  title: string;
+}
+
+interface StudentInfo {
+  student_id: number;
+  student_name: string;
+  status: string;
+}
+
+interface StudentsResponse {
+  students: StudentInfo[];
+}
+
+interface SubmissionItem {
+  question_text: string;
+  question_translation?: string;
+  audio_url?: string;  // 學生的錄音
+  question_audio_url?: string;  // 題目的參考錄音
+  student_answer?: string;
+  transcript?: string;
+  duration?: number;
+  content_title?: string;
+  feedback?: string;
+  passed?: boolean | null;
+}
 
 interface StudentSubmission {
   student_id: number;
@@ -28,29 +56,12 @@ interface StudentSubmission {
   status: string;
   submitted_at?: string;
   content_type: string;
-  submissions: Array<{
-    question_text: string;
-    question_translation?: string;
-    audio_url?: string;  // 學生的錄音
-    question_audio_url?: string;  // 題目的參考錄音
-    student_answer?: string;
-    transcript?: string;
-    duration?: number;
-    content_title?: string;
-  }>;
+  submissions: SubmissionItem[];
   content_groups?: Array<{
     content_id: number;
     content_title: string;
     content_type?: string;
-    submissions: Array<{
-      question_text: string;
-      question_translation?: string;
-      audio_url?: string;  // 學生的錄音
-      question_audio_url?: string;  // 題目的參考錄音
-      student_answer?: string;
-      transcript?: string;
-      duration?: number;
-    }>;
+    submissions: SubmissionItem[];
   }>;
   current_score?: number;
   current_feedback?: string;
@@ -135,7 +146,7 @@ export default function GradingPage() {
     try {
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}`,
-      );
+      ) as AssignmentInfo;
       setAssignmentTitle(response.title || `作業 #${assignmentId}`);
     } catch (error) {
       console.error("Failed to load assignment info:", error);
@@ -147,7 +158,7 @@ export default function GradingPage() {
       // 載入此作業的所有學生
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
-      );
+      ) as StudentsResponse;
       setStudentList(response.students || []);
     } catch (error) {
       console.error("Failed to load student list:", error);
@@ -165,7 +176,7 @@ export default function GradingPage() {
       setLoading(true);
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/submissions/${studentId}`,
-      );
+      ) as StudentSubmission;
 
       setSubmission(response);
 
@@ -188,7 +199,7 @@ export default function GradingPage() {
           if (sub.feedback || sub.passed !== null) {
             loadedFeedbacks[index] = {
               feedback: sub.feedback || "",
-              passed: sub.passed
+              passed: sub.passed ?? null
             };
           }
         });
@@ -411,7 +422,7 @@ export default function GradingPage() {
       ));
 
       // 重新載入提交資料
-      await loadSubmission(parseInt(studentId!));
+      await loadSubmission();
     } catch (error) {
       console.error("Failed to set in progress:", error);
       toast.error("設定批改中失敗，請稍後再試");
@@ -446,7 +457,7 @@ export default function GradingPage() {
       ));
 
       // 重新載入提交資料
-      await loadSubmission(parseInt(studentId!));
+      await loadSubmission();
     } catch (error) {
       console.error("Failed to request revision:", error);
       toast.error("要求訂正失敗，請稍後再試");
@@ -530,6 +541,7 @@ export default function GradingPage() {
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
+        const totalQuestions = getTotalQuestions();
         if (selectedItemIndex < totalQuestions - 1) {
           // 切換前自動儲存
           await handleAutoSave();
@@ -542,7 +554,32 @@ export default function GradingPage() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [selectedItemIndex, submission, handleAutoSave]);
 
-  const currentItem = submission?.submissions?.[selectedItemIndex];
+  // Get current item from either structure
+  const getCurrentItem = () => {
+    if (submission?.content_groups && submission.content_groups.length > 0) {
+      let currentIndex = 0;
+      for (const group of submission.content_groups) {
+        if (selectedItemIndex < currentIndex + group.submissions.length) {
+          return group.submissions[selectedItemIndex - currentIndex];
+        }
+        currentIndex += group.submissions.length;
+      }
+      return null;
+    }
+    return submission?.submissions?.[selectedItemIndex] || null;
+  };
+
+  const currentItem = getCurrentItem();
+
+  // Get total questions count from either structure
+  const getTotalQuestions = () => {
+    if (submission?.content_groups && submission.content_groups.length > 0) {
+      return submission.content_groups.reduce((sum, group) => sum + group.submissions.length, 0);
+    }
+    return submission?.submissions?.length || 0;
+  };
+
+  const totalQuestions = getTotalQuestions();
 
   if (loading) {
     return (
@@ -687,7 +724,7 @@ export default function GradingPage() {
                               <h5 className="text-sm font-semibold text-gray-700">
                                 題目 {selectedItemIndex + 1}
                               </h5>
-                              {currentItem.content_title && (
+                              {currentItem && currentItem.content_title && (
                                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                                   {currentItem.content_title}
                                 </span>
@@ -938,11 +975,7 @@ export default function GradingPage() {
 
                                 <span className="text-xs text-gray-500">
                                   {selectedItemIndex + 1} /{" "}
-                                  {submission?.content_groups?.reduce(
-                                    (sum, group) =>
-                                      sum + group.submissions.length,
-                                    0,
-                                  ) || 0}
+                                  {totalQuestions}
                                 </span>
 
                                 <Button
@@ -952,12 +985,7 @@ export default function GradingPage() {
                                     // 切換前自動儲存
                                     await handleAutoSave();
                                     // 計算下一題的索引
-                                    const totalQuestions =
-                                      submission?.content_groups?.reduce(
-                                        (sum, group) =>
-                                          sum + group.submissions.length,
-                                        0,
-                                      ) || 0;
+                                    const totalQuestions = getTotalQuestions();
                                     if (
                                       selectedItemIndex <
                                       totalQuestions - 1
@@ -969,12 +997,7 @@ export default function GradingPage() {
                                   }}
                                   disabled={
                                     selectedItemIndex >=
-                                    (submission?.content_groups?.reduce(
-                                      (sum, group) =>
-                                        sum + group.submissions.length,
-                                      0,
-                                    ) || 0) -
-                                      1
+                                    totalQuestions - 1
                                   }
                                   className="text-xs"
                                 >
@@ -1150,7 +1173,7 @@ export default function GradingPage() {
                     </label>
                     <div className="p-3 bg-gray-100 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
                       <pre className="whitespace-pre-wrap text-xs text-gray-700 font-mono">
-{submission?.submissions?.map((_item, index) => {
+{Array.from({ length: totalQuestions }).map((_, index) => {
   const result = itemFeedbacks[index];
   return `題目 ${index + 1} ${result?.passed === true ? '✅' : result?.passed === false ? '❌' : '⬜'}: ${result?.feedback || '(尚無評語)'}
 `;

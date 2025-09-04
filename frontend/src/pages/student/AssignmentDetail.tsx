@@ -18,36 +18,13 @@ import {
   ChevronLeft,
   CheckCircle
 } from 'lucide-react';
-
-interface AssignmentContent {
-  id: number;
-  type: string;
-  title: string;
-  items: Array<{
-    text: string;
-    translation?: string;
-    audio_url?: string;
-  }>;
-  target_wpm?: number;
-  target_accuracy?: number;
-}
-
-interface AssignmentDetailData {
-  id: number;
-  title: string;
-  instructions?: string;
-  status: string;
-  due_date?: string;
-  score?: number;
-  feedback?: string;
-  content: AssignmentContent;
-}
+import { AssignmentDetail as AssignmentDetailType } from '@/types';
 
 export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [assignment, setAssignment] = useState<AssignmentDetailData | null>(null);
+  const [assignment, setAssignment] = useState<AssignmentDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -66,7 +43,7 @@ export default function AssignmentDetail() {
   const loadAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/teachers/assignments/${id}/detail`);
+      const response = await apiClient.get(`/api/teachers/assignments/${id}/detail`) as { data: AssignmentDetailType };
       setAssignment(response.data);
     } catch (error) {
       console.error('Failed to load assignment:', error);
@@ -146,7 +123,8 @@ export default function AssignmentDetail() {
     if (!assignment) return;
 
     // 檢查是否所有項目都有錄音
-    const missingRecordings = assignment.content.items.length - recordings.size;
+    const itemsLength = assignment.content.items?.length || 0;
+    const missingRecordings = itemsLength - recordings.size;
     if (missingRecordings > 0) {
       toast.warning(`還有 ${missingRecordings} 個項目未錄音`);
       return;
@@ -162,7 +140,7 @@ export default function AssignmentDetail() {
           item_index: index,
           audio_url: `mock://recording-${index}`, // 實際應上傳到 GCS
           duration: 5, // 實際應計算錄音長度
-          transcript: assignment.content.items[index].text
+          transcript: assignment.content.items?.[index]?.text || ''
         })),
         completed_at: new Date().toISOString()
       };
@@ -204,8 +182,9 @@ export default function AssignmentDetail() {
     );
   }
 
-  const currentItem = assignment.content.items[currentItemIndex];
-  const progress = ((currentItemIndex + 1) / assignment.content.items.length) * 100;
+  const currentItem = assignment.content.items?.[currentItemIndex];
+  const itemsLength = assignment.content.items?.length || 0;
+  const progress = itemsLength > 0 ? ((currentItemIndex + 1) / itemsLength) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
@@ -273,7 +252,7 @@ export default function AssignmentDetail() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">進度</span>
             <span className="text-sm font-medium">
-              {currentItemIndex + 1} / {assignment.content.items.length}
+              {currentItemIndex + 1} / {itemsLength}
             </span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -282,12 +261,18 @@ export default function AssignmentDetail() {
         {/* Recording Card */}
         <Card className="mb-6">
           <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold mb-2">{currentItem.text}</h3>
-              {currentItem.translation && (
-                <p className="text-gray-600">{currentItem.translation}</p>
-              )}
-            </div>
+            {currentItem ? (
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold mb-2">{currentItem.text}</h3>
+                {currentItem.translation && (
+                  <p className="text-gray-600">{currentItem.translation}</p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold mb-2">無內容項目</h3>
+              </div>
+            )}
 
             {/* Recording Controls */}
             <div className="flex justify-center gap-4 mb-6">
@@ -358,11 +343,11 @@ export default function AssignmentDetail() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              已錄音: {recordings.size} / {assignment.content.items.length}
+              已錄音: {recordings.size} / {itemsLength}
             </p>
           </div>
 
-          {currentItemIndex < assignment.content.items.length - 1 ? (
+          {currentItemIndex < itemsLength - 1 ? (
             <Button
               onClick={() => setCurrentItemIndex(prev => prev + 1)}
               disabled={!recordings.has(currentItemIndex)}
@@ -372,7 +357,7 @@ export default function AssignmentDetail() {
           ) : (
             <Button
               onClick={submitAssignment}
-              disabled={recordings.size !== assignment.content.items.length || submitting}
+              disabled={recordings.size !== itemsLength || submitting}
               className="bg-green-600 hover:bg-green-700"
             >
               <Send className="h-4 w-4 mr-2" />

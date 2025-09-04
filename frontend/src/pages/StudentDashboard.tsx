@@ -15,21 +15,7 @@ import {
   ChevronRight,
   Calendar
 } from 'lucide-react';
-
-interface Assignment {
-  id: number;
-  title: string;
-  content_id: number;
-  content?: {
-    type: string;
-    title: string;
-  };
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'RETURNED';
-  due_date?: string;
-  score?: number;
-  instructions?: string;
-  created_at: string;
-}
+import { Assignment } from '@/types';
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -53,7 +39,7 @@ export default function StudentDashboard() {
 
   const loadAssignments = async () => {
     try {
-      const response = await apiClient.get('/api/teachers/assignments/student');
+      const response = await apiClient.get('/api/teachers/assignments/student') as { data: Assignment[] };
       setAssignments(response.data);
     } catch (error) {
       console.error('Failed to load assignments:', error);
@@ -232,8 +218,8 @@ export default function StudentDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold">{assignment.title}</h3>
-                      <Badge className={getStatusColor(assignment.status)}>
-                        {getStatusText(assignment.status)}
+                      <Badge className={getStatusColor(assignment.status || '')}>
+                        {getStatusText(assignment.status || '')}
                       </Badge>
                       {assignment.content && (
                         <span className="text-xs text-gray-500">

@@ -234,12 +234,16 @@ async def preview_unassign(
             "student_id": student_id,
             "student_name": student.name if student else f"Student {student_id}",
             "status": student_assignment.status.value,
-            "started_at": student_assignment.started_at.isoformat()
-            if student_assignment.started_at
-            else None,
-            "submitted_at": student_assignment.submitted_at.isoformat()
-            if student_assignment.submitted_at
-            else None,
+            "started_at": (
+                student_assignment.started_at.isoformat()
+                if student_assignment.started_at
+                else None
+            ),
+            "submitted_at": (
+                student_assignment.submitted_at.isoformat()
+                if student_assignment.submitted_at
+                else None
+            ),
         }
 
         if student_assignment.status == AssignmentStatus.NOT_STARTED:

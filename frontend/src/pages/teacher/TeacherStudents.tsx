@@ -7,12 +7,12 @@ import { ClassroomAssignDialog } from '@/components/ClassroomAssignDialog';
 import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download, School, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
+import { Classroom } from '@/types';
 
-interface Classroom {
-  id: number;
-  name: string;
-  students: Student[];
-}
+// Extended classroom interface for this page (if needed in future)
+// interface ClassroomWithStudents extends Classroom {
+//   students: Student[];
+// }
 
 export default function TeacherStudents() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -47,21 +47,40 @@ export default function TeacherStudents() {
         classroom_id?: number;
       }>;
 
+      // Define extended student API response type
+      interface ExtendedStudentResponse {
+        id: number;
+        name: string;
+        email: string;
+        student_id?: string;
+        classroom?: {id: number; name: string};
+        classroom_id?: number;
+        birthdate?: string;
+        phone?: string;
+        password_changed?: boolean;
+        enrollment_date?: string;
+        status?: 'active' | 'inactive' | 'suspended';
+        last_login?: string | null;
+        classroom_name?: string;
+      }
+
       // Format students data
-      const studentsWithDetails = studentsData.map((student) => ({
-        id: student.id,
-        name: student.name,
-        email: student.email,
-        student_id: student.student_id || '',
-        birthdate: student.birthdate || '',
-        phone: student.phone || '',
-        password_changed: student.password_changed || false,
-        enrollment_date: student.enrollment_date || '',
-        status: student.status || 'active' as const,
-        last_login: student.last_login || null,
-        classroom_id: student.classroom_id,
-        classroom_name: student.classroom_name || '未分配',
-      }));
+      const studentsWithDetails = studentsData.map((student: ExtendedStudentResponse) => {
+        return {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          student_id: student.student_id || '',
+          birthdate: student.birthdate || '',
+          phone: student.phone || '',
+          password_changed: student.password_changed || false,
+          enrollment_date: student.enrollment_date || '',
+          status: student.status || 'active' as const,
+          last_login: student.last_login || null,
+          classroom_id: student.classroom_id,
+          classroom_name: student.classroom_name || '未分配',
+        };
+      });
 
       setAllStudents(studentsWithDetails);
     } catch (err) {
@@ -91,7 +110,7 @@ export default function TeacherStudents() {
 
       const matchesSearch = !searchTerm ||
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase());
+        (student.email || '').toLowerCase().includes(searchTerm.toLowerCase());
       return matchesClassroom && matchesSearch;
     })
     .sort((a, b) => a.id - b.id); // 按 ID 排序

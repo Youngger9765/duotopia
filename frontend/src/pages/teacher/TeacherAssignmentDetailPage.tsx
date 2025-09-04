@@ -23,30 +23,14 @@ import {
   ChevronRight,
   Search
 } from 'lucide-react';
+import { Student, Assignment } from '@/types';
 
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  student_number?: string;
-}
-
-interface AssignmentDetail {
-  id: number;
-  title: string;
-  instructions?: string;
+// Extended assignment interface for this specific page
+interface AssignmentDetail extends Assignment {
   content_type: string;
   content_id: number;
-  due_date?: string;
-  assigned_at?: string;
   assigned_date?: string; // Alternative field name
-  created_at?: string; // Another alternative
-  classroom_id: number;
-  student_ids?: number[];
   students?: number[]; // Alternative field name
-  status?: string;
-  completion_rate?: number;
-  student_count?: number;
   content?: {
     title: string;
     type: string;
@@ -133,11 +117,9 @@ export default function TeacherAssignmentDetailPage() {
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
 
       // Extract student IDs from students_progress
-      let studentIds = [];
+      let studentIds: number[] = [];
       if (response.students_progress && Array.isArray(response.students_progress)) {
         studentIds = response.students_progress.map((sp) => sp.student_id).filter((id) => id !== null);
-      } else if (response.student_ids && Array.isArray(response.student_ids)) {
-        studentIds = response.student_ids;
       } else if (response.students && Array.isArray(response.students)) {
         studentIds = response.students;
       }
@@ -145,16 +127,16 @@ export default function TeacherAssignmentDetailPage() {
       const assignmentData = {
         ...response,
         assigned_at: assignedDate,
-        student_ids: studentIds,
+        students: studentIds,
         student_count: studentIds.length,
-        instructions: response.description || response.instructions, // API returns 'description'
+        instructions: (response as AssignmentDetail & {description?: string}).description || response.instructions, // API returns 'description'
       };
 
 
       setAssignment(assignmentData);
       setEditingData({
         title: response.title,
-        instructions: response.description || response.instructions,
+        instructions: (response as AssignmentDetail & {description?: string}).description || response.instructions,
         due_date: response.due_date ? response.due_date.split('T')[0] : ''
       });
     } catch (error) {
@@ -170,7 +152,7 @@ export default function TeacherAssignmentDetailPage() {
         due_date: '2025-09-30',
         assigned_at: new Date().toISOString(),
         classroom_id: Number(classroomId),
-        student_ids: [1, 2], // Mock 2 assigned students
+        students: [1, 2], // Mock 2 assigned students
         student_count: 2,
         completion_rate: 0
       };
@@ -207,16 +189,34 @@ export default function TeacherAssignmentDetailPage() {
       }
 
       // Handle both array and object responses
-      const progressArray = Array.isArray(response) ? response : response.data || [];
+      const progressArray = Array.isArray(response) ? response : (response as {data?: unknown[]}).data || [];
 
       // Get assigned student IDs from assignment
-      const assignedIds = assignment?.student_ids || assignment?.students || [];
+      const assignedIds = assignment?.students || [];
 
       // If we have progress data from API
       if (progressArray.length > 0) {
         // Create a map of progress data
         const progressMap = new Map();
-        progressArray.forEach((item: {student_id?: number; id?: number; student_name?: string; name?: string; status?: string; submission_date?: string; submitted_at?: string; score?: number; grading?: {score?: number}; feedback?: string}) => {
+
+        interface ProgressItem {
+          student_id?: number;
+          id?: number;
+          student_name?: string;
+          name?: string;
+          status?: string;
+          submission_date?: string;
+          submitted_at?: string;
+          score?: number;
+          grading?: {score?: number};
+          feedback?: string;
+          attempts?: number;
+          last_activity?: string;
+          updated_at?: string;
+          timestamps?: StudentProgress['timestamps'];
+        }
+
+        progressArray.forEach((item: ProgressItem) => {
           const studentId = item.student_id || item.id;
           progressMap.set(studentId, {
             student_id: studentId,
@@ -274,7 +274,7 @@ export default function TeacherAssignmentDetailPage() {
     // Show all classroom students
 
     if (students && students.length > 0) {
-      const assignedIds = assignment?.student_ids || [];
+      const assignedIds = assignment?.students || [];
 
       const mockProgress = students.map(student => {
         const isAssigned = assignedIds.includes(student.id);
@@ -319,7 +319,6 @@ export default function TeacherAssignmentDetailPage() {
           ...assignment,
           title: updateData.title,
           instructions: updateData.instructions,
-          description: updateData.instructions, // Also update description field
           due_date: updateData.due_date
         });
       }
@@ -344,19 +343,19 @@ export default function TeacherAssignmentDetailPage() {
   const handleAssignStudent = async (studentId: number) => {
     try {
       // Get current assigned students
-      const currentAssignedIds = assignment?.student_ids || [];
+      const currentAssignedIds = assignment?.students || [];
       const updatedStudentIds = [...currentAssignedIds, studentId];
 
       // Update assignment with new student list
       await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, {
-        student_ids: updatedStudentIds
+        students: updatedStudentIds
       });
 
       // Update local state
       if (assignment) {
         setAssignment({
           ...assignment,
-          student_ids: updatedStudentIds,
+          students: updatedStudentIds,
           student_count: updatedStudentIds.length
         });
       }
@@ -391,23 +390,30 @@ export default function TeacherAssignmentDetailPage() {
 
       // Call unassign API
       const response = await apiClient.post(`/api/teachers/assignments/${assignmentId}/unassign`, {
-        student_ids: [studentId],
+        students: [studentId],
         force: status === 'in_progress'
       });
 
-      if (response && 'protected' in response && response.protected && Array.isArray(response.protected) && response.protected.length > 0) {
-        toast.warning(response.protected[0].reason);
-        return;
+      interface UnassignResponse {
+        protected?: Array<{reason: string}>;
+      }
+
+      if (response && typeof response === 'object' && 'protected' in response) {
+        const typedResponse = response as UnassignResponse;
+        if (typedResponse.protected && Array.isArray(typedResponse.protected) && typedResponse.protected.length > 0) {
+          toast.warning(typedResponse.protected[0].reason);
+          return;
+        }
       }
 
       // Update local state
-      const currentAssignedIds = assignment?.student_ids || [];
-      const updatedStudentIds = currentAssignedIds.filter(id => id !== studentId);
+      const currentAssignedIds = assignment?.students || [];
+      const updatedStudentIds = currentAssignedIds.filter((id: number) => id !== studentId);
 
       if (assignment) {
         setAssignment({
           ...assignment,
-          student_ids: updatedStudentIds,
+          students: updatedStudentIds,
           student_count: updatedStudentIds.length
         });
       }
@@ -591,7 +597,7 @@ export default function TeacherAssignmentDetailPage() {
                 <span>
                   {(() => {
                     // Priority: actual assigned students count
-                    const assignedStudentIds = assignment.student_ids || assignment.students || [];
+                    const assignedStudentIds = assignment.students || [];
                     const assignedProgressCount = studentProgress.filter(p => p.status !== 'unassigned').length;
 
                     // Use assignment data first, then fall back to progress data

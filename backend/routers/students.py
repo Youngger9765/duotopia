@@ -153,18 +153,22 @@ async def get_student_assignments(
             {
                 "id": assignment.id,
                 "title": assignment.title,
-                "status": assignment.status.value
-                if assignment.status
-                else "not_started",
-                "due_date": assignment.due_date.isoformat()
-                if assignment.due_date
-                else None,
-                "assigned_at": assignment.assigned_at.isoformat()
-                if assignment.assigned_at
-                else None,
-                "submitted_at": assignment.submitted_at.isoformat()
-                if assignment.submitted_at
-                else None,
+                "status": (
+                    assignment.status.value if assignment.status else "not_started"
+                ),
+                "due_date": (
+                    assignment.due_date.isoformat() if assignment.due_date else None
+                ),
+                "assigned_at": (
+                    assignment.assigned_at.isoformat()
+                    if assignment.assigned_at
+                    else None
+                ),
+                "submitted_at": (
+                    assignment.submitted_at.isoformat()
+                    if assignment.submitted_at
+                    else None
+                ),
                 "content_id": assignment.content_id,
                 "classroom_id": assignment.classroom_id,
                 "score": assignment.score,

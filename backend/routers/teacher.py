@@ -248,9 +248,9 @@ async def get_teacher_programs(
                 description=program.description,
                 level=program.level.value if program.level else "A1",
                 classroom_id=program.classroom_id,
-                classroom_name=program.classroom.name
-                if program.classroom
-                else "Unknown",
+                classroom_name=(
+                    program.classroom.name if program.classroom else "Unknown"
+                ),
                 estimated_hours=program.estimated_hours,
                 lesson_count=len(program.lessons),
             )

@@ -15,7 +15,7 @@ import { Edit, Users, Plus, Eye, RotateCcw, Trash2, Copy, CheckSquare, Square } 
 export interface Student {
   id: number;
   name: string;
-  email: string;
+  email?: string; // Make email optional to match global Student type
   student_id?: string;
   birthdate?: string;
   password_changed?: boolean;
@@ -231,7 +231,7 @@ export default function StudentTable({
                         size="sm"
                         title={`複製密碼: ${student.birthdate?.replace(/-/g, '')}`}
                         onClick={() => {
-                          const password = student.birthdate.replace(/-/g, '');
+                          const password = student.birthdate?.replace(/-/g, '') || '';
                           navigator.clipboard.writeText(password);
                           toast.success(`密碼已複製`);
                         }}

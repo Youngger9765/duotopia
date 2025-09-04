@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
+import { useStudentAuthStore, StudentUser } from '@/stores/studentAuthStore';
 import { authService } from '@/services/authService';
 import { teacherService } from '@/services/teacherService';
 
@@ -126,7 +126,13 @@ export default function StudentLogin() {
       });
 
       if (response.access_token) {
-        login(response.access_token, response.user);
+        login(response.access_token, {
+          ...response.user,
+          student_id: response.user.id.toString(),
+          classroom_id: selectedClassroom?.id || 0,
+          classroom_name: selectedClassroom?.name,
+          teacher_name: teacherHistory.find(t => t.email === teacherEmail)?.name
+        } as StudentUser);
         navigate('/student/dashboard');
       }
     } catch {

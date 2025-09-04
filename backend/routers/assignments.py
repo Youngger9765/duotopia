@@ -428,12 +428,12 @@ async def get_assignments(
                 "classroom_id": assignment.classroom_id,
                 "content_count": content_count,
                 "student_count": total_students,
-                "due_date": assignment.due_date.isoformat()
-                if assignment.due_date
-                else None,
-                "created_at": assignment.created_at.isoformat()
-                if assignment.created_at
-                else None,
+                "due_date": (
+                    assignment.due_date.isoformat() if assignment.due_date else None
+                ),
+                "created_at": (
+                    assignment.created_at.isoformat() if assignment.created_at else None
+                ),
                 "completion_rate": completion_rate,
                 "status_distribution": status_counts,
             }
@@ -745,15 +745,19 @@ async def get_student_assignments(
                 "title": assignment.title,
                 "instructions": assignment.instructions,
                 "status": assignment.status.value,
-                "assigned_at": assignment.assigned_at.isoformat()
-                if assignment.assigned_at
-                else None,
-                "due_date": assignment.due_date.isoformat()
-                if assignment.due_date
-                else None,
-                "submitted_at": assignment.submitted_at.isoformat()
-                if assignment.submitted_at
-                else None,
+                "assigned_at": (
+                    assignment.assigned_at.isoformat()
+                    if assignment.assigned_at
+                    else None
+                ),
+                "due_date": (
+                    assignment.due_date.isoformat() if assignment.due_date else None
+                ),
+                "submitted_at": (
+                    assignment.submitted_at.isoformat()
+                    if assignment.submitted_at
+                    else None
+                ),
                 "score": assignment.score,
                 "feedback": assignment.feedback,
                 "time_remaining": time_remaining,
@@ -762,9 +766,11 @@ async def get_student_assignments(
                     {
                         "id": content.id,
                         "title": content.title,
-                        "type": content.type.value
-                        if hasattr(content.type, "value")
-                        else str(content.type),
+                        "type": (
+                            content.type.value
+                            if hasattr(content.type, "value")
+                            else str(content.type)
+                        ),
                         "items_count": len(content.items) if content.items else 0,
                     }
                     if content
@@ -822,9 +828,11 @@ async def get_assignment_detail(
                 {
                     "id": content.id,
                     "title": content.title,
-                    "type": content.type.value
-                    if hasattr(content.type, "value")
-                    else str(content.type),
+                    "type": (
+                        content.type.value
+                        if hasattr(content.type, "value")
+                        else str(content.type)
+                    ),
                     "order_index": ac.order_index,
                 }
             )
@@ -863,14 +871,16 @@ async def get_assignment_detail(
                     {
                         "content_id": content["id"],
                         "content_title": content["title"],
-                        "status": progress.status.value
-                        if progress.status
-                        else "NOT_STARTED",
+                        "status": (
+                            progress.status.value if progress.status else "NOT_STARTED"
+                        ),
                         "score": progress.score,
                         "checked": progress.checked,
-                        "completed_at": progress.completed_at.isoformat()
-                        if progress.completed_at
-                        else None,
+                        "completed_at": (
+                            progress.completed_at.isoformat()
+                            if progress.completed_at
+                            else None
+                        ),
                     }
                 )
 
@@ -879,9 +889,9 @@ async def get_assignment_detail(
                 "student_id": student.id if student else None,
                 "student_name": student.name if student else "Unknown",
                 "overall_status": sa.status.value if sa.status else "NOT_STARTED",
-                "submitted_at": sa.submitted_at.isoformat()
-                if sa.submitted_at
-                else None,
+                "submitted_at": (
+                    sa.submitted_at.isoformat() if sa.submitted_at else None
+                ),
                 "content_progress": content_progress,
             }
         )
@@ -892,9 +902,9 @@ async def get_assignment_detail(
         "description": assignment.description,
         "classroom_id": assignment.classroom_id,
         "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
-        "created_at": assignment.created_at.isoformat()
-        if assignment.created_at
-        else None,
+        "created_at": (
+            assignment.created_at.isoformat() if assignment.created_at else None
+        ),
         "contents": contents,
         "student_ids": student_ids,  # 已指派的學生 IDs
         "students_progress": students_progress,
@@ -952,9 +962,9 @@ async def get_assignment_progress(
                     "student_id": student.id,
                     "student_name": student.name,
                     "status": sa.status.value if sa.status else "NOT_STARTED",
-                    "submission_date": sa.submitted_at.isoformat()
-                    if sa.submitted_at
-                    else None,
+                    "submission_date": (
+                        sa.submitted_at.isoformat() if sa.submitted_at else None
+                    ),
                     "score": sa.score,
                     "attempts": 1 if sa.submitted_at else 0,  # Simple attempt count
                     "last_activity": (
@@ -966,25 +976,25 @@ async def get_assignment_progress(
                     ),
                     # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
                     "timestamps": {
-                        "started_at": sa.started_at.isoformat()
-                        if sa.started_at
-                        else None,
-                        "submitted_at": sa.submitted_at.isoformat()
-                        if sa.submitted_at
-                        else None,
+                        "started_at": (
+                            sa.started_at.isoformat() if sa.started_at else None
+                        ),
+                        "submitted_at": (
+                            sa.submitted_at.isoformat() if sa.submitted_at else None
+                        ),
                         "graded_at": sa.graded_at.isoformat() if sa.graded_at else None,
-                        "returned_at": sa.returned_at.isoformat()
-                        if sa.returned_at
-                        else None,
-                        "resubmitted_at": sa.resubmitted_at.isoformat()
-                        if sa.resubmitted_at
-                        else None,
-                        "created_at": sa.created_at.isoformat()
-                        if sa.created_at
-                        else None,
-                        "updated_at": sa.updated_at.isoformat()
-                        if sa.updated_at
-                        else None,
+                        "returned_at": (
+                            sa.returned_at.isoformat() if sa.returned_at else None
+                        ),
+                        "resubmitted_at": (
+                            sa.resubmitted_at.isoformat() if sa.resubmitted_at else None
+                        ),
+                        "created_at": (
+                            sa.created_at.isoformat() if sa.created_at else None
+                        ),
+                        "updated_at": (
+                            sa.updated_at.isoformat() if sa.updated_at else None
+                        ),
                     },
                 }
             )
@@ -1097,9 +1107,11 @@ async def get_available_contents(
                 id=content.id,
                 lesson_id=content.lesson_id,
                 title=content.title,
-                type=content.type.value
-                if hasattr(content.type, "value")
-                else str(content.type),
+                type=(
+                    content.type.value
+                    if hasattr(content.type, "value")
+                    else str(content.type)
+                ),
                 level=content.level,
                 items_count=items_count,
             )
@@ -1396,9 +1408,9 @@ async def get_assignment_submissions(
                 "student_id": student.id,
                 "student_name": student.name,
                 "status": sub.status.value,
-                "submitted_at": sub.submitted_at.isoformat()
-                if sub.submitted_at
-                else None,
+                "submitted_at": (
+                    sub.submitted_at.isoformat() if sub.submitted_at else None
+                ),
                 "score": sub.score,
                 "feedback": sub.feedback,
                 "content_progress": [
@@ -1535,9 +1547,9 @@ async def get_student_submission(
                 group = {
                     "content_id": content.id,
                     "content_title": content.title,
-                    "content_type": content.type.value
-                    if content.type
-                    else "READING_ASSESSMENT",
+                    "content_type": (
+                        content.type.value if content.type else "READING_ASSESSMENT"
+                    ),
                     "submissions": [],
                 }
 
@@ -1654,9 +1666,9 @@ async def get_student_submission(
         "student_name": student.name,
         "student_email": student.email,
         "status": assignment.status.value,
-        "submitted_at": assignment.submitted_at.isoformat()
-        if assignment.submitted_at
-        else None,
+        "submitted_at": (
+            assignment.submitted_at.isoformat() if assignment.submitted_at else None
+        ),
         "content_type": "SPEAKING_PRACTICE",
         "submissions": submissions,
         "content_groups": content_groups,  # 新增：按 content 分組的資料
@@ -1925,9 +1937,9 @@ async def return_for_revision(
             "assignment_id": assignment.id,
             "student_id": student_id,
             "status": assignment.status.value,
-            "returned_at": assignment.returned_at.isoformat()
-            if assignment.returned_at
-            else None,
+            "returned_at": (
+                assignment.returned_at.isoformat() if assignment.returned_at else None
+            ),
         }
 
     # 更新狀態為 RETURNED（要求訂正）

@@ -69,8 +69,14 @@ def check_migration_file(filepath: str) -> tuple[bool, list[str]]:
             upgrade_content = upgrade_match.group(1)
 
             dangerous_patterns = [
-                (r"drop_table\(", "⚠️  警告: upgrade() 中包含 drop_table - 請確認是否真的要刪除表"),
-                (r"drop_column\(", "⚠️  警告: upgrade() 中包含 drop_column - 請確認是否真的要刪除欄位"),
+                (
+                    r"drop_table\(",
+                    "⚠️  警告: upgrade() 中包含 drop_table - 請確認是否真的要刪除表",
+                ),
+                (
+                    r"drop_column\(",
+                    "⚠️  警告: upgrade() 中包含 drop_column - 請確認是否真的要刪除欄位",
+                ),
                 (
                     r"execute\(.*DELETE",
                     "⚠️  警告: upgrade() 中包含 DELETE 語句 - 請確認是否真的要刪除資料",

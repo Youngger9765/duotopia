@@ -38,7 +38,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
 
   const fetchTeacherProfile = async () => {
     try {
-      const data = await apiClient.getTeacherDashboard();
+      const data = await apiClient.getTeacherDashboard() as { teacher: TeacherProfile };
       setTeacherProfile(data.teacher);
     } catch (err) {
       console.error('Failed to fetch teacher profile:', err);

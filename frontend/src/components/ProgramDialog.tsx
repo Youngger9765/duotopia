@@ -10,15 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
 import { apiClient } from '@/lib/api';
-
-interface Program {
-  id?: number;
-  name: string;
-  description?: string;
-  level?: string;
-  estimated_hours?: number;
-  classroom_id?: number;
-}
+import { Program } from '@/types';
 
 interface ProgramDialogProps {
   program: Program | null;
@@ -29,6 +21,16 @@ interface ProgramDialogProps {
   onDelete?: (programId: number) => void;
 }
 
+// Local form data type that makes id optional for creation
+interface ProgramFormData {
+  id?: number;
+  name: string;
+  description?: string;
+  level?: string;
+  estimated_hours?: number;
+  classroom_id?: number;
+}
+
 export function ProgramDialog({
   program,
   dialogType,
@@ -37,7 +39,7 @@ export function ProgramDialog({
   onSave,
   onDelete
 }: ProgramDialogProps) {
-  const [formData, setFormData] = useState<Program>({
+  const [formData, setFormData] = useState<ProgramFormData>({
     name: '',
     description: '',
     level: 'A1',
@@ -95,7 +97,12 @@ export function ProgramDialog({
           classroom_id: formData.classroom_id || classroomId!,
           estimated_hours: formData.estimated_hours
         });
-        onSave(newProgram as Program);
+        // Ensure the new program has all required Program properties
+        const completeProgram: Program = {
+          ...(newProgram as Program),
+          id: (newProgram as Program)?.id || 0, // Default ID if not provided
+        };
+        onSave(completeProgram);
       } else if (dialogType === 'edit' && program?.id) {
         // For classroom programs, we might need different API endpoint
         // TODO: Check if this is a classroom program update
@@ -105,7 +112,13 @@ export function ProgramDialog({
           level: formData.level,
           estimated_hours: formData.estimated_hours
         });
-        onSave({ ...program, ...formData, id: program.id });
+        // Ensure the updated program has all required Program properties
+        const updatedProgram: Program = {
+          ...program,
+          ...formData,
+          id: program.id,
+        };
+        onSave(updatedProgram);
       }
       onClose();
     } catch (error) {

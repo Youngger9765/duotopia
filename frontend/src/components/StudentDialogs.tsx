@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 export interface Student {
   id: number;
   name: string;
-  email: string;
+  email?: string; // Make email optional to match global Student type
   student_id?: string;
   birthdate?: string;
   password_changed?: boolean;
@@ -111,20 +111,16 @@ export function StudentDialogs({
     try {
       if (dialogType === 'create') {
         // Create new student - ensure required fields are present
-        const createData: Partial<Student> & { classroom_id?: number } = {
+        const createData = {
           name: formData.name || '',
           email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
           birthdate: formData.birthdate || '',
           student_id: formData.student_id,
-          phone: formData.phone
+          phone: formData.phone,
+          classroom_id: formData.classroom_id
         };
 
-        // classroom_id 是可選的，只有在選擇了班級時才傳送
-        if (formData.classroom_id) {
-          createData.classroom_id = formData.classroom_id;
-        }
-
-        const response = await apiClient.createStudent(createData);
+        const response = await apiClient.createStudent(createData) as Record<string, unknown>;
         // 如果有生日，顯示預設密碼
         if (formData.birthdate) {
           const defaultPassword = formData.birthdate.replace(/-/g, '');
@@ -140,19 +136,19 @@ export function StudentDialogs({
         }
         // 只傳遞 Student interface 需要的字段
         const newStudent: Student = {
-          id: response.id,
-          name: response.name,
-          email: response.email,
-          student_id: response.student_id,
-          birthdate: response.birthdate,
-          password_changed: response.password_changed,
-          classroom_id: response.classroom_id,
+          id: response.id as number,
+          name: response.name as string,
+          email: response.email as string,
+          student_id: response.student_id as string | undefined,
+          birthdate: response.birthdate as string | undefined,
+          password_changed: response.password_changed as boolean | undefined,
+          classroom_id: response.classroom_id as number | undefined,
           status: 'active'
         };
         onSave(newStudent);
       } else if (dialogType === 'edit' && student) {
         // Update existing student
-        const response = await apiClient.updateStudent(student.id, formData);
+        const response = await apiClient.updateStudent(student.id, formData) as Record<string, unknown>;
         toast.success(`學生「${student.name}」資料已更新`);
         onSave({ ...student, ...(response as Partial<Student>) });
       }
@@ -163,10 +159,10 @@ export function StudentDialogs({
       // Parse error message
       let errorMessage = '儲存失敗，請稍後再試';
 
-      if (error.message) {
+      if (error && typeof error === 'object' && 'message' in error) {
         try {
           // Try to parse JSON error response
-          const errorData = JSON.parse(error.message);
+          const errorData = JSON.parse((error as Error).message);
 
           // Handle Pydantic validation errors
           if (Array.isArray(errorData.detail)) {
@@ -202,7 +198,7 @@ export function StudentDialogs({
           }
         } catch {
           // If not JSON, use the message directly
-          errorMessage = error.message;
+          errorMessage = (error as Error).message;
         }
       }
 

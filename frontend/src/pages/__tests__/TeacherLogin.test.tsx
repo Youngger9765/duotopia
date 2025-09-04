@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import TeacherLogin from '../TeacherLogin'
-import { apiClient } from '@/lib/api'
+import { apiClient, LoginResponse } from '@/lib/api'
 
 // Mock the API client
 vi.mock('@/lib/api', () => ({
@@ -134,8 +134,8 @@ describe('TeacherLogin', () => {
     const user = userEvent.setup()
 
     // Create a promise that we can control
-    let resolveLogin: (value: any) => void
-    const loginPromise = new Promise((resolve) => {
+    let resolveLogin: (value: LoginResponse) => void
+    const loginPromise = new Promise<LoginResponse>((resolve) => {
       resolveLogin = resolve
     })
 
@@ -253,8 +253,8 @@ describe('TeacherLogin', () => {
     const user = userEvent.setup()
 
     // Create a promise that we can control
-    let resolveLogin: (value: any) => void
-    const loginPromise = new Promise((resolve) => {
+    let resolveLogin: (value: LoginResponse) => void
+    const loginPromise = new Promise<LoginResponse>((resolve) => {
       resolveLogin = resolve
     })
 

@@ -42,7 +42,7 @@ interface TTSModalProps {
   open: boolean;
   onClose: () => void;
   row: ContentRow;
-  onConfirm: (audioUrl: string, settings: { voice?: string; speed?: number }) => void;
+  onConfirm: (audioUrl: string, settings: { accent?: string; gender?: string; speed?: string; source?: string; audioBlob?: Blob | null }) => void;
   contentId?: number;
   itemIndex?: number;
   isCreating?: boolean; // 是否為新增模式
@@ -242,7 +242,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         onConfirm(finalUrl, {
           accent,
           gender,
-          speed: speed.toString(),
+          speed,
           source: selectedSource,
           audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null
         });
@@ -262,7 +262,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed: speed.toString(), source: 'recording' });
+            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
@@ -277,7 +277,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       }
 
       const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
-      onConfirm(finalUrl, { accent, gender, speed: speed.toString(), source: selectedSource });
+      onConfirm(finalUrl, { accent, gender, speed, source: selectedSource });
     } else {
       // 只有一種音源
       const finalAudioUrl = recordedAudio || audioUrl;
@@ -292,7 +292,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         onConfirm(finalAudioUrl, {
           accent,
           gender,
-          speed: speed.toString(),
+          speed,
           source,
           audioBlob: source === 'recording' ? audioBlobRef.current : null
         });
@@ -312,7 +312,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed: speed.toString(), source: 'recording' });
+            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
             onClose();
           } else {
             throw new Error('No audio URL returned');
@@ -327,7 +327,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       }
 
       const source = recordedAudio ? 'recording' : 'tts';
-      onConfirm(finalAudioUrl, { accent, gender, speed: speed.toString(), source });
+      onConfirm(finalAudioUrl, { accent, gender, speed, source });
     }
     onClose();
   };
@@ -596,8 +596,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
 interface ReadingAssessmentPanelProps {
   content?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
   editingContent?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
-  onUpdateContent?: (content: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number }) => void;
-  onSave?: () => void;
+  onUpdateContent?: (content: Record<string, unknown>) => void;
+  onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
   contentId?: number;
@@ -643,7 +643,14 @@ export default function ReadingAssessmentPanel({
 
     setIsLoading(true);
     try {
-      const data = await apiClient.getContentDetail(content.id);
+      const data = await apiClient.getContentDetail(content.id) as {
+        title?: string;
+        items?: Array<{ text?: string; translation?: string; definition?: string; audio_url?: string }>;
+        level?: string;
+        tags?: string[];
+        is_public?: boolean;
+        audio_urls?: string[];
+      };
       setTitle(data.title || '');
 
       // Convert items to rows format
@@ -714,7 +721,7 @@ export default function ReadingAssessmentPanel({
       return;
     }
     // 找出最大的 ID 數字，然後加 1
-    const maxId = Math.max(...rows.map(r => parseInt(r.id) || 0));
+    const maxId = Math.max(...rows.map(r => parseInt(String(r.id)) || 0));
     const newRow: ContentRow = {
       id: (maxId + 1).toString(),
       text: '',
@@ -739,7 +746,7 @@ export default function ReadingAssessmentPanel({
     }
     const rowToCopy = rows[index];
     // 找出最大的 ID 數字，然後加 1
-    const maxId = Math.max(...rows.map(r => parseInt(r.id) || 0));
+    const maxId = Math.max(...rows.map(r => parseInt(String(r.id)) || 0));
     const newRow: ContentRow = {
       ...rowToCopy,
       id: (maxId + 1).toString()
@@ -760,7 +767,7 @@ export default function ReadingAssessmentPanel({
     setTtsModalOpen(true);
   };
 
-  const handleTTSConfirm = async (audioUrl: string, settings: { voice?: string; speed?: number }) => {
+  const handleTTSConfirm = async (audioUrl: string, settings: { accent?: string; gender?: string; speed?: string; source?: string; audioBlob?: Blob | null }) => {
     if (selectedRow) {
       const index = rows.findIndex(r => r.id === selectedRow.id);
       if (index !== -1) {
@@ -769,7 +776,11 @@ export default function ReadingAssessmentPanel({
         newRows[index] = {
           ...newRows[index],
           audioUrl, // 新的音檔會覆蓋舊的
-          audioSettings: settings
+          audioSettings: {
+            accent: settings.accent || 'American English',
+            gender: settings.gender || 'Male',
+            speed: settings.speed || 'Normal x1'
+          }
         };
         setRows(newRows);
 
@@ -797,17 +808,17 @@ export default function ReadingAssessmentPanel({
           // 編輯模式：直接呼叫 API 更新
           try {
             const updateData = {
-              title: title || editingContent.title,
+              title: title || editingContent?.title,
               items,
               level,
               tags
             };
 
             console.log('Updating content with new audio:', audioUrl);
-            await apiClient.updateContent(editingContent.id, updateData);
+            await apiClient.updateContent(editingContent?.id ?? 0, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
-            const response = await apiClient.getContentDetail(editingContent.id);
+            const response = await apiClient.getContentDetail(editingContent?.id ?? 0);
             if (response && response.items) {
               const updatedRows = response.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
                 id: String(index + 1),
@@ -829,7 +840,7 @@ export default function ReadingAssessmentPanel({
                 tags
               });
             }
-          } catch {
+          } catch (error) {
             console.error('Failed to update content:', error);
             toast.error('更新失敗，但音檔已生成');
           }
@@ -864,14 +875,14 @@ export default function ReadingAssessmentPanel({
         '+0%'
       );
 
-      if (result && result.audio_urls) {
+      if (result && typeof result === 'object' && 'audio_urls' in result && Array.isArray(result.audio_urls)) {
         // 更新 rows 的 audioUrl
         const newRows = [...rows];
         let audioIndex = 0;
 
         for (let i = 0; i < newRows.length; i++) {
           if (newRows[i].text && !newRows[i].audioUrl) {
-            const audioUrl = result.audio_urls[audioIndex];
+            const audioUrl = (result as { audio_urls: string[] }).audio_urls[audioIndex];
             // 如果是相對路徑，加上 API base URL
             newRows[i].audioUrl = audioUrl.startsWith('http')
               ? audioUrl
@@ -907,13 +918,13 @@ export default function ReadingAssessmentPanel({
           // 編輯模式：直接呼叫 API 更新
           try {
             const updateData = {
-              title: title || editingContent.title,
+              title: title || editingContent?.title,
               items,
               level,
               tags
             };
 
-            await apiClient.updateContent(editingContent.id, updateData);
+            await apiClient.updateContent(editingContent?.id ?? 0, updateData);
 
             // 更新本地狀態
             if (onUpdateContent) {
@@ -927,13 +938,13 @@ export default function ReadingAssessmentPanel({
             }
 
             toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
-          } catch {
+          } catch (error) {
             console.error('Failed to save TTS:', error);
             toast.error('儲存失敗，但音檔已生成');
           }
         }
       }
-    } catch {
+    } catch (error) {
       console.error('Batch TTS generation failed:', error);
       toast.error('批次生成失敗，請重試');
     }
@@ -951,12 +962,12 @@ export default function ReadingAssessmentPanel({
       const response = await apiClient.translateText(
         newRows[index].text,
         translationType === 'chinese' ? 'zh-TW' : 'en'
-      );
+      ) as { translation: string };
 
       newRows[index].definition = response.translation;
       setRows(newRows);
       toast.success('翻譯生成完成');
-    } catch {
+    } catch (error) {
       console.error('Translation error:', error);
       toast.error('翻譯失敗，請稍後再試');
     }
@@ -987,14 +998,14 @@ export default function ReadingAssessmentPanel({
 
       for (let i = 0; i < newRows.length; i++) {
         if (newRows[i].text && !newRows[i].definition) {
-          newRows[i].definition = response.translations[translationIndex];
+          newRows[i].definition = (response as { translations: string[] }).translations[translationIndex];
           translationIndex++;
         }
       }
 
       setRows(newRows);
       toast.success('批次翻譯生成完成');
-    } catch {
+    } catch (error) {
       console.error('Batch translation error:', error);
       toast.error('批次翻譯失敗，請稍後再試');
     }
@@ -1287,13 +1298,14 @@ export default function ReadingAssessmentPanel({
               }
 
               // 收集有效的資料
-              const items = validRows.map(row => ({
+              /*const items = validRows.map(row => ({
                 text: row.text.trim(),
                 translation: row.definition.trim(),
                 audio_url: row.audioUrl || ''
-              }));
+              }));*/
 
-              const contentData = {
+              // Prepare content data for callback
+            /*const contentData = {
                 title,
                 items,
                 level,
@@ -1302,11 +1314,11 @@ export default function ReadingAssessmentPanel({
                 target_accuracy: 0.8,
                 time_limit_seconds: 180,
                 is_public: isPublic
-              };
+              };*/
 
               // 呼叫 onSave 並傳遞資料
               if (onSave) {
-                await onSave(contentData);
+                await onSave();
               }
             }}
           >
