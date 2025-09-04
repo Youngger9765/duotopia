@@ -6,7 +6,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 import sys
 
 BASE_URL = "http://localhost:8000/api"
@@ -69,7 +69,7 @@ def test_student_soft_deletion():
     test_student = next((s for s in students if s["id"] == student_id), None)
 
     if not test_student:
-        print(f"❌ 新建學生未出現在列表中")
+        print("❌ 新建學生未出現在列表中")
         assert False, "Test failed"
 
     print(f"✅ 確認學生出現在列表中 - 狀態: {test_student['status']}")
@@ -85,7 +85,7 @@ def test_student_soft_deletion():
         print(f"❌ 刪除學生失敗: {response.status_code} - {response.text}")
         assert False, "Test failed"
 
-    print(f"✅ 刪除學生成功")
+    print("✅ 刪除學生成功")
 
     # 4. 確認學生不再出現在列表中
     print("\n4. 確認學生不再出現在列表中...")
@@ -103,21 +103,21 @@ def test_student_soft_deletion():
         assert False, "Test failed"
 
     student_count_after = len(students_after)
-    print(f"✅ 確認學生已從列表中移除")
+    print("✅ 確認學生已從列表中移除")
     print(f"   刪除前學生數: {student_count_before}")
     print(f"   刪除後學生數: {student_count_after}")
 
     # 5. 嘗試直接存取被刪除的學生
-    print(f"\n5. 嘗試直接存取被刪除的學生...")
+    print("\n5. 嘗試直接存取被刪除的學生...")
     response = requests.get(
         f"{BASE_URL}/teachers/students/{student_id}", headers=headers
     )
 
     # 被軟刪除的學生應該返回 404 或不可存取
     if response.status_code == 404:
-        print(f"✅ 被刪除學生正確返回 404")
+        print("✅ 被刪除學生正確返回 404")
     elif response.status_code == 403:
-        print(f"✅ 被刪除學生正確返回 403 (無權限)")
+        print("✅ 被刪除學生正確返回 403 (無權限)")
     else:
         print(f"⚠️  被刪除學生返回狀態碼: {response.status_code}")
         # 這可能需要根據實際業務邏輯調整
@@ -127,7 +127,7 @@ def test_student_soft_deletion():
     response = requests.delete(f"{BASE_URL}/teachers/students/99999", headers=headers)
 
     if response.status_code == 404:
-        print(f"✅ 刪除不存在學生正確返回 404")
+        print("✅ 刪除不存在學生正確返回 404")
     else:
         print(f"❌ 刪除不存在學生返回: {response.status_code}")
         assert False, "Test failed"
@@ -189,7 +189,7 @@ def test_student_with_classroom_deletion():
     print(f"✅ 建立學生成功 - ID: {student_id}, 班級: {student.get('classroom_id')}")
 
     # 3. 刪除有班級的學生
-    print(f"\n3. 刪除有班級的學生...")
+    print("\n3. 刪除有班級的學生...")
     response = requests.delete(
         f"{BASE_URL}/teachers/students/{student_id}", headers=headers
     )
@@ -198,7 +198,7 @@ def test_student_with_classroom_deletion():
         print(f"❌ 刪除學生失敗: {response.status_code}")
         assert False, "Test failed"
 
-    print(f"✅ 刪除有班級的學生成功")
+    print("✅ 刪除有班級的學生成功")
 
     # 4. 確認學生從列表中消失
     print("\n4. 確認學生從列表中消失...")
@@ -209,9 +209,9 @@ def test_student_with_classroom_deletion():
         deleted_student = next((s for s in students if s["id"] == student_id), None)
 
         if not deleted_student:
-            print(f"✅ 有班級的學生也正確從列表中消失")
+            print("✅ 有班級的學生也正確從列表中消失")
         else:
-            print(f"❌ 有班級的學生仍在列表中")
+            print("❌ 有班級的學生仍在列表中")
             assert False, "Test failed"
 
     # 清理：刪除測試班級

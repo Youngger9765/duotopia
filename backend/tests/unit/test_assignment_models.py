@@ -4,7 +4,7 @@ Tests model relationships, constraints, and behaviors
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base

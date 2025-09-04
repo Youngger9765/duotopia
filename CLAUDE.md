@@ -4,6 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 最高指導原則：修完要自己去測試過！
 
+## 🔴 絕對禁止使用 --no-verify！
+**永遠不要偷懶！** 所有 pre-commit hooks 的錯誤都必須修復，不能跳過：
+- ❌ **絕對禁止** `git commit --no-verify`
+- ✅ **必須修復** 所有 flake8、ESLint、black 錯誤
+- ✅ **必須通過** 所有 pre-commit 檢查才能 commit
+
 ## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
 
 ### 在執行任何重要操作前，必須按順序檢查：

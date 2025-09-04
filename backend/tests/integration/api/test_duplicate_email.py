@@ -27,7 +27,7 @@ def test_duplicate_email():
     teacher_data = response.json()
     token = teacher_data["access_token"]
     session.headers.update({"Authorization": f"Bearer {token}"})
-    print(f"✅ 教師登入成功")
+    print("✅ 教師登入成功")
 
     # 2. 測試重複的email
     print("\n2. 測試重複的email...")

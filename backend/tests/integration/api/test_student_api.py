@@ -4,7 +4,7 @@ API 測試 - 學生功能
 """
 import requests
 import json
-from typing import Dict, Any
+from typing import Dict, Any  # noqa: F401
 
 # 測試環境配置
 BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"  # 正式環境
@@ -67,7 +67,7 @@ class TestStudentAPI:
             data = response.json()
             self.token = data["access_token"]
             self.headers = {"Authorization": f"Bearer {self.token}"}
-            print(f"✅ 登入成功!")
+            print("✅ 登入成功!")
             return data
         else:
             print(f"❌ 登入失敗: {response.text}")
@@ -105,7 +105,7 @@ class TestStudentAPI:
 
         if response.status_code == 200:
             profile = response.json()
-            print(f"✅ 學生資料:")
+            print("✅ 學生資料:")
             print(f"   姓名: {profile.get('name', 'N/A')}")
             print(f"   班級: {profile.get('classroom_name', 'N/A')}")
             return profile

@@ -5,7 +5,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -28,7 +28,7 @@ def test_422_error():
     teacher_data = response.json()
     token = teacher_data["access_token"]
     session.headers.update({"Authorization": f"Bearer {token}"})
-    print(f"✅ 教師登入成功")
+    print("✅ 教師登入成功")
 
     # 2. 測試有問題的資料
     print("\n2. 測試新增學生（有問題的資料）...")
@@ -78,7 +78,7 @@ def test_422_error():
         print(f"狀態碼: {response.status_code}")
 
         if response.status_code == 422:
-            print(f"422 錯誤詳情:")
+            print("422 錯誤詳情:")
             error_detail = response.json()
             print(json.dumps(error_detail, indent=2, ensure_ascii=False))
         elif response.status_code == 200:

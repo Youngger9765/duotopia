@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from fastapi import UploadFile
 import io
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 import asyncio
 
 from main import app

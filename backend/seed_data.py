@@ -3,7 +3,7 @@ Seed data for Duotopia - 新作業系統架構
 建立完整的 Demo 資料：教師、學生、班級、課程、作業
 覆蓋所有作業系統情境（教師端和學生端）
 """
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta  # noqa: F401
 import random
 from sqlalchemy.orm import Session
 from database import engine

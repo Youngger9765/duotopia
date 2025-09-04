@@ -5,7 +5,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -82,9 +82,9 @@ def test_add_student():
         students = response.json()
         new_student = [s for s in students if s["name"] == "測試學生"]
         if new_student:
-            print(f"✅ 確認學生已加入班級")
+            print("✅ 確認學生已加入班級")
         else:
-            print(f"⚠️  學生未出現在班級列表中")
+            print("⚠️  學生未出現在班級列表中")
 
     return True
 

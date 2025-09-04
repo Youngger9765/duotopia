@@ -4,7 +4,7 @@ Test assignment API functionality with TDD approach
 """
 
 import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone  # noqa: F401
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 

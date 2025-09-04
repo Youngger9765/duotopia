@@ -1,22 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any  # noqa: F401
 from database import get_db
 from models import (
     Student,
     Classroom,
     ClassroomStudent,
     StudentAssignment,
-    AssignmentStatus,
 )
 from auth import (
     create_access_token,
     verify_password,
-    get_password_hash,
     get_current_user,
 )
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime  # noqa: F401
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
@@ -59,8 +57,6 @@ async def validate_student(
 
     # 取得班級資訊 - 需要從 ClassroomStudent 關聯取得
     # TODO: 實作取得學生班級資訊
-    student_class = None
-
     return {
         "access_token": access_token,
         "token_type": "bearer",

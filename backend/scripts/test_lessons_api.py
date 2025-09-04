@@ -31,7 +31,7 @@ if login_response.status_code == 200:
 
         if detail_response.status_code == 200:
             detail = detail_response.json()
-            print(f"  Lessons:")
+            print("  Lessons:")
             for lesson in detail.get("lessons", []):
                 print(f"    - Lesson {lesson['id']}: {lesson['name']}")
                 print(f"      描述: {lesson.get('description', 'N/A')}")

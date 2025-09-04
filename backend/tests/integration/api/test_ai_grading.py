@@ -5,7 +5,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 import tempfile
 import os
 from auth import create_access_token

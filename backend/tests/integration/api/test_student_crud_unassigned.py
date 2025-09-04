@@ -6,7 +6,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 import sys
 
 BASE_URL = "http://localhost:8000/api"
@@ -72,7 +72,7 @@ def test_crud_unassigned_student():
     print(f"✅ 取得學生成功 - 姓名: {student_info['name']}")
 
     # 3. 更新學生資料
-    print(f"\n3. 更新學生資料...")
+    print("\n3. 更新學生資料...")
     update_data = {"name": f"更新的{student_data['name']}", "phone": "0912345678"}
 
     response = requests.put(
@@ -83,10 +83,10 @@ def test_crud_unassigned_student():
         print(f"❌ 更新學生失敗: {response.status_code} - {response.text}")
         assert False, "Test failed"
 
-    print(f"✅ 更新學生成功")
+    print("✅ 更新學生成功")
 
     # 4. 刪除學生
-    print(f"\n4. 刪除學生...")
+    print("\n4. 刪除學生...")
     response = requests.delete(
         f"{BASE_URL}/teachers/students/{student_id}", headers=headers
     )
@@ -95,19 +95,19 @@ def test_crud_unassigned_student():
         print(f"❌ 刪除學生失敗: {response.status_code} - {response.text}")
         assert False, "Test failed"
 
-    print(f"✅ 刪除學生成功")
+    print("✅ 刪除學生成功")
 
     # 5. 確認學生已被軟刪除（is_active = False）
-    print(f"\n5. 確認學生已被軟刪除...")
+    print("\n5. 確認學生已被軟刪除...")
     response = requests.get(f"{BASE_URL}/teachers/students", headers=headers)
 
     if response.status_code == 200:
         all_students = response.json()
         deleted_student = [s for s in all_students if s["id"] == student_id]
         if deleted_student and deleted_student[0].get("status") == "inactive":
-            print(f"✅ 確認學生已被標記為 inactive")
+            print("✅ 確認學生已被標記為 inactive")
         else:
-            print(f"⚠️  學生可能未正確標記為 inactive")
+            print("⚠️  學生可能未正確標記為 inactive")
 
     # Test passed
 
@@ -161,7 +161,7 @@ def test_assign_classroom_after_creation():
     response = requests.get(f"{BASE_URL}/teachers/classrooms", headers=headers)
 
     if response.status_code != 200 or not response.json():
-        print(f"❌ 無法取得班級列表")
+        print("❌ 無法取得班級列表")
         assert False, "Test failed"
 
     classroom_id = response.json()[0]["id"]

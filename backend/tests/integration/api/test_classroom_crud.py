@@ -3,7 +3,7 @@
 import requests
 import json
 import time
-from typing import Dict, Any
+from typing import Dict, Any  # noqa: F401
 
 # API configuration
 API_URL = "http://localhost:8000"
@@ -103,7 +103,7 @@ def test_create_classroom(token: str) -> Dict[str, Any]:
 
     if response.status_code == 200:
         created = response.json()
-        print(f"✅ CREATE /api/teachers/classrooms")
+        print("✅ CREATE /api/teachers/classrooms")
         print(f"  ID: {created['id']}")
         print(f"  Name: {created['name']}")
         print(f"  Level: {created.get('level', 'N/A')}")

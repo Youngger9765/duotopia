@@ -6,7 +6,7 @@
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 import sys
 
 BASE_URL = "http://localhost:8000/api"
@@ -86,14 +86,14 @@ def test_student_classroom_assignment():
     test_student = next((s for s in students if s["id"] == student_id), None)
 
     if not test_student:
-        print(f"❌ 找不到測試學生")
+        print("❌ 找不到測試學生")
         assert False, "Test failed"
 
     if test_student["classroom_name"] != "未分配":
         print(f"❌ 學生應該顯示為未分配，實際: {test_student['classroom_name']}")
         assert False, "Test failed"
 
-    print(f"✅ 確認學生顯示為未分配")
+    print("✅ 確認學生顯示為未分配")
 
     # 4. 分配學生到班級
     print(f"\n4. 分配學生到班級 (班級ID: {classroom_id})...")
@@ -107,7 +107,7 @@ def test_student_classroom_assignment():
         print(f"❌ 分配學生到班級失敗: {response.status_code} - {response.text}")
         assert False, "Test failed"
 
-    print(f"✅ 分配學生到班級成功")
+    print("✅ 分配學生到班級成功")
 
     # 5. 確認學生已分配到班級
     print("\n5. 確認學生已分配到班級...")
@@ -146,7 +146,7 @@ def test_student_classroom_assignment():
     print(f"✅ 建立第二個班級成功 - ID: {classroom2_id}")
 
     # 7. 重新分配學生到第二個班級
-    print(f"\n7. 重新分配學生到第二個班級...")
+    print("\n7. 重新分配學生到第二個班級...")
     update_data = {"classroom_id": classroom2_id}
 
     response = requests.put(
@@ -157,7 +157,7 @@ def test_student_classroom_assignment():
         print(f"❌ 重新分配學生失敗: {response.status_code}")
         assert False, "Test failed"
 
-    print(f"✅ 重新分配學生成功")
+    print("✅ 重新分配學生成功")
 
     # 8. 確認學生已重新分配
     print("\n8. 確認學生已重新分配...")
@@ -170,7 +170,7 @@ def test_student_classroom_assignment():
         if test_student and test_student["classroom_id"] == classroom2_id:
             print(f"✅ 確認學生已重新分配到班級: {test_student['classroom_name']}")
         else:
-            print(f"❌ 學生重新分配失敗")
+            print("❌ 學生重新分配失敗")
             assert False, "Test failed"
 
     # 9. 取消班級分配（設為未分配）
@@ -185,7 +185,7 @@ def test_student_classroom_assignment():
         print(f"❌ 取消班級分配失敗: {response.status_code}")
         assert False, "Test failed"
 
-    print(f"✅ 取消班級分配成功")
+    print("✅ 取消班級分配成功")
 
     # 10. 確認學生回到未分配狀態
     print("\n10. 確認學生回到未分配狀態...")
@@ -196,7 +196,7 @@ def test_student_classroom_assignment():
         test_student = next((s for s in students if s["id"] == student_id), None)
 
         if test_student and test_student["classroom_name"] == "未分配":
-            print(f"✅ 確認學生回到未分配狀態")
+            print("✅ 確認學生回到未分配狀態")
         else:
             print(
                 f"❌ 學生未回到未分配狀態: {test_student['classroom_name'] if test_student else 'None'}"

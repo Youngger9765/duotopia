@@ -16,8 +16,8 @@ from models import (
     ProgramLevel,
 )
 from auth import verify_token, get_password_hash
-from typing import List, Optional, Dict, Any
-from datetime import date
+from typing import List, Optional, Dict, Any  # noqa: F401
+from datetime import date  # noqa: F401
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -143,7 +143,7 @@ async def get_teacher_dashboard(
     # Get program count (programs created by this teacher)
     program_count = (
         db.query(Program)
-        .filter(Program.teacher_id == current_teacher.id, Program.is_active == True)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
         .count()
     )
 
@@ -170,7 +170,7 @@ async def get_teacher_classrooms(
         db.query(Classroom)
         .filter(
             Classroom.teacher_id == current_teacher.id,
-            Classroom.is_active == True,  # Only show active classrooms
+            Classroom.is_active.is_(True),  # Only show active classrooms
         )
         .options(
             selectinload(Classroom.students).selectinload(ClassroomStudent.student)
@@ -183,7 +183,7 @@ async def get_teacher_classrooms(
         db.query(Program.classroom_id, func.count(Program.id).label("count"))
         .filter(
             Program.classroom_id.in_([c.id for c in classrooms]),
-            Program.is_active == True,
+            Program.is_active.is_(True),
         )
         .group_by(Program.classroom_id)
         .all()
@@ -235,7 +235,7 @@ async def get_teacher_programs(
     """取得教師的所有課程"""
     programs = (
         db.query(Program)
-        .filter(Program.teacher_id == current_teacher.id, Program.is_active == True)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
         .options(selectinload(Program.classroom), selectinload(Program.lessons))
         .order_by(Program.order_index)
         .all()
@@ -264,7 +264,7 @@ async def get_teacher_programs(
                 if program.created_at
                 else None,
                 "lesson_count": len(
-                    [l for l in program.lessons if l.is_active]
+                    [lesson for lesson in program.lessons if lesson.is_active]
                 ),  # Count only active lessons
                 "student_count": student_count,  # Real student count
                 "status": "active"
@@ -457,7 +457,7 @@ async def get_all_students(
         .join(Classroom, ClassroomStudent.classroom_id == Classroom.id)
         .filter(
             Classroom.teacher_id == current_teacher.id,
-            Student.is_active == True,  # Only show active students
+            Student.is_active.is_(True),  # Only show active students
         )
         .all()
     )
@@ -468,8 +468,8 @@ async def get_all_students(
         db.query(Student)
         .outerjoin(ClassroomStudent, Student.id == ClassroomStudent.student_id)
         .filter(
-            ClassroomStudent.id == None,
-            Student.is_active == True,  # Only show active students
+            ClassroomStudent.id is None,
+            Student.is_active.is_(True),  # Only show active students
         )
         .all()
     )
@@ -487,7 +487,7 @@ async def get_all_students(
             db.query(ClassroomStudent)
             .filter(
                 ClassroomStudent.student_id == student.id,
-                ClassroomStudent.is_active == True,
+                ClassroomStudent.is_active.is_(True),
             )
             .join(Classroom)
             .filter(Classroom.teacher_id == current_teacher.id)
@@ -644,7 +644,7 @@ async def get_student(
     # First check if student exists and is active
     student = (
         db.query(Student)
-        .filter(Student.id == student_id, Student.is_active == True)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
         .first()
     )
 
@@ -698,7 +698,7 @@ async def update_student(
     # First check if student exists and is active
     student = (
         db.query(Student)
-        .filter(Student.id == student_id, Student.is_active == True)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
         .first()
     )
 
@@ -765,7 +765,7 @@ async def update_student(
             db.query(ClassroomStudent)
             .filter(
                 ClassroomStudent.student_id == student_id,
-                ClassroomStudent.is_active == True,
+                ClassroomStudent.is_active.is_(True),
             )
             .first()
         )
@@ -781,7 +781,7 @@ async def update_student(
                 .filter(
                     Classroom.id == update_data.classroom_id,
                     Classroom.teacher_id == current_teacher.id,
-                    Classroom.is_active == True,
+                    Classroom.is_active.is_(True),
                 )
                 .first()
             )
@@ -818,7 +818,7 @@ async def delete_student(
     # First check if student exists and is active
     student = (
         db.query(Student)
-        .filter(Student.id == student_id, Student.is_active == True)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
         .first()
     )
 
@@ -1332,7 +1332,7 @@ async def delete_lesson(
     # 檢查相關資料
     content_count = (
         db.query(Content)
-        .filter(Content.lesson_id == lesson_id, Content.is_active == True)
+        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
         .count()
     )
 
@@ -1415,7 +1415,7 @@ async def get_lesson_contents(
 
     contents = (
         db.query(Content)
-        .filter(Content.lesson_id == lesson_id, Content.is_active == True)
+        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
         .order_by(Content.order_index)
         .all()
     )
@@ -1506,11 +1506,9 @@ async def get_content_detail(
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
         "time_limit_seconds": content.time_limit_seconds,
-        "level": "A1",  # 可以從 lesson 或 program 獲取
-        "tags": ["public"],  # 可以從其他地方獲取
         "order_index": content.order_index,
         "level": content.level if hasattr(content, "level") else "A1",
-        "tags": content.tags if hasattr(content, "tags") else [],
+        "tags": content.tags if hasattr(content, "tags") else ["public"],
     }
 
 

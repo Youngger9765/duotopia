@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import Teacher, Student
 from auth import verify_password, create_access_token, get_password_hash
-from datetime import timedelta
+from datetime import timedelta  # noqa: F401
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 

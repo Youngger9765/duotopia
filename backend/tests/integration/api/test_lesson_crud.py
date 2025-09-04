@@ -77,7 +77,7 @@ def test_lesson_crud():
             print(f"❌ 更新失敗: {response.text}")
 
     # 4. 建立新 Lesson
-    print(f"\n4. 建立新 Lesson...")
+    print("\n4. 建立新 Lesson...")
     new_lesson_data = {
         "name": "測試單元",
         "description": "這是測試建立的單元",
@@ -97,7 +97,7 @@ def test_lesson_crud():
         print(f"✅ 建立成功: {new_lesson['name']} (ID: {new_lesson_id})")
 
         # 5. 刪除新建的 Lesson（應該成功，因為沒有內容）
-        print(f"\n5. 刪除空的 Lesson...")
+        print("\n5. 刪除空的 Lesson...")
         response = requests.delete(
             f"{BASE_URL}/teachers/lessons/{new_lesson_id}", headers=headers
         )
@@ -113,7 +113,7 @@ def test_lesson_crud():
         print(f"❌ 建立失敗: {response.text}")
 
     # 6. 測試刪除有內容的 Lesson
-    print(f"\n6. 測試刪除有內容的 Lesson...")
+    print("\n6. 測試刪除有內容的 Lesson...")
     # 先找一個有內容的 lesson
     for lesson in lessons:
         response = requests.get(

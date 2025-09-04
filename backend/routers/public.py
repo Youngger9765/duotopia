@@ -5,7 +5,7 @@ Public API endpoints for student login flow
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List, Optional
+from typing import List, Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import Teacher, Classroom, Student, ClassroomStudent
@@ -64,7 +64,7 @@ def get_teacher_classrooms(email: str, db: Session = Depends(get_db)):
     # 獲取該教師的所有班級
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == teacher.id, Classroom.is_active == True)
+        .filter(Classroom.teacher_id == teacher.id, Classroom.is_active.is_(True))
         .all()
     )
 
@@ -92,7 +92,7 @@ def get_classroom_students(classroom_id: int, db: Session = Depends(get_db)):
     # 確認班級存在
     classroom = (
         db.query(Classroom)
-        .filter(Classroom.id == classroom_id, Classroom.is_active == True)
+        .filter(Classroom.id == classroom_id, Classroom.is_active.is_(True))
         .first()
     )
 

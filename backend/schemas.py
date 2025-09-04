@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List, Dict, Any
-from datetime import datetime
+from typing import Optional, List, Dict, Any  # noqa: F401
+from datetime import datetime  # noqa: F401
 from enum import Enum
 
 

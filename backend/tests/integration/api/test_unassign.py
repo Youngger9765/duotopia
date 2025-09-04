@@ -6,7 +6,7 @@ Test unassign functionality with different student progress states
 
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000"
 TEACHER_EMAIL = "demo@duotopia.com"
@@ -107,7 +107,7 @@ def simulate_student_progress(assignment_id, student_id, status):
         session.commit()
         print(f"  ✅ 設定學生 {student_id} 狀態為 {status}")
     else:
-        print(f"  ❌ 找不到學生作業記錄")
+        print("  ❌ 找不到學生作業記錄")
 
     session.close()
 
@@ -190,7 +190,7 @@ def test_unassign_scenarios(token, assignment_id, classroom_id):
         print(f"  ✅ {result['message']}")
         print(f"  成功取消: {result.get('unassigned', [])}")
         if result.get("protected"):
-            print(f"  受保護的學生:")
+            print("  受保護的學生:")
             for p in result["protected"]:
                 print(f"    - {p['student_name']}: {p['reason']}")
     else:
@@ -223,7 +223,7 @@ def test_unassign_scenarios(token, assignment_id, classroom_id):
         print(f"  最終指派學生: {final_students}")
         print(f"  剩餘學生數: {len(final_students)}")
     else:
-        print(f"❌ 無法取得作業狀態")
+        print("❌ 無法取得作業狀態")
 
 
 def main():

@@ -4,7 +4,7 @@ Tests Pydantic schemas validation and serialization
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 from pydantic import ValidationError
 from schemas import (
     AssignmentCreate,

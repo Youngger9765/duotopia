@@ -18,7 +18,7 @@ def test_student_login_flow():
     response = requests.post(
         f"{BASE_URL}/api/public/validate-teacher", json={"email": teacher_email}
     )
-    print(f"   請求: POST /api/public/validate-teacher")
+    print("   請求: POST /api/public/validate-teacher")
     print(f"   資料: {{email: '{teacher_email}'}}")
     print(f"   回應: {response.status_code} - {response.json()}")
 
@@ -79,13 +79,13 @@ def test_student_login_flow():
         return
 
     # Step 4: 學生登入
-    print(f"\n4. 學生登入測試")
+    print("\n4. 學生登入測試")
     print(f"   選擇學生: {selected_student['name']}")
 
     # 測試正確密碼 (預設生日 20120101)
     login_data = {"email": selected_student["email"], "password": "20120101"}  # 預設密碼
     response = requests.post(f"{BASE_URL}/api/auth/student/login", json=login_data)
-    print(f"   請求: POST /api/auth/student/login")
+    print("   請求: POST /api/auth/student/login")
     print(f"   資料: {{email: '{login_data['email']}', password: '20120101'}}")
     print(f"   回應: {response.status_code}")
 

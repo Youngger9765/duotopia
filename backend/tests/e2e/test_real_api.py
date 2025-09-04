@@ -4,7 +4,7 @@
 """
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -16,7 +16,7 @@ response = requests.post(
 )
 token = response.json()["access_token"]
 headers = {"Authorization": f"Bearer {token}"}
-print(f"✅ 登入成功，取得 token")
+print("✅ 登入成功，取得 token")
 
 # 2. 查詢教師的作業列表
 print("\n2. 查詢教師的作業列表...")

@@ -2,7 +2,7 @@
 Translation service using OpenAI API
 """
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional  # noqa: F401
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -81,14 +81,14 @@ class TranslationService:
             combined_text = "\n---\n".join(texts)
 
             if target_lang == "zh-TW":
-                prompt = f"""請將以下英文句子翻譯成繁體中文。
+                prompt = """請將以下英文句子翻譯成繁體中文。
 每個句子之間用 --- 分隔。
 請保持相同的格式，每個翻譯也用 --- 分隔。
 只回覆翻譯結果，不要加任何說明或編號。
 
 {combined_text}"""
             else:
-                prompt = f"""Please translate the following sentences to English.
+                prompt = """Please translate the following sentences to English.
 Each sentence is separated by ---.
 Keep the same format, separate each translation with ---.
 Only return the translations without any explanation or numbering.

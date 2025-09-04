@@ -6,7 +6,7 @@ Test assign student functionality and database updates
 
 import requests
 import json
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 # API endpoint
 BASE_URL = "http://localhost:8000"
@@ -67,7 +67,7 @@ def test_assign_student(token, assignment_id, student_ids):
         json={"student_ids": student_ids},
     )
 
-    print(f"\n=== 測試指派學生 ===")
+    print("\n=== 測試指派學生 ===")
     print(f"Assignment ID: {assignment_id}")
     print(f"Student IDs to assign: {student_ids}")
     print(f"Response status: {response.status_code}")
@@ -156,12 +156,12 @@ def main():
         print(f"目前已指派 {len(current_assigned)} 位學生，將減少到只有2位")
         new_student_ids = current_assigned[:2]
 
-    print(f"\n4. 測試指派學生...")
+    print("\n4. 測試指派學生...")
     success = test_assign_student(token, assignment_id, new_student_ids)
 
     if success:
         # 5. 驗證更新結果
-        print(f"\n5. 驗證更新結果...")
+        print("\n5. 驗證更新結果...")
 
         # 重新取得作業詳情
         updated_assignment = get_assignment_detail(token, assignment_id)

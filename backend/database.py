@@ -26,6 +26,6 @@ def get_db():
 
 def init_db():
     """建立資料表"""
-    import models  # Import models to register them
+    import models  # noqa: F401 - Import models to register them
 
     Base.metadata.create_all(bind=engine)

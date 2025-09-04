@@ -5,8 +5,8 @@
 
 import pytest
 import requests
-from datetime import datetime, timedelta
-from typing import Dict, List
+from datetime import datetime, timedelta  # noqa: F401
+from typing import Dict, List  # noqa: F401
 
 
 class TestAssignmentsIntegration:

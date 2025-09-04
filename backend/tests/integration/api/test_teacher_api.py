@@ -4,7 +4,7 @@ API 測試 - 教師功能
 """
 import requests
 import json
-from typing import Dict, Any
+from typing import Dict, Any  # noqa: F401
 
 # 測試環境配置
 BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"
@@ -36,7 +36,7 @@ class TestTeacherAPI:
         self.token = data["access_token"]
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
-        print(f"✅ 登入成功")
+        print("✅ 登入成功")
         print(f"   用戶: {data['user']['name']}")
         print(f"   Token: {self.token[:20]}...")
 
@@ -53,7 +53,7 @@ class TestTeacherAPI:
         assert response.status_code == 200, f"取得 Dashboard 失敗: {response.text}"
         data = response.json()
 
-        print(f"✅ Dashboard 資料:")
+        print("✅ Dashboard 資料:")
         print(f"   班級數: {data.get('total_classrooms', 0)}")
         print(f"   學生數: {data.get('total_students', 0)}")
 
@@ -89,7 +89,7 @@ class TestTeacherAPI:
         assert response.status_code == 200, f"取得班級詳情失敗: {response.text}"
         classroom = response.json()
 
-        print(f"✅ 班級詳情:")
+        print("✅ 班級詳情:")
         print(f"   名稱: {classroom['name']}")
         print(f"   描述: {classroom.get('description', 'N/A')}")
         print(f"   學生數: {len(classroom.get('students', []))}")
@@ -97,7 +97,7 @@ class TestTeacherAPI:
 
         # 列出學生
         if classroom.get("students"):
-            print(f"\n   👥 學生列表:")
+            print("\n   👥 學生列表:")
             for student in classroom["students"]:
                 print(
                     f"      - {student.get('name', 'Unknown')} (ID: {student.get('id')})"
@@ -105,7 +105,7 @@ class TestTeacherAPI:
 
         # 列出課程
         if classroom.get("programs"):
-            print(f"\n   📚 課程列表:")
+            print("\n   📚 課程列表:")
             for program in classroom["programs"]:
                 print(
                     f"      - {program.get('name', 'Unknown')} (ID: {program.get('id')})"
@@ -131,7 +131,7 @@ class TestTeacherAPI:
 
         if response.status_code == 201:
             student = response.json()
-            print(f"✅ 新增學生成功:")
+            print("✅ 新增學生成功:")
             print(f"   ID: {student['id']}")
             print(f"   姓名: {student['name']}")
             return student

@@ -4,21 +4,18 @@ Teacher API endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Dict, Any
+from typing import List, Dict, Any  # noqa: F401
 from database import get_db
 from models import (
     Teacher,
     Classroom,
-    Student,
     ClassroomStudent,
     Program,
-    Lesson,
-    Content,
     StudentAssignment,
 )
 from auth import verify_token
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -112,7 +109,9 @@ async def get_teacher_dashboard(
     # Get classrooms with students
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == current_teacher.id, Classroom.is_active == True)
+        .filter(
+            Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True)
+        )
         .options(joinedload(Classroom.students).joinedload(ClassroomStudent.student))
         .all()
     )
@@ -148,7 +147,7 @@ async def get_teacher_dashboard(
     # Count programs
     total_programs = (
         db.query(Program)
-        .filter(Program.teacher_id == current_teacher.id, Program.is_active == True)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
         .count()
     )
 
@@ -191,7 +190,9 @@ async def get_teacher_classrooms(
 
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == current_teacher.id, Classroom.is_active == True)
+        .filter(
+            Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True)
+        )
         .options(joinedload(Classroom.students).joinedload(ClassroomStudent.student))
         .all()
     )
@@ -232,7 +233,7 @@ async def get_teacher_programs(
 
     programs = (
         db.query(Program)
-        .filter(Program.teacher_id == current_teacher.id, Program.is_active == True)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
         .options(joinedload(Program.classroom), joinedload(Program.lessons))
         .all()
     )

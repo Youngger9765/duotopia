@@ -2,7 +2,7 @@
 Audio manager service for handling audio files with GCS
 """
 import os
-from typing import Optional
+from typing import Optional  # noqa: F401
 from google.cloud import storage
 from urllib.parse import urlparse
 
