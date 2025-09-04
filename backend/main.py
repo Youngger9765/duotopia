@@ -51,5 +51,3 @@ app.include_router(files.router)  # 檔案服務路由
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
-# Test comment
-# Test comment for hooks
