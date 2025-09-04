@@ -4,6 +4,7 @@
 TDD: 先寫測試，再實作功能
 """
 import requests
+import json
 from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
@@ -260,7 +261,7 @@ def test_teacher_manual_grade():
         print("⚠️ 沒有提交記錄")
         return
 
-    submissions[0]["id"]
+    submission_id = submissions[0]["id"]
     student_assignment_id = submissions[0]["assignment_id"]
 
     # 4. 手動評分

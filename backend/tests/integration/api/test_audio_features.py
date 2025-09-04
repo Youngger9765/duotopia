@@ -2,17 +2,20 @@
 Test suite for audio features including TTS and recording upload
 """
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
-import json  # noqa: F401
+import io
+import json
+from datetime import datetime  # noqa: F401
+import asyncio
 
 from main import app
-from models import Teacher
-from services.tts import TTSService
-from services.translation import TranslationService
-from services.audio_upload import AudioUploadService
-from services.audio_manager import AudioManager
+from models import Teacher, Content, ContentType
+from services.tts import TTSService, get_tts_service
+from services.translation import TranslationService, translation_service
+from services.audio_upload import AudioUploadService, get_audio_upload_service
+from services.audio_manager import AudioManager, get_audio_manager
 
 client = TestClient(app)
 
@@ -384,7 +387,7 @@ class TestAudioAPIEndpoints_Skip:
                 )
                 mock_service_getter.return_value = mock_service
 
-                _ = client.post(
+                response = client.post(
                     "/api/teachers/content/1/tts",
                     headers=auth_headers,
                     json={
@@ -415,7 +418,7 @@ class TestAudioAPIEndpoints_Skip:
                 files = {"file": ("test.webm", b"audio data", "audio/webm")}
                 data = {"duration": "5", "content_id": "1", "item_index": "0"}
 
-                _ = client.post(
+                response = client.post(
                     "/api/teachers/upload/audio",
                     headers=auth_headers,
                     files=files,
@@ -440,7 +443,7 @@ class TestAudioAPIEndpoints_Skip:
                 )
                 mock_service_getter.return_value = mock_service
 
-                _ = client.post(
+                response = client.post(
                     "/api/teachers/content/1/batch-tts",
                     headers=auth_headers,
                     json={"texts": ["Hello", "World"], "voice": "en-US-JennyNeural"},

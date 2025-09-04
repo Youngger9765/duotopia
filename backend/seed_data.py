@@ -3,7 +3,6 @@ Seed data for Duotopia - 新作業系統架構
 建立完整的 Demo 資料：教師、學生、班級、課程、作業
 覆蓋所有作業系統情境（教師端和學生端）
 """
-
 from datetime import datetime, date, timedelta  # noqa: F401
 import random
 from sqlalchemy.orm import Session
@@ -666,19 +665,15 @@ def create_demo_data(db: Session):
             student_assignment_id=student_assignment1.id,
             content_id=content1_5a.id,
             status=student_data["status"],
-            score=(
-                student_data.get("score")
-                if student_data["status"] == AssignmentStatus.GRADED
-                else None
-            ),
+            score=student_data.get("score")
+            if student_data["status"] == AssignmentStatus.GRADED
+            else None,
             order_index=1,
             is_locked=False,
             checked=True if student_data["status"] == AssignmentStatus.GRADED else None,
-            feedback=(
-                student_data.get("feedback")
-                if student_data["status"] == AssignmentStatus.GRADED
-                else None
-            ),
+            feedback=student_data.get("feedback")
+            if student_data["status"] == AssignmentStatus.GRADED
+            else None,
         )
 
         if student_data["status"] in [

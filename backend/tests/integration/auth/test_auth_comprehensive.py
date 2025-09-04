@@ -4,6 +4,7 @@ Testing all authentication utilities and edge cases
 """
 import pytest
 from datetime import datetime, timedelta  # noqa: F401
+from jose import jwt, JWTError
 from auth import (
     verify_password,
     get_password_hash,
@@ -13,6 +14,7 @@ from auth import (
     authenticate_student,
 )
 from models import Teacher, Student
+from sqlalchemy.orm import Session
 
 
 class TestPasswordHashing:
@@ -132,6 +134,7 @@ class TestJWTTokens:
 
     def test_token_with_wrong_secret(self):
         """Test token created with different secret"""
+        import os
         from jose import jwt
 
         data = {"sub": "123", "email": "test@example.com"}

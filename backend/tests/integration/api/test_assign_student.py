@@ -5,6 +5,7 @@ Test assign student functionality and database updates
 """
 
 import requests
+import json
 from datetime import datetime  # noqa: F401
 
 # API endpoint

@@ -5,7 +5,6 @@ Revises:
 Create Date: 2025-09-02 20:37:11.825929
 
 """
-
 from typing import Sequence, Union  # noqa: F401
 
 from alembic import op
