@@ -102,7 +102,16 @@ export interface Program {
   lessons?: Lesson[];
 }
 
-// ============ Assignment Types ============
+// ============ Assignment Status Types ============
+export type AssignmentStatusEnum =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'GRADED'
+  | 'RETURNED'
+  | 'RESUBMITTED';
+
+// ============ Teacher Assignment Types ============
 export interface AssignmentSubmission {
   id: number;
   student_id: number;
@@ -135,6 +144,84 @@ export interface Assignment {
   };
   // Score property for graded assignments
   score?: number;
+}
+
+// ============ Student Assignment Types ============
+export interface StudentAssignment {
+  id: number;
+  assignment_id?: number;
+  student_id: number;
+  classroom_id: number;
+  title: string;
+  status: AssignmentStatusEnum;
+  score?: number;
+  feedback?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+  started_at?: string;
+  submitted_at?: string;
+  due_date?: string;
+  // Extended properties for UI
+  content_progress?: StudentContentProgress[];
+  contents?: Content[];
+  estimated_time?: string;
+  progress_percentage?: number;
+  content_count?: number;
+  completed_count?: number;
+}
+
+// Student Content Progress for individual activities within assignment
+export interface StudentContentProgress {
+  id: number;
+  student_assignment_id: number;
+  content_id: number;
+  status: AssignmentStatusEnum;
+  score?: number;
+  checked?: boolean;
+  feedback?: string;
+  response_data?: Record<string, unknown>;
+  ai_scores?: Record<string, unknown>;
+  order_index: number;
+  // Extended properties for UI
+  content?: Content;
+  estimated_time?: string;
+  completed_at?: string;
+}
+
+// Student Assignment Card Data for list view
+export interface StudentAssignmentCard {
+  id: number;
+  title: string;
+  status: AssignmentStatusEnum;
+  due_date?: string;
+  progress_percentage: number;
+  content_count: number;
+  completed_count: number;
+  estimated_time?: string;
+  content_type?: string;
+  classroom_name?: string;
+  teacher_name?: string;
+  score?: number;
+  is_overdue?: boolean;
+}
+
+// Student Dashboard specific data
+export interface StudentDashboard {
+  active_assignments: StudentAssignmentCard[];
+  completed_assignments: StudentAssignmentCard[];
+  stats: {
+    total_assignments: number;
+    completed_assignments: number;
+    average_score?: number;
+    total_study_time?: string;
+  };
+  recent_activity: {
+    assignment_title: string;
+    activity_type: string;
+    completed_at: string;
+    score?: number;
+  }[];
 }
 
 export interface AssignmentDetail {

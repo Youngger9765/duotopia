@@ -13,6 +13,10 @@ import StudentGradingPage from './pages/teacher/StudentGradingPage'
 import GradingPage from './pages/teacher/GradingPage'
 import StudentLogin from './pages/StudentLogin'
 import StudentDashboard from './pages/StudentDashboard'
+import StudentAssignmentList from './pages/student/StudentAssignmentList'
+import StudentAssignmentDetail from './pages/student/StudentAssignmentDetail'
+import AssignmentDetail from './pages/student/AssignmentDetail'
+import StudentLayout from './components/StudentLayout'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -45,7 +49,22 @@ function App() {
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />
-      <Route path="/student/dashboard" element={<StudentDashboard />} />
+
+      {/* Student Routes with Layout */}
+      <Route path="/student" element={<StudentLayout />}>
+        <Route path="dashboard" element={<StudentDashboard />} />
+        <Route path="assignments" element={<StudentAssignmentList />} />
+        <Route path="assignment/:id/detail" element={<StudentAssignmentDetail />} />
+        <Route path="assignment/:id" element={<AssignmentDetail />} />
+        <Route path="assignment/:id/activity" element={<AssignmentDetail />} />
+        <Route path="assignment/:id/activity/:progressId" element={<AssignmentDetail />} />
+        <Route path="progress" element={<div className="p-8 text-center">學習進度頁面開發中...</div>} />
+        <Route path="achievements" element={<div className="p-8 text-center">成就頁面開發中...</div>} />
+        <Route path="calendar" element={<div className="p-8 text-center">行事曆頁面開發中...</div>} />
+        <Route path="messages" element={<div className="p-8 text-center">訊息頁面開發中...</div>} />
+        <Route path="profile" element={<div className="p-8 text-center">個人資料頁面開發中...</div>} />
+        <Route path="settings" element={<div className="p-8 text-center">設定頁面開發中...</div>} />
+      </Route>
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -4,14 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   BookOpen,
   Trophy,
   Clock,
   Target,
-  LogOut,
   ChevronRight,
   Calendar
 } from 'lucide-react';
@@ -19,7 +17,7 @@ import { Assignment } from '@/types';
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useStudentAuthStore();
+  const { user, token } = useStudentAuthStore();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [stats, setStats] = useState({
     completedAssignments: 0,
@@ -29,18 +27,31 @@ export default function StudentDashboard() {
   });
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !token) {
       navigate('/student/login');
       return;
     }
     loadAssignments();
     loadStats();
-  }, [user, navigate]);
+  }, [user, token, navigate]);
 
   const loadAssignments = async () => {
     try {
-      const response = await apiClient.get('/api/teachers/assignments/student') as { data: Assignment[] };
-      setAssignments(response.data);
+      // Directly use fetch with student token
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/students/assignments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAssignments(data as Assignment[]);
     } catch (error) {
       console.error('Failed to load assignments:', error);
       toast.error('無法載入作業列表');
@@ -97,13 +108,12 @@ export default function StudentDashboard() {
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/student/login');
+  const handleStartAssignment = (assignmentId: number) => {
+    navigate(`/student/assignment/${assignmentId}/detail`);
   };
 
-  const handleStartAssignment = (assignmentId: number) => {
-    navigate(`/student/assignment/${assignmentId}`);
+  const handleViewAllAssignments = () => {
+    navigate('/student/assignments');
   };
 
   const getStatusColor = (status: string) => {
@@ -129,26 +139,8 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-blue-600">🚀 Duotopia</h1>
-              <div className="text-gray-600">
-                歡迎回來，<span className="font-semibold">{user?.name}</span>！
-              </div>
-            </div>
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              登出
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
+    <div className="p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
@@ -203,10 +195,21 @@ export default function StudentDashboard() {
         {/* Assignments Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              我的作業
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                我的作業
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewAllAssignments}
+                className="flex items-center gap-2"
+              >
+                查看全部
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -314,7 +317,7 @@ export default function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }
