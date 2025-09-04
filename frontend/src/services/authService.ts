@@ -8,7 +8,12 @@ interface LoginCredentials {
 interface LoginResponse {
   access_token: string;
   token_type: string;
-  user: any;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    [key: string]: unknown;
+  };
 }
 
 export const authService = {
@@ -22,7 +27,7 @@ export const authService = {
     return response.data;
   },
 
-  async validateToken(): Promise<any> {
+  async validateToken(): Promise<unknown> {
     const response = await api.get('/api/auth/validate');
     return response.data;
   },

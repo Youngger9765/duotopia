@@ -38,10 +38,17 @@ export default function TeacherStudents() {
       setClassrooms(classroomData);
 
       // Fetch all students (including those without classroom)
-      const studentsData = await apiClient.getAllStudents() as any[];
+      const studentsData = await apiClient.getAllStudents() as Array<{
+        id: number;
+        name: string;
+        email: string;
+        student_id?: string;
+        classroom?: {id: number; name: string};
+        classroom_id?: number;
+      }>;
 
       // Format students data
-      const studentsWithDetails = studentsData.map((student: any) => ({
+      const studentsWithDetails = studentsData.map((student) => ({
         id: student.id,
         name: student.name,
         email: student.email,

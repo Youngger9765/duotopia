@@ -3,8 +3,7 @@
 完整測試作業系統流程
 """
 import requests
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 

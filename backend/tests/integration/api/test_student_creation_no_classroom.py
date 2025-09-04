@@ -4,8 +4,8 @@
 """
 
 import requests
-import json
-from datetime import datetime
+import json  # noqa: F401
+from datetime import datetime  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 

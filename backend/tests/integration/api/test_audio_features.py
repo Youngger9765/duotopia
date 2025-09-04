@@ -5,9 +5,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
-import io
-import json
-from datetime import datetime
+import json  # noqa: F401
 import asyncio
 
 from main import app

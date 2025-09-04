@@ -3,7 +3,7 @@
 測試教師後台路由功能
 """
 import requests
-import json
+import json  # noqa: F401
 
 BASE_URL = "http://localhost:5173"
 

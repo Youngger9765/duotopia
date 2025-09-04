@@ -18,7 +18,7 @@ def test_cascade_delete():
         lessons_count = db.query(Lesson).count()
         contents_count = db.query(Content).count()
 
-        print(f"初始狀態:")
+        print("初始狀態:")
         print(f"  - Programs: {programs_count}")
         print(f"  - Lessons: {lessons_count}")
         print(f"  - Contents: {contents_count}")
@@ -34,7 +34,7 @@ def test_cascade_delete():
 
         # 計算這個 Program 有多少 Lessons 和 Contents
         program_lessons = db.query(Lesson).filter(Lesson.program_id == program_id).all()
-        lesson_ids = [l.id for l in program_lessons]
+        lesson_ids = [lst.id for lst in program_lessons]
         program_contents = (
             db.query(Content)
             .join(Lesson)
@@ -47,7 +47,7 @@ def test_cascade_delete():
         print(f"  - 包含 {program_contents} 個 Contents")
 
         # 3. 刪除 Program
-        print(f"\n執行刪除...")
+        print("\n執行刪除...")
         db.delete(program)
         db.commit()
 
@@ -66,7 +66,7 @@ def test_cascade_delete():
             else 0
         )
 
-        print(f"\n刪除後狀態:")
+        print("\n刪除後狀態:")
         print(
             f"  - Programs: {programs_count} → {new_programs_count} (減少 {programs_count - new_programs_count})"
         )
@@ -77,7 +77,7 @@ def test_cascade_delete():
             f"  - Contents: {contents_count} → {new_contents_count} (減少 {contents_count - new_contents_count})"
         )
 
-        print(f"\n檢查關聯資料:")
+        print("\n檢查關聯資料:")
         print(f"  - 原 Program 的 Lessons 剩餘: {remaining_lessons}")
         print(f"  - 原 Lessons 的 Contents 剩餘: {remaining_contents}")
 

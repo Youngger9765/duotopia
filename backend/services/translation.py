@@ -1,8 +1,9 @@
 """
 Translation service using OpenAI API
 """
+
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional  # noqa: F401
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -40,14 +41,20 @@ class TranslationService:
             if target_lang == "zh-TW":
                 prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
             else:
-                prompt = f"Please translate the following text to English, only return the translation without any explanation:\n{text}"
+                prompt = (
+                    f"Please translate the following text to English, "
+                    f"only return the translation without any explanation:\n{text}"
+                )
 
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional translator. Only provide the translation without any explanation.",
+                        "content": (
+                            "You are a professional translator. Only provide the "
+                            "translation without any explanation."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -100,7 +107,10 @@ Only return the translations without any explanation or numbering.
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional translator. Maintain the exact format with --- separators.",
+                        "content": (
+                            "You are a professional translator. Maintain the exact "
+                            "format with --- separators."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],

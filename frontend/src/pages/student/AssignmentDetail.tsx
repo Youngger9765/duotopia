@@ -158,7 +158,7 @@ export default function AssignmentDetail() {
       // 這裡應該要上傳錄音檔案到雲端儲存
       // 然後提交作業資料
       const submissionData = {
-        recordings: Array.from(recordings.entries()).map(([index, blob]) => ({
+        recordings: Array.from(recordings.entries()).map(([index]) => ({
           item_index: index,
           audio_url: `mock://recording-${index}`, // 實際應上傳到 GCS
           duration: 5, // 實際應計算錄音長度

@@ -3,7 +3,7 @@
 測試拖拽排序 API
 """
 import requests
-import json
+import json  # noqa: F401
 
 # 測試環境配置
 BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"

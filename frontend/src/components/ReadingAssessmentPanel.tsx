@@ -97,7 +97,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         // 如果是相對路徑，加上 API base URL
         const fullUrl = result.audio_url.startsWith('http')
           ? result.audio_url
-          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${result.audio_url}`;
+          : `${import.meta.env.VITE_API_URL}${result.audio_url}`;
         setAudioUrl(fullUrl);
         toast.success('音檔生成成功！');
       }
@@ -875,7 +875,7 @@ export default function ReadingAssessmentPanel({
             // 如果是相對路徑，加上 API base URL
             newRows[i].audioUrl = audioUrl.startsWith('http')
               ? audioUrl
-              : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${audioUrl}`;
+              : `${import.meta.env.VITE_API_URL}${audioUrl}`;
             audioIndex++;
           }
         }

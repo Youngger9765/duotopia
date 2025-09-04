@@ -4,9 +4,9 @@ Test CRUD operations for teacher's classrooms, students, and programs
 Following TDD approach - write tests first, then implement
 """
 import requests
-import json
+import json  # noqa: F401
 import sys
-from typing import Dict, Any
+from typing import Dict, Any  # noqa: F401
 
 BASE_URL = "http://localhost:8000"
 

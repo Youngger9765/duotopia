@@ -4,8 +4,8 @@
 """
 
 import requests
-import json
-from datetime import datetime
+import json  # noqa: F401
+from datetime import datetime  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -66,9 +66,9 @@ def test_create_classroom():
         classrooms = response.json()
         new_classroom = [c for c in classrooms if c["name"].startswith("測試班級")]
         if new_classroom:
-            print(f"✅ 確認班級已加入列表")
+            print("✅ 確認班級已加入列表")
         else:
-            print(f"⚠️  班級未出現在列表中")
+            print("⚠️  班級未出現在列表中")
 
     return True
 

@@ -5,8 +5,8 @@
 """
 
 import requests
-import json
-from datetime import datetime
+import json  # noqa: F401
+from datetime import datetime  # noqa: F401
 import sys
 
 BASE_URL = "http://localhost:8000/api"
@@ -66,19 +66,19 @@ def test_delete_empty_classroom():
         print(f"❌ 刪除班級失敗: {response.status_code} - {response.text}")
         assert False, "Test failed"
 
-    print(f"✅ 刪除班級成功")
+    print("✅ 刪除班級成功")
 
     # 3. 確認班級已被軟刪除
-    print(f"\n3. 確認班級已被軟刪除...")
+    print("\n3. 確認班級已被軟刪除...")
     response = requests.get(f"{BASE_URL}/teachers/classrooms", headers=headers)
 
     if response.status_code == 200:
         classrooms = response.json()
         deleted_classroom = [c for c in classrooms if c["id"] == classroom_id]
         if not deleted_classroom:
-            print(f"✅ 確認班級已從列表中移除")
+            print("✅ 確認班級已從列表中移除")
         else:
-            print(f"❌ 班級仍在列表中")
+            print("❌ 班級仍在列表中")
             assert False, "Test failed"
 
     # Test passed
@@ -137,7 +137,7 @@ def test_delete_classroom_with_students():
     print(f"✅ 新增學生成功 - ID: {student['id']}")
 
     # 3. 嘗試刪除有學生的班級
-    print(f"\n3. 嘗試刪除有學生的班級...")
+    print("\n3. 嘗試刪除有學生的班級...")
     response = requests.delete(
         f"{BASE_URL}/teachers/classrooms/{classroom_id}", headers=headers
     )
@@ -146,7 +146,7 @@ def test_delete_classroom_with_students():
     # - 允許刪除（軟刪除，學生仍保留）
     # - 拒絕刪除（返回錯誤）
     if response.status_code == 200:
-        print(f"✅ 允許刪除有學生的班級（軟刪除）")
+        print("✅ 允許刪除有學生的班級（軟刪除）")
 
         # 檢查學生是否仍存在
         response = requests.get(f"{BASE_URL}/teachers/students", headers=headers)
@@ -154,9 +154,9 @@ def test_delete_classroom_with_students():
             students = response.json()
             class_student = [s for s in students if s["id"] == student["id"]]
             if class_student:
-                print(f"✅ 學生仍存在系統中")
+                print("✅ 學生仍存在系統中")
             else:
-                print(f"⚠️  學生可能被一併刪除")
+                print("⚠️  學生可能被一併刪除")
     elif response.status_code == 400:
         print(f"⚠️  系統拒絕刪除有學生的班級: {response.json()}")
         # 這也是合理的業務邏輯
@@ -185,7 +185,7 @@ def test_delete_nonexistent_classroom():
     response = requests.delete(f"{BASE_URL}/teachers/classrooms/99999", headers=headers)
 
     if response.status_code == 404:
-        print(f"✅ 正確返回 404 錯誤")
+        print("✅ 正確返回 404 錯誤")
         # Test passed
     else:
         print(f"❌ 未預期的回應: {response.status_code}")

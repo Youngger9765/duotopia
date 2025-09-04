@@ -4,8 +4,8 @@ API 測試 - 班級完整功能
 包含：學生管理、課程管理、拖拽排序
 """
 import requests
-import json
-from typing import Dict, Any
+import json  # noqa: F401
+from typing import Dict, Any  # noqa: F401
 
 # 測試環境配置
 BASE_URL = "https://duotopia-staging-backend-qchnzlfpda-de.a.run.app"
@@ -186,7 +186,7 @@ class TestClassroomAPI:
 
         if response.status_code == 200:
             program = response.json()
-            print(f"    ✅ 取得成功")
+            print("    ✅ 取得成功")
             print(f"    單元數: {len(program.get('lessons', []))}")
         else:
             print(f"    ❌ 取得失敗: {response.text}")

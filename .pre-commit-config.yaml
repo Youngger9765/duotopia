@@ -45,7 +45,6 @@ repos:
         language: python
         files: ^backend/alembic/versions/.*\.py$
         pass_filenames: true
-
       - id: prevent-hardcoded-urls
         name: Prevent hardcoded localhost URLs
         entry: bash -c 'if grep -r "localhost:[0-9]" frontend/src/ 2>/dev/null; then echo "Error - Hardcoded localhost URL found - Use environment variables"; exit 1; fi'
@@ -60,6 +59,7 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=1000']
       - id: check-json
+        exclude: tsconfig.*\.json$
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace

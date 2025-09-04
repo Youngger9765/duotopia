@@ -140,7 +140,7 @@ export default function ClassroomDetail() {
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [dropIndicatorProgram, setDropIndicatorProgram] = useState<number | null>(null);
   const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
@@ -609,7 +609,7 @@ export default function ClassroomDetail() {
     }
   };
 
-  const handleSaveReadingContent = async (data: any) => {
+  const handleSaveReadingContent = async (data: {title: string; items: Array<{text: string; audio_url?: string}>}) => {
     try {
       // Data from ReadingAssessmentPanel already has formatted items
       const items = data.items || [];
@@ -1442,7 +1442,7 @@ export default function ClassroomDetail() {
                       <div className="space-y-3">
                         <h4 className="font-medium text-sm">內容項目</h4>
                         {editingContent && editingContent.items && editingContent.items.length > 0 ? (
-                          editingContent.items.map((item: any, index: number) => (
+                          editingContent.items.map((item: {text?: string; question?: string; answer?: string; options?: string[]}, index: number) => (
                             <div key={index} className="border rounded-lg p-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">項目 {index + 1}</span>

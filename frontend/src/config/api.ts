@@ -1,6 +1,6 @@
 // API configuration
 // This value is injected at build time from environment variables
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+export const API_URL = import.meta.env.VITE_API_URL
 
 // Helper function for API calls
 export const apiCall = async (endpoint: string, options?: RequestInit) => {

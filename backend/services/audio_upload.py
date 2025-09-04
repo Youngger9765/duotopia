@@ -1,13 +1,13 @@
 """
 Audio upload service for recording files
 """
+
 import os
 import uuid
-from datetime import datetime
-from typing import Optional
+from datetime import datetime  # noqa: F401
+from typing import Optional  # noqa: F401
 from google.cloud import storage
 from fastapi import UploadFile, HTTPException
-import tempfile
 
 
 class AudioUploadService:

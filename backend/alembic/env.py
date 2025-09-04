@@ -1,16 +1,16 @@
+import os
+import sys
+from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
-import os
-import sys
-from pathlib import Path
 
 # Add parent directory to path to import our modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-from database import Base
-from models import *  # Import all models to ensure they're registered
+from database import Base  # noqa: E402
+import models  # Import models module to ensure all models are registered  # noqa: F401, E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

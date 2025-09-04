@@ -2,7 +2,6 @@
 Test cases for teacher authentication
 Following TDD principles
 """
-import pytest
 from fastapi import status
 
 
@@ -30,7 +29,7 @@ class TestTeacherLogin:
         # Check user info
         assert data["user"]["email"] == "test@duotopia.com"
         assert data["user"]["name"] == "Test Teacher"
-        assert data["user"]["is_demo"] == False
+        assert data["user"]["is_demo"] is False
         assert data["user"]["id"] == demo_teacher.id
 
     def test_login_with_wrong_password(self, client, demo_teacher):
@@ -115,8 +114,7 @@ class TestTeacherRegistration:
         # Check user info
         assert data["user"]["email"] == "newteacher@duotopia.com"
         assert data["user"]["name"] == "New Teacher"
-        assert data["user"]["is_demo"] == False
-
+        assert data["user"]["is_demo"] is False
         # Verify teacher was created in database
         from models import Teacher
 
@@ -212,5 +210,5 @@ class TestDemoTeacher:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["user"]["is_demo"] == True
+        assert data["user"]["is_demo"] is True
         assert data["user"]["name"] == "Demo Teacher"

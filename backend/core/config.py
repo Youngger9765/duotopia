@@ -2,8 +2,9 @@
 Configuration for multi-database support
 Supports switching between Supabase and Cloud SQL
 """
+
 import os
-from typing import Literal, Optional
+from typing import Literal, Optional  # noqa: F401
 from functools import lru_cache
 
 

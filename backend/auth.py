@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from typing import Union, Optional, Dict, Any
+from datetime import datetime, timedelta  # noqa: F401
+from typing import Optional, Dict, Any  # noqa: F401
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session

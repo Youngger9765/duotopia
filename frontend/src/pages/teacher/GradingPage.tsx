@@ -8,7 +8,6 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
   User,
-  Calendar,
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -185,7 +184,7 @@ export default function GradingPage() {
       // 載入個別題目的評語和通過狀態
       const loadedFeedbacks: ItemFeedback = {};
       if (response.submissions) {
-        response.submissions.forEach((sub: any, index: number) => {
+        response.submissions.forEach((sub: {feedback?: string; passed?: boolean | null}, index: number) => {
           if (sub.feedback || sub.passed !== null) {
             loadedFeedbacks[index] = {
               feedback: sub.feedback || "",
@@ -211,7 +210,7 @@ export default function GradingPage() {
     setAutoSaving(true);
     try {
       // 準備個別題目的評分資料
-      const itemResults: any[] = [];
+      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
@@ -266,7 +265,7 @@ export default function GradingPage() {
       setSubmitting(true);
 
       // 準備個別題目的評分資料
-      const itemResults: any[] = [];
+      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
@@ -321,7 +320,7 @@ export default function GradingPage() {
       setSubmitting(true);
 
       // 準備個別題目的評分資料
-      const itemResults: any[] = [];
+      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
@@ -508,13 +507,6 @@ export default function GradingPage() {
     { label: "60分", value: 60 },
   ];
 
-  const commonFeedback = [
-    "很棒！繼續保持！",
-    "進步很多，加油！",
-    "發音清晰，表現優秀！",
-    "語調自然，很有進步！",
-    "請多練習，加油！",
-  ];
 
   // 移除自動同步，總評現在是獨立的欄位
   // 不再自動將個別評語同步到總評
@@ -530,11 +522,6 @@ export default function GradingPage() {
       // 左右箭頭切換題目
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        const totalQuestions =
-          submission?.content_groups?.reduce(
-            (sum, group) => sum + group.submissions.length,
-            0,
-          ) || 0;
         if (selectedItemIndex > 0) {
           // 切換前自動儲存
           await handleAutoSave();
@@ -543,11 +530,6 @@ export default function GradingPage() {
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        const totalQuestions =
-          submission?.content_groups?.reduce(
-            (sum, group) => sum + group.submissions.length,
-            0,
-          ) || 0;
         if (selectedItemIndex < totalQuestions - 1) {
           // 切換前自動儲存
           await handleAutoSave();
@@ -628,7 +610,7 @@ export default function GradingPage() {
                 學生
               </h3>
               <div className="space-y-1">
-                {studentList.map((student, index) => (
+                {studentList.map((student) => (
                   <button
                     key={student.student_id}
                     onClick={() => handleStudentSelect(student)}
@@ -941,12 +923,6 @@ export default function GradingPage() {
                                     // 切換前自動儲存
                                     await handleAutoSave();
                                     // 計算上一題的索引
-                                    const totalQuestions =
-                                      submission?.content_groups?.reduce(
-                                        (sum, group) =>
-                                          sum + group.submissions.length,
-                                        0,
-                                      ) || 0;
                                     if (selectedItemIndex > 0) {
                                       setSelectedItemIndex(
                                         selectedItemIndex - 1,
@@ -1042,7 +1018,7 @@ export default function GradingPage() {
                 {/* 題號選擇區 */}
                 {submission && submission.content_groups && (
                   <div className="space-y-2">
-                    {submission.content_groups.map((group, groupIndex) => (
+                    {submission.content_groups.map((group) => (
                       <div
                         key={group.content_id}
                         className="bg-gray-50 rounded-lg p-2"

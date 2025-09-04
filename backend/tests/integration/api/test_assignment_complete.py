@@ -5,8 +5,7 @@ Complete test for assignment functionality
 """
 
 import requests
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 # API endpoint
 BASE_URL = "http://localhost:8000"
@@ -124,7 +123,7 @@ def test_assignment_complete(token, assignment_id):
     progress_data = response.json()
     # 進度 API 只返回已指派的學生
 
-    print(f"✅ 進度統計:")
+    print("✅ 進度統計:")
     print(f"   已指派學生數: {len(progress_data)}")
 
     print("\n   已指派學生進度:")
@@ -158,9 +157,9 @@ def test_assignment_complete(token, assignment_id):
         },
     )
     if response.status_code == 200:
-        print(f"✅ 成功同時更新:")
-        print(f"   標題: 最終測試作業")
-        print(f"   描述: 這是最終的測試描述")
+        print("✅ 成功同時更新:")
+        print("   標題: 最終測試作業")
+        print("   描述: 這是最終的測試描述")
         print(f"   截止日期: {new_due_date}")
         print(f"   指派學生: {final_students}")
     else:
@@ -173,13 +172,13 @@ def test_assignment_complete(token, assignment_id):
     )
     if response.status_code == 200:
         final_assignment = response.json()
-        print(f"✅ 最終作業狀態:")
+        print("✅ 最終作業狀態:")
         print(f"   標題: {final_assignment.get('title')}")
         print(f"   描述: {final_assignment.get('description')}")
         print(f"   截止日期: {final_assignment.get('due_date')}")
         print(f"   已指派學生 IDs: {final_assignment.get('student_ids', [])}")
     else:
-        print(f"❌ 無法取得最終狀態")
+        print("❌ 無法取得最終狀態")
 
 
 def main():

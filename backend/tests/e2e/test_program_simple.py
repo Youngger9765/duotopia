@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 from models import Teacher, Classroom, Program, ProgramLevel
 from auth import get_password_hash
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 
 class TestSimplifiedProgramModel:

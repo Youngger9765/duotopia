@@ -5,7 +5,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 import tempfile
 import os
 from auth import create_access_token
@@ -221,8 +221,7 @@ class TestAIGrading:
 
             result = response.json()
             assert "success" in result
-            assert result["success"] == True
-
+            assert result["success"] is True
         finally:
             # 清理臨時檔案
             if os.path.exists(audio_file):

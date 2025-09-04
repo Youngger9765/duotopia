@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
@@ -37,7 +38,7 @@ Object.defineProperty(window, 'sessionStorage', {
   value: localStorageMock,
 })
 
-// Mock environment variables
+// Mock environment variables - will use the actual VITE_API_URL from .env file during tests
 vi.mock('@/config/api', () => ({
-  API_BASE_URL: 'http://localhost:8000'
+  API_BASE_URL: import.meta.env.VITE_API_URL
 }))

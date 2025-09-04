@@ -5,7 +5,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 from auth import create_access_token
 
 
@@ -261,8 +261,7 @@ class TestManualGrading:
 
         result = response.json()
         assert "success" in result
-        assert result["success"] == True
-
+        assert result["success"] is True
         # 驗證調整結果
         assert "updated_score" in result
         assert result["updated_score"] == 88.5
@@ -295,8 +294,7 @@ class TestManualGrading:
 
         result = response.json()
         assert "success" in result
-        assert result["success"] == True
-
+        assert result["success"] is True
         # 檢查學生端是否能看到更新的回饋
         student_headers = {"Authorization": f"Bearer {self.test_data['student_token']}"}
         response = self.client.get(
@@ -341,8 +339,7 @@ class TestManualGrading:
 
         result = response.json()
         assert "success" in result
-        assert result["success"] == True
-
+        assert result["success"] is True
         # 檢查作業狀態是否更新為 RETURNED
         student_headers = {"Authorization": f"Bearer {self.test_data['student_token']}"}
         response = self.client.get("/api/assignments/student", headers=student_headers)

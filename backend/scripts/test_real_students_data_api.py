@@ -3,7 +3,7 @@
 Test that students API returns real data from database
 """
 import requests
-import json
+import json  # noqa: F401
 
 BASE_URL = "http://localhost:8000"
 

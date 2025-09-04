@@ -2,6 +2,7 @@
 Duotopia 資料模型
 Phase 1: 個體教師版本
 """
+
 from sqlalchemy import (
     Column,
     Integer,

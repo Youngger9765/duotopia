@@ -2,7 +2,7 @@
 """測試拖曳重新排序功能 (TDD)"""
 
 import requests
-import json
+import json  # noqa: F401
 import sys
 
 

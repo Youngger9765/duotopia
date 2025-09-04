@@ -3,8 +3,8 @@
 Phase 1: 基礎指派功能
 """
 
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timezone
+from typing import List, Optional, Dict, Any  # noqa: F401
+from datetime import datetime, timezone  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -28,6 +28,66 @@ from models import (
 from .auth import get_current_user
 
 router = APIRouter(prefix="/api/teachers", tags=["assignments"])
+
+
+# ============ Helper Functions (Mock implementations) ============
+
+
+async def process_audio_with_whisper(
+    audio_urls: List[str], expected_texts: List[str]
+) -> Dict[str, Any]:
+    """Mock implementation for processing audio with Whisper API"""
+    # TODO: Implement actual Whisper API integration
+    return {
+        "transcriptions": [
+            {
+                "item_id": i,
+                "expected_text": text,
+                "transcribed_text": text,  # Mock: return same as expected
+                "words": [],
+            }
+            for i, text in enumerate(expected_texts)
+        ],
+        "audio_analysis": {"total_duration": 10.0},
+    }
+
+
+def calculate_text_similarity(expected: str, actual: str) -> float:
+    """Calculate similarity between expected and actual text"""
+    if not expected or not actual:
+        return 0.0
+    # Simple mock implementation - should use proper text similarity algorithm
+    return 0.85 if expected.lower() == actual.lower() else 0.5
+
+
+def calculate_pronunciation_score(words: List[Dict]) -> float:
+    """Calculate pronunciation score from word-level analysis"""
+    # Mock implementation
+    return 85.0
+
+
+def calculate_fluency_score(audio_analysis: Dict[str, Any]) -> float:
+    """Calculate fluency score from audio analysis"""
+    # Mock implementation
+    return 80.0
+
+
+def calculate_wpm(text: str, duration: float) -> int:
+    """Calculate words per minute"""
+    if duration <= 0:
+        return 0
+    word_count = len(text.split()) if text else 0
+    return int((word_count / duration) * 60)
+
+
+def generate_ai_feedback(ai_scores: "AIScores", detailed_results: List[Dict]) -> str:
+    """Generate AI feedback based on scores"""
+    # Mock implementation
+    feedback = "Overall performance is good. "
+    feedback += f"Pronunciation: {ai_scores.pronunciation}/100. "
+    feedback += f"Fluency: {ai_scores.fluency}/100. "
+    feedback += f"Accuracy: {ai_scores.accuracy}/100."
+    return feedback
 
 
 # ============ Pydantic Models ============
@@ -698,16 +758,18 @@ async def get_student_assignments(
                 "feedback": assignment.feedback,
                 "time_remaining": time_remaining,
                 "is_overdue": is_overdue,
-                "content": {
-                    "id": content.id,
-                    "title": content.title,
-                    "type": content.type.value
-                    if hasattr(content.type, "value")
-                    else str(content.type),
-                    "items_count": len(content.items) if content.items else 0,
-                }
-                if content
-                else None,
+                "content": (
+                    {
+                        "id": content.id,
+                        "title": content.title,
+                        "type": content.type.value
+                        if hasattr(content.type, "value")
+                        else str(content.type),
+                        "items_count": len(content.items) if content.items else 0,
+                    }
+                    if content
+                    else None
+                ),
             }
         )
 
@@ -895,11 +957,13 @@ async def get_assignment_progress(
                     else None,
                     "score": sa.score,
                     "attempts": 1 if sa.submitted_at else 0,  # Simple attempt count
-                    "last_activity": sa.updated_at.isoformat()
-                    if sa.updated_at
-                    else sa.created_at.isoformat()
-                    if sa.created_at
-                    else None,
+                    "last_activity": (
+                        sa.updated_at.isoformat()
+                        if sa.updated_at
+                        else sa.created_at.isoformat()
+                        if sa.created_at
+                        else None
+                    ),
                     # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
                     "timestamps": {
                         "started_at": sa.started_at.isoformat()
@@ -1349,70 +1413,6 @@ async def get_assignment_submissions(
         )
 
     return result
-
-
-@router.post("/{assignment_id}/submit")
-async def submit_assignment(
-    assignment_id: int,
-    submission: dict,
-    current_user: Teacher = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """提交作業（學生用）"""
-    # 檢查是否為學生
-    student = db.query(Student).filter(Student.email == current_user.email).first()
-    if not student:
-        raise HTTPException(
-            status_code=403, detail="Only students can submit assignments"
-        )
-
-    # 獲取作業
-    assignment = (
-        db.query(StudentAssignment)
-        .filter(
-            StudentAssignment.id == assignment_id,
-            StudentAssignment.student_id == student.id,
-        )
-        .first()
-    )
-
-    if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-
-    # 檢查作業狀態
-    if assignment.status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
-        raise HTTPException(status_code=400, detail="Assignment already graded")
-
-    # 更新內容進度（新架構）
-    if "content_id" in submission and "response_data" in submission:
-        progress = (
-            db.query(StudentContentProgress)
-            .filter(
-                StudentContentProgress.student_assignment_id == assignment_id,
-                StudentContentProgress.content_id == submission["content_id"],
-            )
-            .first()
-        )
-
-        if progress:
-            progress.status = AssignmentStatus.SUBMITTED
-            progress.response_data = submission["response_data"]
-            progress.completed_at = datetime.now(timezone.utc)
-            if "ai_scores" in submission:
-                progress.ai_scores = submission["ai_scores"]
-
-    # 更新作業狀態
-    assignment.status = AssignmentStatus.SUBMITTED
-    assignment.submitted_at = datetime.now(timezone.utc)
-
-    db.commit()
-
-    return {
-        "id": assignment.id,
-        "status": assignment.status.value,
-        "submitted_at": assignment.submitted_at.isoformat(),
-        "message": "Assignment submitted successfully",
-    }
 
 
 @router.get("/assignments/{assignment_id}/students")

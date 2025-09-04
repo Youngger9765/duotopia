@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Test suite for ReadingAssessmentPanel component
  */
@@ -34,14 +35,14 @@ class MockMediaRecorder {
   ondataavailable: ((event: any) => void) | null = null;
   onstop: (() => void) | null = null;
 
-  constructor(public stream: MediaStream, public options?: any) {}
+  constructor(public stream: MediaStream, public options?: MediaRecorderOptions) {}
 
-  start(_timeslice?: number) {
+  start() {
     this.state = 'recording';
     // Simulate data available event
     setTimeout(() => {
       if (this.ondataavailable) {
-        this.ondataavailable({ data: new Blob(['audio'], { type: 'audio/webm' }) });
+        this.ondataavailable({ data: new Blob(['audio'], { type: 'audio/webm' }) } as BlobEvent);
       }
     }, 100);
   }

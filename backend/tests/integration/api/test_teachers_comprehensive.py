@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from models import Teacher, Classroom, Student, ClassroomStudent, Program, ProgramLevel
 from auth import get_password_hash, create_access_token
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 
 @pytest.fixture

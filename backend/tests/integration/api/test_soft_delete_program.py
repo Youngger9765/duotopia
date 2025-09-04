@@ -3,7 +3,7 @@
 測試課程軟刪除功能
 """
 import requests
-import json
+import json  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -58,10 +58,10 @@ def test_soft_delete():
 
     if "details" in result:
         details = result["details"]
-        print(f"\n📊 刪除詳情:")
+        print("\n📊 刪除詳情:")
         print(f"  - 課程名稱: {details['program_name']}")
         print(f"  - 已停用: {details['deactivated']}")
-        print(f"  - 相關資料:")
+        print("  - 相關資料:")
         print(f"    • Lessons: {details['related_data']['lessons']}")
         print(f"    • Contents: {details['related_data']['contents']}")
         print(f"    • Assignments: {details['related_data']['assignments']}")

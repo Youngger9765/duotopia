@@ -4,8 +4,7 @@
 TDD: 先寫測試，再實作功能
 """
 import requests
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -198,7 +197,7 @@ def test_teacher_view_submissions():
     print(f"✅ 找到有提交的作業 ID: {assignment_id}")
 
     # 3. 查看提交詳情
-    print(f"\n3. 查看提交詳情...")
+    print("\n3. 查看提交詳情...")
     response = requests.get(
         f"{BASE_URL}/assignments/{assignment_id}/submissions", headers=teacher_headers
     )

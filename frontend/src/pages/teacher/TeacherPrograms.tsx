@@ -51,7 +51,7 @@ export default function TeacherPrograms() {
       setLoading(true);
       const [programsData, classroomsData] = await Promise.all([
         apiClient.getTeacherPrograms() as Promise<Program[]>,
-        apiClient.getTeacherClassrooms() as Promise<any[]>
+        apiClient.getTeacherClassrooms() as Promise<Array<{id: number; name: string; [key: string]: unknown}>>
       ]);
 
       // Now using real data from backend API

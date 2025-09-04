@@ -2,7 +2,7 @@
 """測試課程 CRUD 功能"""
 
 import requests
-import json
+import json  # noqa: F401
 import time
 
 # 登入取得 token
@@ -70,7 +70,7 @@ detail_response = requests.get(
 
 if detail_response.status_code == 200:
     detail = detail_response.json()
-    print(f"✅ 成功取得課程詳情:")
+    print("✅ 成功取得課程詳情:")
     print(f"   名稱: {detail['name']}")
     print(f"   描述: {detail['description']}")
     print(f"   程度: {detail['level']}")
@@ -97,7 +97,7 @@ verify_response = requests.get(
 )
 
 if verify_response.status_code == 404:
-    print(f"✅ 確認課程已被刪除")
+    print("✅ 確認課程已被刪除")
 else:
     print(f"❌ 課程仍然存在: {verify_response.status_code}")
 

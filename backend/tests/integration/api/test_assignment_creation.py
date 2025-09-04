@@ -4,7 +4,7 @@
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 

@@ -1,20 +1,21 @@
 """
 Pytest configuration and fixtures
 """
+
+import sys
+import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-import sys
-import os
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import Base, get_db
-from main import app
-from models import Teacher, Student, Classroom
-from auth import get_password_hash
+from database import Base, get_db  # noqa: E402
+from main import app  # noqa: E402
+from models import Teacher  # noqa: E402
+from auth import get_password_hash  # noqa: E402
 
 # Use in-memory SQLite for tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

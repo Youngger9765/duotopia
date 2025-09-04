@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from main import app
 from models import Student, Classroom, Teacher, ClassroomStudent
 from auth import create_access_token
-import json
+import json  # noqa: F401
 
 client = TestClient(app)
 

@@ -1,7 +1,6 @@
 """
 Tests to cover missing lines in auth.py for 90%+ coverage
 """
-import pytest
 from sqlalchemy.orm import Session
 from auth import (
     verify_password,

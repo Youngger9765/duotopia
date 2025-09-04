@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import TeacherLayout from '@/components/TeacherLayout';
 import GradingModal from '@/components/GradingModal';
@@ -51,7 +50,7 @@ interface AssignmentDetail {
   content?: {
     title: string;
     type: string;
-    items?: any[];
+    items?: Array<{text?: string; question?: string; answer?: string; options?: string[]}>;
     target_wpm?: number;
     target_accuracy?: number;
     time_limit_seconds?: number;
@@ -92,7 +91,6 @@ export default function TeacherAssignmentDetailPage() {
   const [editingData, setEditingData] = useState<Partial<AssignmentDetail>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showContent, setShowContent] = useState(false);
   const [expandedContent, setExpandedContent] = useState(false);
 
   // Modal 狀態
@@ -121,7 +119,7 @@ export default function TeacherAssignmentDetailPage() {
     // Don't fail if progress API doesn't exist
     try {
       await fetchStudentProgress();
-    } catch (error) {
+    } catch {
       // Progress API might not exist yet, which is okay
     }
   };
@@ -129,7 +127,7 @@ export default function TeacherAssignmentDetailPage() {
   const fetchAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<any>(`/api/teachers/assignments/${assignmentId}`);
+      const response = await apiClient.get<AssignmentDetail & {assigned_at?: string; assigned_date?: string; created_at?: string; students_progress?: Array<{student_id: number}>}>(`/api/teachers/assignments/${assignmentId}`);
 
       // Handle different possible date field names
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
@@ -137,7 +135,7 @@ export default function TeacherAssignmentDetailPage() {
       // Extract student IDs from students_progress
       let studentIds = [];
       if (response.students_progress && Array.isArray(response.students_progress)) {
-        studentIds = response.students_progress.map((sp: any) => sp.student_id).filter((id: any) => id !== null);
+        studentIds = response.students_progress.map((sp) => sp.student_id).filter((id) => id !== null);
       } else if (response.student_ids && Array.isArray(response.student_ids)) {
         studentIds = response.student_ids;
       } else if (response.students && Array.isArray(response.students)) {
@@ -203,7 +201,7 @@ export default function TeacherAssignmentDetailPage() {
       let response;
       try {
         response = await apiClient.get(`/api/teachers/assignments/${assignmentId}/progress`);
-      } catch (apiError) {
+      } catch {
         // If API doesn't exist, create empty response
         response = [];
       }
@@ -218,7 +216,7 @@ export default function TeacherAssignmentDetailPage() {
       if (progressArray.length > 0) {
         // Create a map of progress data
         const progressMap = new Map();
-        progressArray.forEach((item: any) => {
+        progressArray.forEach((item: {student_id?: number; id?: number; student_name?: string; name?: string; status?: string; submission_date?: string; submitted_at?: string; score?: number; grading?: {score?: number}; feedback?: string}) => {
           const studentId = item.student_id || item.id;
           progressMap.set(studentId, {
             student_id: studentId,
@@ -880,7 +878,6 @@ export default function TeacherAssignmentDetailPage() {
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">重新提交</th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 w-20">已完成</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 w-20">分數</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 w-20">查看</th>
                   <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 min-w-[120px]">操作</th>
                 </tr>
               </thead>
@@ -1070,33 +1067,18 @@ export default function TeacherAssignmentDetailPage() {
                             <span className="text-gray-300">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-center w-20">
-                          {isAssigned ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                              onClick={() => {
-                                toast.info(`查看 ${progress.student_name} 的作業詳情`);
-                              }}
-                            >
-                              查看
-                            </Button>
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex gap-2 justify-center">
                             {isAssigned ? (
                               <>
-                                {progress.status === 'SUBMITTED' || progress.status === 'RESUBMITTED' ? (
+                                {progress.status === 'SUBMITTED' || progress.status === 'RESUBMITTED' || progress.status === 'GRADED' || progress.status === 'RETURNED' ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
                                     onClick={() => {
-                                      // 開啟 Modal 批改
+                                      // 導向到批改頁面
+                                      navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`);
                                       setSelectedStudentId(progress.student_id);
                                       setSelectedStudentName(progress.student_name);
                                       // 找出這個學生在列表中的位置

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a test program for a classroom."""
 import requests
-import json
+import json  # noqa: F401
 
 # API configuration
 API_URL = "http://localhost:8000"

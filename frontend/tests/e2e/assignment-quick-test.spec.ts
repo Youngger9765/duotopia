@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('Assignment Dashboard Quick Test', () => {
   test('Test all assignment features', async ({ page }) => {
