@@ -291,9 +291,10 @@ db-seed-staging-pooler:
 		echo "❌ Error: backend/.env.staging not found"; \
 		exit 1; \
 	fi
+	@echo "🔐 Loading DATABASE_URL from backend/.env.staging..."
 	@cd $(BACKEND_DIR) && \
-		DATABASE_URL="postgresql://postgres.oenkjognodqhvujaooax:Duotopia2025@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres" \
-		python seed_data.py
+		export $$(grep 'STAGING_SUPABASE_POOLER_URL=' ../.env.staging | xargs) && \
+		DATABASE_URL="$$STAGING_SUPABASE_POOLER_URL" python seed_data.py
 	@echo "✅ Staging database seeded via pooler!"
 	@echo "💡 Tip: If direct connection fails, use this pooler method"
 
