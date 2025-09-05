@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Activity Page Preview</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            background: linear-gradient(to bottom right, #EFF6FF, #FFFFFF, #FAF5FF);
+            min-height: 100vh;
+        }
+        .preview-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .feature-list {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .feature-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+        }
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+        .check-icon {
+            color: #10b981;
+            margin-right: 12px;
+        }
+        .screenshot {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .screenshot img {
+            width: 100%;
+            border-radius: 8px;
+        }
+        h1 {
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        h2 {
+            color: #475569;
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .navigation-preview {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .question-tab {
+            padding: 8px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .question-tab.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .question-tab.completed {
+            border-color: #10b981;
+        }
+        .status-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+        }
+        .status-icon.completed {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        .demo-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .demo-link:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1>🎯 學生做題頁面 - 功能預覽</h1>
+        <p style="color: #64748b; margin-bottom: 24px;">
+            完整的互動式作業練習系統，支援音檔播放、錄音功能和智能導航
+        </p>
+
+        <div class="feature-list">
+            <h2>✨ 已實現功能</h2>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>真實題目與音檔播放</strong> - 支援聽力題型的音檔播放，包含播放/暫停/重播功能
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>學生錄音功能</strong> - 支援麥克風錄音，即時顯示錄音時長，可重新錄音
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>題目導航系統</strong> - 頂部顯示所有題號，標記完成狀態，點擊可快速跳轉
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>自動儲存機制</strong> - 切換題目時自動儲存當前答案，防止資料遺失
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>完整提交功能</strong> - 檢查未答題目，確認後提交所有答案
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>多種題型支援</strong> - 聽力測驗、朗讀評測、口說練習
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="check-icon">✅</span>
+                <div>
+                    <strong>進度追蹤</strong> - 即時顯示完成/進行中/未開始的題目數量
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h2>🎮 使用者體驗設計</h2>
+
+            <h3 style="margin-top: 20px; color: #1e293b;">題目導航列預覽</h3>
+            <div class="navigation-preview">
+                <div class="question-tab completed">
+                    <div class="status-icon completed"></div>
+                    <span>第 1 題</span>
+                </div>
+                <div class="question-tab completed">
+                    <div class="status-icon completed"></div>
+                    <span>第 2 題</span>
+                </div>
+                <div class="question-tab active">
+                    <div class="status-icon" style="background: #fbbf24;"></div>
+                    <span>第 3 題</span>
+                </div>
+                <div class="question-tab">
+                    <div class="status-icon"></div>
+                    <span>第 4 題</span>
+                </div>
+                <div class="question-tab">
+                    <div class="status-icon"></div>
+                    <span>第 5 題</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h4 style="color: #475569; margin-bottom: 12px;">狀態指示說明</h4>
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background: #10b981;"></div>
+                        <span>已完成</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background: #fbbf24;"></div>
+                        <span>進行中</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid #d1d5db;"></div>
+                        <span>未開始</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h2>📱 頁面結構</h2>
+            <ul style="color: #475569; line-height: 1.8;">
+                <li><strong>固定頂部導航</strong> - 題目切換按鈕始終可見，方便快速導航</li>
+                <li><strong>主要作答區</strong> - 清晰的題目展示和作答介面</li>
+                <li><strong>音檔控制區</strong> - 聽力題專用播放器，支援進度條顯示</li>
+                <li><strong>錄音控制區</strong> - 大按鈕設計，操作直觀</li>
+                <li><strong>狀態統計區</strong> - 即時顯示各題目完成狀態</li>
+            </ul>
+        </div>
+
+        <div class="feature-list">
+            <h2>🔧 技術特點</h2>
+            <ul style="color: #475569; line-height: 1.8;">
+                <li>使用 React Hooks 管理複雜狀態</li>
+                <li>Web Audio API 實現錄音功能</li>
+                <li>響應式設計，適配各種螢幕尺寸</li>
+                <li>優雅的載入和錯誤處理</li>
+                <li>TypeScript 確保類型安全</li>
+            </ul>
+        </div>
+
+        <a href="/student/assignment/1/activity" class="demo-link">
+            查看實際頁面 →
+        </a>
+
+        <p style="margin-top: 24px; color: #94a3b8; font-size: 14px;">
+            注意：需要先登入學生帳號才能訪問實際頁面
+        </p>
+    </div>
+</body>
+</html>

@@ -16,6 +16,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import StudentAssignmentList from './pages/student/StudentAssignmentList'
 import StudentAssignmentDetail from './pages/student/StudentAssignmentDetail'
 import AssignmentDetail from './pages/student/AssignmentDetail'
+import StudentActivityPage from './pages/student/StudentActivityPage'
 import StudentLayout from './components/StudentLayout'
 import { Toaster } from 'sonner'
 
@@ -56,7 +57,7 @@ function App() {
         <Route path="assignments" element={<StudentAssignmentList />} />
         <Route path="assignment/:id/detail" element={<StudentAssignmentDetail />} />
         <Route path="assignment/:id" element={<AssignmentDetail />} />
-        <Route path="assignment/:id/activity" element={<AssignmentDetail />} />
+        <Route path="assignment/:assignmentId/activity" element={<StudentActivityPage />} />
         <Route path="assignment/:id/activity/:progressId" element={<AssignmentDetail />} />
         <Route path="progress" element={<div className="p-8 text-center">學習進度頁面開發中...</div>} />
         <Route path="achievements" element={<div className="p-8 text-center">成就頁面開發中...</div>} />
