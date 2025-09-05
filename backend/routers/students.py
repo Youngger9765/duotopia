@@ -8,13 +8,17 @@ from models import (
     Classroom,
     ClassroomStudent,
     StudentAssignment,
+    Content,
+    AssignmentStatus,
+    AssignmentContent,
+    StudentContentProgress,
 )
 from auth import (
     create_access_token,
     verify_password,
     get_current_user,
 )
-from datetime import timedelta, datetime  # noqa: F401
+from datetime import timedelta, datetime
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
@@ -177,3 +181,311 @@ async def get_student_assignments(
         )
 
     return result
+
+
+@router.get("/assignments/{assignment_id}/activities")
+async def get_assignment_activities(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """取得作業的活動內容列表（題目）"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # 確認學生有這個作業
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # 獲取作業對應的 Assignment（如果有 assignment_id）
+    activities = []
+
+    # 如果有 content_id，直接獲取該內容
+    if student_assignment.content_id:
+        content = (
+            db.query(Content)
+            .filter(Content.id == student_assignment.content_id)
+            .first()
+        )
+
+        if content:
+            # 檢查是否已有進度記錄
+            progress = (
+                db.query(StudentContentProgress)
+                .filter(
+                    StudentContentProgress.student_assignment_id
+                    == student_assignment.id,
+                    StudentContentProgress.content_id == content.id,
+                )
+                .first()
+            )
+
+            # 如果沒有進度記錄，創建一個
+            if not progress:
+                progress = StudentContentProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_id=content.id,
+                    order_index=0,
+                    status=AssignmentStatus.NOT_STARTED,
+                )
+                db.add(progress)
+                db.commit()
+                db.refresh(progress)
+
+            activities.append(
+                {
+                    "id": progress.id,
+                    "content_id": content.id,
+                    "order": 1,
+                    "type": content.type.value
+                    if content.type
+                    else "reading_assessment",
+                    "title": content.title,
+                    "content": content.content,
+                    "target_text": content.content,  # For reading assessment
+                    "duration": 60,  # Default duration
+                    "points": 100,
+                    "status": progress.status.value
+                    if progress.status
+                    else "NOT_STARTED",
+                    "score": progress.score,
+                    "audio_url": progress.audio_url,
+                    "completed_at": progress.completed_at.isoformat()
+                    if progress.completed_at
+                    else None,
+                }
+            )
+
+    # 如果有 assignment_id，獲取所有相關內容
+    elif student_assignment.assignment_id:
+        # 獲取作業的所有內容
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == student_assignment.assignment_id)
+            .order_by(AssignmentContent.order_index)
+            .all()
+        )
+
+        for idx, ac in enumerate(assignment_contents):
+            content = db.query(Content).filter(Content.id == ac.content_id).first()
+
+            if content:
+                # 檢查是否已有進度記錄
+                progress = (
+                    db.query(StudentContentProgress)
+                    .filter(
+                        StudentContentProgress.student_assignment_id
+                        == student_assignment.id,
+                        StudentContentProgress.content_id == content.id,
+                    )
+                    .first()
+                )
+
+                # 如果沒有進度記錄，創建一個
+                if not progress:
+                    progress = StudentContentProgress(
+                        student_assignment_id=student_assignment.id,
+                        content_id=content.id,
+                        order_index=ac.order_index,
+                        status=AssignmentStatus.NOT_STARTED,
+                    )
+                    db.add(progress)
+                    db.commit()
+                    db.refresh(progress)
+
+                activities.append(
+                    {
+                        "id": progress.id,
+                        "content_id": content.id,
+                        "order": ac.order_index + 1,
+                        "type": content.type.value
+                        if content.type
+                        else "reading_assessment",
+                        "title": content.title,
+                        "content": content.content,
+                        "target_text": content.content,  # For reading assessment
+                        "duration": 60,  # Default duration
+                        "points": 100 // len(assignment_contents)
+                        if assignment_contents
+                        else 100,
+                        "status": progress.status.value
+                        if progress.status
+                        else "NOT_STARTED",
+                        "score": progress.score,
+                        "audio_url": progress.audio_url,
+                        "completed_at": progress.completed_at.isoformat()
+                        if progress.completed_at
+                        else None,
+                    }
+                )
+
+    # 如果沒有活動，創建一個默認的朗讀活動
+    if not activities:
+        # 創建一個臨時的朗讀活動
+        activities.append(
+            {
+                "id": 0,
+                "content_id": 0,
+                "order": 1,
+                "type": "reading_assessment",
+                "title": "朗讀測驗",
+                "content": "Please read the following text aloud.",
+                "target_text": (
+                    "The quick brown fox jumps over the lazy dog. "
+                    "This pangram contains all letters of the English alphabet."
+                ),
+                "duration": 60,
+                "points": 100,
+                "status": "NOT_STARTED",
+                "score": None,
+                "audio_url": None,
+                "completed_at": None,
+            }
+        )
+
+    # 更新作業狀態為進行中（如果還是未開始）
+    if student_assignment.status == AssignmentStatus.NOT_STARTED:
+        student_assignment.status = AssignmentStatus.IN_PROGRESS
+        db.commit()
+
+    return {
+        "assignment_id": assignment_id,
+        "title": student_assignment.title,
+        "total_activities": len(activities),
+        "activities": activities,
+    }
+
+
+@router.post("/assignments/{assignment_id}/activities/{progress_id}/save")
+async def save_activity_progress(
+    assignment_id: int,
+    progress_id: int,
+    audio_url: Optional[str] = None,
+    text_answer: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """儲存活動進度（自動儲存）"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # 確認學生有這個作業
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+        )
+
+    # 獲取並更新進度記錄
+    progress = (
+        db.query(StudentContentProgress)
+        .filter(
+            StudentContentProgress.id == progress_id,
+            StudentContentProgress.student_assignment_id == student_assignment.id,
+        )
+        .first()
+    )
+
+    if not progress:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Activity progress not found"
+        )
+
+    # 更新進度
+    if audio_url:
+        progress.audio_url = audio_url
+    if text_answer:
+        progress.text_response = text_answer
+
+    # 更新狀態
+    if progress.status == AssignmentStatus.NOT_STARTED:
+        progress.status = AssignmentStatus.IN_PROGRESS
+
+    db.commit()
+
+    return {"message": "Progress saved successfully"}
+
+
+@router.post("/assignments/{assignment_id}/submit")
+async def submit_assignment(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """提交作業"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # 確認學生有這個作業
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+        )
+
+    # 更新所有進度為已完成
+    progress_records = (
+        db.query(StudentContentProgress)
+        .filter(StudentContentProgress.student_assignment_id == student_assignment.id)
+        .all()
+    )
+
+    for progress in progress_records:
+        if progress.status == AssignmentStatus.IN_PROGRESS:
+            progress.status = AssignmentStatus.SUBMITTED
+            progress.completed_at = datetime.now()
+
+    # 更新作業狀態
+    student_assignment.status = AssignmentStatus.SUBMITTED
+    student_assignment.submitted_at = datetime.now()
+
+    db.commit()
+
+    return {
+        "message": "Assignment submitted successfully",
+        "submitted_at": student_assignment.submitted_at.isoformat(),
+    }

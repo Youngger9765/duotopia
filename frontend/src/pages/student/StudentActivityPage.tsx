@@ -11,17 +11,17 @@ import { toast } from 'sonner';
 import {
   ChevronLeft,
   ChevronRight,
-  Play,
-  Pause,
   Mic,
   MicOff,
   RotateCcw,
   Send,
-  Volume2,
   CheckCircle,
   Circle,
   Clock,
-  Loader2
+  Loader2,
+  Volume2,
+  Play,
+  Pause
 } from 'lucide-react';
 
 interface Question {
@@ -583,7 +583,7 @@ export default function StudentActivityPage() {
                     placeholder="請輸入你的答案..."
                     className="min-h-[150px]"
                     value={currentAnswer?.textAnswer || ''}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                       const value = e.target.value;
                       setAnswers(prev => {
                         const newAnswers = new Map(prev);

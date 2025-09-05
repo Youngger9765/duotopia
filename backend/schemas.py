@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime  # noqa: F401
 from enum import Enum
+from models import ProgramLevel  # 使用 models 中定義的 Enum
 
 
 # Auth schemas
@@ -31,6 +32,78 @@ class TeacherResponse(BaseModel):
     name: str
     is_active: bool
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Program schemas
+class ProgramBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    level: Optional[ProgramLevel] = ProgramLevel.A1
+    estimated_hours: Optional[int] = None
+    tags: Optional[List[str]] = None
+
+
+class ProgramCreate(ProgramBase):
+    pass
+
+
+class ProgramUpdate(ProgramBase):
+    name: Optional[str] = None
+
+
+class ProgramResponse(ProgramBase):
+    id: int
+    is_template: bool
+    classroom_id: Optional[int] = None
+    teacher_id: int
+    source_type: Optional[str] = None
+    source_metadata: Optional[Dict[str, Any]] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    # Computed fields
+    classroom_name: Optional[str] = None
+    teacher_name: Optional[str] = None
+    lesson_count: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
+class ProgramCopyFromTemplate(BaseModel):
+    template_id: int
+    classroom_id: int
+    name: Optional[str] = None  # 可選，預設使用模板名稱
+
+
+class ProgramCopyFromClassroom(BaseModel):
+    source_program_id: int
+    target_classroom_id: int
+    name: Optional[str] = None  # 可選，預設使用來源名稱
+
+
+# Lesson schemas
+class LessonBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    order_index: int = 0
+    estimated_minutes: Optional[int] = None
+
+
+class LessonCreate(LessonBase):
+    pass
+
+
+class LessonResponse(LessonBase):
+    id: int
+    program_id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

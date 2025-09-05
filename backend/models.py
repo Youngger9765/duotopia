@@ -183,7 +183,7 @@ class ClassroomStudent(Base):
 
 # ============ 課程系統（三層架構）============
 class Program(Base):
-    """課程計畫（最上層）- 在特定班級內創建"""
+    """課程計畫 - 公版模板或班級課程"""
 
     __tablename__ = "programs"
 
@@ -191,13 +191,36 @@ class Program(Base):
     name = Column(String(200), nullable=False)
     description = Column(Text)
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+
+    # 類型與歸屬
+    is_template = Column(
+        Boolean, default=False, nullable=False
+    )  # True=公版模板, False=班級課程
     classroom_id = Column(
-        Integer, ForeignKey("classrooms.id"), nullable=False
-    )  # 課程歸屬班級
+        Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=True
+    )  # 公版課程為 NULL
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+
+    # 來源追蹤
+    source_type = Column(
+        String(20), nullable=True
+    )  # 'template', 'classroom', 'custom', None
+    source_metadata = Column(JSON, nullable=True)
+    """
+    範例：
+    - 從公版複製: {"template_id": 123, "template_name": "初級會話"}
+    - 從其他班級: {"classroom_id": 456, "classroom_name": "五年級B班", "program_id": 789}
+    - 自建: {"created_by": "manual"}
+    """
+
+    # 課程屬性
     estimated_hours = Column(Integer)  # 預計時數
     order_index = Column(Integer, default=1)  # 排序順序
+    tags = Column(JSON, nullable=True)  # 標籤
+
+    # 軟刪除
     is_active = Column(Boolean, default=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -209,8 +232,19 @@ class Program(Base):
         "Lesson", back_populates="program", cascade="all, delete-orphan"
     )
 
+    @property
+    def is_public_template(self):
+        """判斷是否為公版模板"""
+        return self.is_template and self.classroom_id is None
+
+    @property
+    def is_classroom_program(self):
+        """判斷是否為班級課程"""
+        return not self.is_template and self.classroom_id is not None
+
     def __repr__(self):
-        return f"<Program {self.name}>"
+        type_str = "Template" if self.is_template else f"Class {self.classroom_id}"
+        return f"<Program {self.name} ({type_str})>"
 
 
 class Lesson(Base):
@@ -237,6 +271,9 @@ class Lesson(Base):
 
     def __repr__(self):
         return f"<Lesson {self.name}>"
+
+
+# (重複定義已刪除)
 
 
 class Content(Base):

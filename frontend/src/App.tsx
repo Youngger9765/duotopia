@@ -16,7 +16,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import StudentAssignmentList from './pages/student/StudentAssignmentList'
 import StudentAssignmentDetail from './pages/student/StudentAssignmentDetail'
 import AssignmentDetail from './pages/student/AssignmentDetail'
-import StudentActivityPage from './pages/student/StudentActivityPage'
+import StudentActivityPage from './pages/student/StudentActivityPageV2'
 import StudentLayout from './components/StudentLayout'
 import { Toaster } from 'sonner'
 

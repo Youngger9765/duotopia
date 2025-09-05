@@ -1,0 +1,425 @@
+"""
+課程管理 API - 支援公版模板和班級課程
+"""
+
+from datetime import datetime
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import Program, Lesson, Teacher, Classroom
+from schemas import (
+    ProgramCreate,
+    ProgramResponse,
+    ProgramCopyFromTemplate,
+    ProgramCopyFromClassroom,
+)
+from auth import verify_token
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
+
+router = APIRouter(prefix="/api/programs", tags=["programs"])
+
+
+# ============ 認證輔助函數 ============
+
+
+async def get_current_teacher(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
+    """取得當前登入的教師"""
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    teacher_id = payload.get("sub")
+    teacher_type = payload.get("type")
+
+    if teacher_type != "teacher":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
+        )
+
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
+        )
+
+    return teacher
+
+
+# ============ 公版模板管理 ============
+
+
+@router.get("/templates", response_model=List[ProgramResponse])
+async def get_template_programs(
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """取得所有公版課程模板（只看得到自己建立的）"""
+    templates = (
+        db.query(Program)
+        .filter(
+            Program.is_template.is_(True),
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .order_by(Program.created_at.desc())
+        .all()
+    )
+
+    return templates
+
+
+@router.post("/templates", response_model=ProgramResponse)
+async def create_template_program(
+    program: ProgramCreate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """建立新的公版課程模板"""
+    db_program = Program(
+        name=program.name,
+        description=program.description,
+        level=program.level,
+        is_template=True,
+        classroom_id=None,  # 公版課程無班級
+        teacher_id=current_teacher.id,
+        estimated_hours=program.estimated_hours,
+        tags=program.tags,
+        source_type=None,  # 原創
+        source_metadata={
+            "created_by": "manual",
+            "created_at": datetime.now().isoformat(),
+        },
+    )
+
+    db.add(db_program)
+    db.commit()
+    db.refresh(db_program)
+
+    return db_program
+
+
+@router.get("/templates/{program_id}", response_model=ProgramResponse)
+async def get_template_program(
+    program_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """取得單一公版課程模板詳情"""
+    template = (
+        db.query(Program)
+        .filter(
+            Program.id == program_id,
+            Program.is_template.is_(True),
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return template
+
+
+# ============ 班級課程管理 ============
+
+
+@router.get("/classroom/{classroom_id}", response_model=List[ProgramResponse])
+async def get_classroom_programs(
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """取得特定班級的所有課程"""
+    # 驗證班級存在且屬於當前教師
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    programs = (
+        db.query(Program)
+        .filter(
+            Program.classroom_id == classroom_id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .order_by(Program.order_index, Program.created_at)
+        .all()
+    )
+
+    return programs
+
+
+# ============ 三種複製方式 ============
+
+
+@router.post("/copy-from-template", response_model=ProgramResponse)
+async def copy_from_template(
+    data: ProgramCopyFromTemplate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """從公版模板複製課程到班級"""
+    # 驗證模板存在
+    template = (
+        db.query(Program)
+        .filter(
+            Program.id == data.template_id,
+            Program.is_template.is_(True),
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # 驗證目標班級存在
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == data.classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    # 建立新課程
+    new_program = Program(
+        name=data.name or f"{template.name} (複製)",
+        description=template.description,
+        level=template.level,
+        is_template=False,
+        classroom_id=data.classroom_id,
+        teacher_id=current_teacher.id,
+        estimated_hours=template.estimated_hours,
+        tags=template.tags,
+        source_type="template",
+        source_metadata={
+            "template_id": template.id,
+            "template_name": template.name,
+            "copied_at": datetime.now().isoformat(),
+        },
+    )
+
+    db.add(new_program)
+    db.flush()  # 取得 new_program.id
+
+    # 深度複製 Lessons
+    for lesson in template.lessons:
+        new_lesson = Lesson(
+            program_id=new_program.id,
+            name=lesson.name,
+            description=lesson.description,
+            order_index=lesson.order_index,
+            estimated_minutes=lesson.estimated_minutes,
+        )
+        db.add(new_lesson)
+        db.flush()
+
+        # 複製 lesson 的 contents（引用相同的 content，不複製）
+        for content in lesson.contents:
+            # 這裡可以選擇是否複製 content 關聯
+            pass
+
+    db.commit()
+    db.refresh(new_program)
+
+    return new_program
+
+
+@router.post("/copy-from-classroom", response_model=ProgramResponse)
+async def copy_from_classroom(
+    data: ProgramCopyFromClassroom,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """從其他班級複製課程"""
+    # 驗證來源課程存在且屬於當前教師
+    source_program = (
+        db.query(Program)
+        .join(Classroom)
+        .filter(
+            Program.id == data.source_program_id,
+            Program.is_template.is_(False),
+            Classroom.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not source_program:
+        raise HTTPException(status_code=404, detail="Source program not found")
+
+    # 驗證目標班級存在
+    target_classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == data.target_classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not target_classroom:
+        raise HTTPException(status_code=404, detail="Target classroom not found")
+
+    # 建立新課程
+    new_program = Program(
+        name=data.name or f"{source_program.name} (從{source_program.classroom.name}複製)",
+        description=source_program.description,
+        level=source_program.level,
+        is_template=False,
+        classroom_id=data.target_classroom_id,
+        teacher_id=current_teacher.id,
+        estimated_hours=source_program.estimated_hours,
+        tags=source_program.tags,
+        source_type="classroom",
+        source_metadata={
+            "source_classroom_id": source_program.classroom_id,
+            "source_classroom_name": source_program.classroom.name,
+            "source_program_id": source_program.id,
+            "source_program_name": source_program.name,
+            "copied_at": datetime.now().isoformat(),
+        },
+    )
+
+    db.add(new_program)
+    db.flush()
+
+    # 深度複製 Lessons
+    for lesson in source_program.lessons:
+        new_lesson = Lesson(
+            program_id=new_program.id,
+            name=lesson.name,
+            description=lesson.description,
+            order_index=lesson.order_index,
+            estimated_minutes=lesson.estimated_minutes,
+        )
+        db.add(new_lesson)
+
+    db.commit()
+    db.refresh(new_program)
+
+    return new_program
+
+
+@router.post("/create-custom", response_model=ProgramResponse)
+async def create_custom_program(
+    program: ProgramCreate,
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """在班級中自建課程"""
+    # 驗證班級存在
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    # 建立新課程
+    new_program = Program(
+        name=program.name,
+        description=program.description,
+        level=program.level,
+        is_template=False,
+        classroom_id=classroom_id,
+        teacher_id=current_teacher.id,
+        estimated_hours=program.estimated_hours,
+        tags=program.tags,
+        source_type="custom",
+        source_metadata={
+            "created_by": "manual",
+            "created_at": datetime.now().isoformat(),
+        },
+    )
+
+    db.add(new_program)
+    db.commit()
+    db.refresh(new_program)
+
+    return new_program
+
+
+# ============ 輔助功能 ============
+
+
+@router.get("/copyable", response_model=List[ProgramResponse])
+async def get_copyable_programs(
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """取得所有可複製的課程（公版模板 + 其他班級課程）"""
+    # 公版模板
+    templates = db.query(Program).filter(
+        Program.is_template.is_(True),
+        Program.teacher_id == current_teacher.id,
+        Program.is_active.is_(True),
+    )
+
+    # 其他班級的課程
+    classroom_programs = (
+        db.query(Program)
+        .join(Classroom)
+        .filter(
+            Program.is_template.is_(False),
+            Classroom.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
+    )
+
+    all_programs = templates.union(classroom_programs).all()
+    return all_programs
+
+
+@router.delete("/{program_id}")
+async def soft_delete_program(
+    program_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """軟刪除課程"""
+    program = (
+        db.query(Program)
+        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
+
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    # 軟刪除
+    program.is_active = False
+    program.deleted_at = datetime.now()
+
+    db.commit()
+
+    return {"message": "Program deleted successfully"}
