@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, Copy, Plus, Archive, Search, CheckCircle } from 'lucide-react';
+import { BookOpen, Copy, Plus, Archive, Search, CheckCircle, ChevronDown, ChevronRight, School } from 'lucide-react';
 import { TagInputWithSuggestions, TagSuggestion } from '@/components/ui/tag-input';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
@@ -77,6 +77,7 @@ export default function CreateProgramDialog({
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedClassrooms, setExpandedClassrooms] = useState<Set<number>>(new Set());
 
   // 預設的標籤建議
   const tagSuggestions: TagSuggestion[] = [
@@ -149,6 +150,32 @@ export default function CreateProgramDialog({
     });
     setSearchTerm('');
     setActiveTab('template');
+    setExpandedClassrooms(new Set());
+  };
+
+  // 將課程按班級分組
+  const groupProgramsByClassroom = () => {
+    const grouped: { [key: string]: Program[] } = {};
+
+    copyablePrograms.forEach(program => {
+      const classroomKey = program.classroom_name || '未分類';
+      if (!grouped[classroomKey]) {
+        grouped[classroomKey] = [];
+      }
+      grouped[classroomKey].push(program);
+    });
+
+    return grouped;
+  };
+
+  const toggleClassroom = (classroomId: number) => {
+    const newExpanded = new Set(expandedClassrooms);
+    if (newExpanded.has(classroomId)) {
+      newExpanded.delete(classroomId);
+    } else {
+      newExpanded.add(classroomId);
+    }
+    setExpandedClassrooms(newExpanded);
   };
 
   const handleCreateFromTemplate = async () => {
@@ -220,10 +247,6 @@ export default function CreateProgramDialog({
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredPrograms = copyablePrograms.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getLevelBadge = (level?: string) => {
     if (!level) return null;
     const levelColors: Record<string, string> = {
@@ -291,10 +314,10 @@ export default function CreateProgramDialog({
                       setSelectedTemplate(template);
                       setTemplateName(template.name);
                     }}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    className={`p-4 rounded-lg cursor-pointer transition-all ${
                       selectedTemplate?.id === template.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50'
+                        ? 'bg-blue-50 border-2 border-blue-500 shadow-sm'
+                        : 'border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -353,50 +376,91 @@ export default function CreateProgramDialog({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+            <div className="flex-1 overflow-y-auto mb-4">
               {loading ? (
                 <div className="text-center py-8 text-gray-500">載入中...</div>
-              ) : filteredPrograms.length === 0 ? (
+              ) : Object.keys(groupProgramsByClassroom()).length === 0 ? (
                 <div className="text-center py-8 text-gray-500">沒有其他班級的課程</div>
               ) : (
-                filteredPrograms.map((program) => (
-                  <div
-                    key={program.id}
-                    onClick={() => {
-                      setSelectedProgram(program);
-                      setCopyName(program.name);
-                    }}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedProgram?.id === program.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="h-4 w-4 text-gray-400" />
-                          <h4 className="font-medium">{program.name}</h4>
-                          {selectedProgram?.id === program.id && (
-                            <CheckCircle className="h-4 w-4 text-blue-500" />
-                          )}
+                <div className="space-y-3">
+                  {Object.entries(groupProgramsByClassroom()).map(([classroomName, programs], index) => {
+                    const isExpanded = expandedClassrooms.has(index);
+                    const filteredClassroomPrograms = programs.filter(p =>
+                      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+
+                    if (searchTerm && filteredClassroomPrograms.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <div key={classroomName} className="border rounded-lg overflow-hidden">
+                        {/* 班級標頭 */}
+                        <div
+                          onClick={() => toggleClassroom(index)}
+                          className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-gray-500" />
+                            )}
+                            <School className="h-4 w-4 text-gray-500" />
+                            <span className="font-medium text-sm">{classroomName}</span>
+                            <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                              {searchTerm ? filteredClassroomPrograms.length : programs.length} 個課程
+                            </span>
+                          </div>
                         </div>
-                        {program.classroom_name && (
-                          <p className="text-sm text-gray-500 mt-1">來自：{program.classroom_name}</p>
+
+                        {/* 班級課程列表 */}
+                        {isExpanded && (
+                          <div className="p-2 space-y-2 bg-white border-t">
+                            {(searchTerm ? filteredClassroomPrograms : programs).map((program) => (
+                              <div
+                                key={program.id}
+                                onClick={() => {
+                                  setSelectedProgram(program);
+                                  setCopyName(program.name);
+                                }}
+                                className={`p-3 rounded-lg cursor-pointer transition-all ${
+                                  selectedProgram?.id === program.id
+                                    ? 'bg-blue-50 border-2 border-blue-500 shadow-sm'
+                                    : 'border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <BookOpen className="h-4 w-4 text-gray-400" />
+                                      <h4 className="font-medium text-sm">{program.name}</h4>
+                                      {selectedProgram?.id === program.id && (
+                                        <CheckCircle className="h-4 w-4 text-blue-500" />
+                                      )}
+                                    </div>
+                                    {program.description && (
+                                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{program.description}</p>
+                                    )}
+                                    <div className="flex items-center gap-3 mt-2">
+                                      {program.level && getLevelBadge(program.level)}
+                                      {program.estimated_hours && (
+                                        <span className="text-xs text-gray-500">{program.estimated_hours} 小時</span>
+                                      )}
+                                      {program.lesson_count && (
+                                        <span className="text-xs text-gray-500">{program.lesson_count} 個課程單元</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {program.description && (
-                          <p className="text-sm text-gray-500 mt-1">{program.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2">
-                          {program.level && getLevelBadge(program.level)}
-                          {program.estimated_hours && (
-                            <span className="text-xs text-gray-500">{program.estimated_hours} 小時</span>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                </div>
               )}
             </div>
 
