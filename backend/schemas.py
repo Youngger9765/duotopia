@@ -69,6 +69,7 @@ class ProgramResponse(ProgramBase):
     classroom_name: Optional[str] = None
     teacher_name: Optional[str] = None
     lesson_count: Optional[int] = 0
+    is_duplicate: Optional[bool] = None
 
     class Config:
         from_attributes = True

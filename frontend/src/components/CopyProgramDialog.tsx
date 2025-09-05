@@ -54,7 +54,7 @@ export default function CopyProgramDialog({
     try {
       setLoading(true);
       // Get copyable programs (templates + other classroom programs)
-      const data = await apiClient.getCopyablePrograms() as TeacherProgram[];
+      const data = await apiClient.getCopyablePrograms(classroomId) as TeacherProgram[];
       // Filter out programs already in this classroom
       const availablePrograms = data.filter(p => p.classroom_id !== classroomId);
       setPrograms(availablePrograms);

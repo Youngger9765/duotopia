@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { TagInputWithSuggestions, TagSuggestion } from '@/components/ui/tag-input';
 import {
   Table,
   TableBody,
@@ -71,6 +72,29 @@ export default function TeacherTemplatePrograms() {
     newName: '',
   });
 
+  // 標籤建議
+  const tagSuggestions: TagSuggestion[] = [
+    // 程度相關
+    { value: 'beginner', label: '初級', category: 'level' },
+    { value: 'intermediate', label: '中級', category: 'level' },
+    { value: 'advanced', label: '進階', category: 'level' },
+
+    // 技能相關
+    { value: 'speaking', label: '口說', category: 'skill' },
+    { value: 'listening', label: '聽力', category: 'skill' },
+    { value: 'reading', label: '閱讀', category: 'skill' },
+    { value: 'writing', label: '寫作', category: 'skill' },
+    { value: 'grammar', label: '文法', category: 'skill' },
+    { value: 'vocabulary', label: '詞彙', category: 'skill' },
+    { value: 'pronunciation', label: '發音', category: 'skill' },
+
+    // 主題相關
+    { value: 'daily', label: '日常生活', category: 'topic' },
+    { value: 'business', label: '商務', category: 'topic' },
+    { value: 'travel', label: '旅遊', category: 'topic' },
+    { value: 'exam', label: '考試準備', category: 'topic' },
+  ];
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -83,7 +107,9 @@ export default function TeacherTemplatePrograms() {
         apiClient.getTeacherClassrooms() as Promise<Array<{id: number; name: string; [key: string]: unknown}>>
       ]);
 
-      setPrograms(templatesData);
+      // 按 ID 排序（升序）
+      const sortedPrograms = templatesData.sort((a, b) => a.id - b.id);
+      setPrograms(sortedPrograms);
       setClassrooms(classroomsData.map(c => ({ id: c.id, name: c.name })));
     } catch (err) {
       console.error('Fetch data error:', err);
@@ -147,14 +173,14 @@ export default function TeacherTemplatePrograms() {
       if (dialogType === 'create') {
         await apiClient.createTemplateProgram(data);
       } else if (dialogType === 'edit' && selectedProgram) {
-        // TODO: Add update endpoint when available
-        console.log('Update not implemented yet');
+        await apiClient.updateTemplateProgram(selectedProgram.id, data);
       }
 
       setDialogType(null);
       fetchData();
     } catch (err) {
       console.error('Save program error:', err);
+      alert('儲存失敗，請稍後再試');
     }
   };
 
@@ -497,15 +523,14 @@ export default function TeacherTemplatePrograms() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="tags">標籤（用逗號分隔）</Label>
-                <Input
-                  id="tags"
-                  value={formData.tags.join(', ')}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                  })}
-                  placeholder="speaking, beginner, conversation"
+                <Label>標籤</Label>
+                <TagInputWithSuggestions
+                  value={formData.tags}
+                  onChange={(tags) => setFormData({ ...formData, tags })}
+                  placeholder="輸入標籤後按 Enter 新增"
+                  maxTags={10}
+                  suggestions={tagSuggestions}
+                  showSuggestions={true}
                 />
               </div>
             </div>

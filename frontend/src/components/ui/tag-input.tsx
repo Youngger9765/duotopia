@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface TagInputProps {
   value: string[];
@@ -75,16 +74,15 @@ export function TagInput({
   return (
     <div className={`w-full ${className}`}>
       <div
-        className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] cursor-text bg-white"
+        className="flex flex-wrap gap-2 p-3 border-2 border-gray-200 rounded-lg min-h-[48px] cursor-text bg-white hover:border-gray-300 focus-within:border-blue-400 transition-colors"
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((tag, index) => (
-          <Badge
+          <div
             key={`${tag}-${index}`}
-            variant="secondary"
-            className="px-2 py-1 gap-1 hover:bg-secondary/80"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 transition-colors"
           >
-            <span className="text-sm">{tag}</span>
+            <span className="text-sm font-medium">{tag}</span>
             {!disabled && (
               <button
                 type="button"
@@ -92,13 +90,13 @@ export function TagInput({
                   e.stopPropagation();
                   removeTag(index);
                 }}
-                className="ml-1 hover:text-destructive transition-colors"
+                className="ml-1 hover:bg-blue-300 rounded-full p-0.5 transition-colors"
                 aria-label={`移除標籤 ${tag}`}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
-          </Badge>
+          </div>
         ))}
         <input
           ref={inputRef}
@@ -159,14 +157,14 @@ export function TagInputWithSuggestions({
           <p className="text-xs text-muted-foreground">建議標籤（點擊新增）：</p>
           <div className="flex flex-wrap gap-1">
             {availableSuggestions.slice(0, 8).map((suggestion) => (
-              <Badge
+              <button
                 key={suggestion.value}
-                variant="outline"
-                className="cursor-pointer hover:bg-secondary transition-colors"
+                type="button"
+                className="inline-flex items-center px-3 py-1.5 rounded-full border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all text-sm font-medium"
                 onClick={() => handleSuggestionClick(suggestion.value)}
               >
-                <span className="text-xs">{suggestion.label}</span>
-              </Badge>
+                + {suggestion.label}
+              </button>
             ))}
           </div>
         </div>

@@ -166,8 +166,9 @@ class ApiClient {
   }
 
   // ============ Public Template Program Methods ============
-  async getTemplatePrograms() {
-    return this.request('/api/programs/templates');
+  async getTemplatePrograms(classroomId?: number) {
+    const params = classroomId ? `?classroom_id=${classroomId}` : '';
+    return this.request(`/api/programs/templates${params}`);
   }
 
   async createTemplateProgram(data: {
@@ -179,6 +180,19 @@ class ApiClient {
   }) {
     return this.request('/api/programs/templates', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTemplateProgram(id: number, data: {
+    name?: string;
+    description?: string;
+    level?: string;
+    estimated_hours?: number;
+    tags?: string[];
+  }) {
+    return this.request(`/api/programs/templates/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   }
@@ -222,8 +236,8 @@ class ApiClient {
     });
   }
 
-  async getCopyablePrograms() {
-    return this.request('/api/programs/copyable');
+  async getCopyablePrograms(classroomId: number) {
+    return this.request(`/api/programs/copyable?classroom_id=${classroomId}`);
   }
 
   async getClassroomPrograms(classroomId: number) {

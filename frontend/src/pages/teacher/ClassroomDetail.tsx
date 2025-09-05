@@ -16,7 +16,7 @@ import ContentTypeDialog from '@/components/ContentTypeDialog';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { AssignmentDialog } from '@/components/AssignmentDialog';
 import { StudentCompletionDashboard } from '@/components/StudentCompletionDashboard';
-import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical, Copy } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -382,11 +382,6 @@ export default function ClassroomDetail() {
   const handleSwitchToEdit = () => {
     // Switch from view to edit mode
     setDialogType('edit');
-  };
-
-  const handleCreateProgram = () => {
-    setSelectedProgram(null);
-    setProgramDialogType('create');
   };
 
   const handleAddLesson = (programId: number) => {
@@ -778,16 +773,10 @@ export default function ClassroomDetail() {
             <TabsContent value="programs" className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">班級課程</h3>
-                <div className="flex items-center space-x-2">
-                  <Button size="sm" variant="outline" onClick={() => setShowCopyDialog(true)}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    從課程庫複製
-                  </Button>
-                  <Button size="sm" onClick={handleCreateProgram}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    建立課程
-                  </Button>
-                </div>
+                <Button size="sm" onClick={() => setShowCopyDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  建立課程
+                </Button>
               </div>
 
               {programs.length > 0 ? (
@@ -1216,7 +1205,7 @@ export default function ClassroomDetail() {
                   <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500">尚未建立課程</p>
                   <p className="text-sm text-gray-400 mt-2">為班級建立課程內容，開始教學</p>
-                  <Button className="mt-4" size="sm" onClick={handleCreateProgram}>
+                  <Button className="mt-4" size="sm" onClick={() => setShowCopyDialog(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     建立第一個課程
                   </Button>

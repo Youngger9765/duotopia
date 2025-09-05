@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>測試標籤功能</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f4f4f4; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>標籤功能前端測試</h1>
+
+    <div class="test">
+        <h2>1. 登入測試</h2>
+        <button onclick="testLogin()">測試登入</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="test">
+        <h2>2. 建立帶標籤的課程</h2>
+        <button onclick="testCreateWithTags()">測試建立</button>
+        <div id="createResult"></div>
+    </div>
+
+    <div class="test">
+        <h2>3. 查詢課程檢查標籤</h2>
+        <button onclick="testQueryPrograms()">查詢課程</button>
+        <div id="queryResult"></div>
+    </div>
+
+    <script>
+        let token = '';
+        let classroomId = 0;
+
+        async function testLogin() {
+            const result = document.getElementById('loginResult');
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/teacher/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'demo@duotopia.com',
+                        password: 'demo123'
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    token = data.access_token;
+                    result.innerHTML = '<div class="success">✅ 登入成功！Token 已儲存</div>';
+
+                    // 取得班級
+                    const classroomsResponse = await fetch('http://localhost:8000/api/teachers/classrooms', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const classrooms = await classroomsResponse.json();
+                    if (classrooms.length > 0) {
+                        classroomId = classrooms[0].id;
+                        result.innerHTML += `<div>班級 ID: ${classroomId}</div>`;
+                    }
+                } else {
+                    result.innerHTML = `<div class="error">❌ 登入失敗: ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ 錯誤: ${error}</div>`;
+            }
+        }
+
+        async function testCreateWithTags() {
+            if (!token) {
+                alert('請先登入');
+                return;
+            }
+
+            const result = document.getElementById('createResult');
+            const programData = {
+                name: '前端測試標籤課程 ' + new Date().getTime(),
+                description: '測試標籤是否能儲存',
+                level: 'B1',
+                estimated_hours: 20,
+                tags: ['前端測試', '標籤功能', 'JavaScript', '測試中']
+            };
+
+            try {
+                result.innerHTML = '<div>送出資料:</div><pre>' + JSON.stringify(programData, null, 2) + '</pre>';
+
+                const response = await fetch(`http://localhost:8000/api/programs/create-custom?classroom_id=${classroomId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(programData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    result.innerHTML += '<div class="success">✅ 建立成功！</div>';
+                    result.innerHTML += '<div>回應資料:</div><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+                    // 檢查標籤
+                    if (data.tags) {
+                        const tagsMatch = JSON.stringify(data.tags) === JSON.stringify(programData.tags);
+                        if (tagsMatch) {
+                            result.innerHTML += '<div class="success">✅ 標籤正確儲存！</div>';
+                        } else {
+                            result.innerHTML += '<div class="error">❌ 標籤不符合</div>';
+                        }
+                    } else {
+                        result.innerHTML += '<div class="error">❌ 回應中沒有 tags 欄位</div>';
+                    }
+                } else {
+                    result.innerHTML += `<div class="error">❌ 建立失敗: ${response.status}</div>`;
+                    result.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                result.innerHTML += `<div class="error">❌ 錯誤: ${error}</div>`;
+            }
+        }
+
+        async function testQueryPrograms() {
+            if (!token) {
+                alert('請先登入');
+                return;
+            }
+
+            const result = document.getElementById('queryResult');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/teachers/programs', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const programs = await response.json();
+
+                if (response.ok) {
+                    result.innerHTML = `<div class="success">✅ 取得 ${programs.length} 個課程</div>`;
+
+                    // 找出有標籤的課程
+                    const programsWithTags = programs.filter(p => p.tags && p.tags.length > 0);
+                    result.innerHTML += `<div>有標籤的課程: ${programsWithTags.length} 個</div>`;
+
+                    // 顯示前3個有標籤的課程
+                    programsWithTags.slice(0, 3).forEach(p => {
+                        result.innerHTML += `<div>📚 ${p.name}: ${JSON.stringify(p.tags)}</div>`;
+                    });
+
+                    // 顯示完整資料
+                    if (programsWithTags.length > 0) {
+                        result.innerHTML += '<div>第一個有標籤的課程詳細資料:</div>';
+                        result.innerHTML += '<pre>' + JSON.stringify(programsWithTags[0], null, 2) + '</pre>';
+                    }
+                } else {
+                    result.innerHTML = `<div class="error">❌ 查詢失敗: ${response.status}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ 錯誤: ${error}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

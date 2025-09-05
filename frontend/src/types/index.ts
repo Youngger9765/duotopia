@@ -100,6 +100,8 @@ export interface Program {
   order_index?: number;
   classroom_id?: number;
   lessons?: Lesson[];
+  classroom_name?: string;
+  is_duplicate?: boolean;
 }
 
 // ============ Assignment Status Types ============

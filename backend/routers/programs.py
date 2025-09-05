@@ -12,6 +12,7 @@ from database import get_db
 from models import Program, Lesson, Teacher, Classroom
 from schemas import (
     ProgramCreate,
+    ProgramUpdate,
     ProgramResponse,
     ProgramCopyFromTemplate,
     ProgramCopyFromClassroom,
@@ -58,10 +59,11 @@ async def get_current_teacher(
 
 @router.get("/templates", response_model=List[ProgramResponse])
 async def get_template_programs(
+    classroom_id: int = None,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
-    """取得所有公版課程模板（只看得到自己建立的）"""
+    """取得所有公版課程模板（只看得到自己建立的），並標記重複狀態"""
     templates = (
         db.query(Program)
         .filter(
@@ -73,6 +75,39 @@ async def get_template_programs(
         .order_by(Program.created_at.desc())
         .all()
     )
+
+    # 如果提供了 classroom_id，檢查重複狀態
+    if classroom_id:
+        # 獲取目標班級中已存在的課程
+        existing_programs = (
+            db.query(Program)
+            .filter(
+                Program.classroom_id == classroom_id,
+                Program.is_active.is_(True),
+                Program.deleted_at.is_(None),
+            )
+            .all()
+        )
+
+        # 建立已存在模板 ID 集合
+        existing_template_ids = set()
+        for existing_program in existing_programs:
+            if (
+                existing_program.source_metadata
+                and existing_program.source_type == "template"
+            ):
+                if "template_id" in existing_program.source_metadata:
+                    existing_template_ids.add(
+                        existing_program.source_metadata["template_id"]
+                    )
+
+        # 標記重複狀態
+        for template in templates:
+            template.is_duplicate = template.id in existing_template_ids
+    else:
+        # 沒有提供 classroom_id，不標記重複狀態
+        for template in templates:
+            template.is_duplicate = False
 
     return templates
 
@@ -127,6 +162,48 @@ async def get_template_program(
 
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
+
+    return template
+
+
+@router.put("/templates/{program_id}", response_model=ProgramResponse)
+async def update_template_program(
+    program_id: int,
+    program_update: ProgramUpdate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """更新公版課程模板"""
+    template = (
+        db.query(Program)
+        .filter(
+            Program.id == program_id,
+            Program.is_template.is_(True),
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # 更新欄位
+    if program_update.name is not None:
+        template.name = program_update.name
+    if program_update.description is not None:
+        template.description = program_update.description
+    if program_update.level is not None:
+        template.level = program_update.level
+    if program_update.estimated_hours is not None:
+        template.estimated_hours = program_update.estimated_hours
+    if program_update.tags is not None:
+        template.tags = program_update.tags
+
+    template.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(template)
 
     return template
 
@@ -374,31 +451,90 @@ async def create_custom_program(
 
 @router.get("/copyable", response_model=List[ProgramResponse])
 async def get_copyable_programs(
+    classroom_id: int,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
-    """取得所有可複製的課程（公版模板 + 其他班級課程）"""
-    # 公版模板
-    templates = db.query(Program).filter(
-        Program.is_template.is_(True),
-        Program.teacher_id == current_teacher.id,
-        Program.is_active.is_(True),
-    )
+    """取得教師班級的課程（只顯示班級課程，不含公版模板），並標記重複狀態"""
+    # 只取得班級課程 - 使用 joinedload 來載入 classroom 關聯
+    from sqlalchemy.orm import joinedload
 
-    # 其他班級的課程
     classroom_programs = (
         db.query(Program)
+        .options(joinedload(Program.classroom))
         .join(Classroom)
         .filter(
             Program.is_template.is_(False),
             Classroom.teacher_id == current_teacher.id,
             Program.is_active.is_(True),
         )
+        .all()
     )
 
-    # 合併結果（避免 UNION 與 JSON column 的問題）
-    all_programs = templates.all() + classroom_programs.all()
-    return all_programs
+    # 獲取目標班級中已存在的課程，用於重複檢測
+    target_classroom_programs = (
+        db.query(Program)
+        .filter(
+            Program.classroom_id == classroom_id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    # 建立重複檢測映射
+    existing_template_ids = set()
+    existing_program_ids = set()
+
+    for existing_program in target_classroom_programs:
+        if existing_program.source_metadata:
+            # 檢查從模板複製的課程
+            if (
+                existing_program.source_type == "template"
+                and "template_id" in existing_program.source_metadata
+            ):
+                existing_template_ids.add(
+                    existing_program.source_metadata["template_id"]
+                )
+            # 檢查從其他班級複製的課程
+            elif (
+                existing_program.source_type == "classroom"
+                and "source_program_id" in existing_program.source_metadata
+            ):
+                existing_program_ids.add(
+                    existing_program.source_metadata["source_program_id"]
+                )
+
+    # 手動添加 classroom_name 和 is_duplicate 標記
+    result = []
+
+    # 只添加班級課程（有班級名稱）
+    for program in classroom_programs:
+        program.classroom_name = program.classroom.name if program.classroom else None
+
+        # 檢查是否重複
+        is_duplicate = False
+        if program.source_metadata:
+            if (
+                program.source_type == "template"
+                and "template_id" in program.source_metadata
+            ):
+                is_duplicate = (
+                    program.source_metadata["template_id"] in existing_template_ids
+                )
+            elif (
+                program.source_type == "classroom"
+                and "source_program_id" in program.source_metadata
+            ):
+                is_duplicate = (
+                    program.source_metadata["source_program_id"] in existing_program_ids
+                )
+
+        # 添加自定義屬性（不在數據庫模型中）
+        program.is_duplicate = is_duplicate
+        result.append(program)
+
+    return result
 
 
 @router.delete("/{program_id}")
