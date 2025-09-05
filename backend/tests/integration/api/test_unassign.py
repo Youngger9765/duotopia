@@ -5,7 +5,6 @@ Test unassign functionality with different student progress states
 """
 
 import requests
-import json
 from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000"

@@ -1,74 +1,98 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Student Login Flow', () => {
+  const screenshotDir = '/tmp/student-e2e-screenshots';
+
+  test.beforeAll(async () => {
+    // Create temporary screenshot directory
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
+  });
+
+  test.afterAll(async () => {
+    // Clean up screenshots after all tests
+    if (fs.existsSync(screenshotDir)) {
+      const files = fs.readdirSync(screenshotDir);
+      files.forEach(file => {
+        fs.unlinkSync(path.join(screenshotDir, file));
+      });
+      fs.rmdirSync(screenshotDir);
+      console.log('✅ Screenshots cleaned up');
+    }
+  });
+
   test('complete student login flow works', async ({ page }) => {
     // Navigate to student login page
-    await page.goto('http://localhost:5173/student-login');
+    await page.goto('http://localhost:5173/student/login');
+
+    // Take initial screenshot
+    await page.screenshot({ path: `${screenshotDir}/01-login-page.png` });
 
     // Step 1: Enter teacher email
     await expect(page.locator('h2')).toContainText('請輸入老師 Email');
     await page.fill('input[type="email"]', 'demo@duotopia.com');
+    await page.screenshot({ path: `${screenshotDir}/02-email-entered.png` });
     await page.click('button:has-text("下一步")');
 
     // Step 2: Select classroom
-    await page.waitForTimeout(1000); // Wait for API
+    await page.waitForSelector('button:has-text("五年級A班")', { timeout: 5000 });
     await expect(page.locator('h2')).toContainText('請選擇你的班級');
+    await page.screenshot({ path: `${screenshotDir}/03-classroom-selection.png` });
     await page.click('button:has-text("五年級A班")');
 
     // Step 3: Select student
-    await page.waitForTimeout(1000); // Wait for API
-    await expect(page.locator('h2')).toContainText('請選擇你的名字');
+    await page.waitForSelector('button:has-text("王小明")', { timeout: 5000 });
+    await expect(page.locator('h2')).toContainText('五年級A班');
+    await expect(page.locator('text=請選擇你的名字')).toBeVisible();
+    await page.screenshot({ path: `${screenshotDir}/04-student-selection.png` });
     await page.click('button:has-text("王小明")');
 
     // Step 4: Enter password
     await expect(page.locator('h2')).toContainText('你好，王小明');
     await page.fill('input[type="password"]', '20120101');
+    await page.screenshot({ path: `${screenshotDir}/05-password-entry.png` });
     await page.click('button:has-text("登入")');
 
-    // Wait for navigation or error
-    await page.waitForTimeout(2000);
+    // Wait for navigation to dashboard
+    await page.waitForURL('**/student/dashboard', { timeout: 5000 });
 
-    // Check if login was successful
-    const url = page.url();
-    console.log('Final URL after login:', url);
+    // Verify successful login
+    await expect(page).toHaveURL(/.*\/student\/dashboard/);
+    await page.screenshot({ path: `${screenshotDir}/06-dashboard-after-login.png` });
 
-    // Check for error message
-    const errorMessage = await page.locator('.text-red-500').textContent().catch(() => null);
-    if (errorMessage) {
-      console.log('Error message:', errorMessage);
-    }
-
-    // Take screenshot for debugging
-    await page.screenshot({ path: 'student-login-result.png' });
+    console.log(`✅ Login successful! Screenshots saved to ${screenshotDir}`);
   });
 
-  test('test with default password student', async ({ page }) => {
+  test('test with another student (李小美)', async ({ page }) => {
     // Navigate to student login page
-    await page.goto('http://localhost:5173/student-login');
+    await page.goto('http://localhost:5173/student/login');
 
     // Step 1: Enter teacher email
     await page.fill('input[type="email"]', 'demo@duotopia.com');
     await page.click('button:has-text("下一步")');
 
     // Step 2: Select classroom
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('button:has-text("五年級A班")', { timeout: 5000 });
     await page.click('button:has-text("五年級A班")');
 
-    // Step 3: Select student (李小美 uses default password)
-    await page.waitForTimeout(1000);
+    // Step 3: Select student (李小美)
+    await page.waitForSelector('button:has-text("李小美")', { timeout: 5000 });
     await page.click('button:has-text("李小美")');
 
-    // Step 4: Enter default password
-    await page.fill('input[type="password"]', '20120101');
+    // Step 4: Enter password
+    await page.fill('input[type="password"]', '20120102');
     await page.click('button:has-text("登入")');
 
     // Wait for navigation
-    await page.waitForTimeout(2000);
+    await page.waitForURL('**/student/dashboard', { timeout: 5000 });
 
-    // Check result
-    const url = page.url();
-    console.log('Final URL after login with default password:', url);
+    // Verify successful login
+    await expect(page).toHaveURL(/.*\/student\/dashboard/);
+    await page.screenshot({ path: `${screenshotDir}/07-li-xiaomei-dashboard.png` });
 
-    await page.screenshot({ path: 'student-login-default-password.png' });
+    console.log('✅ 李小美 login successful!');
   });
 });

@@ -4,7 +4,6 @@ API 測試 - 班級完整功能
 包含：學生管理、課程管理、拖拽排序
 """
 import requests
-import json
 from typing import Dict, Any  # noqa: F401
 
 # 測試環境配置

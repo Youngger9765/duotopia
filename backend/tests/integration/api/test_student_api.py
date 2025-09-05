@@ -3,7 +3,6 @@
 API 測試 - 學生功能
 """
 import requests
-import json
 from typing import Dict, Any  # noqa: F401
 
 # 測試環境配置

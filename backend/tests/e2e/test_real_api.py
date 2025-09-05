@@ -3,7 +3,6 @@
 實際 API 測試腳本 - 測試完整作業流程
 """
 import requests
-import json
 from datetime import datetime, timedelta  # noqa: F401
 
 BASE_URL = "http://localhost:8000/api"

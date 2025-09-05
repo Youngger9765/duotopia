@@ -5,7 +5,6 @@
 """
 
 import requests
-import json
 from datetime import datetime  # noqa: F401
 import sys
 
