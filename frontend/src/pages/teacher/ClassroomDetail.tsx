@@ -11,7 +11,7 @@ import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
 import { ProgramDialog } from '@/components/ProgramDialog';
 import { LessonDialog } from '@/components/LessonDialog';
-import CopyProgramDialog from '@/components/CopyProgramDialog';
+import CreateProgramDialog from '@/components/CreateProgramDialog';
 import ContentTypeDialog from '@/components/ContentTypeDialog';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { AssignmentDialog } from '@/components/AssignmentDialog';
@@ -145,9 +145,8 @@ export default function ClassroomDetail() {
 
   const fetchPrograms = async () => {
     try {
-      const allPrograms = await apiClient.getTeacherPrograms() as Program[];
-      // Filter programs for this classroom
-      const classroomPrograms = allPrograms.filter(p => p.classroom_id === Number(id));
+      // Use new API to get programs for this specific classroom
+      const classroomPrograms = await apiClient.getClassroomPrograms(Number(id)) as Program[];
 
       // Fetch detailed info including lessons for each program
       const programsWithLessons = await Promise.all(
@@ -1558,14 +1557,15 @@ export default function ClassroomDetail() {
         onDelete={handleDeleteLessonConfirm}
       />
 
-      {/* Copy Program Dialog */}
-      <CopyProgramDialog
+      {/* Create Program Dialog - Three Ways */}
+      <CreateProgramDialog
         open={showCopyDialog}
         onClose={() => setShowCopyDialog(false)}
         onSuccess={() => {
-          fetchPrograms(); // Refresh programs after copying
+          fetchPrograms(); // Refresh programs after creating
         }}
         classroomId={Number(id)}
+        classroomName={classroom?.name || ''}
       />
 
       {/* Assignment Dialog */}

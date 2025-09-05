@@ -19,6 +19,7 @@ export interface TeacherProgram {
   level: string;
   estimated_hours?: number;
   lesson_count?: number;
+  classroom_id?: number;
   already_in_classroom?: boolean;
 }
 
@@ -52,9 +53,11 @@ export default function CopyProgramDialog({
   const fetchPrograms = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getTeacherPrograms() as TeacherProgram[];
-      // TODO: Add API to check which programs are already in classroom
-      setPrograms(data);
+      // Get copyable programs (templates + other classroom programs)
+      const data = await apiClient.getCopyablePrograms() as TeacherProgram[];
+      // Filter out programs already in this classroom
+      const availablePrograms = data.filter(p => p.classroom_id !== classroomId);
+      setPrograms(availablePrograms);
     } catch (error) {
       console.error('Failed to fetch programs:', error);
       toast.error('載入課程失敗');
