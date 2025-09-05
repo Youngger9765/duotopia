@@ -272,16 +272,25 @@ export default function CreateProgramDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="template" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+            <TabsTrigger
+              value="template"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <Archive className="h-4 w-4" />
               從公版複製
             </TabsTrigger>
-            <TabsTrigger value="classroom" className="flex items-center gap-2">
+            <TabsTrigger
+              value="classroom"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <Copy className="h-4 w-4" />
               從其他班級複製
             </TabsTrigger>
-            <TabsTrigger value="custom" className="flex items-center gap-2">
+            <TabsTrigger
+              value="custom"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <Plus className="h-4 w-4" />
               自建課程
             </TabsTrigger>
