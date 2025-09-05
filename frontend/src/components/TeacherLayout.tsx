@@ -57,7 +57,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     { id: 'dashboard', label: '儀表板', icon: Home, path: '/teacher/dashboard' },
     { id: 'classrooms', label: '我的班級', icon: GraduationCap, path: '/teacher/classrooms' },
     { id: 'students', label: '所有學生', icon: Users, path: '/teacher/students' },
-    { id: 'programs', label: '所有課程', icon: BookOpen, path: '/teacher/programs' },
+    { id: 'programs', label: '公版課程', icon: BookOpen, path: '/teacher/programs' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

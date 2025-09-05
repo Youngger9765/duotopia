@@ -18,7 +18,7 @@ from auth import (
     verify_password,
     get_current_user,
 )
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime  # noqa: F401
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
@@ -255,22 +255,24 @@ async def get_assignment_activities(
                     "id": progress.id,
                     "content_id": content.id,
                     "order": 1,
-                    "type": content.type.value
-                    if content.type
-                    else "reading_assessment",
+                    "type": (
+                        content.type.value if content.type else "reading_assessment"
+                    ),
                     "title": content.title,
                     "content": content.content,
                     "target_text": content.content,  # For reading assessment
                     "duration": 60,  # Default duration
                     "points": 100,
-                    "status": progress.status.value
-                    if progress.status
-                    else "NOT_STARTED",
+                    "status": (
+                        progress.status.value if progress.status else "NOT_STARTED"
+                    ),
                     "score": progress.score,
                     "audio_url": progress.audio_url,
-                    "completed_at": progress.completed_at.isoformat()
-                    if progress.completed_at
-                    else None,
+                    "completed_at": (
+                        progress.completed_at.isoformat()
+                        if progress.completed_at
+                        else None
+                    ),
                 }
             )
 
@@ -316,24 +318,28 @@ async def get_assignment_activities(
                         "id": progress.id,
                         "content_id": content.id,
                         "order": ac.order_index + 1,
-                        "type": content.type.value
-                        if content.type
-                        else "reading_assessment",
+                        "type": (
+                            content.type.value if content.type else "reading_assessment"
+                        ),
                         "title": content.title,
                         "content": content.content,
                         "target_text": content.content,  # For reading assessment
                         "duration": 60,  # Default duration
-                        "points": 100 // len(assignment_contents)
-                        if assignment_contents
-                        else 100,
-                        "status": progress.status.value
-                        if progress.status
-                        else "NOT_STARTED",
+                        "points": (
+                            100 // len(assignment_contents)
+                            if assignment_contents
+                            else 100
+                        ),
+                        "status": (
+                            progress.status.value if progress.status else "NOT_STARTED"
+                        ),
                         "score": progress.score,
                         "audio_url": progress.audio_url,
-                        "completed_at": progress.completed_at.isoformat()
-                        if progress.completed_at
-                        else None,
+                        "completed_at": (
+                            progress.completed_at.isoformat()
+                            if progress.completed_at
+                            else None
+                        ),
                     }
                 )
 

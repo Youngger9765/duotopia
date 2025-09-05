@@ -201,22 +201,26 @@ async def get_teacher_classrooms(
             "level": classroom.level.value if classroom.level else "A1",
             "student_count": len([s for s in classroom.students if s.is_active]),
             "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
-            "created_at": classroom.created_at.isoformat()
-            if classroom.created_at
-            else None,
+            "created_at": (
+                classroom.created_at.isoformat() if classroom.created_at else None
+            ),
             "students": [
                 {
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
                     "student_id": cs.student.student_id,
-                    "birthdate": cs.student.birthdate.isoformat()
-                    if cs.student.birthdate
-                    else None,
+                    "birthdate": (
+                        cs.student.birthdate.isoformat()
+                        if cs.student.birthdate
+                        else None
+                    ),
                     "password_changed": cs.student.password_changed,
-                    "last_login": cs.student.last_login.isoformat()
-                    if cs.student.last_login
-                    else None,
+                    "last_login": (
+                        cs.student.last_login.isoformat()
+                        if cs.student.last_login
+                        else None
+                    ),
                     "phone": "",  # Privacy: don't expose phone numbers in list
                     "status": "active" if cs.student.is_active else "inactive",
                 }
@@ -261,19 +265,19 @@ async def get_teacher_programs(
                 "classroom_name": program.classroom.name,
                 "estimated_hours": program.estimated_hours,
                 "is_active": program.is_active,
-                "created_at": program.created_at.isoformat()
-                if program.created_at
-                else None,
+                "created_at": (
+                    program.created_at.isoformat() if program.created_at else None
+                ),
                 "lesson_count": len(
                     [lesson for lesson in program.lessons if lesson.is_active]
                 ),  # Count only active lessons
                 "student_count": student_count,  # Real student count
-                "status": "active"
-                if program.is_active
-                else "archived",  # Real status based on is_active
-                "order_index": program.order_index
-                if hasattr(program, "order_index")
-                else 1,
+                "status": (
+                    "active" if program.is_active else "archived"
+                ),  # Real status based on is_active
+                "order_index": (
+                    program.order_index if hasattr(program, "order_index") else 1
+                ),
             }
         )
 
@@ -511,17 +515,17 @@ async def get_all_students(
                 "name": student.name,
                 "email": student.email,
                 "student_id": student.student_id,
-                "birthdate": student.birthdate.isoformat()
-                if student.birthdate
-                else None,
+                "birthdate": (
+                    student.birthdate.isoformat() if student.birthdate else None
+                ),
                 "phone": getattr(student, "phone", ""),
                 "password_changed": student.password_changed,
-                "last_login": student.last_login.isoformat()
-                if student.last_login
-                else None,
+                "last_login": (
+                    student.last_login.isoformat() if student.last_login else None
+                ),
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
-                "classroom_name": classroom_info["name"] if classroom_info else "未分配",
+                "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
             }
         )
 
@@ -1130,9 +1134,9 @@ async def get_program(
                 "contents": [
                     {
                         "id": content.id,
-                        "type": content.type.value
-                        if content.type
-                        else "reading_assessment",
+                        "type": (
+                            content.type.value if content.type else "reading_assessment"
+                        ),
                         "title": content.title,
                         "items": content.items or [],  # Include actual items
                         "items_count": len(content.items) if content.items else 0,

@@ -2,8 +2,8 @@
 課程管理 API - 支援公版模板和班級課程
 """
 
-from datetime import datetime
-from typing import List
+from datetime import datetime  # noqa: F401
+from typing import List  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -396,7 +396,8 @@ async def get_copyable_programs(
         )
     )
 
-    all_programs = templates.union(classroom_programs).all()
+    # 合併結果（避免 UNION 與 JSON column 的問題）
+    all_programs = templates.all() + classroom_programs.all()
     return all_programs
 
 

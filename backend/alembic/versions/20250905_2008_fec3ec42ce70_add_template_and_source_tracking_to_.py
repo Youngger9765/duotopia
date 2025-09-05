@@ -5,7 +5,8 @@ Revises: 6c42743b461f
 Create Date: 2025-09-05 20:08:27.625890
 
 """
-from typing import Sequence, Union
+
+from typing import Sequence, Union  # noqa: F401
 
 from alembic import op
 import sqlalchemy as sa

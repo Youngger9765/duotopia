@@ -165,6 +165,77 @@ class ApiClient {
     return this.request(`/api/teachers/programs/${programId}`);
   }
 
+  // ============ Public Template Program Methods ============
+  async getTemplatePrograms() {
+    return this.request('/api/programs/templates');
+  }
+
+  async createTemplateProgram(data: {
+    name: string;
+    description?: string;
+    level?: string;
+    estimated_hours?: number;
+    tags?: string[];
+  }) {
+    return this.request('/api/programs/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getTemplateProgram(programId: number) {
+    return this.request(`/api/programs/templates/${programId}`);
+  }
+
+  async copyFromTemplate(data: {
+    template_id: number;
+    classroom_id: number;
+    name?: string;
+  }) {
+    return this.request('/api/programs/copy-from-template', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async copyFromClassroom(data: {
+    source_program_id: number;
+    target_classroom_id: number;
+    name?: string;
+  }) {
+    return this.request('/api/programs/copy-from-classroom', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createCustomProgram(classroomId: number, data: {
+    name: string;
+    description?: string;
+    level?: string;
+    estimated_hours?: number;
+    tags?: string[];
+  }) {
+    return this.request(`/api/programs/create-custom?classroom_id=${classroomId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getCopyablePrograms() {
+    return this.request('/api/programs/copyable');
+  }
+
+  async getClassroomPrograms(classroomId: number) {
+    return this.request(`/api/programs/classroom/${classroomId}`);
+  }
+
+  async softDeleteProgram(programId: number) {
+    return this.request(`/api/programs/${programId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============ Classroom CRUD Methods ============
   async updateClassroom(classroomId: number, data: { name?: string; description?: string; level?: string }) {
     return this.request(`/api/teachers/classrooms/${classroomId}`, {

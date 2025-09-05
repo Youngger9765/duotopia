@@ -6,7 +6,7 @@ import TeacherDashboardWithSidebar from './pages/TeacherDashboardWithSidebar'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherClassrooms from './pages/teacher/TeacherClassrooms'
 import TeacherStudents from './pages/teacher/TeacherStudents'
-import TeacherPrograms from './pages/teacher/TeacherPrograms'
+import TeacherTemplatePrograms from './pages/teacher/TeacherTemplatePrograms'
 import ClassroomDetail from './pages/teacher/ClassroomDetail'
 import TeacherAssignmentDetailPage from './pages/teacher/TeacherAssignmentDetailPage'
 import StudentGradingPage from './pages/teacher/StudentGradingPage'
@@ -46,7 +46,7 @@ function App() {
       <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId/grade/:studentId" element={<StudentGradingPage />} />
 
       <Route path="/teacher/students" element={<TeacherStudents />} />
-      <Route path="/teacher/programs" element={<TeacherPrograms />} />
+      <Route path="/teacher/programs" element={<TeacherTemplatePrograms />} />
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />
