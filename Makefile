@@ -283,6 +283,20 @@ db-seed-staging:
 	cd $(BACKEND_DIR) && python seed_data.py
 	@echo "✅ Staging database seeded!"
 
+.PHONY: db-seed-staging-pooler
+db-seed-staging-pooler:
+	@echo "🌱 Seeding STAGING database using Supabase Pooler URL (備用方案)..."
+	@echo "⚠️  Using pooler connection for better reliability"
+	@if [ ! -f backend/.env.staging ]; then \
+		echo "❌ Error: backend/.env.staging not found"; \
+		exit 1; \
+	fi
+	@cd $(BACKEND_DIR) && \
+		DATABASE_URL="postgresql://postgres.oenkjognodqhvujaooax:Duotopia2025@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres" \
+		python seed_data.py
+	@echo "✅ Staging database seeded via pooler!"
+	@echo "💡 Tip: If direct connection fails, use this pooler method"
+
 # 狀態檢查
 .PHONY: status
 status:
@@ -343,6 +357,7 @@ help:
 	@echo "Database - Seed Data:"
 	@echo "  db-seed-local     - Seed local database with demo data"
 	@echo "  db-seed-staging   - Seed staging database with demo data"
+	@echo "  db-seed-staging-pooler - Seed staging via Supabase pooler (備用方案)"
 	@echo ""
 	@echo "Deployment:"
 	@echo "  deploy-staging - Deploy to staging environment"
