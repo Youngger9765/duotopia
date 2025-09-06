@@ -6,6 +6,9 @@ import os
 # Import configuration
 from core.config import settings
 
+# Import middleware
+from middleware.rate_limiter import RateLimitMiddleware
+
 # Import routers
 from routers import (
     auth,
@@ -23,6 +26,10 @@ app = FastAPI(
     version="1.0.0",
     description=f"Running on {settings.deployment_name}",
 )
+
+# Rate Limiting 設定
+redis_url = os.getenv("REDIS_URL", None)  # 如果有 Redis 就用，沒有就用記憶體
+app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
 
 # CORS 設定
 app.add_middleware(
