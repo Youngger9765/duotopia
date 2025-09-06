@@ -102,10 +102,13 @@ async def get_teacher_dashboard(
 ):
     """取得教師儀表板資料"""
 
-    # Get classrooms with student count
+    # Get classrooms with student count (only active classrooms)
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == current_teacher.id)
+        .filter(
+            Classroom.teacher_id == current_teacher.id,
+            Classroom.is_active.is_(True),  # Filter out soft-deleted classrooms
+        )
         .options(
             selectinload(Classroom.students).selectinload(ClassroomStudent.student)
         )
@@ -117,7 +120,11 @@ async def get_teacher_dashboard(
     recent_students = []
 
     for classroom in classrooms:
-        student_count = len(classroom.students)
+        # Only count active students in active enrollments
+        active_students = [
+            cs for cs in classroom.students if cs.is_active and cs.student.is_active
+        ]
+        student_count = len(active_students)
         total_students += student_count
 
         classroom_summaries.append(
@@ -129,8 +136,8 @@ async def get_teacher_dashboard(
             )
         )
 
-        # Add recent students (first 3 from each classroom)
-        for classroom_student in classroom.students[:3]:
+        # Add recent students (first 3 active students from each classroom)
+        for classroom_student in active_students[:3]:
             if len(recent_students) < 10:  # Limit to 10 recent students
                 recent_students.append(
                     StudentSummary(
