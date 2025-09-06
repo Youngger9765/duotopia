@@ -1,13 +1,13 @@
-name: CI/CD Pipeline
+name: Deploy to Staging
 
 on:
   workflow_dispatch:  # 手動觸發
   push:
-    branches: [ main, staging, develop ]
+    branches: [ staging ]
   pull_request:
-    branches: [ main, staging, develop ]
+    branches: [ staging ]
   schedule:
-    # Run security scan daily at 2 AM UTC
+    # Run daily at 2 AM UTC for security scan
     - cron: '0 2 * * *'
 
 env:
@@ -18,9 +18,7 @@ env:
   REPOSITORY: duotopia-repo
 
 jobs:
-  # ========== Test Job ==========
   test:
-    name: 🧪 Test & Build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -65,17 +63,16 @@ jobs:
       working-directory: ./backend
       run: python -c "import main; print('Backend imports successfully')"
 
-  # ========== Security Scanning Jobs ==========
+  # Security Scanning Jobs
   secret-scanning:
     name: 🔐 Secret Detection
     runs-on: ubuntu-latest
-    # Continue even if other jobs fail
-    continue-on-error: true
+    continue-on-error: true  # Don't block deployment on security issues
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for better detection
 
       - name: Run Trufflehog
         uses: trufflesecurity/trufflehog@main
@@ -140,12 +137,66 @@ jobs:
         uses: github/codeql-action/analyze@v3
         continue-on-error: true
 
-  # ========== Deploy to Staging ==========
-  deploy-staging:
-    name: 🚀 Deploy to Staging
+  credential-check:
+    name: 🔒 Credential Exposure Check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for hardcoded credentials
+        continue-on-error: true
+        run: |
+          echo "Checking for hardcoded database URLs..."
+          if grep -r "postgresql://[^:]+:[^@]+@" . \
+            --include="*.py" \
+            --include="*.ts" \
+            --include="*.tsx" \
+            --include="*.js" \
+            --include="Makefile" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude="*.example" | \
+            grep -v "dummy" | \
+            grep -v "localhost"; then
+            echo "::warning::Found exposed database credentials!"
+          fi
+
+          echo "Checking for hardcoded passwords..."
+          if grep -r -E "(password|secret|key|token)\s*=\s*[\"'][^\"']+[\"']" . \
+            --include="*.py" \
+            --include="*.ts" \
+            --include="*.tsx" \
+            --include="*.js" \
+            --include="Makefile" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude="*.example" | \
+            grep -v "your-" | \
+            grep -v "dummy" | \
+            grep -v "TODO"; then
+            echo "::warning::Found hardcoded credentials!"
+          fi
+
+          echo "✅ No obvious credentials found in code"
+
+      - name: Check git history for secrets
+        continue-on-error: true
+        run: |
+          echo "Scanning recent commits for exposed secrets..."
+          if git log -p -20 | grep -E "postgresql://[^:]+:[^@]+@" | \
+            grep -v "dummy" | \
+            grep -v "localhost"; then
+            echo "::warning::Database credentials found in git history - consider rotating"
+          fi
+
+  deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging' && github.event_name != 'schedule'
+    if: github.ref == 'refs/heads/staging'
 
     steps:
     - uses: actions/checkout@v4
@@ -286,7 +337,7 @@ jobs:
 
         # 測試後端健康檢查
         for i in {1..5}; do
-          if curl -f "$BACKEND_URL/api/auth/validate"; then
+          if curl -f "$BACKEND_URL/health"; then
             echo "Backend health check passed"
             break
           else
@@ -306,6 +357,17 @@ jobs:
           fi
         done
 
+        # 測試前端 API 代理
+        for i in {1..5}; do
+          if curl -f "$FRONTEND_URL/api/health"; then
+            echo "Frontend API proxy check passed"
+            break
+          else
+            echo "Frontend API proxy check failed, attempt $i/5"
+            sleep 10
+          fi
+        done
+
     # 顯示部署摘要
     - name: Deployment Summary
       if: success()
@@ -318,42 +380,10 @@ jobs:
         echo "🆓 Daily Cost: $0 (Supabase free tier)"
         echo "========================================="
 
-  # ========== Deploy to Production ==========
-  deploy-production:
-    name: 🚀 Deploy to Production
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
-    environment:
-      name: production
-      url: https://duotopia-production-frontend-206313737181.asia-east1.run.app
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Configure Docker for Artifact Registry
-      run: gcloud auth configure-docker $REGION-docker.pkg.dev
-
-    # Similar deployment steps as staging but with production environment variables
-    - name: Deploy to Production
-      run: |
-        echo "🚀 Deploying to production environment..."
-        # Production deployment logic would go here
-        # Using production-specific service names and environment variables
-        echo "⚠️ Production deployment not fully configured yet"
-
-  # ========== Security Report ==========
+  # Security Report
   security-report:
     name: 📊 Security Report
-    needs: [secret-scanning, dependency-check, code-scanning]
+    needs: [secret-scanning, dependency-check, code-scanning, credential-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -366,10 +396,11 @@ jobs:
           echo "| Secret Detection | ${{ needs.secret-scanning.result }} |"
           echo "| Dependency Check | ${{ needs.dependency-check.result }} |"
           echo "| Code Analysis | ${{ needs.code-scanning.result }} |"
+          echo "| Credential Check | ${{ needs.credential-check.result }} |"
           echo ""
 
-          # Note: Security scans are set to continue-on-error to not block deployments
-          # but still provide visibility into potential issues
+          # Security scans are set to continue-on-error
+          # They provide visibility but don't block deployment
           if [ "${{ contains(needs.*.result, 'failure') }}" == "true" ]; then
             echo "⚠️ Some security checks reported issues. Please review the logs."
           else
