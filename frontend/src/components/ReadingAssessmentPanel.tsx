@@ -59,6 +59,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<string>('');
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showAudioAnimation, setShowAudioAnimation] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedSource, setSelectedSource] = useState<'tts' | 'recording' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('generate');
@@ -107,7 +108,19 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           ? result.audio_url
           : `${import.meta.env.VITE_API_URL}${result.audio_url}`;
         setAudioUrl(fullUrl);
-        toast.success('音檔生成成功！');
+
+        // 觸發動畫效果
+        setShowAudioAnimation(true);
+        setTimeout(() => setShowAudioAnimation(false), 3000);
+
+        // 自動播放一次讓使用者知道音檔已生成
+        const previewAudio = new Audio(fullUrl);
+        previewAudio.volume = 0.5;
+        previewAudio.play().catch(() => {
+          // 如果自動播放失敗（瀏覽器限制），仍顯示成功訊息
+        });
+
+        toast.success('音檔生成成功！點擊播放按鈕試聽');
       }
     } catch (err) {
       console.error('TTS generation failed:', err);
@@ -453,11 +466,33 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                   variant="outline"
                   onClick={handlePlayAudio}
                   size="icon"
+                  className={`
+                    border-2 transition-all duration-300
+                    ${showAudioAnimation
+                      ? 'border-green-500 bg-green-50 animate-bounce scale-110'
+                      : 'border-gray-300 hover:border-green-500 hover:bg-green-50'
+                    }
+                  `}
+                  title="播放生成的音檔"
                 >
-                  <Play className="h-4 w-4" />
+                  <Play className={`h-4 w-4 ${showAudioAnimation ? 'text-green-600' : 'text-gray-600'}`} />
                 </Button>
               )}
             </div>
+
+            {/* 音檔生成成功提示 */}
+            {audioUrl && showAudioAnimation && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg animate-pulse">
+                <div className="flex items-center gap-2 text-green-700">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                  <span className="text-sm font-medium">音檔已生成！點擊播放按鈕試聽</span>
+                </div>
+              </div>
+            )}
 
             {audioUrl && (
               <audio ref={audioRef} src={audioUrl} className="hidden" />
