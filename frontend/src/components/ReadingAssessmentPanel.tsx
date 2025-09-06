@@ -73,6 +73,13 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
   const genders = ['Male', 'Female'];
   const speeds = ['Slow x0.75', 'Normal x1', 'Fast x1.5'];
 
+  // 當 modal 打開或 row.text 改變時，更新 text state
+  useEffect(() => {
+    if (open && row.text) {
+      setText(row.text);
+    }
+  }, [open, row.text]);
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
