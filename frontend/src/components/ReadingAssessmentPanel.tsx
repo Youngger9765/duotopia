@@ -689,6 +689,7 @@ export default function ReadingAssessmentPanel({
   editingContent,
   onUpdateContent,
   onSave,
+  lessonId,
   onCancel,
   isCreating = false
 }: ReadingAssessmentPanelProps) {
@@ -1522,13 +1523,32 @@ export default function ReadingAssessmentPanel({
                   definition: row.definition || '',
                   audio_url: row.audioUrl || row.audio_url || '',
                   translation: row.translation || ''
-                }))
+                })),
+                target_wpm: 60,
+                target_accuracy: 0.8,
+                time_limit_seconds: 180
               };
 
               console.log('Saving data:', saveData);
 
-              // 直接呼叫 onSave 並傳遞資料
-              if (onSave) {
+              // 如果是創建模式，需要呼叫 API 創建內容
+              if (isCreating && lessonId) {
+                try {
+                  await apiClient.createContent(lessonId, {
+                    type: 'reading_assessment',
+                    ...saveData
+                  });
+                  toast.success('內容已成功創建');
+                  // 呼叫 onSave 關閉對話框
+                  if (onSave) {
+                    await (onSave as () => void | Promise<void>)();
+                  }
+                } catch (error) {
+                  console.error('Failed to create content:', error);
+                  toast.error('創建內容失敗');
+                }
+              } else if (onSave) {
+                // 編輯模式，呼叫 onSave
                 try {
                   await (onSave as () => void | Promise<void>)();
                   toast.success('儲存成功');

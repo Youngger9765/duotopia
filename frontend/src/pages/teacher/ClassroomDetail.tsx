@@ -1688,6 +1688,7 @@ export default function ClassroomDetail() {
               <ReadingAssessmentPanel
                 content={undefined}
                 editingContent={{ id: editorContentId || undefined }}
+                lessonId={editorLessonId}
                 onUpdateContent={(updatedContent) => {
                   // Handle content update if needed
                   console.log('Content updated:', updatedContent);
@@ -1698,6 +1699,8 @@ export default function ClassroomDetail() {
                   setShowReadingEditor(false);
                   setEditorLessonId(null);
                   setEditorContentId(null);
+                  await fetchPrograms();
+                  toast.success('內容已成功儲存');
                 }}
                 onCancel={() => {
                   setShowReadingEditor(false);
