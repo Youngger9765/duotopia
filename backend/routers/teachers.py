@@ -460,10 +460,10 @@ async def get_all_students(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有學生（只包含在教師班級中的學生）"""
-    # NOTE: Currently only showing students in teacher's classrooms
-    # Students created without classroom assignment won't appear here
-    # TODO: Add created_by_teacher_id field to Student model to track creator
+    """取得教師的所有學生（包含班級學生及24小時內建立的未分配學生）"""
+    # Shows:
+    # 1. All students in teacher's classrooms
+    # 2. Unassigned students created in last 24 hours (for assignment purposes)
 
     # Get students in teacher's classrooms
     students_in_classrooms = (
@@ -478,8 +478,27 @@ async def get_all_students(
         .all()
     )
 
-    # Use only students in classrooms (no unassigned students for now)
-    all_students = students_in_classrooms
+    # IMPORTANT: Also get recently created unassigned students (last 24 hours)
+    # This allows teachers to see and assign students they just created
+    from datetime import datetime, timedelta
+
+    twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+
+    recent_unassigned_students = (
+        db.query(Student)
+        .outerjoin(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+        .filter(
+            ClassroomStudent.id.is_(None),  # No classroom assignment
+            Student.is_active.is_(True),
+            Student.created_at >= twenty_four_hours_ago,  # Created in last 24 hours
+        )
+        .all()
+    )
+
+    # Combine and deduplicate
+    all_students = list(
+        {s.id: s for s in students_in_classrooms + recent_unassigned_students}.values()
+    )
 
     # Build response with classroom info
     result = []
@@ -637,7 +656,7 @@ async def create_student(
 
     # Add warning if no classroom assigned
     if not student_data.classroom_id:
-        response["warning"] = "學生已建立但未分配到任何班級，將不會出現在學生列表中。請編輯學生資料並分配班級。"
+        response["warning"] = "學生已建立但未分配到任何班級。該學生將在「我的學生」列表中顯示24小時，請儘快分配班級。"
 
     return response
 
