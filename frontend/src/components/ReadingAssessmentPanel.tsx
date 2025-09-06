@@ -781,6 +781,40 @@ export default function ReadingAssessmentPanel({
     setRows(newRows);
   };
 
+  const handleRemoveAudio = async (index: number) => {
+    const newRows = [...rows];
+    newRows[index] = { ...newRows[index], audioUrl: '' };
+    setRows(newRows);
+
+    // 如果是編輯模式，立即更新到後端
+    if (!isCreating && editingContent?.id) {
+      try {
+        const items = newRows.map(row => ({
+          text: row.text,
+          definition: row.definition,
+          translation: row.translation,
+          audio_url: row.audioUrl || '',
+          selectedLanguage: row.selectedLanguage
+        }));
+
+        await apiClient.updateContent(editingContent.id, {
+          title: title || editingContent.title,
+          items
+        });
+
+        toast.success('已移除音檔');
+      } catch (error) {
+        console.error('Failed to remove audio:', error);
+        toast.error('移除音檔失敗');
+        // 恢復原始狀態
+        const originalRows = [...rows];
+        setRows(originalRows);
+      }
+    } else {
+      toast.info('已移除音檔');
+    }
+  };
+
   const handleOpenTTSModal = (row: ContentRow) => {
     setSelectedRow(row);
     setTtsModalOpen(true);
@@ -1207,6 +1241,16 @@ export default function ReadingAssessmentPanel({
                   >
                     <Mic className="h-4 w-4" />
                   </button>
+                  {/* 移除音檔按鈕 - 只在有音檔時顯示 */}
+                  {row.audioUrl && (
+                    <button
+                      onClick={() => handleRemoveAudio(index)}
+                      className="p-1 rounded text-red-600 hover:bg-red-100"
+                      title="移除音檔"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
