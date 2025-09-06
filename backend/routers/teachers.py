@@ -453,9 +453,12 @@ async def get_all_students(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有學生（包含未分配班級的）"""
-    # Get all students created by this teacher or in their classrooms
-    # First, get students in teacher's classrooms
+    """取得教師的所有學生（只包含在教師班級中的學生）"""
+    # NOTE: Currently only showing students in teacher's classrooms
+    # Students created without classroom assignment won't appear here
+    # TODO: Add created_by_teacher_id field to Student model to track creator
+
+    # Get students in teacher's classrooms
     students_in_classrooms = (
         db.query(Student)
         .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
@@ -463,26 +466,13 @@ async def get_all_students(
         .filter(
             Classroom.teacher_id == current_teacher.id,
             Student.is_active.is_(True),  # Only show active students
+            ClassroomStudent.is_active.is_(True),  # Only active enrollments
         )
         .all()
     )
 
-    # Also get students without classroom (created by this teacher)
-    # We need to track which teacher created a student - for now, get all unassigned
-    students_without_classroom = (
-        db.query(Student)
-        .outerjoin(ClassroomStudent, Student.id == ClassroomStudent.student_id)
-        .filter(
-            ClassroomStudent.id is None,
-            Student.is_active.is_(True),  # Only show active students
-        )
-        .all()
-    )
-
-    # Combine and deduplicate
-    all_students = list(
-        {s.id: s for s in students_in_classrooms + students_without_classroom}.values()
-    )
+    # Use only students in classrooms (no unassigned students for now)
+    all_students = students_in_classrooms
 
     # Build response with classroom info
     result = []
@@ -626,7 +616,7 @@ async def create_student(
         db.add(enrollment)
         db.commit()
 
-    return {
+    response = {
         "id": student.id,
         "name": student.name,
         "email": student.email,
@@ -637,6 +627,12 @@ async def create_student(
         "student_id": student.student_id,
         "phone": student_data.phone,
     }
+
+    # Add warning if no classroom assigned
+    if not student_data.classroom_id:
+        response["warning"] = "學生已建立但未分配到任何班級，將不會出現在學生列表中。請編輯學生資料並分配班級。"
+
+    return response
 
 
 @router.get("/students/{student_id}")

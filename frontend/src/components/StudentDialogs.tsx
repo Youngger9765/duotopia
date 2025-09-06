@@ -121,18 +121,31 @@ export function StudentDialogs({
         };
 
         const response = await apiClient.createStudent(createData) as Record<string, unknown>;
-        // 如果有生日，顯示預設密碼
-        if (formData.birthdate) {
-          const defaultPassword = formData.birthdate.replace(/-/g, '');
-          toast.success(
+
+        // Check for warning message about unassigned students
+        if (response.warning) {
+          toast.warning(
             <div>
               <p>學生「{formData.name}」已成功新增</p>
-              <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{defaultPassword}</code></p>
+              <p className="text-sm mt-1 text-orange-600">⚠️ {response.warning as string}</p>
+              {formData.birthdate ? <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{formData.birthdate.replace(/-/g, '')}</code></p> : null}
             </div>,
-            { duration: 5000 }
+            { duration: 8000 }
           );
         } else {
-          toast.success(`學生「${formData.name}」已成功新增`);
+          // 如果有生日，顯示預設密碼
+          if (formData.birthdate) {
+            const defaultPassword = formData.birthdate.replace(/-/g, '');
+            toast.success(
+              <div>
+                <p>學生「{formData.name}」已成功新增</p>
+                <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{defaultPassword}</code></p>
+              </div>,
+              { duration: 5000 }
+            );
+          } else {
+            toast.success(`學生「${formData.name}」已成功新增`);
+          }
         }
         // 只傳遞 Student interface 需要的字段
         const newStudent: Student = {
