@@ -18,6 +18,7 @@ import sys
 import time
 from typing import Dict, Any
 
+
 class ReadingAssessmentTranslationE2ETest:
     def __init__(self):
         self.base_url = "http://localhost:8000"
@@ -36,15 +37,11 @@ class ReadingAssessmentTranslationE2ETest:
         """測試教師登入"""
         print("🔐 測試教師登入...")
 
-        login_data = {
-            "email": "demo@duotopia.com",
-            "password": "demo123"
-        }
+        login_data = {"email": "demo@duotopia.com", "password": "demo123"}
 
         try:
             async with session.post(
-                f"{self.base_url}/api/auth/teacher/login",
-                json=login_data
+                f"{self.base_url}/api/auth/teacher/login", json=login_data
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -69,8 +66,7 @@ class ReadingAssessmentTranslationE2ETest:
         try:
             # 先嘗試取得現有課程
             async with session.get(
-                f"{self.base_url}/api/teachers/programs",
-                headers=headers
+                f"{self.base_url}/api/teachers/programs", headers=headers
             ) as response:
                 if response.status == 200:
                     programs = await response.json()
@@ -83,13 +79,13 @@ class ReadingAssessmentTranslationE2ETest:
             program_data = {
                 "name": f"E2E測試課程 {int(time.time())}",
                 "description": "E2E測試用課程",
-                "level": "A1"
+                "level": "A1",
             }
 
             async with session.post(
                 f"{self.base_url}/api/teachers/programs",
                 json=program_data,
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status == 201:
                     data = await response.json()
@@ -115,7 +111,7 @@ class ReadingAssessmentTranslationE2ETest:
             # 先嘗試取得現有單元
             async with session.get(
                 f"{self.base_url}/api/teachers/programs/{self.program_id}/lessons",
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status == 200:
                     lessons = await response.json()
@@ -127,13 +123,13 @@ class ReadingAssessmentTranslationE2ETest:
             # 如果沒有單元，創建一個
             lesson_data = {
                 "name": f"E2E測試單元 {int(time.time())}",
-                "description": "E2E測試用單元"
+                "description": "E2E測試用單元",
             }
 
             async with session.post(
                 f"{self.base_url}/api/teachers/programs/{self.program_id}/lessons",
                 json=lesson_data,
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status in [200, 201]:
                     data = await response.json()
@@ -149,7 +145,9 @@ class ReadingAssessmentTranslationE2ETest:
             print(f"❌ 單元操作異常: {e}")
             return False
 
-    async def test_translation_functionality(self, session: aiohttp.ClientSession) -> bool:
+    async def test_translation_functionality(
+        self, session: aiohttp.ClientSession
+    ) -> bool:
         """測試翻譯功能"""
         print("🌐 測試翻譯功能...")
 
@@ -164,15 +162,15 @@ class ReadingAssessmentTranslationE2ETest:
                     "text": "apple",
                     "definition": "",  # 中文翻譯欄位
                     "translation": "",  # 英文釋義欄位
-                    "audio_url": ""
+                    "audio_url": "",
                 },
                 {
                     "text": "banana",
                     "definition": "",
                     "translation": "",
-                    "audio_url": ""
-                }
-            ]
+                    "audio_url": "",
+                },
+            ],
         }
 
         try:
@@ -180,7 +178,7 @@ class ReadingAssessmentTranslationE2ETest:
             async with session.post(
                 f"{self.base_url}/api/teachers/lessons/{self.lesson_id}/contents",
                 json=test_content,
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status not in [200, 201]:
                     error_text = await response.text()
@@ -196,7 +194,7 @@ class ReadingAssessmentTranslationE2ETest:
             async with session.post(
                 f"{self.base_url}/api/teachers/translate",
                 json={"text": "apple", "target_lang": "zh-TW"},
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -204,7 +202,9 @@ class ReadingAssessmentTranslationE2ETest:
                     print(f"     ✅ 中文翻譯結果: '{chinese_translation}'")
 
                     # 驗證是否包含中文字符
-                    if any('\u4e00' <= char <= '\u9fff' for char in chinese_translation):
+                    if any(
+                        "\u4e00" <= char <= "\u9fff" for char in chinese_translation
+                    ):
                         print("     ✅ 中文翻譯格式正確")
                     else:
                         print(f"     ⚠️  中文翻譯可能格式不正確: {chinese_translation}")
@@ -218,7 +218,7 @@ class ReadingAssessmentTranslationE2ETest:
             async with session.post(
                 f"{self.base_url}/api/teachers/translate",
                 json={"text": "apple", "target_lang": "en"},
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -226,7 +226,7 @@ class ReadingAssessmentTranslationE2ETest:
                     print(f"     ✅ 英文釋義結果: '{english_definition}'")
 
                     # 驗證是否為英文內容
-                    if any('a' <= char.lower() <= 'z' for char in english_definition):
+                    if any("a" <= char.lower() <= "z" for char in english_definition):
                         print("     ✅ 英文釋義格式正確")
                     else:
                         print(f"     ⚠️  英文釋義可能格式不正確: {english_definition}")
@@ -240,7 +240,7 @@ class ReadingAssessmentTranslationE2ETest:
             async with session.post(
                 f"{self.base_url}/api/teachers/translate/batch",
                 json={"texts": ["apple", "banana"], "target_lang": "zh-TW"},
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -277,15 +277,15 @@ class ReadingAssessmentTranslationE2ETest:
                     "text": "apple",
                     "definition": "蘋果",  # 中文翻譯
                     "translation": "A round fruit with red or green skin",  # 英文釋義
-                    "audio_url": ""
+                    "audio_url": "",
                 },
                 {
                     "text": "banana",
                     "definition": "香蕉",  # 中文翻譯
                     "translation": "A long curved fruit with yellow skin",  # 英文釋義
-                    "audio_url": ""
-                }
-            ]
+                    "audio_url": "",
+                },
+            ],
         }
 
         try:
@@ -293,7 +293,7 @@ class ReadingAssessmentTranslationE2ETest:
             async with session.put(
                 f"{self.base_url}/api/teachers/contents/{self.content_id}",
                 json=updated_content,
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
@@ -305,7 +305,7 @@ class ReadingAssessmentTranslationE2ETest:
             # 2. 重新讀取內容驗證
             async with session.get(
                 f"{self.base_url}/api/teachers/contents/{self.content_id}",
-                headers=headers
+                headers=headers,
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
@@ -342,7 +342,9 @@ class ReadingAssessmentTranslationE2ETest:
             print(f"❌ 內容持久化測試異常: {e}")
             return False
 
-    async def test_language_detection_logic(self, session: aiohttp.ClientSession) -> bool:
+    async def test_language_detection_logic(
+        self, session: aiohttp.ClientSession
+    ) -> bool:
         """測試語言檢測邏輯"""
         print("🔍 測試語言檢測邏輯...")
 
@@ -356,9 +358,9 @@ class ReadingAssessmentTranslationE2ETest:
                     "text": "hello",
                     "definition": "你好",
                     "translation": "",
-                    "audio_url": ""
+                    "audio_url": "",
                 },
-                "expected_lang": "chinese"
+                "expected_lang": "chinese",
             },
             {
                 "name": "只有英文釋義",
@@ -366,9 +368,9 @@ class ReadingAssessmentTranslationE2ETest:
                     "text": "hello",
                     "definition": "",
                     "translation": "A greeting word",
-                    "audio_url": ""
+                    "audio_url": "",
                 },
-                "expected_lang": "english"
+                "expected_lang": "english",
             },
             {
                 "name": "中文內容在錯誤欄位",
@@ -376,11 +378,11 @@ class ReadingAssessmentTranslationE2ETest:
                     "text": "hello",
                     "definition": "undefined",  # 模擬後端返回的問題
                     "translation": "你好",  # 中文內容在英文欄位
-                    "audio_url": ""
+                    "audio_url": "",
                 },
                 "expected_lang": "chinese",  # 應該被檢測為中文並修正
-                "should_correct": True
-            }
+                "should_correct": True,
+            },
         ]
 
         for i, test_case in enumerate(test_cases):
@@ -390,7 +392,7 @@ class ReadingAssessmentTranslationE2ETest:
             content_data = {
                 "type": "reading_assessment",
                 "title": f"語言檢測測試 - {test_case['name']}",
-                "items": [test_case["data"]]
+                "items": [test_case["data"]],
             }
 
             try:
@@ -398,7 +400,7 @@ class ReadingAssessmentTranslationE2ETest:
                 async with session.post(
                     f"{self.base_url}/api/teachers/lessons/{self.lesson_id}/contents",
                     json=content_data,
-                    headers=headers
+                    headers=headers,
                 ) as response:
                     if response.status not in [200, 201]:
                         error_text = await response.text()
@@ -411,7 +413,7 @@ class ReadingAssessmentTranslationE2ETest:
                 # 讀取內容檢驗
                 async with session.get(
                     f"{self.base_url}/api/teachers/contents/{test_content_id}",
-                    headers=headers
+                    headers=headers,
                 ) as response:
                     if response.status != 200:
                         error_text = await response.text()
@@ -432,7 +434,7 @@ class ReadingAssessmentTranslationE2ETest:
                     # 清理測試內容
                     await session.delete(
                         f"{self.base_url}/api/teachers/contents/{test_content_id}",
-                        headers=headers
+                        headers=headers,
                     )
 
             except Exception as e:
@@ -456,7 +458,7 @@ class ReadingAssessmentTranslationE2ETest:
             if self.content_id:
                 async with session.delete(
                     f"{self.base_url}/api/teachers/contents/{self.content_id}",
-                    headers=headers
+                    headers=headers,
                 ) as response:
                     if response.status in [200, 204, 404]:
                         print("✅ 測試內容已清理")
@@ -508,6 +510,7 @@ class ReadingAssessmentTranslationE2ETest:
         finally:
             await session.close()
 
+
 async def main():
     """主函數"""
     print("=" * 60)
@@ -532,6 +535,7 @@ async def main():
         sys.exit(1)
 
     print("=" * 60)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -353,16 +353,6 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     onClose();
   };
 
-  const handleRemove = () => {
-    setAudioUrl('');
-    setRecordedAudio('');
-    setSelectedSource(null);
-    audioBlobRef.current = null;
-    // 通知父元件清除音檔
-    onConfirm('', { accent, gender, speed, source: undefined });
-    toast.info('已移除音檔');
-    onClose();
-  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -480,16 +470,39 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               )}
             </div>
 
-            {/* 音檔生成成功提示 */}
-            {audioUrl && showAudioAnimation && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg animate-pulse">
-                <div className="flex items-center gap-2 text-green-700">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            {/* 音檔生成成功提示與管理 */}
+            {audioUrl && (
+              <div className={`mt-3 p-3 border rounded-lg transition-all duration-300 ${
+                showAudioAnimation
+                  ? 'bg-green-50 border-green-200 animate-pulse'
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    {showAudioAnimation && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                    )}
+                    <Volume2 className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium">
+                      {showAudioAnimation ? '音檔已生成！點擊播放按鈕試聽' : 'TTS 音檔已準備'}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium">音檔已生成！點擊播放按鈕試聽</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAudioUrl('');
+                      setSelectedSource(null);
+                      toast.info('已刪除 TTS 音檔');
+                    }}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             )}
@@ -548,29 +561,49 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               {recordedAudio && !isRecording && (
                 <div className="space-y-4">
                   {/* 使用自定義播放按鈕避免瀏覽器相容性問題 */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          if (!recordedAudio) {
-                            toast.error('沒有錄音可播放');
-                            return;
-                          }
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            if (!recordedAudio) {
+                              toast.error('沒有錄音可播放');
+                              return;
+                            }
 
-                          const audio = new Audio(recordedAudio);
-                          audio.play().catch(err => {
-                            console.error('Play failed:', err);
-                            toast.error('無法播放錄音');
-                          });
+                            const audio = new Audio(recordedAudio);
+                            audio.play().catch(err => {
+                              console.error('Play failed:', err);
+                              toast.error('無法播放錄音');
+                            });
+                          }}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Mic className="h-4 w-4 text-red-600" />
+                          <span className="text-sm text-gray-700 font-medium">
+                            錄音檔案已準備 ({recordingDuration}秒)
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setRecordedAudio('');
+                          setSelectedSource(null);
+                          audioBlobRef.current = null;
+                          setRecordingDuration(0);
+                          recordingDurationRef.current = 0;
+                          toast.info('已刪除錄音檔案');
                         }}
+                        className="text-red-600 hover:bg-red-50"
                       >
-                        <Play className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm text-gray-600">
-                        錄音長度: {recordingDuration}秒
-                      </span>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -626,9 +659,6 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleRemove}>
-            Remove
-          </Button>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
