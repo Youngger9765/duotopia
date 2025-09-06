@@ -111,14 +111,24 @@ export default function TeacherClassrooms() {
   };
 
   const handleCreate = async () => {
+    // Check if name is provided
+    if (!createFormData.name.trim()) {
+      alert('請輸入班級名稱');
+      return;
+    }
+
     try {
       await apiClient.createClassroom(createFormData);
+
       // Refresh the list after creation
       await fetchClassrooms();
       setShowCreateDialog(false);
       setCreateFormData({ name: '', description: '', level: 'A1' });
     } catch (error) {
       console.error('Error creating classroom:', error);
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : '建立班級失敗';
+      alert(`錯誤: ${errorMessage}`);
     }
   };
 
@@ -302,7 +312,7 @@ export default function TeacherClassrooms() {
             <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">尚未建立班級</p>
             <p className="text-sm text-gray-400 mt-2">建立您的第一個班級，開始管理學生和課程</p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               建立第一個班級
             </Button>
@@ -402,7 +412,7 @@ export default function TeacherClassrooms() {
 
         {/* Create Classroom Dialog */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
+          <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
             <DialogHeader>
               <DialogTitle>新增班級</DialogTitle>
               <DialogDescription>
