@@ -269,7 +269,7 @@ async def get_teacher_programs(
                 "description": program.description,
                 "level": program.level.value if program.level else None,
                 "classroom_id": program.classroom_id,
-                "classroom_name": program.classroom.name,
+                "classroom_name": program.classroom.name if program.classroom else None,
                 "estimated_hours": program.estimated_hours,
                 "is_active": program.is_active,
                 "created_at": (

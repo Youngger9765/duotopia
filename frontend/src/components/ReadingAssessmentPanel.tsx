@@ -31,6 +31,7 @@ interface ContentRow {
   audioUrl?: string;
   audio_url?: string;
   translation?: string;
+  selectedLanguage?: 'chinese' | 'english';  // 最後選擇的語言
   audioSettings?: {
     accent: string;
     gender: string;
@@ -335,7 +336,12 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
   const handleRemove = () => {
     setAudioUrl('');
     setRecordedAudio('');
+    setSelectedSource(null);
+    audioBlobRef.current = null;
+    // 通知父元件清除音檔
+    onConfirm('', { accent, gender, speed, source: undefined });
     toast.info('已移除音檔');
+    onClose();
   };
 
   return (
@@ -594,8 +600,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
 };
 
 interface ReadingAssessmentPanelProps {
-  content?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
-  editingContent?: { id?: number; title?: string; items?: ContentRow[]; target_wpm?: number; target_accuracy?: number; time_limit_seconds?: number };
+  content?: { id?: number; title?: string; items?: ContentRow[] };
+  editingContent?: { id?: number; title?: string; items?: ContentRow[] };
   onUpdateContent?: (content: Record<string, unknown>) => void;
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
@@ -616,9 +622,9 @@ export default function ReadingAssessmentPanel({
 }: ReadingAssessmentPanelProps) {
   const [title, setTitle] = useState('朗讀評測內容');
   const [rows, setRows] = useState<ContentRow[]>([
-    { id: '1', text: '', definition: '' },
-    { id: '2', text: '', definition: '' },
-    { id: '3', text: '', definition: '' }
+    { id: '1', text: '', definition: '', translation: '', selectedLanguage: 'chinese' },
+    { id: '2', text: '', definition: '', translation: '', selectedLanguage: 'chinese' },
+    { id: '3', text: '', definition: '', translation: '', selectedLanguage: 'chinese' }
   ]);
   const [level, setLevel] = useState('A1');
   const [tags, setTags] = useState<string[]>([]);
@@ -655,11 +661,13 @@ export default function ReadingAssessmentPanel({
 
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
+        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string; selectedLanguage?: 'chinese' | 'english' }, index: number) => ({
           id: (index + 1).toString(),
           text: item.text || '',
-          definition: item.translation || item.definition || '',
-          audioUrl: item.audio_url || ''
+          definition: item.definition || '',
+          translation: item.translation || '',
+          audioUrl: item.audio_url || '',
+          selectedLanguage: item.selectedLanguage || 'chinese'  // 使用保存的語言選擇，預設中文
         }));
         setRows(convertedRows);
       }
@@ -681,8 +689,10 @@ export default function ReadingAssessmentPanel({
 
     const items = rows.map(row => ({
       text: row.text,
-      translation: row.definition,
-      audio_url: row.audioUrl
+      definition: row.definition,  // 中文翻譯
+      translation: row.translation, // 英文釋義
+      audio_url: row.audioUrl,
+      selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
     }));
 
     onUpdateContent({
@@ -725,7 +735,9 @@ export default function ReadingAssessmentPanel({
     const newRow: ContentRow = {
       id: (maxId + 1).toString(),
       text: '',
-      definition: ''
+      definition: '',
+      translation: '',
+      selectedLanguage: 'chinese'
     };
     setRows([...rows, newRow]);
   };
@@ -756,7 +768,7 @@ export default function ReadingAssessmentPanel({
     setRows(newRows);
   };
 
-  const handleUpdateRow = (index: number, field: 'text' | 'definition', value: string) => {
+  const handleUpdateRow = (index: number, field: keyof ContentRow, value: string | 'chinese' | 'english') => {
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], [field]: value };
     setRows(newRows);
@@ -787,8 +799,10 @@ export default function ReadingAssessmentPanel({
         // 立即更新 content 並儲存到後端
         const items = newRows.map(row => ({
           text: row.text,
-          translation: row.definition,
-          audio_url: row.audioUrl || ''
+          definition: row.definition,  // 中文翻譯
+          translation: row.translation, // 英文釋義
+          audio_url: row.audioUrl || '',
+          selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態
@@ -896,8 +910,10 @@ export default function ReadingAssessmentPanel({
         // 立即更新 content 並儲存到後端（不要用 onSave 避免關閉 panel）
         const items = newRows.map(row => ({
           text: row.text,
-          translation: row.definition,
-          audio_url: row.audioUrl || ''
+          definition: row.definition,  // 中文翻譯
+          translation: row.translation, // 英文釋義
+          audio_url: row.audioUrl || '',
+          selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態，不呼叫 API
@@ -950,7 +966,13 @@ export default function ReadingAssessmentPanel({
     }
   };
 
-  const handleGenerateSingleDefinition = async (index: number, translationType: 'chinese' | 'english' = 'chinese') => {
+  const handleGenerateSingleDefinition = async (index: number) => {
+    const newRows = [...rows];
+    const currentLang = newRows[index].selectedLanguage || 'chinese';
+    return handleGenerateSingleDefinitionWithLang(index, currentLang);
+  };
+
+  const handleGenerateSingleDefinitionWithLang = async (index: number, targetLang: 'chinese' | 'english') => {
     const newRows = [...rows];
     if (!newRows[index].text) {
       toast.error('請先輸入文本');
@@ -961,50 +983,83 @@ export default function ReadingAssessmentPanel({
     try {
       const response = await apiClient.translateText(
         newRows[index].text,
-        translationType === 'chinese' ? 'zh-TW' : 'en'
+        targetLang === 'chinese' ? 'zh-TW' : 'en'
       ) as { translation: string };
 
-      newRows[index].definition = response.translation;
+      // 根據目標語言寫入對應欄位，但不清空另一個欄位
+      if (targetLang === 'chinese') {
+        newRows[index].definition = response.translation;
+      } else {
+        newRows[index].translation = response.translation;
+      }
+      // 記錄最後選擇的語言
+      newRows[index].selectedLanguage = targetLang;
+
       setRows(newRows);
-      toast.success('翻譯生成完成');
+      toast.success(`${targetLang === 'chinese' ? '中文翻譯' : '英文釋義'}生成完成`);
     } catch (error) {
       console.error('Translation error:', error);
       toast.error('翻譯失敗，請稍後再試');
     }
   };
 
-  const handleBatchGenerateDefinitions = async (translationType: 'chinese' | 'english') => {
-    // 收集需要翻譯的文本
-    const textsToTranslate = rows
-      .filter(row => row.text && !row.definition)
-      .map(row => row.text);
+  const handleBatchGenerateDefinitions = async () => {
+    // 收集需要翻譯的項目（現在同時翻譯兩種語言）
+    const itemsToTranslate: { index: number; text: string }[] = [];
 
-    if (textsToTranslate.length === 0) {
+    rows.forEach((row, index) => {
+      if (row.text && (!row.definition || !row.translation)) {
+        itemsToTranslate.push({ index, text: row.text });
+      }
+    });
+
+    if (itemsToTranslate.length === 0) {
       toast.info('沒有需要翻譯的項目');
       return;
     }
 
-    toast.info(`開始批次生成${translationType === 'chinese' ? '中文' : '英文'}翻譯...`);
+    toast.info(`開始批次生成翻譯...`);
+    const newRows = [...rows];
 
     try {
-      const response = await apiClient.batchTranslate(
-        textsToTranslate,
-        translationType === 'chinese' ? 'zh-TW' : 'en'
-      );
+      // 收集需要中文翻譯的項目
+      const needsChinese = itemsToTranslate.filter(item => !newRows[item.index].definition);
+      // 收集需要英文翻譯的項目
+      const needsEnglish = itemsToTranslate.filter(item => !newRows[item.index].translation);
 
-      // 更新翻譯結果
-      const newRows = [...rows];
-      let translationIndex = 0;
+      // 批次處理中文翻譯
+      if (needsChinese.length > 0) {
+        const chineseTexts = needsChinese.map(item => item.text);
+        const chineseResponse = await apiClient.batchTranslate(chineseTexts, 'zh-TW');
+        const chineseTranslations = (chineseResponse as { translations?: string[] }).translations || [];
 
-      for (let i = 0; i < newRows.length; i++) {
-        if (newRows[i].text && !newRows[i].definition) {
-          newRows[i].definition = (response as { translations: string[] }).translations[translationIndex];
-          translationIndex++;
-        }
+        needsChinese.forEach((item, idx) => {
+          newRows[item.index].definition = chineseTranslations[idx] || item.text;
+          // 不清空英文欄位，保留兩種語言
+        });
       }
 
+      // 批次處理英文釋義
+      if (needsEnglish.length > 0) {
+        const englishTexts = needsEnglish.map(item => item.text);
+        const englishResponse = await apiClient.batchTranslate(englishTexts, 'en');
+        const englishTranslations = (englishResponse as { translations?: string[] }).translations || [];
+
+        needsEnglish.forEach((item, idx) => {
+          newRows[item.index].translation = englishTranslations[idx] || item.text;
+          // 不清空中文欄位，保留兩種語言
+        });
+      }
+
+      // 批次翻譯時預設使用中文
+      itemsToTranslate.forEach(item => {
+        if (!newRows[item.index].selectedLanguage) {
+          newRows[item.index].selectedLanguage = 'chinese';
+        }
+      });
+
       setRows(newRows);
-      toast.success('批次翻譯生成完成');
+      toast.success(`批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目`);
     } catch (error) {
       console.error('Batch translation error:', error);
       toast.error('批次翻譯失敗，請稍後再試');
@@ -1034,25 +1089,27 @@ export default function ReadingAssessmentPanel({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Title Input - Only show in create mode */}
-      {isCreating && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">
-            標題 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="請輸入內容標題"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
+    <div className="flex flex-col h-full max-h-[calc(100vh-200px)]">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 space-y-4 pb-4">
+        {/* Title Input - Only show in create mode */}
+        {isCreating && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              標題 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="請輸入內容標題"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
 
-      {/* Batch Actions - RWD adjusted */}
-      <div className="flex flex-wrap gap-2">
+        {/* Batch Actions - RWD adjusted */}
+        <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -1066,17 +1123,18 @@ export default function ReadingAssessmentPanel({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleBatchGenerateDefinitions('chinese')}
+          onClick={() => handleBatchGenerateDefinitions()}
           className="bg-green-100 hover:bg-green-200 border-green-300"
-          title="使用 OpenAI GPT-3.5 翻譯"
+          title="批次生成翻譯（根據各行語言設定）"
         >
           <Globe className="h-4 w-4 mr-1" />
           批次生成翻譯
         </Button>
+        </div>
       </div>
 
-      {/* Content Rows - RWD adjusted */}
-      <div className="space-y-3">
+      {/* Scrollable Content Rows */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
         {rows.map((row, index) => (
           <div
             key={row.id}
@@ -1145,21 +1203,45 @@ export default function ReadingAssessmentPanel({
                 </div>
               </div>
 
-              <div className="relative">
-                <input
-                  type="text"
-                  value={row.definition}
-                  onChange={(e) => handleUpdateRow(index, 'definition', e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border rounded-md text-sm"
-                  placeholder="輸入定義"
-                />
-                <button
-                  onClick={() => handleGenerateSingleDefinition(index, 'chinese')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-green-200 bg-green-100 text-green-700"
-                  title="使用 OpenAI GPT-3.5 翻譯"
-                >
-                  <Globe className="h-4 w-4" />
-                </button>
+              <div className="space-y-2">
+                {/* 翻譯欄位 */}
+                <div className="relative">
+                  <textarea
+                    value={(row.selectedLanguage || 'chinese') === 'chinese' ? (row.definition || '') : (row.translation || '')}
+                    onChange={(e) => handleUpdateRow(index, (row.selectedLanguage || 'chinese') === 'chinese' ? 'definition' : 'translation', e.target.value)}
+                    className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
+                    placeholder={(row.selectedLanguage || 'chinese') === 'chinese' ? '中文翻譯' : '英文釋義'}
+                    rows={1}
+                  />
+                  {/* 右側對齊的選單和按鈕 */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <select
+                      value={row.selectedLanguage || 'chinese'}
+                      onChange={async (e) => {
+                        const newLang = e.target.value as 'chinese' | 'english';
+                        handleUpdateRow(index, 'selectedLanguage', newLang);
+                        // 選擇語言後自動翻譯 - 直接傳入新語言
+                        if (row.text) {
+                          setTimeout(() => {
+                            handleGenerateSingleDefinitionWithLang(index, newLang);
+                          }, 100);
+                        }
+                      }}
+                      className="px-1 py-0.5 border rounded text-xs bg-white"
+                    >
+                      <option value="chinese">中文翻譯</option>
+                      <option value="english">英文釋義</option>
+                    </select>
+                    <button
+                      onClick={() => handleGenerateSingleDefinition(index)}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
+                      title={`生成${(row.selectedLanguage || 'chinese') === 'chinese' ? '中文翻譯' : '英文釋義'}`}
+                    >
+                      <Globe className="h-4 w-4" />
+                      <span className="text-xs">{(row.selectedLanguage || 'chinese') === 'chinese' ? '中' : 'EN'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1194,8 +1276,8 @@ export default function ReadingAssessmentPanel({
         </button>
       </div>
 
-      {/* Level and Tags - RWD adjusted */}
-      <div className="space-y-4 pt-3 border-t">
+      {/* Fixed Footer Section */}
+      <div className="flex-shrink-0 space-y-4 pt-3 border-t mt-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">LEVEL：</label>
@@ -1289,11 +1371,11 @@ export default function ReadingAssessmentPanel({
                 return;
               }
 
-              // 過濾掉空白的項目，只保留有內容的
-              const validRows = rows.filter(r => r.text && r.definition);
+              // 過濾掉空白的項目，只保留有文字的
+              const validRows = rows.filter(r => r.text && r.text.trim());
 
               if (validRows.length === 0) {
-                toast.error('請至少填寫一個完整的項目（包含文字和翻譯）');
+                toast.error('請至少填寫一個項目的文字');
                 return;
               }
 
@@ -1316,9 +1398,28 @@ export default function ReadingAssessmentPanel({
                 is_public: isPublic
               };*/
 
-              // 呼叫 onSave 並傳遞資料
+              // 準備要儲存的資料
+              const saveData = {
+                title: title,
+                items: validRows.map(row => ({
+                  text: row.text.trim(),
+                  definition: row.definition || '',
+                  audio_url: row.audioUrl || row.audio_url || '',
+                  translation: row.translation || ''
+                }))
+              };
+
+              console.log('Saving data:', saveData);
+
+              // 直接呼叫 onSave 並傳遞資料
               if (onSave) {
-                await onSave();
+                try {
+                  await (onSave as () => void | Promise<void>)();
+                  toast.success('儲存成功');
+                } catch (error) {
+                  console.error('Save error:', error);
+                  toast.error('儲存失敗');
+                }
               }
             }}
           >

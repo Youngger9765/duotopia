@@ -40,9 +40,15 @@ class TranslationService:
             # 根據目標語言設定 prompt
             if target_lang == "zh-TW":
                 prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
+            elif target_lang == "en":
+                # 英英釋義
+                prompt = (
+                    f"Please provide a simple English definition or explanation for the following word or phrase. "
+                    f"Keep it concise (1-2 sentences) and suitable for language learners:\n{text}"
+                )
             else:
                 prompt = (
-                    f"Please translate the following text to English, "
+                    f"Please translate the following text to {target_lang}, "
                     f"only return the translation without any explanation:\n{text}"
                 )
 
@@ -85,17 +91,25 @@ class TranslationService:
 
         try:
             # 將所有文本組合成一個請求以節省 API 呼叫
-            # combined_text = "\n---\n".join(texts)  # Reserved for future use
+            combined_text = "\n---\n".join(texts)
 
             if target_lang == "zh-TW":
-                prompt = """請將以下英文句子翻譯成繁體中文。
+                prompt = f"""請將以下英文句子翻譯成繁體中文。
 每個句子之間用 --- 分隔。
 請保持相同的格式，每個翻譯也用 --- 分隔。
 只回覆翻譯結果，不要加任何說明或編號。
 
 {combined_text}"""
+            elif target_lang == "en":
+                prompt = f"""Please provide simple English definitions for the following words or phrases.
+Each word/phrase is separated by ---.
+Keep the same format, separate each definition with ---.
+Keep definitions concise (1-2 sentences) and suitable for language learners.
+Only return the definitions without any explanation or numbering.
+
+{combined_text}"""
             else:
-                prompt = """Please translate the following sentences to English.
+                prompt = f"""Please translate the following sentences to {target_lang}.
 Each sentence is separated by ---.
 Keep the same format, separate each translation with ---.
 Only return the translations without any explanation or numbering.

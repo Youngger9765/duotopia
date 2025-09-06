@@ -579,39 +579,6 @@ export default function ClassroomDetail() {
     }
   };
 
-  const handleSaveReadingContent = async (data: {title: string; items: Array<{text: string; audio_url?: string}>}) => {
-    try {
-      // Data from ReadingAssessmentPanel already has formatted items
-      const items = data.items || [];
-
-      if (editorContentId) {
-        // Update existing content
-        await apiClient.updateContent(editorContentId, {
-          title: data.title,
-          items: items
-        });
-        toast.success('內容已更新成功');
-      } else if (editorLessonId) {
-        // Create new content
-        await apiClient.createContent(editorLessonId, {
-          type: 'reading_assessment',
-          title: data.title,
-          items: items,
-          // Note: These properties don't exist on the data object
-          // target_wpm: 60,
-          // target_accuracy: 0.8,
-          // time_limit_seconds: 180
-        });
-        toast.success('內容已創建成功');
-      }
-
-      setShowReadingEditor(false);
-      await fetchPrograms();
-    } catch (error) {
-      console.error('Failed to save content:', error);
-      toast.error('保存內容失敗，請稍後再試');
-    }
-  };
 
   const getLevelBadge = (level?: string) => {
     const levelColors: Record<string, string> = {
@@ -1701,8 +1668,8 @@ export default function ClassroomDetail() {
 
       {/* Reading Assessment Editor */}
       {showReadingEditor && editorLessonId && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto">
-          <div className="relative w-full max-w-7xl my-8 bg-white rounded-lg p-6">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">朗讀評測設定</h2>
               <Button
@@ -1717,24 +1684,29 @@ export default function ClassroomDetail() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <ReadingAssessmentPanel
-              content={undefined}
-              editingContent={{ id: editorContentId || undefined }}
-              onUpdateContent={(updatedContent) => {
-                // Handle content update if needed
-                console.log('Content updated:', updatedContent);
-              }}
-              onSave={() => {
-                // This will be handled by the save function that's passed
-                return handleSaveReadingContent({ title: '', items: [] });
-              }}
-              onCancel={() => {
-                setShowReadingEditor(false);
-                setEditorLessonId(null);
-                setEditorContentId(null);
-              }}
-              isCreating={!editorContentId}
-            />
+            <div className="flex-1 overflow-hidden">
+              <ReadingAssessmentPanel
+                content={undefined}
+                editingContent={{ id: editorContentId || undefined }}
+                onUpdateContent={(updatedContent) => {
+                  // Handle content update if needed
+                  console.log('Content updated:', updatedContent);
+                }}
+                onSave={async () => {
+                  // ReadingAssessmentPanel handles save internally
+                  // Just close the editor on successful save
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                }}
+                onCancel={() => {
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                }}
+                isCreating={!editorContentId}
+              />
+            </div>
           </div>
         </div>
       )}
