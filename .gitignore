@@ -50,7 +50,7 @@ Thumbs.db
 # Temporary files and test artifacts
 tmp/
 *.png
-test_*.py
+/test_*.py  # Only ignore test files in root directory, not in tests/ folders
 
 # Logs
 *.log
