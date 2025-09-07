@@ -43,8 +43,34 @@ export default function AssignmentDetail() {
   const loadAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/teachers/assignments/${id}/detail`) as { data: AssignmentDetailType };
-      setAssignment(response.data);
+      // 學生應該使用學生的 API endpoint
+      const response = await apiClient.get(`/api/students/assignments/${id}/activities`);
+
+      // 將 activities API 的資料轉換成 AssignmentDetail 格式
+      if (response.data) {
+        const assignmentData: AssignmentDetailType = {
+          id: parseInt(id || '0'),
+          title: response.data.title || '作業',
+          description: '練習作業',
+          content: {
+            id: parseInt(id || '0'),
+            title: response.data.title || '作業內容',
+            type: 'reading_assessment',
+            items: (response.data as { activities?: Array<{ items?: unknown[] }> }).activities?.flatMap((activity) =>
+              activity.items || []
+            ) || [],
+            items_count: (response.data as { activities?: Array<{ items?: unknown[] }> }).activities?.reduce((sum: number, activity) =>
+              sum + (activity.items?.length || 0), 0
+            ) || 0,
+            target_wpm: 100,
+            target_accuracy: 90
+          },
+          status: 'NOT_STARTED',
+          submissions: [],
+          created_at: new Date().toISOString()
+        };
+        setAssignment(assignmentData);
+      }
     } catch (error) {
       console.error('Failed to load assignment:', error);
       toast.error('無法載入作業詳情');
@@ -145,7 +171,7 @@ export default function AssignmentDetail() {
         completed_at: new Date().toISOString()
       };
 
-      await apiClient.post(`/api/teachers/assignments/${id}/submit`, submissionData);
+      await apiClient.post(`/api/students/assignments/${id}/submit`, submissionData);
 
       toast.success('作業提交成功！');
       navigate('/student/dashboard');

@@ -259,8 +259,8 @@ async def get_assignment_activities(
                         content.type.value if content.type else "reading_assessment"
                     ),
                     "title": content.title,
-                    "content": content.content,
-                    "target_text": content.content,  # For reading assessment
+                    "content": content.items,  # JSON array of items
+                    "target_text": content.items,  # For reading assessment
                     "duration": 60,  # Default duration
                     "points": 100,
                     "status": (
@@ -322,8 +322,26 @@ async def get_assignment_activities(
                             content.type.value if content.type else "reading_assessment"
                         ),
                         "title": content.title,
-                        "content": content.content,
-                        "target_text": content.content,  # For reading assessment
+                        "content": (
+                            # 如果是物件陣列，轉換成純文字
+                            " ".join([item["text"] for item in content.items])
+                            if isinstance(content.items, list)
+                            and len(content.items) > 0
+                            and isinstance(content.items[0], dict)
+                            else str(content.items)
+                            if content.items
+                            else ""
+                        ),
+                        "target_text": (
+                            # 對於朗讀評測，組合所有文字
+                            " ".join([item["text"] for item in content.items])
+                            if isinstance(content.items, list)
+                            and len(content.items) > 0
+                            and isinstance(content.items[0], dict)
+                            else str(content.items)
+                            if content.items
+                            else ""
+                        ),
                         "duration": 60,  # Default duration
                         "points": (
                             100 // len(assignment_contents)
@@ -334,7 +352,11 @@ async def get_assignment_activities(
                             progress.status.value if progress.status else "NOT_STARTED"
                         ),
                         "score": progress.score,
-                        "audio_url": progress.audio_url,
+                        "audio_url": (
+                            progress.response_data.get("audio_url")
+                            if progress.response_data
+                            else None
+                        ),
                         "completed_at": (
                             progress.completed_at.isoformat()
                             if progress.completed_at

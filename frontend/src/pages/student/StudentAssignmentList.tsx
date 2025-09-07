@@ -15,7 +15,8 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react';
 import {
   StudentAssignmentCard,
@@ -27,11 +28,15 @@ export default function StudentAssignmentList() {
   const { token, user } = useStudentAuthStore();
   const [assignments, setAssignments] = useState<StudentAssignmentCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState('not_started');
   const [stats, setStats] = useState({
     totalAssignments: 0,
-    completedAssignments: 0,
-    inProgressAssignments: 0,
+    notStarted: 0,
+    inProgress: 0,
+    submitted: 0,
+    graded: 0,
+    returned: 0,
+    resubmitted: 0,
     averageScore: 0
   });
 
@@ -91,16 +96,25 @@ export default function StudentAssignmentList() {
 
       setAssignments(assignmentCards);
 
-      // Calculate stats
-      const completed = assignmentCards.filter(a => a.status === 'GRADED').length;
+      // Calculate stats for each status
+      const notStarted = assignmentCards.filter(a => a.status === 'NOT_STARTED').length;
       const inProgress = assignmentCards.filter(a => a.status === 'IN_PROGRESS').length;
+      const submitted = assignmentCards.filter(a => a.status === 'SUBMITTED').length;
+      const graded = assignmentCards.filter(a => a.status === 'GRADED').length;
+      const returned = assignmentCards.filter(a => a.status === 'RETURNED').length;
+      const resubmitted = assignmentCards.filter(a => a.status === 'RESUBMITTED').length;
+
       const scores = assignmentCards.filter(a => a.score).map(a => a.score || 0);
       const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 
       setStats({
         totalAssignments: assignmentCards.length,
-        completedAssignments: completed,
-        inProgressAssignments: inProgress,
+        notStarted: notStarted,
+        inProgress: inProgress,
+        submitted: submitted,
+        graded: graded,
+        returned: returned,
+        resubmitted: resubmitted,
         averageScore: Math.round(avgScore)
       });
     } catch (error) {
@@ -297,123 +311,306 @@ export default function StudentAssignmentList() {
     <div className="p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-blue-600" />
+        {/* Assignment Flow Status */}
+        <Card className="mb-8 overflow-visible">
+          <CardContent className="p-4 sm:p-6 overflow-visible">
+            <h3 className="text-lg font-semibold mb-4">作業進度流程</h3>
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 pt-2 justify-start sm:justify-center flex-nowrap">
+            {/* 未開始 */}
+            <button
+              onClick={() => setActiveTab('not_started')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'not_started' ? 'scale-105' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'not_started'
+                    ? 'bg-gray-600 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-600'
+                }`}>
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.totalAssignments}</p>
-                  <p className="text-gray-600 text-sm">總作業數</p>
-                </div>
+                {stats.notStarted > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.notStarted}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'not_started' ? 'text-gray-900' : 'text-gray-600'
+              }`}>未開始</span>
+            </button>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+            <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
+
+            {/* 進行中 */}
+            <button
+              onClick={() => setActiveTab('in_progress')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'in_progress' ? 'scale-110' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'in_progress'
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white border-gray-300 text-blue-600'
+                }`}>
+                  <Play className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.completedAssignments}</p>
-                  <p className="text-gray-600 text-sm">已完成</p>
-                </div>
+                {stats.inProgress > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.inProgress}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'in_progress' ? 'text-gray-900' : 'text-gray-600'
+              }`}>進行中</span>
+            </button>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <BarChart3 className="h-6 w-6 text-orange-600" />
+            <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
+
+            {/* 已提交 */}
+            <button
+              onClick={() => setActiveTab('submitted')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'submitted' ? 'scale-110' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'submitted'
+                    ? 'bg-yellow-600 border-yellow-600 text-white'
+                    : 'bg-white border-gray-300 text-yellow-600'
+                }`}>
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {stats.averageScore || '--'}
-                  </p>
-                  <p className="text-gray-600 text-sm">平均分數</p>
-                </div>
+                {stats.submitted > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.submitted}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'submitted' ? 'text-gray-900' : 'text-gray-600'
+              }`}>已提交</span>
+            </button>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-purple-600" />
+            <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
+
+            {/* 退回訂正 (分支) */}
+            <button
+              onClick={() => setActiveTab('returned')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'returned' ? 'scale-110' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'returned'
+                    ? 'bg-orange-600 border-orange-600 text-white'
+                    : 'bg-white border-gray-300 text-orange-600'
+                }`}>
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {stats.inProgressAssignments}
-                  </p>
-                  <p className="text-gray-600 text-sm">進行中</p>
-                </div>
+                {stats.returned > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.returned}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'returned' ? 'text-gray-900' : 'text-gray-600'
+              }`}>退回訂正</span>
+            </button>
 
-        {/* Assignment Lists */}
+            <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
+
+            {/* 重新提交 */}
+            <button
+              onClick={() => setActiveTab('resubmitted')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'resubmitted' ? 'scale-110' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'resubmitted'
+                    ? 'bg-purple-600 border-purple-600 text-white'
+                    : 'bg-white border-gray-300 text-purple-600'
+                }`}>
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                </div>
+                {stats.resubmitted > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.resubmitted}
+                  </div>
+                )}
+              </div>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'resubmitted' ? 'text-gray-900' : 'text-gray-600'
+              }`}>重新提交</span>
+            </button>
+
+            <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
+
+            {/* 已完成 */}
+            <button
+              onClick={() => setActiveTab('graded')}
+              className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                activeTab === 'graded' ? 'scale-110' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className="relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                  activeTab === 'graded'
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'bg-white border-gray-300 text-green-600'
+                }`}>
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                </div>
+                {stats.graded > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
+                    {stats.graded}
+                  </div>
+                )}
+              </div>
+              <span className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                activeTab === 'graded' ? 'text-gray-900' : 'text-gray-600'
+              }`}>已完成</span>
+            </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Assignment Lists by Status */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger
-              value="active"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-medium transition-all"
-            >
-              進行中作業
-            </TabsTrigger>
-            <TabsTrigger
-              value="completed"
-              className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-medium transition-all"
-            >
-              已完成作業
-            </TabsTrigger>
+          <TabsList className="hidden">
+            <TabsTrigger value="not_started" />
+            <TabsTrigger value="in_progress" />
+            <TabsTrigger value="submitted" />
+            <TabsTrigger value="returned" />
+            <TabsTrigger value="resubmitted" />
+            <TabsTrigger value="graded" />
           </TabsList>
 
-          <TabsContent value="active" className="space-y-4">
+          {/* NOT_STARTED Tab */}
+          <TabsContent value="not_started" className="space-y-4">
             {(() => {
-              const activeAssignments = assignments.filter(a =>
-                a.status === 'NOT_STARTED' || a.status === 'IN_PROGRESS' || a.status === 'RETURNED'
-              );
-              return activeAssignments.length === 0 ? (
+              const notStartedAssignments = assignments.filter(a => a.status === 'NOT_STARTED');
+              return notStartedAssignments.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
-                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有進行中的作業</h3>
-                    <p className="text-gray-500">你已經完成了所有指派的作業！</p>
+                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有未開始的作業</h3>
+                    <p className="text-gray-500">所有作業都已經開始了！</p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {activeAssignments.map(renderAssignmentCard)}
+                  {notStartedAssignments.map(renderAssignmentCard)}
                 </div>
               );
             })()}
           </TabsContent>
 
-          <TabsContent value="completed" className="space-y-4">
+          {/* IN_PROGRESS Tab */}
+          <TabsContent value="in_progress" className="space-y-4">
             {(() => {
-              const completedAssignments = assignments.filter(a =>
-                a.status === 'GRADED' || a.status === 'SUBMITTED' || a.status === 'RESUBMITTED'
-              );
-              return completedAssignments.length === 0 ? (
+              const inProgressAssignments = assignments.filter(a => a.status === 'IN_PROGRESS');
+              return inProgressAssignments.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
-                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">還沒有完成的作業</h3>
-                    <p className="text-gray-500">完成作業後，結果會顯示在這裡。</p>
+                    <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有進行中的作業</h3>
+                    <p className="text-gray-500">開始練習作業吧！</p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {completedAssignments.map(renderAssignmentCard)}
+                  {inProgressAssignments.map(renderAssignmentCard)}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* SUBMITTED Tab */}
+          <TabsContent value="submitted" className="space-y-4">
+            {(() => {
+              const submittedAssignments = assignments.filter(a => a.status === 'SUBMITTED');
+              return submittedAssignments.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有待批改的作業</h3>
+                    <p className="text-gray-500">提交的作業會顯示在這裡。</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {submittedAssignments.map(renderAssignmentCard)}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* GRADED Tab - 已完成 */}
+          <TabsContent value="graded" className="space-y-4">
+            {(() => {
+              const gradedAssignments = assignments.filter(a => a.status === 'GRADED');
+              return gradedAssignments.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有已完成的作業</h3>
+                    <p className="text-gray-500">完成並評分的作業會顯示在這裡，可以查看詳細成績。</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {gradedAssignments.map(renderAssignmentCard)}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* RETURNED Tab */}
+          <TabsContent value="returned" className="space-y-4">
+            {(() => {
+              const returnedAssignments = assignments.filter(a => a.status === 'RETURNED');
+              return returnedAssignments.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有需要訂正的作業</h3>
+                    <p className="text-gray-500">需要重做的作業會顯示在這裡。</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {returnedAssignments.map(renderAssignmentCard)}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* RESUBMITTED Tab */}
+          <TabsContent value="resubmitted" className="space-y-4">
+            {(() => {
+              const resubmittedAssignments = assignments.filter(a => a.status === 'RESUBMITTED');
+              return resubmittedAssignments.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">沒有重新提交的作業</h3>
+                    <p className="text-gray-500">重新提交的作業會顯示在這裡。</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {resubmittedAssignments.map(renderAssignmentCard)}
                 </div>
               );
             })()}
