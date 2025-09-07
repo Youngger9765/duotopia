@@ -277,7 +277,11 @@ class TestFeedbackSeparation:
 
         # 第二次儲存：更新部分評語
         item_results_2 = [
-            {"item_index": 0, "feedback": "第一題更新評語", "passed": False},  # 改變通過狀態
+            {
+                "item_index": 0,
+                "feedback": "第一題更新評語",
+                "passed": False,
+            },  # 改變通過狀態
             {"item_index": 1, "feedback": "第二題新評語", "passed": True},
         ]
 

@@ -432,7 +432,7 @@ async def delete_classroom(
 # ------------ Student CRUD ------------
 class StudentCreate(BaseModel):
     name: str
-    email: Optional[str] = None  # Email 改為選填
+    email: Optional[str] = None  # Email（選填，可以是真實 email）
     birthdate: str  # YYYY-MM-DD format
     classroom_id: Optional[int] = None  # 班級改為選填，可以之後再分配
     student_id: Optional[str] = None
@@ -441,7 +441,7 @@ class StudentCreate(BaseModel):
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[str] = None  # 可更新為真實 email
     student_id: Optional[str] = None
     birthdate: Optional[str] = None
     phone: Optional[str] = None
@@ -542,6 +542,12 @@ async def get_all_students(
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
                 "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
+                "email_verified": student.email_verified,
+                "email_verified_at": (
+                    student.email_verified_at.isoformat()
+                    if student.email_verified_at
+                    else None
+                ),
             }
         )
 
@@ -588,23 +594,8 @@ async def create_student(
 
     default_password = birthdate.strftime("%Y%m%d")
 
-    # Generate unique email if not provided
-    if not student_data.email:
-        # Generate a unique email based on student_id or timestamp
-        import time
-
-        timestamp = int(time.time())
-        email = f"student_{timestamp}@duotopia.local"
-    else:
-        email = student_data.email
-
-    # Check if email already exists
-    existing_student = db.query(Student).filter(Student.email == email).first()
-    if existing_student:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Email '{email}' is already registered. Please use a different email.",
-        )
+    # Email is optional now - can be NULL or shared between students
+    email = student_data.email if student_data.email else None
 
     # Create student
     student = Student(
@@ -652,6 +643,7 @@ async def create_student(
         "classroom_id": student_data.classroom_id,
         "student_id": student.student_id,
         "phone": student_data.phone,
+        "email_verified": False,  # 新建立的學生 email 未驗證
     }
 
     # Add warning if no classroom assigned
@@ -784,6 +776,13 @@ async def update_student(
         student.target_wpm = update_data.target_wpm
     if update_data.target_accuracy is not None:
         student.target_accuracy = update_data.target_accuracy
+
+    # 如果更新 email 且是真實 email（非系統生成），重置驗證狀態
+    if update_data.email is not None and "@duotopia.local" not in update_data.email:
+        if student.email != update_data.email:
+            student.email_verified = False
+            student.email_verified_at = None
+            student.email_verification_token = None
 
     # Handle classroom assignment
     if update_data.classroom_id is not None:

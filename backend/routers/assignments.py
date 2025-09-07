@@ -136,7 +136,7 @@ class StudentResponse(BaseModel):
 
     id: int
     name: str
-    email: str
+    email: Optional[str] = None
     student_id: Optional[str]
 
     class Config:

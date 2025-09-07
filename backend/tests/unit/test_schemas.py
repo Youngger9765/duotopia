@@ -1,6 +1,7 @@
 """
 Test Pydantic schemas validation
 """
+
 import pytest
 from datetime import datetime  # noqa: F401
 from pydantic import ValidationError

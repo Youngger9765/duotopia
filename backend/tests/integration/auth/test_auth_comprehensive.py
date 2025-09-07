@@ -2,6 +2,7 @@
 Comprehensive tests for auth.py module
 Testing all authentication utilities and edge cases
 """
+
 import pytest
 from datetime import datetime, timedelta  # noqa: F401
 from jose import jwt

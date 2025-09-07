@@ -11,6 +11,7 @@ API_URL = "http://localhost:8000"
 TEST_EMAIL = "demo@duotopia.com"
 TEST_PASSWORD = "demo123"
 
+
 async def test_content_save():
     async with aiohttp.ClientSession() as session:
         print("=" * 60)
@@ -21,7 +22,7 @@ async def test_content_save():
         print("\n1️⃣ 教師登入...")
         login_response = await session.post(
             f"{API_URL}/api/auth/teacher/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
         )
 
         if login_response.status != 200:
@@ -38,8 +39,7 @@ async def test_content_save():
         # 2. 獲取課程列表
         print("\n2️⃣ 獲取課程列表...")
         programs_response = await session.get(
-            f"{API_URL}/api/teachers/programs",
-            headers=headers
+            f"{API_URL}/api/teachers/programs", headers=headers
         )
 
         if programs_response.status != 200:
@@ -61,8 +61,7 @@ async def test_content_save():
 
         # 4. 獲取課堂列表
         lessons_response = await session.get(
-            f"{API_URL}/api/teachers/programs/{program['id']}/lessons",
-            headers=headers
+            f"{API_URL}/api/teachers/programs/{program['id']}/lessons", headers=headers
         )
 
         if lessons_response.status != 200:
@@ -79,8 +78,8 @@ async def test_content_save():
                 json={
                     "name": "測試課堂",
                     "description": "用於測試朗讀評測",
-                    "order_index": 1
-                }
+                    "order_index": 1,
+                },
             )
 
             if create_lesson_response.status != 200:
@@ -99,28 +98,20 @@ async def test_content_save():
             "title": "測試朗讀評測",
             "type": "reading_assessment",
             "items": [
-                {
-                    "text": "apple",
-                    "translation": "蘋果",
-                    "audio_url": ""
-                },
-                {
-                    "text": "banana",
-                    "translation": "香蕉",
-                    "audio_url": ""
-                }
+                {"text": "apple", "translation": "蘋果", "audio_url": ""},
+                {"text": "banana", "translation": "香蕉", "audio_url": ""},
             ],
             "order_index": 1,
             "target_wpm": 80,
             "target_accuracy": 0.85,
             "time_limit_seconds": 180,
-            "is_public": False
+            "is_public": False,
         }
 
         create_response = await session.post(
             f"{API_URL}/api/teachers/lessons/{lesson['id']}/contents",
             headers=headers,
-            json=content_data
+            json=content_data,
         )
 
         if create_response.status == 200:
@@ -141,6 +132,7 @@ async def test_content_save():
                 print(json.dumps(error_json, indent=2, ensure_ascii=False))
             except:
                 pass
+
 
 if __name__ == "__main__":
     asyncio.run(test_content_save())

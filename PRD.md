@@ -144,9 +144,69 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
    - 登入成功，進入作業列表
 
 **Phase 2 擴展**：
-- 家長 Email 綁定
-- Email 驗證機制
+- 家長 Email 綁定（已部分實作）
+- Email 驗證機制（已實作）
 - 歷史記錄快速選擇
+
+#### Email 驗證機制（2025年9月實作）
+
+**設計目標**：
+- Email 作為純管理工具，不影響登入流程
+- 選擇性功能，不綁定也能正常使用
+- 統一驗證把關，確保 email 正確性
+
+**資料模型**：
+```
+Student 表欄位：
+- email: 學生 email（可為系統生成或真實 email）
+- email_verified: 是否已驗證（預設 false）
+- email_verified_at: 驗證時間
+- email_verification_token: 驗證 token
+- email_verification_sent_at: 最後發送時間
+```
+
+**設計原則**：
+- 使用現有的 `student.email` 欄位，不另外建立欄位
+- 系統生成的 email 格式：`student_timestamp@duotopia.local`
+- 老師可填寫真實 email 取代系統生成的
+- 登入方式維持不變（email + 生日）
+
+**功能流程**：
+
+1. **老師端功能**：
+   - 建立/編輯學生時可填寫真實 email（選填）
+   - 顯示 email 驗證狀態（待驗證/已驗證）
+   - 區分系統生成 email 與真實 email
+
+2. **學生端功能**：
+   - 登入後顯示 email 驗證狀態
+   - 若老師已預填 email，顯示並提示驗證
+   - 可自行輸入或修改 email
+   - 發送/重發驗證信（5分鐘頻率限制）
+
+3. **驗證流程**：
+   - 發送含驗證連結的 HTML email
+   - 24小時內有效
+   - 點擊連結完成驗證
+   - 驗證成功後可接收通知
+
+**Email 用途**（非登入）：
+- 學習進度通知
+- 作業完成通知
+- 每週/月度學習報告
+- 重要公告
+
+**API Endpoints**：
+- `POST /api/students/{id}/email/request-verification` - 請求驗證
+- `POST /api/students/{id}/email/resend-verification` - 重發驗證
+- `GET /api/students/verify-email/{token}` - 驗證 token
+- `GET /api/students/{id}/email-status` - 取得驗證狀態
+
+**安全考量**：
+- Token 使用 secrets.token_urlsafe(32) 生成
+- Token 一次性使用，驗證後立即清除
+- 發送頻率限制防止濫用
+- 開發模式下在 console 顯示驗證連結
 
 ### 3.2 教師端功能（Phase 1）
 

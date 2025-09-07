@@ -172,7 +172,10 @@ class TestProgramCopy:
 
         # 加入 lessons
         lesson = Lesson(
-            program_id=template.id, name="第一課", description="第一課內容", order_index=0
+            program_id=template.id,
+            name="第一課",
+            description="第一課內容",
+            order_index=0,
         )
         db.add(lesson)
         db.commit()

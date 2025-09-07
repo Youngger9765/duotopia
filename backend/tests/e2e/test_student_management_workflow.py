@@ -43,7 +43,11 @@ class TestStudentManagementWorkflow:
 
         if not classrooms:
             # 建立測試班級
-            classroom_data = {"name": "測試班級", "description": "本地測試用班級", "level": "A1"}
+            classroom_data = {
+                "name": "測試班級",
+                "description": "本地測試用班級",
+                "level": "A1",
+            }
             response = self.client.post(
                 "/api/teachers/classrooms",
                 json=classroom_data,
@@ -214,7 +218,11 @@ class TestStudentManagementWorkflow:
                 headers=self.teacher_headers,
             )
 
-            assert response.status_code in [400, 404, 422], "分配到不存在班級應該返回錯誤"
+            assert response.status_code in [
+                400,
+                404,
+                422,
+            ], "分配到不存在班級應該返回錯誤"
 
             # 測試清除班級分配（設為 null）
             update_data = {"classroom_id": None}

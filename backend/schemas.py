@@ -120,14 +120,36 @@ class StudentCreate(BaseModel):
 
 class StudentResponse(BaseModel):
     id: int
-    email: str
+    email: Optional[str] = None
     name: str
     class_id: Optional[int]
     is_active: bool
     created_at: datetime
+    parent_email: Optional[str] = None
+    email_verified: bool = False
+    email_verified_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+# Email verification schemas
+class EmailVerificationRequest(BaseModel):
+    parent_email: EmailStr
+
+
+class EmailVerificationResponse(BaseModel):
+    message: str
+    email: str
+    verification_sent: bool
+
+
+class EmailVerifyToken(BaseModel):
+    token: str
+
+
+class StudentEmailUpdate(BaseModel):
+    parent_email: EmailStr
 
 
 # Class schemas

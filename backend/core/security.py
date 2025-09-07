@@ -1,6 +1,7 @@
 """
 安全性配置和加密功能
 """
+
 import os
 import ssl
 from typing import Optional, Dict, Any

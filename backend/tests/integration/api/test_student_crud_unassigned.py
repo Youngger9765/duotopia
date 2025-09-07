@@ -41,7 +41,7 @@ def test_crud_unassigned_student():
         "name": f"測試學生_{int(datetime.now().timestamp())}",
         "email": f"test_{int(datetime.now().timestamp())}@duotopia.local",
         "birthdate": "2012-01-01",
-        "student_id": f"TEST{int(datetime.now().timestamp())}"
+        "student_id": f"TEST{int(datetime.now().timestamp())}",
         # 注意：沒有 classroom_id
     }
 

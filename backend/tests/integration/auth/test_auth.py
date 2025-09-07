@@ -2,6 +2,7 @@
 Test cases for teacher authentication
 Following TDD principles
 """
+
 from fastapi import status
 
 

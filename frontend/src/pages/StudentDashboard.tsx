@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import { toast } from 'sonner';
 import {
@@ -11,7 +12,9 @@ import {
   Clock,
   Target,
   ChevronRight,
-  Calendar
+  Calendar,
+  Mail,
+  X
 } from 'lucide-react';
 import { Assignment } from '@/types';
 
@@ -25,6 +28,10 @@ export default function StudentDashboard() {
     totalPracticeTime: 0,
     streak: 0
   });
+  const [showEmailPrompt, setShowEmailPrompt] = useState(false);
+  const [showEmailSetup, setShowEmailSetup] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailInitialized, setEmailInitialized] = useState(false);
 
   useEffect(() => {
     if (!user || !token) {
@@ -33,6 +40,7 @@ export default function StudentDashboard() {
     }
     loadAssignments();
     loadStats();
+    loadEmailStatus();
   }, [user, token, navigate]);
 
   const loadAssignments = async () => {
@@ -108,12 +116,86 @@ export default function StudentDashboard() {
     });
   };
 
+  const loadEmailStatus = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      // 使用 /me 端點來獲取當前學生資訊
+      const response = await fetch(`${apiUrl}/api/students/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // 如果有 email，預填到輸入框
+        if (data.email && !emailInitialized) {
+          setNewEmail(data.email);
+          setEmailInitialized(true);
+        }
+
+        // 如果沒有驗證過 email，就顯示提醒
+        if (!data.email_verified) {
+          setShowEmailPrompt(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load email status:', error);
+    }
+  };
+
   const handleStartAssignment = (assignmentId: number) => {
     navigate(`/student/assignment/${assignmentId}/detail`);
   };
 
   const handleViewAllAssignments = () => {
     navigate('/student/assignments');
+  };
+
+  const handleEmailPromptClose = () => {
+    setShowEmailPrompt(false);
+    // 不記錄，下次登入還是會顯示
+  };
+
+  const handleEmailUpdate = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      toast.error('請輸入有效的 Email 地址');
+      return;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      // 使用正確的 update-email 端點
+      const response = await fetch(`${apiUrl}/api/students/update-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: newEmail })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.verification_sent) {
+          toast.success('驗證信已發送！請檢查您的信箱');
+        } else {
+          toast.success('Email 已更新');
+        }
+        setShowEmailPrompt(false);
+        setShowEmailSetup(false);
+        // 重新載入 email 狀態
+        loadEmailStatus();
+      } else {
+        const error = await response.text();
+        toast.error(`設定失敗：${error}`);
+      }
+    } catch (error) {
+      console.error('Failed to update email:', error);
+      toast.error('設定失敗，請稍後再試');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -141,6 +223,71 @@ export default function StudentDashboard() {
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Welcome Message */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            你好，{user?.name || '同學'}！歡迎回到 Duotopia 🚀
+          </h1>
+          <p className="text-gray-600">繼續你的英語學習之旅吧</p>
+        </div>
+
+        {/* Email Setup Form */}
+        {(showEmailPrompt || showEmailSetup) && (
+          <Card className="mb-6 bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-blue-900 mb-3">
+                      📧 設定 Email 通知
+                    </h3>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
+                          你的 Email 地址
+                        </label>
+                        <Input
+                          type="email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="請輸入你的 Email 地址"
+                          className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                        <p>📌 點擊「發送驗證信」後，會發送驗證信到你的 Email，點擊信中連結即可完成設定</p>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          onClick={handleEmailUpdate}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          發送驗證信
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleEmailPromptClose}
+                  className="text-blue-400 hover:text-blue-600 hover:bg-blue-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>

@@ -33,7 +33,7 @@ class ClassroomResponse(BaseModel):
 class StudentResponse(BaseModel):
     id: int
     name: str
-    email: str
+    email: Optional[str] = None
     avatar: Optional[str] = None
 
 

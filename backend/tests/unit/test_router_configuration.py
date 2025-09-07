@@ -2,6 +2,7 @@
 Router 配置測試
 確保所有 router 都有正確的配置，避免重構時出錯
 """
+
 import pytest
 import importlib
 import sys

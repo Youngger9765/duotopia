@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Storage</title>
+</head>
+<body>
+    <h1>清除 localStorage</h1>
+    <button onclick="clearEmailPrompt()">清除 Email 提示記錄</button>
+    <button onclick="clearAll()">清除所有 localStorage</button>
+    <button onclick="showStorage()">顯示 localStorage 內容</button>
+    <div id="output"></div>
+
+    <script>
+        function clearEmailPrompt() {
+            // 清除所有 email-prompt 相關的記錄
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.includes('email-prompt')) {
+                    localStorage.removeItem(key);
+                    console.log('Removed:', key);
+                }
+            });
+            alert('Email 提示記錄已清除！');
+            showStorage();
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            alert('所有 localStorage 已清除！');
+            showStorage();
+        }
+
+        function showStorage() {
+            const output = document.getElementById('output');
+            const keys = Object.keys(localStorage);
+            output.innerHTML = '<h2>目前的 localStorage：</h2>';
+            if (keys.length === 0) {
+                output.innerHTML += '<p>（空）</p>';
+            } else {
+                keys.forEach(key => {
+                    output.innerHTML += `<p><strong>${key}:</strong> ${localStorage.getItem(key)}</p>`;
+                });
+            }
+        }
+
+        // 初始顯示
+        showStorage();
+    </script>
+</body>
+</html>

@@ -23,7 +23,11 @@ class TestAssignmentsIntegration:
             "email": "xiaoming.wang@duotopia.local",
             "password": "mynewpassword123",
         },
-        {"name": "李小美", "email": "xiaomei.li@duotopia.local", "password": "20120101"},
+        {
+            "name": "李小美",
+            "email": "xiaomei.li@duotopia.local",
+            "password": "20120101",
+        },
     ]
 
     def setup_class(self):

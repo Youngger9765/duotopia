@@ -176,7 +176,12 @@ def test_content_creation(headers):
         "type": "reading_assessment",
         "title": f"測試錄音集 {datetime.now().strftime('%H%M%S')}",
         "items": [
-            {"text": "apple", "definition": "蘋果", "audio_url": "", "translation": "蘋果"},
+            {
+                "text": "apple",
+                "definition": "蘋果",
+                "audio_url": "",
+                "translation": "蘋果",
+            },
             {
                 "text": "banana",
                 "definition": "香蕉",

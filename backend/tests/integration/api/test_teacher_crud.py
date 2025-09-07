@@ -42,7 +42,11 @@ class TeacherCRUDTest:
 
         # 1. CREATE - Create new classroom
         print("\n1️⃣ CREATE: Creating new classroom...")
-        new_classroom = {"name": "測試班級", "description": "這是一個測試班級", "level": "A1"}
+        new_classroom = {
+            "name": "測試班級",
+            "description": "這是一個測試班級",
+            "level": "A1",
+        }
         response = requests.post(
             f"{BASE_URL}/api/teachers/classrooms",
             json=new_classroom,
@@ -71,7 +75,11 @@ class TeacherCRUDTest:
 
         # 3. UPDATE - Update classroom
         print(f"\n3️⃣ UPDATE: Updating classroom {classroom_id}...")
-        update_data = {"name": "更新的測試班級", "description": "這是更新後的描述", "level": "A2"}
+        update_data = {
+            "name": "更新的測試班級",
+            "description": "這是更新後的描述",
+            "level": "A2",
+        }
         response = requests.put(
             f"{BASE_URL}/api/teachers/classrooms/{classroom_id}",
             json=update_data,
@@ -105,7 +113,11 @@ class TeacherCRUDTest:
         # First create a classroom for the student
         classroom_response = requests.post(
             f"{BASE_URL}/api/teachers/classrooms",
-            json={"name": "學生測試班級", "description": "用於學生CRUD測試", "level": "A1"},
+            json={
+                "name": "學生測試班級",
+                "description": "用於學生CRUD測試",
+                "level": "A1",
+            },
             headers=self.headers(),
         )
         if classroom_response.status_code != 200:
@@ -222,7 +234,11 @@ class TeacherCRUDTest:
         # First create a classroom for the program
         classroom_response = requests.post(
             f"{BASE_URL}/api/teachers/classrooms",
-            json={"name": "課程測試班級", "description": "用於課程CRUD測試", "level": "B1"},
+            json={
+                "name": "課程測試班級",
+                "description": "用於課程CRUD測試",
+                "level": "B1",
+            },
             headers=self.headers(),
         )
         if classroom_response.status_code != 200:

@@ -57,7 +57,7 @@ def test_student_classroom_assignment():
     student_data = {
         "name": f"測試學生_{datetime.now().strftime('%H%M%S')}",
         "email": f"assign_test_{int(datetime.now().timestamp())}@duotopia.local",
-        "birthdate": "2012-03-15"
+        "birthdate": "2012-03-15",
         # 注意：沒有 classroom_id
     }
 

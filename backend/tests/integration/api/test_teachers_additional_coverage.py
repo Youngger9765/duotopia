@@ -1,6 +1,7 @@
 """
 Additional tests to improve teachers.py coverage from 55% to 90%+
 """
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

@@ -1,6 +1,7 @@
 """
 Comprehensive tests for student endpoints to improve coverage
 """
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

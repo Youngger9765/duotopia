@@ -50,7 +50,7 @@ async def validate_student(
     # 驗證生日（作為密碼）
     if not verify_password(request.birthdate, student.password_hash):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password"
         )
 
     # 建立 token
@@ -494,4 +494,471 @@ async def submit_assignment(
     return {
         "message": "Assignment submitted successfully",
         "submitted_at": student_assignment.submitted_at.isoformat(),
+    }
+
+
+# ========== Email 驗證相關 API ==========
+
+
+class EmailUpdateRequest(BaseModel):
+    email: str
+
+
+@router.post("/update-email")
+async def update_student_email(
+    request: EmailUpdateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """更新學生 email (簡化版本用於前端)"""
+    from services.email_service import email_service
+
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+    student = db.query(Student).filter(Student.id == student_id).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        )
+
+    # 更新 email
+    student.email = request.email
+    student.email_verified = False
+    student.email_verified_at = None
+
+    # 發送驗證信
+    success = email_service.send_verification_email(db, student, request.email)
+
+    db.commit()
+
+    return {
+        "message": "Email updated and verification email sent",
+        "email": request.email,
+        "verified": False,
+        "verification_sent": success,
+    }
+
+
+@router.get("/me")
+async def get_current_student_info(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """取得當前學生資訊 (別名為 /profile)"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = current_user.get("sub")
+    student = db.query(Student).filter(Student.id == int(student_id)).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        )
+
+    # Get classroom info
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student.id)
+        .first()
+    )
+
+    classroom_name = None
+    classroom_id = None
+    if classroom_student:
+        classroom = (
+            db.query(Classroom)
+            .filter(Classroom.id == classroom_student.classroom_id)
+            .first()
+        )
+        if classroom:
+            classroom_name = classroom.name
+            classroom_id = classroom.id
+
+    return {
+        "id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "email_verified": student.email_verified,
+        "student_id": student.student_id,
+        "classroom_id": classroom_id,
+        "classroom_name": classroom_name,
+        "target_wpm": student.target_wpm,
+        "target_accuracy": student.target_accuracy,
+    }
+
+
+@router.post("/{student_id}/email/request-verification")
+async def request_email_verification(
+    student_id: int,
+    email_request: Dict[str, str],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """請求發送 email 驗證信"""
+    from services.email_service import email_service
+
+    # 確認是學生本人
+    if (
+        current_user.get("type") != "student"
+        or int(current_user.get("sub")) != student_id
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 檢查是否已經驗證
+    if student.email_verified:
+        return {"message": "Email already verified", "verified": True}
+
+    email = email_request.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    # 發送驗證信
+    success = email_service.send_verification_email(db, student, email)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+
+    return {
+        "message": "Verification email sent successfully",
+        "email": email,
+        "verification_sent": True,
+    }
+
+
+@router.post("/{student_id}/email/resend-verification")
+async def resend_email_verification(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """重新發送驗證信"""
+    from services.email_service import email_service
+
+    # 確認是學生本人
+    if (
+        current_user.get("type") != "student"
+        or int(current_user.get("sub")) != student_id
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 檢查是否已經驗證
+    if student.email_verified:
+        return {"message": "Email already verified", "verified": True}
+
+    # 檢查是否有 email（且不是系統生成的）
+    if not student.email or "@duotopia.local" in student.email:
+        raise HTTPException(status_code=400, detail="No valid email to verify")
+
+    # 重新發送
+    success = email_service.resend_verification_email(db, student)
+    if not success:
+        raise HTTPException(
+            status_code=429, detail="Please wait 5 minutes before requesting again"
+        )
+
+    return {
+        "message": "Verification email resent successfully",
+        "email": student.email,
+        "verification_sent": True,
+    }
+
+
+@router.get("/verify-email/{token}")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """驗證 email token"""
+    from services.email_service import email_service
+
+    student = email_service.verify_email_token(db, token)
+    if not student:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    return {
+        "message": "Email verified successfully",
+        "student_name": student.name,
+        "email": student.email,
+        "verified": True,
+    }
+
+
+@router.get("/{student_id}/email-status")
+async def get_email_status(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """獲取 email 驗證狀態"""
+    # 確認是學生本人
+    if (
+        current_user.get("type") != "student"
+        or int(current_user.get("sub")) != student_id
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    return {
+        "email": student.email,
+        "is_system_email": (
+            "@duotopia.local" in student.email if student.email else True
+        ),
+        "email_verified": student.email_verified,
+        "email_verified_at": (
+            student.email_verified_at.isoformat() if student.email_verified_at else None
+        ),
+        "verification_sent_at": (
+            student.email_verification_sent_at.isoformat()
+            if student.email_verification_sent_at
+            else None
+        ),
+    }
+
+
+# ========== 班級切換相關 API ==========
+
+
+@router.get("/{student_id}/linked-accounts")
+async def get_linked_accounts(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """獲取相同已驗證 email 的其他學生帳號"""
+    # 確認是學生本人
+    if (
+        current_user.get("type") != "student"
+        or int(current_user.get("sub")) != student_id
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 檢查是否有已驗證的 email
+    if not student.email or not student.email_verified:
+        return {"linked_accounts": [], "message": "No verified email"}
+
+    # 找出所有相同 email 且已驗證的學生帳號
+    linked_students = (
+        db.query(Student)
+        .filter(
+            Student.email == student.email,
+            Student.email_verified == True,
+            Student.id != student_id,  # 排除自己
+            Student.is_active == True,
+        )
+        .all()
+    )
+
+    # 建立回應，包含班級資訊
+    linked_accounts = []
+    for linked_student in linked_students:
+        # 取得班級資訊
+        classroom_enrollment = (
+            db.query(ClassroomStudent)
+            .filter(
+                ClassroomStudent.student_id == linked_student.id,
+                ClassroomStudent.is_active == True,
+            )
+            .first()
+        )
+
+        classroom_info = None
+        if classroom_enrollment:
+            classroom = (
+                db.query(Classroom)
+                .filter(Classroom.id == classroom_enrollment.classroom_id)
+                .first()
+            )
+            if classroom:
+                classroom_info = {
+                    "id": classroom.id,
+                    "name": classroom.name,
+                    "teacher_name": (
+                        classroom.teacher.name if classroom.teacher else None
+                    ),
+                }
+
+        linked_accounts.append(
+            {
+                "student_id": linked_student.id,
+                "name": linked_student.name,
+                "classroom": classroom_info,
+                "last_login": (
+                    linked_student.last_login.isoformat()
+                    if linked_student.last_login
+                    else None
+                ),
+            }
+        )
+
+    return {"linked_accounts": linked_accounts, "current_email": student.email}
+
+
+class SwitchAccountRequest(BaseModel):
+    target_student_id: int
+    password: str  # 目標帳號的密碼（生日）
+
+
+@router.post("/switch-account")
+async def switch_account(
+    request: SwitchAccountRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """切換到另一個已連結的學生帳號"""
+    # 確認是學生
+    if current_user.get("type") != "student":
+        raise HTTPException(status_code=403, detail="Only students can switch accounts")
+
+    current_student_id = int(current_user.get("sub"))
+    current_student = db.query(Student).filter(Student.id == current_student_id).first()
+
+    if not current_student:
+        raise HTTPException(status_code=404, detail="Current student not found")
+
+    # 檢查當前帳號是否有已驗證的 email
+    if not current_student.email or not current_student.email_verified:
+        raise HTTPException(
+            status_code=400, detail="Current account has no verified email"
+        )
+
+    # 查找目標學生
+    target_student = (
+        db.query(Student).filter(Student.id == request.target_student_id).first()
+    )
+
+    if not target_student:
+        raise HTTPException(status_code=404, detail="Target student not found")
+
+    # 檢查目標學生是否有相同的已驗證 email
+    if (
+        target_student.email != current_student.email
+        or not target_student.email_verified
+    ):
+        raise HTTPException(status_code=403, detail="Target account is not linked")
+
+    # 驗證目標帳號的密碼
+    if not verify_password(request.password, target_student.password_hash):
+        raise HTTPException(
+            status_code=401, detail="Invalid password for target account"
+        )
+
+    # 更新最後登入時間
+    target_student.last_login = datetime.now()
+    db.commit()
+
+    # 建立新的 JWT token
+    access_token = create_access_token(
+        data={"sub": str(target_student.id), "type": "student"},
+        expires_delta=timedelta(minutes=30),
+    )
+
+    # 取得班級資訊
+    classroom_enrollment = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.student_id == target_student.id,
+            ClassroomStudent.is_active == True,
+        )
+        .first()
+    )
+
+    classroom_info = None
+    if classroom_enrollment:
+        classroom = (
+            db.query(Classroom)
+            .filter(Classroom.id == classroom_enrollment.classroom_id)
+            .first()
+        )
+        if classroom:
+            classroom_info = {"id": classroom.id, "name": classroom.name}
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "student": {
+            "id": target_student.id,
+            "name": target_student.name,
+            "email": target_student.email,
+            "classroom": classroom_info,
+        },
+        "message": "Successfully switched to target account",
+    }
+
+
+@router.delete("/{student_id}/email-binding")
+async def unbind_email(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """解除 email 綁定（學生自己或老師都可以操作）"""
+    # 檢查權限：學生本人或老師
+    is_student_self = (
+        current_user.get("type") == "student"
+        and int(current_user.get("sub")) == student_id
+    )
+    is_teacher = current_user.get("type") == "teacher"
+
+    if not is_student_self and not is_teacher:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 如果是老師，檢查學生是否在老師的班級中
+    if is_teacher:
+        teacher_id = int(current_user.get("sub"))
+        # 檢查學生是否在該老師的任何班級中
+        student_in_teacher_class = (
+            db.query(ClassroomStudent)
+            .join(Classroom)
+            .filter(
+                ClassroomStudent.student_id == student_id,
+                Classroom.teacher_id == teacher_id,
+                ClassroomStudent.is_active == True,
+            )
+            .first()
+        )
+        if not student_in_teacher_class:
+            raise HTTPException(
+                status_code=403, detail="Student is not in your classroom"
+            )
+
+    # 清除 email 綁定相關資訊
+    old_email = student.email
+    student.email = None
+    student.email_verified = False
+    student.email_verified_at = None
+    student.email_verification_token = None
+    student.email_verification_sent_at = None
+
+    db.commit()
+
+    return {
+        "message": "Email binding removed successfully",
+        "student_id": student_id,
+        "old_email": old_email,
+        "removed_by": "teacher" if is_teacher else "student",
     }

@@ -1,6 +1,7 @@
 """
 Test suite for audio features including TTS and recording upload
 """
+
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
@@ -53,8 +54,8 @@ class TestTTSService:
                 mock_instance.save.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_tts_fallback_to_local(self, tts_service):
-        """Test TTS fallback to local storage when GCS fails"""
+    async def test_generate_tts_gcs_failure(self, tts_service):
+        """Test TTS generation fails when GCS is unavailable"""
         with patch("edge_tts.Communicate") as mock_communicate:
             mock_instance = AsyncMock()
             mock_instance.save = AsyncMock()
@@ -62,20 +63,14 @@ class TestTTSService:
 
             # Mock GCS failure
             with patch.object(tts_service, "_get_storage_client") as mock_storage:
-                mock_storage.return_value = None
+                mock_storage.side_effect = Exception("GCS connection failed")
 
-                with patch("os.makedirs") as mock_makedirs:
-                    with patch("shutil.copy2") as mock_copy:
-                        result = await tts_service.generate_tts(
-                            text="Hello World",
-                            voice="en-US-JennyNeural",
-                            save_to_gcs=False,
-                        )
+                with pytest.raises(Exception) as exc_info:
+                    await tts_service.generate_tts(
+                        text="Hello World", voice="en-US-JennyNeural"
+                    )
 
-                        assert result.startswith("/static/audio/tts/")
-                        assert ".mp3" in result
-                        mock_makedirs.assert_called_once()
-                        mock_copy.assert_called_once()
+                assert "TTS generation failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_batch_generate_tts(self, tts_service):
@@ -273,8 +268,8 @@ class TestAudioUploadService:
         assert "Invalid file type" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_upload_audio_fallback_to_local(self, upload_service):
-        """Test audio upload fallback to local storage"""
+    async def test_upload_audio_gcs_failure(self, upload_service):
+        """Test audio upload fails when GCS is unavailable"""
         audio_content = b"fake audio data"
         mock_file = Mock(spec=UploadFile)
         mock_file.content_type = "audio/webm"
@@ -282,19 +277,15 @@ class TestAudioUploadService:
 
         # Mock GCS failure
         with patch.object(upload_service, "_get_storage_client") as mock_storage:
-            mock_storage.return_value = None
+            mock_storage.side_effect = Exception("GCS connection failed")
 
-            with patch("os.makedirs") as mock_makedirs:
-                with patch("builtins.open", create=True) as mock_open:
-                    mock_open.return_value.__enter__ = Mock(
-                        return_value=Mock(write=Mock())
-                    )
+            from fastapi import HTTPException
 
-                    result = await upload_service.upload_audio(file=mock_file)
+            with pytest.raises(HTTPException) as exc_info:
+                await upload_service.upload_audio(file=mock_file)
 
-                    assert result.startswith("/static/audio/recordings/")
-                    assert ".webm" in result
-                    mock_makedirs.assert_called_once()
+            assert exc_info.value.status_code == 500
+            assert "Upload failed" in exc_info.value.detail
 
 
 class TestAudioManager:

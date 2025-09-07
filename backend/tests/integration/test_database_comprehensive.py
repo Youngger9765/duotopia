@@ -1,6 +1,7 @@
 """
 Comprehensive tests for database operations to improve coverage
 """
+
 import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy import text

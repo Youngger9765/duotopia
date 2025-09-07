@@ -41,20 +41,18 @@ class TTSService:
         voice: str = "en-US-JennyNeural",
         rate: str = "+0%",
         volume: str = "+0%",
-        save_to_gcs: bool = True,  # 預設為 True，優先使用 GCS
     ) -> str:
         """
-        生成 TTS 音檔
+        生成 TTS 音檔並上傳到 GCS
 
         Args:
             text: 要轉換的文字
             voice: 語音名稱
             rate: 語速調整 (e.g., '+10%', '-10%')
             volume: 音量調整 (e.g., '+10%', '-10%')
-            save_to_gcs: 是否儲存到 GCS
 
         Returns:
-            音檔 URL 或本地路徑
+            音檔 GCS URL
         """
         try:
             # 創建 TTS 通訊
@@ -69,42 +67,21 @@ class TTSService:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
                 await communicate.save(tmp_file.name)
 
-                if save_to_gcs:
-                    try:
-                        # 上傳到 GCS
-                        client = self._get_storage_client()
-                        bucket = client.bucket(self.bucket_name)
-                        blob = bucket.blob(f"tts/{filename}")
+                # 上傳到 GCS (必須成功)
+                client = self._get_storage_client()
+                bucket = client.bucket(self.bucket_name)
+                blob = bucket.blob(f"tts/{filename}")
 
-                        blob.upload_from_filename(tmp_file.name)
-                        blob.make_public()
+                blob.upload_from_filename(tmp_file.name)
+                blob.make_public()
 
-                        # 清理臨時檔案
-                        os.unlink(tmp_file.name)
+                # 清理臨時檔案
+                os.unlink(tmp_file.name)
 
-                        # 返回公開 URL
-                        return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
-                    except Exception as e:
-                        print(f"GCS upload failed: {e}, falling back to local storage")
-                        # 如果 GCS 失敗，改用本地儲存
-                        save_to_gcs = False
-
-                if not save_to_gcs:
-                    # 儲存到本地 static 目錄
-                    local_dir = "static/audio/tts"
-                    os.makedirs(local_dir, exist_ok=True)
-                    local_path = os.path.join(local_dir, filename)
-
-                    # 複製檔案到 static 目錄
-                    import shutil
-
-                    shutil.copy2(tmp_file.name, local_path)
-
-                    # 清理臨時檔案
-                    os.unlink(tmp_file.name)
-
-                    # 返回本地 URL（相對於 API 路徑）
-                    return f"/static/audio/tts/{filename}"
+                # 返回公開 URL
+                return (
+                    f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                )
 
         except Exception as e:
             raise Exception(f"TTS generation failed: {str(e)}")

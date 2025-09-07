@@ -2,6 +2,7 @@
 Comprehensive tests for routers/public.py
 Testing all public API endpoints that don't require authentication
 """
+
 import pytest
 from models import Teacher, Classroom, Student, ClassroomStudent, ProgramLevel
 from auth import get_password_hash

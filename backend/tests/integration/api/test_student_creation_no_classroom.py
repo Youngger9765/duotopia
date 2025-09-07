@@ -37,7 +37,7 @@ def test_add_student_without_classroom():
         "name": "無班級測試學生",
         "email": f"no_class_{int(datetime.now().timestamp())}@duotopia.local",
         "birthdate": "2012-01-01",
-        "student_id": f"NOCLASS{int(datetime.now().timestamp())}"
+        "student_id": f"NOCLASS{int(datetime.now().timestamp())}",
         # 注意：沒有 classroom_id
     }
 

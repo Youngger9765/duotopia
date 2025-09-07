@@ -177,7 +177,11 @@ def get_or_create_test_classrooms(token: str):
         create_response = requests.post(
             f"{BASE_URL}/api/teachers/classrooms",
             headers=headers,
-            json={"name": "測試源班級", "description": "用於測試複製功能的源班級", "level": "A1"},
+            json={
+                "name": "測試源班級",
+                "description": "用於測試複製功能的源班級",
+                "level": "A1",
+            },
         )
         if create_response.status_code == 200:
             source_classroom = create_response.json()
@@ -193,7 +197,11 @@ def get_or_create_test_classrooms(token: str):
         create_response = requests.post(
             f"{BASE_URL}/api/teachers/classrooms",
             headers=headers,
-            json={"name": "測試目標班級", "description": "用於測試三種建立方式的目標班級", "level": "A1"},
+            json={
+                "name": "測試目標班級",
+                "description": "用於測試三種建立方式的目標班級",
+                "level": "A1",
+            },
         )
         if create_response.status_code == 200:
             target_classroom = create_response.json()

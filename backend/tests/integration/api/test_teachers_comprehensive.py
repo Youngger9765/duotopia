@@ -2,6 +2,7 @@
 Comprehensive tests for routers/teachers.py
 Testing all endpoints and error conditions to improve coverage from 51% to 90%+
 """
+
 import pytest
 from models import Teacher, Classroom, Student, ClassroomStudent, Program, ProgramLevel
 from auth import get_password_hash, create_access_token
@@ -274,7 +275,7 @@ class TestTokenValidation:
             {
                 "email": teacher_with_comprehensive_data.email,
                 "type": "teacher",
-                "name": teacher_with_comprehensive_data.name
+                "name": teacher_with_comprehensive_data.name,
                 # Missing "sub" field
             }
         )
@@ -289,7 +290,7 @@ class TestTokenValidation:
             {
                 "sub": str(teacher_with_comprehensive_data.id),
                 "email": teacher_with_comprehensive_data.email,
-                "name": teacher_with_comprehensive_data.name
+                "name": teacher_with_comprehensive_data.name,
                 # Missing "type" field
             }
         )

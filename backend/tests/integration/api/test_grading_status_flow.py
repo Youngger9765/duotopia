@@ -264,7 +264,12 @@ class TestGradingStatusFlow:
                 "score": 85,
                 "feedback": "總評：表現良好",
                 "item_results": [
-                    {"item_index": 0, "feedback": "發音清晰", "passed": True, "score": 90},
+                    {
+                        "item_index": 0,
+                        "feedback": "發音清晰",
+                        "passed": True,
+                        "score": 90,
+                    },
                     {
                         "item_index": 1,
                         "feedback": "需要加強語調",

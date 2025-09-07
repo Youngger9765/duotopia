@@ -176,7 +176,12 @@ class TestAudioWorkflow:
 
     def test_full_audio_workflow(self):
         """測試完整的音檔工作流程"""
-        results = {"TTS 生成": False, "錄音上傳": False, "音檔持久化": False, "音檔替換": False}
+        results = {
+            "TTS 生成": False,
+            "錄音上傳": False,
+            "音檔持久化": False,
+            "音檔替換": False,
+        }
 
         # TTS 測試
         try:

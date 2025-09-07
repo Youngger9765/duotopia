@@ -97,11 +97,14 @@ class Student(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     student_id = Column(String(50))  # 學號（選填）
-    email = Column(String(255), unique=True, index=True)  # 系統生成
+    email = Column(String(255), nullable=True, index=True)  # Email（可為空，可重複）
     password_hash = Column(String(255), nullable=False)  # 密碼雜湊
     birthdate = Column(Date, nullable=False)  # 生日（預設密碼來源）
     password_changed = Column(Boolean, default=False)  # 是否已更改密碼
-    parent_email = Column(String(255))  # Phase 2
+    email_verified = Column(Boolean, default=False)  # email 是否已驗證
+    email_verified_at = Column(DateTime(timezone=True))  # email 驗證時間
+    email_verification_token = Column(String(100))  # email 驗證 token
+    email_verification_sent_at = Column(DateTime(timezone=True))  # 最後發送驗證信時間
     parent_phone = Column(String(20))  # Phase 2
     avatar_url = Column(String(500))
     is_active = Column(Boolean, default=True)

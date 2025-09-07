@@ -71,8 +71,18 @@ def test_grading_submission():
         "total_score": 85,
         "feedback": "很好的表現！繼續加油！",
         "item_results": [
-            {"item_index": 0, "score": 90, "feedback": "發音清晰，語調自然", "passed": True},
-            {"item_index": 1, "score": 80, "feedback": "句子結構正確，但可以更流暢", "passed": True},
+            {
+                "item_index": 0,
+                "score": 90,
+                "feedback": "發音清晰，語調自然",
+                "passed": True,
+            },
+            {
+                "item_index": 1,
+                "score": 80,
+                "feedback": "句子結構正確，但可以更流暢",
+                "passed": True,
+            },
         ],
         "graded_at": datetime.now().isoformat(),
     }

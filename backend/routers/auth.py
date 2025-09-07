@@ -144,7 +144,7 @@ async def student_login(request: StudentLoginRequest, db: Session = Depends(get_
     # 驗證密碼
     if not verify_password(request.password, student.password_hash):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
         )
 
     # 創建 JWT token

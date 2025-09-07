@@ -37,9 +37,24 @@ def test_item_feedback():
         "score": 88,
         "feedback": "整體表現良好，繼續保持！",
         "item_results": [
-            {"item_index": 0, "score": 95, "feedback": "第一題：發音清晰，表達流暢", "passed": True},
-            {"item_index": 1, "score": 85, "feedback": "第二題：語調需要加強練習", "passed": True},
-            {"item_index": 2, "score": 70, "feedback": "第三題：請注意重音位置", "passed": False},
+            {
+                "item_index": 0,
+                "score": 95,
+                "feedback": "第一題：發音清晰，表達流暢",
+                "passed": True,
+            },
+            {
+                "item_index": 1,
+                "score": 85,
+                "feedback": "第二題：語調需要加強練習",
+                "passed": True,
+            },
+            {
+                "item_index": 2,
+                "score": 70,
+                "feedback": "第三題：請注意重音位置",
+                "passed": False,
+            },
         ],
     }
 

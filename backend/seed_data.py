@@ -89,8 +89,8 @@ def create_demo_data(db: Session):
     for i, name in enumerate(students_5a_names):
         # 保持原有學生的特殊密碼設定
         if name == "王小明":
-            password_hash = get_password_hash("mynewpassword123")
-            password_changed = True
+            password_hash = common_password  # 使用生日密碼
+            password_changed = False
         elif name == "陳大雄":
             password_hash = get_password_hash("student456")
             password_changed = True
@@ -113,6 +113,8 @@ def create_demo_data(db: Session):
             target_wpm=random.randint(50, 70),
             target_accuracy=round(random.uniform(0.70, 0.85), 2),
             password_changed=password_changed,
+            email_verified=False,  # 所有學生預設都未驗證 email
+            email_verified_at=None,
             is_active=True,
         )
         students_5a.append(student)
@@ -167,6 +169,8 @@ def create_demo_data(db: Session):
             target_wpm=random.randint(65, 85),
             target_accuracy=round(random.uniform(0.80, 0.95), 2),
             password_changed=password_changed,
+            email_verified=False,  # 所有學生預設都未驗證 email
+            email_verified_at=None,
             is_active=True,
         )
         students_6b.append(student)
@@ -1437,7 +1441,7 @@ def create_demo_data(db: Session):
     print("\n【學生登入】")
     print("  方式: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生")
     print("\n  五年級A班:")
-    print("    - 王小明: mynewpassword123 (已改密碼)")
+    print("    - 王小明: 20120101 (預設密碼)")
     print("    - 李小美: 20120101 (預設密碼)")
     print("    - 陳大雄: student456 (已改密碼)")
     print("\n  六年級B班:")
