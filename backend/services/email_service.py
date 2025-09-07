@@ -33,7 +33,9 @@ class EmailService:
         """生成驗證 token"""
         return secrets.token_urlsafe(32)
 
-    def send_verification_email(self, db: Session, student: Student, email: str = None) -> bool:
+    def send_verification_email(
+        self, db: Session, student: Student, email: str = None
+    ) -> bool:
         """發送驗證 email
 
         Args:
@@ -72,10 +74,13 @@ class EmailService:
                 <style>
                     body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                     .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background-color: #4A90E2; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .header {{ background-color: #4A90E2; color: white; padding: 20px;
+                               text-align: center; border-radius: 10px 10px 0 0; }}
                     .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
-                    .button {{ display: inline-block; padding: 12px 30px; background-color: #4A90E2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-                    .footer {{ text-align: center; margin-top: 30px; font-size: 12px; color: #666; }}
+                    .button {{ display: inline-block; padding: 12px 30px; background-color: #4A90E2;
+                               color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; margin-top: 30px;
+                               font-size: 12px; color: #666; }}
                 </style>
             </head>
             <body>
@@ -98,7 +103,8 @@ class EmailService:
                         </div>
                         <p style="font-size: 12px; color: #666;">
                             如果按鈕無法點擊，請複製以下連結到瀏覽器：<br>
-                            <a href="{verification_url}" style="color: #4A90E2; word-break: break-all;">{verification_url}</a>
+                            <a href="{verification_url}" style="color: #4A90E2; word-break: break-all;">
+                                {verification_url}</a>
                         </p>
                         <p style="font-size: 12px; color: #666;">
                             此驗證連結將在 24 小時後失效。
@@ -154,7 +160,11 @@ class EmailService:
         """
         try:
             # 查找擁有此 token 的學生
-            student = db.query(Student).filter(Student.email_verification_token == token).first()
+            student = (
+                db.query(Student)
+                .filter(Student.email_verification_token == token)
+                .first()
+            )
 
             if not student:
                 return None

@@ -38,7 +38,9 @@ async def test_email_binding():
 
         # 2. 取得班級列表
         print("\n2️⃣ 取得班級列表...")
-        classrooms_response = await session.get(f"{API_URL}/api/teachers/classrooms", headers=teacher_headers)
+        classrooms_response = await session.get(
+            f"{API_URL}/api/teachers/classrooms", headers=teacher_headers
+        )
 
         if classrooms_response.status != 200:
             print("❌ 取得班級失敗")
@@ -117,7 +119,7 @@ async def test_email_binding():
             if create_student_response.status == 200:
                 student = await create_student_response.json()
                 students.append(student)
-                print(f"✅ 建立學生成功")
+                print("✅ 建立學生成功")
                 print(f"   ID: {student['id']}")
                 print(f"   Email: {student.get('email', 'None')}")
                 print(f"   班級: {classroom['name']}")
@@ -131,7 +133,7 @@ async def test_email_binding():
             return
 
         # 4. 第一個學生登入
-        print(f"\n4️⃣ 第一個學生登入...")
+        print("\n4️⃣ 第一個學生登入...")
 
         # 注意：現在學生可能沒有 email，需要用其他方式登入
         # 這裡我們假設第一個學生有 email
@@ -157,7 +159,7 @@ async def test_email_binding():
             return
 
         # 5. 請求 email 驗證
-        print(f"\n5️⃣ 請求 email 驗證...")
+        print("\n5️⃣ 請求 email 驗證...")
         verify_request = await session.post(
             f"{API_URL}/api/students/{student1_id}/email/request-verification",
             headers=student1_headers,
@@ -174,7 +176,7 @@ async def test_email_binding():
             print(f"錯誤: {error}")
 
         # 6. 檢查 email 狀態
-        print(f"\n6️⃣ 檢查 email 驗證狀態...")
+        print("\n6️⃣ 檢查 email 驗證狀態...")
         status_response = await session.get(
             f"{API_URL}/api/students/{student1_id}/email-status",
             headers=student1_headers,
@@ -190,7 +192,7 @@ async def test_email_binding():
             print("❌ 取得狀態失敗")
 
         # 7. 為第二個學生設定相同的 email
-        print(f"\n7️⃣ 更新第二個學生的 email（相同 email）...")
+        print("\n7️⃣ 更新第二個學生的 email（相同 email）...")
         update_student2 = await session.put(
             f"{API_URL}/api/teachers/students/{students[1]['id']}",
             headers=teacher_headers,
@@ -205,7 +207,7 @@ async def test_email_binding():
             print(f"錯誤: {error}")
 
         # 8. 測試取得連結的帳號（需要先驗證 email）
-        print(f"\n8️⃣ 取得連結的帳號...")
+        print("\n8️⃣ 取得連結的帳號...")
         linked_response = await session.get(
             f"{API_URL}/api/students/{student1_id}/linked-accounts",
             headers=student1_headers,
@@ -213,7 +215,7 @@ async def test_email_binding():
 
         if linked_response.status == 200:
             linked_data = await linked_response.json()
-            print(f"✅ 連結的帳號:")
+            print("✅ 連結的帳號:")
             if linked_data.get("linked_accounts"):
                 for account in linked_data["linked_accounts"]:
                     print(f"   - ID: {account['student_id']}, 姓名: {account['name']}")
@@ -227,7 +229,7 @@ async def test_email_binding():
             print(f"錯誤: {error}")
 
         # 8.5 模擬驗證 email (開發模式下取得 token)
-        print(f"\n8.5️⃣ 模擬驗證 email...")
+        print("\n8.5️⃣ 模擬驗證 email...")
         # 在開發模式下，我們可以直接從資料庫取得 token
         # 實際生產環境會發送真實 email
 
@@ -244,7 +246,7 @@ async def test_email_binding():
         # 這裡我們跳過驗證步驟，直接測試後續功能
 
         # 9. 測試解除綁定（老師端）
-        print(f"\n9️⃣ 測試解除 email 綁定...")
+        print("\n9️⃣ 測試解除 email 綁定...")
         unbind_response = await session.delete(
             f"{API_URL}/api/students/{student1_id}/email-binding",
             headers=teacher_headers,

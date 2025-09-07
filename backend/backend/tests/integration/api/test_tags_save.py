@@ -30,7 +30,9 @@ def test_tags_save():
 
     # 2. 取得班級
     print("\n2. 取得班級...")
-    classrooms = requests.get(f"{BASE_URL}/api/teachers/classrooms", headers=headers).json()
+    classrooms = requests.get(
+        f"{BASE_URL}/api/teachers/classrooms", headers=headers
+    ).json()
     if not classrooms:
         print("❌ 沒有班級")
         return False
@@ -49,12 +51,14 @@ def test_tags_save():
         "tags": ["口說", "聽力", "進階", "商務英語", "TOEIC"],
     }
 
-    print(f"   送出資料：")
+    print("   送出資料：")
     print(f"   - 名稱: {program_data['name']}")
     print(f"   - 標籤: {program_data['tags']}")
 
     # 先檢查 API endpoint
-    print(f"\n   測試 API endpoint: POST {BASE_URL}/api/programs/create-custom?classroom_id={classroom_id}")
+    print(
+        f"\n   測試 API endpoint: POST {BASE_URL}/api/programs/create-custom?classroom_id={classroom_id}"
+    )
 
     response = requests.post(
         f"{BASE_URL}/api/programs/create-custom?classroom_id={classroom_id}",
@@ -66,7 +70,7 @@ def test_tags_save():
 
     if response.status_code == 200:
         result = response.json()
-        print(f"\n✅ 成功建立課程！")
+        print("\n✅ 成功建立課程！")
         print(f"   課程 ID: {result['id']}")
         print(f"   課程名稱: {result['name']}")
 
@@ -77,7 +81,7 @@ def test_tags_save():
                 print("✅ 標籤正確儲存！")
                 return True
             else:
-                print(f"❌ 標籤不符！")
+                print("❌ 標籤不符！")
                 print(f"   預期: {program_data['tags']}")
                 print(f"   實際: {result['tags']}")
                 return False
@@ -118,7 +122,7 @@ def check_database_schema():
         tags_column = next((c for c in columns if c["name"] == "tags"), None)
 
         if tags_column:
-            print(f"✅ programs 表有 tags 欄位")
+            print("✅ programs 表有 tags 欄位")
             print(f"   類型: {tags_column['type']}")
             print(f"   可為空: {tags_column['nullable']}")
         else:

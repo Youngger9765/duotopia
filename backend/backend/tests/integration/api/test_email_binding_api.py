@@ -48,16 +48,20 @@ class TestEmailBindingAPI:
 
     def test_get_student_profile(self, student_token, test_student):
         """測試獲取學生資料端點"""
-        response = client.get("/api/students/me", headers={"Authorization": f"Bearer {student_token}"})
+        response = client.get(
+            "/api/students/me", headers={"Authorization": f"Bearer {student_token}"}
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == test_student.name
         assert data["email"] == test_student.email
-        assert data["email_verified"] == False
+        assert data["email_verified"] is False
 
     @patch("services.email_service.EmailService.send_verification_email")
-    def test_update_email(self, mock_send_email, student_token, test_student, db: Session):
+    def test_update_email(
+        self, mock_send_email, student_token, test_student, db: Session
+    ):
         """測試更新 Email (使用 mock 不真的寄信)"""
         # Mock email 發送，返回成功
         mock_send_email.return_value = True
@@ -73,8 +77,8 @@ class TestEmailBindingAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == new_email
-        assert data["verified"] == False
-        assert data["verification_sent"] == True
+        assert data["verified"] is False
+        assert data["verification_sent"] is True
 
         # 驗證 mock 被呼叫
         mock_send_email.assert_called_once()
@@ -85,7 +89,9 @@ class TestEmailBindingAPI:
         assert test_student.email_verified is False
 
     @patch("services.email_service.EmailService.send_verification_email")
-    def test_update_email_with_failed_sending(self, mock_send_email, student_token, test_student, db: Session):
+    def test_update_email_with_failed_sending(
+        self, mock_send_email, student_token, test_student, db: Session
+    ):
         """測試更新 Email 但郵件發送失敗的情況"""
         # Mock email 發送失敗
         mock_send_email.return_value = False
@@ -101,8 +107,8 @@ class TestEmailBindingAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == new_email
-        assert data["verified"] == False
-        assert data["verification_sent"] == False  # 發送失敗
+        assert data["verified"] is False
+        assert data["verification_sent"] is False  # 發送失敗
 
         # 但 email 還是會更新
         db.refresh(test_student)
@@ -110,7 +116,9 @@ class TestEmailBindingAPI:
 
     def test_update_email_without_auth(self):
         """測試未認證情況下更新 Email"""
-        response = client.post("/api/students/update-email", json={"email": "test@example.com"})
+        response = client.post(
+            "/api/students/update-email", json={"email": "test@example.com"}
+        )
 
         assert response.status_code == 401  # Unauthorized
 
@@ -152,7 +160,9 @@ class TestEmailBindingAPI:
         assert response.status_code == 200
 
         # 測試新版 /me 端點
-        response = client.get("/api/students/me", headers={"Authorization": f"Bearer {student_token}"})
+        response = client.get(
+            "/api/students/me", headers={"Authorization": f"Bearer {student_token}"}
+        )
         assert response.status_code == 200
 
 

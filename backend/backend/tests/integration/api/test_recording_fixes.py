@@ -43,7 +43,7 @@ def test_batch_translation(headers):
 
     if response.status_code == 200:
         data = response.json()
-        print(f"✅ 批次翻譯成功")
+        print("✅ 批次翻譯成功")
         print(f"   原文: {data.get('originals', [])}")
         print(f"   翻譯: {data.get('translations', [])}")
 
@@ -142,7 +142,9 @@ def test_content_creation(headers):
     program_id = programs[0]["id"]
 
     # 獲取 lessons
-    response = requests.get(f"{API_URL}/api/teachers/programs/{program_id}/lessons", headers=headers)
+    response = requests.get(
+        f"{API_URL}/api/teachers/programs/{program_id}/lessons", headers=headers
+    )
 
     if response.status_code != 200:
         print("❌ 無法獲取課程單元")
@@ -204,7 +206,7 @@ def test_content_creation(headers):
 
     if response.status_code == 200:
         created = response.json()
-        print(f"✅ 內容創建成功")
+        print("✅ 內容創建成功")
         print(f"   ID: {created.get('id')}")
         print(f"   標題: {created.get('title')}")
         print(f"   項目數: {len(created.get('items', []))}")

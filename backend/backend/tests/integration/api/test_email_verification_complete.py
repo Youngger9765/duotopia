@@ -19,14 +19,18 @@ TEACHER_EMAIL = "demo@duotopia.com"
 TEACHER_PASSWORD = "demo123"
 
 # 資料庫連線（開發模式用）
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
+)
 
 
 def get_verification_token_from_db(student_id):
     """從資料庫取得驗證 token（開發模式用）"""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     cur = conn.cursor()
-    cur.execute("SELECT email_verification_token FROM students WHERE id = %s", (student_id,))
+    cur.execute(
+        "SELECT email_verification_token FROM students WHERE id = %s", (student_id,)
+    )
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -57,7 +61,9 @@ async def test_email_verification_complete():
 
         # 2. 取得班級
         print("\n2️⃣ 取得班級列表...")
-        classrooms_response = await session.get(f"{API_URL}/api/teachers/classrooms", headers=teacher_headers)
+        classrooms_response = await session.get(
+            f"{API_URL}/api/teachers/classrooms", headers=teacher_headers
+        )
         classrooms = await classrooms_response.json()
 
         if len(classrooms) < 2:
@@ -93,9 +99,11 @@ async def test_email_verification_complete():
             if create_response.status == 200:
                 student = await create_response.json()
                 students_created.append(student)
-                print(f"✅ 建立成功 - ID: {student['id']}, Email: {student.get('email', 'None')}")
+                print(
+                    f"✅ 建立成功 - ID: {student['id']}, Email: {student.get('email', 'None')}"
+                )
             else:
-                print(f"❌ 建立失敗")
+                print("❌ 建立失敗")
                 error = await create_response.text()
                 print(f"錯誤: {error}")
                 return
@@ -103,7 +111,7 @@ async def test_email_verification_complete():
         student1, student2 = students_created
 
         # 4. 第一個學生登入
-        print(f"\n4️⃣ 學生 1 登入...")
+        print("\n4️⃣ 學生 1 登入...")
         student1_login = await session.post(
             f"{API_URL}/api/students/validate",
             json={"email": student1["email"], "birthdate": "20100515"},  # YYYYMMDD 格式
@@ -118,10 +126,10 @@ async def test_email_verification_complete():
         student1_data = await student1_login.json()
         student1_token = student1_data["access_token"]
         student1_headers = {"Authorization": f"Bearer {student1_token}"}
-        print(f"✅ 學生 1 登入成功")
+        print("✅ 學生 1 登入成功")
 
         # 5. 請求 email 驗證
-        print(f"\n5️⃣ 請求 email 驗證...")
+        print("\n5️⃣ 請求 email 驗證...")
         verify_request = await session.post(
             f"{API_URL}/api/students/{student1['id']}/email/request-verification",
             headers=student1_headers,
@@ -137,7 +145,7 @@ async def test_email_verification_complete():
         print("✅ 驗證信已發送")
 
         # 6. 從資料庫取得 token（開發模式）
-        print(f"\n6️⃣ 取得驗證 token（開發模式）...")
+        print("\n6️⃣ 取得驗證 token（開發模式）...")
         token = get_verification_token_from_db(student1["id"])
 
         if not token:
@@ -147,8 +155,10 @@ async def test_email_verification_complete():
         print(f"✅ Token: {token[:20]}...")
 
         # 7. 驗證 email
-        print(f"\n7️⃣ 驗證 email...")
-        verify_response = await session.get(f"{API_URL}/api/students/verify-email/{token}")
+        print("\n7️⃣ 驗證 email...")
+        verify_response = await session.get(
+            f"{API_URL}/api/students/verify-email/{token}"
+        )
 
         if verify_response.status == 200:
             verify_data = await verify_response.json()
@@ -162,7 +172,7 @@ async def test_email_verification_complete():
             return
 
         # 8. 檢查驗證狀態
-        print(f"\n8️⃣ 檢查 email 狀態...")
+        print("\n8️⃣ 檢查 email 狀態...")
         status_response = await session.get(
             f"{API_URL}/api/students/{student1['id']}/email-status",
             headers=student1_headers,
@@ -176,7 +186,7 @@ async def test_email_verification_complete():
             print(f"   驗證時間: {status_data.get('email_verified_at')}")
 
         # 9. 為第二個學生設定相同 email 並驗證
-        print(f"\n9️⃣ 為學生 2 設定相同 email...")
+        print("\n9️⃣ 為學生 2 設定相同 email...")
         update_student2 = await session.put(
             f"{API_URL}/api/teachers/students/{student2['id']}",
             headers=teacher_headers,
@@ -184,10 +194,10 @@ async def test_email_verification_complete():
         )
 
         if update_student2.status == 200:
-            print(f"✅ 學生 2 email 已更新")
+            print("✅ 學生 2 email 已更新")
 
             # 學生 2 登入
-            print(f"\n登入學生 2...")
+            print("\n登入學生 2...")
             student2_login = await session.post(
                 f"{API_URL}/api/students/validate",
                 json={"email": test_email, "birthdate": "20100515"},
@@ -212,12 +222,14 @@ async def test_email_verification_complete():
                     # 取得並驗證 token
                     token2 = get_verification_token_from_db(student2["id"])
                     if token2:
-                        verify2_response = await session.get(f"{API_URL}/api/students/verify-email/{token2}")
+                        verify2_response = await session.get(
+                            f"{API_URL}/api/students/verify-email/{token2}"
+                        )
                         if verify2_response.status == 200:
                             print("✅ 學生 2 email 驗證成功！")
 
         # 10. 取得連結的帳號
-        print(f"\n🔟 取得連結的帳號...")
+        print("\n🔟 取得連結的帳號...")
         linked_response = await session.get(
             f"{API_URL}/api/students/{student1['id']}/linked-accounts",
             headers=student1_headers,
@@ -236,7 +248,7 @@ async def test_email_verification_complete():
                 print(f"   {linked_data.get('message', '無連結帳號')}")
 
         # 11. 測試帳號切換
-        print(f"\n1️⃣1️⃣ 測試帳號切換...")
+        print("\n1️⃣1️⃣ 測試帳號切換...")
         switch_response = await session.post(
             f"{API_URL}/api/students/switch-account",
             headers=student1_headers,
@@ -247,16 +259,16 @@ async def test_email_verification_complete():
             switch_data = await switch_response.json()
             print("✅ 帳號切換成功！")
             print(f"   現在登入為: {switch_data['student']['name']}")
-            print(
-                f"   班級: {switch_data['student']['classroom']['name'] if switch_data['student'].get('classroom') else 'None'}"
-            )
+            classroom = switch_data["student"].get("classroom")
+            classroom_name = classroom["name"] if classroom else "None"
+            print(f"   班級: {classroom_name}")
         else:
             print("❌ 帳號切換失敗")
             error = await switch_response.text()
             print(f"錯誤: {error}")
 
         # 12. 測試解除綁定
-        print(f"\n1️⃣2️⃣ 測試解除 email 綁定...")
+        print("\n1️⃣2️⃣ 測試解除 email 綁定...")
         unbind_response = await session.delete(
             f"{API_URL}/api/students/{student1['id']}/email-binding",
             headers=teacher_headers,

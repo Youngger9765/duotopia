@@ -38,7 +38,9 @@ class ReadingAssessmentTranslationE2ETest:
         login_data = {"email": "demo@duotopia.com", "password": "demo123"}
 
         try:
-            async with session.post(f"{self.base_url}/api/auth/teacher/login", json=login_data) as response:
+            async with session.post(
+                f"{self.base_url}/api/auth/teacher/login", json=login_data
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
                     self.auth_token = data.get("access_token")
@@ -61,7 +63,9 @@ class ReadingAssessmentTranslationE2ETest:
 
         try:
             # 先嘗試取得現有課程
-            async with session.get(f"{self.base_url}/api/teachers/programs", headers=headers) as response:
+            async with session.get(
+                f"{self.base_url}/api/teachers/programs", headers=headers
+            ) as response:
                 if response.status == 200:
                     programs = await response.json()
                     if programs:
@@ -139,7 +143,9 @@ class ReadingAssessmentTranslationE2ETest:
             print(f"❌ 單元操作異常: {e}")
             return False
 
-    async def test_translation_functionality(self, session: aiohttp.ClientSession) -> bool:
+    async def test_translation_functionality(
+        self, session: aiohttp.ClientSession
+    ) -> bool:
         """測試翻譯功能"""
         print("🌐 測試翻譯功能...")
 
@@ -194,7 +200,9 @@ class ReadingAssessmentTranslationE2ETest:
                     print(f"     ✅ 中文翻譯結果: '{chinese_translation}'")
 
                     # 驗證是否包含中文字符
-                    if any("\u4e00" <= char <= "\u9fff" for char in chinese_translation):
+                    if any(
+                        "\u4e00" <= char <= "\u9fff" for char in chinese_translation
+                    ):
                         print("     ✅ 中文翻譯格式正確")
                     else:
                         print(f"     ⚠️  中文翻譯可能格式不正確: {chinese_translation}")
@@ -332,7 +340,9 @@ class ReadingAssessmentTranslationE2ETest:
             print(f"❌ 內容持久化測試異常: {e}")
             return False
 
-    async def test_language_detection_logic(self, session: aiohttp.ClientSession) -> bool:
+    async def test_language_detection_logic(
+        self, session: aiohttp.ClientSession
+    ) -> bool:
         """測試語言檢測邏輯"""
         print("🔍 測試語言檢測邏輯...")
 
@@ -411,7 +421,7 @@ class ReadingAssessmentTranslationE2ETest:
                     data = await response.json()
                     item = data.get("items", [{}])[0]
 
-                    print(f"     📊 讀取結果:")
+                    print("     📊 讀取結果:")
                     print(f"        text: '{item.get('text')}'")
                     print(f"        definition: '{item.get('definition')}'")
                     print(f"        translation: '{item.get('translation')}'")

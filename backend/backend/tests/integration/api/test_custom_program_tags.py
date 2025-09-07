@@ -25,7 +25,9 @@ def test_create_custom_program_with_tags():
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. 取得班級
-    classrooms = requests.get(f"{BASE_URL}/api/teachers/classrooms", headers=headers).json()
+    classrooms = requests.get(
+        f"{BASE_URL}/api/teachers/classrooms", headers=headers
+    ).json()
     if not classrooms:
         print("❌ 沒有班級")
         return False
@@ -41,7 +43,7 @@ def test_create_custom_program_with_tags():
         "tags": ["口說", "聽力", "進階", "商務英語", "TOEIC"],
     }
 
-    print(f"📤 送出課程資料：")
+    print("📤 送出課程資料：")
     print(f"   名稱: {program_data['name']}")
     print(f"   等級: {program_data['level']}")
     print(f"   標籤: {program_data['tags']}")
@@ -54,7 +56,7 @@ def test_create_custom_program_with_tags():
 
     if response.status_code == 200:
         result = response.json()
-        print(f"✅ 成功建立課程！")
+        print("✅ 成功建立課程！")
         print(f"   課程 ID: {result['id']}")
         print(f"   課程名稱: {result['name']}")
         print(f"   標籤: {result.get('tags', [])}")
