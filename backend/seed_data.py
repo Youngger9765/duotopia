@@ -87,32 +87,16 @@ def create_demo_data(db: Session):
 
     students_5a = []
     for i, name in enumerate(students_5a_names):
-        # 保持原有學生的特殊密碼設定
-        if name == "王小明":
-            password_hash = common_password  # 使用生日密碼
-            password_changed = False
-        elif name == "陳大雄":
-            password_hash = get_password_hash("student456")
-            password_changed = True
-        elif name == "劉心怡":
-            password_hash = get_password_hash("newpass123")
-            password_changed = True
-        elif name == "許雅婷":
-            password_hash = get_password_hash("pass456")
-            password_changed = True
-        else:
-            password_hash = common_password
-            password_changed = False
-
+        # 所有五年級學生都使用預設密碼
         student = Student(
             name=name,
             email=f"student{i+1}@duotopia.com",
-            password_hash=password_hash,
+            password_hash=common_password,
             birthdate=common_birthdate,
             student_id=f"S{i+1:03d}",
             target_wpm=random.randint(50, 70),
             target_accuracy=round(random.uniform(0.70, 0.85), 2),
-            password_changed=password_changed,
+            password_changed=False,
             email_verified=False,  # 所有學生預設都未驗證 email
             email_verified_at=None,
             is_active=True,
@@ -140,21 +124,9 @@ def create_demo_data(db: Session):
 
     students_6b = []
     for i, name in enumerate(students_6b_names):
-        # 保持原有學生的特殊密碼設定
-        if name == "林靜香":
-            password_hash = get_password_hash("password789")
-            password_changed = True
-        elif name == "蔡文傑":
-            password_hash = get_password_hash("mypass789")
-            password_changed = True
-        elif name == "楊智凱":
-            password_hash = get_password_hash("smart123")
-            password_changed = True
-        elif name == "高俊宇":
-            password_hash = get_password_hash("junior456")
-            password_changed = True
-        elif name == "洪志峰":
-            password_hash = get_password_hash("peak789")
+        # 只有最後一個學生（余佳蓉）有特殊密碼
+        if name == "余佳蓉":
+            password_hash = get_password_hash("custom123")
             password_changed = True
         else:
             password_hash = common_password
@@ -178,17 +150,23 @@ def create_demo_data(db: Session):
     all_students = students_5a + students_6b
     db.add_all(all_students)
     db.commit()
-    print(f"✅ 建立 {len(all_students)} 位學生（五年級A班{len(students_5a)}位，六年級B班{len(students_6b)}位）")
+    print(
+        f"✅ 建立 {len(all_students)} 位學生（五年級A班{len(students_5a)}位，六年級B班{len(students_6b)}位）"
+    )
 
     # ============ 4. 學生加入班級 ============
     # 五年級A班
     for student in students_5a:
-        enrollment = ClassroomStudent(classroom_id=classroom_a.id, student_id=student.id, is_active=True)
+        enrollment = ClassroomStudent(
+            classroom_id=classroom_a.id, student_id=student.id, is_active=True
+        )
         db.add(enrollment)
 
     # 六年級B班
     for student in students_6b:
-        enrollment = ClassroomStudent(classroom_id=classroom_b.id, student_id=student.id, is_active=True)
+        enrollment = ClassroomStudent(
+            classroom_id=classroom_b.id, student_id=student.id, is_active=True
+        )
         db.add(enrollment)
 
     db.commit()
@@ -517,7 +495,9 @@ def create_demo_data(db: Session):
     db.flush()
 
     # 關聯內容
-    assignment1_content = AssignmentContent(assignment_id=assignment1.id, content_id=content1_5a.id, order_index=1)
+    assignment1_content = AssignmentContent(
+        assignment_id=assignment1.id, content_id=content1_5a.id, order_index=1
+    )
     db.add(assignment1_content)
 
     # 指派給五年級A班所有學生 - 展示所有狀態
@@ -662,11 +642,19 @@ def create_demo_data(db: Session):
             student_assignment_id=student_assignment1.id,
             content_id=content1_5a.id,
             status=student_data["status"],
-            score=(student_data.get("score") if student_data["status"] == AssignmentStatus.GRADED else None),
+            score=(
+                student_data.get("score")
+                if student_data["status"] == AssignmentStatus.GRADED
+                else None
+            ),
             order_index=1,
             is_locked=False,
             checked=True if student_data["status"] == AssignmentStatus.GRADED else None,
-            feedback=(student_data.get("feedback") if student_data["status"] == AssignmentStatus.GRADED else None),
+            feedback=(
+                student_data.get("feedback")
+                if student_data["status"] == AssignmentStatus.GRADED
+                else None
+            ),
         )
 
         if student_data["status"] in [
@@ -675,7 +663,9 @@ def create_demo_data(db: Session):
             AssignmentStatus.RETURNED,
             AssignmentStatus.RESUBMITTED,
         ]:
-            progress.started_at = student_data.get("started_at", datetime.now() - timedelta(days=3))
+            progress.started_at = student_data.get(
+                "started_at", datetime.now() - timedelta(days=3)
+            )
             progress.completed_at = student_data.get("submitted_at")
             progress.response_data = {
                 "recordings": [f"recording_{i}.webm" for i in range(5)],
@@ -689,7 +679,9 @@ def create_demo_data(db: Session):
                     "fluency": 0.88,
                     "pronunciation": 0.90,
                 }
-                progress.ai_feedback = "Great pronunciation! Keep practicing the 'th' sound."
+                progress.ai_feedback = (
+                    "Great pronunciation! Keep practicing the 'th' sound."
+                )
 
         db.add(progress)
 
@@ -707,7 +699,9 @@ def create_demo_data(db: Session):
 
     # 關聯多個內容
     for idx, content in enumerate([content2_5a, content3_5a], 1):
-        assignment_content = AssignmentContent(assignment_id=assignment2.id, content_id=content.id, order_index=idx)
+        assignment_content = AssignmentContent(
+            assignment_id=assignment2.id, content_id=content.id, order_index=idx
+        )
         db.add(assignment_content)
 
     # 指派給五年級A班所有學生 - 展示更多狀態
@@ -735,11 +729,19 @@ def create_demo_data(db: Session):
         elif status == AssignmentStatus.RETURNED:
             student_assignment2.submitted_at = datetime.now() - timedelta(days=1)
             student_assignment2.graded_at = datetime.now() - timedelta(hours=12)
-            student_assignment2.returned_at = datetime.now() - timedelta(hours=12)  # 🔥 設置 returned_at
+            student_assignment2.returned_at = datetime.now() - timedelta(
+                hours=12
+            )  # 🔥 設置 returned_at
         elif status == AssignmentStatus.RESUBMITTED:
-            student_assignment2.submitted_at = datetime.now() - timedelta(days=2)  # 第一次提交
-            student_assignment2.returned_at = datetime.now() - timedelta(days=1)  # 🔥 被退回
-            student_assignment2.resubmitted_at = datetime.now() - timedelta(hours=3)  # 🔥 重新提交
+            student_assignment2.submitted_at = datetime.now() - timedelta(
+                days=2
+            )  # 第一次提交
+            student_assignment2.returned_at = datetime.now() - timedelta(
+                days=1
+            )  # 🔥 被退回
+            student_assignment2.resubmitted_at = datetime.now() - timedelta(
+                hours=3
+            )  # 🔥 重新提交
             student_assignment2.graded_at = datetime.now() - timedelta(hours=1)  # 批改完成
 
         db.add(student_assignment2)
@@ -792,7 +794,9 @@ def create_demo_data(db: Session):
     db.add(assignment3)
     db.flush()
 
-    assignment3_content = AssignmentContent(assignment_id=assignment3.id, content_id=content5_5a.id, order_index=1)
+    assignment3_content = AssignmentContent(
+        assignment_id=assignment3.id, content_id=content5_5a.id, order_index=1
+    )
     db.add(assignment3_content)
 
     # 只指派給王小明（測試退回訂正流程）
@@ -810,7 +814,9 @@ def create_demo_data(db: Session):
     )
     student_assignment3.submitted_at = datetime.now() - timedelta(days=1)
     student_assignment3.graded_at = datetime.now() - timedelta(hours=12)
-    student_assignment3.returned_at = datetime.now() - timedelta(hours=12)  # 🔥 設置 returned_at
+    student_assignment3.returned_at = datetime.now() - timedelta(
+        hours=12
+    )  # 🔥 設置 returned_at
 
     db.add(student_assignment3)
     db.flush()
@@ -853,7 +859,9 @@ def create_demo_data(db: Session):
 
     # 關聯兩個內容
     for idx, content in enumerate([content1_6b, content2_6b], 1):
-        assignment_content = AssignmentContent(assignment_id=assignment4.id, content_id=content.id, order_index=idx)
+        assignment_content = AssignmentContent(
+            assignment_id=assignment4.id, content_id=content.id, order_index=idx
+        )
         db.add(assignment_content)
 
     # 指派給六年級B班所有學生
@@ -949,7 +957,9 @@ def create_demo_data(db: Session):
     db.add(assignment5)
     db.flush()
 
-    assignment5_content = AssignmentContent(assignment_id=assignment5.id, content_id=content3_6b.id, order_index=1)
+    assignment5_content = AssignmentContent(
+        assignment_id=assignment5.id, content_id=content3_6b.id, order_index=1
+    )
     db.add(assignment5_content)
 
     # 只指派給張志豪（林靜香未被指派）
@@ -987,7 +997,9 @@ def create_demo_data(db: Session):
     db.add(assignment6)
     db.flush()
 
-    assignment6_content = AssignmentContent(assignment_id=assignment6.id, content_id=content3_5a.id, order_index=1)
+    assignment6_content = AssignmentContent(
+        assignment_id=assignment6.id, content_id=content3_5a.id, order_index=1
+    )
     db.add(assignment6_content)
 
     # 指派給李小美（測試重新提交流程）
@@ -1063,7 +1075,9 @@ def create_demo_data(db: Session):
     db.add(content_hobby)
     db.flush()
 
-    assignment7_content = AssignmentContent(assignment_id=assignment7.id, content_id=content_hobby.id, order_index=1)
+    assignment7_content = AssignmentContent(
+        assignment_id=assignment7.id, content_id=content_hobby.id, order_index=1
+    )
     db.add(assignment7_content)
 
     # 指派給測試學生（展示 RETURNED 狀態）
@@ -1081,7 +1095,9 @@ def create_demo_data(db: Session):
     )
     student_assignment7.submitted_at = datetime.now() - timedelta(days=1)
     student_assignment7.graded_at = datetime.now() - timedelta(hours=8)
-    student_assignment7.returned_at = datetime.now() - timedelta(hours=8)  # 🔥 設置 returned_at
+    student_assignment7.returned_at = datetime.now() - timedelta(
+        hours=8
+    )  # 🔥 設置 returned_at
 
     db.add(student_assignment7)
     db.flush()
@@ -1169,11 +1185,17 @@ def create_demo_data(db: Session):
                 # 30% 機率已完成但沒有分數（不需要評分的作業）
                 if random.random() < 0.3:
                     score = None
-                    feedback = "作業已完成，表現良好！" if status == AssignmentStatus.GRADED else "需要訂正部分內容"
+                    feedback = (
+                        "作業已完成，表現良好！"
+                        if status == AssignmentStatus.GRADED
+                        else "需要訂正部分內容"
+                    )
                 else:
                     score = random.randint(65, 95)
                     if status == AssignmentStatus.GRADED:
-                        feedback = f"做得很好！分數：{score}" if score >= 80 else f"有進步空間，分數：{score}"
+                        feedback = (
+                            f"做得很好！分數：{score}" if score >= 80 else f"有進步空間，分數：{score}"
+                        )
                     else:
                         feedback = f"分數：{score}，請根據回饋訂正後重新提交"
 
@@ -1192,22 +1214,34 @@ def create_demo_data(db: Session):
 
             # 設定時間戳記 - 這是關鍵！
             if status != AssignmentStatus.NOT_STARTED:
-                student_assignment.started_at = datetime.now() - timedelta(days=random.randint(1, 5))
+                student_assignment.started_at = datetime.now() - timedelta(
+                    days=random.randint(1, 5)
+                )
             if status in [
                 AssignmentStatus.SUBMITTED,
                 AssignmentStatus.GRADED,
                 AssignmentStatus.RETURNED,
                 AssignmentStatus.RESUBMITTED,
             ]:
-                student_assignment.submitted_at = datetime.now() - timedelta(days=random.randint(0, 3))
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(0, 3)
+                )
             if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
-                student_assignment.graded_at = datetime.now() - timedelta(days=random.randint(0, 2))
+                student_assignment.graded_at = datetime.now() - timedelta(
+                    days=random.randint(0, 2)
+                )
             if status == AssignmentStatus.RETURNED:
-                student_assignment.returned_at = student_assignment.graded_at  # 關鍵：returned_at 時間戳
+                student_assignment.returned_at = (
+                    student_assignment.graded_at
+                )  # 關鍵：returned_at 時間戳
             if status == AssignmentStatus.RESUBMITTED:
                 # RESUBMITTED 表示經過 RETURNED 狀態，所以也要有 returned_at
-                student_assignment.submitted_at = datetime.now() - timedelta(days=random.randint(2, 4))  # 第一次提交
-                student_assignment.returned_at = datetime.now() - timedelta(days=random.randint(1, 2))  # 被退回
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(2, 4)
+                )  # 第一次提交
+                student_assignment.returned_at = datetime.now() - timedelta(
+                    days=random.randint(1, 2)
+                )  # 被退回
                 student_assignment.resubmitted_at = datetime.now() - timedelta(
                     hours=random.randint(1, 24)
                 )  # 🔥 重新提交
@@ -1274,11 +1308,17 @@ def create_demo_data(db: Session):
                 # 25% 機率已完成但沒有分數
                 if random.random() < 0.25:
                     score = None
-                    feedback = "作業完成度良好" if status == AssignmentStatus.GRADED else "請根據建議進行修改"
+                    feedback = (
+                        "作業完成度良好" if status == AssignmentStatus.GRADED else "請根據建議進行修改"
+                    )
                 else:
                     score = random.randint(70, 98)
                     if status == AssignmentStatus.GRADED:
-                        feedback = f"優秀表現！繼續保持！分數：{score}" if score >= 85 else f"不錯的表現，分數：{score}"
+                        feedback = (
+                            f"優秀表現！繼續保持！分數：{score}"
+                            if score >= 85
+                            else f"不錯的表現，分數：{score}"
+                        )
                     else:
                         feedback = f"分數：{score}，有些地方需要加強，請重新練習"
 
@@ -1297,22 +1337,32 @@ def create_demo_data(db: Session):
 
             # 設定時間戳記 - 重點是 returned_at 和 submitted_at 的邏輯
             if status != AssignmentStatus.NOT_STARTED:
-                student_assignment.started_at = datetime.now() - timedelta(days=random.randint(1, 6))
+                student_assignment.started_at = datetime.now() - timedelta(
+                    days=random.randint(1, 6)
+                )
             if status in [
                 AssignmentStatus.SUBMITTED,
                 AssignmentStatus.GRADED,
                 AssignmentStatus.RETURNED,
                 AssignmentStatus.RESUBMITTED,
             ]:
-                student_assignment.submitted_at = datetime.now() - timedelta(days=random.randint(0, 4))
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(0, 4)
+                )
             if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
-                student_assignment.graded_at = datetime.now() - timedelta(days=random.randint(0, 3))
+                student_assignment.graded_at = datetime.now() - timedelta(
+                    days=random.randint(0, 3)
+                )
             if status == AssignmentStatus.RETURNED:
                 student_assignment.returned_at = student_assignment.graded_at
             if status == AssignmentStatus.RESUBMITTED:
                 # RESUBMITTED 必須先經過 RETURNED，所以要有 returned_at
-                student_assignment.submitted_at = datetime.now() - timedelta(days=random.randint(3, 5))  # 第一次提交
-                student_assignment.returned_at = datetime.now() - timedelta(days=random.randint(1, 2))  # 被退回
+                student_assignment.submitted_at = datetime.now() - timedelta(
+                    days=random.randint(3, 5)
+                )  # 第一次提交
+                student_assignment.returned_at = datetime.now() - timedelta(
+                    days=random.randint(1, 2)
+                )  # 被退回
                 student_assignment.resubmitted_at = datetime.now() - timedelta(
                     hours=random.randint(1, 48)
                 )  # 🔥 重新提交
@@ -1334,14 +1384,20 @@ def create_demo_data(db: Session):
     # 統計 StudentAssignments 各狀態
     print("\n學生作業狀態分布 (StudentAssignments):")
     for status in AssignmentStatus:
-        count = db.query(StudentAssignment).filter(StudentAssignment.status == status).count()
+        count = (
+            db.query(StudentAssignment)
+            .filter(StudentAssignment.status == status)
+            .count()
+        )
         if count > 0:
             print(f"  - {status.value}: {count} 個")
 
     # 統計內容進度
     total_progress = db.query(StudentContentProgress).count()
     completed_progress = (
-        db.query(StudentContentProgress).filter(StudentContentProgress.status == AssignmentStatus.SUBMITTED).count()
+        db.query(StudentContentProgress)
+        .filter(StudentContentProgress.status == AssignmentStatus.SUBMITTED)
+        .count()
     )
     print(f"\n內容進度記錄 (StudentContentProgress): {total_progress} 個")
     print(f"  - 已完成: {completed_progress} 個")
@@ -1378,7 +1434,9 @@ def seed_template_programs(db: Session):
     print("\n🌱 建立公版課程模板...")
 
     # ============ 1. 取得 Demo 教師 ============
-    demo_teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
+    demo_teacher = (
+        db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
+    )
 
     if not demo_teacher:
         print("❌ 找不到 Demo 教師，請先執行主要 seed")
@@ -1643,7 +1701,9 @@ def seed_template_programs(db: Session):
 
     # ============ 4. 顯示結果摘要 ============
     template_count = (
-        db.query(Program).filter(Program.is_template.is_(True), Program.teacher_id == demo_teacher.id).count()
+        db.query(Program)
+        .filter(Program.is_template.is_(True), Program.teacher_id == demo_teacher.id)
+        .count()
     )
 
     print(f"✅ 總共建立了 {template_count} 個公版課程模板（含標籤）")
