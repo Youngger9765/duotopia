@@ -33,13 +33,64 @@ def get_url():
 
     if not database_url:
         # Default to local development database
-        database_url = "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
+        database_url = (
+            "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
+        )
 
     # For production/staging, replace postgres:// with postgresql://
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
     return database_url
+
+
+def process_revision_directives(context, revision, directives):
+    """Validate migrations to prevent dangerous operations."""
+    # Core business tables that should never be created by autogenerate
+    PROTECTED_TABLES = {
+        "users",
+        "students",
+        "classrooms",
+        "schools",
+        "programs",
+        "lessons",
+        "contents",
+        "student_assignments",
+        "activity_results",
+        "classroom_program_mappings",
+    }
+
+    if directives and directives[0].upgrade_ops:
+        for op in directives[0].upgrade_ops.ops:
+            # Check for create table operations
+            if hasattr(op, "table_name") and op.__class__.__name__ == "CreateTableOp":
+                table_name = op.table_name
+                if table_name in PROTECTED_TABLES:
+                    raise ValueError(
+                        f"🚨 MIGRATION VALIDATION ERROR 🚨\n"
+                        f"Migration attempts to create core table '{table_name}' which should already exist.\n"
+                        f"This usually indicates:\n"
+                        f"1. Model changes without proper migration history\n"
+                        f"2. Incorrect autogenerate detection\n"
+                        f"3. Database schema drift\n\n"
+                        f"Please check:\n"
+                        f"- Current database state: alembic current\n"
+                        f"- Migration history: alembic history\n"
+                        f"- Model definitions in models.py\n\n"
+                        f"Consider using: alembic revision -m 'description' (without --autogenerate)\n"
+                        f"And manually write the specific changes needed."
+                    )
+
+            # Check for suspicious operations on protected tables
+            if hasattr(op, "table_name") and op.table_name in PROTECTED_TABLES:
+                op_type = op.__class__.__name__
+                if op_type in ["DropTableOp"]:
+                    raise ValueError(
+                        f"🚨 DANGEROUS OPERATION DETECTED 🚨\n"
+                        f"Migration attempts to drop core table '{op.table_name}'.\n"
+                        f"This would destroy critical business data!\n"
+                        f"If this is intentional, manually create the migration."
+                    )
 
 
 def run_migrations_offline() -> None:
@@ -59,6 +110,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        process_revision_directives=process_revision_directives,
     )
 
     with context.begin_transaction():
@@ -81,7 +133,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
