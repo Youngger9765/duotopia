@@ -171,7 +171,14 @@ class EmailService:
 
             # 檢查 token 是否過期（24 小時）
             if student.email_verification_sent_at:
-                time_diff = datetime.utcnow() - student.email_verification_sent_at
+                # 處理時區問題：確保兩個時間都是 UTC
+                now_utc = datetime.utcnow().replace(tzinfo=None)
+                sent_at = (
+                    student.email_verification_sent_at.replace(tzinfo=None)
+                    if student.email_verification_sent_at.tzinfo
+                    else student.email_verification_sent_at
+                )
+                time_diff = now_utc - sent_at
                 if time_diff > timedelta(hours=24):
                     logger.warning(f"Token 已過期: {token}")
                     return None

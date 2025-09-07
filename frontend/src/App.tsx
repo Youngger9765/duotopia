@@ -18,6 +18,7 @@ import StudentAssignmentDetail from './pages/student/StudentAssignmentDetail'
 import AssignmentDetail from './pages/student/AssignmentDetail'
 import StudentActivityPage from './pages/student/StudentActivityPageV2'
 import StudentLayout from './components/StudentLayout'
+import EmailVerification from './pages/EmailVerification'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -50,6 +51,9 @@ function App() {
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />
+
+      {/* Email Verification */}
+      <Route path="/verify-email" element={<EmailVerification />} />
 
       {/* Student Routes with Layout */}
       <Route path="/student" element={<StudentLayout />}>
