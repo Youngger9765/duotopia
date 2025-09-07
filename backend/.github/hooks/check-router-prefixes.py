@@ -51,17 +51,12 @@ def check_router_files():
                             expected = expected_prefixes[filename]
                             if actual_prefix != expected:
                                 errors.append(
-                                    f"❌ {filename}: prefix 錯誤\n"
-                                    f"   預期: {expected}\n"
-                                    f"   實際: {actual_prefix}"
+                                    f"❌ {filename}: prefix 錯誤\n" f"   預期: {expected}\n" f"   實際: {actual_prefix}"
                                 )
 
                         # 檢查 prefix 格式
                         if not actual_prefix.startswith("/api/"):
-                            errors.append(
-                                f"❌ {filename}: prefix 應該以 /api/ 開頭\n"
-                                f"   實際: {actual_prefix}"
-                            )
+                            errors.append(f"❌ {filename}: prefix 應該以 /api/ 開頭\n" f"   實際: {actual_prefix}")
 
     return errors
 

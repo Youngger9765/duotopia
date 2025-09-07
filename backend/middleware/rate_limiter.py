@@ -173,18 +173,14 @@ class RateLimitMiddleware:
     async def __call__(self, request: Request, call_next):
         """處理請求"""
         # 跳過靜態資源
-        if request.url.path.startswith("/static") or request.url.path.startswith(
-            "/docs"
-        ):
+        if request.url.path.startswith("/static") or request.url.path.startswith("/docs"):
             return await call_next(request)
 
         # 取得限制設定
         max_requests, window = self._get_limit_for_path(request.url.path)
 
         # 檢查速率限制
-        allowed, info = await self.limiter.check_rate_limit(
-            request, max_requests=max_requests, window_seconds=window
-        )
+        allowed, info = await self.limiter.check_rate_limit(request, max_requests=max_requests, window_seconds=window)
 
         if not allowed:
             # 超過限制，返回 429

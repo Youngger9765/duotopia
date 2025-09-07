@@ -48,9 +48,7 @@ def fix_file(filepath):
     for line in new_lines:
         if import_pattern.match(line.strip()):
             # Check if any imported name is used
-            imported_names = re.findall(
-                r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", line.split("import")[-1]
-            )
+            imported_names = re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", line.split("import")[-1])
             if any(name in used_names for name in imported_names):
                 final_lines.append(line)
             else:

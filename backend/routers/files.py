@@ -26,9 +26,7 @@ async def get_recording(filename: str):
     if not file_path.exists():
         # 如果檔案不存在，返回範例音檔（用於開發測試）
         # 在生產環境中應該返回 404
-        raise HTTPException(
-            status_code=404, detail=f"Recording file not found: {filename}"
-        )
+        raise HTTPException(status_code=404, detail=f"Recording file not found: {filename}")
 
     # 返回檔案
     return FileResponse(

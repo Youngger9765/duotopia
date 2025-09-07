@@ -64,9 +64,7 @@ else:
 
 # 3. 取得課程詳情
 print("\n3. 測試取得課程詳情...")
-detail_response = requests.get(
-    f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers
-)
+detail_response = requests.get(f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers)
 
 if detail_response.status_code == 200:
     detail = detail_response.json()
@@ -81,9 +79,7 @@ else:
 
 # 4. 刪除課程
 print("\n4. 測試刪除課程...")
-delete_response = requests.delete(
-    f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers
-)
+delete_response = requests.delete(f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers)
 
 if delete_response.status_code == 200:
     print(f"✅ 成功刪除課程 ID={program_id}")
@@ -92,9 +88,7 @@ else:
 
 # 5. 驗證刪除
 print("\n5. 驗證課程已刪除...")
-verify_response = requests.get(
-    f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers
-)
+verify_response = requests.get(f"http://localhost:8000/api/teachers/programs/{program_id}", headers=headers)
 
 if verify_response.status_code == 404:
     print("✅ 確認課程已被刪除")

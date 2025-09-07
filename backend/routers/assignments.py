@@ -33,9 +33,7 @@ router = APIRouter(prefix="/api/teachers", tags=["assignments"])
 # ============ Helper Functions (Mock implementations) ============
 
 
-async def process_audio_with_whisper(
-    audio_urls: List[str], expected_texts: List[str]
-) -> Dict[str, Any]:
+async def process_audio_with_whisper(audio_urls: List[str], expected_texts: List[str]) -> Dict[str, Any]:
     """Mock implementation for processing audio with Whisper API"""
     # TODO: Implement actual Whisper API integration
     return {
@@ -228,9 +226,7 @@ async def create_assignment(
     """
     # 驗證是教師身份
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can create assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can create assignments")
 
     # 驗證班級存在且屬於當前教師
     classroom = (
@@ -246,9 +242,7 @@ async def create_assignment(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=404, detail="Classroom not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Classroom not found or you don't have permission")
 
     # 驗證所有 Content 存在
     contents = db.query(Content).filter(Content.id.in_(request.content_ids)).all()
@@ -269,9 +263,7 @@ async def create_assignment(
 
     # 建立 AssignmentContent 關聯
     for idx, content_id in enumerate(request.content_ids, 1):
-        assignment_content = AssignmentContent(
-            assignment_id=assignment.id, content_id=content_id, order_index=idx
-        )
+        assignment_content = AssignmentContent(assignment_id=assignment.id, content_id=content_id, order_index=idx)
         db.add(assignment_content)
 
     # 取得要指派的學生列表
@@ -290,9 +282,7 @@ async def create_assignment(
             .all()
         )
         if len(students) != len(request.student_ids):
-            raise HTTPException(
-                status_code=400, detail="Some students not found in this classroom"
-            )
+            raise HTTPException(status_code=400, detail="Some students not found in this classroom")
     else:
         # 指派給全班
         students = (
@@ -309,9 +299,7 @@ async def create_assignment(
         )
 
     if not students:
-        raise HTTPException(
-            status_code=400, detail="No active students in this classroom"
-        )
+        raise HTTPException(status_code=400, detail="No active students in this classroom")
 
     # 為每個學生建立 StudentAssignment
     for student in students:
@@ -364,14 +352,10 @@ async def get_assignments(
     - 可依班級和狀態篩選
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access assignments")
 
     # 建立查詢
-    query = db.query(Assignment).filter(
-        Assignment.teacher_id == current_user.id, Assignment.is_active.is_(True)
-    )
+    query = db.query(Assignment).filter(Assignment.teacher_id == current_user.id, Assignment.is_active.is_(True))
 
     # 套用篩選
     if classroom_id:
@@ -383,11 +367,7 @@ async def get_assignments(
     result = []
     for assignment in assignments:
         # 取得內容數量
-        content_count = (
-            db.query(AssignmentContent)
-            .filter(AssignmentContent.assignment_id == assignment.id)
-            .count()
-        )
+        content_count = db.query(AssignmentContent).filter(AssignmentContent.assignment_id == assignment.id).count()
 
         # 取得學生進度統計
         student_assignments = (
@@ -416,9 +396,7 @@ async def get_assignments(
         # 計算完成率
         total_students = len(student_assignments)
         completed = status_counts["graded"]
-        completion_rate = (
-            int((completed / total_students * 100)) if total_students > 0 else 0
-        )
+        completion_rate = int((completed / total_students * 100)) if total_students > 0 else 0
 
         result.append(
             {
@@ -428,12 +406,8 @@ async def get_assignments(
                 "classroom_id": assignment.classroom_id,
                 "content_count": content_count,
                 "student_count": total_students,
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "created_at": (
-                    assignment.created_at.isoformat() if assignment.created_at else None
-                ),
+                "due_date": (assignment.due_date.isoformat() if assignment.due_date else None),
+                "created_at": (assignment.created_at.isoformat() if assignment.created_at else None),
                 "completion_rate": completion_rate,
                 "status_distribution": status_counts,
             }
@@ -453,9 +427,7 @@ async def update_assignment(
     編輯作業（新架構）
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can update assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can update assignments")
 
     # 取得並驗證作業
     assignment = (
@@ -469,9 +441,7 @@ async def update_assignment(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 更新基本資訊
     assignment.title = request.title
@@ -479,20 +449,14 @@ async def update_assignment(
     assignment.due_date = request.due_date
 
     # 更新內容關聯（先刪除舊的，再建立新的）
-    db.query(AssignmentContent).filter(
-        AssignmentContent.assignment_id == assignment_id
-    ).delete()
+    db.query(AssignmentContent).filter(AssignmentContent.assignment_id == assignment_id).delete()
 
     for idx, content_id in enumerate(request.content_ids, 1):
-        assignment_content = AssignmentContent(
-            assignment_id=assignment_id, content_id=content_id, order_index=idx
-        )
+        assignment_content = AssignmentContent(assignment_id=assignment_id, content_id=content_id, order_index=idx)
         db.add(assignment_content)
 
     # 更新所有相關的 StudentAssignment（暫時保留舊欄位）
-    db.query(StudentAssignment).filter(
-        StudentAssignment.assignment_id == assignment_id
-    ).update(
+    db.query(StudentAssignment).filter(StudentAssignment.assignment_id == assignment_id).update(
         {
             "title": request.title,
             "instructions": request.description,
@@ -520,9 +484,7 @@ async def patch_assignment(
     部分更新作業（只更新提供的欄位）
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can update assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can update assignments")
 
     # 取得並驗證作業
     assignment = (
@@ -536,9 +498,7 @@ async def patch_assignment(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 只更新提供的欄位
     if request.title is not None:
@@ -562,9 +522,7 @@ async def patch_assignment(
         update_fields["due_date"] = request.due_date
 
     if update_fields:
-        db.query(StudentAssignment).filter(
-            StudentAssignment.assignment_id == assignment_id
-        ).update(update_fields)
+        db.query(StudentAssignment).filter(StudentAssignment.assignment_id == assignment_id).update(update_fields)
 
     # 如果要更新 student_ids
     if request.student_ids is not None:
@@ -585,15 +543,13 @@ async def patch_assignment(
             from models import StudentContentProgress
 
             db.query(StudentContentProgress).filter(
-                StudentContentProgress.student_assignment_id.in_(
-                    assignment_ids_to_delete
-                )
+                StudentContentProgress.student_assignment_id.in_(assignment_ids_to_delete)
             ).delete(synchronize_session=False)
 
             # 再刪除 StudentAssignment 記錄
-            db.query(StudentAssignment).filter(
-                StudentAssignment.id.in_(assignment_ids_to_delete)
-            ).delete(synchronize_session=False)
+            db.query(StudentAssignment).filter(StudentAssignment.id.in_(assignment_ids_to_delete)).delete(
+                synchronize_session=False
+            )
 
         # 為新的學生列表創建 StudentAssignment
         for student_id in request.student_ids:
@@ -640,9 +596,7 @@ async def delete_assignment(
     軟刪除作業（新架構）
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can delete assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can delete assignments")
 
     # 取得並驗證作業
     assignment = (
@@ -656,17 +610,13 @@ async def delete_assignment(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 軟刪除 Assignment
     assignment.is_active = False
 
     # 軟刪除所有相關的 StudentAssignment
-    db.query(StudentAssignment).filter(
-        StudentAssignment.assignment_id == assignment_id
-    ).update({"is_active": False})
+    db.query(StudentAssignment).filter(StudentAssignment.assignment_id == assignment_id).update({"is_active": False})
 
     db.commit()
 
@@ -689,15 +639,11 @@ async def get_student_assignments(
 
     # 0. 驗證是學生身份
     if not isinstance(current_user, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can access their assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only students can access their assignments")
     current_student = current_user
 
     # 建立查詢
-    query = db.query(StudentAssignment).filter(
-        StudentAssignment.student_id == current_student.id
-    )
+    query = db.query(StudentAssignment).filter(StudentAssignment.student_id == current_student.id)
 
     # 套用篩選條件
     if status:
@@ -745,19 +691,9 @@ async def get_student_assignments(
                 "title": assignment.title,
                 "instructions": assignment.instructions,
                 "status": assignment.status.value,
-                "assigned_at": (
-                    assignment.assigned_at.isoformat()
-                    if assignment.assigned_at
-                    else None
-                ),
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "submitted_at": (
-                    assignment.submitted_at.isoformat()
-                    if assignment.submitted_at
-                    else None
-                ),
+                "assigned_at": (assignment.assigned_at.isoformat() if assignment.assigned_at else None),
+                "due_date": (assignment.due_date.isoformat() if assignment.due_date else None),
+                "submitted_at": (assignment.submitted_at.isoformat() if assignment.submitted_at else None),
                 "score": assignment.score,
                 "feedback": assignment.feedback,
                 "time_remaining": time_remaining,
@@ -766,11 +702,7 @@ async def get_student_assignments(
                     {
                         "id": content.id,
                         "title": content.title,
-                        "type": (
-                            content.type.value
-                            if hasattr(content.type, "value")
-                            else str(content.type)
-                        ),
+                        "type": (content.type.value if hasattr(content.type, "value") else str(content.type)),
                         "items_count": len(content.items) if content.items else 0,
                     }
                     if content
@@ -792,9 +724,7 @@ async def get_assignment_detail(
     取得作業詳細資訊（新架構）
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access assignment details"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access assignment details")
 
     # 取得作業
     assignment = (
@@ -808,9 +738,7 @@ async def get_assignment_detail(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 取得內容列表
     assignment_contents = (
@@ -828,11 +756,7 @@ async def get_assignment_detail(
                 {
                     "id": content.id,
                     "title": content.title,
-                    "type": (
-                        content.type.value
-                        if hasattr(content.type, "value")
-                        else str(content.type)
-                    ),
+                    "type": (content.type.value if hasattr(content.type, "value") else str(content.type)),
                     "order_index": ac.order_index,
                 }
             )
@@ -871,16 +795,10 @@ async def get_assignment_detail(
                     {
                         "content_id": content["id"],
                         "content_title": content["title"],
-                        "status": (
-                            progress.status.value if progress.status else "NOT_STARTED"
-                        ),
+                        "status": (progress.status.value if progress.status else "NOT_STARTED"),
                         "score": progress.score,
                         "checked": progress.checked,
-                        "completed_at": (
-                            progress.completed_at.isoformat()
-                            if progress.completed_at
-                            else None
-                        ),
+                        "completed_at": (progress.completed_at.isoformat() if progress.completed_at else None),
                     }
                 )
 
@@ -889,9 +807,7 @@ async def get_assignment_detail(
                 "student_id": student.id if student else None,
                 "student_name": student.name if student else "Unknown",
                 "overall_status": sa.status.value if sa.status else "NOT_STARTED",
-                "submitted_at": (
-                    sa.submitted_at.isoformat() if sa.submitted_at else None
-                ),
+                "submitted_at": (sa.submitted_at.isoformat() if sa.submitted_at else None),
                 "content_progress": content_progress,
             }
         )
@@ -902,9 +818,7 @@ async def get_assignment_detail(
         "description": assignment.description,
         "classroom_id": assignment.classroom_id,
         "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
-        "created_at": (
-            assignment.created_at.isoformat() if assignment.created_at else None
-        ),
+        "created_at": (assignment.created_at.isoformat() if assignment.created_at else None),
         "contents": contents,
         "student_ids": student_ids,  # 已指派的學生 IDs
         "students_progress": students_progress,
@@ -921,9 +835,7 @@ async def get_assignment_progress(
     取得作業的學生進度
     """
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access assignment progress"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access assignment progress")
 
     # 確認作業存在且屬於當前教師
     assignment = (
@@ -937,9 +849,7 @@ async def get_assignment_progress(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 取得學生作業進度
     student_assignments = (
@@ -962,39 +872,23 @@ async def get_assignment_progress(
                     "student_id": student.id,
                     "student_name": student.name,
                     "status": sa.status.value if sa.status else "NOT_STARTED",
-                    "submission_date": (
-                        sa.submitted_at.isoformat() if sa.submitted_at else None
-                    ),
+                    "submission_date": (sa.submitted_at.isoformat() if sa.submitted_at else None),
                     "score": sa.score,
                     "attempts": 1 if sa.submitted_at else 0,  # Simple attempt count
                     "last_activity": (
                         sa.updated_at.isoformat()
                         if sa.updated_at
-                        else sa.created_at.isoformat()
-                        if sa.created_at
-                        else None
+                        else sa.created_at.isoformat() if sa.created_at else None
                     ),
                     # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
                     "timestamps": {
-                        "started_at": (
-                            sa.started_at.isoformat() if sa.started_at else None
-                        ),
-                        "submitted_at": (
-                            sa.submitted_at.isoformat() if sa.submitted_at else None
-                        ),
+                        "started_at": (sa.started_at.isoformat() if sa.started_at else None),
+                        "submitted_at": (sa.submitted_at.isoformat() if sa.submitted_at else None),
                         "graded_at": sa.graded_at.isoformat() if sa.graded_at else None,
-                        "returned_at": (
-                            sa.returned_at.isoformat() if sa.returned_at else None
-                        ),
-                        "resubmitted_at": (
-                            sa.resubmitted_at.isoformat() if sa.resubmitted_at else None
-                        ),
-                        "created_at": (
-                            sa.created_at.isoformat() if sa.created_at else None
-                        ),
-                        "updated_at": (
-                            sa.updated_at.isoformat() if sa.updated_at else None
-                        ),
+                        "returned_at": (sa.returned_at.isoformat() if sa.returned_at else None),
+                        "resubmitted_at": (sa.resubmitted_at.isoformat() if sa.resubmitted_at else None),
+                        "created_at": (sa.created_at.isoformat() if sa.created_at else None),
+                        "updated_at": (sa.updated_at.isoformat() if sa.updated_at else None),
                     },
                 }
             )
@@ -1012,9 +906,7 @@ async def get_classroom_students(
 
     # 0. 驗證是教師身份
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access classroom students"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access classroom students")
     current_teacher = current_user
 
     # 驗證班級存在且屬於當前教師
@@ -1031,9 +923,7 @@ async def get_classroom_students(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=404, detail="Classroom not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Classroom not found or you don't have permission")
 
     # 取得班級學生
     students = (
@@ -1107,11 +997,7 @@ async def get_available_contents(
                 id=content.id,
                 lesson_id=content.lesson_id,
                 title=content.title,
-                type=(
-                    content.type.value
-                    if hasattr(content.type, "value")
-                    else str(content.type)
-                ),
+                type=(content.type.value if hasattr(content.type, "value") else str(content.type)),
                 level=content.level,
                 items_count=items_count,
             )
@@ -1140,9 +1026,7 @@ async def submit_assignment(
 
     # 0. 驗證是學生身份
     if not isinstance(current_user, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can submit assignments"
-        )
+        raise HTTPException(status_code=403, detail="Only students can submit assignments")
     current_student = current_user
 
     # 取得作業
@@ -1156,15 +1040,11 @@ async def submit_assignment(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 檢查作業狀態
     if assignment.status == AssignmentStatus.GRADED:
-        raise HTTPException(
-            status_code=400, detail="Assignment has already been graded"
-        )
+        raise HTTPException(status_code=400, detail="Assignment has already been graded")
 
     # 檢查是否過期（但仍允許提交）
     is_late = False
@@ -1204,9 +1084,7 @@ async def ai_grade_assignment(
 
     # 0. 驗證是教師身份
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can trigger AI grading"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can trigger AI grading")
     current_teacher = current_user
 
     # 1. 取得作業並驗證權限
@@ -1223,15 +1101,11 @@ async def ai_grade_assignment(
     )
 
     if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
 
     # 2. 檢查作業狀態
     if assignment.status != AssignmentStatus.SUBMITTED:
-        raise HTTPException(
-            status_code=400, detail="Assignment must be submitted before grading"
-        )
+        raise HTTPException(status_code=400, detail="Assignment must be submitted before grading")
 
     # 3. 簡化版 - 不查詢 Content
     content = None
@@ -1252,9 +1126,7 @@ async def ai_grade_assignment(
                     expected_texts.append(item.get("text", ""))
 
             # 呼叫 Whisper API
-            whisper_result = await process_audio_with_whisper(
-                request.audio_urls or [], expected_texts
-            )
+            whisper_result = await process_audio_with_whisper(request.audio_urls or [], expected_texts)
 
         # 6. 分析批改結果
         transcriptions = whisper_result.get("transcriptions", [])
@@ -1299,9 +1171,7 @@ async def ai_grade_assignment(
         fluency = calculate_fluency_score(audio_analysis)
 
         # 計算語速
-        all_transcribed = " ".join(
-            [t.get("transcribed_text", "") for t in transcriptions]
-        )
+        all_transcribed = " ".join([t.get("transcribed_text", "") for t in transcriptions])
         total_duration = audio_analysis.get("total_duration", 10.0)
         wpm = calculate_wpm(all_transcribed, total_duration)
 
@@ -1315,9 +1185,7 @@ async def ai_grade_assignment(
 
         # 計算整體評分（加權平均）
         overall_score = round(
-            ai_scores.pronunciation * 0.3
-            + ai_scores.fluency * 0.3
-            + ai_scores.accuracy * 0.4,
+            ai_scores.pronunciation * 0.3 + ai_scores.fluency * 0.3 + ai_scores.accuracy * 0.4,
             1,
         )
 
@@ -1371,11 +1239,7 @@ async def get_assignment_submissions(
 ):
     """獲取作業的所有提交（教師用）"""
     # 獲取基礎作業資訊
-    base_assignment = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.id == assignment_id)
-        .first()
-    )
+    base_assignment = db.query(StudentAssignment).filter(StudentAssignment.id == assignment_id).first()
 
     if not base_assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -1397,9 +1261,7 @@ async def get_assignment_submissions(
         student = db.query(Student).filter(Student.id == sub.student_id).first()
         # 取得學生的內容進度（新架構）
         progress_list = (
-            db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == sub.id)
-            .all()
+            db.query(StudentContentProgress).filter(StudentContentProgress.student_assignment_id == sub.id).all()
         )
 
         result.append(
@@ -1408,9 +1270,7 @@ async def get_assignment_submissions(
                 "student_id": student.id,
                 "student_name": student.name,
                 "status": sub.status.value,
-                "submitted_at": (
-                    sub.submitted_at.isoformat() if sub.submitted_at else None
-                ),
+                "submitted_at": (sub.submitted_at.isoformat() if sub.submitted_at else None),
                 "score": sub.score,
                 "feedback": sub.feedback,
                 "content_progress": [
@@ -1438,17 +1298,11 @@ async def get_assignment_students(
     """
     # 驗證教師身份
     if not isinstance(current_teacher, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access this endpoint"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access this endpoint")
 
     # 查詢作業
     assignment = (
-        db.query(Assignment)
-        .filter(
-            Assignment.id == assignment_id, Assignment.teacher_id == current_teacher.id
-        )
-        .first()
+        db.query(Assignment).filter(Assignment.id == assignment_id, Assignment.teacher_id == current_teacher.id).first()
     )
 
     if not assignment:
@@ -1487,9 +1341,7 @@ async def get_student_submission(
 
     # Verify user is a teacher (get_current_user returns a Teacher object from routers/auth.py)
     if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can access this endpoint"
-        )
+        raise HTTPException(status_code=403, detail="Only teachers can access this endpoint")
 
     # 直接查詢學生作業
     assignment = (
@@ -1547,9 +1399,7 @@ async def get_student_submission(
                 group = {
                     "content_id": content.id,
                     "content_title": content.title,
-                    "content_type": (
-                        content.type.value if content.type else "READING_ASSESSMENT"
-                    ),
+                    "content_type": (content.type.value if content.type else "READING_ASSESSMENT"),
                     "submissions": [],
                 }
 
@@ -1583,9 +1433,7 @@ async def get_student_submission(
                             recording_file = recordings[local_item_index]
                             # 假設錄音檔案存在某個路徑下，需要根據實際情況調整
                             submission["student_audio_url"] = (
-                                f"/api/files/recordings/{recording_file}"
-                                if recording_file
-                                else ""
+                                f"/api/files/recordings/{recording_file}" if recording_file else ""
                             )
 
                         # 獲取學生文字答案（如果有）
@@ -1599,9 +1447,7 @@ async def get_student_submission(
                             submission["transcript"] = transcripts[local_item_index]
 
                         # 獲取個別題目的批改資訊
-                        item_feedbacks = progress.response_data.get(
-                            "item_feedbacks", []
-                        )
+                        item_feedbacks = progress.response_data.get("item_feedbacks", [])
                         if local_item_index < len(item_feedbacks):
                             item_feedback = item_feedbacks[local_item_index]
                             submission["feedback"] = item_feedback.get("feedback", "")
@@ -1615,9 +1461,7 @@ async def get_student_submission(
 
     # 如果沒有真實資料，使用模擬資料 (標記為 MOCK)
     if not submissions:
-        print(
-            f"WARNING: No real content found for assignment_id={actual_assignment_id}, using MOCK data"
-        )
+        print(f"WARNING: No real content found for assignment_id={actual_assignment_id}, using MOCK data")
         # 通用 MOCK 資料 - 所有作業都使用相同的後備資料
         submissions = [
             {
@@ -1666,9 +1510,7 @@ async def get_student_submission(
         "student_name": student.name,
         "student_email": student.email,
         "status": assignment.status.value,
-        "submitted_at": (
-            assignment.submitted_at.isoformat() if assignment.submitted_at else None
-        ),
+        "submitted_at": (assignment.submitted_at.isoformat() if assignment.submitted_at else None),
         "content_type": "SPEAKING_PRACTICE",
         "submissions": submissions,
         "content_groups": content_groups,  # 新增：按 content 分組的資料
@@ -1714,9 +1556,7 @@ async def grade_student_assignment(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to grade this assignment"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to grade this assignment")
 
     # 更新評分資訊
     assignment.score = grade_data.get("score")
@@ -1747,13 +1587,9 @@ async def grade_student_assignment(
         current_item_index = 0
         for progress in progress_records:
             # 獲取此 content 的所有項目數量
-            content = (
-                db.query(Content).filter(Content.id == progress.content_id).first()
-            )
+            content = db.query(Content).filter(Content.id == progress.content_id).first()
             if content and content.items:
-                items_count = (
-                    len(content.items) if isinstance(content.items, list) else 0
-                )
+                items_count = len(content.items) if isinstance(content.items, list) else 0
 
                 # 收集此 content 的所有 item 回饋
                 items_feedback = []
@@ -1768,16 +1604,12 @@ async def grade_student_assignment(
                             }
                         )
                     else:
-                        items_feedback.append(
-                            {"feedback": "", "passed": None, "score": None}
-                        )
+                        items_feedback.append({"feedback": "", "passed": None, "score": None})
                     current_item_index += 1
 
                 # 將所有 item 回饋儲存在 response_data JSON 欄位中
                 # 確保 response_data 是一個新的字典，這樣 SQLAlchemy 會偵測到變更
-                new_response_data = (
-                    progress.response_data.copy() if progress.response_data else {}
-                )
+                new_response_data = progress.response_data.copy() if progress.response_data else {}
                 new_response_data["item_feedbacks"] = items_feedback
                 progress.response_data = new_response_data
                 # 明確標記欄位已修改，確保 SQLAlchemy 偵測到 JSON 欄位的變更
@@ -1785,9 +1617,7 @@ async def grade_student_assignment(
 
                 # 更新整體的 checked 狀態（如果所有 items 都評過）
                 all_passed = all(
-                    item.get("passed") is True
-                    for item in items_feedback
-                    if item.get("passed") is not None
+                    item.get("passed") is True for item in items_feedback if item.get("passed") is not None
                 )
                 any_failed = any(item.get("passed") is False for item in items_feedback)
                 if any_failed:
@@ -1844,9 +1674,7 @@ async def set_assignment_in_progress(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to modify this assignment"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to modify this assignment")
 
     # 檢查當前狀態
     if assignment.status in [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]:
@@ -1861,8 +1689,7 @@ async def set_assignment_in_progress(
     if assignment.status == AssignmentStatus.RETURNED:
         # 如果是從「要求訂正」回到批改中，檢查是否有重新提交
         if assignment.resubmitted_at and (
-            not assignment.submitted_at
-            or assignment.resubmitted_at > assignment.submitted_at
+            not assignment.submitted_at or assignment.resubmitted_at > assignment.submitted_at
         ):
             assignment.status = AssignmentStatus.RESUBMITTED
         else:
@@ -1870,8 +1697,7 @@ async def set_assignment_in_progress(
     elif assignment.status == AssignmentStatus.GRADED:
         # 從「已完成」回到批改中
         if assignment.resubmitted_at and (
-            not assignment.submitted_at
-            or assignment.resubmitted_at > assignment.submitted_at
+            not assignment.submitted_at or assignment.resubmitted_at > assignment.submitted_at
         ):
             assignment.status = AssignmentStatus.RESUBMITTED
         else:
@@ -1926,9 +1752,7 @@ async def return_for_revision(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to return this assignment"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to return this assignment")
 
     # 檢查是否已經是要求訂正狀態
     if assignment.status == AssignmentStatus.RETURNED:
@@ -1937,9 +1761,7 @@ async def return_for_revision(
             "assignment_id": assignment.id,
             "student_id": student_id,
             "status": assignment.status.value,
-            "returned_at": (
-                assignment.returned_at.isoformat() if assignment.returned_at else None
-            ),
+            "returned_at": (assignment.returned_at.isoformat() if assignment.returned_at else None),
         }
 
     # 更新狀態為 RETURNED（要求訂正）
@@ -1971,11 +1793,7 @@ async def manual_grade_assignment(
 ):
     """手動評分（教師用）"""
     # 獲取作業
-    assignment = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.id == assignment_id)
-        .first()
-    )
+    assignment = db.query(StudentAssignment).filter(StudentAssignment.id == assignment_id).first()
 
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -1991,9 +1809,7 @@ async def manual_grade_assignment(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to grade this assignment"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to grade this assignment")
 
     # 更新評分
     assignment.score = grade_data.get("score")
@@ -2004,9 +1820,7 @@ async def manual_grade_assignment(
     # 更新內容進度評分（新架構）
     if "detailed_scores" in grade_data:
         progress_records = (
-            db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == assignment_id)
-            .all()
+            db.query(StudentContentProgress).filter(StudentContentProgress.student_assignment_id == assignment_id).all()
         )
 
         for progress in progress_records:

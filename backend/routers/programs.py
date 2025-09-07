@@ -27,29 +27,21 @@ router = APIRouter(prefix="/api/programs", tags=["programs"])
 # ============ 認證輔助函數 ============
 
 
-async def get_current_teacher(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-):
+async def get_current_teacher(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """取得當前登入的教師"""
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     teacher_id = payload.get("sub")
     teacher_type = payload.get("type")
 
     if teacher_type != "teacher":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher")
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
 
     return teacher
 
@@ -92,14 +84,9 @@ async def get_template_programs(
         # 建立已存在模板 ID 集合
         existing_template_ids = set()
         for existing_program in existing_programs:
-            if (
-                existing_program.source_metadata
-                and existing_program.source_type == "template"
-            ):
+            if existing_program.source_metadata and existing_program.source_type == "template":
                 if "template_id" in existing_program.source_metadata:
-                    existing_template_ids.add(
-                        existing_program.source_metadata["template_id"]
-                    )
+                    existing_template_ids.add(existing_program.source_metadata["template_id"])
 
         # 標記重複狀態
         for template in templates:
@@ -220,11 +207,7 @@ async def get_classroom_programs(
     """取得特定班級的所有課程"""
     # 驗證班級存在且屬於當前教師
     classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
-        )
-        .first()
+        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
     )
 
     if not classroom:
@@ -412,11 +395,7 @@ async def create_custom_program(
     """在班級中自建課程"""
     # 驗證班級存在
     classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
-        )
-        .first()
+        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
     )
 
     if not classroom:
@@ -489,21 +468,13 @@ async def get_copyable_programs(
     for existing_program in target_classroom_programs:
         if existing_program.source_metadata:
             # 檢查從模板複製的課程
-            if (
-                existing_program.source_type == "template"
-                and "template_id" in existing_program.source_metadata
-            ):
-                existing_template_ids.add(
-                    existing_program.source_metadata["template_id"]
-                )
+            if existing_program.source_type == "template" and "template_id" in existing_program.source_metadata:
+                existing_template_ids.add(existing_program.source_metadata["template_id"])
             # 檢查從其他班級複製的課程
             elif (
-                existing_program.source_type == "classroom"
-                and "source_program_id" in existing_program.source_metadata
+                existing_program.source_type == "classroom" and "source_program_id" in existing_program.source_metadata
             ):
-                existing_program_ids.add(
-                    existing_program.source_metadata["source_program_id"]
-                )
+                existing_program_ids.add(existing_program.source_metadata["source_program_id"])
 
     # 手動添加 classroom_name 和 is_duplicate 標記
     result = []
@@ -515,20 +486,10 @@ async def get_copyable_programs(
         # 檢查是否重複
         is_duplicate = False
         if program.source_metadata:
-            if (
-                program.source_type == "template"
-                and "template_id" in program.source_metadata
-            ):
-                is_duplicate = (
-                    program.source_metadata["template_id"] in existing_template_ids
-                )
-            elif (
-                program.source_type == "classroom"
-                and "source_program_id" in program.source_metadata
-            ):
-                is_duplicate = (
-                    program.source_metadata["source_program_id"] in existing_program_ids
-                )
+            if program.source_type == "template" and "template_id" in program.source_metadata:
+                is_duplicate = program.source_metadata["template_id"] in existing_template_ids
+            elif program.source_type == "classroom" and "source_program_id" in program.source_metadata:
+                is_duplicate = program.source_metadata["source_program_id"] in existing_program_ids
 
         # 添加自定義屬性（不在數據庫模型中）
         program.is_duplicate = is_duplicate
@@ -544,11 +505,7 @@ async def soft_delete_program(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """軟刪除課程"""
-    program = (
-        db.query(Program)
-        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
-        .first()
-    )
+    program = db.query(Program).filter(Program.id == program_id, Program.teacher_id == current_teacher.id).first()
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")

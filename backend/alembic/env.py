@@ -33,9 +33,7 @@ def get_url():
 
     if not database_url:
         # Default to local development database
-        database_url = (
-            "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
-        )
+        database_url = "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
 
     # For production/staging, replace postgres:// with postgresql://
     if database_url.startswith("postgres://"):

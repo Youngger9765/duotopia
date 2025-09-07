@@ -44,9 +44,7 @@ def update_supabase_migration():
                 # 2. 更新為正確的 revision ID
                 if current_version[0] == "13ed6b11e858" or current_version[0] == "001":
                     print("🔄 更新 alembic_version 到正確格式...")
-                    conn.execute(
-                        text("UPDATE alembic_version SET version_num = '624bfd9ff075'")
-                    )
+                    conn.execute(text("UPDATE alembic_version SET version_num = '624bfd9ff075'"))
                     conn.commit()
                     print("✅ 已更新到初始 migration: 624bfd9ff075")
                 elif current_version[0] == "624bfd9ff075":

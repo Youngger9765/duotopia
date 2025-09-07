@@ -35,23 +35,17 @@ class StudentLoginResponse(BaseModel):
 
 
 @router.post("/validate", response_model=StudentLoginResponse)
-async def validate_student(
-    request: StudentValidateRequest, db: Session = Depends(get_db)
-):
+async def validate_student(request: StudentValidateRequest, db: Session = Depends(get_db)):
     """學生登入驗證"""
     # 查詢學生
     student = db.query(Student).filter(Student.email == request.email).first()
 
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     # 驗證生日（作為密碼）
     if not verify_password(request.birthdate, student.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password")
 
     # 建立 token
     access_token = create_access_token(
@@ -90,25 +84,15 @@ async def get_student_profile(
     student = db.query(Student).filter(Student.id == int(student_id)).first()
 
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     # Get classroom info
-    classroom_student = (
-        db.query(ClassroomStudent)
-        .filter(ClassroomStudent.student_id == student.id)
-        .first()
-    )
+    classroom_student = db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student.id).first()
 
     classroom_name = None
     classroom_id = None
     if classroom_student:
-        classroom = (
-            db.query(Classroom)
-            .filter(Classroom.id == classroom_student.classroom_id)
-            .first()
-        )
+        classroom = db.query(Classroom).filter(Classroom.id == classroom_student.classroom_id).first()
         if classroom:
             classroom_name = classroom.name
             classroom_id = classroom.id
@@ -144,9 +128,7 @@ async def get_student_assignments(
         db.query(StudentAssignment)
         .filter(StudentAssignment.student_id == int(student_id))
         .order_by(
-            StudentAssignment.due_date.desc()
-            if StudentAssignment.due_date
-            else StudentAssignment.assigned_at.desc()
+            StudentAssignment.due_date.desc() if StudentAssignment.due_date else StudentAssignment.assigned_at.desc()
         )
         .all()
     )
@@ -157,22 +139,10 @@ async def get_student_assignments(
             {
                 "id": assignment.id,
                 "title": assignment.title,
-                "status": (
-                    assignment.status.value if assignment.status else "not_started"
-                ),
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "assigned_at": (
-                    assignment.assigned_at.isoformat()
-                    if assignment.assigned_at
-                    else None
-                ),
-                "submitted_at": (
-                    assignment.submitted_at.isoformat()
-                    if assignment.submitted_at
-                    else None
-                ),
+                "status": (assignment.status.value if assignment.status else "not_started"),
+                "due_date": (assignment.due_date.isoformat() if assignment.due_date else None),
+                "assigned_at": (assignment.assigned_at.isoformat() if assignment.assigned_at else None),
+                "submitted_at": (assignment.submitted_at.isoformat() if assignment.submitted_at else None),
                 "content_id": assignment.content_id,
                 "classroom_id": assignment.classroom_id,
                 "score": assignment.score,
@@ -220,19 +190,14 @@ async def get_assignment_activities(
 
     # 如果有 content_id，直接獲取該內容
     if student_assignment.content_id:
-        content = (
-            db.query(Content)
-            .filter(Content.id == student_assignment.content_id)
-            .first()
-        )
+        content = db.query(Content).filter(Content.id == student_assignment.content_id).first()
 
         if content:
             # 檢查是否已有進度記錄
             progress = (
                 db.query(StudentContentProgress)
                 .filter(
-                    StudentContentProgress.student_assignment_id
-                    == student_assignment.id,
+                    StudentContentProgress.student_assignment_id == student_assignment.id,
                     StudentContentProgress.content_id == content.id,
                 )
                 .first()
@@ -255,24 +220,16 @@ async def get_assignment_activities(
                     "id": progress.id,
                     "content_id": content.id,
                     "order": 1,
-                    "type": (
-                        content.type.value if content.type else "reading_assessment"
-                    ),
+                    "type": (content.type.value if content.type else "reading_assessment"),
                     "title": content.title,
                     "content": content.content,
                     "target_text": content.content,  # For reading assessment
                     "duration": 60,  # Default duration
                     "points": 100,
-                    "status": (
-                        progress.status.value if progress.status else "NOT_STARTED"
-                    ),
+                    "status": (progress.status.value if progress.status else "NOT_STARTED"),
                     "score": progress.score,
                     "audio_url": progress.audio_url,
-                    "completed_at": (
-                        progress.completed_at.isoformat()
-                        if progress.completed_at
-                        else None
-                    ),
+                    "completed_at": (progress.completed_at.isoformat() if progress.completed_at else None),
                 }
             )
 
@@ -294,8 +251,7 @@ async def get_assignment_activities(
                 progress = (
                     db.query(StudentContentProgress)
                     .filter(
-                        StudentContentProgress.student_assignment_id
-                        == student_assignment.id,
+                        StudentContentProgress.student_assignment_id == student_assignment.id,
                         StudentContentProgress.content_id == content.id,
                     )
                     .first()
@@ -318,28 +274,16 @@ async def get_assignment_activities(
                         "id": progress.id,
                         "content_id": content.id,
                         "order": ac.order_index + 1,
-                        "type": (
-                            content.type.value if content.type else "reading_assessment"
-                        ),
+                        "type": (content.type.value if content.type else "reading_assessment"),
                         "title": content.title,
                         "content": content.content,
                         "target_text": content.content,  # For reading assessment
                         "duration": 60,  # Default duration
-                        "points": (
-                            100 // len(assignment_contents)
-                            if assignment_contents
-                            else 100
-                        ),
-                        "status": (
-                            progress.status.value if progress.status else "NOT_STARTED"
-                        ),
+                        "points": (100 // len(assignment_contents) if assignment_contents else 100),
+                        "status": (progress.status.value if progress.status else "NOT_STARTED"),
                         "score": progress.score,
                         "audio_url": progress.audio_url,
-                        "completed_at": (
-                            progress.completed_at.isoformat()
-                            if progress.completed_at
-                            else None
-                        ),
+                        "completed_at": (progress.completed_at.isoformat() if progress.completed_at else None),
                     }
                 )
 
@@ -409,9 +353,7 @@ async def save_activity_progress(
     )
 
     if not student_assignment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
 
     # 獲取並更新進度記錄
     progress = (
@@ -424,9 +366,7 @@ async def save_activity_progress(
     )
 
     if not progress:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Activity progress not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity progress not found")
 
     # 更新進度
     if audio_url:
@@ -469,9 +409,7 @@ async def submit_assignment(
     )
 
     if not student_assignment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
 
     # 更新所有進度為已完成
     progress_records = (
@@ -523,9 +461,7 @@ async def update_student_email(
     student = db.query(Student).filter(Student.id == student_id).first()
 
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     # 更新 email
     student.email = request.email
@@ -561,25 +497,15 @@ async def get_current_student_info(
     student = db.query(Student).filter(Student.id == int(student_id)).first()
 
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     # Get classroom info
-    classroom_student = (
-        db.query(ClassroomStudent)
-        .filter(ClassroomStudent.student_id == student.id)
-        .first()
-    )
+    classroom_student = db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student.id).first()
 
     classroom_name = None
     classroom_id = None
     if classroom_student:
-        classroom = (
-            db.query(Classroom)
-            .filter(Classroom.id == classroom_student.classroom_id)
-            .first()
-        )
+        classroom = db.query(Classroom).filter(Classroom.id == classroom_student.classroom_id).first()
         if classroom:
             classroom_name = classroom.name
             classroom_id = classroom.id
@@ -608,10 +534,7 @@ async def request_email_verification(
     from services.email_service import email_service
 
     # 確認是學生本人
-    if (
-        current_user.get("type") != "student"
-        or int(current_user.get("sub")) != student_id
-    ):
+    if current_user.get("type") != "student" or int(current_user.get("sub")) != student_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -648,10 +571,7 @@ async def resend_email_verification(
     from services.email_service import email_service
 
     # 確認是學生本人
-    if (
-        current_user.get("type") != "student"
-        or int(current_user.get("sub")) != student_id
-    ):
+    if current_user.get("type") != "student" or int(current_user.get("sub")) != student_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -669,9 +589,7 @@ async def resend_email_verification(
     # 重新發送
     success = email_service.resend_verification_email(db, student)
     if not success:
-        raise HTTPException(
-            status_code=429, detail="Please wait 5 minutes before requesting again"
-        )
+        raise HTTPException(status_code=429, detail="Please wait 5 minutes before requesting again")
 
     return {
         "message": "Verification email resent successfully",
@@ -705,10 +623,7 @@ async def get_email_status(
 ):
     """獲取 email 驗證狀態"""
     # 確認是學生本人
-    if (
-        current_user.get("type") != "student"
-        or int(current_user.get("sub")) != student_id
-    ):
+    if current_user.get("type") != "student" or int(current_user.get("sub")) != student_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -717,17 +632,11 @@ async def get_email_status(
 
     return {
         "email": student.email,
-        "is_system_email": (
-            "@duotopia.local" in student.email if student.email else True
-        ),
+        "is_system_email": ("@duotopia.local" in student.email if student.email else True),
         "email_verified": student.email_verified,
-        "email_verified_at": (
-            student.email_verified_at.isoformat() if student.email_verified_at else None
-        ),
+        "email_verified_at": (student.email_verified_at.isoformat() if student.email_verified_at else None),
         "verification_sent_at": (
-            student.email_verification_sent_at.isoformat()
-            if student.email_verification_sent_at
-            else None
+            student.email_verification_sent_at.isoformat() if student.email_verification_sent_at else None
         ),
     }
 
@@ -743,10 +652,7 @@ async def get_linked_accounts(
 ):
     """獲取相同已驗證 email 的其他學生帳號"""
     # 確認是學生本人
-    if (
-        current_user.get("type") != "student"
-        or int(current_user.get("sub")) != student_id
-    ):
+    if current_user.get("type") != "student" or int(current_user.get("sub")) != student_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -762,9 +668,9 @@ async def get_linked_accounts(
         db.query(Student)
         .filter(
             Student.email == student.email,
-            Student.email_verified == True,
+            Student.email_verified is True,
             Student.id != student_id,  # 排除自己
-            Student.is_active == True,
+            Student.is_active is True,
         )
         .all()
     )
@@ -777,25 +683,19 @@ async def get_linked_accounts(
             db.query(ClassroomStudent)
             .filter(
                 ClassroomStudent.student_id == linked_student.id,
-                ClassroomStudent.is_active == True,
+                ClassroomStudent.is_active is True,
             )
             .first()
         )
 
         classroom_info = None
         if classroom_enrollment:
-            classroom = (
-                db.query(Classroom)
-                .filter(Classroom.id == classroom_enrollment.classroom_id)
-                .first()
-            )
+            classroom = db.query(Classroom).filter(Classroom.id == classroom_enrollment.classroom_id).first()
             if classroom:
                 classroom_info = {
                     "id": classroom.id,
                     "name": classroom.name,
-                    "teacher_name": (
-                        classroom.teacher.name if classroom.teacher else None
-                    ),
+                    "teacher_name": (classroom.teacher.name if classroom.teacher else None),
                 }
 
         linked_accounts.append(
@@ -803,11 +703,7 @@ async def get_linked_accounts(
                 "student_id": linked_student.id,
                 "name": linked_student.name,
                 "classroom": classroom_info,
-                "last_login": (
-                    linked_student.last_login.isoformat()
-                    if linked_student.last_login
-                    else None
-                ),
+                "last_login": (linked_student.last_login.isoformat() if linked_student.last_login else None),
             }
         )
 
@@ -838,30 +734,21 @@ async def switch_account(
 
     # 檢查當前帳號是否有已驗證的 email
     if not current_student.email or not current_student.email_verified:
-        raise HTTPException(
-            status_code=400, detail="Current account has no verified email"
-        )
+        raise HTTPException(status_code=400, detail="Current account has no verified email")
 
     # 查找目標學生
-    target_student = (
-        db.query(Student).filter(Student.id == request.target_student_id).first()
-    )
+    target_student = db.query(Student).filter(Student.id == request.target_student_id).first()
 
     if not target_student:
         raise HTTPException(status_code=404, detail="Target student not found")
 
     # 檢查目標學生是否有相同的已驗證 email
-    if (
-        target_student.email != current_student.email
-        or not target_student.email_verified
-    ):
+    if target_student.email != current_student.email or not target_student.email_verified:
         raise HTTPException(status_code=403, detail="Target account is not linked")
 
     # 驗證目標帳號的密碼
     if not verify_password(request.password, target_student.password_hash):
-        raise HTTPException(
-            status_code=401, detail="Invalid password for target account"
-        )
+        raise HTTPException(status_code=401, detail="Invalid password for target account")
 
     # 更新最後登入時間
     target_student.last_login = datetime.now()
@@ -878,18 +765,14 @@ async def switch_account(
         db.query(ClassroomStudent)
         .filter(
             ClassroomStudent.student_id == target_student.id,
-            ClassroomStudent.is_active == True,
+            ClassroomStudent.is_active is True,
         )
         .first()
     )
 
     classroom_info = None
     if classroom_enrollment:
-        classroom = (
-            db.query(Classroom)
-            .filter(Classroom.id == classroom_enrollment.classroom_id)
-            .first()
-        )
+        classroom = db.query(Classroom).filter(Classroom.id == classroom_enrollment.classroom_id).first()
         if classroom:
             classroom_info = {"id": classroom.id, "name": classroom.name}
 
@@ -914,10 +797,7 @@ async def unbind_email(
 ):
     """解除 email 綁定（學生自己或老師都可以操作）"""
     # 檢查權限：學生本人或老師
-    is_student_self = (
-        current_user.get("type") == "student"
-        and int(current_user.get("sub")) == student_id
-    )
+    is_student_self = current_user.get("type") == "student" and int(current_user.get("sub")) == student_id
     is_teacher = current_user.get("type") == "teacher"
 
     if not is_student_self and not is_teacher:
@@ -937,14 +817,12 @@ async def unbind_email(
             .filter(
                 ClassroomStudent.student_id == student_id,
                 Classroom.teacher_id == teacher_id,
-                ClassroomStudent.is_active == True,
+                ClassroomStudent.is_active is True,
             )
             .first()
         )
         if not student_in_teacher_class:
-            raise HTTPException(
-                status_code=403, detail="Student is not in your classroom"
-            )
+            raise HTTPException(status_code=403, detail="Student is not in your classroom")
 
     # 清除 email 綁定相關資訊
     old_email = student.email

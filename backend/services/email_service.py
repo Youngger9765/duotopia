@@ -33,9 +33,7 @@ class EmailService:
         """生成驗證 token"""
         return secrets.token_urlsafe(32)
 
-    def send_verification_email(
-        self, db: Session, student: Student, email: str = None
-    ) -> bool:
+    def send_verification_email(self, db: Session, student: Student, email: str = None) -> bool:
         """發送驗證 email
 
         Args:
@@ -118,7 +116,7 @@ class EmailService:
             # 如果 SMTP 未設定，只記錄日誌（開發模式）
             if not self.smtp_user or not self.smtp_password:
                 logger.info(f"開發模式：驗證連結 - {verification_url}")
-                print(f"\n📧 驗證 Email 已發送（開發模式）")
+                print("\n📧 驗證 Email 已發送（開發模式）")
                 print(f"   收件人: {target_email}")
                 print(f"   學生: {student.name}")
                 print(f"   驗證連結: {verification_url}\n")
@@ -156,11 +154,7 @@ class EmailService:
         """
         try:
             # 查找擁有此 token 的學生
-            student = (
-                db.query(Student)
-                .filter(Student.email_verification_token == token)
-                .first()
-            )
+            student = db.query(Student).filter(Student.email_verification_token == token).first()
 
             if not student:
                 return None

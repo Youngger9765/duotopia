@@ -10,12 +10,8 @@ from functools import lru_cache
 
 class Settings:
     # Environment
-    ENVIRONMENT: Literal["local", "staging", "production"] = os.getenv(
-        "ENVIRONMENT", "local"
-    )
-    DATABASE_TYPE: Literal["local", "supabase", "cloudsql"] = os.getenv(
-        "DATABASE_TYPE", "local"
-    )
+    ENVIRONMENT: Literal["local", "staging", "production"] = os.getenv("ENVIRONMENT", "local")
+    DATABASE_TYPE: Literal["local", "supabase", "cloudsql"] = os.getenv("DATABASE_TYPE", "local")
 
     # Database
     DATABASE_URL: str = os.getenv(
@@ -91,10 +87,7 @@ class Settings:
         if self.DATABASE_TYPE == "supabase" and not self.SUPABASE_URL:
             print("Warning: Using Supabase but SUPABASE_URL not set")
 
-        if (
-            self.is_production
-            and self.JWT_SECRET == "your-secret-key-change-in-production"
-        ):
+        if self.is_production and self.JWT_SECRET == "your-secret-key-change-in-production":
             raise ValueError("Please set a secure JWT_SECRET for production")
 
         return True

@@ -6,16 +6,12 @@ Test all three methods of creating programs in a classroom:
 3. Create custom
 """
 
+import requests
 import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Teacher, Classroom, Program
-from auth import create_access_token
-import requests
 
 BASE_URL = "http://localhost:8000"
 
@@ -40,9 +36,7 @@ def test_copy_from_template(token: str, classroom_id: int):
     headers = {"Authorization": f"Bearer {token}"}
 
     # Get available templates
-    templates_response = requests.get(
-        f"{BASE_URL}/api/programs/templates", headers=headers
-    )
+    templates_response = requests.get(f"{BASE_URL}/api/programs/templates", headers=headers)
 
     if templates_response.status_code != 200:
         print(f"❌ Failed to get templates: {templates_response.status_code}")
@@ -79,16 +73,12 @@ def test_copy_from_template(token: str, classroom_id: int):
         return False
 
 
-def test_copy_from_classroom(
-    token: str, source_classroom_id: int, target_classroom_id: int
-):
+def test_copy_from_classroom(token: str, source_classroom_id: int, target_classroom_id: int):
     """Test copying from another classroom"""
     headers = {"Authorization": f"Bearer {token}"}
 
     # Get programs from source classroom
-    programs_response = requests.get(
-        f"{BASE_URL}/api/programs/classroom/{source_classroom_id}", headers=headers
-    )
+    programs_response = requests.get(f"{BASE_URL}/api/programs/classroom/{source_classroom_id}", headers=headers)
 
     if programs_response.status_code != 200:
         print(f"❌ Failed to get classroom programs: {programs_response.status_code}")
@@ -232,7 +222,7 @@ def main():
         print("❌ Failed to get/create test classrooms")
         return
 
-    print(f"\n📚 Using classrooms:")
+    print("\n📚 Using classrooms:")
     print(f"   - Source: {source_classroom['name']} (ID: {source_classroom['id']})")
     print(f"   - Target: {target_classroom['name']} (ID: {target_classroom['id']})")
 
@@ -250,9 +240,7 @@ def main():
     print("\n" + "=" * 40)
     print("測試 2: 從其他班級複製")
     print("=" * 40)
-    success2 = test_copy_from_classroom(
-        token, source_classroom["id"], target_classroom["id"]
-    )
+    success2 = test_copy_from_classroom(token, source_classroom["id"], target_classroom["id"])
 
     # Test 3: Create custom
     print("\n" + "=" * 40)
@@ -270,9 +258,7 @@ def main():
 
     # Show final programs in target classroom
     headers = {"Authorization": f"Bearer {token}"}
-    final_programs = requests.get(
-        f"{BASE_URL}/api/programs/classroom/{target_classroom['id']}", headers=headers
-    ).json()
+    final_programs = requests.get(f"{BASE_URL}/api/programs/classroom/{target_classroom['id']}", headers=headers).json()
 
     print(f"\n目標班級最終課程數量: {len(final_programs)}")
     for prog in final_programs:

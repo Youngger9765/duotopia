@@ -4,7 +4,6 @@
 """
 
 import requests
-import json
 from datetime import datetime  # noqa: F401
 
 BASE_URL = "http://localhost:8000"
@@ -42,9 +41,7 @@ def test_create_template(token):
         "tags": ["speaking", "beginner", "conversation"],
     }
 
-    response = requests.post(
-        f"{BASE_URL}/api/programs/templates", headers=headers, json=program_data
-    )
+    response = requests.post(f"{BASE_URL}/api/programs/templates", headers=headers, json=program_data)
 
     print("\n=== 建立公版課程模板 ===")
     print(f"Status: {response.status_code}")
@@ -75,9 +72,7 @@ def test_get_templates(token):
         templates = response.json()
         print(f"找到 {len(templates)} 個公版課程")
         for template in templates[:3]:  # 只顯示前3個
-            print(
-                f"- {template['name']} (ID: {template['id']}, Template: {template['is_template']})"
-            )
+            print(f"- {template['name']} (ID: {template['id']}, Template: {template['is_template']})")
     else:
         print(f"Error: {response.text}")
 
@@ -87,9 +82,7 @@ def test_copy_from_template(token, template_id):
     headers = {"Authorization": f"Bearer {token}"}
 
     # 先取得班級列表
-    classrooms_response = requests.get(
-        f"{BASE_URL}/api/teacher/classrooms", headers=headers
-    )
+    classrooms_response = requests.get(f"{BASE_URL}/api/teacher/classrooms", headers=headers)
 
     if classrooms_response.status_code != 200:
         print("無法取得班級列表")
@@ -108,9 +101,7 @@ def test_copy_from_template(token, template_id):
         "name": "班級版英語會話課程",
     }
 
-    response = requests.post(
-        f"{BASE_URL}/api/programs/copy-from-template", headers=headers, json=copy_data
-    )
+    response = requests.post(f"{BASE_URL}/api/programs/copy-from-template", headers=headers, json=copy_data)
 
     print("\n=== 從公版複製到班級 ===")
     print(f"Status: {response.status_code}")
@@ -140,9 +131,7 @@ def test_get_copyable(token):
         programs = response.json()
         print(f"找到 {len(programs)} 個可複製課程")
         for program in programs[:5]:  # 只顯示前5個
-            print(
-                f"- {program['name']} (Template: {program['is_template']}, Classroom: {program['classroom_id']})"
-            )
+            print(f"- {program['name']} (Template: {program['is_template']}, Classroom: {program['classroom_id']})")
     else:
         print(f"Error: {response.text}")
 

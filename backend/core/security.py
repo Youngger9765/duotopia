@@ -12,9 +12,7 @@ import jwt
 from passlib.context import CryptContext
 
 # 密碼雜湊設定
-pwd_context = CryptContext(
-    schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12  # 提高 rounds 數增加安全性
-)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)  # 提高 rounds 數增加安全性
 
 
 class SecurityConfig:
@@ -169,9 +167,7 @@ class TokenManager:
         self.secret = secret or os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
         self.algorithm = algorithm
 
-    def create_access_token(
-        self, data: dict, expires_delta: Optional[timedelta] = None
-    ) -> str:
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
         """建立存取 token"""
         to_encode = data.copy()
         if expires_delta:
@@ -276,11 +272,7 @@ def mask_sensitive_data(data: str, visible_chars: int = 4) -> str:
     """遮罩敏感資料"""
     if len(data) <= visible_chars * 2:
         return "*" * len(data)
-    return (
-        data[:visible_chars]
-        + "*" * (len(data) - visible_chars * 2)
-        + data[-visible_chars:]
-    )
+    return data[:visible_chars] + "*" * (len(data) - visible_chars * 2) + data[-visible_chars:]
 
 
 # IP 地址驗證

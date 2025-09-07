@@ -14,9 +14,7 @@ if login_response.status_code == 200:
     headers = {"Authorization": f"Bearer {token}"}
 
     # 獲取所有 programs
-    programs_response = requests.get(
-        "http://localhost:8000/api/teachers/programs", headers=headers
-    )
+    programs_response = requests.get("http://localhost:8000/api/teachers/programs", headers=headers)
 
     print("=== Programs 列表 ===")
     programs = programs_response.json()

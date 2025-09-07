@@ -54,9 +54,7 @@ def test_grading_api(token):
 
     # 2. 取得學生提交列表
     print("\n👥 取得學生提交列表...")
-    response = requests.get(
-        f"{API_URL}/teachers/assignments/{assignment_id}/students", headers=headers
-    )
+    response = requests.get(f"{API_URL}/teachers/assignments/{assignment_id}/students", headers=headers)
     if response.status_code != 200:
         print(f"❌ 無法取得學生列表: {response.text}")
         return False
@@ -102,11 +100,7 @@ def test_grading_api(token):
         for group_idx, group in enumerate(submission["content_groups"]):
             for item_idx, item in enumerate(group.get("submissions", [])):
                 global_idx = (
-                    sum(
-                        len(g.get("submissions", []))
-                        for g in submission["content_groups"][:group_idx]
-                    )
-                    + item_idx
+                    sum(len(g.get("submissions", [])) for g in submission["content_groups"][:group_idx]) + item_idx
                 )
                 item_results.append(
                     {
