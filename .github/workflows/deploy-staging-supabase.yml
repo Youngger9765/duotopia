@@ -277,6 +277,13 @@ jobs:
         ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
         ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
         ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+        ENV_VARS="$ENV_VARS,SMTP_HOST=${{ secrets.SMTP_HOST }}"
+        ENV_VARS="$ENV_VARS,SMTP_PORT=${{ secrets.SMTP_PORT }}"
+        ENV_VARS="$ENV_VARS,SMTP_USER=${{ secrets.SMTP_USER }}"
+        ENV_VARS="$ENV_VARS,SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
+        ENV_VARS="$ENV_VARS,FROM_EMAIL=${{ secrets.FROM_EMAIL }}"
+        ENV_VARS="$ENV_VARS,FROM_NAME=${{ secrets.FROM_NAME }}"
+        ENV_VARS="$ENV_VARS,FRONTEND_URL=${{ secrets.FRONTEND_URL }}"
 
         gcloud run deploy $BACKEND_SERVICE \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA \
