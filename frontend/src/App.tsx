@@ -19,6 +19,7 @@ import AssignmentDetail from './pages/student/AssignmentDetail'
 import StudentActivityPage from './pages/student/StudentActivityPageV2'
 import StudentLayout from './components/StudentLayout'
 import EmailVerification from './pages/EmailVerification'
+import StudentProfile from './pages/student/StudentProfile'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -67,7 +68,7 @@ function App() {
         <Route path="achievements" element={<div className="p-8 text-center">成就頁面開發中...</div>} />
         <Route path="calendar" element={<div className="p-8 text-center">行事曆頁面開發中...</div>} />
         <Route path="messages" element={<div className="p-8 text-center">訊息頁面開發中...</div>} />
-        <Route path="profile" element={<div className="p-8 text-center">個人資料頁面開發中...</div>} />
+        <Route path="profile" element={<StudentProfile />} />
         <Route path="settings" element={<div className="p-8 text-center">設定頁面開發中...</div>} />
       </Route>
 

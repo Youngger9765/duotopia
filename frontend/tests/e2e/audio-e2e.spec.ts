@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 const DEMO_EMAIL = 'demo@duotopia.com';
 const DEMO_PASSWORD = 'demo123';

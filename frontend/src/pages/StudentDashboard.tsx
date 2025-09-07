@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Calendar,
   Mail,
-  X
+  X,
+  CheckCircle,
+  User
 } from 'lucide-react';
 import { Assignment } from '@/types';
 
@@ -32,6 +34,8 @@ export default function StudentDashboard() {
   const [showEmailSetup, setShowEmailSetup] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [emailInitialized, setEmailInitialized] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState('');
 
   useEffect(() => {
     if (!user || !token) {
@@ -133,8 +137,12 @@ export default function StudentDashboard() {
         // 如果有 email，預填到輸入框
         if (data.email && !emailInitialized) {
           setNewEmail(data.email);
+          setCurrentEmail(data.email);
           setEmailInitialized(true);
         }
+
+        // 設定驗證狀態
+        setEmailVerified(data.email_verified === true);
 
         // 如果沒有驗證過 email，就顯示提醒
         if (!data.email_verified) {
@@ -229,6 +237,35 @@ export default function StudentDashboard() {
             你好，{user?.name || '同學'}！歡迎回到 Duotopia 🚀
           </h1>
           <p className="text-gray-600">繼續你的英語學習之旅吧</p>
+
+          {/* Email 狀態顯示 */}
+          {currentEmail && (
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm bg-gray-50 px-3 py-2 rounded-lg">
+                <Mail className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-700">{currentEmail}</span>
+                {emailVerified ? (
+                  <div className="flex items-center gap-1 text-blue-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-xs font-medium">已驗證</span>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                    待驗證
+                  </Badge>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => navigate('/student/profile')}
+                className="text-xs flex items-center gap-1 hover:bg-gray-100"
+              >
+                <User className="h-3 w-3" />
+                個人資料
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Email Setup Form */}

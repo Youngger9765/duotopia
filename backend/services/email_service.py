@@ -159,10 +159,15 @@ class EmailService:
             驗證成功的學生物件，或 None
         """
         try:
+            # Hash the token to compare with stored value
+            import hashlib
+
+            hashed_token = hashlib.sha256(token.encode()).hexdigest()
+
             # 查找擁有此 token 的學生
             student = (
                 db.query(Student)
-                .filter(Student.email_verification_token == token)
+                .filter(Student.email_verification_token == hashed_token)
                 .first()
             )
 

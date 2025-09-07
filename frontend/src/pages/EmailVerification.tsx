@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ export default function EmailVerification() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [studentInfo, setStudentInfo] = useState<{name: string, email: string} | null>(null);
+  const hasVerifiedRef = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -20,7 +21,11 @@ export default function EmailVerification() {
       return;
     }
 
-    verifyEmail(token);
+    // 防止 React StrictMode 重複呼叫
+    if (!hasVerifiedRef.current) {
+      hasVerifiedRef.current = true;
+      verifyEmail(token);
+    }
   }, [searchParams]);
 
   const verifyEmail = async (token: string) => {
