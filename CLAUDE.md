@@ -773,6 +773,47 @@ python tests/integration/api/test_lesson_crud.py
   - `test_create_student_success`
   - `test_login_with_invalid_password_fails`
 
+### 測試資料管理策略
+
+#### 現在（開發/Staging 階段）
+```bash
+# 保持簡單的做法
+python seed_data.py  # 開發用種子資料
+pytest tests/        # 測試用同一份資料
+
+# 重置測試環境
+python seed_data.py  # 重新執行即可
+```
+
+#### 未來（生產階段）- 分層管理
+```bash
+# 1. 資料庫結構
+alembic upgrade head      # 只管理 schema
+
+# 2. 生產必要資料
+python seed_initial.py    # 只有系統必要資料（如預設角色）
+
+# 3. 測試專用資料
+pytest --fixtures         # 使用 conftest.py 的 fixtures
+# 或
+factory_boy              # 測試資料工廠
+
+# 4. Demo 資料（選用）
+python seed_demo.py      # Demo 帳號和範例資料
+```
+
+#### 為什麼現在用 seed_data.py 就夠了？
+1. **專案還在快速迭代** - 資料結構經常變動
+2. **簡單直接** - 一個檔案管理所有測試資料
+3. **易於維護** - 不需要學習額外的測試框架
+4. **滿足當前需求** - 開發和 staging 測試都能用
+
+#### 何時該升級到正規方法？
+- 測試數量超過 100 個
+- 需要平行執行測試
+- 多人協作需要資料隔離
+- 生產環境需要嚴格的資料管理
+
 ### 安全最佳實踐
 - 所有密碼存在 Secret Manager
 - Service Account 最小權限原則

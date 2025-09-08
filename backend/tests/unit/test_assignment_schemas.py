@@ -146,10 +146,13 @@ class TestAssignmentResponseSchema:
         data = {
             "id": 1,
             "title": "Test Assignment",
+            "description": "Test description",  # 必要欄位
             "classroom_id": 1,
             "teacher_id": 1,
+            "due_date": datetime.utcnow(),  # 必要欄位
             "is_active": True,
             "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),  # 必要欄位
             "contents": [
                 {"id": 1, "title": "Content 1"},
                 {"id": 2, "title": "Content 2"},
@@ -258,21 +261,19 @@ class TestStudentContentProgressSchemas:
         assert update.ai_scores["wpm"] == 85
 
     def test_content_progress_with_response(self):
-        """Test progress with student response data"""
+        """Test progress create schema (response_data not in Create)"""
         data = {
             "student_assignment_id": 1,
             "content_id": 1,
             "status": "SUBMITTED",
-            "response_data": {
-                "audio_url": "recording.mp3",
-                "duration": 45,
-                "submitted_at": datetime.utcnow().isoformat(),
-            },
+            "order_index": 0,
         }
         progress = StudentContentProgressCreate(**data)
 
-        assert progress.response_data["audio_url"] == "recording.mp3"
-        assert progress.response_data["duration"] == 45
+        assert progress.student_assignment_id == 1
+        assert progress.content_id == 1
+        assert progress.status == "SUBMITTED"
+        assert progress.order_index == 0
 
 
 class TestComplexSchemas:
@@ -331,6 +332,7 @@ class TestComplexSchemas:
             "title": "Student's Assignment",
             "status": "IN_PROGRESS",
             "score": 75.0,
+            "feedback": "Good progress",  # 必要欄位
             "is_active": True,
             "created_at": datetime.utcnow(),
             "content_progress": [
