@@ -347,11 +347,15 @@ class TestProgramManagement:
         db.add(classroom_program)
         db.commit()
 
-        response = client.get("/api/programs/copyable", headers=auth_headers)
+        response = client.get(
+            f"/api/programs/copyable?classroom_id={test_classroom.id}",
+            headers=auth_headers,
+        )
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
+        assert len(data) == 1  # 只返回班級課程，不含模板
         names = [p["name"] for p in data]
-        assert "Template" in names
         assert "Classroom Program" in names
+        # API 不返回模板，所以 Template 不應該在列表中
+        assert "Template" not in names

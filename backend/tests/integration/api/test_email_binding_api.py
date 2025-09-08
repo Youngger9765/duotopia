@@ -9,8 +9,8 @@ from unittest.mock import patch
 from sqlalchemy.orm import Session
 
 from main import app
-from models import Student, User
-from auth import hash_password
+from models import Student, Teacher
+from core.security import hash_password
 
 client = TestClient(app)
 
@@ -125,7 +125,7 @@ class TestEmailBindingAPI:
     def test_update_email_with_teacher_token(self, db: Session):
         """測試用教師 token 無法更新學生 email"""
         # 建立測試教師
-        teacher = User(
+        teacher = Teacher(
             email="test.teacher@duotopia.com",
             password_hash=hash_password("teacher123"),
             name="測試教師",
