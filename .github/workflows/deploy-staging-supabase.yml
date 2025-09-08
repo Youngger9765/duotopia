@@ -209,6 +209,10 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
+    - name: Create GCS Service Account Key File
+      run: |
+        echo "${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}" | base64 -d > backend/service-account-key.json
+
     - name: Configure Docker for Artifact Registry
       run: gcloud auth configure-docker $REGION-docker.pkg.dev
 

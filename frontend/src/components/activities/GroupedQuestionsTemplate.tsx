@@ -429,9 +429,19 @@ export default function GroupedQuestionsTemplate({
           )}
         </div>
 
-        {/* 3. AI 評估按鈕區 - 固定顯示 */}
+        {/* 3. AI 評估按鈕區 - 智慧顯示 */}
         <div className="mt-6 flex justify-center min-h-[60px] items-center">
-          {recordings[currentQuestionIndex] ? (
+          {!recordings[currentQuestionIndex] ? (
+            <div className="text-gray-400 text-sm">請先錄音後進行 AI 評估</div>
+          ) : assessmentResults[currentQuestionIndex] ? (
+            <div className="text-center">
+              <div className="text-green-600 text-sm flex items-center justify-center mb-1">
+                <Brain className="w-4 h-4 mr-1" />
+                AI 評估已完成
+              </div>
+              <div className="text-xs text-gray-500">重新錄音將清除評估結果</div>
+            </div>
+          ) : (
             <Button
               size="lg"
               onClick={handleAssessment}
@@ -446,12 +456,10 @@ export default function GroupedQuestionsTemplate({
               ) : (
                 <>
                   <Brain className="w-5 h-5 mr-2" />
-                  {assessmentResults[currentQuestionIndex] ? 'AI 重新評估' : 'AI 發音評估'}
+                  AI 發音評估
                 </>
               )}
             </Button>
-          ) : (
-            <div className="text-gray-400 text-sm">請先錄音後進行 AI 評估</div>
           )}
         </div>
 
@@ -507,12 +515,12 @@ export default function GroupedQuestionsTemplate({
               </div>
 
               {/* 單字詳細評分 */}
-              {assessmentResults[currentQuestionIndex].words &&
-               assessmentResults[currentQuestionIndex].words.length > 0 && (
+              {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details) &&
+               (assessmentResults[currentQuestionIndex].words?.length > 0 || assessmentResults[currentQuestionIndex].word_details?.length > 0) && (
                 <div className="space-y-2">
                   <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
                   <div className="flex flex-wrap gap-2">
-                    {assessmentResults[currentQuestionIndex].words.map((word: any, idx: number) => {
+                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: any, idx: number) => {
                       const score = word.accuracy_score || 0;
                       // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
                       const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';

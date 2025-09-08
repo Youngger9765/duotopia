@@ -171,10 +171,10 @@ export default function StudentActivityPage() {
         const audioBlob = new Blob(chunks, { type: 'audio/webm' });
         const currentActivity = activities[currentActivityIndex];
 
-        // Create audio URL for playback
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // Create local audio URL for playback
+        const localAudioUrl = URL.createObjectURL(audioBlob);
 
-        // Update local state
+        // Update local state immediately for playback
         setAnswers(prev => {
           const newAnswers = new Map(prev);
           const answer = newAnswers.get(currentActivity.id) || {
@@ -188,14 +188,14 @@ export default function StudentActivityPage() {
           // For grouped questions, store recordings per sub-question
           if (currentActivity.items && currentActivity.items.length > 0) {
             if (!answer.recordings) answer.recordings = [];
-            answer.recordings[currentSubQuestionIndex] = audioUrl;
+            answer.recordings[currentSubQuestionIndex] = localAudioUrl;
           } else {
             // For single questions, store directly
             answer.audioBlob = audioBlob;
-            answer.audioUrl = audioUrl;
+            answer.audioUrl = localAudioUrl;
           }
 
-          answer.status = 'completed';
+          answer.status = 'in_progress';  // Keep as in_progress until uploaded
           answer.endTime = new Date();
 
           newAnswers.set(currentActivity.id, answer);
@@ -205,11 +205,108 @@ export default function StudentActivityPage() {
         // Update activity's recordings array for display
         if (currentActivity.items && currentActivity.items.length > 0) {
           currentActivity.recordings = currentActivity.recordings || [];
-          currentActivity.recordings[currentSubQuestionIndex] = audioUrl;
+          currentActivity.recordings[currentSubQuestionIndex] = localAudioUrl;
         }
 
-        // Save to server
-        await autoSave(audioUrl);
+        // Upload to GCS
+        const skipUpload = false; // 啟用 GCS 上傳
+        if (!skipUpload) {
+        try {
+          const formData = new FormData();
+          formData.append('assignment_id', assignmentId || '');
+          formData.append('content_item_index', currentSubQuestionIndex.toString());
+          formData.append('audio_file', audioBlob, 'recording.webm');
+
+          const apiUrl = import.meta.env.VITE_API_URL || '';
+          console.log('Uploading recording to:', `${apiUrl}/api/students/upload-recording`);
+
+          const uploadResponse = await fetch(`${apiUrl}/api/students/upload-recording`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (uploadResponse.ok) {
+            const result = await uploadResponse.json();
+            const { audio_url, storage_type, message } = result;
+            console.log('Recording uploaded successfully:', {
+              url: audio_url,
+              storage: storage_type,
+              message: message
+            });
+
+            // 根據儲存類型顯示不同訊息
+            if (storage_type === 'local') {
+              console.warn('Using local storage (GCS not available)');
+              toast.info('錄音已儲存在本地伺服器');
+            } else {
+              toast.success('錄音已上傳到雲端');
+            }
+
+            // Update with the URL (whether local or GCS)
+            setAnswers(prev => {
+              const newAnswers = new Map(prev);
+              const answer = newAnswers.get(currentActivity.id);
+              if (answer) {
+                if (currentActivity.items && currentActivity.items.length > 0) {
+                  if (!answer.recordings) answer.recordings = [];
+                  answer.recordings[currentSubQuestionIndex] = audio_url;
+                } else {
+                  answer.audioUrl = audio_url;
+                }
+                answer.status = 'completed';
+              }
+              newAnswers.set(currentActivity.id, answer!);
+              return newAnswers;
+            });
+
+            // Save to server with the URL
+            await autoSave(audio_url);
+          } else {
+            const errorText = await uploadResponse.text();
+            console.error('Upload failed with status:', uploadResponse.status, errorText);
+            throw new Error(`Upload failed: ${uploadResponse.status}`);
+          }
+        } catch (error) {
+          console.error('Failed to upload recording:', error);
+
+          // 如果是網絡錯誤，先保存在本地
+          if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            console.log('Network error - saving locally for now');
+            toast.warning('網絡問題，錄音已暫存本地');
+
+            // 仍然保存本地 URL 讓用戶可以播放
+            setAnswers(prev => {
+              const newAnswers = new Map(prev);
+              const answer = newAnswers.get(currentActivity.id);
+              if (answer) {
+                answer.status = 'completed';
+              }
+              newAnswers.set(currentActivity.id, answer!);
+              return newAnswers;
+            });
+          } else {
+            toast.error('錄音上傳失敗，請稍後再試');
+          }
+        }
+        } else {
+          // 暫時跳過上傳，只使用本地儲存
+          console.log('Skipping GCS upload - using local storage');
+          setAnswers(prev => {
+            const newAnswers = new Map(prev);
+            const answer = newAnswers.get(currentActivity.id);
+            if (answer) {
+              answer.status = 'completed';
+            }
+            newAnswers.set(currentActivity.id, answer!);
+            return newAnswers;
+          });
+
+          // 仍然保存到 server（但使用本地 URL）
+          await autoSave(localAudioUrl);
+        }
 
         // Clean up
         stream.getTracks().forEach(track => track.stop());

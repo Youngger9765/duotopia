@@ -17,6 +17,9 @@ COPY service[s] ./services/
 COPY router[s] ./routers/
 COPY cor[e] ./core/
 
+# 複製 GCS service account key（如果存在）
+COPY service-account-key.jso[n] ./service-account-key.json
+
 # 暴露端口 (Cloud Run 使用 8080)
 EXPOSE 8080
 

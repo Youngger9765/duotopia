@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
+from datetime import datetime
 from database import get_db
 from models import (
     Student,
@@ -267,7 +268,9 @@ async def get_assignment_activities(
                         progress.status.value if progress.status else "NOT_STARTED"
                     ),
                     "score": progress.score,
-                    "audio_url": progress.audio_url,
+                    "audio_url": progress.response_data.get("audio_url")
+                    if progress.response_data
+                    else None,
                     "completed_at": (
                         progress.completed_at.isoformat()
                         if progress.completed_at
@@ -305,9 +308,11 @@ async def get_assignment_activities(
                     ),
                     "title": content.title,
                     "duration": 60,  # Default duration
-                    "points": 100 // len(progress_records)
-                    if len(progress_records) > 0
-                    else 100,  # 平均分配分數
+                    "points": (
+                        100 // len(progress_records)
+                        if len(progress_records) > 0
+                        else 100
+                    ),  # 平均分配分數
                     "status": (
                         progress.status.value if progress.status else "NOT_STARTED"
                     ),
@@ -333,9 +338,15 @@ async def get_assignment_activities(
 
                     # 如果有 response_data，包含所有錄音
                     if progress.response_data:
-                        activity_data["recordings"] = progress.response_data.get(
-                            "recordings", []
-                        )
+                        # 對於有 items 的情況，可能錄音存在 recordings 陣列或 audio_url 中
+                        recordings = progress.response_data.get("recordings", [])
+                        audio_url = progress.response_data.get("audio_url")
+
+                        # 如果有 audio_url 但 recordings 為空，將 audio_url 放到 recordings[0]
+                        if audio_url and not recordings:
+                            recordings = [audio_url]
+
+                        activity_data["recordings"] = recordings
                         activity_data["answers"] = progress.response_data.get(
                             "answers", []
                         )
@@ -743,6 +754,139 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         "email": student.email,
         "verified": True,
     }
+
+
+@router.post("/upload-recording")
+async def upload_student_recording(
+    assignment_id: int = Form(...),
+    content_item_index: int = Form(...),
+    audio_file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """上傳學生錄音到 Google Cloud Storage (支援重新錄製)"""
+    try:
+        from services.audio_upload import get_audio_upload_service
+        from services.audio_manager import get_audio_manager
+
+        audio_service = get_audio_upload_service()
+        audio_manager = get_audio_manager()
+
+        # 驗證學生身份
+        if current_user.get("type") != "student":
+            raise HTTPException(
+                status_code=403, detail="Only students can upload recordings"
+            )
+
+        student_id = int(current_user.get("sub"))
+
+        # 驗證作業存在且屬於該學生
+        assignment = (
+            db.query(StudentAssignment)
+            .filter(
+                StudentAssignment.id == assignment_id,
+                StudentAssignment.student_id == student_id,
+            )
+            .first()
+        )
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # 查找現有的 StudentContentProgress 記錄以獲取舊 URL
+        existing_progress = (
+            db.query(StudentContentProgress)
+            .filter(
+                StudentContentProgress.student_assignment_id == assignment_id,
+                StudentContentProgress.order_index == content_item_index,
+            )
+            .first()
+        )
+
+        # 檢查是否有舊錄音需要刪除
+        old_audio_url = None
+        if existing_progress and existing_progress.response_data:
+            old_audio_url = existing_progress.response_data.get("audio_url")
+
+        # 簡單上傳，不需要複雜的檔名識別
+        # 使用真實的 content_id 創建資料庫記錄（簡化：使用 content_id = 1）
+        real_content_id = 1
+
+        # 上傳新錄音（不傳 content_id 和 item_index，讓它用 UUID）
+        audio_url = await audio_service.upload_audio(
+            audio_file, duration_seconds=30  # 預設 30 秒
+        )
+
+        # 刪除舊錄音檔案（如果存在且不同）
+        if old_audio_url and old_audio_url != audio_url:
+            try:
+                audio_manager.delete_old_audio(old_audio_url)
+                print(f"Deleted old student recording: {old_audio_url}")
+
+                # 同時清除舊的 AI 分數，因為分數對應的是舊錄音
+                if existing_progress and existing_progress.response_data:
+                    # 保留錄音相關資訊，但清除 AI 評分
+                    ai_fields_to_clear = [
+                        "ai_scores",
+                        "pronunciation_score",
+                        "fluency_score",
+                        "accuracy_score",
+                        "word_scores",
+                    ]
+                    for field in ai_fields_to_clear:
+                        if field in existing_progress.response_data:
+                            del existing_progress.response_data[field]
+                    print(f"Cleared AI scores for re-recording")
+
+            except Exception as e:
+                print(f"Failed to delete old recording: {e}")
+
+        # 更新或創建 StudentContentProgress 記錄
+        if existing_progress:
+            # 更新現有記錄
+            if not existing_progress.response_data:
+                existing_progress.response_data = {}
+            existing_progress.response_data["audio_url"] = audio_url
+            existing_progress.response_data[
+                "recorded_at"
+            ] = datetime.utcnow().isoformat()
+            existing_progress.status = "IN_PROGRESS"
+            print(f"Updated existing progress record: {existing_progress.id}")
+        else:
+            # 創建新記錄（使用真實的 content_id）
+            new_progress = StudentContentProgress(
+                student_assignment_id=assignment_id,
+                content_id=real_content_id,  # 使用真實的 content_id
+                order_index=content_item_index,
+                status="IN_PROGRESS",
+                response_data={
+                    "audio_url": audio_url,
+                    "recorded_at": datetime.utcnow().isoformat(),
+                },
+            )
+            db.add(new_progress)
+            print(f"Created new progress record")
+
+        db.commit()
+
+        # 判斷是否使用本地儲存
+        is_local_storage = audio_url.startswith("/static/")
+        storage_type = "local" if is_local_storage else "gcs"
+
+        return {
+            "audio_url": audio_url,
+            "assignment_id": assignment_id,
+            "content_item_index": content_item_index,
+            "storage_type": storage_type,
+            "message": f"Recording uploaded successfully to {storage_type} storage",
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Student upload error: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to upload recording: {str(e)}"
+        )
 
 
 @router.get("/{student_id}/email-status")

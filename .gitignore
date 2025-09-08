@@ -44,6 +44,14 @@ yarn-error.log*
 .env.production
 .env.staging
 
+# Service Account Keys (NEVER COMMIT!)
+service-account-key.json
+*-key.json
+*-sa.json
+*-credentials.json
+/backend/service-account-key.json
+/backend/*-key.json
+
 # IDEs
 .vscode/
 .idea/
