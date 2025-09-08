@@ -375,6 +375,48 @@ jobs:
           fi
         done
 
+    # 清理舊版本映像檔（省錢）
+    - name: Cleanup old images
+      if: success()
+      run: |
+        echo "🧹 清理 Artifact Registry 舊版本..."
+
+        # 獲取當前使用的版本標籤
+        CURRENT_TAG=$GITHUB_SHA
+
+        # 清理 staging backend 舊版本
+        echo "清理 $BACKEND_SERVICE 舊版本..."
+        gcloud artifacts docker images list \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE \
+          --format='value(IMAGE)' | \
+        while read IMAGE; do
+          if [[ "$IMAGE" != *"$CURRENT_TAG"* ]]; then
+            echo "刪除: ${IMAGE##*/}"
+            gcloud artifacts docker images delete "$IMAGE" --quiet --delete-tags || true
+          fi
+        done
+
+        # 清理 staging frontend 舊版本
+        echo "清理 $FRONTEND_SERVICE 舊版本..."
+        gcloud artifacts docker images list \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE \
+          --format='value(IMAGE)' | \
+        while read IMAGE; do
+          if [[ "$IMAGE" != *"$CURRENT_TAG"* ]]; then
+            echo "刪除: ${IMAGE##*/}"
+            gcloud artifacts docker images delete "$IMAGE" --quiet --delete-tags || true
+          fi
+        done
+
+        echo "✅ 清理完成"
+
+        # 顯示清理後的儲存空間
+        REPO_SIZE=$(gcloud artifacts repositories describe $REPOSITORY \
+          --location=$REGION \
+          --format='value(sizeBytes)' 2>/dev/null || echo "0")
+        REPO_SIZE_MB=$(echo "scale=2; $REPO_SIZE / 1048576" | bc)
+        echo "📦 Artifact Registry 使用空間: ${REPO_SIZE_MB} MB"
+
     # 顯示部署摘要
     - name: Deployment Summary
       if: success()
