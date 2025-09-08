@@ -1,13 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import {
   CheckCircle,
   Mic,
   Square,
   Play,
   Pause,
-  Volume2
+  Volume2,
+  Brain,
+  Loader2,
+  Star
 } from 'lucide-react';
 
 interface Question {
@@ -27,6 +32,8 @@ interface GroupedQuestionsTemplateProps {
   onStartRecording?: () => void;
   onStopRecording?: () => void;
   formatTime?: (seconds: number) => string;
+  progressId?: number | string;
+  initialAssessmentResults?: any; // AI 評估結果
 }
 
 export default function GroupedQuestionsTemplate({
@@ -38,14 +45,21 @@ export default function GroupedQuestionsTemplate({
   recordingTime = 0,
   onStartRecording,
   onStopRecording,
-  formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+  formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`,
+  progressId,
+  initialAssessmentResults
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isAssessing, setIsAssessing] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState<Record<number, any>>(
+    initialAssessmentResults ? { [currentQuestionIndex]: initialAssessmentResults } : {}
+  );
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { token } = useStudentAuthStore();
 
   // 檢查題目是否已完成
   const isQuestionCompleted = (index: number) => {
@@ -146,6 +160,65 @@ export default function GroupedQuestionsTemplate({
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // AI 發音評估
+  const handleAssessment = async () => {
+    const audioUrl = recordings[currentQuestionIndex];
+    const referenceText = currentQuestion?.text;
+
+    if (!audioUrl || !referenceText) {
+      toast.error('請先錄音並確保有參考文本');
+      return;
+    }
+
+    setIsAssessing(true);
+    try {
+      // Convert blob URL to blob
+      const response = await fetch(audioUrl);
+      const audioBlob = await response.blob();
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('audio_file', audioBlob, 'recording.webm');
+      formData.append('reference_text', referenceText);
+      formData.append('progress_id', String(progressId || '1')); // Use actual progress ID
+
+      // Get authentication token from store
+      if (!token) {
+        toast.error('請重新登入');
+        return;
+      }
+
+      // Call API
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!assessResponse.ok) {
+        throw new Error('評估失敗');
+      }
+
+      const result = await assessResponse.json();
+
+      // Store result
+      setAssessmentResults(prev => ({
+        ...prev,
+        [currentQuestionIndex]: result
+      }));
+
+      toast.success('AI 發音評估完成！');
+    } catch (error) {
+      console.error('Assessment error:', error);
+      toast.error('AI 評估失敗，請稍後再試');
+    } finally {
+      setIsAssessing(false);
+    }
   };
 
   return (
@@ -269,82 +342,226 @@ export default function GroupedQuestionsTemplate({
           )}
         </div>
 
-        {/* 已錄音檔案播放 - 音檔播放器樣式 */}
-        {recordings[currentQuestionIndex] && (
-          <div className="mt-6 max-w-lg mx-auto">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 shadow-sm">
-              <div className="flex items-center gap-4">
-                {/* 播放/暫停按鈕 */}
-                <button
-                  onClick={togglePlayback}
-                  className="flex-shrink-0 w-14 h-14 bg-green-600 hover:bg-green-700 transition-colors rounded-full flex items-center justify-center text-white shadow-md"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-6 h-6" fill="currentColor" />
-                  ) : (
-                    <Play className="w-6 h-6 ml-1" fill="currentColor" />
-                  )}
-                </button>
+        {/* 2. 錄音結果區 - 固定顯示 */}
+        <div className="mt-6">
+          {recordings[currentQuestionIndex] ? (
+            <div className="max-w-lg mx-auto">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 shadow-sm">
+                <div className="flex items-center gap-4">
+                  {/* 播放/暫停按鈕 */}
+                  <button
+                    onClick={togglePlayback}
+                    className="flex-shrink-0 w-14 h-14 bg-green-600 hover:bg-green-700 transition-colors rounded-full flex items-center justify-center text-white shadow-md"
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-6 h-6" fill="currentColor" />
+                    ) : (
+                      <Play className="w-6 h-6 ml-1" fill="currentColor" />
+                    )}
+                  </button>
 
-                {/* 音檔資訊與時間軸 */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-800">已錄製音檔</span>
-                  </div>
-
-                  {/* 時間軸 */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 relative h-2 bg-green-200 rounded-full overflow-hidden">
-                      <div
-                        className="absolute h-full bg-green-500 rounded-full transition-all duration-100"
-                        style={{
-                          width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
-                        }}
-                      />
-                      {/* 播放點 */}
-                      {duration > 0 && isPlaying && (
-                        <div
-                          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-green-600 rounded-full shadow-sm"
-                          style={{
-                            left: `calc(${(currentTime / duration) * 100}% - 6px)`
-                          }}
-                        />
-                      )}
+                  {/* 音檔資訊與時間軸 */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-800">已錄製音檔</span>
                     </div>
 
-                    {/* 只顯示總時長 */}
-                    <span className="text-xs text-gray-600 font-medium min-w-[35px]">
-                      {formatAudioTime(duration || 0)}
-                    </span>
-                  </div>
-                </div>
+                    {/* 時間軸 */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 relative h-2 bg-green-200 rounded-full overflow-hidden">
+                        <div
+                          className="absolute h-full bg-green-500 rounded-full transition-all duration-100"
+                          style={{
+                            width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
+                          }}
+                        />
+                        {/* 播放點 */}
+                        {duration > 0 && isPlaying && (
+                          <div
+                            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-green-600 rounded-full shadow-sm"
+                            style={{
+                              left: `calc(${(currentTime / duration) * 100}% - 6px)`
+                            }}
+                          />
+                        )}
+                      </div>
 
-                {/* 重錄按鈕 */}
-                <button
-                  onClick={() => {
-                    if (audioRef.current) {
-                      audioRef.current.pause();
-                    }
-                    setIsPlaying(false);
-                    setCurrentTime(0);
-                    if (onStartRecording) {
-                      // Clear current recording
-                      recordings[currentQuestionIndex] = '';
-                      onStartRecording();
-                    }
-                  }}
-                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                  title="重新錄音"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
+                      {/* 只顯示總時長 */}
+                      <span className="text-xs text-gray-600 font-medium min-w-[35px]">
+                        {formatAudioTime(duration || 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 重錄按鈕 */}
+                  <button
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.pause();
+                      }
+                      setIsPlaying(false);
+                      setCurrentTime(0);
+                      if (onStartRecording) {
+                        // Clear current recording
+                        recordings[currentQuestionIndex] = '';
+                        onStartRecording();
+                      }
+                    }}
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                    title="重新錄音"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="max-w-lg mx-auto min-h-[100px] bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <Mic className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">錄音結果將顯示於此</p>
+                <p className="text-xs mt-1">點擊上方錄音按鈕開始錄音</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. AI 評估按鈕區 - 固定顯示 */}
+        <div className="mt-6 flex justify-center min-h-[60px] items-center">
+          {recordings[currentQuestionIndex] ? (
+            <Button
+              size="lg"
+              onClick={handleAssessment}
+              disabled={isAssessing}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+            >
+              {isAssessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  AI 評估中...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-5 h-5 mr-2" />
+                  {assessmentResults[currentQuestionIndex] ? 'AI 重新評估' : 'AI 發音評估'}
+                </>
+              )}
+            </Button>
+          ) : (
+            <div className="text-gray-400 text-sm">請先錄音後進行 AI 評估</div>
+          )}
+        </div>
+
+        {/* 4. AI 評估結果區 - 固定顯示 */}
+        <div className="mt-6">
+          {assessmentResults[currentQuestionIndex] ? (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-purple-600" />
+                  AI 發音評估結果
+                </h4>
+                <button
+                  onClick={() => {
+                    setAssessmentResults(prev => {
+                      const newResults = { ...prev };
+                      delete newResults[currentQuestionIndex];
+                      return newResults;
+                    });
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  清除結果
+                </button>
+              </div>
+
+              {/* 總體分數 */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {assessmentResults[currentQuestionIndex].pronunciation_score?.toFixed(1) || '0'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">總體發音</div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {assessmentResults[currentQuestionIndex].accuracy_score?.toFixed(1) || '0'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">準確度</div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {assessmentResults[currentQuestionIndex].fluency_score?.toFixed(1) || '0'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">流暢度</div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {assessmentResults[currentQuestionIndex].completeness_score?.toFixed(1) || '0'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">完整度</div>
+                </div>
+              </div>
+
+              {/* 單字詳細評分 */}
+              {assessmentResults[currentQuestionIndex].words &&
+               assessmentResults[currentQuestionIndex].words.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {assessmentResults[currentQuestionIndex].words.map((word: any, idx: number) => {
+                      const score = word.accuracy_score || 0;
+                      // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
+                      const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';
+                      const borderColor = score >= 80 ? 'border-green-300' : score >= 60 ? 'border-yellow-300' : 'border-red-300';
+                      const textColor = score >= 80 ? 'text-green-800' : score >= 60 ? 'text-yellow-800' : 'text-red-800';
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`${bgColor} ${borderColor} ${textColor} border rounded-lg px-3 py-1.5 text-sm font-medium`}
+                        >
+                          <span className="font-semibold">{word.word}</span>
+                          <span className="ml-2 text-xs opacity-80">({score})</span>
+                          {word.error_type && word.error_type !== 'None' && (
+                            <span className="ml-1 text-xs">⚠️</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 建議區域 */}
+              <div className="mt-4 pt-4 border-t border-purple-200">
+                <div className="flex items-start gap-2">
+                  <Star className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-700">
+                    {assessmentResults[currentQuestionIndex].pronunciation_score >= 80 ? (
+                      <span className="font-medium text-green-700">表現優秀！繼續保持這樣的發音水準。</span>
+                    ) : assessmentResults[currentQuestionIndex].pronunciation_score >= 60 ? (
+                      <span className="font-medium text-yellow-700">不錯！注意準確度和流暢度的平衡。</span>
+                    ) : (
+                      <span className="font-medium text-red-700">需要更多練習，特別注意標示的單字發音。</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="min-h-[300px] bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <Brain className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">等待 AI 評估結果</p>
+                <p className="text-xs mt-1">錄音後點擊評估按鈕</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

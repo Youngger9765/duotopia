@@ -51,6 +51,18 @@ interface Activity {
   blanks?: string[];
   prompts?: string[];
   example_audio_url?: string;
+  // AI evaluation results
+  ai_scores?: {
+    accuracy_score?: number;
+    fluency_score?: number;
+    completeness_score?: number;
+    pronunciation_score?: number;
+    word_details?: Array<{
+      word: string;
+      accuracy_score: number;
+      error_type: string;
+    }>;
+  };
 }
 
 interface ActivityResponse {
@@ -255,21 +267,55 @@ export default function StudentActivityPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Navigation
+  // Navigation - handles both activities and sub-questions
   const handleNextActivity = async () => {
     await autoSave();
+    const currentActivity = activities[currentActivityIndex];
+
+    // If current activity has sub-questions and we're not at the last one
+    if (currentActivity.items && currentActivity.items.length > 0) {
+      if (currentSubQuestionIndex < currentActivity.items.length - 1) {
+        // Move to next sub-question
+        setCurrentSubQuestionIndex(currentSubQuestionIndex + 1);
+        setRecordingTime(0);
+        return;
+      }
+    }
+
+    // Move to next activity if available
     if (currentActivityIndex < activities.length - 1) {
       setCurrentActivityIndex(currentActivityIndex + 1);
-      setCurrentSubQuestionIndex(0); // Reset sub-question index
-      setRecordingTime(0); // Reset recording time for new activity
+      setCurrentSubQuestionIndex(0);
+      setRecordingTime(0);
     }
   };
 
   const handlePreviousActivity = async () => {
     await autoSave();
+    const currentActivity = activities[currentActivityIndex];
+
+    // If current activity has sub-questions and we're not at the first one
+    if (currentActivity.items && currentActivity.items.length > 0) {
+      if (currentSubQuestionIndex > 0) {
+        // Move to previous sub-question
+        setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
+        setRecordingTime(0);
+        return;
+      }
+    }
+
+    // Move to previous activity if available
     if (currentActivityIndex > 0) {
-      setCurrentActivityIndex(currentActivityIndex - 1);
-      setCurrentSubQuestionIndex(0); // Reset sub-question index
+      const prevActivityIndex = currentActivityIndex - 1;
+      const prevActivity = activities[prevActivityIndex];
+      setCurrentActivityIndex(prevActivityIndex);
+
+      // If previous activity has sub-questions, go to the last one
+      if (prevActivity.items && prevActivity.items.length > 0) {
+        setCurrentSubQuestionIndex(prevActivity.items.length - 1);
+      } else {
+        setCurrentSubQuestionIndex(0);
+      }
       setRecordingTime(0);
     }
   };
@@ -403,6 +449,8 @@ export default function StudentActivityPage() {
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           formatTime={formatTime}
+          progressId={activity.id}
+          initialAssessmentResults={activity.ai_scores}
         />
       );
     }
@@ -670,41 +718,73 @@ export default function StudentActivityPage() {
               <Button
                 variant="outline"
                 onClick={handlePreviousActivity}
-                disabled={currentActivityIndex === 0}
+                disabled={currentActivityIndex === 0 && currentSubQuestionIndex === 0}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 上一題
               </Button>
 
               <span className="text-sm text-gray-600">
-                {currentActivityIndex + 1} / {activities.length}
+                {(() => {
+                  // Calculate current question number across all activities
+                  let currentQuestion = 0;
+                  let totalQuestions = 0;
+
+                  for (let i = 0; i < activities.length; i++) {
+                    const activity = activities[i];
+                    const questionCount = activity.items?.length || 1;
+
+                    if (i < currentActivityIndex) {
+                      currentQuestion += questionCount;
+                    } else if (i === currentActivityIndex) {
+                      currentQuestion += (activity.items ? currentSubQuestionIndex + 1 : 1);
+                    }
+
+                    totalQuestions += questionCount;
+                  }
+
+                  return `${currentQuestion} / ${totalQuestions}`;
+                })()}
               </span>
 
-              {currentActivityIndex < activities.length - 1 ? (
-                <Button
-                  onClick={handleNextActivity}
-                >
-                  下一題
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      提交中...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      完成並提交
-                    </>
-                  )}
-                </Button>
-              )}
+              {(() => {
+                const currentActivity = activities[currentActivityIndex];
+                const isLastActivity = currentActivityIndex === activities.length - 1;
+                const isLastSubQuestion = currentActivity.items
+                  ? currentSubQuestionIndex === currentActivity.items.length - 1
+                  : true;
+                const isLastQuestion = isLastActivity && isLastSubQuestion;
+
+                if (isLastQuestion) {
+                  return (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          提交中...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          完成並提交
+                        </>
+                      )}
+                    </Button>
+                  );
+                }
+
+                return (
+                  <Button
+                    onClick={handleNextActivity}
+                  >
+                    下一題
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

@@ -6,9 +6,12 @@ import os
 import logging
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from io import BytesIO
+import tempfile
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from pydub import AudioSegment
 
 from database import get_db
 from auth import get_current_user
@@ -54,6 +57,62 @@ class AssessmentResponse(BaseModel):
     created_at: Optional[datetime] = None
 
 
+def convert_audio_to_wav(audio_data: bytes, content_type: str) -> bytes:
+    """
+    將音檔轉換為 WAV 格式（16000Hz, 16bit, mono）
+    Azure Speech SDK 需要特定格式的 WAV
+    """
+    logger.info(f"[DEBUG] Converting audio from {content_type} to WAV")
+
+    try:
+        # 根據 content type 選擇格式
+        if "webm" in content_type:
+            # WebM 格式（瀏覽器錄音）
+            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_in:
+                temp_in.write(audio_data)
+                temp_in_path = temp_in.name
+
+            # 使用 pydub 轉換（需要 ffmpeg）
+            audio = AudioSegment.from_file(temp_in_path, format="webm")
+        elif "mp3" in content_type or "mpeg" in content_type:
+            # MP3 格式
+            audio = AudioSegment.from_mp3(BytesIO(audio_data))
+        elif "wav" in content_type:
+            # 已經是 WAV，但可能需要轉換採樣率
+            audio = AudioSegment.from_wav(BytesIO(audio_data))
+        else:
+            # 嘗試自動偵測格式
+            audio = AudioSegment.from_file(BytesIO(audio_data))
+
+        # 轉換為 Azure Speech SDK 需要的格式
+        # 16000Hz 採樣率, 單聲道, 16bit
+        audio = audio.set_frame_rate(16000)
+        audio = audio.set_channels(1)
+        audio = audio.set_sample_width(2)  # 16bit = 2 bytes
+
+        # 輸出為 WAV
+        wav_buffer = BytesIO()
+        audio.export(wav_buffer, format="wav")
+        wav_data = wav_buffer.getvalue()
+
+        logger.info(
+            f"[DEBUG] Converted audio: {len(audio_data)} bytes -> {len(wav_data)} bytes WAV"
+        )
+        logger.info(f"[DEBUG] Audio duration: {len(audio) / 1000.0} seconds")
+
+        # 清理暫存檔
+        if "temp_in_path" in locals():
+            os.unlink(temp_in_path)
+
+        return wav_data
+
+    except Exception as e:
+        logger.error(f"[DEBUG] Audio conversion failed: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Audio format conversion failed: {str(e)}"
+        )
+
+
 def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, Any]:
     """
     呼叫 Azure Speech API 進行發音評估
@@ -71,7 +130,13 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
     speech_key = os.getenv("AZURE_SPEECH_KEY")
     speech_region = os.getenv("AZURE_SPEECH_REGION", "eastasia")
 
+    logger.info(f"[DEBUG] Azure Speech Key exists: {bool(speech_key)}")
+    logger.info(f"[DEBUG] Azure Speech Region: {speech_region}")
+    logger.info(f"[DEBUG] Audio data size: {len(audio_data)} bytes")
+    logger.info(f"[DEBUG] Reference text: {reference_text}")
+
     if not speech_key:
+        logger.error("[DEBUG] AZURE_SPEECH_KEY not configured!")
         raise ValueError("AZURE_SPEECH_KEY not configured")
 
     try:
@@ -121,13 +186,34 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             }
 
             # 解析單字詳細資料
-            for word in pronunciation_result.words:
-                word_data = {
-                    "word": word.word,
-                    "accuracy_score": word.accuracy_score,
-                    "error_type": word.error_type.name if word.error_type else "None",
-                }
-                assessment_result["words"].append(word_data)
+            logger.info(f"[DEBUG] Parsing {len(pronunciation_result.words)} words...")
+            for idx, word in enumerate(pronunciation_result.words):
+                logger.info(f"[DEBUG] Word {idx}: type={type(word)}, attrs={dir(word)}")
+                try:
+                    # 檢查 error_type 是否有 name 屬性
+                    error_type = None
+                    if word.error_type:
+                        logger.info(
+                            f"[DEBUG] error_type exists, type={type(word.error_type)}"
+                        )
+                        if hasattr(word.error_type, "name"):
+                            error_type = word.error_type.name
+                        else:
+                            # error_type 可能是字串
+                            error_type = str(word.error_type)
+                            logger.info(f"[DEBUG] error_type is string: {error_type}")
+
+                    word_data = {
+                        "word": word.word,
+                        "accuracy_score": word.accuracy_score,
+                        "error_type": error_type,
+                    }
+                    assessment_result["words"].append(word_data)
+                    logger.info(f"[DEBUG] Successfully processed word: {word_data}")
+                except Exception as e:
+                    logger.error(f"[DEBUG] Error processing word {idx}: {e}")
+                    logger.error(f"[DEBUG] Word object: {word}")
+                    raise
 
             return assessment_result
 
@@ -141,7 +227,11 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             )
 
     except Exception as e:
-        logger.error(f"Azure Speech API error: {str(e)}")
+        logger.error(f"[DEBUG] Azure Speech API error: {str(e)}")
+        logger.error(f"[DEBUG] Error type: {type(e)}")
+        import traceback
+
+        logger.error(f"[DEBUG] Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=503, detail="Service unavailable. Please try again later."
         )
@@ -219,8 +309,11 @@ async def assess_pronunciation_endpoint(
             detail=f"File too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB",
         )
 
+    # 轉換音檔格式為 WAV（Azure Speech SDK 需要）
+    wav_audio_data = convert_audio_to_wav(audio_data, audio_file.content_type)
+
     # 進行發音評估
-    assessment_result = assess_pronunciation(audio_data, reference_text)
+    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
 
     # 儲存結果到資料庫
     updated_progress = save_assessment_result(

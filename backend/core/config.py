@@ -6,12 +6,37 @@ Supports switching between Supabase and Cloud SQL
 import os
 from typing import Literal, Optional  # noqa: F401
 from functools import lru_cache
+from pathlib import Path
+from dotenv import load_dotenv
+
+# 載入環境變數
+# 環境優先順序：.env.local > .env.staging > .env
+root_dir = Path(__file__).parent.parent.parent
+
+# 先嘗試載入 .env.local（本地開發）
+env_local = root_dir / ".env.local"
+env_staging = root_dir / ".env.staging"
+env_default = root_dir / ".env"
+
+# Silent loading - no console output for security
+if env_local.exists():
+    load_dotenv(env_local, override=True)
+elif env_staging.exists() and os.getenv("ENVIRONMENT") == "staging":
+    load_dotenv(env_staging, override=True)
+elif env_default.exists():
+    load_dotenv(env_default, override=True)
+else:
+    load_dotenv()
 
 
 class Settings:
     # Environment
-    ENVIRONMENT: Literal["local", "staging", "production"] = os.getenv("ENVIRONMENT", "local")
-    DATABASE_TYPE: Literal["local", "supabase", "cloudsql"] = os.getenv("DATABASE_TYPE", "local")
+    ENVIRONMENT: Literal["local", "staging", "production"] = os.getenv(
+        "ENVIRONMENT", "local"
+    )
+    DATABASE_TYPE: Literal["local", "supabase", "cloudsql"] = os.getenv(
+        "DATABASE_TYPE", "local"
+    )
 
     # Database
     DATABASE_URL: str = os.getenv(
@@ -34,6 +59,11 @@ class Settings:
 
     # OpenAI (optional)
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+
+    # Azure Speech Services (optional)
+    AZURE_SPEECH_KEY: Optional[str] = os.getenv("AZURE_SPEECH_KEY")
+    AZURE_SPEECH_REGION: Optional[str] = os.getenv("AZURE_SPEECH_REGION", "eastasia")
+    AZURE_SPEECH_ENDPOINT: Optional[str] = os.getenv("AZURE_SPEECH_ENDPOINT")
 
     # GCP (optional)
     GCP_PROJECT_ID: Optional[str] = os.getenv("GCP_PROJECT_ID", "duotopia-469413")
@@ -85,9 +115,13 @@ class Settings:
             raise ValueError("DATABASE_URL is required")
 
         if self.DATABASE_TYPE == "supabase" and not self.SUPABASE_URL:
-            print("Warning: Using Supabase but SUPABASE_URL not set")
+            # Silent warning - don't expose configuration details
+            pass
 
-        if self.is_production and self.JWT_SECRET == "your-secret-key-change-in-production":
+        if (
+            self.is_production
+            and self.JWT_SECRET == "your-secret-key-change-in-production"
+        ):
             raise ValueError("Please set a secure JWT_SECRET for production")
 
         return True

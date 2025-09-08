@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   CheckCircle,
   Upload,
-  Star
+  // Star
 } from 'lucide-react';
 import { AssignmentDetail as AssignmentDetailType } from '@/types';
 
@@ -48,24 +48,50 @@ export default function AssignmentDetail() {
     try {
       setLoading(true);
       // 學生應該使用學生的 API endpoint
-      const response = await apiClient.get(`/api/students/assignments/${id}/activities`);
+      const response = await apiClient.get<{
+        data?: {
+          title?: string;
+          activities?: Array<{
+            items?: Array<{
+              text?: string;
+              translation?: string;
+              audio_url?: string;
+            }>;
+          }>;
+        };
+      }>(`/api/students/assignments/${id}/activities`);
 
       // 將 activities API 的資料轉換成 AssignmentDetail 格式
       if (response.data) {
+        const responseData = response.data as {
+          title?: string;
+          activities?: Array<{
+            items?: Array<{
+              text?: string;
+              translation?: string;
+              audio_url?: string;
+            }>;
+          }>;
+        };
+
+        const items = responseData.activities?.flatMap((activity) =>
+          (activity.items || []).map(item => ({
+            text: item.text || '',
+            translation: item.translation,
+            audio_url: item.audio_url
+          }))
+        ) || [];
+
         const assignmentData: AssignmentDetailType = {
           id: parseInt(id || '0'),
-          title: response.data.title || '作業',
+          title: responseData.title || '作業',
           description: '練習作業',
           content: {
             id: parseInt(id || '0'),
-            title: response.data.title || '作業內容',
+            title: responseData.title || '作業內容',
             type: 'reading_assessment',
-            items: (response.data as { activities?: Array<{ items?: unknown[] }> }).activities?.flatMap((activity) =>
-              activity.items || []
-            ) || [],
-            items_count: (response.data as { activities?: Array<{ items?: unknown[] }> }).activities?.reduce((sum: number, activity) =>
-              sum + (activity.items?.length || 0), 0
-            ) || 0,
+            items: items,
+            items_count: items.length,
             target_wpm: 100,
             target_accuracy: 90
           },
@@ -172,11 +198,7 @@ export default function AssignmentDetail() {
       formData.append('reference_text', currentItemText);
       formData.append('progress_id', `${index + 1}`); // 暫時使用 index 作為 progress_id
 
-      const response = await apiClient.post('/api/speech/assess', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await apiClient.post<{ data?: any }>('/api/speech/assess', formData);
 
       if (response.data) {
         setAssessmentResults(prev => new Map(prev).set(index, response.data));

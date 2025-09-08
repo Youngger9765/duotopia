@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import {
   Mic,
   MicOff,
@@ -47,21 +48,21 @@ export default function ReadingAssessmentTemplate({
   exampleAudioUrl,
   progressId
 }: ReadingAssessmentProps) {
-  const [isPlayingExample, setIsPlayingExample] = useState(false);
+  const [, setIsPlayingExample] = useState(false);
   const [isAssessing, setIsAssessing] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const exampleAudioRef = useRef<HTMLAudioElement>(null);
 
-  const handlePlayExample = () => {
-    if (!exampleAudioRef.current) return;
+  // const handlePlayExample = () => {
+  //   if (!exampleAudioRef.current) return;
 
-    if (isPlayingExample) {
-      exampleAudioRef.current.pause();
-    } else {
-      exampleAudioRef.current.play();
-    }
-    setIsPlayingExample(!isPlayingExample);
-  };
+  //   if (isPlayingExample) {
+  //     exampleAudioRef.current.pause();
+  //   } else {
+  //     exampleAudioRef.current.play();
+  //   }
+  //   setIsPlayingExample(!isPlayingExample);
+  // };
 
   const handleAssessment = async () => {
     if (!audioUrl || !progressId) {
@@ -81,8 +82,8 @@ export default function ReadingAssessmentTemplate({
       formData.append('reference_text', targetText);
       formData.append('progress_id', progressId.toString());
 
-      // Get authentication token
-      const token = localStorage.getItem('student_access_token');
+      // Get authentication token from store
+      const { token } = useStudentAuthStore();
       if (!token) {
         toast.error('請重新登入');
         return;

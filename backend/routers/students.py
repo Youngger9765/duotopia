@@ -10,7 +10,7 @@ from models import (
     StudentAssignment,
     Content,
     AssignmentStatus,
-    AssignmentContent,
+    # AssignmentContent,
     StudentContentProgress,
 )
 from auth import (
@@ -273,6 +273,7 @@ async def get_assignment_activities(
                         if progress.completed_at
                         else None
                     ),
+                    "ai_scores": progress.ai_scores,  # 包含 AI 評估結果
                 }
             )
 
@@ -316,6 +317,7 @@ async def get_assignment_activities(
                         if progress.completed_at
                         else None
                     ),
+                    "ai_scores": progress.ai_scores,  # 包含 AI 評估結果
                 }
 
                 # 如果有 items，將它們作為子題目包含進去
