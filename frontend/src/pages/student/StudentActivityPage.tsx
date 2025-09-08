@@ -4,43 +4,70 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import { toast } from 'sonner';
+import ReadingAssessmentTemplate from '@/components/activities/ReadingAssessmentTemplate';
+import ListeningClozeTemplate from '@/components/activities/ListeningClozeTemplate';
+import SpeakingPracticeTemplate from '@/components/activities/SpeakingPracticeTemplate';
+import GroupedQuestionsTemplate from '@/components/activities/GroupedQuestionsTemplate';
 import {
   ChevronLeft,
   ChevronRight,
-  Mic,
-  MicOff,
-  RotateCcw,
   Send,
   CheckCircle,
   Circle,
   Clock,
   Loader2,
-  Volume2,
-  Play,
-  Pause
+  BookOpen
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface Question {
+// Activity type from API
+interface Activity {
   id: number;
+  content_id: number;
   order: number;
-  type: 'reading' | 'listening' | 'speaking';
+  type: string;
   title: string;
   content: string;
-  audioUrl?: string;
-  targetText?: string;
-  duration?: number;
+  target_text: string;
+  duration: number;
   points: number;
+  status: string;
+  score: number | null;
+  audio_url?: string | null;
+  completed_at: string | null;
+  // For activities with multiple items (questions)
+  items?: Array<{
+    text?: string;
+    translation?: string;
+    audio_url?: string;
+    [key: string]: any;
+  }>;
+  item_count?: number;
+  recordings?: string[];
+  answers?: string[];
+  // Additional fields for different activity types
+  blanks?: string[];
+  prompts?: string[];
+  example_audio_url?: string;
+}
+
+interface ActivityResponse {
+  assignment_id: number;
+  title: string;
+  total_activities: number;
+  activities: Activity[];
 }
 
 interface Answer {
-  questionId: number;
+  progressId: number;
   audioBlob?: Blob;
   audioUrl?: string;
   textAnswer?: string;
+  userAnswers?: string[]; // For listening cloze
+  recordings?: string[]; // For grouped questions
+  answers?: string[]; // For grouped questions answers
   startTime: Date;
   endTime?: Date;
   status: 'not_started' | 'in_progress' | 'completed';
@@ -49,127 +76,70 @@ interface Answer {
 export default function StudentActivityPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
-  useStudentAuthStore(); // Will use token when API is connected
+  const { token } = useStudentAuthStore();
 
   // State management
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
+  const [currentSubQuestionIndex, setCurrentSubQuestionIndex] = useState(0); // For activities with multiple items
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Audio playback state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackTime, setPlaybackTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Mock questions for demonstration
+  // Load activities from API
   useEffect(() => {
-    loadQuestions();
-  }, [assignmentId]);
+    if (assignmentId && token) {
+      loadActivities();
+    }
+  }, [assignmentId, token]);
 
-  const loadQuestions = async () => {
+  const loadActivities = async () => {
     try {
       setLoading(true);
-      // Mock data - replace with actual API call
-      const mockQuestions: Question[] = [
-        {
-          id: 1,
-          order: 1,
-          type: 'listening',
-          title: '聽力測驗 - 日常對話',
-          content: 'Listen to the conversation and answer the questions.',
-          audioUrl: '/audio/conversation1.mp3',
-          duration: 120,
-          points: 20
-        },
-        {
-          id: 2,
-          order: 2,
-          type: 'reading',
-          title: '朗讀測驗 - 短文朗讀',
-          content: 'The quick brown fox jumps over the lazy dog. This pangram contains all letters of the English alphabet.',
-          targetText: 'The quick brown fox jumps over the lazy dog.',
-          duration: 60,
-          points: 15
-        },
-        {
-          id: 3,
-          order: 3,
-          type: 'speaking',
-          title: '口說測驗 - 自我介紹',
-          content: 'Please introduce yourself in English. Include your name, age, hobbies, and favorite subject.',
-          duration: 90,
-          points: 25
-        },
-        {
-          id: 4,
-          order: 4,
-          type: 'listening',
-          title: '聽力測驗 - 短文理解',
-          content: 'Listen to the passage and summarize the main points.',
-          audioUrl: '/audio/passage1.mp3',
-          duration: 180,
-          points: 20
-        },
-        {
-          id: 5,
-          order: 5,
-          type: 'reading',
-          title: '朗讀測驗 - 詩歌朗讀',
-          content: 'Roses are red, violets are blue. Sugar is sweet, and so are you.',
-          targetText: 'Roses are red, violets are blue.',
-          duration: 45,
-          points: 20
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/activities`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
+      });
 
-      setQuestions(mockQuestions);
+      if (!response.ok) {
+        throw new Error(`Failed to load activities: ${response.status}`);
+      }
 
-      // Initialize answers for all questions
+      const data: ActivityResponse = await response.json();
+      setActivities(data.activities);
+      setAssignmentTitle(data.title);
+
+      // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
-      mockQuestions.forEach(q => {
-        initialAnswers.set(q.id, {
-          questionId: q.id,
-          status: 'not_started',
-          startTime: new Date()
+      data.activities.forEach(activity => {
+        initialAnswers.set(activity.id, {
+          progressId: activity.id,
+          status: activity.status === 'NOT_STARTED' ? 'not_started' :
+                  activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
+          startTime: new Date(),
+          audioUrl: activity.audio_url || undefined,
+          userAnswers: [] // For listening activities
         });
       });
       setAnswers(initialAnswers);
     } catch (error) {
-      console.error('Failed to load questions:', error);
-      toast.error('無法載入題目');
+      console.error('Failed to load activities:', error);
+      toast.error('無法載入題目，請稍後再試');
+      navigate(`/student/assignment/${assignmentId}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Audio playback controls
-  const handlePlayPause = () => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleReplay = () => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play();
-    setIsPlaying(true);
   };
 
   // Recording controls
@@ -177,37 +147,60 @@ export default function StudentActivityPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          setAudioChunks(prev => [...prev, event.data]);
+          chunks.push(event.data);
         }
       };
 
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const currentQuestion = questions[currentQuestionIndex];
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        const currentActivity = activities[currentActivityIndex];
 
+        // Create audio URL for playback
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Update local state
         setAnswers(prev => {
           const newAnswers = new Map(prev);
-          const answer = newAnswers.get(currentQuestion.id) || {
-            questionId: currentQuestion.id,
+          const answer = newAnswers.get(currentActivity.id) || {
+            progressId: currentActivity.id,
             status: 'not_started',
-            startTime: new Date()
+            startTime: new Date(),
+            recordings: [],
+            answers: []
           };
 
-          answer.audioBlob = audioBlob;
-          answer.audioUrl = URL.createObjectURL(audioBlob);
+          // For grouped questions, store recordings per sub-question
+          if (currentActivity.items && currentActivity.items.length > 0) {
+            if (!answer.recordings) answer.recordings = [];
+            answer.recordings[currentSubQuestionIndex] = audioUrl;
+          } else {
+            // For single questions, store directly
+            answer.audioBlob = audioBlob;
+            answer.audioUrl = audioUrl;
+          }
+
           answer.status = 'completed';
           answer.endTime = new Date();
 
-          newAnswers.set(currentQuestion.id, answer);
+          newAnswers.set(currentActivity.id, answer);
           return newAnswers;
         });
 
+        // Update activity's recordings array for display
+        if (currentActivity.items && currentActivity.items.length > 0) {
+          currentActivity.recordings = currentActivity.recordings || [];
+          currentActivity.recordings[currentSubQuestionIndex] = audioUrl;
+        }
+
+        // Save to server
+        await autoSave(audioUrl);
+
         // Clean up
         stream.getTracks().forEach(track => track.stop());
-        setAudioChunks([]);
       };
 
       recorder.start();
@@ -240,48 +233,81 @@ export default function StudentActivityPage() {
   };
 
   const reRecord = () => {
-    const currentQuestion = questions[currentQuestionIndex];
+    const currentActivity = activities[currentActivityIndex];
     setAnswers(prev => {
       const newAnswers = new Map(prev);
-      const answer = newAnswers.get(currentQuestion.id);
+      const answer = newAnswers.get(currentActivity.id);
       if (answer) {
         answer.audioBlob = undefined;
         answer.audioUrl = undefined;
         answer.status = 'in_progress';
       }
-      newAnswers.set(currentQuestion.id, answer!);
+      newAnswers.set(currentActivity.id, answer!);
       return newAnswers;
     });
     startRecording();
   };
 
+  // Format time display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Navigation
-  const handleNextQuestion = async () => {
+  const handleNextActivity = async () => {
     await autoSave();
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    if (currentActivityIndex < activities.length - 1) {
+      setCurrentActivityIndex(currentActivityIndex + 1);
+      setCurrentSubQuestionIndex(0); // Reset sub-question index
+      setRecordingTime(0); // Reset recording time for new activity
     }
   };
 
-  const handlePreviousQuestion = async () => {
+  const handlePreviousActivity = async () => {
     await autoSave();
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    if (currentActivityIndex > 0) {
+      setCurrentActivityIndex(currentActivityIndex - 1);
+      setCurrentSubQuestionIndex(0); // Reset sub-question index
+      setRecordingTime(0);
     }
   };
 
-  const handleQuestionSelect = async (index: number) => {
+  const handleActivitySelect = async (index: number) => {
     await autoSave();
-    setCurrentQuestionIndex(index);
+    setCurrentActivityIndex(index);
+    setCurrentSubQuestionIndex(0); // Reset sub-question index
+    setRecordingTime(0);
   };
 
   // Auto-save functionality
-  const autoSave = async () => {
+  const autoSave = async (audioUrl?: string) => {
+    if (!token || !assignmentId) return;
+
     try {
       setSaving(true);
-      // API call to save current answer
-      await new Promise(resolve => setTimeout(resolve, 500)); // Mock save
-      console.log('Auto-saved answer for question', currentQuestionIndex + 1);
+      const currentActivity = activities[currentActivityIndex];
+      const answer = answers.get(currentActivity.id);
+
+      if (!answer || !currentActivity.id) return;
+
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/activities/${currentActivity.id}/save`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          audio_url: audioUrl || answer.audioUrl,
+          text_answer: answer.textAnswer,
+          user_answers: answer.userAnswers, // For listening activities
+          item_index: currentActivity.items ? currentSubQuestionIndex : undefined // Include sub-question index for grouped items
+        })
+      });
+
+      console.log('Auto-saved activity progress');
     } catch (error) {
       console.error('Failed to auto-save:', error);
     } finally {
@@ -304,8 +330,19 @@ export default function StudentActivityPage() {
 
     try {
       setSubmitting(true);
-      // API call to submit all answers
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock submit
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit assignment');
+      }
+
       toast.success('作業提交成功！');
       navigate(`/student/assignment/${assignmentId}`);
     } catch (error) {
@@ -316,11 +353,139 @@ export default function StudentActivityPage() {
     }
   };
 
-  // Format time display
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Get status display
+  const getStatusIcon = (activity: Activity, answer?: Answer) => {
+    const status = answer?.status || 'not_started';
+
+    if (status === 'completed' || activity.status === 'SUBMITTED') {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (status === 'in_progress' || activity.status === 'IN_PROGRESS') {
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    } else {
+      return <Circle className="h-4 w-4" />;
+    }
+  };
+
+  // Get activity type badge
+  const getActivityTypeBadge = (type: string) => {
+    switch (type) {
+      case 'reading_assessment':
+        return <Badge variant="outline">朗讀錄音</Badge>;
+      case 'listening_cloze':
+        return <Badge variant="outline">聽力填空</Badge>;
+      case 'speaking_practice':
+        return <Badge variant="outline">口說練習</Badge>;
+      case 'speaking_scenario':
+        return <Badge variant="outline">情境對話</Badge>;
+      case 'sentence_making':
+        return <Badge variant="outline">造句練習</Badge>;
+      case 'speaking_quiz':
+        return <Badge variant="outline">口說測驗</Badge>;
+      default:
+        return <Badge variant="outline">學習活動</Badge>;
+    }
+  };
+
+  // Render activity content based on type
+  const renderActivityContent = (activity: Activity) => {
+    const answer = answers.get(activity.id);
+
+    // Check if activity has multiple items (grouped questions)
+    if (activity.items && activity.items.length > 0) {
+      return (
+        <GroupedQuestionsTemplate
+          items={activity.items}
+          recordings={answer?.recordings || activity.recordings || []}
+          answers={activity.answers}
+          currentQuestionIndex={currentSubQuestionIndex}
+          isRecording={isRecording}
+          recordingTime={recordingTime}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          formatTime={formatTime}
+        />
+      );
+    }
+
+    switch (activity.type) {
+      case 'reading_assessment':
+        return (
+          <ReadingAssessmentTemplate
+            content={activity.content}
+            targetText={activity.target_text}
+            audioUrl={answer?.audioUrl}
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onReRecord={reRecord}
+            formatTime={formatTime}
+            exampleAudioUrl={activity.example_audio_url}
+            progressId={activity.id}
+          />
+        );
+
+      case 'listening_cloze':
+        return (
+          <ListeningClozeTemplate
+            content={activity.content}
+            audioUrl={activity.audio_url || ''}
+            blanks={activity.blanks || []}
+            userAnswers={answer?.userAnswers || []}
+            onAnswerChange={(index, value) => {
+              setAnswers(prev => {
+                const newAnswers = new Map(prev);
+                const ans = newAnswers.get(activity.id) || {
+                  progressId: activity.id,
+                  status: 'not_started',
+                  startTime: new Date(),
+                  userAnswers: []
+                };
+                if (!ans.userAnswers) ans.userAnswers = [];
+                ans.userAnswers[index] = value;
+                ans.status = 'in_progress';
+                newAnswers.set(activity.id, ans);
+                return newAnswers;
+              });
+            }}
+            showAnswers={activity.status === 'SUBMITTED'}
+          />
+        );
+
+      case 'speaking_practice':
+      case 'speaking_scenario':
+        return (
+          <SpeakingPracticeTemplate
+            topic={activity.title}
+            prompts={activity.prompts || [activity.content]}
+            suggestedDuration={activity.duration || 60}
+            audioUrl={answer?.audioUrl}
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onReRecord={reRecord}
+            formatTime={formatTime}
+          />
+        );
+
+      default:
+        // Default to reading assessment template
+        return (
+          <ReadingAssessmentTemplate
+            content={activity.content}
+            targetText={activity.target_text || activity.content}
+            audioUrl={answer?.audioUrl}
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onReRecord={reRecord}
+            formatTime={formatTime}
+            progressId={activity.id}
+          />
+        );
+    }
   };
 
   if (loading) {
@@ -334,44 +499,63 @@ export default function StudentActivityPage() {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const currentAnswer = answers.get(currentQuestion.id);
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  if (activities.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 mb-4">此作業尚無題目</p>
+          <Button onClick={() => navigate(`/student/assignment/${assignmentId}`)}>
+            返回作業詳情
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentActivity = activities[currentActivityIndex];
+  const progress = ((currentActivityIndex + 1) / activities.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header with progress */}
       <div className="sticky top-0 bg-white border-b z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(`/student/assignment/${assignmentId}`)}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              返回作業
-            </Button>
+        <div className="max-w-6xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/student/assignment/${assignmentId}`)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                返回作業
+              </Button>
+              <div className="h-6 w-px bg-gray-300" />
+              <h1 className="text-base font-semibold">{assignmentTitle}</h1>
+            </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {saving && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   自動儲存中...
                 </div>
               )}
               <Button
                 onClick={handleSubmit}
                 disabled={submitting}
+                size="sm"
                 variant="default"
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     提交中...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4 mr-2" />
+                    <Send className="h-3 w-3 mr-1" />
                     提交作業
                   </>
                 )}
@@ -379,30 +563,76 @@ export default function StudentActivityPage() {
             </div>
           </div>
 
-          {/* Question navigation tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {questions.map((q, index) => {
-              const answer = answers.get(q.id);
-              const isActive = index === currentQuestionIndex;
-              const isCompleted = answer?.status === 'completed';
+          {/* Activity navigation - Grouped by content with sub-questions (horizontal layout) */}
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {activities.map((activity, activityIndex) => {
+              const answer = answers.get(activity.id);
+              const isActiveActivity = activityIndex === currentActivityIndex;
 
+              // If activity has items, show them as sub-questions
+              if (activity.items && activity.items.length > 0) {
+                return (
+                  <div key={activity.id} className="flex items-center gap-2 flex-shrink-0">
+                    {/* Content title */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap">{activity.title}</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0 h-5">{activity.items.length}題</Badge>
+                    </div>
+
+                    {/* Question buttons */}
+                    <div className="flex gap-1">
+                      {activity.items.map((_, itemIndex) => {
+                        const isActiveItem = isActiveActivity && currentSubQuestionIndex === itemIndex;
+                        const isCompleted = activity.recordings?.[itemIndex] || activity.answers?.[itemIndex];
+
+                        return (
+                          <button
+                            key={itemIndex}
+                            onClick={() => {
+                              if (activityIndex !== currentActivityIndex) {
+                                handleActivitySelect(activityIndex);
+                              }
+                              setCurrentSubQuestionIndex(itemIndex);
+                            }}
+                            className={cn(
+                              "relative w-8 h-8 rounded-md border transition-all",
+                              "flex items-center justify-center text-xs font-medium",
+                              isActiveItem
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : isCompleted
+                                ? "bg-green-50 text-green-700 border-green-300"
+                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                            )}
+                          >
+                            {itemIndex + 1}
+                            {isCompleted && !isActiveItem && (
+                              <CheckCircle className="absolute -top-1 -right-1 w-3 h-3 text-green-600 bg-white rounded-full" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Separator between content groups */}
+                    {activityIndex < activities.length - 1 && (
+                      <div className="w-px h-8 bg-gray-300 ml-2" />
+                    )}
+                  </div>
+                );
+              }
+
+              // For activities without items, show single button
               return (
                 <Button
-                  key={q.id}
-                  variant={isActive ? 'default' : 'outline'}
+                  key={activity.id}
+                  variant={isActiveActivity ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => handleQuestionSelect(index)}
-                  className="flex-shrink-0"
+                  onClick={() => handleActivitySelect(activityIndex)}
+                  className="flex-shrink-0 h-8"
                 >
                   <div className="flex items-center gap-2">
-                    {isCompleted ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : answer?.status === 'in_progress' ? (
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
-                    )}
-                    <span>第 {q.order} 題</span>
+                    {getStatusIcon(activity, answer)}
+                    <span className="text-xs">{activity.title}</span>
                   </div>
                 </Button>
               );
@@ -410,7 +640,7 @@ export default function StudentActivityPage() {
           </div>
 
           {/* Overall progress */}
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-1 mt-1" />
         </div>
       </div>
 
@@ -421,208 +651,38 @@ export default function StudentActivityPage() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-2xl mb-2">
-                  第 {currentQuestion.order} 題：{currentQuestion.title}
+                  第 {currentActivity.order} 題：{currentActivity.title}
                 </CardTitle>
-                <Badge variant="outline">
-                  {currentQuestion.type === 'listening' && '聽力測驗'}
-                  {currentQuestion.type === 'reading' && '朗讀測驗'}
-                  {currentQuestion.type === 'speaking' && '口說測驗'}
-                </Badge>
+                {getActivityTypeBadge(currentActivity.type)}
               </div>
               <Badge className="bg-blue-100 text-blue-800">
-                {currentQuestion.points} 分
+                {currentActivity.points} 分
               </Badge>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Question content */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <p className="text-lg leading-relaxed">{currentQuestion.content}</p>
-
-              {/* Display target text for reading questions */}
-              {currentQuestion.type === 'reading' && currentQuestion.targetText && (
-                <div className="mt-4 p-4 bg-white rounded-lg border-2 border-blue-200">
-                  <p className="text-xl font-medium text-blue-900 leading-relaxed">
-                    {currentQuestion.targetText}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Audio player for listening questions */}
-            {currentQuestion.type === 'listening' && currentQuestion.audioUrl && (
-              <div className="bg-blue-50 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Volume2 className="h-5 w-5" />
-                    音檔播放
-                  </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReplay}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    重播
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <Button
-                    onClick={handlePlayPause}
-                    size="lg"
-                    className="rounded-full"
-                  >
-                    {isPlaying ? (
-                      <Pause className="h-6 w-6" />
-                    ) : (
-                      <Play className="h-6 w-6" />
-                    )}
-                  </Button>
-
-                  <div className="flex-1">
-                    <Progress
-                      value={(playbackTime / audioDuration) * 100}
-                      className="h-2"
-                    />
-                    <div className="flex justify-between text-xs text-gray-600 mt-1">
-                      <span>{formatTime(Math.floor(playbackTime))}</span>
-                      <span>{formatTime(Math.floor(audioDuration))}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <audio
-                  ref={audioRef}
-                  src={currentQuestion.audioUrl}
-                  onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)}
-                  onLoadedMetadata={(e) => setAudioDuration(e.currentTarget.duration)}
-                  onEnded={() => setIsPlaying(false)}
-                />
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Answer section */}
-            <div>
-              <h3 className="font-medium mb-4 flex items-center gap-2">
-                <Mic className="h-5 w-5" />
-                作答區
-              </h3>
-
-              {/* Recording controls for speaking/reading questions */}
-              {(currentQuestion.type === 'speaking' || currentQuestion.type === 'reading') && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-4">
-                    {!isRecording && !currentAnswer?.audioUrl ? (
-                      <Button
-                        onClick={startRecording}
-                        size="lg"
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        <Mic className="h-5 w-5 mr-2" />
-                        開始錄音
-                      </Button>
-                    ) : isRecording ? (
-                      <>
-                        <Button
-                          onClick={stopRecording}
-                          size="lg"
-                          variant="outline"
-                        >
-                          <MicOff className="h-5 w-5 mr-2" />
-                          停止錄音
-                        </Button>
-                        <Badge variant="destructive" className="animate-pulse">
-                          錄音中 {formatTime(recordingTime)}
-                        </Badge>
-                      </>
-                    ) : currentAnswer?.audioUrl ? (
-                      <div className="w-full space-y-4">
-                        <div className="bg-green-50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-green-800 font-medium">
-                              已完成錄音
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={reRecord}
-                            >
-                              <RotateCcw className="h-4 w-4 mr-2" />
-                              重新錄音
-                            </Button>
-                          </div>
-                          <audio
-                            controls
-                            src={currentAnswer.audioUrl}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Recording tips */}
-                  {isRecording && (
-                    <div className="bg-yellow-50 rounded-lg p-4">
-                      <p className="text-sm text-yellow-800">
-                        💡 提示：請清晰地朗讀或回答，完成後點擊停止錄音
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Text answer for listening questions */}
-              {currentQuestion.type === 'listening' && (
-                <div className="space-y-4">
-                  <Textarea
-                    placeholder="請輸入你的答案..."
-                    className="min-h-[150px]"
-                    value={currentAnswer?.textAnswer || ''}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                      const value = e.target.value;
-                      setAnswers(prev => {
-                        const newAnswers = new Map(prev);
-                        const answer = newAnswers.get(currentQuestion.id) || {
-                          questionId: currentQuestion.id,
-                          status: 'not_started',
-                          startTime: new Date()
-                        };
-                        answer.textAnswer = value;
-                        answer.status = value ? 'completed' : 'in_progress';
-                        newAnswers.set(currentQuestion.id, answer);
-                        return newAnswers;
-                      });
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <Separator />
+            {/* Render activity-specific content */}
+            {renderActivityContent(currentActivity)}
 
             {/* Navigation buttons */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-6">
               <Button
                 variant="outline"
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
+                onClick={handlePreviousActivity}
+                disabled={currentActivityIndex === 0}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 上一題
               </Button>
 
               <span className="text-sm text-gray-600">
-                {currentQuestionIndex + 1} / {questions.length}
+                {currentActivityIndex + 1} / {activities.length}
               </span>
 
-              {currentQuestionIndex < questions.length - 1 ? (
+              {currentActivityIndex < activities.length - 1 ? (
                 <Button
-                  onClick={handleNextQuestion}
+                  onClick={handleNextActivity}
                 >
                   下一題
                   <ChevronRight className="h-4 w-4 ml-2" />

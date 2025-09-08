@@ -77,8 +77,12 @@ class Teacher(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    classrooms = relationship("Classroom", back_populates="teacher", cascade="all, delete-orphan")
-    programs = relationship("Program", back_populates="teacher", cascade="all, delete-orphan")
+    classrooms = relationship(
+        "Classroom", back_populates="teacher", cascade="all, delete-orphan"
+    )
+    programs = relationship(
+        "Program", back_populates="teacher", cascade="all, delete-orphan"
+    )
     assignments = relationship("Assignment", back_populates="teacher")
 
     def __repr__(self):
@@ -145,9 +149,15 @@ class Classroom(Base):
 
     # Relationships
     teacher = relationship("Teacher", back_populates="classrooms")
-    students = relationship("ClassroomStudent", back_populates="classroom", cascade="all, delete-orphan")
-    programs = relationship("Program", back_populates="classroom", cascade="all, delete-orphan")  # 直接關聯課程
-    assignments = relationship("Assignment", back_populates="classroom", cascade="all, delete-orphan")
+    students = relationship(
+        "ClassroomStudent", back_populates="classroom", cascade="all, delete-orphan"
+    )
+    programs = relationship(
+        "Program", back_populates="classroom", cascade="all, delete-orphan"
+    )  # 直接關聯課程
+    assignments = relationship(
+        "Assignment", back_populates="classroom", cascade="all, delete-orphan"
+    )
 
     # 移除 program_mappings，因為 Program 已直接關聯到 Classroom
 
@@ -186,12 +196,18 @@ class Program(Base):
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
 
     # 類型與歸屬
-    is_template = Column(Boolean, default=False, nullable=False)  # True=公版模板, False=班級課程
-    classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=True)  # 公版課程為 NULL
+    is_template = Column(
+        Boolean, default=False, nullable=False
+    )  # True=公版模板, False=班級課程
+    classroom_id = Column(
+        Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=True
+    )  # 公版課程為 NULL
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
 
     # 來源追蹤
-    source_type = Column(String(20), nullable=True)  # 'template', 'classroom', 'custom', None
+    source_type = Column(
+        String(20), nullable=True
+    )  # 'template', 'classroom', 'custom', None
     source_metadata = Column(JSON, nullable=True)
     """
     範例：
@@ -215,7 +231,9 @@ class Program(Base):
     # Relationships
     teacher = relationship("Teacher", back_populates="programs")
     classroom = relationship("Classroom", back_populates="programs")
-    lessons = relationship("Lesson", back_populates="program", cascade="all, delete-orphan")
+    lessons = relationship(
+        "Lesson", back_populates="program", cascade="all, delete-orphan"
+    )
 
     @property
     def is_public_template(self):
@@ -250,7 +268,9 @@ class Lesson(Base):
 
     # Relationships
     program = relationship("Program", back_populates="lessons")
-    contents = relationship("Content", back_populates="lesson", cascade="all, delete-orphan")
+    contents = relationship(
+        "Content", back_populates="lesson", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Lesson {self.name}>"
@@ -272,7 +292,9 @@ class Content(Base):
     is_active = Column(Boolean, default=True)  # 軟刪除標記
 
     # 朗讀錄音集資料（3-15個項目）
-    items = Column(JSON)  # [{"text": "Hello", "translation": "你好", "audio_url": "..."}, ...]
+    items = Column(
+        JSON
+    )  # [{"text": "Hello", "translation": "你好", "audio_url": "..."}, ...]
 
     # 設定
     target_wpm = Column(Integer)  # 目標 WPM
@@ -320,8 +342,12 @@ class Assignment(Base):
     # Relationships
     classroom = relationship("Classroom", back_populates="assignments")
     teacher = relationship("Teacher", back_populates="assignments")
-    contents = relationship("AssignmentContent", back_populates="assignment", cascade="all, delete-orphan")
-    student_assignments = relationship("StudentAssignment", back_populates="assignment", cascade="all, delete-orphan")
+    contents = relationship(
+        "AssignmentContent", back_populates="assignment", cascade="all, delete-orphan"
+    )
+    student_assignments = relationship(
+        "StudentAssignment", back_populates="assignment", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Assignment {self.title} in Classroom {self.classroom_id}>"
@@ -351,13 +377,17 @@ class StudentAssignment(Base):
     __tablename__ = "student_assignments"
 
     id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=True)  # nullable 暫時為 True 以兼容舊資料
+    assignment_id = Column(
+        Integer, ForeignKey("assignments.id"), nullable=True
+    )  # nullable 暫時為 True 以兼容舊資料
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
 
     # TODO: Phase 2 - 移除以下舊欄位（等資料遷移完成）
     # 這些欄位應該從 Assignment 取得，不需要重複儲存
     content_id = Column(Integer, ForeignKey("contents.id"), nullable=True)  # 舊架構，待移除
-    classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=False)  # 可從 assignment.classroom_id 取得
+    classroom_id = Column(
+        Integer, ForeignKey("classrooms.id"), nullable=False
+    )  # 可從 assignment.classroom_id 取得
     title = Column(String(200), nullable=False)  # 可從 assignment.title 取得
     instructions = Column(Text)  # 可從 assignment.description 取得
     due_date = Column(DateTime(timezone=True))  # 可從 assignment.due_date 取得
@@ -403,7 +433,9 @@ class StudentContentProgress(Base):
     __tablename__ = "student_content_progress"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_assignment_id = Column(Integer, ForeignKey("student_assignments.id"), nullable=False)
+    student_assignment_id = Column(
+        Integer, ForeignKey("student_assignments.id"), nullable=False
+    )
     content_id = Column(Integer, ForeignKey("contents.id"), nullable=False)
 
     status = Column(Enum(AssignmentStatus), default=AssignmentStatus.NOT_STARTED)
@@ -428,7 +460,9 @@ class StudentContentProgress(Base):
     completed_at = Column(DateTime(timezone=True))
 
     # Relationships
-    student_assignment = relationship("StudentAssignment", back_populates="content_progress")
+    student_assignment = relationship(
+        "StudentAssignment", back_populates="content_progress"
+    )
     content = relationship("Content")
 
     def __repr__(self):

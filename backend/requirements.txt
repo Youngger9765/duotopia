@@ -24,6 +24,7 @@ pydantic[email]==2.5.0
 openai==1.57.4
 edge-tts==7.2.3
 google-cloud-storage==2.13.0
+azure-cognitiveservices-speech==1.45.0
 
 # =============================================
 # Development Dependencies

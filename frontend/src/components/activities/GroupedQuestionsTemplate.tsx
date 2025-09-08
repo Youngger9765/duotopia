@@ -1,0 +1,351 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  CheckCircle,
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Volume2
+} from 'lucide-react';
+
+interface Question {
+  text?: string;
+  translation?: string;
+  audio_url?: string;
+  [key: string]: any;
+}
+
+interface GroupedQuestionsTemplateProps {
+  items: Question[];
+  recordings?: string[];
+  answers?: string[];
+  currentQuestionIndex?: number;
+  isRecording?: boolean;
+  recordingTime?: number;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
+  formatTime?: (seconds: number) => string;
+}
+
+export default function GroupedQuestionsTemplate({
+  items,
+  recordings = [],
+  answers = [],
+  currentQuestionIndex = 0,
+  isRecording = false,
+  recordingTime = 0,
+  onStartRecording,
+  onStopRecording,
+  formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+}: GroupedQuestionsTemplateProps) {
+  const currentQuestion = items[currentQuestionIndex];
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 檢查題目是否已完成
+  const isQuestionCompleted = (index: number) => {
+    return recordings[index] || answers[index];
+  };
+
+  // 播放/暫停音檔
+  const togglePlayback = () => {
+    if (!recordings[currentQuestionIndex]) return;
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(recordings[currentQuestionIndex]);
+      audioRef.current = audio;
+
+      audio.addEventListener('loadedmetadata', () => {
+        const dur = audio.duration;
+        if (dur && isFinite(dur) && !isNaN(dur)) {
+          setDuration(dur);
+        }
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+      });
+
+      audio.play();
+      setIsPlaying(true);
+
+      progressIntervalRef.current = setInterval(() => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+      }, 100);
+    }
+  };
+
+  // 清理音檔播放和重置狀態
+  useEffect(() => {
+    // Reset states when switching questions
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    // Clean up previous audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    // Preload duration for current recording if it exists
+    if (recordings[currentQuestionIndex]) {
+      const tempAudio = new Audio(recordings[currentQuestionIndex]);
+      tempAudio.addEventListener('loadedmetadata', () => {
+        const dur = tempAudio.duration;
+        if (dur && isFinite(dur) && !isNaN(dur)) {
+          setDuration(dur);
+        } else {
+          setDuration(0);
+        }
+      });
+      // Trigger load
+      tempAudio.load();
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, [currentQuestionIndex, recordings]);
+
+  // 格式化時間
+  const formatAudioTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
+      return '0:00';
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 題目狀態標籤 */}
+      <div className="flex items-center justify-between">
+        <Badge className="bg-blue-100 text-blue-800">
+          第 {currentQuestionIndex + 1} 題 / 共 {items.length} 題
+        </Badge>
+        {isQuestionCompleted(currentQuestionIndex) && (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            已完成
+          </Badge>
+        )}
+      </div>
+
+      {/* 題目內容區 - 左右分欄 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-gray-50 rounded-lg">
+        {/* 左側：圖片區域 */}
+        <div className="flex items-center justify-center">
+          <div className="w-full max-w-md aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <svg className="w-24 h-24 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm font-medium">圖片預留位置</p>
+              <p className="text-xs mt-1">Mock Image Placeholder</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 右側：題目資訊 */}
+        <div className="space-y-4">
+          {/* 1. 題目文字 - 永遠顯示 */}
+          <div className="relative p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="absolute -top-3 left-4 px-2 bg-white">
+              <span className="text-sm font-semibold text-blue-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                題目
+              </span>
+            </div>
+            <div className="text-xl font-medium text-gray-800 leading-relaxed mt-2">
+              {currentQuestion?.text || <span className="text-gray-400 italic">無題目文字</span>}
+            </div>
+          </div>
+
+          {/* 2. 老師的參考音檔 - 永遠顯示 */}
+          <div className="relative p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="absolute -top-3 left-4 px-2 bg-white">
+              <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
+                <Volume2 className="w-4 h-4" />
+                參考音檔
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (currentQuestion?.audio_url) {
+                  const audio = new Audio(currentQuestion.audio_url);
+                  audio.play();
+                }
+              }}
+              disabled={!currentQuestion?.audio_url}
+              className="w-full mt-2"
+            >
+              <Volume2 className="w-4 h-4 mr-2" />
+              {currentQuestion?.audio_url ? '播放老師錄音' : '無參考音檔'}
+            </Button>
+          </div>
+
+          {/* 3. 翻譯 - 永遠顯示 */}
+          <div className="relative p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="absolute -top-3 left-4 px-2 bg-white">
+              <span className="text-sm font-semibold text-purple-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                </svg>
+                中文翻譯
+              </span>
+            </div>
+            <div className="text-lg text-gray-600 mt-2">
+              {currentQuestion?.translation || <span className="text-gray-400 italic">無翻譯</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 學生作答錄音區 */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">學生作答區</h3>
+        <div className="flex items-center justify-center">
+          {!isRecording ? (
+            <Button
+              size="lg"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={onStartRecording}
+            >
+              <Mic className="w-5 h-5 mr-2" />
+              開始錄音
+            </Button>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+                <span className="text-lg font-medium">{formatTime(recordingTime)}</span>
+              </div>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={onStopRecording}
+                className="border-red-600 text-red-600 hover:bg-red-50"
+              >
+                <Square className="w-5 h-5 mr-2" />
+                停止錄音
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* 已錄音檔案播放 - 音檔播放器樣式 */}
+        {recordings[currentQuestionIndex] && (
+          <div className="mt-6 max-w-lg mx-auto">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 shadow-sm">
+              <div className="flex items-center gap-4">
+                {/* 播放/暫停按鈕 */}
+                <button
+                  onClick={togglePlayback}
+                  className="flex-shrink-0 w-14 h-14 bg-green-600 hover:bg-green-700 transition-colors rounded-full flex items-center justify-center text-white shadow-md"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-6 h-6" fill="currentColor" />
+                  ) : (
+                    <Play className="w-6 h-6 ml-1" fill="currentColor" />
+                  )}
+                </button>
+
+                {/* 音檔資訊與時間軸 */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-gray-800">已錄製音檔</span>
+                  </div>
+
+                  {/* 時間軸 */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 relative h-2 bg-green-200 rounded-full overflow-hidden">
+                      <div
+                        className="absolute h-full bg-green-500 rounded-full transition-all duration-100"
+                        style={{
+                          width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
+                        }}
+                      />
+                      {/* 播放點 */}
+                      {duration > 0 && isPlaying && (
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-green-600 rounded-full shadow-sm"
+                          style={{
+                            left: `calc(${(currentTime / duration) * 100}% - 6px)`
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    {/* 只顯示總時長 */}
+                    <span className="text-xs text-gray-600 font-medium min-w-[35px]">
+                      {formatAudioTime(duration || 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 重錄按鈕 */}
+                <button
+                  onClick={() => {
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                    }
+                    setIsPlaying(false);
+                    setCurrentTime(0);
+                    if (onStartRecording) {
+                      // Clear current recording
+                      recordings[currentQuestionIndex] = '';
+                      onStartRecording();
+                    }
+                  }}
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                  title="重新錄音"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

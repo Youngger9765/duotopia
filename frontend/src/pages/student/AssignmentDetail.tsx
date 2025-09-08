@@ -16,7 +16,9 @@ import {
   Clock,
   Target,
   ChevronLeft,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  Star
 } from 'lucide-react';
 import { AssignmentDetail as AssignmentDetailType } from '@/types';
 
@@ -31,6 +33,8 @@ export default function AssignmentDetail() {
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
   const [isPlaying, setIsPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState<Map<number, any>>(new Map());
+  const [assessing, setAssessing] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -142,7 +146,49 @@ export default function AssignmentDetail() {
       newMap.delete(index);
       return newMap;
     });
+    setAssessmentResults(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(index);
+      return newMap;
+    });
     toast.info('錄音已刪除');
+  };
+
+  const assessPronunciation = async (index: number) => {
+    const recording = recordings.get(index);
+    const currentItemText = assignment?.content.items?.[index]?.text;
+
+    if (!recording || !currentItemText) {
+      toast.error('無錄音檔案或參考文本');
+      return;
+    }
+
+    try {
+      setAssessing(true);
+
+      // 創建 FormData
+      const formData = new FormData();
+      formData.append('audio_file', recording, 'recording.webm');
+      formData.append('reference_text', currentItemText);
+      formData.append('progress_id', `${index + 1}`); // 暫時使用 index 作為 progress_id
+
+      const response = await apiClient.post('/api/speech/assess', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data) {
+        setAssessmentResults(prev => new Map(prev).set(index, response.data));
+        toast.success('AI 發音評測完成！');
+      }
+
+    } catch (error) {
+      console.error('Assessment failed:', error);
+      toast.error('評測失敗，請稍後再試');
+    } finally {
+      setAssessing(false);
+    }
   };
 
   const submitAssignment = async () => {
@@ -349,9 +395,99 @@ export default function AssignmentDetail() {
 
             {/* Recording Status */}
             {recordings.has(currentItemIndex) && (
-              <div className="text-center text-green-600">
-                <CheckCircle className="h-6 w-6 inline-block mr-2" />
-                已完成錄音
+              <div className="text-center mb-4">
+                <div className="text-green-600 mb-4">
+                  <CheckCircle className="h-6 w-6 inline-block mr-2" />
+                  已錄音
+                </div>
+
+                {/* 上傳與評測按鈕 */}
+                {!assessmentResults.has(currentItemIndex) && (
+                  <Button
+                    size="lg"
+                    onClick={() => assessPronunciation(currentItemIndex)}
+                    disabled={assessing}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Upload className="h-5 w-5 mr-2" />
+                    {assessing ? '評測中...' : '上傳與評測'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Assessment Results */}
+            {assessmentResults.has(currentItemIndex) && (
+              <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
+                <div className="text-center mb-4">
+                  <h4 className="text-xl font-bold text-blue-800 mb-2">🤖 AI 發音評測結果</h4>
+                </div>
+
+                {(() => {
+                  const result = assessmentResults.get(currentItemIndex);
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="text-center p-3 bg-white rounded-lg shadow">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {result?.pronunciation_score?.toFixed(1) || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">總體分數</div>
+                      </div>
+
+                      <div className="text-center p-3 bg-white rounded-lg shadow">
+                        <div className="text-2xl font-bold text-green-600">
+                          {result?.accuracy_score?.toFixed(1) || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">準確度</div>
+                      </div>
+
+                      <div className="text-center p-3 bg-white rounded-lg shadow">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {result?.fluency_score?.toFixed(1) || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">流暢度</div>
+                      </div>
+
+                      <div className="text-center p-3 bg-white rounded-lg shadow">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {result?.completeness_score?.toFixed(1) || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">完整度</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 單字詳細評分 */}
+                {(() => {
+                  const result = assessmentResults.get(currentItemIndex);
+                  const words = result?.words || [];
+
+                  if (words.length > 0) {
+                    return (
+                      <div className="mt-4">
+                        <h5 className="font-medium text-gray-700 mb-2">單字評分詳情：</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {words.map((word: any, wordIndex: number) => (
+                            <span
+                              key={wordIndex}
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                word.accuracy_score >= 90
+                                  ? 'bg-green-100 text-green-800 border-green-200 border'
+                                  : word.accuracy_score >= 70
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200 border'
+                                  : 'bg-red-100 text-red-800 border-red-200 border'
+                              }`}
+                            >
+                              {word.word} ({word.accuracy_score?.toFixed(0) || 0})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </CardContent>

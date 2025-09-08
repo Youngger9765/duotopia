@@ -276,94 +276,82 @@ async def get_assignment_activities(
                 }
             )
 
-    # 如果有 assignment_id，獲取所有相關內容
+    # 如果有 assignment_id，直接獲取所有已存在的 StudentContentProgress 記錄
     elif student_assignment.assignment_id:
-        # 獲取作業的所有內容
-        assignment_contents = (
-            db.query(AssignmentContent)
-            .filter(AssignmentContent.assignment_id == student_assignment.assignment_id)
-            .order_by(AssignmentContent.order_index)
+        # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
+        progress_records = (
+            db.query(StudentContentProgress)
+            .filter(
+                StudentContentProgress.student_assignment_id == student_assignment.id
+            )
+            .order_by(StudentContentProgress.order_index)
             .all()
         )
 
-        for idx, ac in enumerate(assignment_contents):
-            content = db.query(Content).filter(Content.id == ac.content_id).first()
+        for progress in progress_records:
+            content = (
+                db.query(Content).filter(Content.id == progress.content_id).first()
+            )
 
             if content:
-                # 檢查是否已有進度記錄
-                progress = (
-                    db.query(StudentContentProgress)
-                    .filter(
-                        StudentContentProgress.student_assignment_id
-                        == student_assignment.id,
-                        StudentContentProgress.content_id == content.id,
-                    )
-                    .first()
-                )
+                # 將整個 content 作為一個活動，包含所有 items
+                activity_data = {
+                    "id": progress.id,
+                    "content_id": content.id,
+                    "order": len(activities) + 1,
+                    "type": (
+                        content.type.value if content.type else "reading_assessment"
+                    ),
+                    "title": content.title,
+                    "duration": 60,  # Default duration
+                    "points": 100 // len(progress_records)
+                    if len(progress_records) > 0
+                    else 100,  # 平均分配分數
+                    "status": (
+                        progress.status.value if progress.status else "NOT_STARTED"
+                    ),
+                    "score": progress.score,
+                    "completed_at": (
+                        progress.completed_at.isoformat()
+                        if progress.completed_at
+                        else None
+                    ),
+                }
 
-                # 如果沒有進度記錄，創建一個
-                if not progress:
-                    progress = StudentContentProgress(
-                        student_assignment_id=student_assignment.id,
-                        content_id=content.id,
-                        order_index=ac.order_index,
-                        status=AssignmentStatus.NOT_STARTED,
-                    )
-                    db.add(progress)
-                    db.commit()
-                    db.refresh(progress)
+                # 如果有 items，將它們作為子題目包含進去
+                if (
+                    content.items
+                    and isinstance(content.items, list)
+                    and len(content.items) > 0
+                ):
+                    activity_data["items"] = content.items  # 包含所有 items
+                    activity_data["item_count"] = len(content.items)  # 題目數量
+                    activity_data["content"] = ""  # 對於有 items 的，content 為空
+                    activity_data["target_text"] = ""
 
-                activities.append(
-                    {
-                        "id": progress.id,
-                        "content_id": content.id,
-                        "order": ac.order_index + 1,
-                        "type": (
-                            content.type.value if content.type else "reading_assessment"
-                        ),
-                        "title": content.title,
-                        "content": (
-                            # 如果是物件陣列，轉換成純文字
-                            " ".join([item["text"] for item in content.items])
-                            if isinstance(content.items, list)
-                            and len(content.items) > 0
-                            and isinstance(content.items[0], dict)
-                            else str(content.items)
-                            if content.items
-                            else ""
-                        ),
-                        "target_text": (
-                            # 對於朗讀評測，組合所有文字
-                            " ".join([item["text"] for item in content.items])
-                            if isinstance(content.items, list)
-                            and len(content.items) > 0
-                            and isinstance(content.items[0], dict)
-                            else str(content.items)
-                            if content.items
-                            else ""
-                        ),
-                        "duration": 60,  # Default duration
-                        "points": (
-                            100 // len(assignment_contents)
-                            if assignment_contents
-                            else 100
-                        ),
-                        "status": (
-                            progress.status.value if progress.status else "NOT_STARTED"
-                        ),
-                        "score": progress.score,
-                        "audio_url": (
-                            progress.response_data.get("audio_url")
-                            if progress.response_data
-                            else None
-                        ),
-                        "completed_at": (
-                            progress.completed_at.isoformat()
-                            if progress.completed_at
-                            else None
-                        ),
-                    }
-                )
+                    # 如果有 response_data，包含所有錄音
+                    if progress.response_data:
+                        activity_data["recordings"] = progress.response_data.get(
+                            "recordings", []
+                        )
+                        activity_data["answers"] = progress.response_data.get(
+                            "answers", []
+                        )
+                else:
+                    # 沒有 items 的情況
+                    activity_data["content"] = (
+                        str(content.items) if content.items else ""
+                    )
+                    activity_data["target_text"] = (
+                        str(content.items) if content.items else ""
+                    )
+                    activity_data["audio_url"] = (
+                        progress.response_data.get("audio_url")
+                        if progress.response_data
+                        else None
+                    )
+
+                activities.append(activity_data)
 
     # 如果沒有活動，創建一個默認的朗讀活動
     if not activities:
