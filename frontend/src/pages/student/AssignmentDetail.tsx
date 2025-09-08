@@ -198,7 +198,7 @@ export default function AssignmentDetail() {
       formData.append('reference_text', currentItemText);
       formData.append('progress_id', `${index + 1}`); // 暫時使用 index 作為 progress_id
 
-      const response = await apiClient.post<{ data?: any }>('/api/speech/assess', formData);
+      const response = await apiClient.post<{ data?: Record<string, unknown> }>('/api/speech/assess', formData);
 
       if (response.data) {
         setAssessmentResults(prev => new Map(prev).set(index, response.data));
@@ -490,7 +490,7 @@ export default function AssignmentDetail() {
                       <div className="mt-4">
                         <h5 className="font-medium text-gray-700 mb-2">單字評分詳情：</h5>
                         <div className="flex flex-wrap gap-2">
-                          {words.map((word: any, wordIndex: number) => (
+                          {words.map((word: Record<string, unknown>, wordIndex: number) => (
                             <span
                               key={wordIndex}
                               className={`px-3 py-1 rounded-full text-sm font-medium ${

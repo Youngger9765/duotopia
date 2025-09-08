@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
-from datetime import datetime
+from datetime import datetime, timedelta  # noqa: F401
 from database import get_db
 from models import (
     Student,
@@ -19,7 +19,6 @@ from auth import (
     verify_password,
     get_current_user,
 )
-from datetime import timedelta, datetime  # noqa: F401
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
@@ -835,7 +834,7 @@ async def upload_student_recording(
                     for field in ai_fields_to_clear:
                         if field in existing_progress.response_data:
                             del existing_progress.response_data[field]
-                    print(f"Cleared AI scores for re-recording")
+                    print("Cleared AI scores for re-recording")
 
             except Exception as e:
                 print(f"Failed to delete old recording: {e}")
@@ -864,7 +863,7 @@ async def upload_student_recording(
                 },
             )
             db.add(new_progress)
-            print(f"Created new progress record")
+            print("Created new progress record")
 
         db.commit()
 

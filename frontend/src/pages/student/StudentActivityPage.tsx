@@ -42,7 +42,7 @@ interface Activity {
     text?: string;
     translation?: string;
     audio_url?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
   item_count?: number;
   recordings?: string[];

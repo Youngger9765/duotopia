@@ -19,7 +19,7 @@ interface Question {
   text?: string;
   translation?: string;
   audio_url?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface GroupedQuestionsTemplateProps {
@@ -33,7 +33,7 @@ interface GroupedQuestionsTemplateProps {
   onStopRecording?: () => void;
   formatTime?: (seconds: number) => string;
   progressId?: number | string;
-  initialAssessmentResults?: any; // AI 評估結果
+  initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
 }
 
 export default function GroupedQuestionsTemplate({
@@ -520,7 +520,7 @@ export default function GroupedQuestionsTemplate({
                 <div className="space-y-2">
                   <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
                   <div className="flex flex-wrap gap-2">
-                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: any, idx: number) => {
+                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: Record<string, unknown>, idx: number) => {
                       const score = word.accuracy_score || 0;
                       // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
                       const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';
