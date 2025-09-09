@@ -32,7 +32,8 @@ import {
   Check,
   Calendar as CalendarIconAlt,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
@@ -96,6 +97,7 @@ export function AssignmentDialog({
   onSuccess
 }: AssignmentDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(new Set());
@@ -128,6 +130,7 @@ export function AssignmentDialog({
 
   const loadPrograms = async () => {
     try {
+      setLoadingPrograms(true);
       // Load programs with their lessons and contents
       const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
 
@@ -164,6 +167,8 @@ export function AssignmentDialog({
       console.error('Failed to load programs:', error);
       toast.error('無法載入課程資料');
       setPrograms([]);
+    } finally {
+      setLoadingPrograms(false);
     }
   };
 
@@ -414,6 +419,26 @@ export function AssignmentDialog({
               </div>
 
               <ScrollArea className="flex-1 border rounded-lg p-3">
+                {loadingPrograms ? (
+                  <div className="flex flex-col items-center justify-center h-96">
+                    <div className="relative">
+                      {/* Outer ring */}
+                      <div className="absolute inset-0 animate-ping">
+                        <div className="h-16 w-16 rounded-full border-4 border-blue-200 opacity-75"></div>
+                      </div>
+                      {/* Inner spinning circle */}
+                      <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
+                    </div>
+                    <p className="mt-6 text-lg font-medium text-gray-700">載入課程內容中...</p>
+                    <p className="mt-2 text-sm text-gray-500">請稍候，正在準備可指派的課程</p>
+                  </div>
+                ) : programs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-96">
+                    <Package className="h-16 w-16 text-gray-300 mb-4" />
+                    <p className="text-gray-500">尚無可用的課程內容</p>
+                    <p className="text-sm text-gray-400 mt-2">請先建立課程計畫和內容</p>
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   {programs.map(program => (
                     <Card key={program.id} className="overflow-hidden">
@@ -517,6 +542,7 @@ export function AssignmentDialog({
                     </Card>
                   ))}
                 </div>
+                )}
               </ScrollArea>
 
               {/* Compact Selected Contents Summary */}
