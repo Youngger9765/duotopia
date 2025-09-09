@@ -34,13 +34,28 @@ app = FastAPI(
 # app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
 
 # CORS 設定
-# 從環境變數讀取允許的來源，預設使用安全的設定
-allowed_origins = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,https://duotopia-469413.web.app"
-).split(",")
-if os.getenv("ENVIRONMENT") == "development":
+environment = os.getenv("ENVIRONMENT", "development")
+
+if environment == "development":
     # 開發環境可以使用較寬鬆的設定
     allowed_origins = ["*"]
+elif environment == "staging":
+    # Staging 環境允許 staging 前端
+    allowed_origins = [
+        "https://duotopia-staging-frontend-206313737181.asia-east1.run.app",
+        "http://localhost:5173",  # 本地開發
+    ]
+elif environment == "production":
+    # 生產環境只允許生產域名
+    allowed_origins = [
+        "https://duotopia-469413.web.app",
+        "https://duotopia.com",  # 如果有自定義域名
+    ]
+else:
+    # 其他環境使用環境變數或預設值
+    allowed_origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(
+        ","
+    )
 
 app.add_middleware(
     CORSMiddleware,
