@@ -1793,6 +1793,374 @@ def seed_template_programs(db: Session):
 
     print("✅ 為每個模板建立了 Lessons")
 
+    # ============ 3.5 為模板課程建立內容 ============
+    print("📝 為模板課程建立內容...")
+
+    # 為初級英語會話課程建立內容
+    template_contents = []
+
+    # Lesson 1: Greetings - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_basic_conv[0].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Basic Greetings 基本問候語",
+            items=[
+                {"text": "Hello!", "translation": "你好！"},
+                {"text": "How are you?", "translation": "你好嗎？"},
+                {"text": "I'm fine, thank you.", "translation": "我很好，謝謝。"},
+                {"text": "Nice to meet you.", "translation": "很高興認識你。"},
+                {"text": "See you later!", "translation": "待會見！"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 2: Daily Activities - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_basic_conv[1].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="My Daily Routine 我的日常作息",
+            items=[
+                {"text": "I wake up at 7 AM.", "translation": "我早上7點起床。"},
+                {"text": "I have breakfast at 8 AM.", "translation": "我早上8點吃早餐。"},
+                {"text": "I go to school at 8:30.", "translation": "我8點半去上學。"},
+                {"text": "I have lunch at noon.", "translation": "我中午吃午餐。"},
+                {"text": "I go to bed at 10 PM.", "translation": "我晚上10點睡覺。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 3: Shopping and Numbers - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_basic_conv[2].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Shopping Vocabulary 購物詞彙",
+            items=[
+                {"text": "How much is this?", "translation": "這個多少錢？"},
+                {"text": "It's twenty dollars.", "translation": "二十元。"},
+                {"text": "Can I pay by credit card?", "translation": "我可以用信用卡付款嗎？"},
+                {"text": "Do you have a smaller size?", "translation": "有小一點的尺寸嗎？"},
+                {"text": "I'll take it.", "translation": "我買了。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 4: Food and Restaurants - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_basic_conv[3].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Restaurant English 餐廳英語",
+            items=[
+                {"text": "May I see the menu?", "translation": "我可以看菜單嗎？"},
+                {"text": "I'd like to order pasta.", "translation": "我想點義大利麵。"},
+                {"text": "How would you like your steak?", "translation": "您的牛排要幾分熟？"},
+                {"text": "Can I have the bill, please?", "translation": "請給我帳單。"},
+                {"text": "The food was delicious.", "translation": "食物很美味。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # 為中級閱讀理解課程建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_reading[0].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Reading Strategies 閱讀策略",
+            items=[
+                {
+                    "text": "Skimming helps you find main ideas quickly.",
+                    "translation": "略讀幫助你快速找到主要概念。",
+                },
+                {
+                    "text": "Scanning helps you find specific details.",
+                    "translation": "掃讀幫助你找到特定細節。",
+                },
+                {
+                    "text": "Read the title and headings first.",
+                    "translation": "先讀標題和標頭。",
+                },
+                {
+                    "text": "Look for keywords in each paragraph.",
+                    "translation": "在每個段落中尋找關鍵字。",
+                },
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 2: News Articles - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_reading[1].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="News Headlines 新聞標題",
+            items=[
+                {
+                    "text": "Breaking news from around the world.",
+                    "translation": "來自世界各地的突發新聞。",
+                },
+                {"text": "Scientists discover new planet.", "translation": "科學家發現新行星。"},
+                {"text": "Technology advances in 2025.", "translation": "2025年的科技進展。"},
+                {
+                    "text": "Climate change impacts global economy.",
+                    "translation": "氣候變遷影響全球經濟。",
+                },
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 3: Short Stories - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_reading[2].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Story Elements 故事元素",
+            items=[
+                {
+                    "text": "Once upon a time in a small village.",
+                    "translation": "從前在一個小村莊。",
+                },
+                {
+                    "text": "The main character faced a challenge.",
+                    "translation": "主角面臨挑戰。",
+                },
+                {
+                    "text": "With courage, they overcame the obstacle.",
+                    "translation": "憑著勇氣，他們克服了障礙。",
+                },
+                {
+                    "text": "The story teaches us an important lesson.",
+                    "translation": "這個故事教導我們重要的一課。",
+                },
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # 為英語發音訓練課程建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_pronunciation[0].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Vowel Sounds 母音發音",
+            items=[
+                {"text": "cat - cake", "translation": "短音a - 長音a"},
+                {"text": "pet - Pete", "translation": "短音e - 長音e"},
+                {"text": "bit - bite", "translation": "短音i - 長音i"},
+                {"text": "hot - home", "translation": "短音o - 長音o"},
+                {"text": "cut - cute", "translation": "短音u - 長音u"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 2: Consonant Sounds - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_pronunciation[1].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Consonant Sounds 子音發音",
+            items=[
+                {"text": "think - this", "translation": "清音th - 濁音th"},
+                {"text": "ship - chip", "translation": "sh音 - ch音"},
+                {"text": "very - berry", "translation": "v音 - b音"},
+                {"text": "light - right", "translation": "l音 - r音"},
+                {"text": "fan - van", "translation": "f音 - v音"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 3: Word Stress and Intonation - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_pronunciation[2].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Word Stress 重音練習",
+            items=[
+                {
+                    "text": "REcord (noun) - reCORD (verb)",
+                    "translation": "記錄(名詞) - 錄音(動詞)",
+                },
+                {
+                    "text": "PREsent (noun) - preSENT (verb)",
+                    "translation": "禮物(名詞) - 呈現(動詞)",
+                },
+                {
+                    "text": "CONtent (noun) - conTENT (adjective)",
+                    "translation": "內容(名詞) - 滿足的(形容詞)",
+                },
+                {"text": "Are you COMING?", "translation": "你要來嗎？(上升語調)"},
+                {"text": "I am coming.", "translation": "我會來。(下降語調)"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # 為商務英語入門建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_business[0].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Business Email Writing 商務郵件",
+            items=[
+                {"text": "Dear Mr. Smith,", "translation": "親愛的史密斯先生，"},
+                {
+                    "text": "I hope this email finds you well.",
+                    "translation": "希望您一切安好。",
+                },
+                {
+                    "text": "Please find attached the report.",
+                    "translation": "請查收附件的報告。",
+                },
+                {"text": "I look forward to your reply.", "translation": "期待您的回覆。"},
+                {"text": "Best regards,", "translation": "誠摯的問候，"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 2: Meeting English - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_business[1].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Meeting English 會議英語",
+            items=[
+                {"text": "Let's begin the meeting.", "translation": "讓我們開始會議。"},
+                {
+                    "text": "Could you elaborate on that point?",
+                    "translation": "您能詳細說明這一點嗎？",
+                },
+                {"text": "I'd like to add something.", "translation": "我想補充一點。"},
+                {
+                    "text": "Let's move on to the next item.",
+                    "translation": "讓我們進入下一個議題。",
+                },
+                {"text": "Thank you for your participation.", "translation": "感謝您的參與。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 3: Presentations - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_business[2].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Presentation Skills 簡報技巧",
+            items=[
+                {
+                    "text": "Today I'll be talking about...",
+                    "translation": "今天我要談論的是...",
+                },
+                {"text": "Let me show you this chart.", "translation": "讓我向您展示這個圖表。"},
+                {
+                    "text": "As you can see from the data...",
+                    "translation": "從數據中可以看出...",
+                },
+                {"text": "Are there any questions?", "translation": "有任何問題嗎？"},
+                {"text": "Thank you for your attention.", "translation": "感謝您的關注。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # 為文法基礎課程建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_grammar[0].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Be Verbs and Simple Present Be動詞與現在簡單式",
+            items=[
+                {"text": "I am a student.", "translation": "我是學生。"},
+                {"text": "She is happy.", "translation": "她很開心。"},
+                {"text": "They are friends.", "translation": "他們是朋友。"},
+                {"text": "He plays tennis every day.", "translation": "他每天打網球。"},
+                {"text": "We study English on Monday.", "translation": "我們星期一學英文。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 2: Articles and Nouns - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_grammar[1].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Articles and Nouns 冠詞與名詞",
+            items=[
+                {"text": "I have a book.", "translation": "我有一本書。"},
+                {"text": "The book is on the table.", "translation": "那本書在桌上。"},
+                {"text": "She is an engineer.", "translation": "她是工程師。"},
+                {"text": "Water is important.", "translation": "水很重要。"},
+                {"text": "I need some apples.", "translation": "我需要一些蘋果。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    # Lesson 3: Simple Past Tense - 建立內容
+    template_contents.append(
+        Content(
+            lesson_id=lessons_grammar[2].id,
+            type=ContentType.READING_ASSESSMENT,
+            title="Simple Past Tense 過去簡單式",
+            items=[
+                {"text": "I went to school yesterday.", "translation": "我昨天去學校了。"},
+                {"text": "She studied English last night.", "translation": "她昨晚學習英文。"},
+                {"text": "They played football.", "translation": "他們踢了足球。"},
+                {"text": "He was happy.", "translation": "他很開心。"},
+                {"text": "We were at home.", "translation": "我們在家。"},
+            ],
+            order_index=1,
+            is_active=True,
+            is_public=True,
+        )
+    )
+
+    db.add_all(template_contents)
+    db.commit()
+    print(f"✅ 為模板課程建立了 {len(template_contents)} 個內容")
+
     # ============ 4. 顯示結果摘要 ============
     template_count = (
         db.query(Program)
