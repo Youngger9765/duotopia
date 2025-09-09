@@ -21,6 +21,7 @@ from routers import (
     files,
     programs,
     speech_assessment,
+    admin,
 )
 
 app = FastAPI(
@@ -94,6 +95,7 @@ app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
 app.include_router(programs.router)  # 課程管理路由
 app.include_router(speech_assessment.router)  # 語音評估路由
+app.include_router(admin.router)  # 管理路由
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
