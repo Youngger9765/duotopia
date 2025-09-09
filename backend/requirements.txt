@@ -26,6 +26,9 @@ edge-tts==7.2.3
 google-cloud-storage==2.13.0
 azure-cognitiveservices-speech==1.45.0
 
+# Audio Processing
+pydub==0.25.1
+
 # =============================================
 # Development Dependencies
 # =============================================
