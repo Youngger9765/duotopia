@@ -40,11 +40,8 @@ if environment == "development":
     # 開發環境可以使用較寬鬆的設定
     allowed_origins = ["*"]
 elif environment == "staging":
-    # Staging 環境允許 staging 前端
-    allowed_origins = [
-        "https://duotopia-staging-frontend-206313737181.asia-east1.run.app",
-        "http://localhost:5173",  # 本地開發
-    ]
+    # Staging 環境暫時允許所有來源（方便測試）
+    allowed_origins = ["*"]
 elif environment == "production":
     # 生產環境只允許生產域名
     allowed_origins = [
