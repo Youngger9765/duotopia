@@ -23,5 +23,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # No-op downgrade - this migration doesn't change anything
+    # SAFE: No-op downgrade - this migration doesn't change anything
+    # This migration is a placeholder and doesn't modify the database schema
     pass

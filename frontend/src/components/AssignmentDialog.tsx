@@ -98,6 +98,7 @@ export function AssignmentDialog({
 }: AssignmentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(new Set());
@@ -131,38 +132,9 @@ export function AssignmentDialog({
   const loadPrograms = async () => {
     try {
       setLoadingPrograms(true);
-      // Load programs with their lessons and contents
+      // Only load program list, not lessons or contents
       const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
-
-      // Load details for each program to get lessons and contents
-      const programsWithDetails = await Promise.all(
-        response.map(async (program) => {
-          try {
-            const detail = await apiClient.get<Program>(`/api/teachers/programs/${program.id}`);
-
-            // For each lesson, try to load its contents
-            if (detail.lessons) {
-              const lessonsWithContents = await Promise.all(
-                detail.lessons.map(async (lesson) => {
-                  try {
-                    const contents = await apiClient.get<Content[]>(`/api/teachers/lessons/${lesson.id}/contents`);
-                    return { ...lesson, contents };
-                  } catch {
-                    return { ...lesson, contents: [] };
-                  }
-                })
-              );
-              return { ...detail, lessons: lessonsWithContents };
-            }
-
-            return detail;
-          } catch {
-            return { ...program, lessons: [] };
-          }
-        })
-      );
-
-      setPrograms(programsWithDetails);
+      setPrograms(response);
     } catch (error) {
       console.error('Failed to load programs:', error);
       toast.error('無法載入課程資料');
@@ -172,7 +144,69 @@ export function AssignmentDialog({
     }
   };
 
-  const toggleProgram = (programId: number) => {
+  const loadProgramLessons = async (programId: number) => {
+    // Check if lessons already loaded
+    const program = programs.find(p => p.id === programId);
+    if (program?.lessons && program.lessons.length > 0) {
+      return; // Already loaded
+    }
+
+    try {
+      setLoadingLessons(prev => ({ ...prev, [programId]: true }));
+      const detail = await apiClient.get<Program>(`/api/teachers/programs/${programId}`);
+      
+      // Update the program with lessons (but without contents)
+      setPrograms(prev => prev.map(p => 
+        p.id === programId 
+          ? { ...p, lessons: detail.lessons || [] }
+          : p
+      ));
+    } catch (error) {
+      console.error(`Failed to load lessons for program ${programId}:`, error);
+      toast.error('無法載入課程單元');
+    } finally {
+      setLoadingLessons(prev => ({ ...prev, [programId]: false }));
+    }
+  };
+
+  const loadLessonContents = async (lessonId: number) => {
+    // Find the lesson and check if contents already loaded
+    let foundLesson: Lesson | undefined;
+    programs.forEach(program => {
+      const lesson = program.lessons?.find(l => l.id === lessonId);
+      if (lesson) {
+        foundLesson = lesson;
+      }
+    });
+
+    if (foundLesson?.contents && foundLesson.contents.length > 0) {
+      return; // Already loaded
+    }
+
+    try {
+      setLoadingLessons(prev => ({ ...prev, [lessonId]: true }));
+      const contents = await apiClient.get<Content[]>(`/api/teachers/lessons/${lessonId}/contents`);
+      
+      // Update the lesson with contents
+      setPrograms(prev => prev.map(program => ({
+        ...program,
+        lessons: program.lessons?.map(lesson => 
+          lesson.id === lessonId 
+            ? { ...lesson, contents }
+            : lesson
+        )
+      })));
+    } catch (error) {
+      console.error(`Failed to load contents for lesson ${lessonId}:`, error);
+      toast.error('無法載入課程內容');
+    } finally {
+      setLoadingLessons(prev => ({ ...prev, [lessonId]: false }));
+    }
+  };
+
+  const toggleProgram = async (programId: number) => {
+    const isExpanding = !expandedPrograms.has(programId);
+    
     setExpandedPrograms(prev => {
       const newSet = new Set(prev);
       if (newSet.has(programId)) {
@@ -182,9 +216,16 @@ export function AssignmentDialog({
       }
       return newSet;
     });
+
+    // Load lessons when expanding
+    if (isExpanding) {
+      await loadProgramLessons(programId);
+    }
   };
 
-  const toggleLesson = (lessonId: number) => {
+  const toggleLesson = async (lessonId: number) => {
+    const isExpanding = !expandedLessons.has(lessonId);
+    
     setExpandedLessons(prev => {
       const newSet = new Set(prev);
       if (newSet.has(lessonId)) {
@@ -194,6 +235,11 @@ export function AssignmentDialog({
       }
       return newSet;
     });
+
+    // Load contents when expanding
+    if (isExpanding) {
+      await loadLessonContents(lessonId);
+    }
   };
 
   const toggleContent = (contentId: number) => {
@@ -447,7 +493,9 @@ export function AssignmentDialog({
                         className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          {expandedPrograms.has(program.id) ? (
+                          {loadingLessons[program.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : expandedPrograms.has(program.id) ? (
                             <ChevronDown className="h-4 w-4" />
                           ) : (
                             <ChevronRight className="h-4 w-4" />
@@ -460,9 +508,14 @@ export function AssignmentDialog({
                             </Badge>
                           )}
                         </div>
-                        <span className="text-sm text-gray-500">
-                          {program.lessons?.length || 0} 個單元
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">
+                            {program.lessons?.length || 0} 個單元
+                          </span>
+                          {loadingLessons[program.id] && (
+                            <span className="text-xs text-blue-600">載入中...</span>
+                          )}
+                        </div>
                       </button>
 
                       {expandedPrograms.has(program.id) && program.lessons && (
@@ -474,7 +527,9 @@ export function AssignmentDialog({
                                 className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
                               >
                                 <div className="flex items-center gap-2">
-                                  {expandedLessons.has(lesson.id) ? (
+                                  {loadingLessons[lesson.id] ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : expandedLessons.has(lesson.id) ? (
                                     <ChevronDown className="h-4 w-4" />
                                   ) : (
                                     <ChevronRight className="h-4 w-4" />
@@ -486,7 +541,10 @@ export function AssignmentDialog({
                                   <span className="text-xs text-gray-500">
                                     {lesson.contents?.length || 0} 個內容
                                   </span>
-                                  {lesson.contents && lesson.contents.length > 0 && (
+                                  {loadingLessons[lesson.id] && (
+                                    <span className="text-xs text-blue-600">載入中...</span>
+                                  )}
+                                  {lesson.contents && lesson.contents.length > 0 && !loadingLessons[lesson.id] && (
                                     <Button
                                       variant="ghost"
                                       size="sm"

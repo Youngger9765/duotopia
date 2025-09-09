@@ -221,6 +221,7 @@ export default function GroupedQuestionsTemplate({
     }
   };
 
+
   return (
     <div className="space-y-6">
       {/* 題目狀態標籤 */}
@@ -318,7 +319,15 @@ export default function GroupedQuestionsTemplate({
             <Button
               size="lg"
               className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={onStartRecording}
+              onClick={() => {
+                // Clear AI assessment results when starting new recording
+                setAssessmentResults(prev => {
+                  const newResults = { ...prev };
+                  delete newResults[currentQuestionIndex];
+                  return newResults;
+                });
+                onStartRecording?.();
+              }}
             >
               <Mic className="w-5 h-5 mr-2" />
               開始錄音
@@ -520,7 +529,7 @@ export default function GroupedQuestionsTemplate({
                 <div className="space-y-2">
                   <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
                   <div className="flex flex-wrap gap-2">
-                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: Record<string, unknown>, idx: number) => {
+                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: any, idx: number) => {
                       const score = word.accuracy_score || 0;
                       // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
                       const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';

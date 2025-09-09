@@ -490,7 +490,7 @@ export default function AssignmentDetail() {
                       <div className="mt-4">
                         <h5 className="font-medium text-gray-700 mb-2">單字評分詳情：</h5>
                         <div className="flex flex-wrap gap-2">
-                          {words.map((word: Record<string, unknown>, wordIndex: number) => (
+                          {words.map((word: any, wordIndex: number) => (
                             <span
                               key={wordIndex}
                               className={`px-3 py-1 rounded-full text-sm font-medium ${

@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 創建非 root 使用者
+RUN useradd -m -u 1000 appuser
+
 # 複製依賴檔案
 COPY requirements.txt .
 
@@ -19,6 +22,12 @@ COPY cor[e] ./core/
 
 # 複製 GCS service account key（如果存在）
 COPY service-account-key.jso[n] ./service-account-key.json
+
+# 變更檔案擁有者
+RUN chown -R appuser:appuser /app
+
+# 切換到非 root 使用者
+USER appuser
 
 # 暴露端口 (Cloud Run 使用 8080)
 EXPOSE 8080

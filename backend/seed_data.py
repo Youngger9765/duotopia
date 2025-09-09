@@ -1376,37 +1376,39 @@ def create_demo_data(db: Session):
 
     # ============ 確保王小明有所有狀態的作業 ============
     print("\n確保王小明有完整的作業狀態分布...")
-    
+
     xiaoming = students_5a[0]  # 王小明
-    
+
     # 檢查王小明目前的作業狀態
     existing_statuses = set()
-    xiaoming_assignments = db.query(StudentAssignment).filter(StudentAssignment.student_id == xiaoming.id).all()
+    xiaoming_assignments = (
+        db.query(StudentAssignment)
+        .filter(StudentAssignment.student_id == xiaoming.id)
+        .all()
+    )
     for assignment in xiaoming_assignments:
         existing_statuses.add(assignment.status)
-    
+
     print(f"王小明現有狀態: {[status.value for status in existing_statuses]}")
-    
+
     # 為王小明添加缺失的狀態作業
     missing_statuses = set(AssignmentStatus) - existing_statuses
     if missing_statuses:
         print(f"為王小明添加缺失狀態: {[status.value for status in missing_statuses]}")
-        
+
         for status in missing_statuses:
             # 建立新作業
             new_assignment = Assignment(
                 title=f"王小明專用作業 - {status.value}",
                 description=f"測試 {status.value} 狀態的作業",
-                content_type="reading_assessment",
                 due_date=datetime.now() + timedelta(days=7),
-                estimated_minutes=15,
                 teacher_id=demo_teacher.id,
                 classroom_id=classroom_a.id,
                 is_active=True,
             )
             db.add(new_assignment)
             db.flush()  # 取得 ID
-            
+
             # 關聯內容
             assignment_content = AssignmentContent(
                 assignment_id=new_assignment.id,
@@ -1414,14 +1416,14 @@ def create_demo_data(db: Session):
                 order_index=1,
             )
             db.add(assignment_content)
-            
+
             # 建立學生作業
             score = None
             feedback = None
             if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
                 score = random.randint(70, 95)
                 feedback = f"測試 {status.value} 狀態的回饋"
-            
+
             student_assignment = StudentAssignment(
                 assignment_id=new_assignment.id,
                 student_id=xiaoming.id,
@@ -1434,28 +1436,33 @@ def create_demo_data(db: Session):
                 feedback=feedback,
                 is_active=True,
             )
-            
+
             # 設置時間戳
-            if status in [AssignmentStatus.SUBMITTED, AssignmentStatus.GRADED, AssignmentStatus.RETURNED, AssignmentStatus.RESUBMITTED]:
+            if status in [
+                AssignmentStatus.SUBMITTED,
+                AssignmentStatus.GRADED,
+                AssignmentStatus.RETURNED,
+                AssignmentStatus.RESUBMITTED,
+            ]:
                 student_assignment.submitted_at = datetime.now() - timedelta(days=2)
             if status in [AssignmentStatus.GRADED, AssignmentStatus.RETURNED]:
                 student_assignment.graded_at = datetime.now() - timedelta(days=1)
             if status == AssignmentStatus.RETURNED:
                 student_assignment.returned_at = student_assignment.graded_at
-            
+
             db.add(student_assignment)
-            
+            db.flush()  # 取得 student_assignment.id
+
             # 建立進度記錄（NOT_STARTED 不需要）
             if status != AssignmentStatus.NOT_STARTED:
                 progress = StudentContentProgress(
                     student_assignment_id=student_assignment.id,
                     content_id=content1_5a.id,
-                    status="completed" if status == AssignmentStatus.GRADED else "in_progress",
-                    attempts=1,
-                    best_score=score if score else 0,
+                    status=status,
+                    score=score if score else None,
                 )
                 db.add(progress)
-        
+
         db.commit()
         print(f"✅ 為王小明添加了 {len(missing_statuses)} 個缺失狀態的作業")
     else:

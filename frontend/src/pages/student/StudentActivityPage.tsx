@@ -157,6 +157,40 @@ export default function StudentActivityPage() {
   // Recording controls
   const startRecording = async () => {
     try {
+      // Clear old recordings and AI scores when starting new recording
+      const currentActivity = activities[currentActivityIndex];
+
+      // Clear previous recording and AI scores for grouped questions
+      if (currentActivity.items && currentActivity.items.length > 0) {
+        setActivities(prevActivities => {
+          const newActivities = [...prevActivities];
+          const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
+          if (activityIndex !== -1) {
+            const recordings = newActivities[activityIndex].recordings || [];
+            recordings[currentSubQuestionIndex] = ''; // Clear current recording
+            newActivities[activityIndex] = {
+              ...newActivities[activityIndex],
+              recordings: recordings,
+              ai_scores: undefined // Clear AI scores
+            };
+          }
+          return newActivities;
+        });
+
+        // Also clear from answers
+        setAnswers(prev => {
+          const newAnswers = new Map(prev);
+          const answer = newAnswers.get(currentActivity.id);
+          if (answer && answer.recordings) {
+            answer.recordings[currentSubQuestionIndex] = '';
+          }
+          if (answer) {
+            newAnswers.set(currentActivity.id, answer);
+          }
+          return newAnswers;
+        });
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       const chunks: Blob[] = [];
@@ -204,8 +238,20 @@ export default function StudentActivityPage() {
 
         // Update activity's recordings array for display
         if (currentActivity.items && currentActivity.items.length > 0) {
-          currentActivity.recordings = currentActivity.recordings || [];
-          currentActivity.recordings[currentSubQuestionIndex] = localAudioUrl;
+          // Update activities state to trigger re-render
+          setActivities(prevActivities => {
+            const newActivities = [...prevActivities];
+            const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
+            if (activityIndex !== -1) {
+              const recordings = newActivities[activityIndex].recordings || [];
+              recordings[currentSubQuestionIndex] = localAudioUrl;
+              newActivities[activityIndex] = {
+                ...newActivities[activityIndex],
+                recordings: recordings
+              };
+            }
+            return newActivities;
+          });
         }
 
         // Upload to GCS
@@ -230,22 +276,16 @@ export default function StudentActivityPage() {
 
           if (uploadResponse.ok) {
             const result = await uploadResponse.json();
-            const { audio_url, storage_type, message } = result;
+            const { audio_url, message } = result;
             console.log('Recording uploaded successfully:', {
               url: audio_url,
-              storage: storage_type,
               message: message
             });
 
-            // 根據儲存類型顯示不同訊息
-            if (storage_type === 'local') {
-              console.warn('Using local storage (GCS not available)');
-              toast.info('錄音已儲存在本地伺服器');
-            } else {
-              toast.success('錄音已上傳到雲端');
-            }
+            // 錄音成功上傳到雲端
+            toast.success('錄音已上傳到雲端');
 
-            // Update with the URL (whether local or GCS)
+            // Update with the GCS URL
             setAnswers(prev => {
               const newAnswers = new Map(prev);
               const answer = newAnswers.get(currentActivity.id);
@@ -262,6 +302,23 @@ export default function StudentActivityPage() {
               return newAnswers;
             });
 
+            // Also update activities state with GCS URL
+            if (currentActivity.items && currentActivity.items.length > 0) {
+              setActivities(prevActivities => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
+                if (activityIndex !== -1) {
+                  const recordings = newActivities[activityIndex].recordings || [];
+                  recordings[currentSubQuestionIndex] = audio_url;
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    recordings: recordings
+                  };
+                }
+                return newActivities;
+              });
+            }
+
             // Save to server with the URL
             await autoSave(audio_url);
           } else {
@@ -272,46 +329,18 @@ export default function StudentActivityPage() {
         } catch (error) {
           console.error('Failed to upload recording:', error);
 
-          // 如果是網絡錯誤，先保存在本地
+          // 處理錯誤
           if (error instanceof TypeError && error.message === 'Failed to fetch') {
-            console.log('Network error - saving locally for now');
-            toast.warning('網絡問題，錄音已暫存本地');
-
-            // 仍然保存本地 URL 讓用戶可以播放
-            setAnswers(prev => {
-              const newAnswers = new Map(prev);
-              const answer = newAnswers.get(currentActivity.id);
-              if (answer) {
-                answer.status = 'completed';
-              }
-              newAnswers.set(currentActivity.id, answer!);
-              return newAnswers;
-            });
+            console.error('Network error - cannot upload recording');
+            toast.error('網絡連接失敗，無法上傳錄音');
           } else {
             toast.error('錄音上傳失敗，請稍後再試');
           }
         }
-        } else {
-          // 暫時跳過上傳，只使用本地儲存
-          console.log('Skipping GCS upload - using local storage');
-          setAnswers(prev => {
-            const newAnswers = new Map(prev);
-            const answer = newAnswers.get(currentActivity.id);
-            if (answer) {
-              answer.status = 'completed';
-            }
-            newAnswers.set(currentActivity.id, answer!);
-            return newAnswers;
-          });
+        } // End of if (!skipUpload)
+      }; // End of recorder.onstop
 
-          // 仍然保存到 server（但使用本地 URL）
-          await autoSave(localAudioUrl);
-        }
-
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-      };
-
+      // Start recording
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
@@ -635,10 +664,18 @@ export default function StudentActivityPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">載入題目中...</p>
+          <div className="relative">
+            {/* Outer ring */}
+            <div className="absolute inset-0 animate-ping">
+              <div className="h-16 w-16 rounded-full border-4 border-blue-200 opacity-75"></div>
+            </div>
+            {/* Inner spinning circle */}
+            <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
+          </div>
+          <p className="mt-6 text-lg font-medium text-gray-700">載入作業中...</p>
+          <p className="mt-2 text-sm text-gray-500">請稍候，正在準備您的學習內容</p>
         </div>
       </div>
     );

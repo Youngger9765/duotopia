@@ -34,9 +34,17 @@ app = FastAPI(
 # app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
 
 # CORS 設定
+# 從環境變數讀取允許的來源，預設使用安全的設定
+allowed_origins = os.getenv(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,https://duotopia-469413.web.app"
+).split(",")
+if os.getenv("ENVIRONMENT") == "development":
+    # 開發環境可以使用較寬鬆的設定
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 暫時允許所有來源
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

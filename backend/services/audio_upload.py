@@ -32,7 +32,24 @@ class AudioUploadService:
         """延遲初始化 GCS client"""
         if not self.storage_client:
             try:
-                self.storage_client = storage.Client()
+                # 明確指定 service account key 檔案路徑
+                import os
+
+                key_path = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "service-account-key.json",
+                )
+                if os.path.exists(key_path):
+                    self.storage_client = storage.Client.from_service_account_json(
+                        key_path
+                    )
+                    print(
+                        f"GCS client initialized with service account from {key_path}"
+                    )
+                else:
+                    # 如果找不到檔案，嘗試使用預設認證（環境變數或 gcloud）
+                    self.storage_client = storage.Client()
+                    print("GCS client initialized with default credentials")
             except Exception as e:
                 print(f"GCS client initialization failed: {e}")
                 return None
@@ -102,37 +119,33 @@ class AudioUploadService:
             else:
                 filename = f"recording_{timestamp}_{file_id}.{extension}"
 
-            # 嘗試上傳到 GCS
+            # 上傳到 GCS（必須成功，不允許本地儲存）
             client = self._get_storage_client()
-            if client:
-                try:
-                    bucket = client.bucket(self.bucket_name)
-                    blob = bucket.blob(f"recordings/{filename}")
+            if not client:
+                raise HTTPException(
+                    status_code=500,
+                    detail="GCS service unavailable. Cannot save recordings.",
+                )
 
-                    # 上傳檔案並設定正確的 content type
-                    blob.upload_from_string(content, content_type=file.content_type)
+            try:
+                bucket = client.bucket(self.bucket_name)
+                blob = bucket.blob(f"recordings/{filename}")
 
-                    # 設為公開
-                    blob.make_public()
+                # 上傳檔案並設定正確的 content type
+                blob.upload_from_string(content, content_type=file.content_type)
 
-                    # 返回公開 URL
-                    return f"https://storage.googleapis.com/{self.bucket_name}/recordings/{filename}"
+                # 設為公開
+                blob.make_public()
 
-                except Exception as e:
-                    print(f"GCS upload failed: {e}, falling back to local storage")
-                    # 繼續使用本地儲存作為備案
+                # 返回公開 URL
+                return f"https://storage.googleapis.com/{self.bucket_name}/recordings/{filename}"
 
-            # 本地儲存作為備案
-            local_dir = "static/audio/recordings"
-            os.makedirs(local_dir, exist_ok=True)
-            local_path = os.path.join(local_dir, filename)
-
-            # 寫入檔案
-            with open(local_path, "wb") as f:
-                f.write(content)
-
-            # 返回本地 URL
-            return f"/static/audio/recordings/{filename}"
+            except Exception as e:
+                print(f"GCS upload failed: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to upload recording to cloud storage: {str(e)}",
+                )
 
         except HTTPException:
             raise

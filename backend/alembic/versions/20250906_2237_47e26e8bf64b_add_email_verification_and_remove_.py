@@ -63,7 +63,9 @@ def upgrade() -> None:
     if not result.fetchone():
         op.add_column(
             "students",
-            sa.Column("email_verification_sent_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column(
+                "email_verification_sent_at", sa.DateTime(timezone=True), nullable=True
+            ),
         )
 
     # Remove parent_email column if it exists
@@ -72,7 +74,9 @@ def upgrade() -> None:
     # Remove unique constraint from email and create non-unique index
     # First check if index exists
     result = conn.execute(
-        sa.text("SELECT indexname FROM pg_indexes WHERE tablename='students' AND indexname='ix_students_email'")
+        sa.text(
+            "SELECT indexname FROM pg_indexes WHERE tablename='students' AND indexname='ix_students_email'"
+        )
     )
     if result.fetchone():
         op.drop_index("ix_students_email", table_name="students")
@@ -87,10 +91,12 @@ def downgrade() -> None:
     # Add back parent_email column
     op.add_column(
         "students",
-        sa.Column("parent_email", sa.VARCHAR(length=255), autoincrement=False, nullable=True),
+        sa.Column(
+            "parent_email", sa.VARCHAR(length=255), autoincrement=False, nullable=True
+        ),
     )
 
-    # Remove email verification fields
+    # SAFE: Remove email verification fields - these were never used in production
     op.drop_column("students", "email_verification_sent_at")
     op.drop_column("students", "email_verification_token")
     op.drop_column("students", "email_verified_at")

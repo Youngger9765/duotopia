@@ -867,16 +867,12 @@ async def upload_student_recording(
 
         db.commit()
 
-        # 判斷是否使用本地儲存
-        is_local_storage = audio_url.startswith("/static/")
-        storage_type = "local" if is_local_storage else "gcs"
-
         return {
             "audio_url": audio_url,
             "assignment_id": assignment_id,
             "content_item_index": content_item_index,
-            "storage_type": storage_type,
-            "message": f"Recording uploaded successfully to {storage_type} storage",
+            "storage_type": "gcs",
+            "message": "Recording uploaded successfully to cloud storage",
         }
 
     except HTTPException as e:
