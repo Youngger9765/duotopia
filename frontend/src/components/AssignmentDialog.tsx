@@ -154,10 +154,10 @@ export function AssignmentDialog({
     try {
       setLoadingLessons(prev => ({ ...prev, [programId]: true }));
       const detail = await apiClient.get<Program>(`/api/teachers/programs/${programId}`);
-      
+
       // Update the program with lessons (but without contents)
-      setPrograms(prev => prev.map(p => 
-        p.id === programId 
+      setPrograms(prev => prev.map(p =>
+        p.id === programId
           ? { ...p, lessons: detail.lessons || [] }
           : p
       ));
@@ -186,12 +186,12 @@ export function AssignmentDialog({
     try {
       setLoadingLessons(prev => ({ ...prev, [lessonId]: true }));
       const contents = await apiClient.get<Content[]>(`/api/teachers/lessons/${lessonId}/contents`);
-      
+
       // Update the lesson with contents
       setPrograms(prev => prev.map(program => ({
         ...program,
-        lessons: program.lessons?.map(lesson => 
-          lesson.id === lessonId 
+        lessons: program.lessons?.map(lesson =>
+          lesson.id === lessonId
             ? { ...lesson, contents }
             : lesson
         )
@@ -206,7 +206,7 @@ export function AssignmentDialog({
 
   const toggleProgram = async (programId: number) => {
     const isExpanding = !expandedPrograms.has(programId);
-    
+
     setExpandedPrograms(prev => {
       const newSet = new Set(prev);
       if (newSet.has(programId)) {
@@ -225,7 +225,7 @@ export function AssignmentDialog({
 
   const toggleLesson = async (lessonId: number) => {
     const isExpanding = !expandedLessons.has(lessonId);
-    
+
     setExpandedLessons(prev => {
       const newSet = new Set(prev);
       if (newSet.has(lessonId)) {

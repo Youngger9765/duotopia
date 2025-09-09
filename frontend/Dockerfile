@@ -12,6 +12,10 @@ RUN npm ci
 # 複製原始碼
 COPY . .
 
+# 建置時設定 API URL（使用 build argument）
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
 # 建置
 RUN npm run build
 
