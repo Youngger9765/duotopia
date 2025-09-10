@@ -29,7 +29,9 @@ interface StudentSubmission {
   submissions: Array<{
     question_text: string;
     question_translation?: string;
-    audio_url?: string;
+    audio_url?: string;  // 保留舊欄位以相容
+    question_audio_url?: string;  // 題目參考音檔
+    student_audio_url?: string;  // 學生錄音檔案
     student_answer?: string;
     transcript?: string;
     duration?: number;
@@ -355,13 +357,18 @@ export default function StudentGradingPage() {
                     )}
                   </div>
 
-                  {/* 音頻播放 */}
-                  {submission.submissions[currentQuestionIndex].audio_url && (
+                  {/* 音頻播放 - 優先使用 student_audio_url，然後是 audio_url */}
+                  {(submission.submissions[currentQuestionIndex].student_audio_url ||
+                    submission.submissions[currentQuestionIndex].audio_url) && (
                     <div className="space-y-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => playAudio(submission.submissions[currentQuestionIndex].audio_url!, currentQuestionIndex)}
+                        onClick={() => playAudio(
+                          submission.submissions[currentQuestionIndex].student_audio_url ||
+                          submission.submissions[currentQuestionIndex].audio_url!,
+                          currentQuestionIndex
+                        )}
                         className="w-full"
                       >
                         {currentAudioIndex === currentQuestionIndex && isPlaying ? (
