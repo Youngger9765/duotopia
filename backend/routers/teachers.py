@@ -535,7 +535,7 @@ async def get_all_students(
                 "id": student.id,
                 "name": student.name,
                 "email": student.email,
-                "student_id": student.student_number,
+                "student_number": student.student_number,
                 "birthdate": (
                     student.birthdate.isoformat() if student.birthdate else None
                 ),
@@ -771,8 +771,8 @@ async def update_student(
         student.name = update_data.name
     if update_data.email is not None:
         student.email = update_data.email
-    if update_data.student_id is not None:
-        student.student_number = update_data.student_id
+    if update_data.student_number is not None:
+        student.student_number = update_data.student_number
     if update_data.phone is not None:
         student.phone = update_data.phone
     if update_data.status is not None:

@@ -98,7 +98,9 @@ export default function StudentLogin() {
       setSelectedClassroom(classroom);
       // Load students for this classroom
       const studentsData = await teacherService.getClassroomStudents(classroom.id);
-      setStudents(studentsData);
+      // Sort students by ID
+      const sortedStudents = [...studentsData].sort((a, b) => a.id - b.id);
+      setStudents(sortedStudents);
       setStep(3);
     } catch {
       setError('無法載入班級學生資料');

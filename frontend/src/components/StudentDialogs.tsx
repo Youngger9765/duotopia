@@ -62,8 +62,8 @@ export function StudentDialogs({
   useEffect(() => {
     if (student && (dialogType === 'edit' || dialogType === 'view')) {
       setFormData({
-        name: student.name,
-        email: student.email,
+        name: student.name || '',
+        email: student.email || '',
         student_number: student.student_number || '',
         birthdate: student.birthdate || '',
         phone: student.phone || '',
