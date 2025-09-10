@@ -14,7 +14,7 @@ export interface Student {
   id: number;
   name: string;
   email?: string;
-  student_id?: string;
+  student_number?: string; // Student ID number (optional)
   birthdate: string;
   phone?: string;
   status: string;
@@ -116,7 +116,7 @@ export type AssignmentStatusEnum =
 // ============ Teacher Assignment Types ============
 export interface AssignmentSubmission {
   id: number;
-  student_id: number;
+  student_number: number;
   assignment_id: number;
   status: string;
   score?: number;
@@ -152,7 +152,7 @@ export interface Assignment {
 export interface StudentAssignment {
   id: number;
   assignment_id?: number;
-  student_id: number;
+  student_number: number;
   classroom_id: number;
   title: string;
   status: AssignmentStatusEnum;
@@ -296,7 +296,7 @@ export interface RegisterRequest {
 export interface StudentFormData {
   name: string;
   email?: string;
-  student_id?: string;
+  student_number?: string;
   birthdate: string;
   phone?: string;
   classroom_id?: number;

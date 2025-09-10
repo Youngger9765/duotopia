@@ -38,7 +38,7 @@ interface GradingModalProps {
 }
 
 interface StudentSubmission {
-  student_id: number;
+  student_number: number;
   student_name: string;
   student_email: string;
   status: string;
@@ -164,7 +164,7 @@ export default function GradingModal({
       await apiClient.post(
         `/api/teachers/assignments/${assignmentId}/grade`,
         {
-          student_id: studentId,
+          student_number: studentId,
           score: score,
           feedback: combinedFeedback
         }

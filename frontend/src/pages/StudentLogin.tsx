@@ -121,14 +121,14 @@ export default function StudentLogin() {
     setError('');
     try {
       const response = await authService.studentLogin({
-        email: selectedStudent.email,
+        id: selectedStudent.id,
         password: password
       });
 
       if (response.access_token) {
         login(response.access_token, {
           ...response.user,
-          student_id: response.user.id.toString(),
+          student_number: response.user.student_number || response.user.id.toString(),
           classroom_id: selectedClassroom?.id || 0,
           classroom_name: selectedClassroom?.name,
           teacher_name: teacherHistory.find(t => t.email === teacherEmail)?.name
@@ -335,7 +335,12 @@ export default function StudentLogin() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => handleStudentSelect(selectedStudent)}
+                  onClick={() => {
+                    setSelectedStudent(null);
+                    setPassword('');
+                    setError('');
+                    setStep(3);
+                  }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   選擇其他學生

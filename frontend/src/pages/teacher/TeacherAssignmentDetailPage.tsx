@@ -42,7 +42,7 @@ interface AssignmentDetail extends Assignment {
 }
 
 interface StudentProgress {
-  student_id: number;
+  student_number: number;
   student_name: string;
   // 對應後端 AssignmentStatus
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'RETURNED' | 'RESUBMITTED' | 'unassigned';
@@ -111,7 +111,7 @@ export default function TeacherAssignmentDetailPage() {
   const fetchAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<AssignmentDetail & {assigned_at?: string; assigned_date?: string; created_at?: string; students_progress?: Array<{student_id: number}>}>(`/api/teachers/assignments/${assignmentId}`);
+      const response = await apiClient.get<AssignmentDetail & {assigned_at?: string; assigned_date?: string; created_at?: string; students_progress?: Array<{student_number: number}>}>(`/api/teachers/assignments/${assignmentId}`);
 
       // Handle different possible date field names
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
@@ -119,7 +119,7 @@ export default function TeacherAssignmentDetailPage() {
       // Extract student IDs from students_progress
       let studentIds: number[] = [];
       if (response.students_progress && Array.isArray(response.students_progress)) {
-        studentIds = response.students_progress.map((sp) => sp.student_id).filter((id) => id !== null);
+        studentIds = response.students_progress.map((sp) => sp.student_number).filter((id) => id !== null);
       } else if (response.students && Array.isArray(response.students)) {
         studentIds = response.students;
       }
@@ -200,7 +200,7 @@ export default function TeacherAssignmentDetailPage() {
         const progressMap = new Map();
 
         interface ProgressItem {
-          student_id?: number;
+          student_number?: number;
           id?: number;
           student_name?: string;
           name?: string;
@@ -217,9 +217,9 @@ export default function TeacherAssignmentDetailPage() {
         }
 
         progressArray.forEach((item: ProgressItem) => {
-          const studentId = item.student_id || item.id;
+          const studentId = item.student_number || item.id;
           progressMap.set(studentId, {
-            student_id: studentId,
+            student_number: studentId,
             student_name: item.student_name || item.name || '未知學生',
             status: item.status || 'not_started',
             submission_date: item.submission_date || item.submitted_at,
@@ -241,7 +241,7 @@ export default function TeacherAssignmentDetailPage() {
             } else {
               const isAssigned = assignedIds.includes(student.id);
               return {
-                student_id: student.id,
+                student_number: student.id,
                 student_name: student.name,
                 status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
                 submission_date: undefined,
@@ -279,7 +279,7 @@ export default function TeacherAssignmentDetailPage() {
       const mockProgress = students.map(student => {
         const isAssigned = assignedIds.includes(student.id);
         return {
-          student_id: student.id,
+          student_number: student.id,
           student_name: student.name,
           status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
           submission_date: undefined,
@@ -362,7 +362,7 @@ export default function TeacherAssignmentDetailPage() {
 
       // Update student progress
       setStudentProgress(prev => prev.map(p =>
-        p.student_id === studentId
+        p.student_number === studentId
           ? { ...p, status: 'NOT_STARTED' as const, is_assigned: true }
           : p
       ));
@@ -420,7 +420,7 @@ export default function TeacherAssignmentDetailPage() {
 
       // Update student progress
       setStudentProgress(prev => prev.map(p =>
-        p.student_id === studentId
+        p.student_number === studentId
           ? { ...p, status: 'unassigned' as const, is_assigned: false }
           : p
       ));
@@ -1028,7 +1028,7 @@ export default function TeacherAssignmentDetailPage() {
 
                     return (
                       <tr
-                        key={progress.student_id}
+                        key={progress.student_number}
                         className={`border-t ${isAssigned ? 'hover:bg-gray-50' : 'bg-gray-50 opacity-60'}`}
                       >
                         <td className="px-4 py-3 min-w-[150px]">
@@ -1084,14 +1084,14 @@ export default function TeacherAssignmentDetailPage() {
                                     className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
                                     onClick={() => {
                                       // 導向到批改頁面
-                                      navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`);
-                                      setSelectedStudentId(progress.student_id);
+                                      navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_number}`);
+                                      setSelectedStudentId(progress.student_number);
                                       setSelectedStudentName(progress.student_name);
                                       // 找出這個學生在列表中的位置
                                       const submittedStudents = filteredProgress.filter(p =>
                                         p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
                                       );
-                                      const currentIndex = submittedStudents.findIndex(p => p.student_id === progress.student_id);
+                                      const currentIndex = submittedStudents.findIndex(p => p.student_number === progress.student_number);
                                       setGradingStudentIndex(currentIndex);
                                       setIsGradingModalOpen(true);
                                     }}
@@ -1103,7 +1103,7 @@ export default function TeacherAssignmentDetailPage() {
                                     size="sm"
                                     variant="outline"
                                     className="text-red-600 border-red-600 hover:bg-red-50 transition-colors"
-                                    onClick={() => handleUnassignStudent(progress.student_id, progress.student_name, progress.status)}
+                                    onClick={() => handleUnassignStudent(progress.student_number, progress.student_name, progress.status)}
                                   >
                                     取消指派
                                   </Button>
@@ -1114,7 +1114,7 @@ export default function TeacherAssignmentDetailPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 transition-colors cursor-pointer"
-                                onClick={() => handleAssignStudent(progress.student_id)}
+                                onClick={() => handleAssignStudent(progress.student_number)}
                               >
                                 指派
                               </Button>
@@ -1161,12 +1161,12 @@ export default function TeacherAssignmentDetailPage() {
             const submittedStudents = filteredProgress.filter(p =>
               p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
             );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+            const currentIndex = submittedStudents.findIndex(p => p.student_number === selectedStudentId);
 
             if (currentIndex < submittedStudents.length - 1) {
               // 有下一個學生
               const nextStudent = submittedStudents[currentIndex + 1];
-              setSelectedStudentId(nextStudent.student_id);
+              setSelectedStudentId(nextStudent.student_number);
               setSelectedStudentName(nextStudent.student_name);
               setGradingStudentIndex(currentIndex + 1);
             } else {
@@ -1184,11 +1184,11 @@ export default function TeacherAssignmentDetailPage() {
             const submittedStudents = filteredProgress.filter(p =>
               p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
             );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+            const currentIndex = submittedStudents.findIndex(p => p.student_number === selectedStudentId);
 
             if (currentIndex > 0) {
               const prevStudent = submittedStudents[currentIndex - 1];
-              setSelectedStudentId(prevStudent.student_id);
+              setSelectedStudentId(prevStudent.student_number);
               setSelectedStudentName(prevStudent.student_name);
               setGradingStudentIndex(currentIndex - 1);
             }
@@ -1198,11 +1198,11 @@ export default function TeacherAssignmentDetailPage() {
             const submittedStudents = filteredProgress.filter(p =>
               p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
             );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
+            const currentIndex = submittedStudents.findIndex(p => p.student_number === selectedStudentId);
 
             if (currentIndex < submittedStudents.length - 1) {
               const nextStudent = submittedStudents[currentIndex + 1];
-              setSelectedStudentId(nextStudent.student_id);
+              setSelectedStudentId(nextStudent.student_number);
               setSelectedStudentName(nextStudent.student_name);
               setGradingStudentIndex(currentIndex + 1);
             }

@@ -20,7 +20,7 @@ class TeacherLoginRequest(BaseModel):
 
 
 class StudentLoginRequest(BaseModel):
-    email: EmailStr
+    id: int  # 學生資料庫主鍵 ID
     password: str
 
 
@@ -44,13 +44,19 @@ async def teacher_login(request: TeacherLoginRequest, db: Session = Depends(get_
     teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
 
     if not teacher:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Email not found"
+        )
 
     if not verify_password(request.password, teacher.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
+        )
 
     if not teacher.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
+        )
 
     # Create token
     access_token = create_access_token(
@@ -76,12 +82,16 @@ async def teacher_login(request: TeacherLoginRequest, db: Session = Depends(get_
 
 
 @router.post("/teacher/register", response_model=TokenResponse)
-async def teacher_register(request: TeacherRegisterRequest, db: Session = Depends(get_db)):
+async def teacher_register(
+    request: TeacherRegisterRequest, db: Session = Depends(get_db)
+):
     """教師註冊"""
     # Check if email exists
     existing = db.query(Teacher).filter(Teacher.email == request.email).first()
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
 
     # Create new teacher
     new_teacher = Teacher(
@@ -124,14 +134,18 @@ async def teacher_register(request: TeacherRegisterRequest, db: Session = Depend
 @router.post("/student/login", response_model=TokenResponse)
 async def student_login(request: StudentLoginRequest, db: Session = Depends(get_db)):
     """學生登入"""
-    student = db.query(Student).filter(Student.email == request.email).first()
+    student = db.query(Student).filter(Student.id == request.id).first()
 
     if not student:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        )
 
     # 驗證密碼
     if not verify_password(request.password, student.password_hash):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
+        )
 
     # 創建 JWT token
     access_token = create_access_token(
@@ -140,7 +154,7 @@ async def student_login(request: StudentLoginRequest, db: Session = Depends(get_
             "email": student.email,
             "type": "student",
             "name": student.name,
-            "student_id": student.student_id,
+            "student_number": student.student_number,
         },
         expires_delta=timedelta(hours=24),
     )
@@ -152,13 +166,15 @@ async def student_login(request: StudentLoginRequest, db: Session = Depends(get_
             "id": student.id,
             "email": student.email,
             "name": student.name,
-            "student_id": student.student_id,
+            "student_number": student.student_number,
         },
     }
 
 
 @router.get("/me")
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     """取得當前登入的使用者資訊"""
     from auth import verify_token
 
@@ -176,7 +192,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     user_type = payload.get("type")
 
     if not user_id or not user_type:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+        )
 
     # 根據類型取得使用者
     if user_type == "teacher":
@@ -184,10 +202,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     elif user_type == "student":
         user = db.query(Student).filter(Student.id == int(user_id)).first()
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user type")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user type"
+        )
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     return user
 

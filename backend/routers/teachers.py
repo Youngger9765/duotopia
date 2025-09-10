@@ -221,7 +221,7 @@ async def get_teacher_classrooms(
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
-                    "student_id": cs.student.student_id,
+                    "student_id": cs.student.student_number,
                     "birthdate": (
                         cs.student.birthdate.isoformat()
                         if cs.student.birthdate
@@ -440,14 +440,14 @@ class StudentCreate(BaseModel):
     email: Optional[str] = None  # Email（選填，可以是真實 email）
     birthdate: str  # YYYY-MM-DD format
     classroom_id: Optional[int] = None  # 班級改為選填，可以之後再分配
-    student_id: Optional[str] = None
+    student_number: Optional[str] = None
     phone: Optional[str] = None  # 新增 phone 欄位
 
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None  # 可更新為真實 email
-    student_id: Optional[str] = None
+    student_number: Optional[str] = None
     birthdate: Optional[str] = None
     phone: Optional[str] = None
     status: Optional[str] = None
@@ -535,7 +535,7 @@ async def get_all_students(
                 "id": student.id,
                 "name": student.name,
                 "email": student.email,
-                "student_id": student.student_id,
+                "student_id": student.student_number,
                 "birthdate": (
                     student.birthdate.isoformat() if student.birthdate else None
                 ),
@@ -609,7 +609,7 @@ async def create_student(
         birthdate=birthdate,
         password_hash=get_password_hash(default_password),
         password_changed=False,
-        student_id=student_data.student_id,
+        student_number=student_data.student_number,
         target_wpm=80,
         target_accuracy=0.8,
         is_active=True,
@@ -646,7 +646,7 @@ async def create_student(
         "default_password": default_password,
         "password_changed": False,
         "classroom_id": student_data.classroom_id,
-        "student_id": student.student_id,
+        "student_id": student.student_number,
         "phone": student_data.phone,
         "email_verified": False,  # 新建立的學生 email 未驗證
     }
@@ -707,7 +707,7 @@ async def get_student(
         "email": student.email,
         "birthdate": student.birthdate.isoformat(),
         "password_changed": student.password_changed,
-        "student_id": student.student_id,
+        "student_id": student.student_number,
     }
 
 
@@ -772,7 +772,7 @@ async def update_student(
     if update_data.email is not None:
         student.email = update_data.email
     if update_data.student_id is not None:
-        student.student_id = update_data.student_id
+        student.student_number = update_data.student_id
     if update_data.phone is not None:
         student.phone = update_data.phone
     if update_data.status is not None:
@@ -835,7 +835,7 @@ async def update_student(
         "id": student.id,
         "name": student.name,
         "email": student.email,
-        "student_id": student.student_id,
+        "student_id": student.student_number,
     }
 
 

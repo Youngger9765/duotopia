@@ -110,12 +110,13 @@ class LessonResponse(LessonBase):
         from_attributes = True
 
 
-# Student schemas
+# Student schemas for teacher dashboard
 class StudentCreate(BaseModel):
-    email: EmailStr
-    password: str
     name: str
-    class_id: Optional[int] = None
+    email: Optional[str] = None
+    student_number: Optional[str] = None
+    birthdate: str
+    classroom_id: Optional[int] = None
 
 
 class StudentResponse(BaseModel):

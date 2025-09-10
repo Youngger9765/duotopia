@@ -61,7 +61,7 @@ export default function StudentAssignmentDetail() {
       interface AssignmentData {
         id: number;
         assignment_id?: number;
-        student_id: number;
+        student_number: number;
         classroom_id: number;
         title: string;
         status?: string;
@@ -81,7 +81,7 @@ export default function StudentAssignmentDetail() {
         const assignmentDetail: StudentAssignment = {
           id: foundAssignment.id,
           assignment_id: foundAssignment.assignment_id,
-          student_id: foundAssignment.student_id,
+          student_number: foundAssignment.student_id,
           classroom_id: foundAssignment.classroom_id,
           title: foundAssignment.title,
           status: foundAssignment.status || 'NOT_STARTED',

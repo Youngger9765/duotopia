@@ -52,7 +52,7 @@ export default function TeacherStudents() {
         id: number;
         name: string;
         email: string;
-        student_id?: string;
+        student_number?: string;
         classroom?: {id: number; name: string};
         classroom_id?: number;
         birthdate?: string;
@@ -70,7 +70,7 @@ export default function TeacherStudents() {
           id: student.id,
           name: student.name,
           email: student.email,
-          student_id: student.student_id || '',
+          student_number: student.student_number || '',
           birthdate: student.birthdate || '',
           phone: student.phone || '',
           password_changed: student.password_changed || false,
@@ -179,7 +179,7 @@ export default function TeacherStudents() {
     const rows = filteredStudents.map(student => [
       student.name,
       student.email || '-',
-      student.student_id || '-',
+      student.student_number || '-',
       student.birthdate || '-',
       student.classroom_name || '未分配',
       student.password_changed ? '已更改' : '預設密碼',

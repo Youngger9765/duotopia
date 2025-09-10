@@ -5,6 +5,11 @@ interface LoginCredentials {
   password: string;
 }
 
+interface StudentLoginCredentials {
+  id: number;
+  password: string;
+}
+
 interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -17,7 +22,7 @@ interface LoginResponse {
 }
 
 export const authService = {
-  async studentLogin(credentials: LoginCredentials): Promise<LoginResponse> {
+  async studentLogin(credentials: StudentLoginCredentials): Promise<LoginResponse> {
     const response = await api.post('/api/auth/student/login', credentials);
     return response.data;
   },

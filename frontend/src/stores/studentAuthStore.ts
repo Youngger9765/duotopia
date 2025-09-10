@@ -5,7 +5,7 @@ export interface StudentUser {
   id: number;
   name: string;
   email: string;
-  student_id: string;
+  student_number: string;
   classroom_id: number;
   classroom_name?: string;
   teacher_name?: string;

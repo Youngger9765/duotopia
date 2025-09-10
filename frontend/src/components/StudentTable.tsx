@@ -16,7 +16,7 @@ export interface Student {
   id: number;
   name: string;
   email?: string; // Make email optional to match global Student type
-  student_id?: string;
+  student_number?: string;
   birthdate?: string;
   password_changed?: boolean;
   last_login?: string | null;
@@ -205,8 +205,8 @@ export default function StudentTable({
                       </span>
                     )
                   )}
-                  {student.student_id && (
-                    <span className="text-xs text-gray-500">#{student.student_id}</span>
+                  {student.student_number && (
+                    <span className="text-xs text-gray-500">#{student.student_number}</span>
                   )}
                 </div>
               </div>
@@ -219,26 +219,29 @@ export default function StudentTable({
                   </span>
                 ) : (
                   <>
-                    <span
-                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 cursor-help whitespace-nowrap"
-                      title={student.birthdate ? `預設: ${student.birthdate.replace(/-/g, '')}` : '預設密碼'}
-                    >
-                      預設
-                    </span>
-                    {student.birthdate && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title={`複製密碼: ${student.birthdate?.replace(/-/g, '')}`}
-                        onClick={() => {
-                          const password = student.birthdate?.replace(/-/g, '') || '';
-                          navigator.clipboard.writeText(password);
-                          toast.success(`密碼已複製`);
-                        }}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
+                    {student.birthdate ? (
+                      <>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 font-mono whitespace-nowrap">
+                          {student.birthdate?.replace(/-/g, '') || ''}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={`複製密碼: ${student.birthdate?.replace(/-/g, '') || ''}`}
+                          onClick={() => {
+                            const password = student.birthdate?.replace(/-/g, '') || '';
+                            navigator.clipboard.writeText(password);
+                            toast.success(`密碼已複製: ${password}`);
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-700 whitespace-nowrap">
+                        未設定生日
+                      </span>
                     )}
                   </>
                 )}

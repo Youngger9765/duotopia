@@ -10,7 +10,7 @@ import {
 import { toast } from 'sonner';
 
 interface StudentStatus {
-  student_id: number;
+  student_number: number;
   student_name: string;
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED';
   submitted_at?: string;
@@ -44,12 +44,12 @@ export function StudentCompletionDashboard({
       setLoading(true);
       // Mock data for now - should be replaced with actual API call
       const mockData: StudentStatus[] = [
-        { student_id: 1, student_name: 'Alysa', status: 'GRADED', score: 95, completion_rate: 100, submitted_at: '2024-03-15T10:30:00Z', time_spent: 25 },
-        { student_id: 2, student_name: 'Angela', status: 'GRADED', score: 88, completion_rate: 100, submitted_at: '2024-03-15T11:15:00Z', time_spent: 30 },
-        { student_id: 3, student_name: 'Cindy', status: 'SUBMITTED', completion_rate: 100, submitted_at: '2024-03-16T09:00:00Z', time_spent: 20 },
-        { student_id: 4, student_name: 'Dennis', status: 'IN_PROGRESS', completion_rate: 60, time_spent: 15 },
-        { student_id: 5, student_name: 'Eastre', status: 'IN_PROGRESS', completion_rate: 40, time_spent: 10 },
-        { student_id: 6, student_name: 'Eddy', status: 'NOT_STARTED', completion_rate: 0 },
+        { student_number: 1, student_name: 'Alysa', status: 'GRADED', score: 95, completion_rate: 100, submitted_at: '2024-03-15T10:30:00Z', time_spent: 25 },
+        { student_number: 2, student_name: 'Angela', status: 'GRADED', score: 88, completion_rate: 100, submitted_at: '2024-03-15T11:15:00Z', time_spent: 30 },
+        { student_number: 3, student_name: 'Cindy', status: 'SUBMITTED', completion_rate: 100, submitted_at: '2024-03-16T09:00:00Z', time_spent: 20 },
+        { student_number: 4, student_name: 'Dennis', status: 'IN_PROGRESS', completion_rate: 60, time_spent: 15 },
+        { student_number: 5, student_name: 'Eastre', status: 'IN_PROGRESS', completion_rate: 40, time_spent: 10 },
+        { student_number: 6, student_name: 'Eddy', status: 'NOT_STARTED', completion_rate: 0 },
       ];
 
       // In production, replace with:
@@ -102,7 +102,7 @@ export function StudentCompletionDashboard({
     // TODO: Open grading dialog/modal
     toast.info(`開啟 ${student.student_name} 的作業批改頁面`);
     // In production: navigate to grading page or open modal
-    // window.location.href = `/teacher/grade/${assignmentId}/${student.student_id}`;
+    // window.location.href = `/teacher/grade/${assignmentId}/${student.student_number}`;
   };
 
   const handleViewGrade = (student: StudentStatus) => {
@@ -113,7 +113,7 @@ export function StudentCompletionDashboard({
   const handleRemindStudent = (student: StudentStatus) => {
     toast.success(`已發送提醒給 ${student.student_name}`);
     // In production: call API to send reminder
-    // apiClient.post(`/api/assignments/${assignmentId}/remind/${student.student_id}`);
+    // apiClient.post(`/api/assignments/${assignmentId}/remind/${student.student_number}`);
   };
 
   if (loading) {
@@ -219,7 +219,7 @@ export function StudentCompletionDashboard({
           </thead>
           <tbody>
             {filteredAndSortedStudents.map((student) => (
-              <tr key={student.student_id} className="border-b hover:bg-gray-50 transition-colors">
+              <tr key={student.student_number} className="border-b hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-700">

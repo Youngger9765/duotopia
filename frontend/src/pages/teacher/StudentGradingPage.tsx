@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 interface StudentSubmission {
-  student_id: number;
+  student_number: number;
   student_name: string;
   student_email: string;
   status: string;
@@ -217,7 +217,7 @@ export default function StudentGradingPage() {
       const fullFeedback = `${detailedRecord}\n【總評】\n${overallComment.trim()}`;
 
       await apiClient.post(`/api/teachers/teachers/assignments/${assignmentId}/grade`, {
-        student_id: submission.student_id,
+        student_number: submission.student_number,
         score: score,
         feedback: fullFeedback,
         item_results: itemResults,

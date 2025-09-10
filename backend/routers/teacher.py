@@ -23,21 +23,29 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
 
 # Dependency to get current teacher
-async def get_current_teacher(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_teacher(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     """Get current logged in teacher"""
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
     teacher_id = payload.get("sub")
     teacher_type = payload.get("type")
 
     if teacher_type != "teacher":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
+        )
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
+        )
 
     return teacher
 
@@ -102,7 +110,9 @@ async def get_teacher_dashboard(
     # Get classrooms with students
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True))
+        .filter(
+            Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True)
+        )
         .options(joinedload(Classroom.students).joinedload(ClassroomStudent.student))
         .all()
     )
@@ -117,7 +127,7 @@ async def get_teacher_dashboard(
                 id=cs.student.id,
                 name=cs.student.name,
                 email=cs.student.email,
-                student_id=cs.student.student_id,
+                student_id=cs.student.student_number,
             )
             for cs in classroom.students
             if cs.is_active
@@ -137,7 +147,9 @@ async def get_teacher_dashboard(
 
     # Count programs
     total_programs = (
-        db.query(Program).filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True)).count()
+        db.query(Program)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
+        .count()
     )
 
     # Count active assignments
@@ -179,7 +191,9 @@ async def get_teacher_classrooms(
 
     classrooms = (
         db.query(Classroom)
-        .filter(Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True))
+        .filter(
+            Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True)
+        )
         .options(joinedload(Classroom.students).joinedload(ClassroomStudent.student))
         .all()
     )
@@ -191,7 +205,7 @@ async def get_teacher_classrooms(
                 id=cs.student.id,
                 name=cs.student.name,
                 email=cs.student.email,
-                student_id=cs.student.student_id,
+                student_id=cs.student.student_number,
             )
             for cs in classroom.students
             if cs.is_active
@@ -234,7 +248,9 @@ async def get_teacher_programs(
                 description=program.description,
                 level=program.level.value if program.level else "A1",
                 classroom_id=program.classroom_id,
-                classroom_name=(program.classroom.name if program.classroom else "Unknown"),
+                classroom_name=(
+                    program.classroom.name if program.classroom else "Unknown"
+                ),
                 estimated_hours=program.estimated_hours,
                 lesson_count=len(program.lessons),
             )

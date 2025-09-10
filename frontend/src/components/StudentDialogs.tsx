@@ -16,7 +16,7 @@ export interface Student {
   id: number;
   name: string;
   email?: string; // Make email optional to match global Student type
-  student_id?: string;
+  student_number?: string;
   birthdate?: string;
   password_changed?: boolean;
   last_login?: string | null;
@@ -49,7 +49,7 @@ export function StudentDialogs({
   const [formData, setFormData] = useState<Partial<Student>>({
     name: '',
     email: '',
-    student_id: '',
+    student_number: '',
     birthdate: '',
     phone: '',
     // 如果只有一個班級（從班級頁面新增），自動設定為該班級
@@ -64,7 +64,7 @@ export function StudentDialogs({
       setFormData({
         name: student.name,
         email: student.email,
-        student_id: student.student_id || '',
+        student_number: student.student_number || '',
         birthdate: student.birthdate || '',
         phone: student.phone || '',
         classroom_id: student.classroom_id,
@@ -74,7 +74,7 @@ export function StudentDialogs({
       setFormData({
         name: '',
         email: '',
-        student_id: '',
+        student_number: '',
         birthdate: '',
         phone: '',
         // 如果只有一個班級（從班級頁面新增），自動設定為該班級
@@ -115,7 +115,7 @@ export function StudentDialogs({
           name: formData.name || '',
           email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
           birthdate: formData.birthdate || '',
-          student_id: formData.student_id,
+          student_number: formData.student_number,
           phone: formData.phone,
           classroom_id: formData.classroom_id
         };
@@ -152,7 +152,7 @@ export function StudentDialogs({
           id: response.id as number,
           name: response.name as string,
           email: response.email as string,
-          student_id: response.student_id as string | undefined,
+          student_number: response.student_id as string | undefined,
           birthdate: response.birthdate as string | undefined,
           password_changed: response.password_changed as boolean | undefined,
           classroom_id: response.classroom_id as number | undefined,
@@ -303,8 +303,8 @@ export function StudentDialogs({
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{student.name}</h3>
                 <p className="text-sm text-gray-500">ID: {student.id}</p>
-                {student.student_id && (
-                  <p className="text-sm text-gray-500">學號: {student.student_id}</p>
+                {student.student_number && (
+                  <p className="text-sm text-gray-500">學號: {student.student_number}</p>
                 )}
               </div>
               <div>{getStatusBadge(student.status)}</div>
@@ -432,8 +432,8 @@ export function StudentDialogs({
                 </label>
                 <input
                   id="student_id"
-                  value={formData.student_id}
-                  onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
+                  value={formData.student_number}
+                  onChange={(e) => setFormData({ ...formData, student_number: e.target.value })}
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                   placeholder="請輸入學號（選填）"
                 />
@@ -474,7 +474,8 @@ export function StudentDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="birthdate" className="text-sm font-medium">
-                  生日 <span className="text-red-500">*</span>
+                  學生生日 <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 font-normal ml-1">(請填寫學生的真實生日)</span>
                 </label>
                 <input
                   id="birthdate"
@@ -482,11 +483,12 @@ export function StudentDialogs({
                   value={formData.birthdate}
                   onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
                   className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.birthdate ? 'border-red-500' : ''}`}
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 {errors.birthdate && <p className="text-xs text-red-500 mt-1">{errors.birthdate}</p>}
                 {formData.birthdate && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    預設密碼: {formData.birthdate.replace(/-/g, '')}
+                  <p className="text-xs text-amber-600 mt-1 font-medium">
+                    ⚠️ 學生登入密碼將設為: <code className="bg-amber-50 px-1 rounded">{formData.birthdate.replace(/-/g, '')}</code>
                   </p>
                 )}
               </div>
