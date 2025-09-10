@@ -25,21 +25,29 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
 
 # ============ Dependency to get current teacher ============
-async def get_current_teacher(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_teacher(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     """取得當前登入的教師"""
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
     teacher_id = payload.get("sub")
     teacher_type = payload.get("type")
 
     if teacher_type != "teacher":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
+        )
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
+        )
 
     return teacher
 
@@ -101,7 +109,9 @@ async def get_teacher_dashboard(
             Classroom.teacher_id == current_teacher.id,
             Classroom.is_active.is_(True),  # Filter out soft-deleted classrooms
         )
-        .options(selectinload(Classroom.students).selectinload(ClassroomStudent.student))
+        .options(
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+        )
         .all()
     )
 
@@ -111,7 +121,12 @@ async def get_teacher_dashboard(
 
     for classroom in classrooms:
         # Only count active students in active enrollments
-        active_students = [cs for cs in classroom.students if cs.is_active and cs.student.is_active]
+        # Also check that student exists (not None) to avoid null reference errors
+        active_students = [
+            cs
+            for cs in classroom.students
+            if cs.is_active and cs.student and cs.student.is_active
+        ]
         student_count = len(active_students)
         total_students += student_count
 
@@ -126,7 +141,9 @@ async def get_teacher_dashboard(
 
         # Add recent students (first 3 active students from each classroom)
         for classroom_student in active_students[:3]:
-            if len(recent_students) < 10:  # Limit to 10 recent students
+            if (
+                len(recent_students) < 10 and classroom_student.student
+            ):  # Limit to 10 recent students
                 recent_students.append(
                     StudentSummary(
                         id=classroom_student.student.id,
@@ -138,7 +155,9 @@ async def get_teacher_dashboard(
 
     # Get program count (programs created by this teacher)
     program_count = (
-        db.query(Program).filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True)).count()
+        db.query(Program)
+        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
+        .count()
     )
 
     return TeacherDashboard(
@@ -166,7 +185,9 @@ async def get_teacher_classrooms(
             Classroom.teacher_id == current_teacher.id,
             Classroom.is_active.is_(True),  # Only show active classrooms
         )
-        .options(selectinload(Classroom.students).selectinload(ClassroomStudent.student))
+        .options(
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+        )
         .all()
     )
 
@@ -192,16 +213,26 @@ async def get_teacher_classrooms(
             "level": classroom.level.value if classroom.level else "A1",
             "student_count": len([s for s in classroom.students if s.is_active]),
             "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
-            "created_at": (classroom.created_at.isoformat() if classroom.created_at else None),
+            "created_at": (
+                classroom.created_at.isoformat() if classroom.created_at else None
+            ),
             "students": [
                 {
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
                     "student_id": cs.student.student_id,
-                    "birthdate": (cs.student.birthdate.isoformat() if cs.student.birthdate else None),
+                    "birthdate": (
+                        cs.student.birthdate.isoformat()
+                        if cs.student.birthdate
+                        else None
+                    ),
                     "password_changed": cs.student.password_changed,
-                    "last_login": (cs.student.last_login.isoformat() if cs.student.last_login else None),
+                    "last_login": (
+                        cs.student.last_login.isoformat()
+                        if cs.student.last_login
+                        else None
+                    ),
                     "phone": "",  # Privacy: don't expose phone numbers in list
                     "status": "active" if cs.student.is_active else "inactive",
                 }
@@ -230,7 +261,11 @@ async def get_teacher_programs(
     result = []
     for program in programs:
         # Get student count for the classroom through ClassroomStudent relationship
-        student_count = db.query(ClassroomStudent).filter(ClassroomStudent.classroom_id == program.classroom_id).count()
+        student_count = (
+            db.query(ClassroomStudent)
+            .filter(ClassroomStudent.classroom_id == program.classroom_id)
+            .count()
+        )
 
         result.append(
             {
@@ -242,13 +277,19 @@ async def get_teacher_programs(
                 "classroom_name": program.classroom.name if program.classroom else None,
                 "estimated_hours": program.estimated_hours,
                 "is_active": program.is_active,
-                "created_at": (program.created_at.isoformat() if program.created_at else None),
+                "created_at": (
+                    program.created_at.isoformat() if program.created_at else None
+                ),
                 "lesson_count": len(
                     [lesson for lesson in program.lessons if lesson.is_active]
                 ),  # Count only active lessons
                 "student_count": student_count,  # Real student count
-                "status": ("active" if program.is_active else "archived"),  # Real status based on is_active
-                "order_index": (program.order_index if hasattr(program, "order_index") else 1),
+                "status": (
+                    "active" if program.is_active else "archived"
+                ),  # Real status based on is_active
+                "order_index": (
+                    program.order_index if hasattr(program, "order_index") else 1
+                ),
             }
         )
 
@@ -310,7 +351,11 @@ async def get_classroom(
 ):
     """取得單一班級資料"""
     classroom = (
-        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
     )
 
     if not classroom:
@@ -334,7 +379,11 @@ async def update_classroom(
 ):
     """更新班級資料"""
     classroom = (
-        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
     )
 
     if not classroom:
@@ -345,7 +394,9 @@ async def update_classroom(
     if update_data.description is not None:
         classroom.description = update_data.description
     if update_data.level is not None:
-        classroom.level = getattr(ProgramLevel, update_data.level.upper().replace("-", "_"), ProgramLevel.A1)
+        classroom.level = getattr(
+            ProgramLevel, update_data.level.upper().replace("-", "_"), ProgramLevel.A1
+        )
 
     db.commit()
     db.refresh(classroom)
@@ -366,7 +417,11 @@ async def delete_classroom(
 ):
     """刪除班級"""
     classroom = (
-        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
     )
 
     if not classroom:
@@ -446,7 +501,9 @@ async def get_all_students(
     )
 
     # Combine and deduplicate
-    all_students = list({s.id: s for s in students_in_classrooms + recent_unassigned_students}.values())
+    all_students = list(
+        {s.id: s for s in students_in_classrooms + recent_unassigned_students}.values()
+    )
 
     # Build response with classroom info
     result = []
@@ -465,7 +522,11 @@ async def get_all_students(
 
         classroom_info = None
         if classroom_student:
-            classroom = db.query(Classroom).filter(Classroom.id == classroom_student.classroom_id).first()
+            classroom = (
+                db.query(Classroom)
+                .filter(Classroom.id == classroom_student.classroom_id)
+                .first()
+            )
             if classroom:
                 classroom_info = {"id": classroom.id, "name": classroom.name}
 
@@ -475,15 +536,23 @@ async def get_all_students(
                 "name": student.name,
                 "email": student.email,
                 "student_id": student.student_id,
-                "birthdate": (student.birthdate.isoformat() if student.birthdate else None),
+                "birthdate": (
+                    student.birthdate.isoformat() if student.birthdate else None
+                ),
                 "phone": getattr(student, "phone", ""),
                 "password_changed": student.password_changed,
-                "last_login": (student.last_login.isoformat() if student.last_login else None),
+                "last_login": (
+                    student.last_login.isoformat() if student.last_login else None
+                ),
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
                 "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
                 "email_verified": student.email_verified,
-                "email_verified_at": (student.email_verified_at.isoformat() if student.email_verified_at else None),
+                "email_verified_at": (
+                    student.email_verified_at.isoformat()
+                    if student.email_verified_at
+                    else None
+                ),
             }
         )
 
@@ -554,7 +623,9 @@ async def create_student(
         db.rollback()
         # Check if it's a unique constraint violation
         if "duplicate key" in str(e):
-            raise HTTPException(status_code=422, detail="Email or student ID already exists")
+            raise HTTPException(
+                status_code=422, detail="Email or student ID already exists"
+            )
         raise HTTPException(status_code=500, detail=str(e))
 
     # Add student to classroom (only if classroom_id is provided)
@@ -595,13 +666,21 @@ async def get_student(
 ):
     """取得單一學生資料"""
     # First check if student exists and is active
-    student = db.query(Student).filter(Student.id == student_id, Student.is_active.is_(True)).first()
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
+        .first()
+    )
 
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
     # Check if student belongs to teacher's classroom (if assigned to any)
-    classroom_student = db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student_id).first()
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student_id)
+        .first()
+    )
 
     if classroom_student:
         # If student is in a classroom, verify it belongs to this teacher
@@ -641,13 +720,21 @@ async def update_student(
 ):
     """更新學生資料"""
     # First check if student exists and is active
-    student = db.query(Student).filter(Student.id == student_id, Student.is_active.is_(True)).first()
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
+        .first()
+    )
 
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
     # Check if student belongs to teacher's classroom (if assigned to any)
-    classroom_student = db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student_id).first()
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student_id)
+        .first()
+    )
 
     if classroom_student:
         # If student is in a classroom, verify it belongs to this teacher
@@ -760,13 +847,21 @@ async def delete_student(
 ):
     """刪除學生"""
     # First check if student exists and is active
-    student = db.query(Student).filter(Student.id == student_id, Student.is_active.is_(True)).first()
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id, Student.is_active.is_(True))
+        .first()
+    )
 
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
     # Check if student belongs to teacher's classroom (if assigned to any)
-    classroom_student = db.query(ClassroomStudent).filter(ClassroomStudent.student_id == student_id).first()
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student_id)
+        .first()
+    )
 
     if classroom_student:
         # If student is in a classroom, verify it belongs to this teacher
@@ -808,7 +903,9 @@ async def reset_student_password(
         .filter(
             Student.id == student_id,
             Student.classroom_enrollments.any(
-                ClassroomStudent.classroom.has(Classroom.teacher_id == current_teacher.id)
+                ClassroomStudent.classroom.has(
+                    Classroom.teacher_id == current_teacher.id
+                )
             ),
         )
         .first()
@@ -845,7 +942,11 @@ async def batch_create_students(
     """批次創建學生"""
     # Verify classroom belongs to teacher
     classroom = (
-        db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id).first()
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id, Classroom.teacher_id == current_teacher.id
+        )
+        .first()
     )
 
     if not classroom:
@@ -871,7 +972,9 @@ async def batch_create_students(
         db.flush()  # Get the ID
 
         # Add to classroom
-        enrollment = ClassroomStudent(classroom_id=classroom_id, student_id=student.id, is_active=True)
+        enrollment = ClassroomStudent(
+            classroom_id=classroom_id, student_id=student.id, is_active=True
+        )
         db.add(enrollment)
         created_students.append(student)
 
@@ -935,13 +1038,18 @@ async def create_program(
 
     # Get the max order_index for programs in this classroom
     max_order = (
-        db.query(func.max(Program.order_index)).filter(Program.classroom_id == program_data.classroom_id).scalar() or 0
+        db.query(func.max(Program.order_index))
+        .filter(Program.classroom_id == program_data.classroom_id)
+        .scalar()
+        or 0
     )
 
     program = Program(
         name=program_data.name,
         description=program_data.description,
-        level=getattr(ProgramLevel, program_data.level.upper().replace("-", "_"), ProgramLevel.A1),
+        level=getattr(
+            ProgramLevel, program_data.level.upper().replace("-", "_"), ProgramLevel.A1
+        ),
         classroom_id=program_data.classroom_id,
         teacher_id=current_teacher.id,
         estimated_hours=program_data.estimated_hours,
@@ -971,7 +1079,11 @@ async def reorder_programs(
 ):
     """重新排序課程"""
     for item in order_data:
-        program = db.query(Program).filter(Program.id == item["id"], Program.teacher_id == current_teacher.id).first()
+        program = (
+            db.query(Program)
+            .filter(Program.id == item["id"], Program.teacher_id == current_teacher.id)
+            .first()
+        )
         if program:
             program.order_index = item["order_index"]
 
@@ -988,13 +1100,21 @@ async def reorder_lessons(
 ):
     """重新排序單元"""
     # 驗證 program 屬於當前教師
-    program = db.query(Program).filter(Program.id == program_id, Program.teacher_id == current_teacher.id).first()
+    program = (
+        db.query(Program)
+        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
     for item in order_data:
-        lesson = db.query(Lesson).filter(Lesson.id == item["id"], Lesson.program_id == program_id).first()
+        lesson = (
+            db.query(Lesson)
+            .filter(Lesson.id == item["id"], Lesson.program_id == program_id)
+            .first()
+        )
         if lesson:
             lesson.order_index = item["order_index"]
 
@@ -1040,13 +1160,17 @@ async def get_program(
                 "contents": [
                     {
                         "id": content.id,
-                        "type": (content.type.value if content.type else "reading_assessment"),
+                        "type": (
+                            content.type.value if content.type else "reading_assessment"
+                        ),
                         "title": content.title,
                         "items": content.items or [],  # Include actual items
                         "items_count": len(content.items) if content.items else 0,
                         "estimated_time": "10 分鐘",  # Can be calculated based on items
                     }
-                    for content in sorted(lesson.contents or [], key=lambda x: x.order_index)
+                    for content in sorted(
+                        lesson.contents or [], key=lambda x: x.order_index
+                    )
                     if content.is_active  # Filter by is_active
                 ],
             }
@@ -1064,7 +1188,11 @@ async def update_program(
     db: Session = Depends(get_db),
 ):
     """更新課程資料"""
-    program = db.query(Program).filter(Program.id == program_id, Program.teacher_id == current_teacher.id).first()
+    program = (
+        db.query(Program)
+        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -1096,16 +1224,26 @@ async def delete_program(
     """刪除課程 - 使用軟刪除保護資料完整性"""
     from models import StudentAssignment, Content, Lesson
 
-    program = db.query(Program).filter(Program.id == program_id, Program.teacher_id == current_teacher.id).first()
+    program = (
+        db.query(Program)
+        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
     # 檢查相關資料
     lesson_count = db.query(Lesson).filter(Lesson.program_id == program_id).count()
-    content_count = db.query(Content).join(Lesson).filter(Lesson.program_id == program_id).count()
+    content_count = (
+        db.query(Content).join(Lesson).filter(Lesson.program_id == program_id).count()
+    )
     assignment_count = (
-        db.query(StudentAssignment).join(Content).join(Lesson).filter(Lesson.program_id == program_id).count()
+        db.query(StudentAssignment)
+        .join(Content)
+        .join(Lesson)
+        .filter(Lesson.program_id == program_id)
+        .count()
     )
 
     # 軟刪除 - 保留資料以供日後參考
@@ -1136,7 +1274,11 @@ async def add_lesson(
     db: Session = Depends(get_db),
 ):
     """新增課程單元"""
-    program = db.query(Program).filter(Program.id == program_id, Program.teacher_id == current_teacher.id).first()
+    program = (
+        db.query(Program)
+        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -1171,7 +1313,10 @@ async def update_lesson(
     """更新課程單元"""
     # 驗證 lesson 屬於當前教師
     lesson = (
-        db.query(Lesson).join(Program).filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id).first()
+        db.query(Lesson)
+        .join(Program)
+        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .first()
     )
 
     if not lesson:
@@ -1206,22 +1351,36 @@ async def delete_lesson(
 
     # 驗證 lesson 屬於當前教師
     lesson = (
-        db.query(Lesson).join(Program).filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id).first()
+        db.query(Lesson)
+        .join(Program)
+        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .first()
     )
 
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     # 檢查相關資料
-    content_count = db.query(Content).filter(Content.lesson_id == lesson_id, Content.is_active.is_(True)).count()
+    content_count = (
+        db.query(Content)
+        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
+        .count()
+    )
 
-    assignment_count = db.query(StudentAssignment).join(Content).filter(Content.lesson_id == lesson_id).count()
+    assignment_count = (
+        db.query(StudentAssignment)
+        .join(Content)
+        .filter(Content.lesson_id == lesson_id)
+        .count()
+    )
 
     # 軟刪除 lesson
     lesson.is_active = False
 
     # 同時軟刪除相關的 contents
-    db.query(Content).filter(Content.lesson_id == lesson_id).update({"is_active": False})
+    db.query(Content).filter(Content.lesson_id == lesson_id).update(
+        {"is_active": False}
+    )
 
     db.commit()
 
@@ -1276,7 +1435,10 @@ async def get_lesson_contents(
     """取得單元的內容列表"""
     # Verify the lesson belongs to the teacher
     lesson = (
-        db.query(Lesson).join(Program).filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id).first()
+        db.query(Lesson)
+        .join(Program)
+        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .first()
     )
 
     if not lesson:
@@ -1313,7 +1475,10 @@ async def create_content(
     """建立新內容"""
     # Verify the lesson belongs to the teacher
     lesson = (
-        db.query(Lesson).join(Program).filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id).first()
+        db.query(Lesson)
+        .join(Program)
+        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .first()
     )
 
     if not lesson:
@@ -1476,7 +1641,11 @@ async def delete_content(
     # 檢查是否有相關的作業
     from models import StudentAssignment
 
-    assignment_count = db.query(StudentAssignment).filter(StudentAssignment.content_id == content_id).count()
+    assignment_count = (
+        db.query(StudentAssignment)
+        .filter(StudentAssignment.content_id == content_id)
+        .count()
+    )
 
     # 軟刪除
     content.is_active = False
@@ -1508,10 +1677,14 @@ class BatchTranslateRequest(BaseModel):
 
 
 @router.post("/translate")
-async def translate_text(request: TranslateRequest, current_teacher: Teacher = Depends(get_current_teacher)):
+async def translate_text(
+    request: TranslateRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
     """翻譯單一文本"""
     try:
-        translation = await translation_service.translate_text(request.text, request.target_lang)
+        translation = await translation_service.translate_text(
+            request.text, request.target_lang
+        )
         return {"original": request.text, "translation": translation}
     except Exception as e:
         print(f"Translation error: {e}")
@@ -1525,7 +1698,9 @@ async def batch_translate(
 ):
     """批次翻譯多個文本"""
     try:
-        translations = await translation_service.batch_translate(request.texts, request.target_lang)
+        translations = await translation_service.batch_translate(
+            request.texts, request.target_lang
+        )
         return {"originals": request.texts, "translations": translations}
     except Exception as e:
         print(f"Batch translation error: {e}")
@@ -1548,7 +1723,9 @@ class BatchTTSRequest(BaseModel):
 
 
 @router.post("/tts")
-async def generate_tts(request: TTSRequest, current_teacher: Teacher = Depends(get_current_teacher)):
+async def generate_tts(
+    request: TTSRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
     """生成單一 TTS 音檔"""
     try:
         from services.tts import get_tts_service
@@ -1570,7 +1747,9 @@ async def generate_tts(request: TTSRequest, current_teacher: Teacher = Depends(g
 
 
 @router.post("/tts/batch")
-async def batch_generate_tts(request: BatchTTSRequest, current_teacher: Teacher = Depends(get_current_teacher)):
+async def batch_generate_tts(
+    request: BatchTTSRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
     """批次生成 TTS 音檔"""
     try:
         from services.tts import get_tts_service
@@ -1592,7 +1771,9 @@ async def batch_generate_tts(request: BatchTTSRequest, current_teacher: Teacher 
 
 
 @router.get("/tts/voices")
-async def get_tts_voices(language: str = "en", current_teacher: Teacher = Depends(get_current_teacher)):
+async def get_tts_voices(
+    language: str = "en", current_teacher: Teacher = Depends(get_current_teacher)
+):
     """取得可用的 TTS 語音列表"""
     try:
         from services.tts import get_tts_service
@@ -1639,7 +1820,9 @@ async def upload_audio(
                 db.query(Content)
                 .filter(
                     Content.id == content_id,
-                    Content.lesson.has(Lesson.program.has(Program.teacher_id == current_teacher.id)),
+                    Content.lesson.has(
+                        Lesson.program.has(Program.teacher_id == current_teacher.id)
+                    ),
                 )
                 .first()
             )
@@ -1651,7 +1834,9 @@ async def upload_audio(
                     audio_manager.delete_old_audio(old_audio_url)
 
         # 上傳新音檔（包含 content_id 和 item_index 在檔名中）
-        audio_url = await audio_service.upload_audio(file, duration, content_id=content_id, item_index=item_index)
+        audio_url = await audio_service.upload_audio(
+            file, duration, content_id=content_id, item_index=item_index
+        )
 
         return {"audio_url": audio_url}
     except HTTPException as e:
