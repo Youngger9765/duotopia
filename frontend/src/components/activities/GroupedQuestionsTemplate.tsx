@@ -22,6 +22,24 @@ interface Question {
   [key: string]: unknown;
 }
 
+interface AssessmentResult {
+  pronunciation_score?: number;
+  accuracy_score?: number;
+  fluency_score?: number;
+  completeness_score?: number;
+  words?: Array<{
+    accuracy_score?: number;
+    word?: string;
+    error_type?: string;
+  }>;
+  word_details?: Array<{
+    accuracy_score?: number;
+    word?: string;
+    error_type?: string;
+  }>;
+  error_type?: string;
+}
+
 interface GroupedQuestionsTemplateProps {
   items: Question[];
   recordings?: string[];
@@ -54,7 +72,7 @@ export default function GroupedQuestionsTemplate({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isAssessing, setIsAssessing] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState<Record<number, any>>(
+  const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResult>>(
     initialAssessmentResults ? { [currentQuestionIndex]: initialAssessmentResults } : {}
   );
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -524,12 +542,12 @@ export default function GroupedQuestionsTemplate({
               </div>
 
               {/* 單字詳細評分 */}
-              {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details) &&
-               (assessmentResults[currentQuestionIndex].words?.length > 0 || assessmentResults[currentQuestionIndex].word_details?.length > 0) && (
+              {assessmentResults[currentQuestionIndex] && (assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details) &&
+               ((assessmentResults[currentQuestionIndex].words?.length || 0) > 0 || (assessmentResults[currentQuestionIndex].word_details?.length || 0) > 0) && (
                 <div className="space-y-2">
                   <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
                   <div className="flex flex-wrap gap-2">
-                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details).map((word: any, idx: number) => {
+                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details)?.map((word, idx: number) => {
                       const score = word.accuracy_score || 0;
                       // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
                       const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';
@@ -558,9 +576,9 @@ export default function GroupedQuestionsTemplate({
                 <div className="flex items-start gap-2">
                   <Star className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-gray-700">
-                    {assessmentResults[currentQuestionIndex].pronunciation_score >= 80 ? (
+                    {(assessmentResults[currentQuestionIndex]?.pronunciation_score || 0) >= 80 ? (
                       <span className="font-medium text-green-700">表現優秀！繼續保持這樣的發音水準。</span>
-                    ) : assessmentResults[currentQuestionIndex].pronunciation_score >= 60 ? (
+                    ) : (assessmentResults[currentQuestionIndex]?.pronunciation_score || 0) >= 60 ? (
                       <span className="font-medium text-yellow-700">不錯！注意準確度和流暢度的平衡。</span>
                     ) : (
                       <span className="font-medium text-red-700">需要更多練習，特別注意標示的單字發音。</span>

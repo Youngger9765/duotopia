@@ -22,6 +22,24 @@ import {
 } from 'lucide-react';
 import { AssignmentDetail as AssignmentDetailType } from '@/types';
 
+interface AssessmentResult {
+  pronunciation_score?: number;
+  accuracy_score?: number;
+  fluency_score?: number;
+  completeness_score?: number;
+  words?: Array<{
+    accuracy_score?: number;
+    word?: string;
+    error_type?: string;
+  }>;
+  word_details?: Array<{
+    accuracy_score?: number;
+    word?: string;
+    error_type?: string;
+  }>;
+  error_type?: string;
+}
+
 export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -33,7 +51,7 @@ export default function AssignmentDetail() {
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
   const [isPlaying, setIsPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState<Map<number, any>>(new Map());
+  const [assessmentResults, setAssessmentResults] = useState<Map<number, AssessmentResult>>(new Map());
   const [assessing, setAssessing] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -201,7 +219,7 @@ export default function AssignmentDetail() {
       const response = await apiClient.post<{ data?: Record<string, unknown> }>('/api/speech/assess', formData);
 
       if (response.data) {
-        setAssessmentResults(prev => new Map(prev).set(index, response.data));
+        setAssessmentResults(prev => new Map(prev).set(index, response.data as AssessmentResult));
         toast.success('AI 發音評測完成！');
       }
 
@@ -490,13 +508,13 @@ export default function AssignmentDetail() {
                       <div className="mt-4">
                         <h5 className="font-medium text-gray-700 mb-2">單字評分詳情：</h5>
                         <div className="flex flex-wrap gap-2">
-                          {words.map((word: any, wordIndex: number) => (
+                          {words.map((word, wordIndex: number) => (
                             <span
                               key={wordIndex}
                               className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                word.accuracy_score >= 90
+                                (word.accuracy_score || 0) >= 90
                                   ? 'bg-green-100 text-green-800 border-green-200 border'
-                                  : word.accuracy_score >= 70
+                                  : (word.accuracy_score || 0) >= 70
                                   ? 'bg-yellow-100 text-yellow-800 border-yellow-200 border'
                                   : 'bg-red-100 text-red-800 border-red-200 border'
                               }`}

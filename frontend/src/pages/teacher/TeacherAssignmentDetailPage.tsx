@@ -390,7 +390,7 @@ export default function TeacherAssignmentDetailPage() {
 
       // Call unassign API
       const response = await apiClient.post(`/api/teachers/assignments/${assignmentId}/unassign`, {
-        students: [studentId],
+        student_ids: [studentId],
         force: status === 'in_progress'
       });
 
