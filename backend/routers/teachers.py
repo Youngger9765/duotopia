@@ -75,7 +75,7 @@ class ClassroomSummary(BaseModel):
 class StudentSummary(BaseModel):
     id: int
     name: str
-    email: str
+    email: str | None  # Allow None for students without email
     classroom_name: str
 
 
@@ -148,7 +148,7 @@ async def get_teacher_dashboard(
                     StudentSummary(
                         id=classroom_student.student.id,
                         name=classroom_student.student.name,
-                        email=classroom_student.student.email,
+                        email=classroom_student.student.email,  # Can be None now
                         classroom_name=classroom.name,
                     )
                 )
