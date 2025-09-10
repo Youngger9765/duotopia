@@ -16,7 +16,8 @@ import {
   Mail,
   X,
   CheckCircle,
-  User
+  User,
+  Loader2
 } from 'lucide-react';
 import { Assignment } from '@/types';
 
@@ -36,6 +37,7 @@ export default function StudentDashboard() {
   const [emailInitialized, setEmailInitialized] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [currentEmail, setCurrentEmail] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     if (!user || !token) {
@@ -173,6 +175,7 @@ export default function StudentDashboard() {
       return;
     }
 
+    setIsSendingEmail(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
       // 使用正確的 update-email 端點
@@ -203,6 +206,8 @@ export default function StudentDashboard() {
     } catch (error) {
       console.error('Failed to update email:', error);
       toast.error('設定失敗，請稍後再試');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -304,9 +309,17 @@ export default function StudentDashboard() {
                         <Button
                           size="sm"
                           onClick={handleEmailUpdate}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          disabled={isSendingEmail || !newEmail || !newEmail.includes('@')}
+                          className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          發送驗證信
+                          {isSendingEmail ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              發送中...
+                            </>
+                          ) : (
+                            '發送驗證信'
+                          )}
                         </Button>
                       </div>
                     </div>
