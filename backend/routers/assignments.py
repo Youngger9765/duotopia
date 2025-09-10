@@ -1578,40 +1578,29 @@ async def get_student_submission(
 
                     # 從 progress 的 response_data 獲取學生答案和錄音
                     if progress and progress.response_data:
-                        # 獲取學生錄音檔案
-                        # 新版本：直接使用 audio_url（upload_student_recording 儲存的格式）
+                        # 獲取學生錄音檔案 - 只使用新架構的 audio_url
                         audio_url = progress.response_data.get("audio_url")
                         if audio_url:
                             submission["student_audio_url"] = audio_url
-                        else:
-                            # 舊版本相容：使用 recordings 陣列
-                            recordings = progress.response_data.get("recordings", [])
-                            if local_item_index < len(recordings):
-                                recording_file = recordings[local_item_index]
-                                submission["student_audio_url"] = (
-                                    f"/api/files/recordings/{recording_file}"
-                                    if recording_file
-                                    else ""
-                                )
 
-                        # 獲取學生文字答案（如果有）
-                        answers = progress.response_data.get("answers", [])
-                        if local_item_index < len(answers):
-                            submission["student_answer"] = answers[local_item_index]
+                        # 獲取學生文字答案（如果有）- 簡化為單一值
+                        student_answer = progress.response_data.get("student_answer")
+                        if student_answer:
+                            submission["student_answer"] = student_answer
 
-                        # 獲取語音辨識結果（如果有）
-                        transcripts = progress.response_data.get("transcripts", [])
-                        if local_item_index < len(transcripts):
-                            submission["transcript"] = transcripts[local_item_index]
+                        # 獲取語音辨識結果（如果有）- 簡化為單一值
+                        transcript = progress.response_data.get("transcript")
+                        if transcript:
+                            submission["transcript"] = transcript
 
-                        # 獲取個別題目的批改資訊
-                        item_feedbacks = progress.response_data.get(
-                            "item_feedbacks", []
-                        )
-                        if local_item_index < len(item_feedbacks):
-                            item_feedback = item_feedbacks[local_item_index]
-                            submission["feedback"] = item_feedback.get("feedback", "")
-                            submission["passed"] = item_feedback.get("passed")
+                        # 獲取批改資訊 - 簡化為單一值
+                        feedback = progress.response_data.get("feedback")
+                        if feedback:
+                            submission["feedback"] = feedback
+
+                        passed = progress.response_data.get("passed")
+                        if passed is not None:
+                            submission["passed"] = passed
 
                     submissions.append(submission)
                     group["submissions"].append(submission)
