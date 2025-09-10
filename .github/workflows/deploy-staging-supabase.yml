@@ -315,7 +315,14 @@ jobs:
     - name: Build and push frontend image
       working-directory: ./frontend
       run: |
-        docker build -f Dockerfile.staging -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA .
+        # 獲取後端實際的 URL
+        BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
+        echo "Building frontend with API URL: $BACKEND_URL"
+
+        # 使用 --build-arg 傳遞 API URL
+        docker build -f Dockerfile.staging \
+          --build-arg VITE_API_URL=$BACKEND_URL \
+          -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE:$GITHUB_SHA
 
     - name: Deploy frontend to Cloud Run

@@ -13,7 +13,8 @@ RUN npm ci
 COPY . .
 
 # 設定 API URL（staging 環境直接連後端）
-ARG VITE_API_URL=https://duotopia-staging-backend-206313737181.asia-east1.run.app
+# 注意：這個值會在 CI/CD 時被覆蓋
+ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 # 建置（Vite 會自動使用 VITE_API_URL 環境變數）
