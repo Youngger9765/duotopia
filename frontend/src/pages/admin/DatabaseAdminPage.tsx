@@ -108,14 +108,16 @@ export default function DatabaseAdminPage() {
 
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
         toast.success('資料庫重建成功！');
         fetchStats(); // 重新載入統計
         if (selectedEntity) {
           fetchEntityData(selectedEntity); // 重新載入選中的資料
         }
       } else {
-        toast.error(`重建失敗: ${result.message}`);
+        // 處理 HTTP 錯誤或業務邏輯錯誤
+        const errorMessage = result.detail || result.message || '未知錯誤';
+        toast.error(`重建失敗: ${errorMessage}`);
         console.error('Seed error:', result);
       }
     } catch (error) {
