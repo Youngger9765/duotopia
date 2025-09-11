@@ -1,5 +1,9 @@
 # Pre-commit hooks for Duotopia
 # 安裝: pip install pre-commit && pre-commit install
+#
+# ⚠️ 重要：這些檢查會在每次 commit 前自動執行
+# 如果任何檢查失敗，commit 會被阻止
+# 使用 --no-verify 跳過檢查是被禁止的（見 CLAUDE.md）
 
 repos:
   # Python formatting

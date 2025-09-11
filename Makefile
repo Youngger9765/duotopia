@@ -64,6 +64,15 @@ db-fix-migration:
 	@cd $(BACKEND_DIR) && python fix_migration.py
 
 # 開發環境
+.PHONY: setup-hooks
+setup-hooks:
+	@echo "🔧 設定 pre-commit hooks..."
+	@pip install pre-commit
+	@pre-commit install
+	@git config hooks.failFast true
+	@echo "✅ Pre-commit hooks 已安裝！"
+	@echo "執行檢查: pre-commit run --all-files"
+
 .PHONY: dev-setup
 dev-setup:
 	@echo "Setting up development environment..."
@@ -73,7 +82,11 @@ dev-setup:
 	@echo "Installing pre-commit hooks..."
 	pip install pre-commit
 	pre-commit install
+	git config hooks.failFast true
+	@echo "Running initial pre-commit checks..."
+	pre-commit run --all-files || true
 	@echo "✅ Development environment ready!"
+	@echo "⚠️  重要：所有 commit 會自動執行程式碼檢查，絕對禁止使用 --no-verify！"
 
 .PHONY: dev-backend
 dev-backend:
