@@ -2,27 +2,13 @@
 
 本文件規範 Duotopia 專案的 CI/CD 流程與部署準則，避免重複犯錯。
 
-## 🔴 最高原則：絕不手動創建昂貴資源
+## 🔴 最高原則：使用 Supabase 免費方案
 
-### Cloud SQL 創建鐵律
-1. **永遠使用 Makefile 創建資源**
-   ```bash
-   # ✅ 正確
-   make db-create
-
-   # ❌ 錯誤 - 絕對禁止
-   gcloud sql instances create ...
-   ```
-
-2. **Tier 必須檢查三次**
-   - 只允許 `db-f1-micro`（$11/月）
-   - 禁止 `db-g1-small`（$50/月）
-   - 禁止任何更大的實例
-
-3. **Edition 必須明確指定**
-   ```bash
-   --edition=ENTERPRISE  # 必須，否則 db-f1-micro 不可用
-   ```
+### 資料庫策略
+- **Staging**: Supabase（免費）
+- **Production**: Supabase（免費）
+- **本地開發**: Docker PostgreSQL
+- **成本**: $0/月（完全免費）
 
 ## 📋 部署前檢查清單
 
@@ -32,19 +18,10 @@
 - [ ] 確認沒有硬編碼的 localhost URL
 - [ ] 確認沒有舊的 import 路徑
 
-### 2. 資源檢查
-```bash
-# 部署前必須執行
-gcloud sql instances list --format="table(name,tier,state)"
-# 確保：
-# - 沒有 Small 或更大的實例
-# - 沒有不必要的 RUNNABLE 實例
-```
-
-### 3. 成本預檢
-- [ ] Cloud SQL 實例數量 ≤ 1
-- [ ] Cloud Run min-instances = 0
-- [ ] 沒有遺留的測試資源
+### 2. 環境變數檢查
+- [ ] Supabase URL 和 Key 已設定
+- [ ] JWT Secret 已設定
+- [ ] OpenAI API Key 已設定（如需要）
 
 ## 🚀 標準部署流程
 
@@ -56,33 +33,21 @@ npm run lint
 npm run build
 cd backend && python -m pytest
 
-# 2. Docker 測試
-docker build -t test-backend backend/
-docker run -p 8080:8080 test-backend
-
-# 3. 推送到 staging
+# 2. 推送到 staging
 git push origin staging
 
-# 4. 監控部署
+# 3. 監控部署
 gh run watch
-gh run list --workflow=deploy-staging.yml --limit=1
 
-# 5. 驗證部署
+# 4. 驗證部署
 curl https://duotopia-backend-staging-xxx.run.app/health
 ```
 
-### 生產環境部署（謹慎）
+### 生產環境部署
 ```bash
 # 1. 確認 staging 測試通過
-make test-staging
-
-# 2. 創建 PR
-git checkout -b release/v1.x.x
-git push origin release/v1.x.x
-gh pr create --base main
-
+# 2. 創建 PR 到 main branch
 # 3. Code Review 後合併
-
 # 4. 監控生產部署
 gh run watch
 ```
@@ -100,18 +65,8 @@ gh run view --log
 # 查看服務日誌
 gcloud run logs read duotopia-backend --limit=50
 
-# 檢查錯誤
-gcloud run logs read duotopia-backend --limit=50 | grep -i error
-```
-
-### 健康檢查
-```bash
-# Backend
+# 健康檢查
 curl https://duotopia-backend-staging-xxx.run.app/health
-curl https://duotopia-backend-staging-xxx.run.app/api/docs
-
-# Frontend
-curl https://duotopia-frontend-staging-xxx.run.app
 ```
 
 ## ⚠️ 常見錯誤與解決
@@ -127,37 +82,24 @@ port = int(os.environ.get("PORT", 8080))
 
 ### 2. 資料庫連線失敗
 **錯誤**: Connection refused 或 could not translate host name
-**原因**:
-- 啟動時立即連接資料庫
-- GitHub Actions 缺少 Pooler URL (IPv4)
-**解決**:
-```python
-# 不要在頂層連接
-# 使用 Depends(get_db) 延遲連接
-```
-**CI/CD 解決**：設定 `STAGING_SUPABASE_POOLER_URL` (見下方 Supabase Pooler 設定)
+**原因**: GitHub Actions 缺少 Pooler URL (IPv4)
+**解決**: 設定 `STAGING_SUPABASE_POOLER_URL` (見下方 Supabase Pooler 設定)
 
 ### 3. Import 路徑錯誤
 **錯誤**: Module not found
 **原因**: TypeScript 路徑別名
 **解決**: 使用相對路徑而非 @/
 
-### 4. Cloud SQL 版本不相容
-**錯誤**: Invalid tier for edition
-**原因**: Enterprise Plus 不支援 micro
-**解決**: 指定 `--edition=ENTERPRISE`
-
 ## 💰 成本控制檢查點
 
 ### 每日檢查
 ```bash
-# 檢查 Cloud SQL
-gcloud sql instances list
-# 任何非 micro 或 RUNNABLE 但未使用的立即處理
-
 # 檢查 Cloud Run
 gcloud run services list
 # 確認 min-instances = 0
+
+# 檢查 Supabase 使用量
+# 登入 Supabase Dashboard 查看使用量
 ```
 
 ### 每週檢查
@@ -178,7 +120,7 @@ gcloud storage ls
 - ✅ 無錯誤日誌
 - ✅ API 文檔可訪問
 - ✅ 前端頁面正常載入
-- ✅ 資料庫連線正常
+- ✅ Supabase 連線正常
 
 ### 性能指標
 - 冷啟動時間 < 10s
@@ -394,6 +336,160 @@ GCP_SA_KEY                  # Service Account JSON
 3. 記錄事件
 4. 事後檢討
 
+## 🔧 GCloud 配置設定
+
+### 確保使用正確的 Duotopia 專案
+```bash
+# 切換到 Duotopia 配置
+gcloud config configurations activate duotopia
+
+# 驗證當前配置
+gcloud config list
+# 應該顯示：
+# account = purpleice9765@msn.com
+# project = duotopia-469413
+
+# 或直接設定專案
+gcloud config set project duotopia-469413
+```
+
+### 重要提醒
+- **部署前必須確認專案**: `gcloud config get-value project`
+- **應該顯示**: `duotopia-469413`
+- **區域**: `asia-east1`
+
+### 🛡️ 隔離環境部署（避免專案互相干擾）
+```bash
+# 使用 Duotopia 專屬的 gcloud 環境
+export CLOUDSDK_CONFIG=$HOME/.gcloud-duotopia
+export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.11
+
+# 驗證環境
+gcloud config list
+# 應該顯示：
+# account = terraform-deploy@duotopia-469413.iam.gserviceaccount.com
+# project = duotopia-469413
+```
+
+## 🚨 部署後測試規則
+
+### 部署完成 ≠ 工作完成
+**部署只是第一步，測試通過才算完成！**
+
+### 每次部署後必須：
+1. **監控部署進度**：`gh run watch`
+2. **健康檢查**：`curl https://your-service-url/health`
+3. **檢查錯誤日誌**：`gcloud run logs read duotopia-backend --limit=50 | grep -i error`
+4. **測試失敗時立即修復**
+
+**⚠️ 絕對不要推完代碼就不管！每次部署都要監控到成功並測試通過！**
+
+## 🔥 部署錯誤反思與預防
+
+### 常見部署錯誤模式
+1. **硬編碼 URL 錯誤**
+   - ❌ 錯誤：`fetch('http://localhost:8000/api/...')`
+   - ✅ 正確：使用環境變數 `import.meta.env.VITE_API_URL`
+   - **教訓**：所有 API URL 必須使用環境變數
+
+2. **PORT 配置錯誤**
+   - ❌ 錯誤：Dockerfile 設定 `ENV PORT=8000`
+   - ✅ 正確：Cloud Run 預設使用 `PORT=8080`
+   - **教訓**：了解部署平台的默認配置
+
+3. **Import 路徑錯誤**
+   - ❌ 錯誤：`from models_dual_system import DualUser`
+   - ✅ 正確：`from models import User`
+   - **教訓**：重構後徹底搜尋舊程式碼
+
+### 系統性預防措施
+1. **部署前檢查腳本**（已加入 git hooks）
+   ```bash
+   # 檢查硬編碼 URL
+   grep -r "localhost:[0-9]" frontend/src/ && exit 1
+   # 檢查舊的 import
+   grep -r "models_dual_system" backend/ && exit 1
+   ```
+
+2. **CI/CD 強化**（已實施）
+   - Docker 本地測試步驟
+   - 健康檢查重試機制（5次）
+   - 部署失敗自動顯示日誌
+
+3. **監控流程標準化**
+   ```bash
+   # 每次推送後立即執行
+   gh run watch
+   gh run view --log | grep -i error
+   ```
+
+4. **診斷優先順序**
+   - Container 無法啟動 → 先查 PORT 和 import
+   - API 呼叫失敗 → 先查環境變數
+   - 資料庫連線失敗 → 先查 DATABASE_URL
+
+### 部署黃金法則
+1. **推送前本地測試**：`docker run -p 8080:8080`
+2. **推送後立即監控**：`gh run watch`
+3. **部署後立即驗證**：`curl /health`
+4. **發現問題立即修復**：不要累積技術債
+
+### 啟動時資料庫連線問題
+**重要教訓**：絕對不要在應用頂層或啟動時立即連接資料庫！
+
+#### ❌ 錯誤模式（會導致 Cloud Run 失敗）
+```python
+# main.py 頂層
+Base.metadata.create_all(bind=engine)  # 立即連接資料庫！
+
+# lifespan 啟動時
+with DatabaseInitializer() as db_init:  # __init__ 就連接資料庫！
+    db_init.initialize()
+```
+
+#### ✅ 正確模式
+```python
+# 資料表建立交給 alembic migrations
+# 資料庫連線只在處理請求時才建立（透過 Depends(get_db)）
+```
+
+**為什麼會失敗**：
+- Cloud Run 啟動容器時，環境變數可能還沒完全準備好
+- 資料庫可能還在初始化或網路還沒連通
+- 任何啟動時的連線失敗都會導致容器無法啟動
+
+### 本地測試的重要性
+**絕對不要用假資料測試**：
+- ❌ `DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"`
+- ✅ 使用真實的本地資料庫：`docker-compose up -d`
+- ✅ 測試真實的連線：`DATABASE_URL="postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"`
+
+**每次修改後必須本地測試**：
+```bash
+# 1. 測試模組載入
+python -c "import sys; sys.path.append('backend'); import main"
+
+# 2. 測試服務啟動（如果有依賴）
+cd backend && uvicorn main:app --host 0.0.0.0 --port 8080
+```
+
+## 💰 成本控制（Supabase 免費方案）
+
+### 當前成本結構
+- **資料庫**: $0/月（Supabase 免費方案）
+- **Cloud Run**: ~$5-10/月（根據流量）
+- **總計**: ~$5-10/月（完全可控）
+
+### 成本監控建議
+1. 設定 GCP 預算警報：$20 USD/月
+2. 定期檢查 Supabase 使用量
+3. 監控 Cloud Run 實例數量
+
+### 最佳實踐
+- 使用 Supabase 免費方案（500MB 資料庫 + 2GB 頻寬）
+- Cloud Run min-instances = 0（無流量時不收費）
+- 定期清理未使用的 Docker 映像
+
 ---
 
-**記住**：寧可多檢查一次，不要產生巨額帳單！
+**記住**：使用 Supabase 免費方案，成本完全可控！
