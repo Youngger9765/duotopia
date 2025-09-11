@@ -20,6 +20,7 @@ import StudentActivityPage from './pages/student/StudentActivityPage'
 import StudentLayout from './components/StudentLayout'
 import EmailVerification from './pages/EmailVerification'
 import StudentProfile from './pages/student/StudentProfile'
+import DatabaseAdminPage from './pages/admin/DatabaseAdminPage'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -55,6 +56,9 @@ function App() {
 
       {/* Email Verification */}
       <Route path="/verify-email" element={<EmailVerification />} />
+
+      {/* Admin Routes */}
+      <Route path="/admin/database" element={<DatabaseAdminPage />} />
 
       {/* Student Routes with Layout */}
       <Route path="/student" element={<StudentLayout />}>
