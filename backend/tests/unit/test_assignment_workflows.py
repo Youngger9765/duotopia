@@ -425,7 +425,11 @@ class TestAssignmentGradingWorkflow:
             {"student_assignment_id": 1, "feedback": "表現優秀", "score": 90},
             {"student_assignment_id": 2, "feedback": "需要改進", "score": 75},
             {"student_assignment_id": 3, "feedback": "", "score": 80},  # 無效：無回饋
-            {"student_assignment_id": 4, "feedback": "不錯", "score": 150},  # 無效：分數過高
+            {
+                "student_assignment_id": 4,
+                "feedback": "不錯",
+                "score": 150,
+            },  # 無效：分數過高
         ]
 
         results = bulk_grade_assignments(grading_data)

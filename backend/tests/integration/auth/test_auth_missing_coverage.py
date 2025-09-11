@@ -59,7 +59,7 @@ class TestTeacherAuthentication:
         password = "test_password_123"
         teacher = Teacher(
             email="auth_test@duotopia.com",
-            hashed_password=get_password_hash(password),
+            password_hash=get_password_hash(password),
             name="Auth Test Teacher",
             is_active=True,
             is_demo=False,
@@ -84,7 +84,7 @@ class TestTeacherAuthentication:
         # Create teacher
         teacher = Teacher(
             email="wrong_pass@duotopia.com",
-            hashed_password=get_password_hash("correct_password"),
+            password_hash=get_password_hash("correct_password"),
             name="Wrong Pass Teacher",
             is_active=True,
             is_demo=False,
@@ -107,7 +107,7 @@ class TestStudentAuthentication:
         student = Student(
             email="auth_student@test.com",
             name="Auth Test Student",
-            hashed_password=get_password_hash(password),
+            password_hash=get_password_hash(password),
             birthdate="2000-01-01",
         )
         db.add(student)
@@ -131,7 +131,7 @@ class TestStudentAuthentication:
         student = Student(
             email="wrong_student@test.com",
             name="Wrong Pass Student",
-            hashed_password=get_password_hash("correct_password"),
+            password_hash=get_password_hash("correct_password"),
             birthdate="2000-01-01",
         )
         db.add(student)
@@ -174,7 +174,7 @@ class TestAuthEdgeCases:
         password = "test_password"
         teacher = Teacher(
             email="CaseTest@Duotopia.com",  # Mixed case
-            hashed_password=get_password_hash(password),
+            password_hash=get_password_hash(password),
             name="Case Test Teacher",
             is_active=True,
             is_demo=False,
@@ -196,7 +196,7 @@ class TestAuthEdgeCases:
         password = "test_password"
         teacher = Teacher(
             email="whitespace@duotopia.com",
-            hashed_password=get_password_hash(password),
+            password_hash=get_password_hash(password),
             name="Whitespace Teacher",
             is_active=True,
             is_demo=False,
@@ -213,7 +213,7 @@ class TestAuthEdgeCases:
         """Test handling of null/empty passwords in authentication"""
         teacher = Teacher(
             email="nullpass@duotopia.com",
-            hashed_password=get_password_hash(""),  # Empty password hash
+            password_hash=get_password_hash(""),  # Empty password hash
             name="Null Pass Teacher",
             is_active=True,
             is_demo=False,

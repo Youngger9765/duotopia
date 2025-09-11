@@ -74,7 +74,9 @@ class TranslationService:
             # 如果翻譯失敗，返回原文
             return text
 
-    async def batch_translate(self, texts: List[str], target_lang: str = "zh-TW") -> List[str]:
+    async def batch_translate(
+        self, texts: List[str], target_lang: str = "zh-TW"
+    ) -> List[str]:
         """
         批次翻譯多個文本
 
@@ -120,7 +122,8 @@ Only return the translations without any explanation or numbering.
                     {
                         "role": "system",
                         "content": (
-                            "You are a professional translator. Maintain the exact " "format with --- separators."
+                            "You are a professional translator. Maintain the exact "
+                            "format with --- separators."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -135,7 +138,9 @@ Only return the translations without any explanation or numbering.
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
-                print(f"Warning: Expected {len(texts)} translations, got {len(translations)}")
+                print(
+                    f"Warning: Expected {len(texts)} translations, got {len(translations)}"
+                )
                 # 如果數量不匹配，返回原文
                 return texts
 

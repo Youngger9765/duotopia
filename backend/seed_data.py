@@ -1826,7 +1826,10 @@ def seed_template_programs(db: Session):
             title="My Daily Routine 我的日常作息",
             items=[
                 {"text": "I wake up at 7 AM.", "translation": "我早上7點起床。"},
-                {"text": "I have breakfast at 8 AM.", "translation": "我早上8點吃早餐。"},
+                {
+                    "text": "I have breakfast at 8 AM.",
+                    "translation": "我早上8點吃早餐。",
+                },
                 {"text": "I go to school at 8:30.", "translation": "我8點半去上學。"},
                 {"text": "I have lunch at noon.", "translation": "我中午吃午餐。"},
                 {"text": "I go to bed at 10 PM.", "translation": "我晚上10點睡覺。"},
@@ -1846,8 +1849,14 @@ def seed_template_programs(db: Session):
             items=[
                 {"text": "How much is this?", "translation": "這個多少錢？"},
                 {"text": "It's twenty dollars.", "translation": "二十元。"},
-                {"text": "Can I pay by credit card?", "translation": "我可以用信用卡付款嗎？"},
-                {"text": "Do you have a smaller size?", "translation": "有小一點的尺寸嗎？"},
+                {
+                    "text": "Can I pay by credit card?",
+                    "translation": "我可以用信用卡付款嗎？",
+                },
+                {
+                    "text": "Do you have a smaller size?",
+                    "translation": "有小一點的尺寸嗎？",
+                },
                 {"text": "I'll take it.", "translation": "我買了。"},
             ],
             order_index=1,
@@ -1865,7 +1874,10 @@ def seed_template_programs(db: Session):
             items=[
                 {"text": "May I see the menu?", "translation": "我可以看菜單嗎？"},
                 {"text": "I'd like to order pasta.", "translation": "我想點義大利麵。"},
-                {"text": "How would you like your steak?", "translation": "您的牛排要幾分熟？"},
+                {
+                    "text": "How would you like your steak?",
+                    "translation": "您的牛排要幾分熟？",
+                },
                 {"text": "Can I have the bill, please?", "translation": "請給我帳單。"},
                 {"text": "The food was delicious.", "translation": "食物很美味。"},
             ],
@@ -1916,8 +1928,14 @@ def seed_template_programs(db: Session):
                     "text": "Breaking news from around the world.",
                     "translation": "來自世界各地的突發新聞。",
                 },
-                {"text": "Scientists discover new planet.", "translation": "科學家發現新行星。"},
-                {"text": "Technology advances in 2025.", "translation": "2025年的科技進展。"},
+                {
+                    "text": "Scientists discover new planet.",
+                    "translation": "科學家發現新行星。",
+                },
+                {
+                    "text": "Technology advances in 2025.",
+                    "translation": "2025年的科技進展。",
+                },
                 {
                     "text": "Climate change impacts global economy.",
                     "translation": "氣候變遷影響全球經濟。",
@@ -2041,7 +2059,10 @@ def seed_template_programs(db: Session):
                     "text": "Please find attached the report.",
                     "translation": "請查收附件的報告。",
                 },
-                {"text": "I look forward to your reply.", "translation": "期待您的回覆。"},
+                {
+                    "text": "I look forward to your reply.",
+                    "translation": "期待您的回覆。",
+                },
                 {"text": "Best regards,", "translation": "誠摯的問候，"},
             ],
             order_index=1,
@@ -2067,7 +2088,10 @@ def seed_template_programs(db: Session):
                     "text": "Let's move on to the next item.",
                     "translation": "讓我們進入下一個議題。",
                 },
-                {"text": "Thank you for your participation.", "translation": "感謝您的參與。"},
+                {
+                    "text": "Thank you for your participation.",
+                    "translation": "感謝您的參與。",
+                },
             ],
             order_index=1,
             is_active=True,
@@ -2086,13 +2110,19 @@ def seed_template_programs(db: Session):
                     "text": "Today I'll be talking about...",
                     "translation": "今天我要談論的是...",
                 },
-                {"text": "Let me show you this chart.", "translation": "讓我向您展示這個圖表。"},
+                {
+                    "text": "Let me show you this chart.",
+                    "translation": "讓我向您展示這個圖表。",
+                },
                 {
                     "text": "As you can see from the data...",
                     "translation": "從數據中可以看出...",
                 },
                 {"text": "Are there any questions?", "translation": "有任何問題嗎？"},
-                {"text": "Thank you for your attention.", "translation": "感謝您的關注。"},
+                {
+                    "text": "Thank you for your attention.",
+                    "translation": "感謝您的關注。",
+                },
             ],
             order_index=1,
             is_active=True,
@@ -2111,7 +2141,10 @@ def seed_template_programs(db: Session):
                 {"text": "She is happy.", "translation": "她很開心。"},
                 {"text": "They are friends.", "translation": "他們是朋友。"},
                 {"text": "He plays tennis every day.", "translation": "他每天打網球。"},
-                {"text": "We study English on Monday.", "translation": "我們星期一學英文。"},
+                {
+                    "text": "We study English on Monday.",
+                    "translation": "我們星期一學英文。",
+                },
             ],
             order_index=1,
             is_active=True,
@@ -2145,8 +2178,14 @@ def seed_template_programs(db: Session):
             type=ContentType.READING_ASSESSMENT,
             title="Simple Past Tense 過去簡單式",
             items=[
-                {"text": "I went to school yesterday.", "translation": "我昨天去學校了。"},
-                {"text": "She studied English last night.", "translation": "她昨晚學習英文。"},
+                {
+                    "text": "I went to school yesterday.",
+                    "translation": "我昨天去學校了。",
+                },
+                {
+                    "text": "She studied English last night.",
+                    "translation": "她昨晚學習英文。",
+                },
                 {"text": "They played football.", "translation": "他們踢了足球。"},
                 {"text": "He was happy.", "translation": "他很開心。"},
                 {"text": "We were at home.", "translation": "我們在家。"},

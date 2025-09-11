@@ -267,9 +267,11 @@ async def get_assignment_activities(
                         progress.status.value if progress.status else "NOT_STARTED"
                     ),
                     "score": progress.score,
-                    "audio_url": progress.response_data.get("audio_url")
-                    if progress.response_data
-                    else None,
+                    "audio_url": (
+                        progress.response_data.get("audio_url")
+                        if progress.response_data
+                        else None
+                    ),
                     "completed_at": (
                         progress.completed_at.isoformat()
                         if progress.completed_at

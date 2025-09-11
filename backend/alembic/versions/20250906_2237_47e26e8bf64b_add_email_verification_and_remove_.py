@@ -24,7 +24,8 @@ def upgrade() -> None:
     conn = op.get_bind()
     result = conn.execute(
         sa.text(
-            "SELECT column_name FROM information_schema.columns WHERE table_name='students' AND column_name='email_verified'"
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='students' AND column_name='email_verified'"
         )
     )
     if not result.fetchone():
@@ -35,7 +36,8 @@ def upgrade() -> None:
 
     result = conn.execute(
         sa.text(
-            "SELECT column_name FROM information_schema.columns WHERE table_name='students' AND column_name='email_verified_at'"
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='students' AND column_name='email_verified_at'"
         )
     )
     if not result.fetchone():
@@ -46,7 +48,8 @@ def upgrade() -> None:
 
     result = conn.execute(
         sa.text(
-            "SELECT column_name FROM information_schema.columns WHERE table_name='students' AND column_name='email_verification_token'"
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='students' AND column_name='email_verification_token'"
         )
     )
     if not result.fetchone():
@@ -57,7 +60,8 @@ def upgrade() -> None:
 
     result = conn.execute(
         sa.text(
-            "SELECT column_name FROM information_schema.columns WHERE table_name='students' AND column_name='email_verification_sent_at'"
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='students' AND column_name='email_verification_sent_at'"
         )
     )
     if not result.fetchone():

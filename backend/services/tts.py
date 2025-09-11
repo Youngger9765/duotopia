@@ -79,7 +79,9 @@ class TTSService:
                 os.unlink(tmp_file.name)
 
                 # 返回公開 URL
-                return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                return (
+                    f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                )
 
         except Exception as e:
             raise Exception(f"TTS generation failed: {str(e)}")

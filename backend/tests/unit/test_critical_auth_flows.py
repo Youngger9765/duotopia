@@ -3,11 +3,9 @@
 確保認證系統的核心邏輯正確運作
 """
 
-import pytest
 from datetime import datetime, date
-from unittest.mock import Mock, patch
 import bcrypt
-from models import Teacher, Student
+from models import Student
 
 
 class TestPasswordHashing:

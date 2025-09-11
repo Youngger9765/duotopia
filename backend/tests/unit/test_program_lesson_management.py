@@ -685,7 +685,11 @@ class TestContentManagement:
 
         # 添加多語言版本
         localizations = {
-            "zh-TW": {"title": "原始內容", "text": "你好，你好嗎？", "instructions": "大聲朗讀課文"},
+            "zh-TW": {
+                "title": "原始內容",
+                "text": "你好，你好嗎？",
+                "instructions": "大聲朗讀課文",
+            },
             "ja": {
                 "title": "オリジナルコンテンツ",
                 "text": "こんにちは、元気ですか？",

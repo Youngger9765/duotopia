@@ -4,14 +4,7 @@ CI/CD Deployment Safety Tests
 """
 
 import pytest
-import os
-import subprocess
-import json
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import importlib.util
-import sys
 
 
 class TestAlembicMigrationSafety:

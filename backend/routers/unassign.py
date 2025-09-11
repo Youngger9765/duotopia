@@ -57,7 +57,9 @@ async def unassign_students(
 
     # 驗證教師身份
     if not isinstance(current_user, Teacher):
-        raise HTTPException(status_code=403, detail="Only teachers can unassign students")
+        raise HTTPException(
+            status_code=403, detail="Only teachers can unassign students"
+        )
 
     # 驗證作業存在且屬於當前教師
     assignment = (
@@ -71,7 +73,9 @@ async def unassign_students(
     )
 
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found or you don't have permission")
+        raise HTTPException(
+            status_code=404, detail="Assignment not found or you don't have permission"
+        )
 
     unassigned = []
     protected = []
@@ -163,7 +167,9 @@ async def unassign_students(
     if protected:
         message += f"，{len(protected)} 位學生因已有進度而受保護"
 
-    return UnassignResponse(success=True, unassigned=unassigned, protected=protected, message=message)
+    return UnassignResponse(
+        success=True, unassigned=unassigned, protected=protected, message=message
+    )
 
 
 @router.get("/assignments/{assignment_id}/unassign-preview")
@@ -179,7 +185,9 @@ async def preview_unassign(
     """
 
     if not isinstance(current_user, Teacher):
-        raise HTTPException(status_code=403, detail="Only teachers can preview unassign")
+        raise HTTPException(
+            status_code=403, detail="Only teachers can preview unassign"
+        )
 
     # 解析學生 IDs
     try:
@@ -226,8 +234,16 @@ async def preview_unassign(
             "student_id": student_id,
             "student_name": student.name if student else f"Student {student_id}",
             "status": student_assignment.status.value,
-            "started_at": (student_assignment.started_at.isoformat() if student_assignment.started_at else None),
-            "submitted_at": (student_assignment.submitted_at.isoformat() if student_assignment.submitted_at else None),
+            "started_at": (
+                student_assignment.started_at.isoformat()
+                if student_assignment.started_at
+                else None
+            ),
+            "submitted_at": (
+                student_assignment.submitted_at.isoformat()
+                if student_assignment.submitted_at
+                else None
+            ),
         }
 
         if student_assignment.status == AssignmentStatus.NOT_STARTED:
@@ -237,7 +253,8 @@ async def preview_unassign(
             progress_count = (
                 db.query(StudentContentProgress)
                 .filter(
-                    StudentContentProgress.student_assignment_id == student_assignment.id,
+                    StudentContentProgress.student_assignment_id
+                    == student_assignment.id,
                     StudentContentProgress.status != AssignmentStatus.NOT_STARTED,
                 )
                 .count()

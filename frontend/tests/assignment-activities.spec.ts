@@ -130,7 +130,7 @@ test.describe('Assignment Activities E2E Test', () => {
     await page.waitForLoadState('networkidle');
 
     // 檢查 Email 狀態
-    const emailSection = page.locator('text=Email').first();
+    await expect(page.locator('text=Email').first()).toBeVisible();
 
     // 如果有綁定 Email，應該顯示藍色勾勾
     const hasEmail = await page.locator('.text-blue-500 svg').count() > 0;

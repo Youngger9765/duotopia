@@ -2,6 +2,7 @@
 Azure Speech Assessment Router
 處理微軟發音評估 API 的請求
 """
+
 import os
 import logging
 from typing import Optional, Dict, Any, List

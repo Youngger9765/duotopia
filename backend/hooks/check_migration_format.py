@@ -30,7 +30,9 @@ def check_migration_file(filepath: str) -> tuple[bool, list[str]]:
             content = f.read()
 
         # 檢查 revision ID 格式（必須是12位 hex）
-        revision_match = re.search(r"revision:\s*str\s*=\s*['\"]([^'\"]+)['\"]", content)
+        revision_match = re.search(
+            r"revision:\s*str\s*=\s*['\"]([^'\"]+)['\"]", content
+        )
         if revision_match:
             revision = revision_match.group(1)
             if not re.match(r"^[a-f0-9]{12}$", revision):
@@ -60,7 +62,9 @@ def check_migration_file(filepath: str) -> tuple[bool, list[str]]:
 
         # 警告：檢查 upgrade() 函數中是否有危險操作（downgrade 中的 drop 是正常的）
         # 找出 upgrade 函數的內容
-        upgrade_match = re.search(r"def upgrade\(\)[^:]*:(.*?)(?=def downgrade|$)", content, re.DOTALL)
+        upgrade_match = re.search(
+            r"def upgrade\(\)[^:]*:(.*?)(?=def downgrade|$)", content, re.DOTALL
+        )
         if upgrade_match:
             upgrade_content = upgrade_match.group(1)
 

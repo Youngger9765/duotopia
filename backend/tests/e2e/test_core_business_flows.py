@@ -5,12 +5,8 @@ Core Business Critical Flow Tests
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
-import json
 from unittest.mock import patch, MagicMock
-from typing import Dict, List
 
 
 class TestTeacherCompleteFlow:
@@ -19,7 +15,7 @@ class TestTeacherCompleteFlow:
     def test_teacher_complete_workflow(self):
         """測試教師從登入到派發作業的完整流程"""
         from main import app
-        from auth import create_access_token, get_password_hash
+        from auth import create_access_token
 
         client = TestClient(app)
 
@@ -74,21 +70,21 @@ class TestTeacherCompleteFlow:
             print(f"Classroom creation status: {classroom_response.status_code}")
 
         # Step 4: 添加學生到班級（核心功能）
-        students_data = {
-            "students": [
-                {"name": "Student One", "email": "student1@test.com"},
-                {"name": "Student Two", "email": "student2@test.com"},
-            ]
-        }
+        # students_data = {
+        #     "students": [
+        #         {"name": "Student One", "email": "student1@test.com"},
+        #         {"name": "Student Two", "email": "student2@test.com"},
+        #     ]
+        # }
 
         # Step 5: 創建並派發作業（最核心功能）
-        assignment_data = {
-            "title": "English Homework Week 1",
-            "description": "Complete reading and vocabulary exercises",
-            "due_date": (datetime.now() + timedelta(days=7)).isoformat(),
-            "classroom_id": 1,
-            "content_ids": [1, 2, 3],
-        }
+        # assignment_data = {
+        #     "title": "English Homework Week 1",
+        #     "description": "Complete reading and vocabulary exercises",
+        #     "due_date": (datetime.now() + timedelta(days=7)).isoformat(),
+        #     "classroom_id": 1,
+        #     "content_ids": [1, 2, 3],
+        # }
 
         # 驗證整個流程是否順暢
         assert teacher_token is not None, "Teacher authentication failed"
@@ -137,7 +133,7 @@ class TestStudentCompleteFlow:
     def test_student_login_and_assignment_flow(self):
         """測試學生登入並完成作業的流程"""
         from main import app
-        from auth import create_access_token, get_password_hash
+        from auth import create_access_token
 
         client = TestClient(app)
 

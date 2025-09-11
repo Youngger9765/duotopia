@@ -4,14 +4,9 @@ CI/CD Failure Prevention Tests
 """
 
 import pytest
-import subprocess
-import os
-import json
 import yaml
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 import importlib.util
-import sys
 
 
 class TestPreDeploymentChecks:
