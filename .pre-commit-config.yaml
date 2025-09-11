@@ -63,6 +63,20 @@ repos:
         files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
 
+      - id: prevent-db-files
+        name: Prevent database files from being committed
+        entry: bash -c 'git diff --cached --name-only | grep -q "\.db$" && echo "Error - Database files detected - Use git reset to remove .db files" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-test-file-location
+        name: Check test files are in correct location
+        entry: bash -c 'git diff --cached --name-only | grep -q "backend/scripts/test_.*\.py" && echo "Warning - Test files should be in backend/tests/ not scripts/" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # 🔒 Secret Detection - CRITICAL SECURITY
   # TODO: Re-enable detect-secrets after fixing baseline compatibility
   # - repo: https://github.com/Yelp/detect-secrets
