@@ -4,11 +4,10 @@ Student Progress Tracking Tests
 """
 
 import pytest
-from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 # Mock schemas and enums for testing
@@ -67,7 +66,7 @@ class TestStudentProgressCalculation:
     def test_assignment_progress_calculation(self):
         """測試作業進度計算"""
         # 模擬學生作業
-        student_assignment = MockStudentAssignment()
+        MockStudentAssignment()
 
         # 總共 5 個活動，完成 3 個
         completed_activities = [

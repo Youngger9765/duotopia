@@ -210,7 +210,6 @@ class TestDataAccessControl:
     def test_cross_tenant_data_isolation(self):
         """測試跨租戶資料隔離（學校之間的資料隔離）"""
         from database import get_db
-        from models import Teacher
 
         db = next(get_db())
 

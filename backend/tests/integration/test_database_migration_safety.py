@@ -7,13 +7,9 @@ import pytest
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Optional, Set
-import ast
 import subprocess
-from unittest.mock import patch, MagicMock
-from sqlalchemy import text, inspect
+from sqlalchemy import inspect
 from database import get_db, engine
-import alembic.config
 
 
 class TestMigrationSafetyChecks:

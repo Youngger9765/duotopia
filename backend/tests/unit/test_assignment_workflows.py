@@ -5,19 +5,8 @@
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from models import (
-    Assignment,
-    StudentAssignment,
-    AssignmentContent,
-    Teacher,
-    Student,
-    Classroom,
-    Content,
-)
-from schemas import AssignmentCreate, StudentAssignmentCreate, AssignmentStatusEnum
 
 
 class TestAssignmentCreationWorkflow:

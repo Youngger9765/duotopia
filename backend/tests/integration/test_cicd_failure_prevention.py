@@ -28,7 +28,7 @@ class TestPreDeploymentChecks:
             try:
                 spec = importlib.util.spec_from_file_location(module_name, py_file)
                 if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
+                    importlib.util.module_from_spec(spec)
                     # 不執行，只檢查語法
                     compile(open(py_file).read(), py_file, "exec")
             except (ImportError, SyntaxError) as e:

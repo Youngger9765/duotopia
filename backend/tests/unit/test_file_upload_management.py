@@ -4,12 +4,9 @@ File Upload and Management Tests
 """
 
 import pytest
-import tempfile
-import os
 import hashlib
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
-from typing import Dict, List, Optional, BinaryIO
+from typing import Dict, List, Optional
 from enum import Enum
 from pathlib import Path
 
@@ -403,11 +400,11 @@ class TestFileManagement:
     def test_file_listing_by_user(self):
         """測試按用戶列出檔案"""
         # 模擬用戶檔案
-        user_files = [
-            MockUploadedFile("1", "audio1.mp3", FileType.AUDIO, 1024),
-            MockUploadedFile("2", "image1.jpg", FileType.IMAGE, 2048),
-            MockUploadedFile("3", "doc1.pdf", FileType.DOCUMENT, 4096),
-        ]
+        # user_files = [
+        #     MockUploadedFile("1", "audio1.mp3", FileType.AUDIO, 1024),
+        #     MockUploadedFile("2", "image1.jpg", FileType.IMAGE, 2048),
+        #     MockUploadedFile("3", "doc1.pdf", FileType.DOCUMENT, 4096),
+        # ]
 
         # 測試列出所有檔案
         all_files = self._list_user_files(user_id=1, file_type=None)

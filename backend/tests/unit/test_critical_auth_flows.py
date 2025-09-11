@@ -55,7 +55,7 @@ class TestStudentModel:
     def test_student_password_validation_logic(self):
         """測試學生密碼驗證邏輯"""
         # 模擬學生資料
-        birthdate = date(2012, 3, 15)
+        date(2012, 3, 15)
         expected_password = "20120315"
 
         # 正確的預設密碼雜湊
@@ -114,7 +114,6 @@ class TestAuthenticationFlow:
     def test_student_login_flow_logic(self):
         """測試學生登入流程邏輯"""
         # 模擬學生資料
-        student_id = 1
         student_birthdate = date(2012, 3, 15)
         expected_password = "20120315"
         student_hash = bcrypt.hashpw(

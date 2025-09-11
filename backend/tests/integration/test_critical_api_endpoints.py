@@ -8,8 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import patch
 
 # 為整合測試設置內存資料庫
@@ -323,7 +322,7 @@ class TestCORSAndHeaders:
         response = test_client.get("/health")
 
         # 檢查是否有基本的安全標頭
-        headers = response.headers
+        response.headers
 
         # 這些檢查可能需要根據實際中間件配置調整
         assert response.status_code == 200
