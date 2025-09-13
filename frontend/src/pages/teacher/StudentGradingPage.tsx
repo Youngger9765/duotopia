@@ -409,7 +409,7 @@ export default function StudentGradingPage() {
                       {submission.submissions[currentQuestionIndex].ai_scores && (
                         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <h4 className="text-sm font-semibold text-blue-800 mb-2">🤖 AI 語音評估結果</h4>
-                          
+
                           {/* 綜合分數 */}
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             <div className="text-center">
@@ -461,7 +461,7 @@ export default function StudentGradingPage() {
                               </div>
                             </div>
                           )}
-                          
+
                           <p className="text-xs text-blue-500 mt-2">※ 此為 AI 自動評估結果，僅供參考</p>
                         </div>
                       )}
