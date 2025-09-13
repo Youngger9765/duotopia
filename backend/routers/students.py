@@ -59,8 +59,25 @@ async def validate_student(
         expires_delta=timedelta(minutes=30),
     )
 
-    # 取得班級資訊 - 需要從 ClassroomStudent 關聯取得
-    # TODO: 實作取得學生班級資訊
+    # 取得班級資訊 - 從 ClassroomStudent 關聯取得
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student.id)
+        .first()
+    )
+
+    classroom_id = None
+    classroom_name = None
+    if classroom_student:
+        classroom = (
+            db.query(Classroom)
+            .filter(Classroom.id == classroom_student.classroom_id)
+            .first()
+        )
+        if classroom:
+            classroom_id = classroom.id
+            classroom_name = classroom.name
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -68,8 +85,8 @@ async def validate_student(
             "id": student.id,
             "name": student.name,
             "email": student.email,
-            "classroom_id": None,  # TODO: Get from ClassroomStudent
-            "classroom_name": None,  # TODO: Get from ClassroomStudent
+            "classroom_id": classroom_id,
+            "classroom_name": classroom_name,
         },
     }
 

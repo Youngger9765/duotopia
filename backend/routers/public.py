@@ -37,6 +37,12 @@ class StudentResponse(BaseModel):
     avatar: Optional[str] = None
 
 
+class TeacherResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+
 @router.post("/validate-teacher", response_model=ValidateTeacherResponse)
 def validate_teacher(request: ValidateTeacherRequest, db: Session = Depends(get_db)):
     """驗證教師 email 是否存在"""
@@ -49,6 +55,20 @@ def validate_teacher(request: ValidateTeacherRequest, db: Session = Depends(get_
     if teacher:
         return ValidateTeacherResponse(valid=True, name=teacher.name, id=teacher.id)
     return ValidateTeacherResponse(valid=False)
+
+
+@router.get("/teachers", response_model=List[TeacherResponse])
+def get_teachers(db: Session = Depends(get_db)):
+    """獲取所有活躍教師的公開資訊"""
+    teachers = db.query(Teacher).filter(Teacher.is_active.is_(True)).all()
+
+    result = []
+    for teacher in teachers:
+        result.append(
+            TeacherResponse(id=teacher.id, name=teacher.name, email=teacher.email)
+        )
+
+    return result
 
 
 @router.get("/teacher-classrooms", response_model=List[ClassroomResponse])

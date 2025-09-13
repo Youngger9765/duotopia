@@ -36,8 +36,16 @@ router = APIRouter(prefix="/api/teachers", tags=["assignments"])
 async def process_audio_with_whisper(
     audio_urls: List[str], expected_texts: List[str]
 ) -> Dict[str, Any]:
-    """Mock implementation for processing audio with Whisper API"""
-    # TODO: Implement actual Whisper API integration
+    """
+    Mock implementation for processing audio with Whisper API
+
+    In production, this should integrate with OpenAI Whisper API:
+    - Send audio files to Whisper for transcription
+    - Compare transcriptions with expected texts
+    - Return accuracy scores and detailed analysis
+
+    For now, returns mock data for development/testing
+    """
     return {
         "transcriptions": [
             {

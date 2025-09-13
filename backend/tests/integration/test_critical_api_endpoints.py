@@ -304,18 +304,20 @@ class TestCORSAndHeaders:
 
     def test_cors_headers_present(self, test_client):
         """測試 CORS 標頭是否存在"""
-        # 模擬來自瀏覽器的預檢請求
+        # 改用實際存在的端點來檢查 CORS 標頭
         headers = {
             "Origin": "http://localhost:3000",
-            "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "Content-Type",
         }
 
-        response = test_client.options("/api/auth/validate", headers=headers)
+        response = test_client.get("/health", headers=headers)
 
-        # 檢查是否有適當的 CORS 標頭
-        # 注意：具體的標頭取決於 CORS 中間件配置
-        assert response.status_code in [200, 204]
+        # 檢查是否有 CORS 標頭
+        assert response.status_code == 200
+        # CORS 中間件應該會添加這些標頭（檢查credentials頭存在表示CORS配置正常）
+        assert (
+            "access-control-allow-credentials" in response.headers
+            or "Access-Control-Allow-Credentials" in response.headers
+        )
 
     def test_security_headers(self, test_client):
         """測試安全標頭"""

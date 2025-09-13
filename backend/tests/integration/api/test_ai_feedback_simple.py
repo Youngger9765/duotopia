@@ -21,6 +21,8 @@ from models import (
     AssignmentContent,
     Classroom,
     AssignmentStatus,
+    Program,
+    Lesson,
 )
 from routers.assignments import get_student_submission
 
@@ -68,8 +70,23 @@ class TestAIFeedbackIntegration:
         db_session.add(student)
         db_session.commit()
 
+        # Create program first
+        program = Program(
+            name="Test Program", description="Test program", teacher_id=teacher.id
+        )
+        db_session.add(program)
+        db_session.commit()
+
+        # Create lesson
+        lesson = Lesson(
+            name="Test Lesson", description="Test lesson", program_id=program.id
+        )
+        db_session.add(lesson)
+        db_session.commit()
+
         # Create content
         content = Content(
+            lesson_id=lesson.id,
             title="Test Reading Assessment",
             type="READING_ASSESSMENT",
             items=[{"text": "Hello, how are you today?", "translation": "你好，你今天好嗎？"}],
@@ -82,6 +99,7 @@ class TestAIFeedbackIntegration:
             title="Test Assignment",
             description="Test description",
             classroom_id=classroom.id,
+            teacher_id=teacher.id,
         )
         db_session.add(assignment)
         db_session.commit()
@@ -97,6 +115,7 @@ class TestAIFeedbackIntegration:
         student_assignment = StudentAssignment(
             student_id=student.id,
             assignment_id=assignment.id,
+            classroom_id=classroom.id,
             status=AssignmentStatus.SUBMITTED,
         )
         db_session.add(student_assignment)
@@ -201,19 +220,38 @@ class TestAIFeedbackIntegration:
         db_session.add(student)
         db_session.commit()
 
+        # Create program and lesson for content
+        program = Program(
+            name="Test Program 2", description="Test program", teacher_id=teacher.id
+        )
+        db_session.add(program)
+        db_session.commit()
+
+        lesson = Lesson(
+            name="Test Lesson 2", description="Test lesson", program_id=program.id
+        )
+        db_session.add(lesson)
+        db_session.commit()
+
         content = Content(
-            title="Content", type="READING_ASSESSMENT", items=[{"text": "test"}]
+            lesson_id=lesson.id,
+            title="Content",
+            type="READING_ASSESSMENT",
+            items=[{"text": "test"}],
         )
         db_session.add(content)
         db_session.commit()
 
-        assignment = Assignment(title="Assignment", classroom_id=classroom.id)
+        assignment = Assignment(
+            title="Assignment", classroom_id=classroom.id, teacher_id=teacher.id
+        )
         db_session.add(assignment)
         db_session.commit()
 
         student_assignment = StudentAssignment(
             student_id=student.id,
             assignment_id=assignment.id,
+            classroom_id=classroom.id,
             status=AssignmentStatus.SUBMITTED,
         )
         db_session.add(student_assignment)
