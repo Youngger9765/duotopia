@@ -52,31 +52,59 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
     }
 
+    // 🔍 DEBUG: API請求詳情
+    console.log('🌐 [DEBUG] API 請求開始');
+    console.log('🌐 [DEBUG] URL:', url);
+    console.log('🌐 [DEBUG] Method:', options.method || 'GET');
+    console.log('🌐 [DEBUG] Headers:', headers);
+    console.log('🌐 [DEBUG] Token exists:', !!this.token);
+    console.log('🌐 [DEBUG] Token preview:', this.token ? `${this.token.substring(0, 20)}...` : 'null');
+
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
+    console.log('🌐 [DEBUG] Response status:', response.status);
+    console.log('🌐 [DEBUG] Response ok:', response.ok);
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
+      console.error('🌐 [ERROR] API請求失敗:', {
+        url,
+        status: response.status,
+        error
+      });
       // Pass the full error object as JSON string for better error handling
       throw new Error(JSON.stringify(error));
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('🌐 [DEBUG] API請求成功，回應數據:', result);
+    return result;
   }
 
   // ============ Auth Methods ============
   async teacherLogin(data: LoginRequest): Promise<LoginResponse> {
+    console.log('🔑 [DEBUG] teacherLogin 方法被調用');
+    console.log('🔑 [DEBUG] 登入前 token 狀態:', this.token);
+
     const response = await this.request<LoginResponse>('/api/auth/teacher/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
 
     // Save token
+    console.log('🔑 [DEBUG] 準備保存 token:', response.access_token?.substring(0, 20) + '...');
     this.token = response.access_token;
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
+
+    console.log('🔑 [DEBUG] Token 已保存到 localStorage');
+    console.log('🔑 [DEBUG] 驗證 localStorage:', {
+      access_token: localStorage.getItem('access_token')?.substring(0, 20) + '...',
+      user: localStorage.getItem('user')
+    });
 
     return response;
   }

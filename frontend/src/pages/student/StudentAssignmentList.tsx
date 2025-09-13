@@ -24,8 +24,12 @@ import {
 } from '@/types';
 
 export default function StudentAssignmentList() {
+  console.log('🚀 [DEBUG] StudentAssignmentList 組件開始載入');
+
   const navigate = useNavigate();
   const { token, user } = useStudentAuthStore();
+
+  console.log('🚀 [DEBUG] StudentAssignmentList 組件載入完成，開始初始化state');
   const [assignments, setAssignments] = useState<StudentAssignmentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('not_started');
@@ -41,10 +45,17 @@ export default function StudentAssignmentList() {
   });
 
   useEffect(() => {
+    console.log('🔍 [DEBUG] StudentAssignmentList useEffect triggered');
+    console.log('🔍 [DEBUG] User:', user);
+    console.log('🔍 [DEBUG] Token exists:', !!token);
+    console.log('🔍 [DEBUG] Token length:', token?.length);
+
     if (!user || !token) {
+      console.log('🔍 [DEBUG] No user or token, redirecting to login');
       navigate('/student/login');
       return;
     }
+    console.log('🔍 [DEBUG] User and token OK, calling loadAssignments');
     loadAssignments();
   }, [user, token, navigate]);
 
@@ -52,6 +63,14 @@ export default function StudentAssignmentList() {
     try {
       setLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || '';
+
+      // 🔍 DEBUG: 檢查基本資訊
+      console.log('🔍 [DEBUG] StudentAssignmentList loadAssignments 開始');
+      console.log('🔍 [DEBUG] API URL:', apiUrl);
+      console.log('🔍 [DEBUG] Token:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('🔍 [DEBUG] User:', user);
+      console.log('🔍 [DEBUG] 完整API URL:', `${apiUrl}/api/students/assignments`);
+
       const response = await fetch(`${apiUrl}/api/students/assignments`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,11 +78,20 @@ export default function StudentAssignmentList() {
         }
       });
 
+      console.log('🔍 [DEBUG] Response status:', response.status);
+      console.log('🔍 [DEBUG] Response ok:', response.ok);
+      console.log('🔍 [DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🔍 [DEBUG] Error response text:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('🔍 [DEBUG] Raw API response data:', data);
+      console.log('🔍 [DEBUG] Data type:', typeof data);
+      console.log('🔍 [DEBUG] Data length:', Array.isArray(data) ? data.length : 'not array');
 
       // Transform data to match StudentAssignmentCard type
       interface AssignmentData {
@@ -94,7 +122,11 @@ export default function StudentAssignmentList() {
         completed_contents: assignment.status === 'GRADED' || assignment.status === 'SUBMITTED' ? 1 : 0
       }));
 
+      console.log('🔍 [DEBUG] Transformed assignment cards:', assignmentCards);
+      console.log('🔍 [DEBUG] Assignment cards length:', assignmentCards.length);
+
       setAssignments(assignmentCards);
+      console.log('🔍 [DEBUG] setAssignments 完成');
 
       // Calculate stats for each status
       const notStarted = assignmentCards.filter(a => a.status === 'NOT_STARTED').length;
@@ -117,11 +149,24 @@ export default function StudentAssignmentList() {
         resubmitted: resubmitted,
         averageScore: Math.round(avgScore)
       });
+
+      console.log('🔍 [DEBUG] Stats calculated:', {
+        totalAssignments: assignmentCards.length,
+        notStarted, inProgress, submitted, graded, returned, resubmitted,
+        averageScore: Math.round(avgScore)
+      });
+      console.log('🔍 [DEBUG] loadAssignments 成功完成');
+
     } catch (error) {
-      console.error('Failed to load assignments:', error);
+      console.error('🔥 [ERROR] Failed to load assignments:', error);
+      console.error('🔥 [ERROR] Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
       toast.error('無法載入作業列表');
     } finally {
       setLoading(false);
+      console.log('🔍 [DEBUG] setLoading(false) - 載入完成');
     }
   };
 

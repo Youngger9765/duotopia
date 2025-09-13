@@ -22,10 +22,20 @@ export default function TeacherLogin() {
     setIsLoading(true);
     setError('');
 
+    console.log('🔑 [DEBUG] 教師登入開始');
+    console.log('🔑 [DEBUG] 登入資料:', { email: formData.email, password: '***' });
+
     try {
-      await apiClient.teacherLogin(formData);
+      const result = await apiClient.teacherLogin(formData);
+      console.log('🔑 [DEBUG] 登入成功，結果:', result);
+      console.log('🔑 [DEBUG] localStorage 檢查:', {
+        auth_storage: localStorage.getItem('auth-storage'),
+        keys: Object.keys(localStorage)
+      });
+
       navigate('/teacher/dashboard');
     } catch (err) {
+      console.error('🔑 [ERROR] 登入失敗:', err);
       setError(err instanceof Error ? err.message : '登入失敗，請檢查帳號密碼');
     } finally {
       setIsLoading(false);
@@ -36,13 +46,23 @@ export default function TeacherLogin() {
     setIsLoading(true);
     setError('');
 
+    console.log('🔑 [DEBUG] Demo登入開始');
+    console.log('🔑 [DEBUG] Demo登入資料:', { email: 'demo@duotopia.com', password: 'demo123' });
+
     try {
-      await apiClient.teacherLogin({
+      const result = await apiClient.teacherLogin({
         email: 'demo@duotopia.com',
         password: 'demo123',
       });
+      console.log('🔑 [DEBUG] Demo登入成功，結果:', result);
+      console.log('🔑 [DEBUG] localStorage 檢查:', {
+        auth_storage: localStorage.getItem('auth-storage'),
+        keys: Object.keys(localStorage)
+      });
+
       navigate('/teacher/dashboard');
-    } catch {
+    } catch (err) {
+      console.error('🔑 [ERROR] Demo登入失敗:', err);
       setError('Demo 帳號登入失敗');
     } finally {
       setIsLoading(false);

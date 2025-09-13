@@ -545,10 +545,8 @@ export function AssignmentDialog({
                                     <span className="text-xs text-blue-600">載入中...</span>
                                   )}
                                   {lesson.contents && lesson.contents.length > 0 && !loadingLessons[lesson.id] && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 px-2 text-xs"
+                                    <span
+                                      className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         toggleAllInLesson(lesson);
@@ -557,7 +555,7 @@ export function AssignmentDialog({
                                       {lesson.contents.every(c => selectedContents.has(c.id))
                                         ? '取消全選'
                                         : '全選'}
-                                    </Button>
+                                    </span>
                                   )}
                                 </div>
                               </button>

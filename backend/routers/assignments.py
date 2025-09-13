@@ -275,7 +275,8 @@ async def create_assignment(
         db.add(assignment_content)
 
     # 取得要指派的學生列表
-    if request.student_ids:
+    if request.student_ids and len(request.student_ids) > 0:
+        # 指派給指定學生
         students = (
             db.query(Student)
             .join(ClassroomStudent)
@@ -850,47 +851,76 @@ async def get_assignment_detail(
     # 收集已指派的學生 IDs
     student_ids = [sa.student_id for sa in student_assignments]
 
+    # 🔥 修復：取得班級的全部學生，並標示指派狀態
+    from models import ClassroomStudent
+
+    all_students = (
+        db.query(Student)
+        .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+        .filter(
+            ClassroomStudent.classroom_id == assignment.classroom_id,
+            ClassroomStudent.is_active.is_(True),
+            Student.is_active.is_(True),
+        )
+        .order_by(Student.student_number)
+        .all()
+    )
+
     students_progress = []
-    for sa in student_assignments:
-        student = db.query(Student).filter(Student.id == sa.student_id).first()
+    for student in all_students:
+        # 檢查這個學生是否已被指派
+        sa = None
+        for student_assignment in student_assignments:
+            if student_assignment.student_id == student.id:
+                sa = student_assignment
+                break
+
+        is_assigned = sa is not None
 
         # 取得各內容進度
         content_progress = []
-        for content in contents:
-            progress = (
-                db.query(StudentContentProgress)
-                .filter(
-                    StudentContentProgress.student_assignment_id == sa.id,
-                    StudentContentProgress.content_id == content["id"],
+        if sa:  # 只有已指派的學生才有進度資料
+            for content in contents:
+                progress = (
+                    db.query(StudentContentProgress)
+                    .filter(
+                        StudentContentProgress.student_assignment_id == sa.id,
+                        StudentContentProgress.content_id == content["id"],
+                    )
+                    .first()
                 )
-                .first()
-            )
 
-            if progress:
-                content_progress.append(
-                    {
-                        "content_id": content["id"],
-                        "content_title": content["title"],
-                        "status": (
-                            progress.status.value if progress.status else "NOT_STARTED"
-                        ),
-                        "score": progress.score,
-                        "checked": progress.checked,
-                        "completed_at": (
-                            progress.completed_at.isoformat()
-                            if progress.completed_at
-                            else None
-                        ),
-                    }
-                )
+                if progress:
+                    content_progress.append(
+                        {
+                            "content_id": content["id"],
+                            "content_title": content["title"],
+                            "status": (
+                                progress.status.value
+                                if progress.status
+                                else "NOT_STARTED"
+                            ),
+                            "score": progress.score,
+                            "checked": progress.checked,
+                            "completed_at": (
+                                progress.completed_at.isoformat()
+                                if progress.completed_at
+                                else None
+                            ),
+                        }
+                    )
 
         students_progress.append(
             {
-                "student_id": student.id if student else None,
-                "student_name": student.name if student else "Unknown",
-                "overall_status": sa.status.value if sa.status else "NOT_STARTED",
+                "student_id": student.id,
+                "student_name": student.name,
+                "student_number": student.student_number,
+                "is_assigned": is_assigned,  # 🔥 新增：指派狀態
+                "overall_status": sa.status.value
+                if sa and sa.status
+                else ("NOT_STARTED" if is_assigned else "unassigned"),
                 "submitted_at": (
-                    sa.submitted_at.isoformat() if sa.submitted_at else None
+                    sa.submitted_at.isoformat() if sa and sa.submitted_at else None
                 ),
                 "content_progress": content_progress,
             }
@@ -941,6 +971,9 @@ async def get_assignment_progress(
             status_code=404, detail="Assignment not found or you don't have permission"
         )
 
+    # 🔥 修復：取得班級全部學生，並標示指派狀態
+    from models import ClassroomStudent
+
     # 取得學生作業進度
     student_assignments = (
         db.query(StudentAssignment)
@@ -951,51 +984,83 @@ async def get_assignment_progress(
         .all()
     )
 
-    progress_list = []
-    for sa in student_assignments:
-        # 取得學生資訊
-        student = db.query(Student).filter(Student.id == sa.student_id).first()
+    # 取得班級全部學生
+    all_students = (
+        db.query(Student)
+        .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+        .filter(
+            ClassroomStudent.classroom_id == assignment.classroom_id,
+            ClassroomStudent.is_active.is_(True),
+            Student.is_active.is_(True),
+        )
+        .order_by(Student.student_number)
+        .all()
+    )
 
-        if student:
-            progress_list.append(
-                {
-                    "student_id": student.id,
-                    "student_name": student.name,
-                    "status": sa.status.value if sa.status else "NOT_STARTED",
-                    "submission_date": (
-                        sa.submitted_at.isoformat() if sa.submitted_at else None
+    progress_list = []
+    for student in all_students:
+        # 檢查這個學生是否已被指派
+        sa = None
+        for student_assignment in student_assignments:
+            if student_assignment.student_id == student.id:
+                sa = student_assignment
+                break
+
+        is_assigned = sa is not None
+
+        print(
+            f"🔍 [DEBUG] Student {student.name} (ID: {student.id}) - is_assigned: {is_assigned}"
+        )
+
+        progress_list.append(
+            {
+                "student_id": student.id,
+                "student_name": student.name,
+                "student_number": student.student_number,  # 🔥 新增學號
+                "is_assigned": is_assigned,  # 🔥 新增指派狀態
+                "status": sa.status.value
+                if sa and sa.status
+                else ("NOT_STARTED" if is_assigned else "unassigned"),
+                "submission_date": (
+                    sa.submitted_at.isoformat() if sa and sa.submitted_at else None
+                ),
+                "score": sa.score if sa else None,
+                "attempts": 1 if sa and sa.submitted_at else 0,  # Simple attempt count
+                "last_activity": (
+                    sa.updated_at.isoformat()
+                    if sa and sa.updated_at
+                    else sa.created_at.isoformat()
+                    if sa and sa.created_at
+                    else None
+                ),
+                # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
+                "timestamps": {
+                    "started_at": (
+                        sa.started_at.isoformat() if sa and sa.started_at else None
                     ),
-                    "score": sa.score,
-                    "attempts": 1 if sa.submitted_at else 0,  # Simple attempt count
-                    "last_activity": (
-                        sa.updated_at.isoformat()
-                        if sa.updated_at
-                        else sa.created_at.isoformat() if sa.created_at else None
+                    "submitted_at": (
+                        sa.submitted_at.isoformat() if sa and sa.submitted_at else None
                     ),
-                    # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
-                    "timestamps": {
-                        "started_at": (
-                            sa.started_at.isoformat() if sa.started_at else None
-                        ),
-                        "submitted_at": (
-                            sa.submitted_at.isoformat() if sa.submitted_at else None
-                        ),
-                        "graded_at": sa.graded_at.isoformat() if sa.graded_at else None,
-                        "returned_at": (
-                            sa.returned_at.isoformat() if sa.returned_at else None
-                        ),
-                        "resubmitted_at": (
-                            sa.resubmitted_at.isoformat() if sa.resubmitted_at else None
-                        ),
-                        "created_at": (
-                            sa.created_at.isoformat() if sa.created_at else None
-                        ),
-                        "updated_at": (
-                            sa.updated_at.isoformat() if sa.updated_at else None
-                        ),
-                    },
-                }
-            )
+                    "graded_at": sa.graded_at.isoformat()
+                    if sa and sa.graded_at
+                    else None,
+                    "returned_at": (
+                        sa.returned_at.isoformat() if sa and sa.returned_at else None
+                    ),
+                    "resubmitted_at": (
+                        sa.resubmitted_at.isoformat()
+                        if sa and sa.resubmitted_at
+                        else None
+                    ),
+                    "created_at": (
+                        sa.created_at.isoformat() if sa and sa.created_at else None
+                    ),
+                    "updated_at": (
+                        sa.updated_at.isoformat() if sa and sa.updated_at else None
+                    ),
+                },
+            }
+        )
 
     return progress_list
 

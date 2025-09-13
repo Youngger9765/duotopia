@@ -84,29 +84,36 @@ export default function TeacherAssignmentDetailPage() {
   const [gradingStudentIndex, setGradingStudentIndex] = useState<number>(0);
 
   useEffect(() => {
+    let isActive = true;
+    const abortController = new AbortController();
+
+    const fetchData = async () => {
+      if (!isActive) return;
+
+      // Fetch in sequence to ensure dependencies are met
+      await fetchAssignmentDetail();
+      if (!isActive) return;
+
+      await fetchStudents();
+      if (!isActive) return;
+
+      // Don't fail if progress API doesn't exist
+      try {
+        await fetchStudentProgress();
+      } catch {
+        // Progress API might not exist yet, which is okay
+      }
+    };
+
     if (classroomId && assignmentId) {
       fetchData();
     }
+
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
   }, [classroomId, assignmentId]);
-
-  // Re-fetch progress when students are loaded
-  useEffect(() => {
-    if (students.length > 0 && assignment) {
-      fetchStudentProgress();
-    }
-  }, [students, assignment]);
-
-  const fetchData = async () => {
-    // Fetch in sequence to ensure dependencies are met
-    await fetchAssignmentDetail();
-    await fetchStudents();
-    // Don't fail if progress API doesn't exist
-    try {
-      await fetchStudentProgress();
-    } catch {
-      // Progress API might not exist yet, which is okay
-    }
-  };
 
   const fetchAssignmentDetail = async () => {
     try {
@@ -116,13 +123,17 @@ export default function TeacherAssignmentDetailPage() {
       // Handle different possible date field names
       const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
 
-      // Extract student IDs from students_progress
+      // Extract student IDs - only count actually assigned students, not all students
       let studentIds: number[] = [];
       if (response.students_progress && Array.isArray(response.students_progress)) {
-        studentIds = response.students_progress.map((sp) => sp.student_number).filter((id) => id !== null);
-      } else if (response.students && Array.isArray(response.students)) {
-        studentIds = response.students;
+        // Only include students who are actually assigned
+        studentIds = response.students_progress
+          .filter((sp: {is_assigned?: boolean; student_number: number}) => sp.is_assigned === true)
+          .map((sp: {is_assigned?: boolean; student_number: number}) => sp.student_number)
+          .filter((id) => id !== null);
       }
+
+      // Process assigned students
 
       const assignmentData = {
         ...response,
@@ -177,7 +188,16 @@ export default function TeacherAssignmentDetailPage() {
     }
   };
 
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
+
   const fetchStudentProgress = async () => {
+    if (isLoadingProgress) {
+      // Skip duplicate request silently
+      return;
+    }
+
+    setIsLoadingProgress(true);
+    // Loading progress...
     try {
       // Try to get progress data from API
       let response;
@@ -191,8 +211,7 @@ export default function TeacherAssignmentDetailPage() {
       // Handle both array and object responses
       const progressArray = Array.isArray(response) ? response : (response as {data?: unknown[]}).data || [];
 
-      // Get assigned student IDs from assignment
-      const assignedIds = assignment?.students || [];
+      // Progress loaded successfully
 
       // If we have progress data from API
       if (progressArray.length > 0) {
@@ -214,41 +233,45 @@ export default function TeacherAssignmentDetailPage() {
           last_activity?: string;
           updated_at?: string;
           timestamps?: StudentProgress['timestamps'];
+          is_assigned?: boolean;  // 🔥 加入 is_assigned 欄位
         }
 
         progressArray.forEach((item: ProgressItem) => {
           const studentId = item.student_number || item.id;
+          // 🔥 修復：使用 API 回傳的真實 is_assigned 值
+          const isAssigned = item.is_assigned === true;
+
           progressMap.set(studentId, {
             student_number: studentId,
             student_name: item.student_name || item.name || '未知學生',
-            status: item.status || 'not_started',
+            status: item.status || (isAssigned ? 'NOT_STARTED' : 'unassigned'),
             submission_date: item.submission_date || item.submitted_at,
             score: item.score,
             attempts: item.attempts || 0,
             last_activity: item.last_activity || item.updated_at,
             timestamps: item.timestamps,  // 🔥 加入 timestamps
-            is_assigned: true
+            is_assigned: isAssigned  // 🔥 使用真實值而不是強制設為 true
           });
         });
 
         // Add all classroom students
 
-        // Check if students are loaded
+        // Check if students are loaded - only show data we have from API
         if (students && students.length > 0) {
           const allProgress = students.map(student => {
             if (progressMap.has(student.id)) {
               return progressMap.get(student.id);
             } else {
-              const isAssigned = assignedIds.includes(student.id);
+              // If no progress data for this student, they are unassigned
               return {
                 student_number: student.id,
                 student_name: student.name,
-                status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
+                status: 'unassigned' as const,
                 submission_date: undefined,
                 score: undefined,
                 attempts: 0,
                 last_activity: undefined,
-                is_assigned: isAssigned
+                is_assigned: false
               };
             }
           });
@@ -260,40 +283,19 @@ export default function TeacherAssignmentDetailPage() {
           setStudentProgress(progressList);
         }
       } else {
-        // No progress data from API, create mock
-        createMockProgress();
+        // No progress data from API - API must provide real data
+        // No progress data available
+        setStudentProgress([]);
       }
     } catch (error) {
       console.error('Failed to fetch student progress:', error);
-      // Create mock data based on assigned students
-      createMockProgress();
-    }
-  };
-
-  const createMockProgress = () => {
-    // Show all classroom students
-
-    if (students && students.length > 0) {
-      const assignedIds = assignment?.students || [];
-
-      const mockProgress = students.map(student => {
-        const isAssigned = assignedIds.includes(student.id);
-        return {
-          student_number: student.id,
-          student_name: student.name,
-          status: isAssigned ? 'NOT_STARTED' as const : 'unassigned' as const,
-          submission_date: undefined,
-          score: undefined,
-          attempts: 0,
-          last_activity: undefined,
-          is_assigned: isAssigned
-        };
-      });
-      setStudentProgress(mockProgress);
-    } else {
+      // API failed - show empty, don't create fake data
       setStudentProgress([]);
+    } finally {
+      setIsLoadingProgress(false);
     }
   };
+
 
   const handleSave = async () => {
     if (!editingData.title) {
@@ -596,28 +598,12 @@ export default function TeacherAssignmentDetailPage() {
                 <Users className="h-4 w-4 text-gray-500" />
                 <span>
                   {(() => {
-                    // Priority: actual assigned students count
-                    const assignedStudentIds = assignment.students || [];
-                    const assignedProgressCount = studentProgress.filter(p => p.status !== 'unassigned').length;
+                    // Only use progress data - count students with is_assigned = true
+                    const assignedCount = studentProgress.filter(p => p.is_assigned === true).length;
 
-                    // Use assignment data first, then fall back to progress data
-                    // Be careful with 0 values - use !== undefined to check existence
-                    let count = 0;
-                    if (assignment.student_count !== undefined && assignment.student_count !== null) {
-                      count = assignment.student_count;
-                    } else if (assignedStudentIds.length > 0) {
-                      count = assignedStudentIds.length;
-                    } else if (assignedProgressCount > 0) {
-                      count = assignedProgressCount;
-                    }
+                    // Progress stats updated
 
-                    // Student count calculation
-                    // student_count: assignment.student_count,
-                    // assignedStudentIds: assignedStudentIds.length,
-                    // assignedProgressCount,
-                    // final: count
-
-                    return `${count} 人`;
+                    return `${assignedCount} 人`;
                   })()}
                 </span>
               </div>
@@ -890,8 +876,9 @@ export default function TeacherAssignmentDetailPage() {
               <tbody>
                 {filteredProgress.length > 0 ? (
                   filteredProgress.map((progress) => {
-                    const isAssigned = progress.is_assigned !== false && progress.status !== 'unassigned';
-                    const currentStatus = progress.status?.toUpperCase() || 'unassigned';
+                    // 簡化邏輯：直接使用 is_assigned 欄位
+                    const isAssigned = progress.is_assigned === true;
+                    const currentStatus = progress.status?.toUpperCase() || 'NOT_STARTED';
 
                     // Status indicator function
                     const getStatusIndicator = (statusName: string) => {
@@ -913,9 +900,10 @@ export default function TeacherAssignmentDetailPage() {
                       // 根據 currentStatus 和時間戳判斷
                       switch (statusName) {
                         case 'ASSIGNED':
-                          // 已指派：一定會走過
-                          isPassed = true;
-                          isActive = currentStatus === 'unassigned';
+                          // 已指派：只有已指派的學生才會顯示這個狀態
+                          // Rendered assignment indicator
+                          isPassed = isAssigned;
+                          isActive = isAssigned && currentStatus === 'NOT_STARTED';
                           break;
 
                         case 'NOT_STARTED':
@@ -1028,7 +1016,7 @@ export default function TeacherAssignmentDetailPage() {
 
                     return (
                       <tr
-                        key={progress.student_number}
+                        key={progress.student_number || `student-${progress.student_name}`}
                         className={`border-t ${isAssigned ? 'hover:bg-gray-50' : 'bg-gray-50 opacity-60'}`}
                       >
                         <td className="px-4 py-3 min-w-[150px]">
