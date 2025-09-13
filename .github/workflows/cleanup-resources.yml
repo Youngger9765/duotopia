@@ -1,0 +1,253 @@
+name: 🧹 Cleanup Cloud Resources
+
+on:
+  # 每天凌晨 2 點執行（台灣時間）
+  schedule:
+    - cron: '0 18 * * *'  # UTC 18:00 = 台灣時間 02:00
+
+  # 允許手動觸發
+  workflow_dispatch:
+    inputs:
+      keep_revisions:
+        description: '保留最近幾個 revisions'
+        required: false
+        default: '1'  # 單人開發，只保留 1 個就夠了
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '5'
+      keep_images:
+        description: '保留最近幾個 images'
+        required: false
+        default: '2'  # 只保留 2 個 image 備用
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '5'
+
+env:
+  PROJECT_ID: duotopia-469413
+  REGION: asia-east1
+  REPOSITORY: cloud-run-source-deploy
+
+jobs:
+  cleanup-cloud-run:
+    name: 🗑️ Clean Cloud Run Revisions
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 🧹 Clean Backend Revisions
+        run: |
+          echo "🔍 Checking backend revisions..."
+
+          # 設定保留數量
+          KEEP_COUNT=${{ github.event.inputs.keep_revisions || '1' }}
+          echo "📌 Will keep $KEEP_COUNT most recent revisions"
+
+          # 獲取所有 revisions，按時間排序
+          REVISIONS=$(gcloud run revisions list \
+            --service=duotopia-staging-backend \
+            --region=${{ env.REGION }} \
+            --format="value(name)" \
+            --sort-by="~creationTimestamp")
+
+          # 計算總數
+          TOTAL=$(echo "$REVISIONS" | wc -l)
+          echo "📊 Total revisions: $TOTAL"
+
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            # 跳過最新的 N 個，刪除其餘的
+            TO_DELETE=$(echo "$REVISIONS" | tail -n +$((KEEP_COUNT + 1)))
+            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+
+            echo "🗑️ Deleting $DELETE_COUNT old revisions..."
+
+            for REVISION in $TO_DELETE; do
+              echo "  Deleting: $REVISION"
+              gcloud run revisions delete $REVISION \
+                --region=${{ env.REGION }} \
+                --quiet || echo "  ⚠️ Failed to delete $REVISION"
+            done
+
+            echo "✅ Backend cleanup complete! Deleted $DELETE_COUNT revisions"
+          else
+            echo "✅ No cleanup needed. Only $TOTAL revisions exist."
+          fi
+
+      - name: 🧹 Clean Frontend Revisions
+        run: |
+          echo "🔍 Checking frontend revisions..."
+
+          KEEP_COUNT=${{ github.event.inputs.keep_revisions || '3' }}
+          echo "📌 Will keep $KEEP_COUNT most recent revisions"
+
+          REVISIONS=$(gcloud run revisions list \
+            --service=duotopia-staging-frontend \
+            --region=${{ env.REGION }} \
+            --format="value(name)" \
+            --sort-by="~creationTimestamp")
+
+          TOTAL=$(echo "$REVISIONS" | wc -l)
+          echo "📊 Total revisions: $TOTAL"
+
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$REVISIONS" | tail -n +$((KEEP_COUNT + 1)))
+            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+
+            echo "🗑️ Deleting $DELETE_COUNT old revisions..."
+
+            for REVISION in $TO_DELETE; do
+              echo "  Deleting: $REVISION"
+              gcloud run revisions delete $REVISION \
+                --region=${{ env.REGION }} \
+                --quiet || echo "  ⚠️ Failed to delete $REVISION"
+            done
+
+            echo "✅ Frontend cleanup complete! Deleted $DELETE_COUNT revisions"
+          else
+            echo "✅ No cleanup needed. Only $TOTAL revisions exist."
+          fi
+
+  cleanup-container-images:
+    name: 🐳 Clean Container Images
+    runs-on: ubuntu-latest
+    needs: cleanup-cloud-run
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 🐳 Clean Backend Images
+        run: |
+          echo "🔍 Checking backend container images..."
+
+          KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
+          echo "📌 Will keep $KEEP_COUNT most recent images"
+
+          # 列出所有 backend images
+          IMAGES=$(gcloud artifacts docker images list \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend \
+            --format="value(version)" \
+            --sort-by="~createTime" 2>/dev/null || echo "")
+
+          if [ -z "$IMAGES" ]; then
+            echo "⚠️ No images found or repository doesn't exist"
+            exit 0
+          fi
+
+          TOTAL=$(echo "$IMAGES" | wc -l)
+          echo "📊 Total images: $TOTAL"
+
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+
+            echo "🗑️ Deleting $DELETE_COUNT old images..."
+
+            for VERSION in $TO_DELETE; do
+              echo "  Deleting: $VERSION"
+              gcloud artifacts docker images delete \
+                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend:$VERSION \
+                --quiet || echo "  ⚠️ Failed to delete $VERSION"
+            done
+
+            echo "✅ Backend images cleanup complete!"
+          else
+            echo "✅ No cleanup needed. Only $TOTAL images exist."
+          fi
+
+      - name: 🐳 Clean Frontend Images
+        run: |
+          echo "🔍 Checking frontend container images..."
+
+          KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
+          echo "📌 Will keep $KEEP_COUNT most recent images"
+
+          IMAGES=$(gcloud artifacts docker images list \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend \
+            --format="value(version)" \
+            --sort-by="~createTime" 2>/dev/null || echo "")
+
+          if [ -z "$IMAGES" ]; then
+            echo "⚠️ No images found or repository doesn't exist"
+            exit 0
+          fi
+
+          TOTAL=$(echo "$IMAGES" | wc -l)
+          echo "📊 Total images: $TOTAL"
+
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+
+            echo "🗑️ Deleting $DELETE_COUNT old images..."
+
+            for VERSION in $TO_DELETE; do
+              echo "  Deleting: $VERSION"
+              gcloud artifacts docker images delete \
+                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend:$VERSION \
+                --quiet || echo "  ⚠️ Failed to delete $VERSION"
+            done
+
+            echo "✅ Frontend images cleanup complete!"
+          else
+            echo "✅ No cleanup needed. Only $TOTAL images exist."
+          fi
+
+  summary:
+    name: 📊 Cleanup Summary
+    runs-on: ubuntu-latest
+    needs: [cleanup-cloud-run, cleanup-container-images]
+    if: always()
+
+    steps:
+      - name: 📝 Generate Summary
+        run: |
+          echo "## 🧹 Cloud Resources Cleanup Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📅 Execution Time" >> $GITHUB_STEP_SUMMARY
+          echo "- Date: $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- Triggered by: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Keep Revisions: ${{ github.event.inputs.keep_revisions || '3' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Keep Images: ${{ github.event.inputs.keep_images || '5' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 💰 Cost Savings" >> $GITHUB_STEP_SUMMARY
+          echo "- Cloud Run: Reduced idle instances" >> $GITHUB_STEP_SUMMARY
+          echo "- Storage: Freed up container registry space" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Cleanup completed successfully!" >> $GITHUB_STEP_SUMMARY
