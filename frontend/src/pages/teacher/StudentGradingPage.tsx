@@ -36,6 +36,17 @@ interface StudentSubmission {
     duration?: number;
     feedback?: string;
     passed?: boolean;
+    ai_scores?: {
+      accuracy_score: number;
+      fluency_score: number;
+      completeness_score: number;
+      pronunciation_score: number;
+      word_details: Array<{
+        word: string;
+        accuracy_score: number;
+        error_type?: string | null;
+      }>;
+    };
   }>;
   current_score?: number;
   current_feedback?: string;
@@ -391,6 +402,67 @@ export default function StudentGradingPage() {
                         <div className="p-2 bg-gray-50 rounded text-sm">
                           <p className="text-gray-600">學生朗讀內容：</p>
                           <p className="mt-1">{submission.submissions[currentQuestionIndex].transcript}</p>
+                        </div>
+                      )}
+
+                      {/* AI 評分結果顯示（唯讀） */}
+                      {submission.submissions[currentQuestionIndex].ai_scores && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="text-sm font-semibold text-blue-800 mb-2">🤖 AI 語音評估結果</h4>
+                          
+                          {/* 綜合分數 */}
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-700">
+                                {submission.submissions[currentQuestionIndex].ai_scores!.accuracy_score.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-blue-600">準確度</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-700">
+                                {submission.submissions[currentQuestionIndex].ai_scores!.fluency_score.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-blue-600">流暢度</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-700">
+                                {submission.submissions[currentQuestionIndex].ai_scores!.completeness_score.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-blue-600">完整度</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-700">
+                                {submission.submissions[currentQuestionIndex].ai_scores!.pronunciation_score.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-blue-600">發音分數</div>
+                            </div>
+                          </div>
+
+                          {/* 單字詳細評分 */}
+                          {submission.submissions[currentQuestionIndex].ai_scores!.word_details.length > 0 && (
+                            <div>
+                              <p className="text-sm text-blue-700 font-medium mb-2">單字分析：</p>
+                              <div className="flex flex-wrap gap-1">
+                                {submission.submissions[currentQuestionIndex].ai_scores!.word_details.map((word, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`px-2 py-1 rounded text-xs font-medium ${
+                                      word.accuracy_score >= 90
+                                        ? 'bg-green-100 text-green-800'
+                                        : word.accuracy_score >= 80
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-red-100 text-red-800'
+                                    }`}
+                                    title={`${word.word}: ${word.accuracy_score.toFixed(1)}分${word.error_type ? ' (' + word.error_type + ')' : ''}`}
+                                  >
+                                    {word.word} ({word.accuracy_score.toFixed(1)})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-blue-500 mt-2">※ 此為 AI 自動評估結果，僅供參考</p>
                         </div>
                       )}
                     </div>
