@@ -74,11 +74,11 @@ jobs:
         echo "Running Flake8 linting..."
         flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
 
-    - name: Run pytest
+    - name: Run pytest (Parallel)
       working-directory: ./backend
       run: |
-        echo "Running all tests..."
-        pytest -v --tb=short || echo "Tests completed with some failures"
+        echo "Running all tests in parallel (2 workers for GitHub Actions)..."
+        pytest -n 2 -v --tb=short || echo "Tests completed with some failures"
 
     - name: Test backend import
       working-directory: ./backend
