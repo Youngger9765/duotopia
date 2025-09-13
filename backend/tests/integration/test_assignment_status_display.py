@@ -20,7 +20,6 @@ from models import (
     Assignment,
     StudentAssignment,
 )
-from database import get_db
 from auth import create_access_token
 
 
