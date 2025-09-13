@@ -6,21 +6,29 @@
 
 ### 1. 安裝依賴
 ```bash
-make dev-setup
+# 前端
+cd frontend && npm install
+
+# 後端
+cd backend && pip install -r requirements.txt
 ```
 
 ### 2. 啟動開發環境
 ```bash
 # Terminal 1 - 後端
-make dev-backend
+cd backend && uvicorn main:app --reload --port 8000
 
 # Terminal 2 - 前端
-make dev-frontend
+cd frontend && npm run dev
 ```
 
 ### 3. 測試
 ```bash
-make test
+# 後端測試（平行執行）
+cd backend && pytest -n auto
+
+# 前端檢查
+cd frontend && npm run lint && npm run typecheck
 ```
 
 ### 4. 部署到 staging
@@ -35,8 +43,7 @@ duotopia/
 ├── frontend/          # React + Vite + TypeScript
 ├── backend/           # Python + FastAPI
 ├── .github/           # GitHub Actions CI/CD
-├── docker-compose.yml # 本地開發環境
-└── Makefile          # 開發指令
+└── docker-compose.yml # 本地開發環境
 ```
 
 ## 技術架構
@@ -46,18 +53,22 @@ duotopia/
 - **部署**: Google Cloud Run
 - **CI/CD**: GitHub Actions
 
-## 可用指令
+## 常用指令
 
+### 前端
 ```bash
-make help              # 查看所有可用指令
-make dev-setup         # 設定開發環境
-make test              # 執行測試
-make build             # 建置 Docker images
-make test-local        # 本地 Docker 測試
-make deploy-staging    # 部署到 staging
-make status            # 查看服務狀態
-make logs-backend      # 查看後端日誌
-make logs-frontend     # 查看前端日誌
+npm run dev            # 開發伺服器
+npm run build          # 建置生產版本
+npm run lint           # ESLint 檢查
+npm run typecheck      # TypeScript 型別檢查
+```
+
+### 後端
+```bash
+uvicorn main:app --reload    # 開發伺服器
+pytest                        # 執行所有測試
+pytest -n auto               # 平行執行測試
+python seed_data.py          # 填充測試資料
 ```
 
 ## 環境

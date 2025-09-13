@@ -13,16 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
 
 ### 在執行任何重要操作前，必須按順序檢查：
-1. **先查 Makefile** - `make help` 或 `cat Makefile | grep "^[a-z-]*:"`
-2. **先查 README** - 了解專案標準流程
-3. **先查 CLAUDE.md** - 了解專案特定規則
-4. **先查 package.json/requirements.txt** - 了解已有的腳本命令
-5. **絕對不要自作主張創建資源** - 永遠使用專案既有的配置
+1. **先查 README** - 了解專案標準流程
+2. **先查 CLAUDE.md** - 了解專案特定規則
+3. **先查 package.json/requirements.txt** - 了解已有的腳本命令
+4. **絕對不要自作主張創建資源** - 永遠使用專案既有的配置
 
 ### 🔴 紅線規則 (絕對禁止)：
-- ❌ **不要手動 gcloud 命令創建資源** - 必須用 Makefile
+- ❌ **不要手動 gcloud 命令創建資源** - 必須使用專案配置
 - ❌ **不要猜測版本號** - POSTGRES_15 vs POSTGRES_17 等必須查證
-- ❌ **不要忽略專案既有工具** - Makefile, npm scripts 優先
+- ❌ **不要忽略專案既有工具** - npm scripts, pytest 優先
 - ❌ **不要在未讀取配置前就執行命令** - 先讀後做
 
 ### ✅ 正確操作範例：
@@ -30,9 +29,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 錯誤：直接創建 Cloud SQL
 gcloud sql instances create duotopia-db-staging --database-version=POSTGRES_15
 
-# 正確：使用 Makefile
-make help  # 先看有什麼命令
-make db-create  # 使用專案配置創建
+# 正確：使用專案配置
+gcloud sql instances create duotopia-staging-0827 \
+  --database-version=POSTGRES_17 \
+  --tier=db-f1-micro \
+  --region=asia-east1
 ```
 
 ### ⚡ 每次修改後必須執行的測試流程：

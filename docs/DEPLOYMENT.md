@@ -13,18 +13,17 @@
 
 ### 預設部署（使用 Supabase - 免費）
 ```bash
-# 部署到 Staging（使用免費的 Supabase）
-make deploy-staging
+# 部署到 Staging（透過 GitHub Actions）
+git push origin staging
 
-# 或明確指定
-make deploy-staging-supabase
+# 或手動觸發 GitHub Actions
+gh workflow run deploy-staging.yml -f database=supabase
 ```
 
 ### 使用 Cloud SQL 部署（需要成本考量）
 ```bash
-# 部署到 Staging with Cloud SQL（$2.28/天）
-make deploy-staging-cloudsql
-# 系統會提醒成本並要求確認
+# 手動觸發部署 with Cloud SQL（$2.28/天）
+gh workflow run deploy-staging.yml -f database=cloudsql
 ```
 
 ## 🔄 切換資料庫（不重新部署）
@@ -33,13 +32,19 @@ make deploy-staging-cloudsql
 
 ```bash
 # 切換到 Supabase（省錢）
-make switch-staging-supabase
+gcloud run services update duotopia-staging-backend \
+  --region=asia-east1 \
+  --update-env-vars DATABASE_TYPE=supabase
 
 # 切換到 Cloud SQL（需要時）
-make switch-staging-cloudsql
+gcloud run services update duotopia-staging-backend \
+  --region=asia-east1 \
+  --update-env-vars DATABASE_TYPE=cloudsql
 
 # 檢查當前使用的資料庫
-make check-database
+gcloud run services describe duotopia-staging-backend \
+  --region=asia-east1 \
+  --format="value(spec.template.spec.containers[0].env[?key=='DATABASE_TYPE'].value)"
 ```
 
 ## 📝 GitHub Actions 工作流程

@@ -143,16 +143,16 @@ pre-commit install
 # 如果 model 有變更但沒有 migration，會阻止 commit
 ```
 
-#### 第二層：Makefile 快捷指令
+#### 第二層：Alembic 指令
 ```bash
 # 檢查是否需要 migration
-make db-check
+cd backend && alembic check
 
-# 生成 migration（有提示）
-make db-migrate MSG="add new field"
+# 生成 migration
+cd backend && alembic revision --autogenerate -m "add new field"
 
 # 執行 migration
-make db-upgrade
+cd backend && alembic upgrade head
 ```
 
 #### 第三層：CI/CD 強制檢查
