@@ -916,9 +916,11 @@ async def get_assignment_detail(
                 "student_name": student.name,
                 "student_number": student.student_number,
                 "is_assigned": is_assigned,  # 🔥 新增：指派狀態
-                "overall_status": sa.status.value
-                if sa and sa.status
-                else ("NOT_STARTED" if is_assigned else "unassigned"),
+                "overall_status": (
+                    sa.status.value
+                    if sa and sa.status
+                    else ("NOT_STARTED" if is_assigned else "unassigned")
+                ),
                 "submitted_at": (
                     sa.submitted_at.isoformat() if sa and sa.submitted_at else None
                 ),
@@ -1018,9 +1020,11 @@ async def get_assignment_progress(
                 "student_name": student.name,
                 "student_number": student.student_number,  # 🔥 新增學號
                 "is_assigned": is_assigned,  # 🔥 新增指派狀態
-                "status": sa.status.value
-                if sa and sa.status
-                else ("NOT_STARTED" if is_assigned else "unassigned"),
+                "status": (
+                    sa.status.value
+                    if sa and sa.status
+                    else ("NOT_STARTED" if is_assigned else "unassigned")
+                ),
                 "submission_date": (
                     sa.submitted_at.isoformat() if sa and sa.submitted_at else None
                 ),
@@ -1041,9 +1045,9 @@ async def get_assignment_progress(
                     "submitted_at": (
                         sa.submitted_at.isoformat() if sa and sa.submitted_at else None
                     ),
-                    "graded_at": sa.graded_at.isoformat()
-                    if sa and sa.graded_at
-                    else None,
+                    "graded_at": (
+                        sa.graded_at.isoformat() if sa and sa.graded_at else None
+                    ),
                     "returned_at": (
                         sa.returned_at.isoformat() if sa and sa.returned_at else None
                     ),

@@ -60,7 +60,7 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install -r requirements.txt
-        pip install black==23.12.1 flake8 pytest pytest-cov
+        # Black 和 flake8 已經在 requirements.txt 中了
 
     - name: Run Black formatting check
       working-directory: ./backend
