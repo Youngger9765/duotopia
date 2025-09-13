@@ -68,8 +68,8 @@ async def validate_student(
             "id": student.id,
             "name": student.name,
             "email": student.email,
-            "class_id": None,  # TODO: Get from ClassroomStudent
-            "class_name": None,  # TODO: Get from ClassroomStudent
+            "classroom_id": None,  # TODO: Get from ClassroomStudent
+            "classroom_name": None,  # TODO: Get from ClassroomStudent
         },
     }
 

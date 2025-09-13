@@ -1669,6 +1669,10 @@ async def get_student_submission(
                         if passed is not None:
                             submission["passed"] = passed
 
+                    # 獲取 AI 評分結果（來自語音評估 API）
+                    if progress and progress.ai_scores:
+                        submission["ai_scores"] = progress.ai_scores
+
                     submissions.append(submission)
                     group["submissions"].append(submission)
                     item_index += 1
