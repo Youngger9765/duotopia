@@ -77,8 +77,8 @@ jobs:
     - name: Run pytest
       working-directory: ./backend
       run: |
-        echo "Running pytest..."
-        pytest tests/unit/ -v --tb=short || echo "Unit tests completed with some failures"
+        echo "Running all tests..."
+        pytest -v --tb=short || echo "Tests completed with some failures"
 
     - name: Test backend import
       working-directory: ./backend
