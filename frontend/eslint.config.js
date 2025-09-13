@@ -17,6 +17,8 @@ export default [
         ecmaFeatures: {
           jsx: true,
         },
+        // project: './tsconfig.json',  // 需要完整路徑設定，暫時關閉
+        // tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.browser,
@@ -34,9 +36,13 @@ export default [
       },
     },
     rules: {
-      // TypeScript rules
+      // TypeScript rules - 嚴格型別檢查
       '@typescript-eslint/no-unused-vars': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',  // 禁止使用 any！
+      // TODO: 下面這些規則需要 parserOptions.project，暫時關閉
+      // '@typescript-eslint/no-unsafe-assignment': 'error',
+      // '@typescript-eslint/no-unsafe-member-access': 'error',
+      // '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
 
       // React rules
