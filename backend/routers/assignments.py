@@ -137,7 +137,7 @@ class StudentResponse(BaseModel):
     id: int
     name: str
     email: Optional[str] = None
-    student_id: Optional[str]
+    student_number: Optional[str] = None  # 改為 student_number 對應資料庫欄位
 
     class Config:
         from_attributes = True
