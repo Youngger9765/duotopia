@@ -546,9 +546,7 @@ async def get_all_students(
                 ),
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
-                "classroom_name": (
-                    classroom_info["name"] if classroom_info else "未分配"
-                ),
+                "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
                 "email_verified": student.email_verified,
                 "email_verified_at": (
                     student.email_verified_at.isoformat()
@@ -655,9 +653,7 @@ async def create_student(
 
     # Add warning if no classroom assigned
     if not student_data.classroom_id:
-        response["warning"] = (
-            "學生已建立但未分配到任何班級。該學生將在「我的學生」列表中顯示24小時，請儘快分配班級。"
-        )
+        response["warning"] = "學生已建立但未分配到任何班級。該學生將在「我的學生」列表中顯示24小時，請儘快分配班級。"
 
     return response
 

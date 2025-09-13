@@ -294,9 +294,7 @@ class TestFileUpload(FileValidationMixin):
             MockFile(
                 "virus.exe", b"malicious content", "application/x-executable"
             ),  # 不允許類型
-            MockFile(
-                "huge_file.mp3", b"x" * (100 * 1024 * 1024), "audio/mp3"
-            ),  # 檔案過大
+            MockFile("huge_file.mp3", b"x" * (100 * 1024 * 1024), "audio/mp3"),  # 檔案過大
         ]
 
         for test_file in invalid_files:

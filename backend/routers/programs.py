@@ -364,8 +364,7 @@ async def copy_from_classroom(
 
     # 建立新課程
     new_program = Program(
-        name=data.name
-        or f"{source_program.name} (從{source_program.classroom.name}複製)",
+        name=data.name or f"{source_program.name} (從{source_program.classroom.name}複製)",
         description=source_program.description,
         level=source_program.level,
         is_template=False,

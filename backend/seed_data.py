@@ -742,9 +742,7 @@ def create_demo_data(db: Session):
             student_assignment2.resubmitted_at = datetime.now() - timedelta(
                 hours=3
             )  # 🔥 重新提交
-            student_assignment2.graded_at = datetime.now() - timedelta(
-                hours=1
-            )  # 批改完成
+            student_assignment2.graded_at = datetime.now() - timedelta(hours=1)  # 批改完成
 
         db.add(student_assignment2)
         db.flush()
@@ -1017,9 +1015,7 @@ def create_demo_data(db: Session):
     )
     student_assignment6.submitted_at = datetime.now() - timedelta(days=3)  # 第一次提交
     student_assignment6.returned_at = datetime.now() - timedelta(days=2)  # 🔥 被退回
-    student_assignment6.resubmitted_at = datetime.now() - timedelta(
-        hours=6
-    )  # 🔥 重新提交
+    student_assignment6.resubmitted_at = datetime.now() - timedelta(hours=6)  # 🔥 重新提交
     student_assignment6.graded_at = datetime.now() - timedelta(hours=2)  # 批改完成
 
     db.add(student_assignment6)
@@ -1198,9 +1194,7 @@ def create_demo_data(db: Session):
                     score = random.randint(65, 95)
                     if status == AssignmentStatus.GRADED:
                         feedback = (
-                            f"做得很好！分數：{score}"
-                            if score >= 80
-                            else f"有進步空間，分數：{score}"
+                            f"做得很好！分數：{score}" if score >= 80 else f"有進步空間，分數：{score}"
                         )
                     else:
                         feedback = f"分數：{score}，請根據回饋訂正後重新提交"
@@ -1315,9 +1309,7 @@ def create_demo_data(db: Session):
                 if random.random() < 0.25:
                     score = None
                     feedback = (
-                        "作業完成度良好"
-                        if status == AssignmentStatus.GRADED
-                        else "請根據建議進行修改"
+                        "作業完成度良好" if status == AssignmentStatus.GRADED else "請根據建議進行修改"
                     )
                 else:
                     score = random.randint(70, 98)

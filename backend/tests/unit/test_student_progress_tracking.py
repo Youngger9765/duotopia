@@ -331,9 +331,7 @@ class TestActivitySpecificProgress:
 
         assert reading_analysis["word_accuracy"] == 0.95
         assert reading_analysis["reading_level"] == "proficient"
-        assert (
-            reading_analysis["reading_speed_category"] == "normal"
-        )  # 100-140 wpm 正常
+        assert reading_analysis["reading_speed_category"] == "normal"  # 100-140 wpm 正常
 
     def test_listening_comprehension_progress(self):
         """測試聽力理解進度"""
