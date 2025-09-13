@@ -83,7 +83,9 @@ def test_cascade_delete():
 
         # 5. 判斷結果
         if remaining_lessons == 0 and remaining_contents == 0:
-            print("\n✅ CASCADE DELETE 運作正常！刪除 Program 時，相關的 Lessons 和 Contents 都被刪除了。")
+            print(
+                "\n✅ CASCADE DELETE 運作正常！刪除 Program 時，相關的 Lessons 和 Contents 都被刪除了。"
+            )
         else:
             print("\n❌ CASCADE DELETE 有問題！還有孤立的資料存在。")
 

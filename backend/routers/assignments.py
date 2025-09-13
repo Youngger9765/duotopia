@@ -970,9 +970,7 @@ async def get_assignment_progress(
                     "last_activity": (
                         sa.updated_at.isoformat()
                         if sa.updated_at
-                        else sa.created_at.isoformat()
-                        if sa.created_at
-                        else None
+                        else sa.created_at.isoformat() if sa.created_at else None
                     ),
                     # 🔥 新增關鍵時間戳欄位用於狀態進度判斷
                     "timestamps": {

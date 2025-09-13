@@ -384,7 +384,9 @@ class StudentAssignment(Base):
 
     # TODO: Phase 2 - 移除以下舊欄位（等資料遷移完成）
     # 這些欄位應該從 Assignment 取得，不需要重複儲存
-    content_id = Column(Integer, ForeignKey("contents.id"), nullable=True)  # 舊架構，待移除
+    content_id = Column(
+        Integer, ForeignKey("contents.id"), nullable=True
+    )  # 舊架構，待移除
     classroom_id = Column(
         Integer, ForeignKey("classrooms.id"), nullable=False
     )  # 可從 assignment.classroom_id 取得

@@ -847,9 +847,9 @@ async def upload_student_recording(
             if not existing_progress.response_data:
                 existing_progress.response_data = {}
             existing_progress.response_data["audio_url"] = audio_url
-            existing_progress.response_data[
-                "recorded_at"
-            ] = datetime.utcnow().isoformat()
+            existing_progress.response_data["recorded_at"] = (
+                datetime.utcnow().isoformat()
+            )
             existing_progress.status = "IN_PROGRESS"
             print(f"Updated existing progress record: {existing_progress.id}")
         else:
