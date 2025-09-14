@@ -59,24 +59,18 @@ async def validate_student(
         expires_delta=timedelta(minutes=30),
     )
 
-    # 取得班級資訊 - 從 ClassroomStudent 關聯取得
-    classroom_student = (
-        db.query(ClassroomStudent)
+    # 取得班級資訊 - 使用 JOIN 優化查詢（避免 N+1）
+    # 原本：3次查詢 (Student + ClassroomStudent + Classroom)
+    # 現在：1次查詢 (JOIN)
+    classroom_info = (
+        db.query(Classroom.id, Classroom.name)
+        .join(ClassroomStudent)
         .filter(ClassroomStudent.student_id == student.id)
         .first()
     )
 
-    classroom_id = None
-    classroom_name = None
-    if classroom_student:
-        classroom = (
-            db.query(Classroom)
-            .filter(Classroom.id == classroom_student.classroom_id)
-            .first()
-        )
-        if classroom:
-            classroom_id = classroom.id
-            classroom_name = classroom.name
+    classroom_id = classroom_info[0] if classroom_info else None
+    classroom_name = classroom_info[1] if classroom_info else None
 
     return {
         "access_token": access_token,

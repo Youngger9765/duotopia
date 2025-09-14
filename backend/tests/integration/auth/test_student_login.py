@@ -2,21 +2,57 @@
 """
 測試學生登入流程
 """
-import requests
-import json  # noqa: F401
+import pytest
+from fastapi.testclient import TestClient
+from main import app
+from database import get_db
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database import Base
+from tests.factories import TestDataFactory
 
-BASE_URL = "http://localhost:8000"
+# 使用 TestClient 而不是 requests，避免需要運行伺服器
+client = TestClient(app)
 
 
-def test_student_login_flow():
+@pytest.fixture
+def test_db():
+    """建立測試資料庫"""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    db = TestSessionLocal()
+
+    # 建立測試資料
+    data = TestDataFactory.create_full_assignment_chain(
+        db, teacher_email="demo@duotopia.com"
+    )
+    db.commit()
+
+    yield db
+
+    db.close()
+    app.dependency_overrides.clear()
+
+
+def test_student_login_flow(test_db):
     print("🚀 測試學生登入流程")
     print("=" * 50)
 
     # Step 1: 驗證教師
     print("\n1. 驗證教師 Email")
     teacher_email = "demo@duotopia.com"
-    response = requests.post(
-        f"{BASE_URL}/api/public/validate-teacher", json={"email": teacher_email}
+    response = client.post(
+        "/api/public/validate-teacher", json={"email": teacher_email}
     )
     print("   請求: POST /api/public/validate-teacher")
     print(f"   資料: {{email: '{teacher_email}'}}")
@@ -30,8 +66,8 @@ def test_student_login_flow():
 
     # Step 2: 取得教師的班級
     print("\n2. 取得教師的班級列表")
-    response = requests.get(
-        f"{BASE_URL}/api/public/teacher-classrooms", params={"email": teacher_email}
+    response = client.get(
+        "/api/public/teacher-classrooms", params={"email": teacher_email}
     )
     print(f"   請求: GET /api/public/teacher-classrooms?email={teacher_email}")
     print(f"   回應: {response.status_code}")
@@ -56,9 +92,7 @@ def test_student_login_flow():
 
     # Step 3: 取得班級的學生
     print(f"\n3. 取得班級 '{selected_classroom['name']}' 的學生列表")
-    response = requests.get(
-        f"{BASE_URL}/api/public/classroom-students/{selected_classroom['id']}"
-    )
+    response = client.get(f"/api/public/classroom-students/{selected_classroom['id']}")
     print(f"   請求: GET /api/public/classroom-students/{selected_classroom['id']}")
     print(f"   回應: {response.status_code}")
 
@@ -87,7 +121,7 @@ def test_student_login_flow():
         "email": selected_student["email"],
         "password": "20120101",
     }  # 預設密碼
-    response = requests.post(f"{BASE_URL}/api/auth/student/login", json=login_data)
+    response = client.post("/api/auth/student/login", json=login_data)
     print("   請求: POST /api/auth/student/login")
     print(f"   資料: {{email: '{login_data['email']}', password: '20120101'}}")
     print(f"   回應: {response.status_code}")

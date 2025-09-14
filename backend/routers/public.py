@@ -82,25 +82,28 @@ def get_teacher_classrooms(email: str, db: Session = Depends(get_db)):
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
 
-    # 獲取該教師的所有班級
-    classrooms = (
-        db.query(Classroom)
+    # 獲取該教師的所有班級和學生數量 - 使用 JOIN 和 GROUP BY 優化
+    # 原本：1 + N 次查詢（1次班級 + N次學生數）
+    # 現在：1次查詢（JOIN + GROUP BY）
+    from sqlalchemy import func
+
+    classrooms_with_count = (
+        db.query(
+            Classroom.id,
+            Classroom.name,
+            func.count(ClassroomStudent.id).label("student_count"),
+        )
+        .outerjoin(ClassroomStudent)  # 使用 outerjoin 以包含沒有學生的班級
         .filter(Classroom.teacher_id == teacher.id, Classroom.is_active.is_(True))
+        .group_by(Classroom.id, Classroom.name)
         .all()
     )
 
     result = []
-    for classroom in classrooms:
-        # 計算每個班級的學生數
-        student_count = (
-            db.query(ClassroomStudent)
-            .filter(ClassroomStudent.classroom_id == classroom.id)
-            .count()
-        )
-
+    for classroom_id, classroom_name, student_count in classrooms_with_count:
         result.append(
             ClassroomResponse(
-                id=classroom.id, name=classroom.name, studentCount=student_count
+                id=classroom_id, name=classroom_name, studentCount=student_count or 0
             )
         )
 

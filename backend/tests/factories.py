@@ -5,7 +5,7 @@ Test Data Factory
 """
 
 from datetime import date
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from models import (
     Teacher,
@@ -163,7 +163,12 @@ class TestDataFactory:
 
     @staticmethod
     def create_full_assignment_chain(
-        db: Session, with_ai_scores: bool = False
+        db: Session,
+        with_ai_scores: bool = False,
+        teacher_email: str = "teacher@test.com",
+        student_email: str = "student@test.com",
+        student_number: str = "S001",
+        content_items: Optional[List[Dict]] = None,
     ) -> Dict[str, Any]:
         """
         建立完整的作業資料鏈
@@ -177,14 +182,21 @@ class TestDataFactory:
             包含所有建立物件的字典
         """
         # 建立基礎人員
-        teacher = TestDataFactory.create_teacher(db)
+        teacher = TestDataFactory.create_teacher(db, email=teacher_email)
         classroom = TestDataFactory.create_classroom(db, teacher)
-        student = TestDataFactory.create_student(db, classroom=classroom)
+        student = TestDataFactory.create_student(
+            db, classroom=classroom, email=student_email, student_number=student_number
+        )
 
         # 建立課程結構
         program = TestDataFactory.create_program(db, teacher)
         lesson = TestDataFactory.create_lesson(db, program)
-        content = TestDataFactory.create_content(db, lesson)
+
+        # 使用自定義的 content_items 或預設值
+        if content_items is None:
+            content_items = [{"text": "Test text", "translation": "測試文字"}]
+
+        content = TestDataFactory.create_content(db, lesson, items=content_items)
 
         # 建立作業
         assignment = TestDataFactory.create_assignment(db, classroom, teacher)
@@ -202,37 +214,39 @@ class TestDataFactory:
         )
 
         # 建立進度記錄
-        progress = None
+        ai_scores_data = None
         if with_ai_scores:
-            progress = StudentContentProgress(
-                student_assignment_id=student_assignment.id,
-                content_id=content.id,
-                order_index=0,
-                response_data={
-                    "audio_url": "https://storage.googleapis.com/test-bucket/recording.webm",
-                    "student_answer": "Hello how are you",
-                    "transcript": "Hello how are you",
-                },
-                ai_scores={
-                    "accuracy_score": 85.5,
-                    "fluency_score": 78.2,
-                    "completeness_score": 92.0,
-                    "pronunciation_score": 88.7,
-                    "word_details": [
-                        {"word": "Hello", "accuracy_score": 95.0, "error_type": None},
-                        {
-                            "word": "how",
-                            "accuracy_score": 82.5,
-                            "error_type": "slight_mispronunciation",
-                        },
-                        {"word": "are", "accuracy_score": 88.0, "error_type": None},
-                        {"word": "you", "accuracy_score": 90.5, "error_type": None},
-                    ],
-                },
-                status=AssignmentStatus.SUBMITTED,
-            )
-            db.add(progress)
-            db.commit()
+            ai_scores_data = {
+                "accuracy_score": 85.5,
+                "fluency_score": 78.2,
+                "completeness_score": 92.0,
+                "pronunciation_score": 88.7,
+                "word_details": [
+                    {"word": "Hello", "accuracy_score": 95.0, "error_type": None},
+                    {
+                        "word": "how",
+                        "accuracy_score": 82.5,
+                        "error_type": "slight_mispronunciation",
+                    },
+                    {"word": "are", "accuracy_score": 88.0, "error_type": None},
+                    {"word": "you", "accuracy_score": 90.5, "error_type": None},
+                ],
+            }
+
+        progress = StudentContentProgress(
+            student_assignment_id=student_assignment.id,
+            content_id=content.id,
+            order_index=0,
+            response_data={
+                "audio_url": "https://storage.googleapis.com/test-bucket/recording.webm",
+                "student_answer": "Hello how are you",
+                "transcript": "Hello how are you",
+            },
+            ai_scores=ai_scores_data,
+            status=AssignmentStatus.SUBMITTED,
+        )
+        db.add(progress)
+        db.commit()
 
         return {
             "teacher": teacher,

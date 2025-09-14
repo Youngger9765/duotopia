@@ -6,25 +6,13 @@ This test focuses on the core issue: API should include AI scores in submission 
 """
 
 import pytest
-from datetime import date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database import Base
-from models import (
-    Teacher,
-    Student,
-    Assignment,
-    StudentAssignment,
-    Content,
-    StudentContentProgress,
-    AssignmentContent,
-    Classroom,
-    AssignmentStatus,
-    Program,
-    Lesson,
-)
+from models import StudentContentProgress, AssignmentStatus
 from routers.assignments import get_student_submission
+from tests.factories import TestDataFactory
 
 
 @pytest.fixture
@@ -49,114 +37,44 @@ class TestAIFeedbackIntegration:
         Test the current API response structure
         This test should FAIL initially - demonstrating the missing AI scores feature
         """
-        # Create test data
-        teacher = Teacher(
-            name="Test Teacher", email="teacher@test.com", password_hash="test_hash"
+        # Create test data using factory - 1 line instead of 50+!
+        data = TestDataFactory.create_full_assignment_chain(
+            db_session,
+            with_ai_scores=True,
+            content_items=[
+                {"text": "Hello, how are you today?", "translation": "你好，你今天好嗎？"}
+            ],
         )
-        db_session.add(teacher)
-        db_session.commit()
 
-        classroom = Classroom(name="Test Classroom", teacher_id=teacher.id)
-        db_session.add(classroom)
-        db_session.commit()
-
-        student = Student(
-            name="Test Student",
-            email="student@test.com",
-            student_number="S001",
-            password_hash="student_hash",
-            birthdate=date(2000, 1, 1),
-        )
-        db_session.add(student)
-        db_session.commit()
-
-        # Create program first
-        program = Program(
-            name="Test Program", description="Test program", teacher_id=teacher.id
-        )
-        db_session.add(program)
-        db_session.commit()
-
-        # Create lesson
-        lesson = Lesson(
-            name="Test Lesson", description="Test lesson", program_id=program.id
-        )
-        db_session.add(lesson)
-        db_session.commit()
-
-        # Create content
-        content = Content(
-            lesson_id=lesson.id,
-            title="Test Reading Assessment",
-            type="READING_ASSESSMENT",
-            items=[{"text": "Hello, how are you today?", "translation": "你好，你今天好嗎？"}],
-        )
-        db_session.add(content)
-        db_session.commit()
-
-        # Create assignment
-        assignment = Assignment(
-            title="Test Assignment",
-            description="Test description",
-            classroom_id=classroom.id,
-            teacher_id=teacher.id,
-        )
-        db_session.add(assignment)
-        db_session.commit()
-
-        # Link content to assignment
-        assignment_content = AssignmentContent(
-            assignment_id=assignment.id, content_id=content.id, order_index=0
-        )
-        db_session.add(assignment_content)
-        db_session.commit()
-
-        # Create student assignment
-        student_assignment = StudentAssignment(
-            student_id=student.id,
-            assignment_id=assignment.id,
-            classroom_id=classroom.id,
-            status=AssignmentStatus.SUBMITTED,
-        )
-        db_session.add(student_assignment)
-        db_session.commit()
-
-        # Create progress with AI scores (simulating speech assessment result)
-        progress = StudentContentProgress(
-            student_assignment_id=student_assignment.id,
-            content_id=content.id,
-            order_index=0,
-            response_data={
-                "audio_url": "https://storage.googleapis.com/test-bucket/recording.webm",
-                "student_answer": "Hello how are you today",
-                "transcript": "Hello how are you today",
-            },
-            # This is the key data that should appear in the API response
-            ai_scores={
-                "accuracy_score": 85.5,
-                "fluency_score": 78.2,
-                "completeness_score": 92.0,
-                "pronunciation_score": 88.7,
-                "word_details": [
-                    {"word": "Hello", "accuracy_score": 95.0, "error_type": None},
-                    {
-                        "word": "how",
-                        "accuracy_score": 82.5,
-                        "error_type": "slight_mispronunciation",
-                    },
-                ],
-            },
-            status=AssignmentStatus.SUBMITTED,
-        )
-        db_session.add(progress)
+        # Override the default progress response data and AI scores
+        progress = data["progress"]
+        progress.response_data = {
+            "audio_url": "https://storage.googleapis.com/test-bucket/recording.webm",
+            "student_answer": "Hello how are you today",
+            "transcript": "Hello how are you today",
+        }
+        progress.ai_scores = {
+            "accuracy_score": 85.5,
+            "fluency_score": 78.2,
+            "completeness_score": 92.0,
+            "pronunciation_score": 88.7,
+            "word_details": [
+                {"word": "Hello", "accuracy_score": 95.0, "error_type": None},
+                {
+                    "word": "how",
+                    "accuracy_score": 82.5,
+                    "error_type": "slight_mispronunciation",
+                },
+            ],
+        }
         db_session.commit()
 
         # Call the API function directly (bypassing auth for testing)
         try:
             response = await get_student_submission(
-                assignment_id=assignment.id,
-                student_id=student.id,
-                current_user=teacher,  # Mock authenticated teacher
+                assignment_id=data["assignment"].id,
+                student_id=data["student"].id,
+                current_user=data["teacher"],  # Mock authenticated teacher
                 db=db_session,
             )
 
@@ -201,82 +119,24 @@ class TestAIFeedbackIntegration:
         Verify that ai_scores data exists in the database
         This confirms our test data setup is correct
         """
-        # Create minimal test data
-        teacher = Teacher(name="Teacher", email="t@test.com", password_hash="hash")
-        db_session.add(teacher)
-        db_session.commit()
+        # Create test data using factory - much simpler!
+        data = TestDataFactory.create_full_assignment_chain(db_session)
 
-        classroom = Classroom(name="Classroom", teacher_id=teacher.id)
-        db_session.add(classroom)
-        db_session.commit()
-
-        student = Student(
-            name="Student",
-            email="s@test.com",
-            student_number="S001",
-            password_hash="hash",
-            birthdate=date(2000, 1, 1),
-        )
-        db_session.add(student)
-        db_session.commit()
-
-        # Create program and lesson for content
-        program = Program(
-            name="Test Program 2", description="Test program", teacher_id=teacher.id
-        )
-        db_session.add(program)
-        db_session.commit()
-
-        lesson = Lesson(
-            name="Test Lesson 2", description="Test lesson", program_id=program.id
-        )
-        db_session.add(lesson)
-        db_session.commit()
-
-        content = Content(
-            lesson_id=lesson.id,
-            title="Content",
-            type="READING_ASSESSMENT",
-            items=[{"text": "test"}],
-        )
-        db_session.add(content)
-        db_session.commit()
-
-        assignment = Assignment(
-            title="Assignment", classroom_id=classroom.id, teacher_id=teacher.id
-        )
-        db_session.add(assignment)
-        db_session.commit()
-
-        student_assignment = StudentAssignment(
-            student_id=student.id,
-            assignment_id=assignment.id,
-            classroom_id=classroom.id,
-            status=AssignmentStatus.SUBMITTED,
-        )
-        db_session.add(student_assignment)
-        db_session.commit()
-
-        # Create progress with AI scores
-        progress = StudentContentProgress(
-            student_assignment_id=student_assignment.id,
-            content_id=content.id,
-            order_index=0,
-            ai_scores={
-                "accuracy_score": 90.0,
-                "fluency_score": 85.0,
-                "completeness_score": 95.0,
-                "pronunciation_score": 87.5,
-            },
-            status=AssignmentStatus.SUBMITTED,
-        )
-        db_session.add(progress)
+        # Update progress with specific AI scores
+        progress = data["progress"]
+        progress.ai_scores = {
+            "accuracy_score": 90.0,
+            "fluency_score": 85.0,
+            "completeness_score": 95.0,
+            "pronunciation_score": 87.5,
+        }
+        progress.status = AssignmentStatus.SUBMITTED
         db_session.commit()
 
         # Verify data is stored correctly
         retrieved = (
             db_session.query(StudentContentProgress)
-            .filter_by(student_assignment_id=student_assignment.id)
+            .filter_by(student_assignment_id=data["student_assignment"].id)
             .first()
         )
 

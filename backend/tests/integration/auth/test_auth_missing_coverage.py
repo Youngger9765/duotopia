@@ -103,12 +103,14 @@ class TestStudentAuthentication:
     def test_authenticate_student_success(self, db: Session):
         """Test successful student authentication"""
         # Create student with known password
+        from datetime import date
+
         password = "student_password_123"
         student = Student(
             email="auth_student@test.com",
             name="Auth Test Student",
             password_hash=get_password_hash(password),
-            birthdate="2000-01-01",
+            birthdate=date(2000, 1, 1),  # 修正：使用 date 物件而不是字串
         )
         db.add(student)
         db.commit()
@@ -128,11 +130,13 @@ class TestStudentAuthentication:
     def test_authenticate_student_wrong_password(self, db: Session):
         """Test authenticating student with wrong password"""
         # Create student
+        from datetime import date
+
         student = Student(
             email="wrong_student@test.com",
             name="Wrong Pass Student",
             password_hash=get_password_hash("correct_password"),
-            birthdate="2000-01-01",
+            birthdate=date(2000, 1, 1),  # 修正：使用 date 物件而不是字串
         )
         db.add(student)
         db.commit()

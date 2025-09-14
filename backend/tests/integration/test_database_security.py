@@ -187,9 +187,9 @@ class TestDataAccessControl:
         # 這些端點應該拒絕學生存取
         teacher_only_endpoints = [
             "/api/teachers/classrooms",
-            "/api/teachers/assignments",
-            "/api/teachers/programs",
-            ("/api/teachers/assignments", "POST"),  # 創建作業
+            "/api/assignments",  # 修正：使用實際存在的端點
+            "/api/programs",  # 修正：使用實際存在的端點
+            ("/api/assignments/create", "POST"),  # 創建作業
         ]
 
         for endpoint_info in teacher_only_endpoints:

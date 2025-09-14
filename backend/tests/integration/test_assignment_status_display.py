@@ -62,19 +62,21 @@ def test_data(db: Session):
     assignment = Assignment(
         title="測試作業",
         classroom_id=classroom.id,
-        created_by=teacher.id,
-        created_at=datetime.now(),
+        teacher_id=teacher.id,  # 修正：使用 teacher_id 而不是 created_by
     )
     db.add(assignment)
     db.flush()
 
     # 只指派給前2個學生
+    from models import AssignmentStatus  # 導入 enum
+
     for i in range(2):
         sa = StudentAssignment(
             assignment_id=assignment.id,
             student_id=students[i].id,
-            assigned_date=datetime.now(),
-            status="NOT_STARTED",
+            classroom_id=classroom.id,  # 必須提供
+            title=assignment.title,  # 必須提供
+            status=AssignmentStatus.NOT_STARTED,  # 使用 enum 而不是字串
         )
         db.add(sa)
 
@@ -141,6 +143,13 @@ def test_assignment_detail_shows_correct_student_list(test_data, db: Session):
     測試：作業詳情 API 正確返回學生列表
     預期：students 欄位只包含被指派的學生
     """
+    from database import get_db
+
+    # Override database dependency
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)
 
     # 建立老師 token
@@ -154,7 +163,7 @@ def test_assignment_detail_shows_correct_student_list(test_data, db: Session):
 
     # 呼叫作業詳情 API
     response = client.get(
-        f"/api/teachers/assignments/{test_data['assignment'].id}",
+        f"/api/assignments/{test_data['assignment'].id}",  # 修正：正確的端點路徑
         headers={"Authorization": f"Bearer {token}"},
     )
 
