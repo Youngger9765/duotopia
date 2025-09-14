@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/table';
 import TeacherLayout from '@/components/TeacherLayout';
 import { BookOpen, RefreshCw, Filter, Plus, Edit, Eye, Trash2 } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import TableSkeleton from '@/components/TableSkeleton';
 import { ProgramDialogs } from '@/components/ProgramDialogs';
 import { apiClient } from '@/lib/api';
 
@@ -142,11 +144,32 @@ export default function TeacherPrograms() {
   if (loading) {
     return (
       <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+        <div>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-gray-900">所有課程</h2>
           </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white p-4 rounded-lg shadow-sm border animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                    <div className="h-8 w-12 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Loading Spinner */}
+          <LoadingSpinner message="正在載入課程資料..." size="lg" />
+
+          {/* Table Skeleton */}
+          <TableSkeleton rows={5} columns={7} />
         </div>
       </TeacherLayout>
     );
