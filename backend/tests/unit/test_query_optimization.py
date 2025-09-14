@@ -80,6 +80,155 @@ class TestQueryOptimization:
 
         # 這個測試應該失敗，證明存在 N+1 問題
 
+    def test_student_content_query_should_detect_n_plus_one(self, db_with_counter):
+        """
+        測試：學生作業內容查詢應該檢測到 N+1 問題
+
+        位置：students.py 第 307-310 行
+        問題：在迴圈中查詢 Content 表
+        """
+        # Arrange: 建立有多個 content 的作業資料
+        data = TestDataFactory.create_full_assignment_chain(db_with_counter)
+
+        # 建立更多 content 和對應的 progress
+        from models import Content, StudentContentProgress, AssignmentStatus
+
+        for i in range(5):  # 5 個額外的 content
+            content = Content(
+                lesson_id=data["lesson"].id,
+                title=f"Additional Content {i}",
+                type="READING_ASSESSMENT",
+                items=[{"text": f"Content {i} text"}],
+            )
+            db_with_counter.add(content)
+            db_with_counter.commit()
+
+            progress = StudentContentProgress(
+                student_assignment_id=data["student_assignment"].id,
+                content_id=content.id,
+                order_index=i + 1,
+                status=AssignmentStatus.NOT_STARTED,
+            )
+            db_with_counter.add(progress)
+
+        db_with_counter.commit()
+
+        # Act: 模擬 students.py:307-310 的查詢邏輯
+        self.query_count = 0
+
+        # 取得 progress_records (模擬原始代碼)
+        progress_records = (
+            db_with_counter.query(StudentContentProgress)
+            .filter(
+                StudentContentProgress.student_assignment_id
+                == data["student_assignment"].id
+            )
+            .all()
+        )
+
+        # 原始的 N+1 查詢方式
+        activities = []
+        for progress in progress_records:
+            content = (
+                db_with_counter.query(Content)
+                .filter(Content.id == progress.content_id)
+                .first()
+            )
+            if content:
+                activities.append({"content_id": content.id, "title": content.title})
+
+        # Assert: 應該偵測到 N+1 問題
+        # 1 個查詢 progress_records + N 個查詢 content = 1 + N
+        expected_queries = 1 + len(progress_records)  # 至少 6 個查詢
+
+        assert self.query_count >= expected_queries, (
+            f"偵測到 N+1 問題！執行了 {self.query_count} 次查詢，"
+            f"對於 {len(progress_records)} 個 progress 記錄"
+        )
+
+        # 驗證功能正確性
+        assert len(activities) == len(progress_records)
+        print(
+            f"✅ N+1 問題確認：{len(progress_records)} 個 progress 產生 {self.query_count} 次查詢"
+        )
+
+    def test_student_content_query_optimized_should_reduce_queries(
+        self, db_with_counter
+    ):
+        """
+        測試：優化後的學生內容查詢應該減少查詢次數
+
+        優化方式：批次查詢 + dictionary lookup
+        """
+        # Arrange: 建立有多個 content 的作業資料
+        data = TestDataFactory.create_full_assignment_chain(db_with_counter)
+
+        # 建立更多 content 和對應的 progress
+        from models import Content, StudentContentProgress, AssignmentStatus
+
+        for i in range(5):  # 5 個額外的 content
+            content = Content(
+                lesson_id=data["lesson"].id,
+                title=f"Additional Content {i}",
+                type="READING_ASSESSMENT",
+                items=[{"text": f"Content {i} text"}],
+            )
+            db_with_counter.add(content)
+            db_with_counter.commit()
+
+            progress = StudentContentProgress(
+                student_assignment_id=data["student_assignment"].id,
+                content_id=content.id,
+                order_index=i + 1,
+                status=AssignmentStatus.NOT_STARTED,
+            )
+            db_with_counter.add(progress)
+
+        db_with_counter.commit()
+
+        # Act: 使用優化的查詢方式
+        self.query_count = 0
+
+        # 取得 progress_records
+        progress_records = (
+            db_with_counter.query(StudentContentProgress)
+            .filter(
+                StudentContentProgress.student_assignment_id
+                == data["student_assignment"].id
+            )
+            .all()
+        )
+
+        # 優化的查詢方式：批次查詢 + dictionary lookup
+        content_ids = [progress.content_id for progress in progress_records]
+        contents = (
+            db_with_counter.query(Content).filter(Content.id.in_(content_ids)).all()
+        )
+        content_dict = {content.id: content for content in contents}
+
+        # 使用 dictionary lookup，不需要額外查詢
+        activities = []
+        for progress in progress_records:
+            content = content_dict.get(progress.content_id)
+            if content:
+                activities.append({"content_id": content.id, "title": content.title})
+
+        # Assert: 應該只有 2 個查詢（progress + contents）
+        assert self.query_count <= 3, (
+            f"優化成功！只執行了 {self.query_count} 次查詢，"
+            f"處理 {len(progress_records)} 個 progress 記錄"
+        )
+
+        # 驗證功能正確性
+        assert len(activities) == len(progress_records)
+
+        improvement = (
+            (1 + len(progress_records) - self.query_count) / (1 + len(progress_records))
+        ) * 100
+        print(
+            f"✅ 優化成功：{improvement:.1f}% 查詢減少（{1 + len(progress_records)} → {self.query_count}）"
+        )
+
     def test_teacher_classrooms_should_use_eager_loading(self, db_with_counter):
         """
         測試：教師班級列表應該使用 eager loading

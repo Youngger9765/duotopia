@@ -304,10 +304,13 @@ async def get_assignment_activities(
             .all()
         )
 
+        # 優化：批次查詢所有 content，避免 N+1 問題
+        content_ids = [progress.content_id for progress in progress_records]
+        contents = db.query(Content).filter(Content.id.in_(content_ids)).all()
+        content_dict = {content.id: content for content in contents}
+
         for progress in progress_records:
-            content = (
-                db.query(Content).filter(Content.id == progress.content_id).first()
-            )
+            content = content_dict.get(progress.content_id)
 
             if content:
                 # 將整個 content 作為一個活動，包含所有 items
