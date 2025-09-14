@@ -80,23 +80,31 @@ async def unassign_students(
     unassigned = []
     protected = []
 
-    for student_id in request.student_ids:
-        # 查找學生作業記錄
-        student_assignment = (
-            db.query(StudentAssignment)
-            .filter(
-                StudentAssignment.assignment_id == assignment_id,
-                StudentAssignment.student_id == student_id,
-                StudentAssignment.is_active.is_(True),
-            )
-            .first()
+    # 優化：批次查詢學生作業記錄，避免 N+1 問題
+    student_assignments_list = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id.in_(request.student_ids),
+            StudentAssignment.is_active.is_(True),
         )
+        .all()
+    )
+    student_assignments_dict = {sa.student_id: sa for sa in student_assignments_list}
+
+    # 優化：批次查詢學生資訊
+    students_list = db.query(Student).filter(Student.id.in_(request.student_ids)).all()
+    students_dict = {s.id: s for s in students_list}
+
+    for student_id in request.student_ids:
+        # 使用字典查找，避免重複查詢
+        student_assignment = student_assignments_dict.get(student_id)
 
         if not student_assignment:
             continue  # 學生本來就沒有被指派
 
-        # 取得學生資訊
-        student = db.query(Student).filter(Student.id == student_id).first()
+        # 使用字典查找學生資訊
+        student = students_dict.get(student_id)
         student_name = student.name if student else f"Student {student_id}"
 
         # 檢查作業狀態
@@ -215,21 +223,29 @@ async def preview_unassign(
         "cannot_unassign": [],  # 不能取消的
     }
 
-    for student_id in student_id_list:
-        student_assignment = (
-            db.query(StudentAssignment)
-            .filter(
-                StudentAssignment.assignment_id == assignment_id,
-                StudentAssignment.student_id == student_id,
-                StudentAssignment.is_active.is_(True),
-            )
-            .first()
+    # 優化：批次查詢學生作業記錄，避免 N+1 問題
+    student_assignments_list = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id.in_(student_id_list),
+            StudentAssignment.is_active.is_(True),
         )
+        .all()
+    )
+    student_assignments_dict = {sa.student_id: sa for sa in student_assignments_list}
+
+    # 優化：批次查詢學生資訊
+    students_list = db.query(Student).filter(Student.id.in_(student_id_list)).all()
+    students_dict = {s.id: s for s in students_list}
+
+    for student_id in student_id_list:
+        student_assignment = student_assignments_dict.get(student_id)
 
         if not student_assignment:
             continue
 
-        student = db.query(Student).filter(Student.id == student_id).first()
+        student = students_dict.get(student_id)
         student_info = {
             "student_id": student_id,
             "student_name": student.name if student else f"Student {student_id}",

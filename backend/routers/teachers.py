@@ -505,28 +505,38 @@ async def get_all_students(
         {s.id: s for s in students_in_classrooms + recent_unassigned_students}.values()
     )
 
+    # 優化：批次查詢教室學生關係，避免 N+1 問題
+    student_ids = [s.id for s in all_students]
+    classroom_students_list = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.student_id.in_(student_ids),
+            ClassroomStudent.is_active.is_(True),
+        )
+        .join(Classroom)
+        .filter(Classroom.teacher_id == current_teacher.id)
+        .all()
+    )
+    classroom_students_dict = {cs.student_id: cs for cs in classroom_students_list}
+
+    # 批次查詢教室資訊
+    classroom_ids = [cs.classroom_id for cs in classroom_students_list]
+    classrooms_dict = {}
+    if classroom_ids:
+        classrooms_list = (
+            db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
+        )
+        classrooms_dict = {c.id: c for c in classrooms_list}
+
     # Build response with classroom info
     result = []
     for student in all_students:
-        # Get classroom info if exists
-        classroom_student = (
-            db.query(ClassroomStudent)
-            .filter(
-                ClassroomStudent.student_id == student.id,
-                ClassroomStudent.is_active.is_(True),
-            )
-            .join(Classroom)
-            .filter(Classroom.teacher_id == current_teacher.id)
-            .first()
-        )
+        # 使用字典查找，避免重複查詢
+        classroom_student = classroom_students_dict.get(student.id)
 
         classroom_info = None
         if classroom_student:
-            classroom = (
-                db.query(Classroom)
-                .filter(Classroom.id == classroom_student.classroom_id)
-                .first()
-            )
+            classroom = classrooms_dict.get(classroom_student.classroom_id)
             if classroom:
                 classroom_info = {"id": classroom.id, "name": classroom.name}
 
@@ -1078,12 +1088,17 @@ async def reorder_programs(
     db: Session = Depends(get_db),
 ):
     """重新排序課程"""
+    # 優化：批次查詢課程，避免 N+1 問題
+    program_ids = [item["id"] for item in order_data]
+    programs_list = (
+        db.query(Program)
+        .filter(Program.id.in_(program_ids), Program.teacher_id == current_teacher.id)
+        .all()
+    )
+    programs_dict = {p.id: p for p in programs_list}
+
     for item in order_data:
-        program = (
-            db.query(Program)
-            .filter(Program.id == item["id"], Program.teacher_id == current_teacher.id)
-            .first()
-        )
+        program = programs_dict.get(item["id"])
         if program:
             program.order_index = item["order_index"]
 
@@ -1109,12 +1124,17 @@ async def reorder_lessons(
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
+    # 優化：批次查詢課程單元，避免 N+1 問題
+    lesson_ids = [item["id"] for item in order_data]
+    lessons_list = (
+        db.query(Lesson)
+        .filter(Lesson.id.in_(lesson_ids), Lesson.program_id == program_id)
+        .all()
+    )
+    lessons_dict = {lesson.id: lesson for lesson in lessons_list}
+
     for item in order_data:
-        lesson = (
-            db.query(Lesson)
-            .filter(Lesson.id == item["id"], Lesson.program_id == program_id)
-            .first()
-        )
+        lesson = lessons_dict.get(item["id"])
         if lesson:
             lesson.order_index = item["order_index"]
 

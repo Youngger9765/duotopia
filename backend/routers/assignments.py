@@ -829,9 +829,15 @@ async def get_assignment_detail(
         .all()
     )
 
+    # 優化：批次查詢所有 content，避免 N+1 問題
+    content_ids = [ac.content_id for ac in assignment_contents]
+    content_dict = {
+        c.id: c for c in db.query(Content).filter(Content.id.in_(content_ids)).all()
+    }
+
     contents = []
     for ac in assignment_contents:
-        content = db.query(Content).filter(Content.id == ac.content_id).first()
+        content = content_dict.get(ac.content_id)
         if content:
             contents.append(
                 {
@@ -1007,15 +1013,13 @@ async def get_assignment_progress(
         .all()
     )
 
+    # 優化：使用字典查找避免嵌套循環 O(N*M) 問題
+    student_assignments_dict = {sa.student_id: sa for sa in student_assignments}
+
     progress_list = []
     for student in all_students:
-        # 檢查這個學生是否已被指派
-        sa = None
-        for student_assignment in student_assignments:
-            if student_assignment.student_id == student.id:
-                sa = student_assignment
-                break
-
+        # 使用字典快速查找，O(1) 時間複雜度
+        sa = student_assignments_dict.get(student.id)
         is_assigned = sa is not None
 
         print(
@@ -1467,15 +1471,31 @@ async def get_assignment_submissions(
         .all()
     )
 
+    # 優化：批次查詢學生和進度資料，避免 N+1 問題
+    student_ids = [sub.student_id for sub in submissions]
+    students_dict = {
+        s.id: s for s in db.query(Student).filter(Student.id.in_(student_ids)).all()
+    }
+
+    submission_ids = [sub.id for sub in submissions]
+    from collections import defaultdict
+
+    progress_dict = defaultdict(list)
+    for progress in (
+        db.query(StudentContentProgress)
+        .filter(StudentContentProgress.student_assignment_id.in_(submission_ids))
+        .all()
+    ):
+        progress_dict[progress.student_assignment_id].append(progress)
+
     result = []
     for sub in submissions:
-        student = db.query(Student).filter(Student.id == sub.student_id).first()
+        student = students_dict.get(sub.student_id)
+        if not student:
+            continue
+
         # 取得學生的內容進度（新架構）
-        progress_list = (
-            db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == sub.id)
-            .all()
-        )
+        progress_list = progress_dict.get(sub.id, [])
 
         result.append(
             {
@@ -1817,13 +1837,17 @@ async def grade_student_assignment(
         for item_result in grade_data["item_results"]:
             item_feedback_map[item_result.get("item_index")] = item_result
 
+        # 優化：批次查詢所有 content，避免 N+1 問題
+        content_ids = {progress.content_id for progress in progress_records}
+        content_dict = {
+            c.id: c for c in db.query(Content).filter(Content.id.in_(content_ids)).all()
+        }
+
         # 對每個 progress record，儲存其對應的所有 item 回饋
         current_item_index = 0
         for progress in progress_records:
             # 獲取此 content 的所有項目數量
-            content = (
-                db.query(Content).filter(Content.id == progress.content_id).first()
-            )
+            content = content_dict.get(progress.content_id)
             if content and content.items:
                 items_count = (
                     len(content.items) if isinstance(content.items, list) else 0
