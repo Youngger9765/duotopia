@@ -39,12 +39,12 @@ pydub==0.25.1
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-pytest-xdist==3.5.0  # 平行執行測試
-httpx==0.25.2  # For testing FastAPI
+pytest-xdist==3.5.0
+httpx==0.25.2
 
 # Code Quality
-black==23.12.1  # 必須與 .pre-commit-config.yaml 版本一致！
-flake8==7.0.0   # 必須與 .pre-commit-config.yaml 版本一致！
+black==23.12.1
+flake8==7.0.0
 # isort==5.13.2
 # mypy==1.7.1
 

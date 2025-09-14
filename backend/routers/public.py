@@ -85,7 +85,6 @@ def get_teacher_classrooms(email: str, db: Session = Depends(get_db)):
     # 獲取該教師的所有班級和學生數量 - 使用 JOIN 和 GROUP BY 優化
     # 原本：1 + N 次查詢（1次班級 + N次學生數）
     # 現在：1次查詢（JOIN + GROUP BY）
-    from sqlalchemy import func
 
     classrooms_with_count = (
         db.query(
