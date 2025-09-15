@@ -32,7 +32,7 @@ on:
 env:
   PROJECT_ID: duotopia-469413
   REGION: asia-east1
-  REPOSITORY: cloud-run-source-deploy
+  REPOSITORY: duotopia-repo
 
 jobs:
   cleanup-cloud-run:
