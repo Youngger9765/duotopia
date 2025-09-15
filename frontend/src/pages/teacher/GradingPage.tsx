@@ -138,7 +138,7 @@ export default function GradingPage() {
       }
     } else if (assignmentId && studentList.length > 0 && !studentId) {
       // 如果沒有指定 studentId，預設選擇第一個學生
-      setSearchParams({ studentId: studentList[0].student_number.toString() });
+      setSearchParams({ studentId: (studentList[0].student_number || 0).toString() });
     }
   }, [assignmentId, studentId, studentList]);
 
@@ -471,7 +471,7 @@ export default function GradingPage() {
       // 切換前自動儲存
       await handleAutoSave();
       const prevStudent = studentList[currentStudentIndex - 1];
-      setSearchParams({ studentId: prevStudent.student_number.toString() });
+      setSearchParams({ studentId: (prevStudent.student_number || 0).toString() });
     }
   };
 
@@ -480,14 +480,14 @@ export default function GradingPage() {
       // 切換前自動儲存
       await handleAutoSave();
       const nextStudent = studentList[currentStudentIndex + 1];
-      setSearchParams({ studentId: nextStudent.student_number.toString() });
+      setSearchParams({ studentId: (nextStudent.student_number || 0).toString() });
     }
   };
 
   const handleStudentSelect = async (student: StudentListItem) => {
     // 切換前自動儲存
     await handleAutoSave();
-    setSearchParams({ studentId: student.student_number.toString() });
+    setSearchParams({ studentId: (student.student_number || 0).toString() });
   };
 
   const getStatusBadge = (status: string) => {
