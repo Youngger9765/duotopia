@@ -6,6 +6,7 @@
 import requests
 import json
 import sys
+import os
 from typing import Dict, Any
 
 # 測試配置
@@ -25,7 +26,7 @@ class APIContractTester:
         # 這裡需要真實的測試帳號
         login_data = {
             "email": "teacher@duotopia.com",
-            "password": "your-real-password",  # 需要真實密碼
+            "password": os.getenv("TEST_PASSWORD", "test-password-placeholder"),
         }
 
         response = self.session.post(

@@ -6,6 +6,7 @@
 import requests
 import json
 import time
+import os
 from typing import Dict, List
 
 # 配置
@@ -14,7 +15,7 @@ BASE_URL = "https://api.duotopia-staging.com"
 
 # 測試用戶憑證 (從環境變數或安全配置取得)
 TEST_EMAIL = "teacher@duotopia.com"
-TEST_PASSWORD = "your-test-password"  # 請替換為實際測試密碼
+TEST_PASSWORD = os.getenv("TEST_PASSWORD", "test-password-placeholder")
 
 
 class AssignmentTester:
