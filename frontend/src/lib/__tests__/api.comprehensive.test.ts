@@ -13,6 +13,10 @@ vi.mock('@/config/api', () => ({
 
 import { apiClient } from '../api'
 
+// Test constants - DO NOT use real passwords
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'test-password-not-real'
+const TEST_EMAIL = 'teacher@duotopia.com'
+
 // Global fetch mock
 global.fetch = vi.fn()
 
@@ -47,8 +51,8 @@ describe('🚀 Comprehensive API Testing Framework', () => {
       })
 
       const result = await apiClient.teacherLogin({
-        email: 'teacher@duotopia.com',
-        password: 'password123'
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD
       })
 
       // Contract validation
@@ -67,8 +71,8 @@ describe('🚀 Comprehensive API Testing Framework', () => {
             'Content-Type': 'application/json'
           }),
           body: JSON.stringify({
-            email: 'teacher@duotopia.com',
-            password: 'password123'
+            email: TEST_EMAIL,
+            password: TEST_PASSWORD
           })
         })
       )
@@ -84,7 +88,7 @@ describe('🚀 Comprehensive API Testing Framework', () => {
       await expect(
         apiClient.teacherLogin({
           email: 'wrong@example.com',
-          password: 'wrongpassword'
+          password: 'wrong-test-password'
         })
       ).rejects.toThrow('Could not validate credentials')
     })
@@ -264,7 +268,7 @@ describe('🚀 Comprehensive API Testing Framework', () => {
       // Validate login payload
       const loginPayload = {
         email: 'test@example.com',
-        password: 'password123'
+        password: TEST_PASSWORD
       }
       expect(typeof loginPayload.email).toBe('string')
       expect(loginPayload.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
