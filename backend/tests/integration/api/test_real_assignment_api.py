@@ -7,7 +7,6 @@ import requests
 import json
 import sys
 import os
-from typing import Dict, Any
 
 # 測試配置
 API_BASE = "http://localhost:8080"  # 本地後端

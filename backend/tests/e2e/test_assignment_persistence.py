@@ -4,10 +4,9 @@
 遵循 CLAUDE.md TDD 原則
 """
 import requests
-import json
 import time
 import os
-from typing import Dict, List
+from typing import Dict
 
 # 配置
 BASE_URL = "https://api.duotopia-staging.com"
