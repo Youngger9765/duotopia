@@ -5,8 +5,6 @@ Test Database Query Optimization
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
-from sqlalchemy.orm import Session
 from sqlalchemy import event
 from tests.factories import TestDataFactory
 
@@ -45,7 +43,7 @@ class TestQueryOptimization:
 
         # 建立 5 個學生，每個都有班級
         for i in range(5):
-            data = TestDataFactory.create_full_assignment_chain(
+            TestDataFactory.create_full_assignment_chain(
                 db_with_counter,
                 teacher_email=f"teacher{i}@test.com",
                 student_email=f"student{i}@test.com",
@@ -67,11 +65,9 @@ class TestQueryOptimization:
                 .first()
             )
             if classroom_student:
-                classroom = (
-                    db_with_counter.query(Classroom)
-                    .filter(Classroom.id == classroom_student.classroom_id)
-                    .first()
-                )
+                db_with_counter.query(Classroom).filter(
+                    Classroom.id == classroom_student.classroom_id
+                ).first()
 
         # Assert: 查詢次數不應該隨學生數量線性增長
         # 1 次查詢學生 + N 次查詢 ClassroomStudent + N 次查詢 Classroom = 1 + 2N
@@ -253,11 +249,9 @@ class TestQueryOptimization:
 
         for classroom in classrooms:
             # 計算每個班級的學生數量（可能的 N+1）
-            student_count = (
-                db_with_counter.query(ClassroomStudent)
-                .filter(ClassroomStudent.classroom_id == classroom.id)
-                .count()
-            )
+            db_with_counter.query(ClassroomStudent).filter(
+                ClassroomStudent.classroom_id == classroom.id
+            ).count()
 
         # Assert: 應該有 N+1 問題
         assert self.query_count > 5, f"偵測到 N+1 問題！執行了 {self.query_count} 次查詢"
@@ -293,15 +287,13 @@ class TestQueryOptimization:
         from models import Classroom, ClassroomStudent
 
         # 優化方式：使用 subquery 或 JOIN
-        classrooms_with_count = (
-            db_with_counter.query(
-                Classroom, func.count(ClassroomStudent.id).label("student_count")
-            )
-            .outerjoin(ClassroomStudent)
-            .filter(Classroom.teacher_id == teacher.id)
-            .group_by(Classroom.id)
-            .all()
-        )
+        db_with_counter.query(
+            Classroom, func.count(ClassroomStudent.id).label("student_count")
+        ).outerjoin(ClassroomStudent).filter(
+            Classroom.teacher_id == teacher.id
+        ).group_by(
+            Classroom.id
+        ).all()
 
         # Assert: 應該只有 1 次查詢
         assert self.query_count <= 2, f"優化成功！只執行了 {self.query_count} 次查詢"

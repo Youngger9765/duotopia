@@ -2,7 +2,6 @@
 """
 測試學生登入流程
 """
-import pytest
 from tests.factories import TestDataFactory
 
 

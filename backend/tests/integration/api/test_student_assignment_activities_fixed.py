@@ -7,8 +7,7 @@ for Content entities works correctly and returns proper data structure.
 """
 
 import pytest
-import json
-from datetime import datetime, date
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient

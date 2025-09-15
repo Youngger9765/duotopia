@@ -104,7 +104,7 @@ class TestDatabaseOperations:
         # Test that we can query (even if empty)
         from models import Teacher
 
-        result = test_session.query(Teacher).first()
+        test_session.query(Teacher).first()
         # Should not crash, even if result is None
 
     def test_transaction_rollback(self):
