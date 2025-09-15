@@ -27,7 +27,7 @@ interface AssignmentInfo extends Assignment {
 }
 
 interface StudentInfo {
-  student_number: number;
+  student_id: number;
   student_name: string;
   status: string;
 }
@@ -75,7 +75,7 @@ interface ItemFeedback {
 }
 
 interface StudentListItem {
-  student_number: number;
+  student_id: number;
   student_name: string;
   status: string;
 }
@@ -131,14 +131,17 @@ export default function GradingPage() {
       loadSubmission();
       // 找到當前學生在列表中的位置
       const index = studentList.findIndex(
-        (s) => s.student_number === parseInt(studentId),
+        (s) => s.student_id === parseInt(studentId),
       );
       if (index !== -1) {
         setCurrentStudentIndex(index);
       }
     } else if (assignmentId && studentList.length > 0 && !studentId) {
-      // 如果沒有指定 studentId，預設選擇第一個學生
-      setSearchParams({ studentId: (studentList[0].student_number || 0).toString() });
+      // 如果沒有指定 studentId，預設選擇第一個學生（API 只回傳被指派的學生）
+      const firstStudent = studentList[0];
+      if (firstStudent && firstStudent.student_id) {
+        setSearchParams({ studentId: firstStudent.student_id.toString() });
+      }
     }
   }, [assignmentId, studentId, studentList]);
 
@@ -164,9 +167,9 @@ export default function GradingPage() {
       console.error("Failed to load student list:", error);
       // 如果 API 還沒實作，使用模擬資料
       setStudentList([
-        { student_number: 1, student_name: "王小明", status: "SUBMITTED" },
-        { student_number: 2, student_name: "李小華", status: "GRADED" },
-        { student_number: 3, student_name: "張大同", status: "SUBMITTED" },
+        { student_id: 1, student_name: "王小明", status: "SUBMITTED" },
+        { student_id: 2, student_name: "李小華", status: "GRADED" },
+        { student_id: 3, student_name: "張大同", status: "SUBMITTED" },
       ]);
     }
   };
@@ -253,7 +256,7 @@ export default function GradingPage() {
         (feedback ? `\n\n總評: ${feedback}` : "");
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
-        student_number: parseInt(studentId!),
+        student_id: parseInt(studentId!),
         score: score,
         feedback: combinedFeedback,
         item_results: itemResults,
@@ -308,7 +311,7 @@ export default function GradingPage() {
         (feedback ? `\n\n總評: ${feedback}` : "");
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
-        student_number: parseInt(studentId!),
+        student_id: parseInt(studentId!),
         score: score,
         feedback: combinedFeedback,
         item_results: itemResults,
@@ -363,7 +366,7 @@ export default function GradingPage() {
         (feedback ? `\n\n總評: ${feedback}` : "");
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
-        student_number: parseInt(studentId!),
+        student_id: parseInt(studentId!),
         score: score,
         feedback: combinedFeedback,
         item_results: itemResults,
@@ -379,7 +382,7 @@ export default function GradingPage() {
 
       // 更新學生列表中的狀態
       setStudentList(prev => prev.map(student =>
-        student.student_number === parseInt(studentId!)
+        student.student_id === parseInt(studentId!)
           ? { ...student, status: "GRADED" }
           : student
       ));
@@ -409,14 +412,14 @@ export default function GradingPage() {
       }
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/set-in-progress`, {
-        student_number: parseInt(studentId!),
+        student_id: parseInt(studentId!),
       });
 
       toast.success("已設為批改中");
 
       // 更新學生列表中的狀態
       setStudentList(prev => prev.map(student =>
-        student.student_number === parseInt(studentId!)
+        student.student_id === parseInt(studentId!)
           ? { ...student, status: "SUBMITTED" }
           : student
       ));
@@ -438,7 +441,7 @@ export default function GradingPage() {
       setSubmitting(true);
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/return-for-revision`, {
-        student_number: parseInt(studentId!),
+        student_id: parseInt(studentId!),
         message: "請依照評語修改後重新提交"
       });
 
@@ -451,7 +454,7 @@ export default function GradingPage() {
 
       // 更新學生列表中的狀態
       setStudentList(prev => prev.map(student =>
-        student.student_number === parseInt(studentId!)
+        student.student_id === parseInt(studentId!)
           ? { ...student, status: "RETURNED" }
           : student
       ));
@@ -471,7 +474,7 @@ export default function GradingPage() {
       // 切換前自動儲存
       await handleAutoSave();
       const prevStudent = studentList[currentStudentIndex - 1];
-      setSearchParams({ studentId: (prevStudent.student_number || 0).toString() });
+      setSearchParams({ studentId: (prevStudent.student_id || 0).toString() });
     }
   };
 
@@ -480,14 +483,14 @@ export default function GradingPage() {
       // 切換前自動儲存
       await handleAutoSave();
       const nextStudent = studentList[currentStudentIndex + 1];
-      setSearchParams({ studentId: (nextStudent.student_number || 0).toString() });
+      setSearchParams({ studentId: (nextStudent.student_id || 0).toString() });
     }
   };
 
   const handleStudentSelect = async (student: StudentListItem) => {
     // 切換前自動儲存
     await handleAutoSave();
-    setSearchParams({ studentId: (student.student_number || 0).toString() });
+    setSearchParams({ studentId: (student.student_id || 0).toString() });
   };
 
   const getStatusBadge = (status: string) => {
@@ -649,10 +652,10 @@ export default function GradingPage() {
               <div className="space-y-1">
                 {studentList.map((student) => (
                   <button
-                    key={student.student_number}
+                    key={student.student_id}
                     onClick={() => handleStudentSelect(student)}
                     className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                      student.student_number === parseInt(studentId!)
+                      student.student_id === parseInt(studentId!)
                         ? "bg-blue-100 text-blue-700"
                         : "hover:bg-gray-100"
                     }`}
