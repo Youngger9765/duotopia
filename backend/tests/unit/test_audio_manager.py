@@ -3,7 +3,7 @@ Audio manager service 單元測試 - 目標覆蓋率 80%
 """
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
