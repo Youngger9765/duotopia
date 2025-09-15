@@ -190,7 +190,11 @@ jobs:
               if [ -n "$TAGS" ]; then
                 for TAG in $TAGS; do
                   echo "    Removing tag: $TAG"
-                  gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet || true
+                  if gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet 2>&1; then
+                    echo "    ✅ Successfully deleted tag: $TAG"
+                  else
+                    echo "    ⚠️ Failed to delete tag: $TAG (may need permission: artifactregistry.tags.delete)"
+                  fi
                 done
               fi
 
@@ -244,7 +248,11 @@ jobs:
               if [ -n "$TAGS" ]; then
                 for TAG in $TAGS; do
                   echo "    Removing tag: $TAG"
-                  gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet || true
+                  if gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet 2>&1; then
+                    echo "    ✅ Successfully deleted tag: $TAG"
+                  else
+                    echo "    ⚠️ Failed to delete tag: $TAG (may need permission: artifactregistry.tags.delete)"
+                  fi
                 done
               fi
 
