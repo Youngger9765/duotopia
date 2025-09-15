@@ -180,9 +180,22 @@ jobs:
             for VERSION in $TO_DELETE; do
               echo "  Deleting: $VERSION"
               # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 符號
-              # 移除 --delete-tags 避免權限問題，只刪除 digest
-              gcloud artifacts docker images delete \
-                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend@$VERSION \
+              # 先刪除 tags，再刪除 digest
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend"
+
+              # 獲取所有 tags
+              TAGS=$(gcloud artifacts docker images describe "${IMAGE_URI}@${VERSION}" --format="value(image_summary.tags[])" 2>/dev/null || echo "")
+
+              # 刪除所有 tags
+              if [ -n "$TAGS" ]; then
+                for TAG in $TAGS; do
+                  echo "    Removing tag: $TAG"
+                  gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet || true
+                done
+              fi
+
+              # 刪除 digest
+              gcloud artifacts docker images delete "${IMAGE_URI}@${VERSION}" \
                 --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
@@ -220,10 +233,23 @@ jobs:
 
             for VERSION in $TO_DELETE; do
               echo "  Deleting: $VERSION"
-              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 符號
-              # 移除 --delete-tags 避免權限問題，只刪除 digest
-              gcloud artifacts docker images delete \
-                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend@$VERSION \
+              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 箆號
+              # 先刪除 tags，再刪除 digest
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend"
+
+              # 獲取所有 tags
+              TAGS=$(gcloud artifacts docker images describe "${IMAGE_URI}@${VERSION}" --format="value(image_summary.tags[])" 2>/dev/null || echo "")
+
+              # 刪除所有 tags
+              if [ -n "$TAGS" ]; then
+                for TAG in $TAGS; do
+                  echo "    Removing tag: $TAG"
+                  gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet || true
+                done
+              fi
+
+              # 刪除 digest
+              gcloud artifacts docker images delete "${IMAGE_URI}@${VERSION}" \
                 --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
