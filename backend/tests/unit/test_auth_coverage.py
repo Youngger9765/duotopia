@@ -7,11 +7,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import pytest  # noqa: E402
-from unittest.mock import Mock, patch, MagicMock  # noqa: E402
+from unittest.mock import Mock  # noqa: E402
 from datetime import datetime, timedelta  # noqa: E402
-from jose import jwt, JWTError  # noqa: E402
+from jose import jwt  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
-import asyncio  # noqa: E402
 from auth import (  # noqa: E402
     verify_password,
     get_password_hash,

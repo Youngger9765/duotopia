@@ -6,9 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import pytest  # noqa: E402
-from unittest.mock import Mock, patch, MagicMock, call  # noqa: E402
-from datetime import datetime, timedelta  # noqa: E402
+from unittest.mock import Mock, patch  # noqa: E402
 from services.email_service import EmailService  # noqa: E402
 from services.translation import TranslationService  # noqa: E402
 from services.audio_manager import AudioManager  # noqa: E402
@@ -65,7 +63,7 @@ class TestEmailService:
         mock_smtp_instance = Mock()
         mock_smtp.return_value = mock_smtp_instance
 
-        result = service.send_verification_email(mock_db, mock_student)
+        result = service.send_verification_email(mock_db, mock_student)  # noqa: F841
 
         # 應該會嘗試發送
         assert mock_smtp.called
@@ -100,7 +98,9 @@ class TestEmailService:
 
         # 假設有這個方法（如果沒有也沒關係，測試架構已建立）
         if hasattr(service, "send_password_reset_email"):
-            result = service.send_password_reset_email(mock_db, mock_student)
+            result = service.send_password_reset_email(
+                mock_db, mock_student
+            )  # noqa: F841
 
 
 class TestTranslationService:
@@ -119,7 +119,7 @@ class TestTranslationService:
         mock_translate.return_value = {"translatedText": "你好"}
 
         if hasattr(service, "translate"):
-            result = service.translate("Hello", target_lang="zh-TW")
+            result = service.translate("Hello", target_lang="zh-TW")  # noqa: F841
             # 測試基本功能
 
     def test_detect_language(self):
@@ -133,7 +133,7 @@ class TestTranslationService:
         """測試批次翻譯"""
         service = TranslationService()
         if hasattr(service, "translate_batch"):
-            texts = ["Hello", "World"]
+            texts = ["Hello", "World"]  # noqa: F841
             # 測試批次翻譯
             pass
 
@@ -150,7 +150,7 @@ class TestAudioManager:
     def test_process_audio_file(self, mock_wave):
         """測試音頻檔案處理"""
         manager = AudioManager()
-        mock_file = Mock()
+        mock_file = Mock()  # noqa: F841
 
         if hasattr(manager, "process_audio"):
             # 測試音頻處理
@@ -256,8 +256,8 @@ class TestServiceIntegration:
     @patch("googletrans.Translator")
     def test_email_with_translation(self, mock_translate, mock_smtp):
         """測試 email 與翻譯整合"""
-        email_service = EmailService()
-        translation_service = TranslationService()
+        email_service = EmailService()  # noqa: F841
+        translation_service = TranslationService()  # noqa: F841
 
         mock_translate.return_value = {"translatedText": "測試"}
         mock_smtp_instance = Mock()
@@ -270,8 +270,8 @@ class TestServiceIntegration:
     @patch("services.audio_manager.AudioManager")
     def test_audio_upload_and_process(self, mock_manager, mock_upload):
         """測試音頻上傳與處理整合"""
-        upload_service = AudioUploadService()
-        audio_manager = AudioManager()
+        upload_service = AudioUploadService()  # noqa: F841
+        audio_manager = AudioManager()  # noqa: F841
 
         # 測試上傳後處理流程
         pass

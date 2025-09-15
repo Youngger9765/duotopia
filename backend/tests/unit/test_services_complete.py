@@ -3,11 +3,18 @@ Services 層完整單元測試，目標覆蓋率 80% 以上
 """
 import os
 import sys
-import asyncio
-import tempfile
-import uuid
-from datetime import datetime
-from unittest.mock import Mock, patch, MagicMock, AsyncMock, call, mock_open
+import asyncio  # noqa: F401
+import tempfile  # noqa: F401
+import uuid  # noqa: F401
+from datetime import datetime  # noqa: F401
+from unittest.mock import (
+    Mock,
+    patch,
+    MagicMock,
+    AsyncMock,
+    call,
+    mock_open,
+)  # noqa: F401
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -480,7 +487,7 @@ class TestServicesIntegration:
     def test_audio_manager_with_translation(self):
         """測試音頻管理與翻譯整合"""
         audio_manager = AudioManager()
-        translation_service = TranslationService()
+        translation_service = TranslationService()  # noqa: F841
 
         # 測試音頻檔案名稱的多語言支援
         assert audio_manager.validate_format("音頻.mp3") is True

@@ -4,20 +4,14 @@ routers/auth.py 單元測試，目標覆蓋率 80% 以上
 import os
 import sys
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock  # noqa: F401
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import pytest  # noqa: E402
-from fastapi import HTTPException  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy.orm import Session  # noqa: E402
 
 from main import app  # noqa: E402
-from routers import auth as auth_router  # noqa: E402
-from schemas import LoginRequest, TeacherCreate, StudentCreate  # noqa: E402
-from models import Teacher, Student  # noqa: E402
-from auth import get_password_hash, create_access_token  # noqa: E402
+from auth import create_access_token  # noqa: E402
 
 client = TestClient(app)
 

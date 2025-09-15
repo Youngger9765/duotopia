@@ -4,12 +4,11 @@ EmailService 完整單元測試，目標覆蓋率 80% 以上
 import os
 import sys
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock, call  # noqa: F401
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import pytest  # noqa: E402
-from services.email_service import EmailService, email_service  # noqa: E402
+from services.email_service import EmailService  # noqa: E402
 
 
 class TestEmailServiceInit:
