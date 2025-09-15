@@ -1,0 +1,73 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`API Response Snapshots > should match dashboard response snapshot 1`] = `
+{
+  "classroom_count": 3,
+  "recent_assignments": [
+    {
+      "due_date": "2025-09-20T23:59:59Z",
+      "id": 31,
+      "submission_count": 12,
+      "title": "English Essay",
+      "total_students": 15,
+    },
+  ],
+  "statistics": {
+    "assignments_created": 45,
+    "avg_score": 85.6,
+    "total_submissions": 234,
+  },
+  "student_count": 25,
+  "teacher": {
+    "email": "teacher@test.com",
+    "id": 1,
+    "name": "Test Teacher",
+  },
+}
+`;
+
+exports[`API Response Snapshots > should match error response snapshot 1`] = `
+{
+  "detail": "Could not validate credentials",
+  "message": "Could not validate credentials",
+  "status": 401,
+}
+`;
+
+exports[`API Response Snapshots > should match login response snapshot 1`] = `
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "email": "teacher@test.com",
+    "id": 1,
+    "is_demo": false,
+    "name": "Test Teacher",
+  },
+  "user_type": "teacher",
+}
+`;
+
+exports[`API Response Snapshots > should match submission response snapshot 1`] = `
+{
+  "assignment_id": 31,
+  "content": {
+    "attachments": [],
+    "audio_recording": null,
+    "text_response": "This is my essay...",
+  },
+  "feedback": null,
+  "graded_at": null,
+  "id": 1,
+  "score": null,
+  "status": "submitted",
+  "student": {
+    "email": "student@test.com",
+    "id": 1,
+    "name": "Test Student",
+    "student_id": "S001",
+  },
+  "student_id": 1,
+  "submitted_at": "2025-09-15T10:30:00Z",
+}
+`;

@@ -241,6 +241,11 @@ export default function TeacherAssignmentDetailPage() {
           // 🔥 修復：使用 API 回傳的真實 is_assigned 值
           const isAssigned = item.is_assigned === true;
 
+          // Debug: 檢查 API 返回的狀態值
+          if (item.status) {
+            console.log(`Student ${item.student_name}: status = ${item.status}`);
+          }
+
           progressMap.set(studentId, {
             student_number: studentId,
             student_name: item.student_name || item.name || '未知學生',
@@ -1065,37 +1070,54 @@ export default function TeacherAssignmentDetailPage() {
                           <div className="flex gap-2 justify-center">
                             {isAssigned ? (
                               <>
-                                {progress.status === 'SUBMITTED' || progress.status === 'RESUBMITTED' || progress.status === 'GRADED' || progress.status === 'RETURNED' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
-                                    onClick={() => {
-                                      // 導向到批改頁面
-                                      navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_number}`);
-                                      setSelectedStudentId(progress.student_number);
-                                      setSelectedStudentName(progress.student_name);
-                                      // 找出這個學生在列表中的位置
-                                      const submittedStudents = filteredProgress.filter(p =>
-                                        p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
-                                      );
-                                      const currentIndex = submittedStudents.findIndex(p => p.student_number === progress.student_number);
-                                      setGradingStudentIndex(currentIndex);
-                                      setIsGradingModalOpen(true);
-                                    }}
-                                  >
-                                    批改
-                                  </Button>
-                                ) : progress.status === 'NOT_STARTED' || progress.status === 'IN_PROGRESS' ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-red-600 border-red-600 hover:bg-red-50 transition-colors"
-                                    onClick={() => handleUnassignStudent(progress.student_number, progress.student_name, progress.status)}
-                                  >
-                                    取消指派
-                                  </Button>
-                                ) : null}
+                                {(() => {
+                                  // 使用大寫的狀態值進行比較
+                                  const upperStatus = progress.status?.toUpperCase();
+
+                                  // 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕
+                                  if (upperStatus === 'SUBMITTED' || upperStatus === 'RESUBMITTED' || upperStatus === 'GRADED' || upperStatus === 'RETURNED') {
+                                    return (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
+                                        onClick={() => {
+                                          // 導向到批改頁面
+                                          navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_number}`);
+                                          setSelectedStudentId(progress.student_number);
+                                          setSelectedStudentName(progress.student_name);
+                                          // 找出這個學生在列表中的位置
+                                          const submittedStudents = filteredProgress.filter(p => {
+                                            const pStatus = p.status?.toUpperCase();
+                                            return pStatus === 'SUBMITTED' || pStatus === 'RESUBMITTED';
+                                          });
+                                          const currentIndex = submittedStudents.findIndex(p => p.student_number === progress.student_number);
+                                          setGradingStudentIndex(currentIndex);
+                                          setIsGradingModalOpen(true);
+                                        }}
+                                      >
+                                        批改
+                                      </Button>
+                                    );
+                                  }
+
+                                  // 只有未開始或進行中的才能取消指派
+                                  if (upperStatus === 'NOT_STARTED' || upperStatus === 'IN_PROGRESS') {
+                                    return (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-600 border-red-600 hover:bg-red-50 transition-colors"
+                                        onClick={() => handleUnassignStudent(progress.student_number, progress.student_name, progress.status)}
+                                      >
+                                        取消指派
+                                      </Button>
+                                    );
+                                  }
+
+                                  // 其他狀態不顯示任何按鈕
+                                  return null;
+                                })()}
                               </>
                             ) : (
                               <Button
