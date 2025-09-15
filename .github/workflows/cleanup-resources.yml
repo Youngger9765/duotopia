@@ -157,7 +157,7 @@ jobs:
           KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
-          # 列出所有 backend images
+          # 列出所有 backend images (使用 digest 格式)
           IMAGES=$(gcloud artifacts docker images list \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend \
             --format="value(version)" \
@@ -179,9 +179,11 @@ jobs:
 
             for VERSION in $TO_DELETE; do
               echo "  Deleting: $VERSION"
+              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 符號
+              # 使用 --delete-tags 來刪除所有相關的 tags
               gcloud artifacts docker images delete \
-                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend:$VERSION \
-                --quiet || echo "  ⚠️ Failed to delete $VERSION"
+                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend@$VERSION \
+                --delete-tags --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
             echo "✅ Backend images cleanup complete!"
@@ -196,6 +198,7 @@ jobs:
           KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
+          # 列出所有 frontend images (使用 digest 格式)
           IMAGES=$(gcloud artifacts docker images list \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend \
             --format="value(version)" \
@@ -217,9 +220,11 @@ jobs:
 
             for VERSION in $TO_DELETE; do
               echo "  Deleting: $VERSION"
+              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 符號
+              # 使用 --delete-tags 來刪除所有相關的 tags
               gcloud artifacts docker images delete \
-                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend:$VERSION \
-                --quiet || echo "  ⚠️ Failed to delete $VERSION"
+                ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend@$VERSION \
+                --delete-tags --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
             echo "✅ Frontend images cleanup complete!"
