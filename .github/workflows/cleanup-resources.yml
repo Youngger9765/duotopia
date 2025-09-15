@@ -183,8 +183,8 @@ jobs:
               # 先刪除 tags，再刪除 digest
               IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend"
 
-              # 獲取所有 tags
-              TAGS=$(gcloud artifacts docker images describe "${IMAGE_URI}@${VERSION}" --format="value(image_summary.tags[])" 2>/dev/null || echo "")
+              # 獲取所有 tags - 使用 list-tags 命令更可靠
+              TAGS=$(gcloud artifacts docker tags list "${IMAGE_URI}" --filter="version='${VERSION}'" --format="value(tag)" 2>/dev/null || echo "")
 
               # 刪除所有 tags
               if [ -n "$TAGS" ]; then
@@ -237,8 +237,8 @@ jobs:
               # 先刪除 tags，再刪除 digest
               IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend"
 
-              # 獲取所有 tags
-              TAGS=$(gcloud artifacts docker images describe "${IMAGE_URI}@${VERSION}" --format="value(image_summary.tags[])" 2>/dev/null || echo "")
+              # 獲取所有 tags - 使用 list-tags 命令更可靠
+              TAGS=$(gcloud artifacts docker tags list "${IMAGE_URI}" --filter="version='${VERSION}'" --format="value(tag)" 2>/dev/null || echo "")
 
               # 刪除所有 tags
               if [ -n "$TAGS" ]; then
