@@ -220,6 +220,7 @@ export default function TeacherAssignmentDetailPage() {
         const progressMap = new Map();
 
         interface ProgressItem {
+          student_id?: number;     // 🔥 加入 student_id 欄位 (資料庫主鍵)
           student_number?: number;
           id?: number;
           student_name?: string;
@@ -238,9 +239,9 @@ export default function TeacherAssignmentDetailPage() {
         }
 
         progressArray.forEach((item: ProgressItem) => {
-          // 🔥 重要：item.id 是 student 的資料庫 ID (整數)
+          // 🔥 重要：item.student_id 是 student 的資料庫 ID (整數)
           // item.student_number 是學號 (字串，如 "S002")
-          const studentId = item.id;  // 使用資料庫 ID 作為 key
+          const studentId = item.student_id;  // 🔥 修復：使用 student_id 而非 id
           const studentNumber = item.student_number || '';  // 學號是字串
 
           // 🔥 修復：使用 API 回傳的真實 is_assigned 值
@@ -267,7 +268,8 @@ export default function TeacherAssignmentDetailPage() {
         if (students && students.length > 0) {
           const allProgress = students.map(student => {
             if (progressMap.has(student.id)) {
-              return progressMap.get(student.id);
+              const progress = progressMap.get(student.id);
+              return progress!;  // 🔥 確保不是 undefined
             } else {
               // If no progress data for this student, they are unassigned
               return {
@@ -283,7 +285,6 @@ export default function TeacherAssignmentDetailPage() {
               };
             }
           });
-
           setStudentProgress(allProgress);
         } else {
           // If students not loaded yet, just use the progress data we have
@@ -352,13 +353,15 @@ export default function TeacherAssignmentDetailPage() {
 
   const handleAssignStudent = async (studentId: number) => {
     try {
-      // Get current assigned students
-      const currentAssignedIds = assignment?.students || [];
+      // Get current assigned students from studentProgress
+      const currentAssignedIds = studentProgress
+        .filter(p => p.is_assigned === true)
+        .map(p => p.student_id);
       const updatedStudentIds = [...currentAssignedIds, studentId];
 
       // Update assignment with new student list
       await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, {
-        students: updatedStudentIds
+        student_ids: updatedStudentIds  // 🔥 修復：後端期望 student_ids 而非 students
       });
 
       // Update local state
@@ -376,6 +379,9 @@ export default function TeacherAssignmentDetailPage() {
           ? { ...p, status: 'NOT_STARTED' as const, is_assigned: true }
           : p
       ));
+
+      // Refresh progress data to ensure sync
+      await fetchStudentProgress();
 
       toast.success('已成功指派給學生');
     } catch (error) {
@@ -417,8 +423,10 @@ export default function TeacherAssignmentDetailPage() {
         }
       }
 
-      // Update local state
-      const currentAssignedIds = assignment?.students || [];
+      // Update local state - get current assigned students from studentProgress
+      const currentAssignedIds = studentProgress
+        .filter(p => p.is_assigned === true)
+        .map(p => p.student_id);
       const updatedStudentIds = currentAssignedIds.filter((id: number) => id !== studentId);
 
       if (assignment) {
@@ -435,6 +443,9 @@ export default function TeacherAssignmentDetailPage() {
           ? { ...p, status: 'unassigned' as const, is_assigned: false }
           : p
       ));
+
+      // Refresh progress data to ensure sync
+      await fetchStudentProgress();
 
       toast.success(`已取消指派學生「${studentName}」`);
     } catch (error) {

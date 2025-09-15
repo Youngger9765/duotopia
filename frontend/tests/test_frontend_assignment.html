@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試前端指派功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .status-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .status-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+        .log {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .test-section {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 前端指派功能測試</h1>
+
+    <div class="test-container">
+        <h2>測試步驟</h2>
+        <div class="status status-info">
+            <strong>重要:</strong> 請確保前端開發伺服器正在運行 (http://localhost:5173)
+        </div>
+
+        <div class="test-section">
+            <h3>📋 手動測試清單</h3>
+            <p>請按照以下步驟測試指派功能：</p>
+            <ol>
+                <li>
+                    <strong>打開作業詳細頁面</strong>
+                    <button class="btn btn-primary" onclick="openAssignmentPage()">
+                        🌐 打開作業詳細頁面
+                    </button>
+                </li>
+                <li>
+                    <strong>檢查學生列表顯示</strong>
+                    <ul>
+                        <li>✅ 12 個學生都有顯示</li>
+                        <li>✅ 已完成學生顯示「批改」按鈕</li>
+                        <li>✅ 未開始/進行中學生顯示「取消指派」按鈕</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>測試指派功能</strong>
+                    <ul>
+                        <li>✅ 勾選未指派的學生</li>
+                        <li>✅ 點擊「指派」按鈕</li>
+                        <li>✅ 確認 API 請求成功 (F12 查看 Network)</li>
+                        <li>✅ 頁面重新整理後學生仍然被指派</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>測試取消指派功能</strong>
+                    <ul>
+                        <li>✅ 點擊已指派學生的「取消指派」按鈕</li>
+                        <li>✅ 確認 API 請求成功</li>
+                        <li>✅ 學生狀態正確更新</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 檢查重點</h3>
+            <div class="status status-info">
+                <strong>API 檢查 (F12 開發者工具 → Network):</strong>
+                <ul>
+                    <li>PATCH /api/teachers/assignments/{id} 返回 200 OK</li>
+                    <li>請求 body 包含正確的 student_ids (數字陣列)</li>
+                    <li>response 資料結構正確</li>
+                </ul>
+            </div>
+
+            <div class="status status-info">
+                <strong>前端檢查:</strong>
+                <ul>
+                    <li>無 console 錯誤</li>
+                    <li>按鈕顯示邏輯正確</li>
+                    <li>狀態更新即時</li>
+                    <li>重刷後資料持久化</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 測試結果記錄</h3>
+            <button class="btn btn-success" onclick="markTestPassed()">✅ 測試通過</button>
+            <button class="btn btn-danger" onclick="markTestFailed()">❌ 測試失敗</button>
+            <div id="test-result" class="status" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🔧 快速檢查工具</h2>
+
+        <div class="test-section">
+            <h3>📱 前端狀態檢查</h3>
+            <button class="btn btn-primary" onclick="checkFrontendStatus()">檢查前端運行狀態</button>
+            <button class="btn btn-primary" onclick="openDevTools()">打開開發者工具指南</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🌍 測試環境</h3>
+            <p><strong>前端:</strong> <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+            <p><strong>API:</strong> https://api.duotopia-staging.com</p>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>📝 測試日誌</h2>
+        <div id="log" class="log">準備開始測試...\n</div>
+        <button class="btn btn-primary" onclick="clearLog()">清除日誌</button>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('log');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logElement.textContent = '日誌已清除...\n';
+        }
+
+        function openAssignmentPage() {
+            log('🌐 正在打開作業詳細頁面...');
+
+            // 這裡需要知道具體的作業 ID，可能需要先登入取得
+            const assignmentUrl = 'http://localhost:5173/';  // 先打開首頁
+            window.open(assignmentUrl, '_blank');
+
+            log('✅ 已在新分頁打開前端頁面');
+            log('📋 請手動導航到作業詳細頁面進行測試');
+        }
+
+        function checkFrontendStatus() {
+            log('🔍 檢查前端運行狀態...');
+
+            fetch('http://localhost:5173/')
+                .then(response => {
+                    if (response.ok) {
+                        log('✅ 前端開發伺服器運行正常');
+                    } else {
+                        log('❌ 前端開發伺服器回應異常');
+                    }
+                })
+                .catch(error => {
+                    log('❌ 前端開發伺服器無法連線 - 請確認 npm run dev 是否運行');
+                    log(`錯誤詳情: ${error.message}`);
+                });
+        }
+
+        function openDevTools() {
+            log('🔧 開發者工具使用指南:');
+            log('1. 在作業頁面按 F12 打開開發者工具');
+            log('2. 切換到 Network 標籤');
+            log('3. 執行指派操作時觀察 API 請求');
+            log('4. 切換到 Console 標籤檢查是否有錯誤');
+
+            alert('請在作業頁面按 F12 打開開發者工具，查看 Network 和 Console 標籤');
+        }
+
+        function markTestPassed() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.className = 'status status-success';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<strong>✅ 測試通過！</strong> 指派功能正常運作且資料能正確持久化';
+
+            log('🎉 測試標記為通過');
+
+            // 生成測試報告
+            generateTestReport(true);
+        }
+
+        function markTestFailed() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.className = 'status status-error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<strong>❌ 測試失敗！</strong> 請檢查控制台錯誤並重新測試';
+
+            log('💥 測試標記為失敗');
+
+            // 生成測試報告
+            generateTestReport(false);
+        }
+
+        function generateTestReport(passed) {
+            const timestamp = new Date().toISOString();
+            const status = passed ? 'PASSED' : 'FAILED';
+
+            log('📊 生成測試報告:');
+            log(`   時間: ${timestamp}`);
+            log(`   狀態: ${status}`);
+            log(`   修復項目: 指派功能持久化問題`);
+            log(`   測試範圍: 前端指派/取消指派操作`);
+
+            if (passed) {
+                log('🎯 所有功能驗證完成，可以安全提交變更');
+            } else {
+                log('⚠️  需要進一步調查問題並修復');
+            }
+        }
+
+        // 初始化
+        window.addEventListener('load', function() {
+            log('🚀 測試頁面載入完成');
+            log('📋 請按照上方步驟進行手動測試');
+
+            // 自動檢查前端狀態
+            setTimeout(checkFrontendStatus, 1000);
+        });
+    </script>
+</body>
+</html>
