@@ -414,25 +414,25 @@ export default function StudentGradingPage() {
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             <div className="text-center">
                               <div className="text-lg font-bold text-blue-700">
-                                {submission.submissions[currentQuestionIndex].ai_scores!.accuracy_score.toFixed(1)}
+                                {(submission.submissions[currentQuestionIndex].ai_scores!.accuracy_score ?? 0).toFixed(1)}
                               </div>
                               <div className="text-xs text-blue-600">準確度</div>
                             </div>
                             <div className="text-center">
                               <div className="text-lg font-bold text-blue-700">
-                                {submission.submissions[currentQuestionIndex].ai_scores!.fluency_score.toFixed(1)}
+                                {(submission.submissions[currentQuestionIndex].ai_scores!.fluency_score ?? 0).toFixed(1)}
                               </div>
                               <div className="text-xs text-blue-600">流暢度</div>
                             </div>
                             <div className="text-center">
                               <div className="text-lg font-bold text-blue-700">
-                                {submission.submissions[currentQuestionIndex].ai_scores!.completeness_score.toFixed(1)}
+                                {(submission.submissions[currentQuestionIndex].ai_scores!.completeness_score ?? 0).toFixed(1)}
                               </div>
                               <div className="text-xs text-blue-600">完整度</div>
                             </div>
                             <div className="text-center">
                               <div className="text-lg font-bold text-blue-700">
-                                {submission.submissions[currentQuestionIndex].ai_scores!.pronunciation_score.toFixed(1)}
+                                {(submission.submissions[currentQuestionIndex].ai_scores!.pronunciation_score ?? 0).toFixed(1)}
                               </div>
                               <div className="text-xs text-blue-600">發音分數</div>
                             </div>
@@ -453,9 +453,9 @@ export default function StudentGradingPage() {
                                         ? 'bg-yellow-100 text-yellow-800'
                                         : 'bg-red-100 text-red-800'
                                     }`}
-                                    title={`${word.word}: ${word.accuracy_score.toFixed(1)}分${word.error_type ? ' (' + word.error_type + ')' : ''}`}
+                                    title={`${word.word}: ${(word.accuracy_score ?? 0).toFixed(1)}分${word.error_type ? ' (' + word.error_type + ')' : ''}`}
                                   >
-                                    {word.word} ({word.accuracy_score.toFixed(1)})
+                                    {word.word} ({(word.accuracy_score ?? 0).toFixed(1)})
                                   </span>
                                 ))}
                               </div>
