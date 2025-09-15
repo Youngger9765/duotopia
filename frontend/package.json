@@ -13,7 +13,17 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "test:api": "vitest run src/lib/__tests__/api.*.test.ts",
+    "test:api:watch": "vitest src/lib/__tests__/api.*.test.ts",
+    "test:api:msw": "vitest run src/lib/__tests__/api.msw.test.ts",
+    "test:api:contract": "vitest run src/lib/__tests__/api.contract.test.ts",
+    "test:api:health": "vitest run src/lib/__tests__/api.health.test.ts",
+    "test:api:comprehensive": "vitest run src/lib/__tests__/api.comprehensive.test.ts",
+    "test:api:realtime": "vitest run src/lib/__tests__/api.realtime.test.ts",
+    "test:api:all": "vitest run src/lib/__tests__/api.*.test.ts",
+    "test:api:ci": "vitest run src/lib/__tests__/api.comprehensive.test.ts src/lib/__tests__/api.realtime.test.ts",
+    "test:replace-e2e": "npm run test:api:ci && echo '✅ API tests complete - E2E replacement ready!'"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

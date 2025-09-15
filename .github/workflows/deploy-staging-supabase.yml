@@ -46,6 +46,14 @@ jobs:
       working-directory: ./frontend
       run: npm run lint:ci
 
+    - name: Run API Testing Framework (Replace E2E)
+      working-directory: ./frontend
+      run: |
+        echo "🚀 Running comprehensive API tests to replace E2E..."
+        echo "📊 Testing API contracts, health checks, and error handling..."
+        npm run test:replace-e2e
+        echo "✅ API testing complete - deployment confidence verified!"
+
     - name: Build frontend
       working-directory: ./frontend
       run: npm run build

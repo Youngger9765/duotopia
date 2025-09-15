@@ -574,6 +574,25 @@ class ApiClient {
 
     return response.json();
   }
+
+  // ============ Assignment & Submission Methods ============
+  async getSubmission(assignmentId: number, studentId: number) {
+    return this.request(`/api/teachers/assignments/${assignmentId}/submissions/${studentId}`);
+  }
+
+  async getAssignmentSubmissions(assignmentId: number) {
+    return this.request(`/api/teachers/assignments/${assignmentId}/submissions`);
+  }
+
+  async gradeSubmission(assignmentId: number, studentId: number, data: {
+    score?: number;
+    feedback?: string;
+  }) {
+    return this.request(`/api/teachers/assignments/${assignmentId}/submissions/${studentId}/grade`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Export singleton instance
