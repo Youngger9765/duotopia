@@ -7,14 +7,7 @@ import asyncio  # noqa: F401
 import tempfile  # noqa: F401
 import uuid  # noqa: F401
 from datetime import datetime  # noqa: F401
-from unittest.mock import (
-    Mock,
-    patch,
-    MagicMock,
-    AsyncMock,
-    call,
-    mock_open,
-)  # noqa: F401
+from unittest.mock import Mock, patch, MagicMock, AsyncMock  # noqa: F401
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 

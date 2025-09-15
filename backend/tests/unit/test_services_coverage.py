@@ -98,9 +98,7 @@ class TestEmailService:
 
         # 假設有這個方法（如果沒有也沒關係，測試架構已建立）
         if hasattr(service, "send_password_reset_email"):
-            result = service.send_password_reset_email(
-                mock_db, mock_student
-            )  # noqa: F841
+            service.send_password_reset_email(mock_db, mock_student)
 
 
 class TestTranslationService:
