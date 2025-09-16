@@ -129,6 +129,8 @@ export default function StudentActivityPage() {
       }
 
       const data: ActivityResponse = await response.json();
+      console.log('Loaded activities from API:', data.activities);
+      console.log('AI scores in activities:', data.activities.map(a => ({ id: a.id, ai_scores: a.ai_scores })));
       setActivities(data.activities);
       setAssignmentTitle(data.title);
 

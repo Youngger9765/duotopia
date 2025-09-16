@@ -72,9 +72,17 @@ export default function GroupedQuestionsTemplate({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isAssessing, setIsAssessing] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResult>>(
-    initialAssessmentResults ? { [currentQuestionIndex]: initialAssessmentResults } : {}
-  );
+  const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResult>>(() => {
+    // 如果有初始 AI 評分，直接使用（對單個活動，不是分組的子題）
+    if (initialAssessmentResults && Object.keys(initialAssessmentResults).length > 0) {
+      // 如果這是一個單獨的評分結果（不是分組的）
+      if (!Object.prototype.hasOwnProperty.call(initialAssessmentResults, '0')) {
+        return { 0: initialAssessmentResults as AssessmentResult };
+      }
+      return initialAssessmentResults as Record<number, AssessmentResult>;
+    }
+    return {};
+  });
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { token } = useStudentAuthStore();
