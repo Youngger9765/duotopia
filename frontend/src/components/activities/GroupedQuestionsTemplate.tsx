@@ -73,10 +73,25 @@ export default function GroupedQuestionsTemplate({
   const [duration, setDuration] = useState(0);
   const [isAssessing, setIsAssessing] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResult>>(() => {
-    // 如果有初始 AI 評分，直接使用（對單個活動，不是分組的子題）
+    // 如果有初始 AI 評分，處理多題目的評分結構
     if (initialAssessmentResults && Object.keys(initialAssessmentResults).length > 0) {
+      // 檢查是否有多題目的評分結構 (items)
+      if (initialAssessmentResults.items && typeof initialAssessmentResults.items === 'object') {
+        const itemsResults: Record<number, AssessmentResult> = {};
+        const items = initialAssessmentResults.items as Record<string, unknown>;
+
+        // 將 items 中的評分轉換為數字索引的結果
+        Object.keys(items).forEach(key => {
+          const index = parseInt(key);
+          if (!isNaN(index) && items[key]) {
+            itemsResults[index] = items[key] as AssessmentResult;
+          }
+        });
+
+        return itemsResults;
+      }
       // 如果這是一個單獨的評分結果（不是分組的）
-      if (!Object.prototype.hasOwnProperty.call(initialAssessmentResults, '0')) {
+      else if (!Object.prototype.hasOwnProperty.call(initialAssessmentResults, '0')) {
         return { 0: initialAssessmentResults as AssessmentResult };
       }
       return initialAssessmentResults as Record<number, AssessmentResult>;
@@ -209,6 +224,7 @@ export default function GroupedQuestionsTemplate({
       formData.append('audio_file', audioBlob, 'recording.webm');
       formData.append('reference_text', referenceText);
       formData.append('progress_id', String(progressId || '1')); // Use actual progress ID
+      formData.append('item_index', String(currentQuestionIndex)); // 傳遞題目索引
 
       // Get authentication token from store
       if (!token) {

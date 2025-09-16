@@ -247,6 +247,7 @@ def save_assessment_result(
     db: Session,
     progress_id: int,
     assessment_result: Dict[str, Any],
+    item_index: Optional[int] = None,
     audio_url: Optional[str] = None,
     student_assignment_id: Optional[int] = None,
 ) -> StudentContentProgress:
@@ -280,17 +281,44 @@ def save_assessment_result(
 
     # 更新 response_data 儲存錄音 URL
     response_data = progress.response_data or {}
-    response_data["audio_url"] = audio_url
+    if audio_url:
+        response_data["audio_url"] = audio_url
     progress.response_data = response_data
 
     # 更新 ai_scores 儲存微軟評估結果
-    progress.ai_scores = {
-        "accuracy_score": assessment_result["accuracy_score"],
-        "fluency_score": assessment_result["fluency_score"],
-        "completeness_score": assessment_result["completeness_score"],
-        "pronunciation_score": assessment_result["pronunciation_score"],
-        "word_details": assessment_result["words"],
-    }
+    ai_scores = progress.ai_scores or {}
+
+    # 為多題目活動創建評分結構
+    if item_index is not None:
+        # 多題目：將評分存在 items 陣列中
+        if "items" not in ai_scores:
+            ai_scores["items"] = {}
+
+        ai_scores["items"][str(item_index)] = {
+            "accuracy_score": assessment_result["accuracy_score"],
+            "fluency_score": assessment_result["fluency_score"],
+            "completeness_score": assessment_result["completeness_score"],
+            "pronunciation_score": assessment_result["pronunciation_score"],
+            "word_details": assessment_result["words"],
+        }
+    else:
+        # 單題目：直接儲存在根層級
+        ai_scores.update(
+            {
+                "accuracy_score": assessment_result["accuracy_score"],
+                "fluency_score": assessment_result["fluency_score"],
+                "completeness_score": assessment_result["completeness_score"],
+                "pronunciation_score": assessment_result["pronunciation_score"],
+                "word_details": assessment_result["words"],
+            }
+        )
+
+    progress.ai_scores = ai_scores
+
+    # 標記 JSON 欄位已修改，確保 SQLAlchemy 偵測到變更
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(progress, "ai_scores")
 
     # 更新狀態為已完成
     progress.status = AssignmentStatus.SUBMITTED
@@ -307,6 +335,7 @@ async def assess_pronunciation_endpoint(
     audio_file: UploadFile = File(...),
     reference_text: str = Form(...),
     progress_id: int = Form(...),
+    item_index: Optional[int] = Form(None),  # 題目索引
     assignment_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     current_student: Student = Depends(get_current_student),
@@ -358,6 +387,7 @@ async def assess_pronunciation_endpoint(
         db=db,
         progress_id=progress_id,
         assessment_result=assessment_result,
+        item_index=item_index,
         student_assignment_id=student_assignment_id,
     )
 

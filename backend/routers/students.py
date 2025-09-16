@@ -424,6 +424,10 @@ async def save_activity_progress(
     progress_id: int,
     audio_url: Optional[str] = None,
     text_answer: Optional[str] = None,
+    recordings: Optional[List[str]] = None,
+    answers: Optional[List[str]] = None,
+    user_answers: Optional[List[str]] = None,
+    item_index: Optional[int] = None,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -466,11 +470,28 @@ async def save_activity_progress(
             status_code=status.HTTP_404_NOT_FOUND, detail="Activity progress not found"
         )
 
-    # 更新進度
+    # 更新進度 - 使用 response_data JSON 欄位儲存所有資料
+    if not progress.response_data:
+        progress.response_data = {}
+
+    # 更新各種類型的資料
     if audio_url:
-        progress.audio_url = audio_url
+        progress.response_data["audio_url"] = audio_url
     if text_answer:
-        progress.text_response = text_answer
+        progress.response_data["text_answer"] = text_answer
+    if recordings:
+        progress.response_data["recordings"] = recordings
+    if answers:
+        progress.response_data["answers"] = answers
+    if user_answers:
+        progress.response_data["user_answers"] = user_answers
+    if item_index is not None:
+        progress.response_data["item_index"] = item_index
+
+    # 標記 JSON 欄位已修改，確保 SQLAlchemy 偵測到變更
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(progress, "response_data")
 
     # 更新狀態
     if progress.status == AssignmentStatus.NOT_STARTED:

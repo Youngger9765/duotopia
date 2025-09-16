@@ -143,6 +143,8 @@ export default function StudentActivityPage() {
                   activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
           startTime: new Date(),
           audioUrl: activity.audio_url || undefined,
+          recordings: activity.recordings || [], // Load existing recordings
+          answers: activity.answers || [], // Load existing answers
           userAnswers: [] // For listening activities
         });
       });
@@ -168,7 +170,11 @@ export default function StudentActivityPage() {
           const newActivities = [...prevActivities];
           const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
           if (activityIndex !== -1) {
-            const recordings = newActivities[activityIndex].recordings || [];
+            const recordings = [...(newActivities[activityIndex].recordings || [])];
+            // Ensure array is long enough
+            while (recordings.length <= currentSubQuestionIndex) {
+              recordings.push('');
+            }
             recordings[currentSubQuestionIndex] = ''; // Clear current recording
             newActivities[activityIndex] = {
               ...newActivities[activityIndex],
@@ -183,10 +189,13 @@ export default function StudentActivityPage() {
         setAnswers(prev => {
           const newAnswers = new Map(prev);
           const answer = newAnswers.get(currentActivity.id);
-          if (answer && answer.recordings) {
-            answer.recordings[currentSubQuestionIndex] = '';
-          }
           if (answer) {
+            if (!answer.recordings) answer.recordings = [];
+            // Ensure array is long enough
+            while (answer.recordings.length <= currentSubQuestionIndex) {
+              answer.recordings.push('');
+            }
+            answer.recordings[currentSubQuestionIndex] = '';
             newAnswers.set(currentActivity.id, answer);
           }
           return newAnswers;
@@ -224,6 +233,10 @@ export default function StudentActivityPage() {
           // For grouped questions, store recordings per sub-question
           if (currentActivity.items && currentActivity.items.length > 0) {
             if (!answer.recordings) answer.recordings = [];
+            // Ensure array is long enough
+            while (answer.recordings.length <= currentSubQuestionIndex) {
+              answer.recordings.push('');
+            }
             answer.recordings[currentSubQuestionIndex] = localAudioUrl;
           } else {
             // For single questions, store directly
@@ -245,7 +258,11 @@ export default function StudentActivityPage() {
             const newActivities = [...prevActivities];
             const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
             if (activityIndex !== -1) {
-              const recordings = newActivities[activityIndex].recordings || [];
+              const recordings = [...(newActivities[activityIndex].recordings || [])];
+              // Ensure array is long enough
+              while (recordings.length <= currentSubQuestionIndex) {
+                recordings.push('');
+              }
               recordings[currentSubQuestionIndex] = localAudioUrl;
               newActivities[activityIndex] = {
                 ...newActivities[activityIndex],
@@ -294,6 +311,10 @@ export default function StudentActivityPage() {
               if (answer) {
                 if (currentActivity.items && currentActivity.items.length > 0) {
                   if (!answer.recordings) answer.recordings = [];
+                  // Ensure array is long enough
+                  while (answer.recordings.length <= currentSubQuestionIndex) {
+                    answer.recordings.push('');
+                  }
                   answer.recordings[currentSubQuestionIndex] = audio_url;
                 } else {
                   answer.audioUrl = audio_url;
@@ -310,7 +331,11 @@ export default function StudentActivityPage() {
                 const newActivities = [...prevActivities];
                 const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
                 if (activityIndex !== -1) {
-                  const recordings = newActivities[activityIndex].recordings || [];
+                  const recordings = [...(newActivities[activityIndex].recordings || [])];
+                  // Ensure array is long enough
+                  while (recordings.length <= currentSubQuestionIndex) {
+                    recordings.push('');
+                  }
                   recordings[currentSubQuestionIndex] = audio_url;
                   newActivities[activityIndex] = {
                     ...newActivities[activityIndex],
@@ -321,8 +346,8 @@ export default function StudentActivityPage() {
               });
             }
 
-            // Save to server with the URL
-            await autoSave(audio_url);
+            // Save to server with the URL - autoSave will handle the updated recordings array
+            await autoSave();
           } else {
             const errorText = await uploadResponse.text();
             console.error('Upload failed with status:', uploadResponse.status, errorText);
@@ -467,18 +492,31 @@ export default function StudentActivityPage() {
       if (!answer || !currentActivity.id) return;
 
       const apiUrl = import.meta.env.VITE_API_URL || '';
+
+      // Prepare save data based on activity type
+      const saveData: Record<string, unknown> = {
+        text_answer: answer.textAnswer,
+        user_answers: answer.userAnswers, // For listening activities
+      };
+
+      // For activities with multiple items (grouped questions)
+      if (currentActivity.items && currentActivity.items.length > 0) {
+        // Save recordings array and answers array
+        saveData.recordings = answer.recordings || [];
+        saveData.answers = answer.answers || [];
+        saveData.item_index = currentSubQuestionIndex;
+      } else {
+        // For single activities, save single audio_url
+        saveData.audio_url = audioUrl || answer.audioUrl;
+      }
+
       await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/activities/${currentActivity.id}/save`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          audio_url: audioUrl || answer.audioUrl,
-          text_answer: answer.textAnswer,
-          user_answers: answer.userAnswers, // For listening activities
-          item_index: currentActivity.items ? currentSubQuestionIndex : undefined // Include sub-question index for grouped items
-        })
+        body: JSON.stringify(saveData)
       });
 
       console.log('Auto-saved activity progress');
