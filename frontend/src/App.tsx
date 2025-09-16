@@ -21,6 +21,7 @@ import StudentLayout from './components/StudentLayout'
 import EmailVerification from './pages/EmailVerification'
 import StudentProfile from './pages/student/StudentProfile'
 import DatabaseAdminPage from './pages/admin/DatabaseAdminPage'
+import DebugPage from './pages/DebugPage'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -75,6 +76,9 @@ function App() {
         <Route path="profile" element={<StudentProfile />} />
         <Route path="settings" element={<div className="p-8 text-center">設定頁面開發中...</div>} />
       </Route>
+
+      {/* Debug 頁面 */}
+      <Route path="/debug" element={<DebugPage />} />
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
