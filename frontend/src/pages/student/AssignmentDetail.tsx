@@ -215,6 +215,7 @@ export default function AssignmentDetail() {
       formData.append('audio_file', recording, 'recording.webm');
       formData.append('reference_text', currentItemText);
       formData.append('progress_id', `${index + 1}`); // 暫時使用 index 作為 progress_id
+      formData.append('assignment_id', id || ''); // 加入 assignment ID
 
       const response = await apiClient.post<{ data?: Record<string, unknown> }>('/api/speech/assess', formData);
 
