@@ -157,11 +157,11 @@ jobs:
           KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
-          # 列出所有 backend images (使用 digest 格式)
-          IMAGES=$(gcloud artifacts docker images list \
+          # 列出所有 backend images (使用正確的指令)
+          IMAGES=$(gcloud container images list-tags \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend \
-            --format="value(version)" \
-            --sort-by="~createTime" 2>/dev/null || echo "")
+            --format="value(digest)" \
+            --sort-by="~timestamp" 2>/dev/null || echo "")
 
           if [ -z "$IMAGES" ]; then
             echo "⚠️ No images found or repository doesn't exist"
@@ -177,30 +177,16 @@ jobs:
 
             echo "🗑️ Deleting $DELETE_COUNT old images..."
 
-            for VERSION in $TO_DELETE; do
-              echo "  Deleting: $VERSION"
-              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 符號
-              # 先刪除 tags，再刪除 digest
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend"
+            for DIGEST in $TO_DELETE; do
+              echo "  Deleting: $DIGEST"
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend@sha256:$DIGEST"
 
-              # 獲取所有 tags - 透過 grep 過濾特定版本的 tags
-              TAGS=$(gcloud artifacts docker tags list "${IMAGE_URI}" --format="table(tag,version)" 2>/dev/null | grep "${VERSION}" | awk '{print $1}' || echo "")
-
-              # 刪除所有 tags
-              if [ -n "$TAGS" ]; then
-                for TAG in $TAGS; do
-                  echo "    Removing tag: $TAG"
-                  if gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet 2>&1; then
-                    echo "    ✅ Successfully deleted tag: $TAG"
-                  else
-                    echo "    ⚠️ Failed to delete tag: $TAG (may need permission: artifactregistry.tags.delete)"
-                  fi
-                done
+              # 直接刪除映像（會自動刪除相關的 tags）
+              if gcloud container images delete "${IMAGE_URI}" --force-delete-tags --quiet 2>&1; then
+                echo "    ✅ Successfully deleted image: $DIGEST"
+              else
+                echo "    ⚠️ Failed to delete image: $DIGEST"
               fi
-
-              # 刪除 digest
-              gcloud artifacts docker images delete "${IMAGE_URI}@${VERSION}" \
-                --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
             echo "✅ Backend images cleanup complete!"
@@ -215,11 +201,11 @@ jobs:
           KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
-          # 列出所有 frontend images (使用 digest 格式)
-          IMAGES=$(gcloud artifacts docker images list \
+          # 列出所有 frontend images (使用正確的指令)
+          IMAGES=$(gcloud container images list-tags \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend \
-            --format="value(version)" \
-            --sort-by="~createTime" 2>/dev/null || echo "")
+            --format="value(digest)" \
+            --sort-by="~timestamp" 2>/dev/null || echo "")
 
           if [ -z "$IMAGES" ]; then
             echo "⚠️ No images found or repository doesn't exist"
@@ -235,30 +221,16 @@ jobs:
 
             echo "🗑️ Deleting $DELETE_COUNT old images..."
 
-            for VERSION in $TO_DELETE; do
-              echo "  Deleting: $VERSION"
-              # 注意：version 欄位返回的是 sha256:xxx 格式，需要用 @ 箆號
-              # 先刪除 tags，再刪除 digest
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend"
+            for DIGEST in $TO_DELETE; do
+              echo "  Deleting: $DIGEST"
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend@sha256:$DIGEST"
 
-              # 獲取所有 tags - 透過 grep 過濾特定版本的 tags
-              TAGS=$(gcloud artifacts docker tags list "${IMAGE_URI}" --format="table(tag,version)" 2>/dev/null | grep "${VERSION}" | awk '{print $1}' || echo "")
-
-              # 刪除所有 tags
-              if [ -n "$TAGS" ]; then
-                for TAG in $TAGS; do
-                  echo "    Removing tag: $TAG"
-                  if gcloud artifacts docker tags delete "${IMAGE_URI}:${TAG}" --quiet 2>&1; then
-                    echo "    ✅ Successfully deleted tag: $TAG"
-                  else
-                    echo "    ⚠️ Failed to delete tag: $TAG (may need permission: artifactregistry.tags.delete)"
-                  fi
-                done
+              # 直接刪除映像（會自動刪除相關的 tags）
+              if gcloud container images delete "${IMAGE_URI}" --force-delete-tags --quiet 2>&1; then
+                echo "    ✅ Successfully deleted image: $DIGEST"
+              else
+                echo "    ⚠️ Failed to delete image: $DIGEST"
               fi
-
-              # 刪除 digest
-              gcloud artifacts docker images delete "${IMAGE_URI}@${VERSION}" \
-                --quiet || echo "  ⚠️ Failed to delete $VERSION"
             done
 
             echo "✅ Frontend images cleanup complete!"
