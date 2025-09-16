@@ -88,6 +88,9 @@ async def test_upload_no_auth(
             "audio/webm;codecs=opus",
             "audio/mp3",
             "audio/wav",
+            "audio/mpeg",
+            "audio/wave",
+            "application/octet-stream",  # 瀏覽器上傳時的通用類型
         ]
         if file.content_type not in allowed_types:
             return JSONResponse(
