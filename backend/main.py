@@ -97,6 +97,34 @@ app.include_router(programs.router)  # 課程管理路由
 app.include_router(speech_assessment.router)  # 語音評估路由
 app.include_router(admin.router)  # 管理路由
 
+
+# 臨時 debug endpoint
+@app.get("/api/debug/system-check")
+async def system_check():
+    """臨時端點：檢查系統環境"""
+    import subprocess
+
+    checks = {}
+
+    # 檢查 ffmpeg
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-version"], capture_output=True, text=True, timeout=5
+        )
+        checks["ffmpeg"] = "installed" if result.returncode == 0 else "not found"
+        checks["ffmpeg_version"] = (
+            result.stdout.split("\n")[0] if result.returncode == 0 else None
+        )
+    except Exception as e:
+        checks["ffmpeg"] = f"error: {str(e)}"
+
+    # 檢查 Azure 環境變數
+    checks["azure_key_exists"] = bool(os.getenv("AZURE_SPEECH_KEY"))
+    checks["azure_region"] = os.getenv("AZURE_SPEECH_REGION", "Not set")
+
+    return checks
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
     uvicorn.run("main:app", host="0.0.0.0", port=port)

@@ -378,6 +378,53 @@ jobs:
           --concurrency 80 \
           --cpu-boost
 
+    - name: 🧹 Cleanup Old Container Images
+      run: |
+        echo "🔍 Cleaning up old container images to save costs..."
+        KEEP_COUNT=2  # 保留最新的 2 個映像
+        
+        # 清理 Backend 映像
+        echo "📦 Cleaning backend images..."
+        BACKEND_IMAGES=$(gcloud container images list-tags \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE \
+          --format="value(digest)" \
+          --sort-by="~timestamp" 2>/dev/null || echo "")
+        
+        if [ ! -z "$BACKEND_IMAGES" ]; then
+          TOTAL=$(echo "$BACKEND_IMAGES" | wc -l)
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$BACKEND_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+            for DIGEST in $TO_DELETE; do
+              echo "  Deleting backend image: $DIGEST"
+              gcloud container images delete \
+                "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE@sha256:$DIGEST" \
+                --force-delete-tags --quiet || true
+            done
+          fi
+        fi
+        
+        # 清理 Frontend 映像
+        echo "📦 Cleaning frontend images..."
+        FRONTEND_IMAGES=$(gcloud container images list-tags \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE \
+          --format="value(digest)" \
+          --sort-by="~timestamp" 2>/dev/null || echo "")
+        
+        if [ ! -z "$FRONTEND_IMAGES" ]; then
+          TOTAL=$(echo "$FRONTEND_IMAGES" | wc -l)
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$FRONTEND_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+            for DIGEST in $TO_DELETE; do
+              echo "  Deleting frontend image: $DIGEST"
+              gcloud container images delete \
+                "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE@sha256:$DIGEST" \
+                --force-delete-tags --quiet || true
+            done
+          fi
+        fi
+        
+        echo "✅ Image cleanup completed!"
+
     - name: Health check
       run: |
         BACKEND_URL=$(gcloud run services describe $BACKEND_SERVICE --platform managed --region $REGION --format 'value(status.url)')
