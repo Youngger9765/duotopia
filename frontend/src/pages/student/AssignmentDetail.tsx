@@ -53,6 +53,7 @@ export default function AssignmentDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<Map<number, AssessmentResult>>(new Map());
   const [assessing, setAssessing] = useState(false);
+  const [, setRecordingItemIndex] = useState<number | null>(null); // 記住正在錄音的題目（內部狀態）
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -137,6 +138,10 @@ export default function AssignmentDetail() {
 
       audioChunksRef.current = [];
 
+      // 記住開始錄音時的題目 index
+      const recordingIndex = currentItemIndex;
+      setRecordingItemIndex(recordingIndex);
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -145,7 +150,9 @@ export default function AssignmentDetail() {
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setRecordings(prev => new Map(prev).set(currentItemIndex, audioBlob));
+        // 使用錄音時的 index，而不是當前的 index
+        setRecordings(prev => new Map(prev).set(recordingIndex, audioBlob));
+        setRecordingItemIndex(null);
         stream.getTracks().forEach(track => track.stop());
       };
 
