@@ -1673,10 +1673,22 @@ async def get_student_submission(
 
                     # 從 progress 的 response_data 獲取學生答案和錄音
                     if progress and progress.response_data:
-                        # 獲取學生錄音檔案 - 只使用新架構的 audio_url
-                        audio_url = progress.response_data.get("audio_url")
-                        if audio_url:
-                            submission["student_audio_url"] = audio_url
+                        # 獲取學生錄音檔案 - 支援多題目的 recordings 陣列
+                        recordings = progress.response_data.get("recordings", [])
+                        if (
+                            recordings
+                            and local_item_index < len(recordings)
+                            and recordings[local_item_index]
+                        ):
+                            # 多題目：從 recordings 陣列取得對應題目的錄音
+                            submission["student_audio_url"] = recordings[
+                                local_item_index
+                            ]
+                        else:
+                            # 單題目：使用 audio_url
+                            audio_url = progress.response_data.get("audio_url")
+                            if audio_url:
+                                submission["student_audio_url"] = audio_url
 
                         # 獲取學生文字答案（如果有）- 簡化為單一值
                         student_answer = progress.response_data.get("student_answer")
@@ -1699,7 +1711,22 @@ async def get_student_submission(
 
                     # 獲取 AI 評分結果（來自語音評估 API）
                     if progress and progress.ai_scores:
-                        submission["ai_scores"] = progress.ai_scores
+                        # 支援多題目的 AI 評分結構
+                        if (
+                            "items" in progress.ai_scores
+                            and str(local_item_index) in progress.ai_scores["items"]
+                        ):
+                            # 多題目：從 items 中取得對應題目的評分
+                            submission["ai_scores"] = progress.ai_scores["items"][
+                                str(local_item_index)
+                            ]
+                        else:
+                            # 單題目：直接使用根層級的評分
+                            submission["ai_scores"] = {
+                                k: v
+                                for k, v in progress.ai_scores.items()
+                                if k not in ["items"]  # 排除 items 結構
+                            }
 
                     submissions.append(submission)
                     group["submissions"].append(submission)

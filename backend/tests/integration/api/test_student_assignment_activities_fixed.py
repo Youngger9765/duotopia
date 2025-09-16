@@ -195,13 +195,16 @@ class TestStudentAssignmentActivities:
             if i == 0:  # First item has progress
                 assert activity["status"] == "IN_PROGRESS"
                 assert activity["score"] == 85
-                assert activity["ai_scores"] == {"accuracy": 0.9, "fluency": 0.8}
+                # 新的 ai_assessments 陣列格式
+                assert "ai_assessments" in activity
+                assert isinstance(activity["ai_assessments"], list)
                 # audio_url 不是必須的欄位
                 assert activity["completed_at"] is not None
             else:  # Other items are not started
                 assert activity["status"] == "NOT_STARTED"
                 assert activity["score"] is None
-                assert activity["ai_scores"] is None
+                assert "ai_assessments" in activity
+                assert activity["ai_assessments"] == []
                 assert activity["completed_at"] is None
 
         print("✅ Batch query optimization test passed!")

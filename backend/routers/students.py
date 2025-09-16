@@ -288,7 +288,7 @@ async def get_assignment_activities(
                         if progress.completed_at
                         else None
                     ),
-                    "ai_scores": progress.ai_scores,  # 包含 AI 評估結果
+                    # AI 評估結果現在統一在 activity_data["ai_assessments"] 陣列中處理
                 }
             )
 
@@ -337,47 +337,52 @@ async def get_assignment_activities(
                         if progress.completed_at
                         else None
                     ),
-                    "ai_scores": progress.ai_scores,  # 包含 AI 評估結果
+                    # AI 評估結果現在統一在 activity_data["ai_assessments"] 陣列中處理
                 }
 
-                # 如果有 items，將它們作為子題目包含進去
+                # 統一處理所有情況為多題目模式（陣列模式）
                 if (
                     content.items
                     and isinstance(content.items, list)
                     and len(content.items) > 0
                 ):
-                    activity_data["items"] = content.items  # 包含所有 items
-                    activity_data["item_count"] = len(content.items)  # 題目數量
-                    activity_data["content"] = ""  # 對於有 items 的，content 為空
+                    # 多題目情況
+                    activity_data["items"] = content.items
+                    activity_data["item_count"] = len(content.items)
+                    activity_data["content"] = ""
+                    activity_data["target_text"] = ""
+                else:
+                    # 單題目情況 - 也統一為陣列模式
+                    single_item = {
+                        "text": str(content.items) if content.items else "",
+                        "translation": "",
+                    }
+                    activity_data["items"] = [single_item]
+                    activity_data["item_count"] = 1
+                    activity_data["content"] = ""
                     activity_data["target_text"] = ""
 
-                    # 如果有 response_data，包含所有錄音
-                    if progress.response_data:
-                        # 對於有 items 的情況，可能錄音存在 recordings 陣列或 audio_url 中
-                        recordings = progress.response_data.get("recordings", [])
-                        audio_url = progress.response_data.get("audio_url")
+                # 統一處理錄音和 AI 評分（一律使用陣列模式）
+                if progress.response_data:
+                    # 處理錄音
+                    recordings = progress.response_data.get("recordings", [])
+                    audio_url = progress.response_data.get("audio_url")
 
-                        # 如果有 audio_url 但 recordings 為空，將 audio_url 放到 recordings[0]
-                        if audio_url and not recordings:
-                            recordings = [audio_url]
+                    # 如果是舊格式的 audio_url，轉換為陣列格式
+                    if audio_url and not recordings:
+                        recordings = [audio_url]
 
-                        activity_data["recordings"] = recordings
-                        activity_data["answers"] = progress.response_data.get(
-                            "answers", []
-                        )
+                    activity_data["recordings"] = recordings
+                    activity_data["answers"] = progress.response_data.get("answers", [])
+
+                    # 處理 AI 評分 - 統一從 response_data 中讀取陣列格式
+                    ai_assessments = progress.response_data.get("ai_assessments", [])
+                    activity_data["ai_assessments"] = ai_assessments
                 else:
-                    # 沒有 items 的情況
-                    activity_data["content"] = (
-                        str(content.items) if content.items else ""
-                    )
-                    activity_data["target_text"] = (
-                        str(content.items) if content.items else ""
-                    )
-                    activity_data["audio_url"] = (
-                        progress.response_data.get("audio_url")
-                        if progress.response_data
-                        else None
-                    )
+                    # 沒有 response_data 的情況
+                    activity_data["recordings"] = []
+                    activity_data["answers"] = []
+                    activity_data["ai_assessments"] = []
 
                 activities.append(activity_data)
 
