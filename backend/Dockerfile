@@ -29,6 +29,7 @@ COPY alembic.ini ./
 COPY service[s] ./services/
 COPY router[s] ./routers/
 COPY cor[e] ./core/
+COPY ap[i] ./api/
 
 # 複製 GCS service account key（如果存在）
 COPY service-account-key.jso[n] ./service-account-key.json

@@ -71,6 +71,17 @@ if not os.path.exists(static_dir):
     os.makedirs(static_dir)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Local recordings for development
+if environment == "development":
+    local_recordings_dir = os.path.join(os.path.dirname(__file__), "local_recordings")
+    if not os.path.exists(local_recordings_dir):
+        os.makedirs(local_recordings_dir)
+    app.mount(
+        "/local_recordings",
+        StaticFiles(directory=local_recordings_dir),
+        name="local_recordings",
+    )
+
 
 @app.get("/")
 async def root():
