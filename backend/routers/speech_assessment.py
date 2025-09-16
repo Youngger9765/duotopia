@@ -29,7 +29,14 @@ router = APIRouter(
 
 # 設定限制
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-ALLOWED_AUDIO_FORMATS = ["audio/wav", "audio/webm", "audio/mp3", "audio/mpeg"]
+ALLOWED_AUDIO_FORMATS = [
+    "audio/wav",
+    "audio/webm",
+    "audio/webm;codecs=opus",
+    "audio/mp3",
+    "audio/mpeg",
+    "application/octet-stream",  # 瀏覽器上傳時的通用類型
+]
 
 
 async def get_current_student(
@@ -241,9 +248,11 @@ def save_assessment_result(
     progress_id: int,
     assessment_result: Dict[str, Any],
     audio_url: Optional[str] = None,
+    student_assignment_id: Optional[int] = None,
 ) -> StudentContentProgress:
     """
     儲存評估結果到 StudentContentProgress
+    如果找不到記錄就創建新的
     """
     progress = (
         db.query(StudentContentProgress)
@@ -251,8 +260,23 @@ def save_assessment_result(
         .first()
     )
 
-    if not progress:
-        raise HTTPException(status_code=404, detail="Progress record not found")
+    if not progress and student_assignment_id:
+        # 創建新的 progress 記錄
+        progress = StudentContentProgress(
+            student_assignment_id=student_assignment_id,
+            content_id=None,  # 暫時設為 None
+            status=AssignmentStatus.IN_PROGRESS,
+            ai_scores={},
+            response_data={},
+        )
+        db.add(progress)
+        db.commit()
+        db.refresh(progress)
+    elif not progress:
+        raise HTTPException(
+            status_code=404,
+            detail="Progress record not found and no student_assignment_id provided",
+        )
 
     # 更新 response_data 儲存錄音 URL
     response_data = progress.response_data or {}
@@ -283,6 +307,7 @@ async def assess_pronunciation_endpoint(
     audio_file: UploadFile = File(...),
     reference_text: str = Form(...),
     progress_id: int = Form(...),
+    assignment_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     current_student: Student = Depends(get_current_student),
 ):
@@ -314,9 +339,26 @@ async def assess_pronunciation_endpoint(
     # 進行發音評估
     assessment_result = assess_pronunciation(wav_audio_data, reference_text)
 
+    # 找到學生的 assignment 記錄
+    student_assignment_id = None
+    if assignment_id:
+        student_assignment = (
+            db.query(StudentAssignment)
+            .filter(
+                StudentAssignment.assignment_id == assignment_id,
+                StudentAssignment.student_id == current_student.id,
+            )
+            .first()
+        )
+        if student_assignment:
+            student_assignment_id = student_assignment.id
+
     # 儲存結果到資料庫
     updated_progress = save_assessment_result(
-        db=db, progress_id=progress_id, assessment_result=assessment_result
+        db=db,
+        progress_id=progress_id,
+        assessment_result=assessment_result,
+        student_assignment_id=student_assignment_id,
     )
 
     # 回傳結果
