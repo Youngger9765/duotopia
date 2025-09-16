@@ -113,7 +113,7 @@ jobs:
           extra_args: --debug --only-verified
 
       - name: Detect Secrets
-        uses: reviewdog/action-detect-secrets@v1.7.0
+        uses: reviewdog/action-detect-secrets@v0.29.1
         continue-on-error: true
         with:
           reporter: github-pr-review

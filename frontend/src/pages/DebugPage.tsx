@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { apiClient } from '../utils/api';
 
 const DebugPage: React.FC = () => {
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
 
-  const addResult = (key: string, value: any) => {
+  const addResult = (key: string, value: unknown) => {
     setResults(prev => ({ ...prev, [key]: value }));
   };
 
@@ -20,7 +20,7 @@ const DebugPage: React.FC = () => {
       const data = await response.json();
       addResult('health', { status: response.status, data });
     } catch (error) {
-      addResult('health', { error: error.message });
+      addResult('health', { error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, health: false }));
   };
@@ -31,11 +31,19 @@ const DebugPage: React.FC = () => {
     try {
       const response = await apiClient.get('/api/auth/me');
       addResult('auth', { status: 'authenticated', user: response.data });
-    } catch (error: any) {
-      addResult('auth', {
-        status: 'not authenticated',
-        error: error.response?.data || error.message
-      });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown }; message?: string };
+        addResult('auth', {
+          status: 'not authenticated',
+          error: axiosError.response?.data || axiosError.message || String(error)
+        });
+      } else {
+        addResult('auth', {
+          status: 'not authenticated',
+          error: String(error)
+        });
+      }
     }
     setLoading(prev => ({ ...prev, auth: false }));
   };
@@ -47,7 +55,7 @@ const DebugPage: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/system-check`);
       const data = await response.json();
       addResult('azure', { status: response.status, data });
-    } catch (error) {
+    } catch {
       addResult('azure', { error: 'Debug endpoint not available' });
     }
     setLoading(prev => ({ ...prev, azure: false }));
@@ -67,8 +75,8 @@ const DebugPage: React.FC = () => {
         status: 'granted',
         devices: audioDevices.map(d => ({ label: d.label, id: d.deviceId }))
       });
-    } catch (error: any) {
-      addResult('mic', { status: 'denied', error: error.message });
+    } catch (error) {
+      addResult('mic', { status: 'denied', error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, mic: false }));
   };
@@ -101,8 +109,8 @@ const DebugPage: React.FC = () => {
       setMediaRecorder(recorder);
       setIsRecording(true);
       addResult('recording', { status: 'started', mimeType: recorder.mimeType });
-    } catch (error: any) {
-      addResult('recording', { error: error.message });
+    } catch (error) {
+      addResult('recording', { error: error instanceof Error ? error.message : String(error) });
     }
   };
 
@@ -140,8 +148,8 @@ const DebugPage: React.FC = () => {
         statusText: response.statusText,
         data: data.substring(0, 500)
       });
-    } catch (error: any) {
-      addResult('upload', { error: error.message });
+    } catch (error) {
+      addResult('upload', { error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, upload: false }));
   };
@@ -178,8 +186,8 @@ const DebugPage: React.FC = () => {
           error: errorText.substring(0, 500)
         });
       }
-    } catch (error: any) {
-      addResult('assessment', { error: error.message });
+    } catch (error) {
+      addResult('assessment', { error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, assessment: false }));
   };
@@ -201,10 +209,17 @@ const DebugPage: React.FC = () => {
       });
 
       addResult('gcs', { status: 'success', url: response.data.url });
-    } catch (error: any) {
-      addResult('gcs', {
-        error: error.response?.data || error.message
-      });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown }; message?: string };
+        addResult('gcs', {
+          error: axiosError.response?.data || axiosError.message || String(error)
+        });
+      } else {
+        addResult('gcs', {
+          error: String(error)
+        });
+      }
     }
     setLoading(prev => ({ ...prev, gcs: false }));
   };

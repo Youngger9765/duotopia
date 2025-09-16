@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Get API URL from environment variable or use empty string (will use relative URLs)
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // In development, use relative URLs which will default to the dev server's origin
+  return '';
+};
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
