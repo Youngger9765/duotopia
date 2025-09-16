@@ -75,7 +75,7 @@ class ClassroomSummary(BaseModel):
 class StudentSummary(BaseModel):
     id: int
     name: str
-    email: str | None  # Allow None for students without email
+    email: Optional[str] = None  # Allow None for students without email
     classroom_name: str
 
 

@@ -4,8 +4,18 @@ on:
   workflow_dispatch:  # 手動觸發
   push:
     branches: [ staging ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'docs/**'
   pull_request:
     branches: [ staging ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'docs/**'
   schedule:
     # Run daily at 2 AM UTC for security scan
     - cron: '0 2 * * *'
