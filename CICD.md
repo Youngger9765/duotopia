@@ -388,7 +388,7 @@ gcloud config list
 
 ### 常見部署錯誤模式
 1. **硬編碼 URL 錯誤**
-   - ❌ 錯誤：`fetch('http://localhost:8000/api/...')`
+   - ❌ 錯誤：`fetch('http://localhost:8080/api/...')`
    - ✅ 正確：使用環境變數 `import.meta.env.VITE_API_URL`
    - **教訓**：所有 API URL 必須使用環境變數
 

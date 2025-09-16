@@ -1444,7 +1444,7 @@ duotopia/
 
 #### 前端 (frontend/.env)
 ```
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8080
 ```
 
 #### 後端 (backend/.env)

@@ -108,7 +108,7 @@ npx playwright test --ui
 
 3. **測試環境**：
    - 前端: http://localhost:5173
-   - 後端: http://localhost:8000
+   - 後端: http://localhost:8080
 
 ## 持續改進
 
