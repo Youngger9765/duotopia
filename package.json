@@ -15,7 +15,13 @@
     "test:e2e:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "test:install": "playwright install",
-    "test:all": "npm run test:api:all && npm run test:e2e"
+    "test:all": "npm run test:api:all && npm run test:e2e",
+    "monitor": "chmod +x scripts/monitor-deployment.sh && ./scripts/monitor-deployment.sh",
+    "monitor:staging": "chmod +x scripts/monitor-deployment.sh && ./scripts/monitor-deployment.sh staging",
+    "monitor:main": "chmod +x scripts/monitor-deployment.sh && ./scripts/monitor-deployment.sh main",
+    "cleanup:images": "gh workflow run cleanup-resources.yml --ref $(git branch --show-current) -f keep_images=2 -f keep_revisions=1",
+    "deploy:status": "gh run list --workflow=deploy-staging-supabase.yml --limit=5",
+    "deploy:watch": "gh run watch $(gh run list --workflow=deploy-staging-supabase.yml --status=in_progress --limit=1 --json databaseId -q '.[0].databaseId')"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

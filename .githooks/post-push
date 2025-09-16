@@ -1,0 +1,24 @@
+#!/bin/bash
+#================================================================
+# Git Post-Push Hook
+# Automatically monitors deployment after pushing to remote
+#================================================================
+
+# 獲取當前分支
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 只在 staging 或 main 分支執行監控
+if [[ "$BRANCH" == "staging" ]] || [[ "$BRANCH" == "main" ]]; then
+    echo "🚀 Starting deployment monitor for branch: $BRANCH"
+
+    # 執行監控腳本（背景執行，不阻塞）
+    if [ -f "./scripts/monitor-deployment.sh" ]; then
+        ./scripts/monitor-deployment.sh "$BRANCH" &
+        echo "📊 Monitor running in background. PID: $!"
+        echo "💡 View live at: https://github.com/Youngger9765/duotopia/actions"
+    else
+        echo "⚠️  Monitor script not found at ./scripts/monitor-deployment.sh"
+    fi
+else
+    echo "ℹ️  Branch '$BRANCH' does not trigger deployment monitoring"
+fi
