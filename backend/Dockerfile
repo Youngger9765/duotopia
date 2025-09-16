@@ -2,6 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 安裝 Azure Speech SDK 所需的系統依賴
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    ca-certificates \
+    libasound2 \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
 # 創建非 root 使用者
 RUN useradd -m -u 1000 appuser
 
