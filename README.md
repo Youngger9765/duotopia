@@ -16,7 +16,7 @@ cd backend && pip install -r requirements.txt
 ### 2. 啟動開發環境
 ```bash
 # Terminal 1 - 後端
-cd backend && uvicorn main:app --reload --port 8000
+cd backend && uvicorn main:app --reload --port 8080
 
 # Terminal 2 - 前端
 cd frontend && npm run dev
@@ -73,10 +73,10 @@ python seed_data.py          # 填充測試資料
 
 ## 環境
 
-- **開發**: http://localhost:5173 (前端) + http://localhost:8000 (後端)
+- **開發**: http://localhost:5173 (前端) + http://localhost:8080 (後端)
 - **Staging**: 透過 GitHub Actions 自動部署到 Google Cloud Run
 
 ## API 文檔
 
-- 開發環境: http://localhost:8000/docs
+- 開發環境: http://localhost:8080/docs
 - Staging: [部署後自動更新]
