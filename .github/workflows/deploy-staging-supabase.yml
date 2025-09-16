@@ -113,7 +113,7 @@ jobs:
           extra_args: --debug --only-verified
 
       - name: Detect Secrets
-        uses: reviewdog/action-detect-secrets@master
+        uses: reviewdog/action-detect-secrets@v1.7.0
         continue-on-error: true
         with:
           reporter: github-pr-review
@@ -148,6 +148,7 @@ jobs:
     permissions:
       security-events: write
       contents: read
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
