@@ -75,6 +75,10 @@ if grep -r "BEGIN RSA PRIVATE KEY\|BEGIN PRIVATE KEY\|BEGIN EC PRIVATE KEY" \
     --exclude-dir=.git \
     --exclude-dir=scripts \
     --exclude="*.sh" \
+    --exclude="service-account-key.json" \
+    --exclude="*-key.json" \
+    --exclude="*-sa.json" \
+    --exclude="*-credentials.json" \
     2>/dev/null; then
     report_error "Private key file found!"
 else

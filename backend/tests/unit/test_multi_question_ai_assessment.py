@@ -4,7 +4,6 @@
 驗證錄音和AI評分的正確存取
 """
 import pytest
-from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from routers.speech_assessment import save_assessment_result
 from models import StudentContentProgress, AssignmentStatus
