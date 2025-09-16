@@ -318,6 +318,13 @@ jobs:
         ENV_VARS="$ENV_VARS,FROM_EMAIL=${{ secrets.FROM_EMAIL }}"
         ENV_VARS="$ENV_VARS,FROM_NAME=${{ secrets.FROM_NAME }}"
         ENV_VARS="$ENV_VARS,FRONTEND_URL=${{ secrets.FRONTEND_URL }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}"
+        ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=$PROJECT_ID"
+        ENV_VARS="$ENV_VARS,REGION=$REGION"
+        ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
+        ENV_VARS="$ENV_VARS,GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json"
 
         gcloud run deploy $BACKEND_SERVICE \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE:$GITHUB_SHA \
