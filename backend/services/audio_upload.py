@@ -17,6 +17,7 @@ class AudioUploadService:
         self.max_file_size = 2 * 1024 * 1024  # 2MB 限制
         self.allowed_formats = [
             "audio/webm",
+            "audio/webm;codecs=opus",  # 支援帶 codecs 的 webm
             "audio/mp3",
             "audio/wav",
             "audio/mpeg",

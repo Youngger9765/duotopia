@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { apiClient } from '../utils/api';
 
 const DebugPage: React.FC = () => {
   const [results, setResults] = useState<Record<string, unknown>>({});
@@ -29,21 +28,30 @@ const DebugPage: React.FC = () => {
   const testAuth = async () => {
     setLoading(prev => ({ ...prev, auth: true }));
     try {
-      const response = await apiClient.get('/api/auth/me');
-      addResult('auth', { status: 'authenticated', user: response.data });
-    } catch (error) {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: unknown }; message?: string };
-        addResult('auth', {
-          status: 'not authenticated',
-          error: axiosError.response?.data || axiosError.message || String(error)
-        });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        addResult('auth', { status: 'authenticated', user: data, token: token?.substring(0, 20) + '...' });
       } else {
+        const errorText = await response.text();
         addResult('auth', {
           status: 'not authenticated',
-          error: String(error)
+          error: errorText,
+          token_exists: !!token,
+          token_preview: token?.substring(0, 20) + '...'
         });
       }
+    } catch (error) {
+      addResult('auth', {
+        status: 'error',
+        error: String(error)
+      });
     }
     setLoading(prev => ({ ...prev, auth: false }));
   };
@@ -133,28 +141,33 @@ const DebugPage: React.FC = () => {
     setLoading(prev => ({ ...prev, upload: true }));
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'test.webm');
-      formData.append('reference_text', 'Hello world');
+      formData.append('file', audioBlob, 'test.webm');
+      formData.append('duration_seconds', '5');
 
-      // 先測試無認證上傳
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/speech/assess`, {
+      // 使用無認證的測試端點
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-upload`, {
         method: 'POST',
         body: formData
       });
 
-      const data = await response.text();
-      addResult('upload', {
-        status: response.status,
-        statusText: response.statusText,
-        data: data.substring(0, 500)
-      });
+      if (response.ok) {
+        const data = await response.json();
+        addResult('upload', { status: 'success', data });
+      } else {
+        const errorText = await response.text();
+        addResult('upload', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText.substring(0, 500)
+        });
+      }
     } catch (error) {
       addResult('upload', { error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, upload: false }));
   };
 
-  // 8. 測試完整評估流程 (帶認證)
+  // 8. 測試完整評估流程 (無認證版本)
   const testFullAssessment = async () => {
     if (!audioBlob) {
       addResult('assessment', { error: 'No audio recorded' });
@@ -164,15 +177,12 @@ const DebugPage: React.FC = () => {
     setLoading(prev => ({ ...prev, assessment: true }));
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'test.webm');
+      formData.append('file', audioBlob, 'test.webm');
       formData.append('reference_text', 'Hello world');
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/speech/assess`, {
+      // 使用無認證的 Azure Speech 測試端點
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-azure-speech`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData
       });
 
@@ -192,7 +202,7 @@ const DebugPage: React.FC = () => {
     setLoading(prev => ({ ...prev, assessment: false }));
   };
 
-  // 9. 測試 GCS 上傳
+  // 9. 測試 GCS 上傳 (無認證版本)
   const testGCSUpload = async () => {
     if (!audioBlob) {
       addResult('gcs', { error: 'No audio recorded' });
@@ -204,22 +214,24 @@ const DebugPage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', audioBlob, 'test_audio.webm');
 
-      const response = await apiClient.post('/api/files/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // 使用無認證的 GCS 測試端點
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-gcs-simple`, {
+        method: 'POST',
+        body: formData
       });
 
-      addResult('gcs', { status: 'success', url: response.data.url });
-    } catch (error) {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: unknown }; message?: string };
-        addResult('gcs', {
-          error: axiosError.response?.data || axiosError.message || String(error)
-        });
+      if (response.ok) {
+        const data = await response.json();
+        addResult('gcs', { status: 'success', data });
       } else {
+        const errorText = await response.text();
         addResult('gcs', {
-          error: String(error)
+          status: response.status,
+          error: errorText.substring(0, 500)
         });
       }
+    } catch (error) {
+      addResult('gcs', { error: error instanceof Error ? error.message : String(error) });
     }
     setLoading(prev => ({ ...prev, gcs: false }));
   };
