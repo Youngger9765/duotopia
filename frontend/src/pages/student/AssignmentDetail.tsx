@@ -90,6 +90,7 @@ export default function AssignmentDetail() {
               translation?: string;
               audio_url?: string;
             }>;
+            ai_assessments?: Array<AssessmentResult | null>;
           }>;
         };
 
@@ -100,6 +101,26 @@ export default function AssignmentDetail() {
             audio_url: item.audio_url
           }))
         ) || [];
+
+        // 處理 AI 評分數據 - 使用新的統一陣列格式
+        const newAssessmentResults = new Map<number, AssessmentResult>();
+        let globalItemIndex = 0;
+
+        responseData.activities?.forEach((activity) => {
+          if (activity.ai_assessments && Array.isArray(activity.ai_assessments)) {
+            // 新的陣列格式：每個 index 直接對應題目位置
+            activity.ai_assessments.forEach((assessment, localIndex) => {
+              if (assessment) {
+                const currentGlobalIndex = globalItemIndex + localIndex;
+                newAssessmentResults.set(currentGlobalIndex, assessment);
+              }
+            });
+          }
+          // 更新全局索引
+          globalItemIndex += activity.items?.length || 1;
+        });
+
+        setAssessmentResults(newAssessmentResults);
 
         const assignmentData: AssignmentDetailType = {
           id: parseInt(id || '0'),
