@@ -304,13 +304,6 @@ def create_demo_data(db: Session):
         title="基礎問候語練習",
         order_index=1,
         is_public=True,
-        items=[
-            {"text": "Hello", "translation": "你好"},
-            {"text": "Good morning", "translation": "早安"},
-            {"text": "Good afternoon", "translation": "午安"},
-            {"text": "How are you?", "translation": "你好嗎？"},
-            {"text": "I'm fine, thank you", "translation": "我很好，謝謝"},
-        ],
         target_wpm=50,
         target_accuracy=0.75,
         time_limit_seconds=180,
@@ -326,13 +319,6 @@ def create_demo_data(db: Session):
         title="進階問候語練習",
         order_index=2,
         is_public=True,
-        items=[
-            {"text": "Nice to meet you", "translation": "很高興認識你"},
-            {"text": "See you later", "translation": "待會見"},
-            {"text": "Have a nice day", "translation": "祝你有美好的一天"},
-            {"text": "Take care", "translation": "保重"},
-            {"text": "Goodbye", "translation": "再見"},
-        ],
         target_wpm=55,
         target_accuracy=0.75,
         time_limit_seconds=180,
@@ -348,13 +334,6 @@ def create_demo_data(db: Session):
         title="數字 1-10 練習",
         order_index=1,
         is_public=True,
-        items=[
-            {"text": "One, Two, Three", "translation": "一、二、三"},
-            {"text": "Four, Five, Six", "translation": "四、五、六"},
-            {"text": "Seven, Eight", "translation": "七、八"},
-            {"text": "Nine, Ten", "translation": "九、十"},
-            {"text": "I have five apples", "translation": "我有五個蘋果"},
-        ],
         target_wpm=60,
         target_accuracy=0.80,
         time_limit_seconds=120,
@@ -370,13 +349,6 @@ def create_demo_data(db: Session):
         title="顏色練習",
         order_index=1,
         is_public=True,
-        items=[
-            {"text": "Red and Blue", "translation": "紅色和藍色"},
-            {"text": "Green and Yellow", "translation": "綠色和黃色"},
-            {"text": "Black and White", "translation": "黑色和白色"},
-            {"text": "The sky is blue", "translation": "天空是藍色的"},
-            {"text": "I like green", "translation": "我喜歡綠色"},
-        ],
         target_wpm=55,
         target_accuracy=0.75,
         time_limit_seconds=150,
@@ -393,13 +365,6 @@ def create_demo_data(db: Session):
         title="自我介紹練習",
         order_index=1,
         is_public=False,
-        items=[
-            {"text": "My name is Alice", "translation": "我的名字是 Alice"},
-            {"text": "I am ten years old", "translation": "我十歲"},
-            {"text": "I live in Taipei", "translation": "我住在台北"},
-            {"text": "I like to read books", "translation": "我喜歡讀書"},
-            {"text": "Nice to meet you all", "translation": "很高興認識大家"},
-        ],
         target_wpm=65,
         target_accuracy=0.80,
         time_limit_seconds=180,
@@ -416,13 +381,6 @@ def create_demo_data(db: Session):
         title="日常對話練習 Part 1",
         order_index=1,
         is_public=False,
-        items=[
-            {"text": "What's your name?", "translation": "你叫什麼名字？"},
-            {"text": "Where are you from?", "translation": "你來自哪裡？"},
-            {"text": "I'm from Taiwan", "translation": "我來自台灣"},
-            {"text": "How old are you?", "translation": "你幾歲？"},
-            {"text": "I'm twelve years old", "translation": "我十二歲"},
-        ],
         target_wpm=70,
         target_accuracy=0.85,
         time_limit_seconds=180,
@@ -438,13 +396,6 @@ def create_demo_data(db: Session):
         title="日常對話練習 Part 2",
         order_index=2,
         is_public=False,
-        items=[
-            {"text": "What do you like to do?", "translation": "你喜歡做什麼？"},
-            {"text": "I enjoy playing basketball", "translation": "我喜歡打籃球"},
-            {"text": "Do you have any hobbies?", "translation": "你有什麼嗜好嗎？"},
-            {"text": "Yes, I love reading", "translation": "有，我喜歡閱讀"},
-            {"text": "That sounds interesting", "translation": "聽起來很有趣"},
-        ],
         target_wpm=75,
         target_accuracy=0.85,
         time_limit_seconds=180,
@@ -460,13 +411,6 @@ def create_demo_data(db: Session):
         title="家庭成員練習",
         order_index=1,
         is_public=False,
-        items=[
-            {"text": "This is my family", "translation": "這是我的家人"},
-            {"text": "My father is a doctor", "translation": "我爸爸是醫生"},
-            {"text": "My mother is a teacher", "translation": "我媽媽是老師"},
-            {"text": "I have one brother", "translation": "我有一個哥哥"},
-            {"text": "We live together happily", "translation": "我們快樂地住在一起"},
-        ],
         target_wpm=75,
         target_accuracy=0.85,
         time_limit_seconds=150,
@@ -480,11 +424,60 @@ def create_demo_data(db: Session):
     db.commit()
     print(f"✅ 建立 {len(contents)} 個課程內容")
 
-    # ============ 6.5 建立 ContentItem（從 Content.items 轉換）============
+    # ============ 6.5 建立 ContentItem ============
     print("\n📝 建立 ContentItem 資料...")
+
+    # 定義所有 Content 的 items（因為 Content.items 欄位已移除）
+    # 這裡先定義幾個主要的，其他的會從資料庫遷移
+    content_items_data = {
+        "基礎問候語練習": [
+            {"text": "Hello", "translation": "你好"},
+            {"text": "Good morning", "translation": "早安"},
+            {"text": "Good afternoon", "translation": "午安"},
+            {"text": "How are you?", "translation": "你好嗎？"},
+            {"text": "I'm fine, thank you", "translation": "我很好，謝謝"},
+        ],
+        "進階問候語練習": [
+            {"text": "Nice to meet you", "translation": "很高興認識你"},
+            {"text": "See you later", "translation": "待會見"},
+            {"text": "Have a nice day", "translation": "祝你有美好的一天"},
+            {"text": "Take care", "translation": "保重"},
+            {"text": "Goodbye", "translation": "再見"},
+        ],
+        "數字練習": [
+            {"text": "One, Two, Three", "translation": "一、二、三"},
+            {"text": "Four, Five, Six", "translation": "四、五、六"},
+            {"text": "Seven, Eight", "translation": "七、八"},
+            {"text": "Nine, Ten", "translation": "九、十"},
+            {"text": "I have five apples", "translation": "我有五個蘋果"},
+        ],
+        "顏色練習": [
+            {"text": "Red and Blue", "translation": "紅色和藍色"},
+            {"text": "Green and Yellow", "translation": "綠色和黃色"},
+            {"text": "Black and White", "translation": "黑色和白色"},
+            {"text": "The sky is blue", "translation": "天空是藍色的"},
+            {"text": "I like green", "translation": "我喜歡綠色"},
+        ],
+    }
+
+    # 建立 ContentItem 記錄
     content_items = []
     for content in contents:
-        if content.items:
+        # 根據 title 找對應的 items
+        items_data = content_items_data.get(content.title, [])
+
+        if items_data:
+            for idx, item_data in enumerate(items_data):
+                content_item = ContentItem(
+                    content_id=content.id,
+                    order_index=idx,
+                    text=item_data.get("text", ""),
+                    translation=item_data.get("translation", ""),
+                    audio_url=item_data.get("audio_url"),
+                )
+                content_items.append(content_item)
+        # 如果沒有預定義的 items，嘗試從 content.items 讀取（向後相容）
+        elif hasattr(content, "items") and content.items:
             for idx, item_data in enumerate(content.items):
                 content_item = ContentItem(
                     content_id=content.id,
@@ -1078,13 +1071,6 @@ def create_demo_data(db: Session):
         title="興趣愛好對話",
         order_index=1,
         is_public=False,
-        items=[
-            {"text": "What are your hobbies?", "translation": "你的興趣是什麼？"},
-            {"text": "I enjoy playing sports", "translation": "我喜歡運動"},
-            {"text": "Reading is my favorite", "translation": "閱讀是我的最愛"},
-            {"text": "I like listening to music", "translation": "我喜歡聽音樂"},
-            {"text": "Let's play together", "translation": "我們一起玩吧"},
-        ],
         target_wpm=70,
         target_accuracy=0.85,
         time_limit_seconds=180,
@@ -1825,13 +1811,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_basic_conv[0].id,
             type=ContentType.READING_ASSESSMENT,
             title="Basic Greetings 基本問候語",
-            items=[
-                {"text": "Hello!", "translation": "你好！"},
-                {"text": "How are you?", "translation": "你好嗎？"},
-                {"text": "I'm fine, thank you.", "translation": "我很好，謝謝。"},
-                {"text": "Nice to meet you.", "translation": "很高興認識你。"},
-                {"text": "See you later!", "translation": "待會見！"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1844,16 +1823,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_basic_conv[1].id,
             type=ContentType.READING_ASSESSMENT,
             title="My Daily Routine 我的日常作息",
-            items=[
-                {"text": "I wake up at 7 AM.", "translation": "我早上7點起床。"},
-                {
-                    "text": "I have breakfast at 8 AM.",
-                    "translation": "我早上8點吃早餐。",
-                },
-                {"text": "I go to school at 8:30.", "translation": "我8點半去上學。"},
-                {"text": "I have lunch at noon.", "translation": "我中午吃午餐。"},
-                {"text": "I go to bed at 10 PM.", "translation": "我晚上10點睡覺。"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1866,19 +1835,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_basic_conv[2].id,
             type=ContentType.READING_ASSESSMENT,
             title="Shopping Vocabulary 購物詞彙",
-            items=[
-                {"text": "How much is this?", "translation": "這個多少錢？"},
-                {"text": "It's twenty dollars.", "translation": "二十元。"},
-                {
-                    "text": "Can I pay by credit card?",
-                    "translation": "我可以用信用卡付款嗎？",
-                },
-                {
-                    "text": "Do you have a smaller size?",
-                    "translation": "有小一點的尺寸嗎？",
-                },
-                {"text": "I'll take it.", "translation": "我買了。"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1891,16 +1847,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_basic_conv[3].id,
             type=ContentType.READING_ASSESSMENT,
             title="Restaurant English 餐廳英語",
-            items=[
-                {"text": "May I see the menu?", "translation": "我可以看菜單嗎？"},
-                {"text": "I'd like to order pasta.", "translation": "我想點義大利麵。"},
-                {
-                    "text": "How would you like your steak?",
-                    "translation": "您的牛排要幾分熟？",
-                },
-                {"text": "Can I have the bill, please?", "translation": "請給我帳單。"},
-                {"text": "The food was delicious.", "translation": "食物很美味。"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1913,24 +1859,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_reading[0].id,
             type=ContentType.READING_ASSESSMENT,
             title="Reading Strategies 閱讀策略",
-            items=[
-                {
-                    "text": "Skimming helps you find main ideas quickly.",
-                    "translation": "略讀幫助你快速找到主要概念。",
-                },
-                {
-                    "text": "Scanning helps you find specific details.",
-                    "translation": "掃讀幫助你找到特定細節。",
-                },
-                {
-                    "text": "Read the title and headings first.",
-                    "translation": "先讀標題和標頭。",
-                },
-                {
-                    "text": "Look for keywords in each paragraph.",
-                    "translation": "在每個段落中尋找關鍵字。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1943,24 +1871,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_reading[1].id,
             type=ContentType.READING_ASSESSMENT,
             title="News Headlines 新聞標題",
-            items=[
-                {
-                    "text": "Breaking news from around the world.",
-                    "translation": "來自世界各地的突發新聞。",
-                },
-                {
-                    "text": "Scientists discover new planet.",
-                    "translation": "科學家發現新行星。",
-                },
-                {
-                    "text": "Technology advances in 2025.",
-                    "translation": "2025年的科技進展。",
-                },
-                {
-                    "text": "Climate change impacts global economy.",
-                    "translation": "氣候變遷影響全球經濟。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -1973,24 +1883,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_reading[2].id,
             type=ContentType.READING_ASSESSMENT,
             title="Story Elements 故事元素",
-            items=[
-                {
-                    "text": "Once upon a time in a small village.",
-                    "translation": "從前在一個小村莊。",
-                },
-                {
-                    "text": "The main character faced a challenge.",
-                    "translation": "主角面臨挑戰。",
-                },
-                {
-                    "text": "With courage, they overcame the obstacle.",
-                    "translation": "憑著勇氣，他們克服了障礙。",
-                },
-                {
-                    "text": "The story teaches us an important lesson.",
-                    "translation": "這個故事教導我們重要的一課。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2003,13 +1895,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_pronunciation[0].id,
             type=ContentType.READING_ASSESSMENT,
             title="Vowel Sounds 母音發音",
-            items=[
-                {"text": "cat - cake", "translation": "短音a - 長音a"},
-                {"text": "pet - Pete", "translation": "短音e - 長音e"},
-                {"text": "bit - bite", "translation": "短音i - 長音i"},
-                {"text": "hot - home", "translation": "短音o - 長音o"},
-                {"text": "cut - cute", "translation": "短音u - 長音u"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2022,13 +1907,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_pronunciation[1].id,
             type=ContentType.READING_ASSESSMENT,
             title="Consonant Sounds 子音發音",
-            items=[
-                {"text": "think - this", "translation": "清音th - 濁音th"},
-                {"text": "ship - chip", "translation": "sh音 - ch音"},
-                {"text": "very - berry", "translation": "v音 - b音"},
-                {"text": "light - right", "translation": "l音 - r音"},
-                {"text": "fan - van", "translation": "f音 - v音"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2041,22 +1919,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_pronunciation[2].id,
             type=ContentType.READING_ASSESSMENT,
             title="Word Stress 重音練習",
-            items=[
-                {
-                    "text": "REcord (noun) - reCORD (verb)",
-                    "translation": "記錄(名詞) - 錄音(動詞)",
-                },
-                {
-                    "text": "PREsent (noun) - preSENT (verb)",
-                    "translation": "禮物(名詞) - 呈現(動詞)",
-                },
-                {
-                    "text": "CONtent (noun) - conTENT (adjective)",
-                    "translation": "內容(名詞) - 滿足的(形容詞)",
-                },
-                {"text": "Are you COMING?", "translation": "你要來嗎？(上升語調)"},
-                {"text": "I am coming.", "translation": "我會來。(下降語調)"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2069,22 +1931,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_business[0].id,
             type=ContentType.READING_ASSESSMENT,
             title="Business Email Writing 商務郵件",
-            items=[
-                {"text": "Dear Mr. Smith,", "translation": "親愛的史密斯先生，"},
-                {
-                    "text": "I hope this email finds you well.",
-                    "translation": "希望您一切安好。",
-                },
-                {
-                    "text": "Please find attached the report.",
-                    "translation": "請查收附件的報告。",
-                },
-                {
-                    "text": "I look forward to your reply.",
-                    "translation": "期待您的回覆。",
-                },
-                {"text": "Best regards,", "translation": "誠摯的問候，"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2097,22 +1943,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_business[1].id,
             type=ContentType.READING_ASSESSMENT,
             title="Meeting English 會議英語",
-            items=[
-                {"text": "Let's begin the meeting.", "translation": "讓我們開始會議。"},
-                {
-                    "text": "Could you elaborate on that point?",
-                    "translation": "您能詳細說明這一點嗎？",
-                },
-                {"text": "I'd like to add something.", "translation": "我想補充一點。"},
-                {
-                    "text": "Let's move on to the next item.",
-                    "translation": "讓我們進入下一個議題。",
-                },
-                {
-                    "text": "Thank you for your participation.",
-                    "translation": "感謝您的參與。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2125,25 +1955,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_business[2].id,
             type=ContentType.READING_ASSESSMENT,
             title="Presentation Skills 簡報技巧",
-            items=[
-                {
-                    "text": "Today I'll be talking about...",
-                    "translation": "今天我要談論的是...",
-                },
-                {
-                    "text": "Let me show you this chart.",
-                    "translation": "讓我向您展示這個圖表。",
-                },
-                {
-                    "text": "As you can see from the data...",
-                    "translation": "從數據中可以看出...",
-                },
-                {"text": "Are there any questions?", "translation": "有任何問題嗎？"},
-                {
-                    "text": "Thank you for your attention.",
-                    "translation": "感謝您的關注。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2156,16 +1967,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_grammar[0].id,
             type=ContentType.READING_ASSESSMENT,
             title="Be Verbs and Simple Present Be動詞與現在簡單式",
-            items=[
-                {"text": "I am a student.", "translation": "我是學生。"},
-                {"text": "She is happy.", "translation": "她很開心。"},
-                {"text": "They are friends.", "translation": "他們是朋友。"},
-                {"text": "He plays tennis every day.", "translation": "他每天打網球。"},
-                {
-                    "text": "We study English on Monday.",
-                    "translation": "我們星期一學英文。",
-                },
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2178,13 +1979,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_grammar[1].id,
             type=ContentType.READING_ASSESSMENT,
             title="Articles and Nouns 冠詞與名詞",
-            items=[
-                {"text": "I have a book.", "translation": "我有一本書。"},
-                {"text": "The book is on the table.", "translation": "那本書在桌上。"},
-                {"text": "She is an engineer.", "translation": "她是工程師。"},
-                {"text": "Water is important.", "translation": "水很重要。"},
-                {"text": "I need some apples.", "translation": "我需要一些蘋果。"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
@@ -2197,19 +1991,6 @@ def seed_template_programs(db: Session):
             lesson_id=lessons_grammar[2].id,
             type=ContentType.READING_ASSESSMENT,
             title="Simple Past Tense 過去簡單式",
-            items=[
-                {
-                    "text": "I went to school yesterday.",
-                    "translation": "我昨天去學校了。",
-                },
-                {
-                    "text": "She studied English last night.",
-                    "translation": "她昨晚學習英文。",
-                },
-                {"text": "They played football.", "translation": "他們踢了足球。"},
-                {"text": "He was happy.", "translation": "他很開心。"},
-                {"text": "We were at home.", "translation": "我們在家。"},
-            ],
             order_index=1,
             is_active=True,
             is_public=True,
