@@ -186,7 +186,6 @@ async def get_student_assignments(
                     if assignment.submitted_at
                     else None
                 ),
-                "content_id": assignment.content_id,
                 "classroom_id": assignment.classroom_id,
                 "score": assignment.score,
                 "feedback": assignment.feedback,
