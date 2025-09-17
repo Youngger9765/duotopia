@@ -21,7 +21,6 @@ from models import (
     AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
-    StudentItemProgress,
     ProgramLevel,
     ContentType,
     AssignmentStatus,

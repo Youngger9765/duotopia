@@ -2,13 +2,10 @@
 簡化的 TDD 測試：驗證 AI 評分統一陣列格式修復
 測試修改後的 students.py 邏輯
 """
-import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime
 from models import (
     Teacher,
     Student,
-    Classroom,
     Program,
     Lesson,
     Content,

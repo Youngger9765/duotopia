@@ -3,11 +3,9 @@
 驗證新的 ContentItem 架構正確運作
 """
 
-import pytest
 from sqlalchemy.orm import Session
-import io
 
-from database import get_db
+from database import SessionLocal
 from models import (
     Teacher,
     Student,
@@ -299,8 +297,6 @@ if __name__ == "__main__":
     import sys
 
     sys.path.append("../../..")
-
-    from database import SessionLocal
 
     print("🚀 執行端到端測試...")
     db = SessionLocal()
