@@ -473,10 +473,10 @@ export default function StudentActivityPage() {
     }
   };
 
-  const handleActivitySelect = async (index: number) => {
+  const handleActivitySelect = async (index: number, subQuestionIndex: number = 0) => {
     await autoSave();
     setCurrentActivityIndex(index);
-    setCurrentSubQuestionIndex(0); // Reset sub-question index
+    setCurrentSubQuestionIndex(subQuestionIndex); // Set to specific sub-question
     setRecordingTime(0);
   };
 
@@ -812,9 +812,10 @@ export default function StudentActivityPage() {
                             key={itemIndex}
                             onClick={() => {
                               if (activityIndex !== currentActivityIndex) {
-                                handleActivitySelect(activityIndex);
+                                handleActivitySelect(activityIndex, itemIndex);
+                              } else {
+                                setCurrentSubQuestionIndex(itemIndex);
                               }
-                              setCurrentSubQuestionIndex(itemIndex);
                             }}
                             className={cn(
                               "relative w-8 h-8 rounded-md border transition-all",
