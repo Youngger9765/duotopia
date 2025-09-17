@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { TagInputWithSuggestions, TagSuggestion } from '@/components/ui/tag-input';
 import {
@@ -57,6 +58,7 @@ interface Classroom {
 }
 
 export default function TeacherTemplatePrograms() {
+  const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,17 +138,6 @@ export default function TeacherTemplatePrograms() {
     setDialogType('view');
   };
 
-  const handleEditProgram = (program: Program) => {
-    setSelectedProgram(program);
-    setFormData({
-      name: program.name,
-      description: program.description || '',
-      level: program.level || 'A1',
-      estimated_hours: program.estimated_hours?.toString() || '',
-      tags: program.tags || [],
-    });
-    setDialogType('edit');
-  };
 
   const handleCopyProgram = (program: Program) => {
     setSelectedProgram(program);
@@ -408,8 +399,8 @@ export default function TeacherTemplatePrograms() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="編輯"
-                        onClick={() => handleEditProgram(program)}
+                        title="編輯課程內容"
+                        onClick={() => navigate(`/teacher/template-programs/${program.id}`)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>

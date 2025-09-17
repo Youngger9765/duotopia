@@ -6,10 +6,10 @@ from datetime import datetime  # noqa: F401
 from typing import List  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
-from models import Program, Lesson, Teacher, Classroom
+from models import Program, Lesson, Teacher, Classroom, Content
 from schemas import (
     ProgramCreate,
     ProgramUpdate,
@@ -142,15 +142,20 @@ async def create_template_program(
     return db_program
 
 
-@router.get("/templates/{program_id}", response_model=ProgramResponse)
+@router.get("/templates/{program_id}")
 async def get_template_program(
     program_id: int,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
-    """取得單一公版課程模板詳情"""
+    """取得單一公版課程模板詳情（包含 lessons 和 contents）"""
     template = (
         db.query(Program)
+        .options(
+            selectinload(Program.lessons)
+            .selectinload(Lesson.contents)
+            .selectinload(Content.content_items)
+        )
         .filter(
             Program.id == program_id,
             Program.is_template.is_(True),
@@ -163,7 +168,50 @@ async def get_template_program(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    return template
+    # 轉換成包含完整資料的回應
+    result = {
+        "id": template.id,
+        "name": template.name,
+        "description": template.description,
+        "level": template.level,
+        "estimated_hours": template.estimated_hours,
+        "tags": template.tags,
+        "is_template": template.is_template,
+        "lessons": [],
+    }
+
+    for lesson in template.lessons:
+        lesson_data = {
+            "id": lesson.id,
+            "name": lesson.name,  # 使用 name 欄位
+            "description": lesson.description,
+            "estimated_minutes": lesson.estimated_minutes,
+            "order_index": lesson.order_index,
+            "contents": [],
+        }
+
+        for content in lesson.contents:
+            content_items = content.content_items or []
+            content_data = {
+                "id": content.id,
+                "title": content.title,
+                "type": content.type,
+                "items_count": len(content_items),
+                "items": [
+                    {
+                        "id": item.id,
+                        "text": item.text,
+                        "translation": item.translation,
+                        "audio_url": item.audio_url,
+                    }
+                    for item in content_items
+                ],
+            }
+            lesson_data["contents"].append(content_data)
+
+        result["lessons"].append(lesson_data)
+
+    return result
 
 
 @router.put("/templates/{program_id}", response_model=ProgramResponse)
