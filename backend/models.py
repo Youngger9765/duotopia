@@ -15,7 +15,10 @@ from sqlalchemy import (
     Date,
     Enum,
     Float,
+    DECIMAL,
+    UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -312,6 +315,9 @@ class Content(Base):
     # Relationships
     lesson = relationship("Lesson", back_populates="contents")
     assignments = relationship("StudentAssignment", back_populates="content")
+    content_items = relationship(
+        "ContentItem", back_populates="content", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Content {self.title}>"
@@ -422,6 +428,11 @@ class StudentAssignment(Base):
         back_populates="student_assignment",
         cascade="all, delete-orphan",
     )
+    item_progress = relationship(
+        "StudentItemProgress",
+        back_populates="student_assignment",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Assignment {self.title} for {self.student_id}>"
@@ -470,3 +481,122 @@ class StudentContentProgress(Base):
 
 
 # AssignmentSubmission 已移除 - 新架構使用 StudentContentProgress 記錄提交內容
+
+
+# ============ New Item-based Models (Phase 2) ============
+
+
+class ContentItem(Base):
+    """Individual question/item within a Content"""
+
+    __tablename__ = "content_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content_id = Column(
+        Integer, ForeignKey("contents.id", ondelete="CASCADE"), nullable=False
+    )
+    order_index = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    translation = Column(Text)
+    audio_url = Column(Text)  # Example audio file
+    item_metadata = Column(JSONB, default={})
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    content = relationship("Content", back_populates="content_items")
+    student_progress = relationship(
+        "StudentItemProgress",
+        back_populates="content_item",
+        cascade="all, delete-orphan",
+    )
+
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint("content_id", "order_index", name="_content_item_order_uc"),
+    )
+
+    def __repr__(self):
+        return f"<ContentItem(id={self.id}, content_id={self.content_id}, order={self.order_index}, text='{self.text[:30]}...')>"
+
+
+class StudentItemProgress(Base):
+    """Track individual item progress for each student"""
+
+    __tablename__ = "student_item_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_assignment_id = Column(
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content_item_id = Column(
+        Integer, ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # Recording data
+    recording_url = Column(Text)
+    answer_text = Column(Text)
+    submitted_at = Column(DateTime(timezone=True))
+
+    # AI Assessment (flattened structure for better querying)
+    accuracy_score = Column(DECIMAL(5, 2))
+    fluency_score = Column(DECIMAL(5, 2))
+    pronunciation_score = Column(DECIMAL(5, 2))
+    ai_feedback = Column(Text)
+    ai_assessed_at = Column(DateTime(timezone=True))
+
+    # Status tracking
+    status = Column(
+        String(20), default="NOT_STARTED"
+    )  # NOT_STARTED, IN_PROGRESS, COMPLETED, SUBMITTED
+    attempts = Column(Integer, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    student_assignment = relationship(
+        "StudentAssignment", back_populates="item_progress"
+    )
+    content_item = relationship("ContentItem", back_populates="student_progress")
+
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint(
+            "student_assignment_id", "content_item_id", name="_student_item_progress_uc"
+        ),
+    )
+
+    @property
+    def overall_score(self):
+        """Calculate overall score from all components"""
+        scores = [
+            s
+            for s in [self.accuracy_score, self.fluency_score, self.pronunciation_score]
+            if s is not None
+        ]
+        return sum(scores) / len(scores) if scores else None
+
+    @property
+    def is_completed(self):
+        """Check if this item is completed"""
+        return self.status == "COMPLETED"
+
+    @property
+    def has_recording(self):
+        """Check if recording exists"""
+        return self.recording_url is not None and self.recording_url != ""
+
+    @property
+    def has_ai_assessment(self):
+        """Check if AI assessment exists"""
+        return any([self.accuracy_score, self.fluency_score, self.pronunciation_score])
+
+    def __repr__(self):
+        return f"<StudentItemProgress(id={self.id}, assignment={self.student_assignment_id}, item={self.content_item_id}, status={self.status})>"
