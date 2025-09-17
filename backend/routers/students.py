@@ -848,9 +848,32 @@ async def upload_student_recording(
         if existing_progress and existing_progress.response_data:
             old_audio_url = existing_progress.response_data.get("audio_url")
 
-        # 簡單上傳，不需要複雜的檔名識別
-        # 使用真實的 content_id 創建資料庫記錄（簡化：使用 content_id = 1）
-        real_content_id = 1
+        # 根據 assignment 找到正確的 content_id
+        # 如果是直接的 content assignment
+        if assignment.content_id:
+            real_content_id = assignment.content_id
+        # 如果是包含多個 contents 的 assignment
+        elif assignment.assignment_id:
+            # 從 StudentContentProgress 查找對應 order_index 的 content_id
+            # 或從 assignment 的 activities 結構中獲取
+            progress_with_content = (
+                db.query(StudentContentProgress)
+                .filter(
+                    StudentContentProgress.student_assignment_id == assignment_id,
+                    StudentContentProgress.order_index == content_item_index,
+                )
+                .first()
+            )
+            if progress_with_content:
+                real_content_id = progress_with_content.content_id
+            else:
+                # 如果沒有找到，不應該創建新的，應該報錯
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No content found for order_index {content_item_index}",
+                )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid assignment structure")
 
         # 上傳新錄音（不傳 content_id 和 item_index，讓它用 UUID）
         audio_url = await audio_service.upload_audio(
