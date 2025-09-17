@@ -780,7 +780,9 @@ async def get_student_assignments(
                             if hasattr(content.type, "value")
                             else str(content.type)
                         ),
-                        "items_count": len(content.items) if content.items else 0,
+                        "items_count": len(content.content_items)
+                        if hasattr(content, "content_items")
+                        else 0,
                     }
                     if content
                     else None
@@ -1180,7 +1182,9 @@ async def get_available_contents(
     # 轉換為回應格式
     response = []
     for content in contents:
-        items_count = len(content.items) if content.items else 0
+        items_count = (
+            len(content.content_items) if hasattr(content, "content_items") else 0
+        )
         response.append(
             ContentResponse(
                 id=content.id,
@@ -1326,9 +1330,9 @@ async def ai_grade_assignment(
         else:
             # 準備預期文字
             expected_texts = []
-            if content.items:
-                for item in content.items:
-                    expected_texts.append(item.get("text", ""))
+            if hasattr(content, "content_items"):
+                for item in content.content_items:
+                    expected_texts.append(item.text if hasattr(item, "text") else "")
 
             # 呼叫 Whisper API
             whisper_result = await process_audio_with_whisper(
@@ -1637,7 +1641,7 @@ async def get_student_submission(
     if assignment_contents:
         item_index = 0  # 全局題目索引
         for ac, content in assignment_contents:
-            if content.items:
+            if hasattr(content, "content_items") and content.content_items:
                 # 建立內容群組
                 group = {
                     "content_id": content.id,
@@ -1650,15 +1654,19 @@ async def get_student_submission(
 
                 # 不在這裡獲取 progress，改為在每個題目中單獨獲取
 
-                # items 是 JSON 格式的題目列表
-                items_data = content.items if isinstance(content.items, list) else []
+                # 使用 ContentItem 關聯
+                items_data = list(content.content_items)
                 for local_item_index, item in enumerate(items_data):
                     submission = {
                         "content_id": content.id,
                         "content_title": content.title,
-                        "question_text": item.get("text", ""),
-                        "question_translation": item.get("translation", ""),
-                        "question_audio_url": item.get("audio_url", ""),  # 題目參考音檔
+                        "question_text": item.text if hasattr(item, "text") else "",
+                        "question_translation": item.translation
+                        if hasattr(item, "translation")
+                        else "",
+                        "question_audio_url": item.audio_url
+                        if hasattr(item, "audio_url")
+                        else "",  # 題目參考音檔
                         "student_answer": "",  # 預設空字串
                         "student_audio_url": "",  # 學生錄音檔案
                         "transcript": "",  # 語音辨識結果
@@ -1875,10 +1883,8 @@ async def grade_student_assignment(
         for progress in progress_records:
             # 獲取此 content 的所有項目數量
             content = content_dict.get(progress.content_id)
-            if content and content.items:
-                items_count = (
-                    len(content.items) if isinstance(content.items, list) else 0
-                )
+            if content and hasattr(content, "content_items"):
+                items_count = len(content.content_items)
 
                 # 收集此 content 的所有 item 回饋
                 items_feedback = []

@@ -403,33 +403,75 @@ async def get_assignment_activities(
                     .all()
                 )
 
+                # 獲取 StudentItemProgress 記錄（包含 AI 評估資料）
+                item_progress_list = []
+                if content_items:
+                    item_ids = [ci.id for ci in content_items]
+                    item_progress_list = (
+                        db.query(StudentItemProgress)
+                        .filter(
+                            StudentItemProgress.student_assignment_id
+                            == student_assignment.id,
+                            StudentItemProgress.content_item_id.in_(item_ids),
+                        )
+                        .all()
+                    )
+
+                # 建立 progress 索引
+                progress_by_item = {p.content_item_id: p for p in item_progress_list}
+
                 if content_items:
                     # 使用 ContentItem 記錄（每個都有 ID）
                     items_with_ids = []
                     for ci in content_items:
-                        items_with_ids.append(
-                            {
-                                "id": ci.id,  # ContentItem 的 ID！
-                                "text": ci.text,
-                                "translation": ci.translation,
-                                "audio_url": ci.audio_url,
-                                "order_index": ci.order_index,
-                            }
-                        )
+                        item_progress = progress_by_item.get(ci.id)
+                        item_data = {
+                            "id": ci.id,  # ContentItem 的 ID！
+                            "text": ci.text,
+                            "translation": ci.translation,
+                            "audio_url": ci.audio_url,
+                            "order_index": ci.order_index,
+                        }
+
+                        # 如果有 progress 記錄，加入 AI 評估資料
+                        if item_progress:
+                            item_data["recording_url"] = item_progress.recording_url
+                            item_data["status"] = item_progress.status
+                            if item_progress.has_ai_assessment:
+                                item_data["ai_assessment"] = {
+                                    "accuracy_score": float(
+                                        item_progress.accuracy_score
+                                    )
+                                    if item_progress.accuracy_score
+                                    else None,
+                                    "fluency_score": float(item_progress.fluency_score)
+                                    if item_progress.fluency_score
+                                    else None,
+                                    "pronunciation_score": float(
+                                        item_progress.pronunciation_score
+                                    )
+                                    if item_progress.pronunciation_score
+                                    else None,
+                                    "ai_feedback": item_progress.ai_feedback,
+                                    "assessed_at": item_progress.ai_assessed_at.isoformat()
+                                    if item_progress.ai_assessed_at
+                                    else None,
+                                }
+
+                        items_with_ids.append(item_data)
+
                     activity_data["items"] = items_with_ids
                     activity_data["item_count"] = len(items_with_ids)
-                elif content.items and isinstance(content.items, list):
-                    # 如果沒有 ContentItem 記錄，回退到使用 Content.items（但沒有 ID）
-                    # 這種情況應該要修復，因為需要 ContentItem ID 來上傳錄音
-                    print(
-                        f"Warning: Content {content.id} has no ContentItem records, using JSONB items"
-                    )
-                    activity_data["items"] = content.items
-                    activity_data["item_count"] = len(content.items)
                 else:
-                    # 單題目情況 - 也統一為陣列模式
+                    # 沒有 ContentItem 記錄的情況 - 返回空陣列
+                    print(f"Warning: Content {content.id} has no ContentItem records")
+                    activity_data["items"] = []
+                    activity_data["item_count"] = 0
+
+                # 如果完全沒有項目，提供一個空的預設項目
+                if not activity_data.get("items"):
                     single_item = {
-                        "text": str(content.items) if content.items else "",
+                        "text": "",
                         "translation": "",
                     }
                     activity_data["items"] = [single_item]

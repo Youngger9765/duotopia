@@ -21,6 +21,7 @@ from models import (
     AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
+    StudentItemProgress,
     ProgramLevel,
     ContentType,
     AssignmentStatus,
@@ -444,7 +445,7 @@ def create_demo_data(db: Session):
             {"text": "Take care", "translation": "保重"},
             {"text": "Goodbye", "translation": "再見"},
         ],
-        "數字練習": [
+        "數字 1-10 練習": [
             {"text": "One, Two, Three", "translation": "一、二、三"},
             {"text": "Four, Five, Six", "translation": "四、五、六"},
             {"text": "Seven, Eight", "translation": "七、八"},
@@ -457,6 +458,137 @@ def create_demo_data(db: Session):
             {"text": "Black and White", "translation": "黑色和白色"},
             {"text": "The sky is blue", "translation": "天空是藍色的"},
             {"text": "I like green", "translation": "我喜歡綠色"},
+        ],
+        "自我介紹練習": [
+            {"text": "My name is John", "translation": "我的名字是約翰"},
+            {"text": "I am ten years old", "translation": "我十歲"},
+            {"text": "I live in Taipei", "translation": "我住在台北"},
+            {"text": "I like playing games", "translation": "我喜歡玩遊戲"},
+            {"text": "Nice to meet you all", "translation": "很高興認識大家"},
+        ],
+        "日常對話練習 Part 1": [
+            {"text": "What time is it?", "translation": "現在幾點？"},
+            {"text": "It's three o'clock", "translation": "現在三點"},
+            {"text": "Where are you going?", "translation": "你要去哪裡？"},
+            {"text": "I'm going to school", "translation": "我要去學校"},
+            {"text": "See you tomorrow", "translation": "明天見"},
+        ],
+        # Program ID 4: 初級英語會話課程
+        "Basic Greetings 基本問候語": [
+            {"text": "Hello, how are you?", "translation": "你好，你好嗎？"},
+            {"text": "I'm fine, thank you", "translation": "我很好，謝謝"},
+            {"text": "Good morning", "translation": "早安"},
+            {"text": "Good afternoon", "translation": "午安"},
+            {"text": "Good evening", "translation": "晚安"},
+        ],
+        "My Daily Routine 我的日常作息": [
+            {"text": "I wake up at seven", "translation": "我七點起床"},
+            {"text": "I brush my teeth", "translation": "我刷牙"},
+            {"text": "I eat breakfast", "translation": "我吃早餐"},
+            {"text": "I go to school", "translation": "我去上學"},
+            {"text": "I do my homework", "translation": "我做功課"},
+        ],
+        "Shopping Vocabulary 購物詞彙": [
+            {"text": "How much is this?", "translation": "這個多少錢？"},
+            {"text": "It's ten dollars", "translation": "十塊錢"},
+            {"text": "Can I try it on?", "translation": "我可以試穿嗎？"},
+            {"text": "Do you have a smaller size?", "translation": "有小一點的尺寸嗎？"},
+            {"text": "I'll take it", "translation": "我要買這個"},
+        ],
+        "Restaurant English 餐廳英語": [
+            {"text": "May I see the menu?", "translation": "我可以看菜單嗎？"},
+            {"text": "I'd like to order", "translation": "我想要點餐"},
+            {"text": "What do you recommend?", "translation": "你推薦什麼？"},
+            {"text": "Can I have the bill?", "translation": "可以結帳嗎？"},
+            {"text": "The food was delicious", "translation": "食物很美味"},
+        ],
+        # Program ID 5: 中級英語閱讀理解
+        "Reading Strategies 閱讀策略": [
+            {"text": "Find the main idea", "translation": "找出主要概念"},
+            {"text": "Look for key words", "translation": "尋找關鍵字"},
+            {"text": "Understand context clues", "translation": "理解上下文線索"},
+            {"text": "Make predictions", "translation": "進行預測"},
+            {"text": "Summarize the text", "translation": "總結文章"},
+        ],
+        "News Headlines 新聞標題": [
+            {"text": "Breaking news today", "translation": "今日突發新聞"},
+            {"text": "Weather forecast shows rain", "translation": "天氣預報顯示有雨"},
+            {"text": "Sports team wins championship", "translation": "運動隊贏得冠軍"},
+            {"text": "New technology announced", "translation": "新科技發布"},
+            {"text": "Market prices increase", "translation": "市場價格上漲"},
+        ],
+        "Story Elements 故事元素": [
+            {"text": "The main character", "translation": "主角"},
+            {"text": "Setting of the story", "translation": "故事背景"},
+            {"text": "Plot development", "translation": "情節發展"},
+            {"text": "Climax of the story", "translation": "故事高潮"},
+            {"text": "Story resolution", "translation": "故事結局"},
+        ],
+        # Program ID 6: 英語發音訓練課程
+        "Vowel Sounds 母音發音": [
+            {"text": "Cat, bat, sat", "translation": "貓、蝙蝠、坐"},
+            {"text": "See, bee, tree", "translation": "看、蜜蜂、樹"},
+            {"text": "Go, no, so", "translation": "去、不、所以"},
+            {"text": "Book, cook, look", "translation": "書、煮、看"},
+            {"text": "Blue, true, new", "translation": "藍色、真的、新的"},
+        ],
+        "Consonant Sounds 子音發音": [
+            {"text": "Pet, put, pot", "translation": "寵物、放、鍋子"},
+            {"text": "Big, bag, bug", "translation": "大、包、蟲"},
+            {"text": "Think, thing, thank", "translation": "想、東西、謝謝"},
+            {"text": "Fish, wish, dish", "translation": "魚、希望、盤子"},
+            {"text": "Red, run, rain", "translation": "紅色、跑、雨"},
+        ],
+        "Word Stress 重音練習": [
+            {"text": "TEAcher, STUdent", "translation": "老師、學生"},
+            {"text": "comPUter, umBRElla", "translation": "電腦、雨傘"},
+            {"text": "HOSpital, LIbrary", "translation": "醫院、圖書館"},
+            {"text": "imPORtant, inTEresting", "translation": "重要的、有趣的"},
+            {"text": "phoTOgraphy, geOgraphy", "translation": "攝影、地理"},
+        ],
+        # Program ID 7: 商務英語入門
+        "Business Email Writing 商務郵件": [
+            {"text": "Dear Mr. Smith", "translation": "親愛的史密斯先生"},
+            {"text": "I hope this email finds you well", "translation": "希望您一切安好"},
+            {"text": "Please find attached", "translation": "請查收附件"},
+            {"text": "Looking forward to your reply", "translation": "期待您的回覆"},
+            {"text": "Best regards", "translation": "最誠摯的問候"},
+        ],
+        "Meeting English 會議英語": [
+            {"text": "Let's begin the meeting", "translation": "讓我們開始會議"},
+            {"text": "Could you elaborate on that?", "translation": "您能詳細說明嗎？"},
+            {"text": "I'd like to add something", "translation": "我想補充一點"},
+            {"text": "Let's move on to the next topic", "translation": "讓我們進入下一個議題"},
+            {"text": "Meeting adjourned", "translation": "會議結束"},
+        ],
+        "Presentation Skills 簡報技巧": [
+            {"text": "Good morning everyone", "translation": "大家早安"},
+            {"text": "Today I'll be talking about", "translation": "今天我要談論的是"},
+            {"text": "Let me show you this chart", "translation": "讓我展示這個圖表"},
+            {"text": "Are there any questions?", "translation": "有任何問題嗎？"},
+            {"text": "Thank you for your attention", "translation": "感謝您的關注"},
+        ],
+        # Program ID 8: 英語文法基礎課程
+        "Be Verbs and Simple Present Be動詞與現在簡單式": [
+            {"text": "I am a student", "translation": "我是學生"},
+            {"text": "She is happy", "translation": "她很開心"},
+            {"text": "They are friends", "translation": "他們是朋友"},
+            {"text": "He plays tennis", "translation": "他打網球"},
+            {"text": "We study English", "translation": "我們學習英文"},
+        ],
+        "Articles and Nouns 冠詞與名詞": [
+            {"text": "A cat, an apple", "translation": "一隻貓、一個蘋果"},
+            {"text": "The sun is bright", "translation": "太陽很亮"},
+            {"text": "Books are interesting", "translation": "書很有趣"},
+            {"text": "The children play", "translation": "孩子們在玩"},
+            {"text": "An hour ago", "translation": "一小時前"},
+        ],
+        "Simple Past Tense 過去簡單式": [
+            {"text": "I went to school", "translation": "我去了學校"},
+            {"text": "She ate breakfast", "translation": "她吃了早餐"},
+            {"text": "They played games", "translation": "他們玩了遊戲"},
+            {"text": "We watched a movie", "translation": "我們看了電影"},
+            {"text": "He studied hard", "translation": "他努力學習"},
         ],
     }
 
@@ -476,16 +608,7 @@ def create_demo_data(db: Session):
                     audio_url=item_data.get("audio_url"),
                 )
                 content_items.append(content_item)
-        # 如果沒有預定義的 items，嘗試從 content.items 讀取（向後相容）
-        elif hasattr(content, "items") and content.items:
-            for idx, item_data in enumerate(content.items):
-                content_item = ContentItem(
-                    content_id=content.id,
-                    order_index=idx,
-                    text=item_data.get("text", ""),
-                    translation=item_data.get("translation", ""),
-                )
-                content_items.append(content_item)
+        # Content 不再有 items 屬性，所有項目都通過 ContentItem 表管理
 
     if content_items:
         db.add_all(content_items)
@@ -1474,6 +1597,84 @@ def create_demo_data(db: Session):
     else:
         print("王小明已有完整的作業狀態分布")
 
+    # ============ 8.5 建立 StudentItemProgress 測試資料（含 AI 評估）============
+    print("\n📝 建立 StudentItemProgress 測試資料（含 AI 評估）...")
+
+    # 為第一個作業建立一些測試的錄音和 AI 評估資料
+    # 先查詢第一個作業的 StudentAssignment
+    test_student_assignments = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.status.in_(
+                [
+                    AssignmentStatus.IN_PROGRESS,
+                    AssignmentStatus.SUBMITTED,
+                    AssignmentStatus.GRADED,
+                ]
+            )
+        )
+        .limit(3)
+        .all()
+    )
+
+    # 查詢 ContentItem 記錄
+    test_content_items = db.query(ContentItem).order_by(ContentItem.id).limit(5).all()
+
+    student_item_progress_records = []
+
+    if test_student_assignments and test_content_items:
+        from decimal import Decimal
+        import json
+
+        for student_assignment in test_student_assignments[:2]:  # 只為前兩個學生作業建立
+            for idx, content_item in enumerate(
+                test_content_items[:3]
+            ):  # 每個作業建立 3 個題目的進度
+                progress = StudentItemProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_item_id=content_item.id,
+                    recording_url=(
+                        f"https://storage.googleapis.com/duotopia-audio/recordings/"
+                        f"test_{student_assignment.id}_{content_item.id}.webm"
+                    ),
+                    submitted_at=datetime.now()
+                    - timedelta(hours=random.randint(1, 24)),
+                    accuracy_score=Decimal(str(round(random.uniform(75, 95), 2))),
+                    fluency_score=Decimal(str(round(random.uniform(70, 90), 2))),
+                    pronunciation_score=Decimal(str(round(random.uniform(65, 95), 2))),
+                    ai_feedback=json.dumps(
+                        {
+                            "completeness_score": round(random.uniform(80, 100), 2),
+                            "word_details": [
+                                {
+                                    "word": content_item.text.split()[0]
+                                    if content_item.text
+                                    else "Hello",
+                                    "accuracy_score": round(random.uniform(70, 95), 2),
+                                    "error_type": None
+                                    if random.random() > 0.3
+                                    else "mispronunciation",
+                                }
+                            ],
+                            "suggestions": "Good pronunciation overall. Keep practicing!"
+                            if idx == 0
+                            else None,
+                        }
+                    ),
+                    ai_assessed_at=datetime.now()
+                    - timedelta(hours=random.randint(1, 20)),
+                    status="COMPLETED" if idx < 2 else "SUBMITTED",
+                    attempts=random.randint(1, 3),
+                )
+                student_item_progress_records.append(progress)
+
+        if student_item_progress_records:
+            db.add_all(student_item_progress_records)
+            db.commit()
+            print(
+                f"✅ 建立 {len(student_item_progress_records)} 個 StudentItemProgress 記錄（含 AI 評估）"
+            )
+
     # ============ 9. 統計顯示 ============
     print("\n📊 作業系統統計：")
 
@@ -2000,6 +2201,150 @@ def seed_template_programs(db: Session):
     db.add_all(template_contents)
     db.commit()
     print(f"✅ 為模板課程建立了 {len(template_contents)} 個內容")
+
+    # ============ 3.5 為模板課程內容建立 ContentItem ============
+    print("📝 為模板課程建立 ContentItem...")
+
+    # ContentItem 資料定義（已在前面定義過）
+    content_items_data = {
+        # Program ID 4: 初級英語會話課程
+        "Basic Greetings 基本問候語": [
+            {"text": "Hello, how are you?", "translation": "你好，你好嗎？"},
+            {"text": "I'm fine, thank you", "translation": "我很好，謝謝"},
+            {"text": "Good morning", "translation": "早安"},
+            {"text": "Good afternoon", "translation": "午安"},
+            {"text": "Good evening", "translation": "晚安"},
+        ],
+        "My Daily Routine 我的日常作息": [
+            {"text": "I wake up at seven", "translation": "我七點起床"},
+            {"text": "I brush my teeth", "translation": "我刷牙"},
+            {"text": "I eat breakfast", "translation": "我吃早餐"},
+            {"text": "I go to school", "translation": "我去上學"},
+            {"text": "I do my homework", "translation": "我做功課"},
+        ],
+        "Shopping Vocabulary 購物詞彙": [
+            {"text": "How much is this?", "translation": "這個多少錢？"},
+            {"text": "It's ten dollars", "translation": "十塊錢"},
+            {"text": "Can I try it on?", "translation": "我可以試穿嗎？"},
+            {"text": "Do you have a smaller size?", "translation": "有小一點的尺寸嗎？"},
+            {"text": "I'll take it", "translation": "我要買這個"},
+        ],
+        "Restaurant English 餐廳英語": [
+            {"text": "May I see the menu?", "translation": "我可以看菜單嗎？"},
+            {"text": "I'd like to order", "translation": "我想要點餐"},
+            {"text": "What do you recommend?", "translation": "你推薦什麼？"},
+            {"text": "Can I have the bill?", "translation": "可以結帳嗎？"},
+            {"text": "The food was delicious", "translation": "食物很美味"},
+        ],
+        # Program ID 5: 中級英語閱讀理解
+        "Reading Strategies 閱讀策略": [
+            {"text": "Find the main idea", "translation": "找出主要概念"},
+            {"text": "Look for key words", "translation": "尋找關鍵字"},
+            {"text": "Understand context clues", "translation": "理解上下文線索"},
+            {"text": "Make predictions", "translation": "進行預測"},
+            {"text": "Summarize the text", "translation": "總結文章"},
+        ],
+        "News Headlines 新聞標題": [
+            {"text": "Breaking news today", "translation": "今日突發新聞"},
+            {"text": "Weather forecast shows rain", "translation": "天氣預報顯示有雨"},
+            {"text": "Sports team wins championship", "translation": "運動隊贏得冠軍"},
+            {"text": "New technology announced", "translation": "新科技發布"},
+            {"text": "Market prices increase", "translation": "市場價格上漲"},
+        ],
+        "Story Elements 故事元素": [
+            {"text": "The main character", "translation": "主角"},
+            {"text": "Setting of the story", "translation": "故事背景"},
+            {"text": "Plot development", "translation": "情節發展"},
+            {"text": "Climax of the story", "translation": "故事高潮"},
+            {"text": "Story resolution", "translation": "故事結局"},
+        ],
+        # Program ID 6: 英語發音訓練課程
+        "Vowel Sounds 母音發音": [
+            {"text": "Cat, bat, sat", "translation": "貓、蝙蝠、坐"},
+            {"text": "See, bee, tree", "translation": "看、蜜蜂、樹"},
+            {"text": "Go, no, so", "translation": "去、不、所以"},
+            {"text": "Book, cook, look", "translation": "書、煮、看"},
+            {"text": "Blue, true, new", "translation": "藍色、真的、新的"},
+        ],
+        "Consonant Sounds 子音發音": [
+            {"text": "Pet, put, pot", "translation": "寵物、放、鍋子"},
+            {"text": "Big, bag, bug", "translation": "大、包、蟲"},
+            {"text": "Think, thing, thank", "translation": "想、東西、謝謝"},
+            {"text": "Fish, wish, dish", "translation": "魚、希望、盤子"},
+            {"text": "Red, run, rain", "translation": "紅色、跑、雨"},
+        ],
+        "Word Stress 重音練習": [
+            {"text": "TEAcher, STUdent", "translation": "老師、學生"},
+            {"text": "comPUter, umBRElla", "translation": "電腦、雨傘"},
+            {"text": "HOSpital, LIbrary", "translation": "醫院、圖書館"},
+            {"text": "imPORtant, inTEresting", "translation": "重要的、有趣的"},
+            {"text": "phoTOgraphy, geOgraphy", "translation": "攝影、地理"},
+        ],
+        # Program ID 7: 商務英語入門
+        "Business Email Writing 商務郵件": [
+            {"text": "Dear Mr. Smith", "translation": "親愛的史密斯先生"},
+            {"text": "I hope this email finds you well", "translation": "希望您一切安好"},
+            {"text": "Please find attached", "translation": "請查收附件"},
+            {"text": "Looking forward to your reply", "translation": "期待您的回覆"},
+            {"text": "Best regards", "translation": "最誠摯的問候"},
+        ],
+        "Meeting English 會議英語": [
+            {"text": "Let's begin the meeting", "translation": "讓我們開始會議"},
+            {"text": "Could you elaborate on that?", "translation": "您能詳細說明嗎？"},
+            {"text": "I'd like to add something", "translation": "我想補充一點"},
+            {"text": "Let's move on to the next topic", "translation": "讓我們進入下一個議題"},
+            {"text": "Meeting adjourned", "translation": "會議結束"},
+        ],
+        "Presentation Skills 簡報技巧": [
+            {"text": "Good morning everyone", "translation": "大家早安"},
+            {"text": "Today I'll be talking about", "translation": "今天我要談論的是"},
+            {"text": "Let me show you this chart", "translation": "讓我展示這個圖表"},
+            {"text": "Are there any questions?", "translation": "有任何問題嗎？"},
+            {"text": "Thank you for your attention", "translation": "感謝您的關注"},
+        ],
+        # Program ID 8: 英語文法基礎課程
+        "Be Verbs and Simple Present Be動詞與現在簡單式": [
+            {"text": "I am a student", "translation": "我是學生"},
+            {"text": "She is happy", "translation": "她很開心"},
+            {"text": "They are friends", "translation": "他們是朋友"},
+            {"text": "He plays tennis", "translation": "他打網球"},
+            {"text": "We study English", "translation": "我們學習英文"},
+        ],
+        "Articles and Nouns 冠詞與名詞": [
+            {"text": "A cat, an apple", "translation": "一隻貓、一個蘋果"},
+            {"text": "The sun is bright", "translation": "太陽很亮"},
+            {"text": "Books are interesting", "translation": "書很有趣"},
+            {"text": "The children play", "translation": "孩子們在玩"},
+            {"text": "An hour ago", "translation": "一小時前"},
+        ],
+        "Simple Past Tense 過去簡單式": [
+            {"text": "I went to school", "translation": "我去了學校"},
+            {"text": "She ate breakfast", "translation": "她吃了早餐"},
+            {"text": "They played games", "translation": "他們玩了遊戲"},
+            {"text": "We watched a movie", "translation": "我們看了電影"},
+            {"text": "He studied hard", "translation": "他努力學習"},
+        ],
+    }
+
+    # 建立 ContentItem 記錄
+    template_content_items = []
+    for content in template_contents:
+        items_data = content_items_data.get(content.title, [])
+        if items_data:
+            for idx, item_data in enumerate(items_data):
+                content_item = ContentItem(
+                    content_id=content.id,
+                    order_index=idx,
+                    text=item_data.get("text", ""),
+                    translation=item_data.get("translation", ""),
+                    audio_url=item_data.get("audio_url"),
+                )
+                template_content_items.append(content_item)
+
+    if template_content_items:
+        db.add_all(template_content_items)
+        db.commit()
+        print(f"✅ 為模板課程建立了 {len(template_content_items)} 個 ContentItem")
 
     # ============ 4. 顯示結果摘要 ============
     template_count = (
