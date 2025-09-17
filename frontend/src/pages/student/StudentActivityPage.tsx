@@ -813,7 +813,7 @@ export default function StudentActivityPage() {
         <div className="text-center">
           <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">此作業尚無題目</p>
-          <Button onClick={() => navigate(`/student/assignment/${assignmentId}`)}>
+          <Button onClick={() => navigate(`/student/assignment/${assignmentId}/detail`)}>
             返回作業詳情
           </Button>
         </div>
@@ -834,7 +834,7 @@ export default function StudentActivityPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/student/assignment/${assignmentId}`)}
+                onClick={() => navigate(`/student/assignment/${assignmentId}/detail`)}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 返回作業
