@@ -734,11 +734,11 @@ export default function ReadingAssessmentPanel({
 
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string; selectedLanguage?: 'chinese' | 'english' }, index: number) => ({
+        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; english_definition?: string; audio_url?: string; selectedLanguage?: 'chinese' | 'english' }, index: number) => ({
           id: (index + 1).toString(),
           text: item.text || '',
-          definition: item.definition || '',
-          translation: item.translation || '',
+          definition: item.definition || '',  // 中文翻譯
+          translation: item.english_definition || '',  // 英文釋義
           audioUrl: item.audio_url || '',
           selectedLanguage: item.selectedLanguage || 'chinese'  // 使用保存的語言選擇，預設中文
         }));
@@ -1337,11 +1337,14 @@ export default function ReadingAssessmentPanel({
                       onChange={async (e) => {
                         const newLang = e.target.value as 'chinese' | 'english';
                         handleUpdateRow(index, 'selectedLanguage', newLang);
-                        // 選擇語言後自動翻譯 - 直接傳入新語言
+                        // 只有在目標欄位為空時才自動翻譯，避免覆蓋用戶手動輸入的內容
                         if (row.text) {
-                          setTimeout(() => {
-                            handleGenerateSingleDefinitionWithLang(index, newLang);
-                          }, 100);
+                          const targetFieldEmpty = newLang === 'chinese' ? !row.definition : !row.translation;
+                          if (targetFieldEmpty) {
+                            setTimeout(() => {
+                              handleGenerateSingleDefinitionWithLang(index, newLang);
+                            }, 100);
+                          }
                         }
                       }}
                       className="px-1 py-0.5 border rounded text-xs bg-white"
@@ -1520,9 +1523,11 @@ export default function ReadingAssessmentPanel({
                 title: title,
                 items: validRows.map(row => ({
                   text: row.text.trim(),
-                  definition: row.definition || '',
-                  audio_url: row.audioUrl || row.audio_url || '',
-                  translation: row.translation || ''
+                  definition: row.definition || '',  // 中文翻譯
+                  english_definition: row.translation || '',  // 英文釋義
+                  translation: row.definition || '',  // 主要翻譯欄位（保持向後兼容）
+                  selectedLanguage: row.selectedLanguage || 'chinese',  // 記錄選擇的語言
+                  audio_url: row.audioUrl || row.audio_url || ''
                 })),
                 target_wpm: 60,
                 target_accuracy: 0.8,

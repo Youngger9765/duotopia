@@ -1156,7 +1156,11 @@ async def get_program(
     program = (
         db.query(Program)
         .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
-        .options(selectinload(Program.lessons).selectinload(Lesson.contents))
+        .options(
+            selectinload(Program.lessons)
+            .selectinload(Lesson.contents)
+            .selectinload(Content.content_items)
+        )
         .first()
     )
 
@@ -1185,8 +1189,12 @@ async def get_program(
                             content.type.value if content.type else "reading_assessment"
                         ),
                         "title": content.title,
-                        "items": content.items or [],  # Include actual items
-                        "items_count": len(content.items) if content.items else 0,
+                        "items": [item for item in content.content_items]
+                        if hasattr(content, "content_items")
+                        else [],  # Use content_items relationship
+                        "items_count": len(content.content_items)
+                        if hasattr(content, "content_items")
+                        else 0,
                         "estimated_time": "10 分鐘",  # Can be calculated based on items
                     }
                     for content in sorted(
@@ -1594,7 +1602,34 @@ async def get_content_detail(
         "id": content.id,
         "type": content.type.value if content.type else "reading_assessment",
         "title": content.title,
-        "items": content.items or [],
+        "items": [
+            {
+                "id": item.id,
+                "text": item.text,
+                "translation": item.translation,  # 主要翻譯欄位（通常是中文）
+                "definition": item.item_metadata.get("chinese_translation")
+                or item.translation
+                if item.item_metadata
+                else item.translation,  # 中文翻譯
+                "english_definition": item.item_metadata.get("english_definition", "")
+                if item.item_metadata
+                else "",  # 英文釋義
+                "selectedLanguage": item.item_metadata.get(
+                    "selected_language", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",  # 選擇的語言
+                "audio_url": item.audio_url,
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+                "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+                "content_id": item.content_id,
+                "order_index": item.order_index,
+                "item_metadata": item.item_metadata or {},
+            }
+            for item in content.content_items
+        ]
+        if hasattr(content, "content_items")
+        else [],
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
         "time_limit_seconds": content.time_limit_seconds,
@@ -1632,25 +1667,78 @@ async def update_content(
     if update_data.title is not None:
         content.title = update_data.title
     if update_data.items is not None:
-        # 處理音檔更新（刪除舊的）
-        if content.items and update_data.items:
-            old_items = content.items if isinstance(content.items, list) else []
-            new_items = update_data.items
+        # 處理 ContentItem 更新
+        # 先取得現有的 ContentItem
+        from models import ContentItem
 
-            # 建立新音檔 URL 的集合
-            new_audio_urls = set()
-            for item in new_items:
-                if isinstance(item, dict) and "audio_url" in item and item["audio_url"]:
-                    new_audio_urls.add(item["audio_url"])
+        existing_items = (
+            db.query(ContentItem).filter(ContentItem.content_id == content.id).all()
+        )
 
-            # 刪除不再使用的舊音檔
-            for old_item in old_items:
-                if isinstance(old_item, dict) and "audio_url" in old_item:
-                    old_url = old_item["audio_url"]
-                    if old_url and old_url not in new_audio_urls:
-                        audio_manager.delete_old_audio(old_url)
+        # 建立新音檔 URL 的集合
+        new_audio_urls = set()
+        for item in update_data.items:
+            if isinstance(item, dict) and "audio_url" in item and item["audio_url"]:
+                new_audio_urls.add(item["audio_url"])
 
-        content.items = update_data.items
+        # 刪除不再使用的舊音檔
+        for existing_item in existing_items:
+            if hasattr(existing_item, "audio_url") and existing_item.audio_url:
+                if existing_item.audio_url not in new_audio_urls:
+                    audio_manager.delete_old_audio(existing_item.audio_url)
+
+        # 使用參數化查詢刪除所有現有的 ContentItem，確保唯一約束不衝突
+        from sqlalchemy import text
+
+        db.execute(
+            text("DELETE FROM content_items WHERE content_id = :content_id"),
+            {"content_id": content.id},
+        )
+
+        # 確保刪除操作執行完成
+        db.flush()
+
+        # 創建新的 ContentItem
+        for idx, item_data in enumerate(update_data.items):
+            if isinstance(item_data, dict):
+                # Store additional fields in item_metadata
+                metadata = {}
+                if "options" in item_data:
+                    metadata["options"] = item_data["options"]
+                if "correct_answer" in item_data:
+                    metadata["correct_answer"] = item_data["correct_answer"]
+                if "question_type" in item_data:
+                    metadata["question_type"] = item_data["question_type"]
+
+                # 處理雙語翻譯支援
+                if "definition" in item_data:
+                    metadata["chinese_translation"] = item_data["definition"]
+                # 前端將英文釋義發送到 translation 欄位，需要正確映射到 english_definition
+                if "translation" in item_data and item_data["translation"]:
+                    # 如果 selectedLanguage 是 english，則 translation 欄位包含英文釋義
+                    if item_data.get("selectedLanguage") == "english":
+                        metadata["english_definition"] = item_data["translation"]
+                # 也處理直接傳來的 english_definition 欄位（向後相容）
+                if "english_definition" in item_data:
+                    metadata["english_definition"] = item_data["english_definition"]
+                if "selectedLanguage" in item_data:
+                    metadata["selected_language"] = item_data["selectedLanguage"]
+
+                # 根據前端傳來的資料決定存儲到 translation 欄位的內容
+                # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
+                translation_value = item_data.get("definition") or item_data.get(
+                    "translation", ""
+                )
+
+                content_item = ContentItem(
+                    content_id=content.id,
+                    order_index=idx,
+                    text=item_data.get("text", ""),
+                    translation=translation_value,
+                    audio_url=item_data.get("audio_url"),
+                    item_metadata=metadata,
+                )
+                db.add(content_item)
     if update_data.target_wpm is not None:
         content.target_wpm = update_data.target_wpm
     if update_data.target_accuracy is not None:
@@ -1671,7 +1759,38 @@ async def update_content(
         "id": content.id,
         "type": content.type.value,
         "title": content.title,
-        "items": content.items,
+        "items": [
+            {
+                "id": item.id,
+                "text": item.text,
+                "translation": item.translation,  # 主要翻譯欄位（通常是中文）
+                "definition": item.item_metadata.get("chinese_translation")
+                or item.translation
+                if item.item_metadata
+                else item.translation,  # 中文翻譯
+                "english_definition": item.item_metadata.get("english_definition", "")
+                if item.item_metadata
+                else "",  # 英文釋義
+                "selectedLanguage": item.item_metadata.get(
+                    "selected_language", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",  # 選擇的語言
+                "audio_url": item.audio_url,
+                "options": item.item_metadata.get("options", [])
+                if item.item_metadata
+                else [],
+                "correct_answer": item.item_metadata.get("correct_answer")
+                if item.item_metadata
+                else None,
+                "question_type": item.item_metadata.get("question_type", "text")
+                if item.item_metadata
+                else "text",
+            }
+            for item in content.content_items
+        ]
+        if hasattr(content, "content_items")
+        else [],
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
         "order_index": content.order_index,
@@ -1888,11 +2007,22 @@ async def upload_audio(
                 .first()
             )
 
-            if content and content.items and item_index < len(content.items):
-                old_audio_url = content.items[item_index].get("audio_url")
-                if old_audio_url:
-                    # 刪除舊音檔
-                    audio_manager.delete_old_audio(old_audio_url)
+            if content:
+                # 查找對應的 ContentItem
+                from models import ContentItem
+
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                if content_items and item_index < len(content_items):
+                    old_audio_url = content_items[item_index].audio_url
+                    if old_audio_url:
+                        # 刪除舊音檔
+                        audio_manager.delete_old_audio(old_audio_url)
 
         # 上傳新音檔（包含 content_id 和 item_index 在檔名中）
         audio_url = await audio_service.upload_audio(
