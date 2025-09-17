@@ -51,6 +51,7 @@ function App() {
 
       <Route path="/teacher/students" element={<TeacherStudents />} />
       <Route path="/teacher/programs" element={<TeacherTemplatePrograms />} />
+      <Route path="/teacher/template-programs/:id" element={<ClassroomDetail isTemplateMode={true} />} />
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />

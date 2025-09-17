@@ -51,15 +51,20 @@ interface ReadingAssessmentContent {
   time_limit_seconds?: number;
 }
 
-export default function ClassroomDetail() {
+interface ClassroomDetailProps {
+  isTemplateMode?: boolean;
+}
+
+export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
+  const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('students');
+  const [activeTab, setActiveTab] = useState(isTemplateMode ? 'programs' : 'students');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
@@ -107,12 +112,16 @@ export default function ClassroomDetail() {
 
   useEffect(() => {
     if (id) {
-      fetchClassroomDetail();
-      fetchPrograms();
-      fetchStudents();
-      fetchAssignments();
+      if (isTemplateMode) {
+        fetchTemplateProgramData();
+      } else {
+        fetchClassroomDetail();
+        fetchPrograms();
+        fetchStudents();
+        fetchAssignments();
+      }
     }
-  }, [id]);
+  }, [id, isTemplateMode]);
 
   useEffect(() => {
     // Check URL parameters for tab switching
@@ -138,6 +147,52 @@ export default function ClassroomDetail() {
     } catch (err) {
       console.error('Fetch classroom error:', err);
       navigate('/teacher/classrooms');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshPrograms = async () => {
+    if (isTemplateMode) {
+      await fetchTemplateProgramData();
+    } else {
+      await fetchPrograms();
+    }
+  };
+
+  const fetchTemplateProgramData = async () => {
+    try {
+      setLoading(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await apiClient.getTemplateProgramDetail(Number(id)) as any;
+
+      if (response) {
+        // Convert template program data to match programs structure
+        const programWithLessons: Program = {
+          id: response.id,
+          name: response.name,
+          description: response.description,
+          level: response.level,
+          estimated_hours: response.estimated_hours,
+          lessons: response.lessons || [],
+        };
+
+        setPrograms([programWithLessons]);
+        setTemplateProgram(programWithLessons);
+
+        // Set a mock classroom for UI consistency
+        setClassroom({
+          id: response.id,
+          name: response.name,
+          description: response.description,
+          level: response.level || 'A1',
+          student_count: 0,
+          students: [],
+        });
+      }
+    } catch (err) {
+      console.error('Fetch template program error:', err);
+      navigate('/teacher/programs');
     } finally {
       setLoading(false);
     }
@@ -324,7 +379,7 @@ export default function ClassroomDetail() {
       });
 
       toast.success('內容已更新成功');
-      await fetchPrograms();
+      await refreshPrograms();
       closePanel();
     } catch (error) {
       console.error('Failed to update content:', error);
@@ -571,7 +626,7 @@ export default function ClassroomDetail() {
         });
 
         toast.success('內容已創建成功');
-        await fetchPrograms();
+        await refreshPrograms();
       } catch (error) {
         console.error('Failed to create content:', error);
         toast.error('創建內容失敗，請稍後再試');
@@ -607,7 +662,7 @@ export default function ClassroomDetail() {
     );
   }
 
-  if (!classroom) {
+  if (!classroom && !isTemplateMode) {
     return (
       <TeacherLayout>
         <div className="text-center py-12">
@@ -617,6 +672,22 @@ export default function ClassroomDetail() {
             onClick={() => navigate('/teacher/classrooms')}
           >
             返回班級列表
+          </Button>
+        </div>
+      </TeacherLayout>
+    );
+  }
+
+  if (isTemplateMode && !templateProgram) {
+    return (
+      <TeacherLayout>
+        <div className="text-center py-12">
+          <p className="text-gray-500">找不到模板課程資料</p>
+          <Button
+            className="mt-4"
+            onClick={() => navigate('/teacher/programs')}
+          >
+            返回模板課程列表
           </Button>
         </div>
       </TeacherLayout>
@@ -633,117 +704,130 @@ export default function ClassroomDetail() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/teacher/classrooms')}
+              onClick={() => navigate(isTemplateMode ? '/teacher/programs' : '/teacher/classrooms')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               返回
             </Button>
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">{classroom.name}</h2>
-              {classroom.description && (
-                <p className="text-gray-600 mt-1">{classroom.description}</p>
+              <h2 className="text-3xl font-bold text-gray-900">{isTemplateMode ? templateProgram?.name : classroom?.name}</h2>
+              {(isTemplateMode ? templateProgram?.description : classroom?.description) && (
+                <p className="text-gray-600 mt-1">{isTemplateMode ? templateProgram?.description : classroom?.description}</p>
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              班級設定
-            </Button>
-          </div>
+          {!isTemplateMode && (
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                班級設定
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">學生數</p>
-                <p className="text-2xl font-bold">{classroom.student_count}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">課程數</p>
-                <p className="text-2xl font-bold">{programs.length}</p>
-              </div>
-              <BookOpen className="h-8 w-8 text-green-500" />
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">等級</p>
-                <p className="text-2xl font-bold">{classroom.level || 'A1'}</p>
-              </div>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-purple-600 font-bold">L</span>
+        {/* Stats - only show for classroom mode */}
+        {!isTemplateMode && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">學生數</p>
+                  <p className="text-2xl font-bold">{classroom?.student_count || 0}</p>
+                </div>
+                <Users className="h-8 w-8 text-blue-500" />
               </div>
             </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">課程數</p>
+                  <p className="text-2xl font-bold">{programs.length}</p>
+                </div>
+                <BookOpen className="h-8 w-8 text-green-500" />
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">等級</p>
+                  <p className="text-2xl font-bold">{classroom?.level || 'A1'}</p>
+                </div>
+                <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-purple-600 font-bold">L</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b bg-gray-50 px-6 py-3">
-              <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-12 bg-white border">
-                <TabsTrigger
-                  value="students"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
-                >
-                  <Users className="h-5 w-5 mr-2" />
-                  學生列表
-                </TabsTrigger>
-                <TabsTrigger
-                  value="programs"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
-                >
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  課程列表
-                </TabsTrigger>
-                <TabsTrigger
-                  value="assignments"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
-                >
-                  <FileText className="h-5 w-5 mr-2" />
-                  作業管理
-                </TabsTrigger>
-              </TabsList>
+              {isTemplateMode ? (
+                /* Template mode - no tabs, just show programs */
+                <div className="h-12" />
+              ) : (
+                <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-12 bg-white border">
+                  <TabsTrigger
+                    value="students"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                  >
+                    <Users className="h-5 w-5 mr-2" />
+                    學生列表
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="programs"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                  >
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    課程列表
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="assignments"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                  >
+                    <FileText className="h-5 w-5 mr-2" />
+                    作業管理
+                  </TabsTrigger>
+                </TabsList>
+              )}
             </div>
 
-            {/* Students Tab */}
-            <TabsContent value="students" className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">班級學生</h3>
-                <Button size="sm" onClick={handleCreateStudent}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  新增學生
-                </Button>
-              </div>
+            {/* Students Tab - only show for classroom mode */}
+            {!isTemplateMode && (
+              <TabsContent value="students" className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">班級學生</h3>
+                  <Button size="sm" onClick={handleCreateStudent}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    新增學生
+                  </Button>
+                </div>
 
-              <StudentTable
-                students={classroom.students}
-                showClassroom={false}
-                onAddStudent={handleCreateStudent}
-                onViewStudent={handleViewStudent}
-                onEditStudent={handleEditStudent}
-                onResetPassword={handleResetPassword}
-                emptyMessage="此班級尚無學生"
-              />
-            </TabsContent>
+                <StudentTable
+                  students={classroom?.students || []}
+                  showClassroom={false}
+                  onAddStudent={handleCreateStudent}
+                  onViewStudent={handleViewStudent}
+                  onEditStudent={handleEditStudent}
+                  onResetPassword={handleResetPassword}
+                  emptyMessage="此班級尚無學生"
+                />
+              </TabsContent>
+            )}
 
             {/* Programs Tab */}
             <TabsContent value="programs" className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">班級課程</h3>
-                <Button size="sm" onClick={() => setShowCopyDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  建立課程
-                </Button>
+                <h3 className="text-lg font-semibold">{isTemplateMode ? '模板課程內容' : '班級課程'}</h3>
+                {!isTemplateMode && (
+                  <Button size="sm" onClick={() => setShowCopyDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    建立課程
+                  </Button>
+                )}
               </div>
 
               {programs.length > 0 ? (
@@ -1180,8 +1264,9 @@ export default function ClassroomDetail() {
               )}
             </TabsContent>
 
-            {/* Assignments Tab */}
-            <TabsContent value="assignments" className="p-6">
+            {/* Assignments Tab - only show for classroom mode */}
+            {!isTemplateMode && (
+              <TabsContent value="assignments" className="p-6">
               <div className="space-y-6">
                 {/* Header with Create Button */}
                 <div className="flex items-center justify-between">
@@ -1304,6 +1389,7 @@ export default function ClassroomDetail() {
                 </div>
               </div>
             </TabsContent>
+            )}
           </Tabs>
         </div>
         </div>
@@ -1699,7 +1785,7 @@ export default function ClassroomDetail() {
                   setShowReadingEditor(false);
                   setEditorLessonId(null);
                   setEditorContentId(null);
-                  await fetchPrograms();
+                  await refreshPrograms();
                   toast.success('內容已成功儲存');
                 }}
                 onCancel={() => {

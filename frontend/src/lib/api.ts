@@ -229,6 +229,10 @@ class ApiClient {
     return this.request(`/api/programs/templates/${programId}`);
   }
 
+  async getTemplateProgramDetail(programId: number) {
+    return this.request(`/api/programs/templates/${programId}`);
+  }
+
   async copyFromTemplate(data: {
     template_id: number;
     classroom_id: number;

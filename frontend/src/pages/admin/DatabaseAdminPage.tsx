@@ -102,8 +102,12 @@ export default function DatabaseAdminPage() {
 
     setSeeding(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/seed-database`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/database/rebuild`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ seed: true })
       });
 
       const result = await response.json();
