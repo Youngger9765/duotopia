@@ -294,10 +294,8 @@ class Content(Base):
     order_index = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)  # 軟刪除標記
 
-    # 朗讀錄音集資料（3-15個項目）
-    items = Column(
-        JSON
-    )  # [{"text": "Hello", "translation": "你好", "audio_url": "..."}, ...]
+    # 注意：items 欄位已移除，改用 ContentItem 關聯表
+    # items = Column(JSON) # DEPRECATED - 使用 content_items 關聯
 
     # 設定
     target_wpm = Column(Integer)  # 目標 WPM

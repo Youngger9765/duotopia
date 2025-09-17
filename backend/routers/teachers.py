@@ -12,6 +12,7 @@ from models import (
     ClassroomStudent,
     Lesson,
     Content,
+    ContentItem,
     ContentType,
     ProgramLevel,
 )
@@ -1471,18 +1472,39 @@ async def get_lesson_contents(
         .all()
     )
 
-    return [
-        {
-            "id": content.id,
-            "type": content.type.value if content.type else "reading_assessment",
-            "title": content.title,
-            "items": content.items or [],
-            "target_wpm": content.target_wpm,
-            "target_accuracy": content.target_accuracy,
-            "order_index": content.order_index,
-        }
-        for content in contents
-    ]
+    result = []
+    for content in contents:
+        # 獲取 ContentItem
+        content_items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        items_data = [
+            {
+                "id": item.id,
+                "text": item.text,
+                "translation": item.translation,
+                "audio_url": item.audio_url,
+            }
+            for item in content_items
+        ]
+
+        result.append(
+            {
+                "id": content.id,
+                "type": content.type.value if content.type else "reading_assessment",
+                "title": content.title,
+                "items": items_data,
+                "target_wpm": content.target_wpm,
+                "target_accuracy": content.target_accuracy,
+                "order_index": content.order_index,
+            }
+        )
+
+    return result
 
 
 @router.post("/lessons/{lesson_id}/contents")
@@ -1504,11 +1526,12 @@ async def create_content(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
+    # 建立 Content（不再使用 items 欄位）
     content = Content(
         lesson_id=lesson_id,
         type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
         title=content_data.title,
-        items=content_data.items,
+        # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
         order_index=content_data.order_index,
@@ -1517,11 +1540,29 @@ async def create_content(
     db.commit()
     db.refresh(content)
 
+    # 建立 ContentItem 記錄
+    items_created = []
+    if content_data.items:
+        for idx, item_data in enumerate(content_data.items):
+            content_item = ContentItem(
+                content_id=content.id,
+                order_index=idx,
+                text=item_data.get("text", ""),
+                translation=item_data.get("translation", ""),
+                audio_url=item_data.get("audio_url"),
+            )
+            db.add(content_item)
+            items_created.append(
+                {"text": content_item.text, "translation": content_item.translation}
+            )
+
+    db.commit()
+
     return {
         "id": content.id,
         "type": content.type.value,
         "title": content.title,
-        "items": content.items,
+        "items": items_created,  # 返回建立的 items
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
         "order_index": content.order_index,

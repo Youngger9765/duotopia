@@ -395,17 +395,37 @@ async def get_assignment_activities(
                     # AI 評估結果現在統一在 activity_data["ai_assessments"] 陣列中處理
                 }
 
-                # 統一處理所有情況為多題目模式（陣列模式）
-                if (
-                    content.items
-                    and isinstance(content.items, list)
-                    and len(content.items) > 0
-                ):
-                    # 多題目情況
+                # 獲取 ContentItem 記錄（有 ID）而不是 Content.items（沒有 ID）
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == content.id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                if content_items:
+                    # 使用 ContentItem 記錄（每個都有 ID）
+                    items_with_ids = []
+                    for ci in content_items:
+                        items_with_ids.append(
+                            {
+                                "id": ci.id,  # ContentItem 的 ID！
+                                "text": ci.text,
+                                "translation": ci.translation,
+                                "audio_url": ci.audio_url,
+                                "order_index": ci.order_index,
+                            }
+                        )
+                    activity_data["items"] = items_with_ids
+                    activity_data["item_count"] = len(items_with_ids)
+                elif content.items and isinstance(content.items, list):
+                    # 如果沒有 ContentItem 記錄，回退到使用 Content.items（但沒有 ID）
+                    # 這種情況應該要修復，因為需要 ContentItem ID 來上傳錄音
+                    print(
+                        f"Warning: Content {content.id} has no ContentItem records, using JSONB items"
+                    )
                     activity_data["items"] = content.items
                     activity_data["item_count"] = len(content.items)
-                    activity_data["content"] = ""
-                    activity_data["target_text"] = ""
                 else:
                     # 單題目情況 - 也統一為陣列模式
                     single_item = {
@@ -414,8 +434,9 @@ async def get_assignment_activities(
                     }
                     activity_data["items"] = [single_item]
                     activity_data["item_count"] = 1
-                    activity_data["content"] = ""
-                    activity_data["target_text"] = ""
+
+                activity_data["content"] = ""
+                activity_data["target_text"] = ""
 
                 # 統一處理錄音和 AI 評分（一律使用陣列模式）
                 if progress.response_data:
@@ -956,53 +977,36 @@ async def upload_student_recording(
             db.add(new_item_progress)
             print("Created new item progress record")
 
+        # 從 ContentItem 找到對應的 Content
+        content_item_obj = db.query(ContentItem).filter_by(id=content_item_id).first()
+        if not content_item_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Content item not found"
+            )
+
+        content_id = content_item_obj.content_id
+
         # 更新或創建摘要統計 (StudentContentProgress)
         summary_progress = (
             db.query(StudentContentProgress)
             .filter(
                 StudentContentProgress.student_assignment_id == assignment_id,
-                StudentContentProgress.content_id == assignment.content_id,
+                StudentContentProgress.content_id == content_id,
             )
             .first()
         )
 
         if not summary_progress:
-            # 計算總題數
-            total_items = (
-                db.query(ContentItem)
-                .filter(ContentItem.content_id == assignment.content_id)
-                .count()
-            )
-
             summary_progress = StudentContentProgress(
                 student_assignment_id=assignment_id,
-                content_id=assignment.content_id,
+                content_id=content_id,
                 order_index=0,  # 摘要記錄使用 0
-                total_items=total_items,
-                completed_items=0,
-                completion_rate=0.0,
+                status=AssignmentStatus.IN_PROGRESS,
             )
             db.add(summary_progress)
 
-        # 更新完成統計
-        completed_count = (
-            db.query(StudentItemProgress)
-            .filter(
-                StudentItemProgress.student_assignment_id == assignment_id,
-                StudentItemProgress.status.in_(["COMPLETED", "SUBMITTED"]),
-            )
-            .count()
-        )
-
-        summary_progress.completed_items = completed_count
-        if summary_progress.total_items > 0:
-            summary_progress.completion_rate = (
-                completed_count / summary_progress.total_items
-            ) * 100
-
-        print(
-            f"Updated summary: {completed_count}/{summary_progress.total_items} completed"
-        )
+        # 更新 StudentContentProgress 狀態
+        summary_progress.status = AssignmentStatus.IN_PROGRESS
 
         db.commit()
 
