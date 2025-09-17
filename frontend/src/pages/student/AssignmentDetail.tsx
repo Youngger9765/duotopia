@@ -84,6 +84,7 @@ export default function AssignmentDetail() {
       if (response.data) {
         const responseData = response.data as {
           title?: string;
+          status?: string;  // 從 API 獲取作業狀態
           activities?: Array<{
             items?: Array<{
               text?: string;
@@ -91,6 +92,7 @@ export default function AssignmentDetail() {
               audio_url?: string;
             }>;
             ai_assessments?: Array<AssessmentResult | null>;
+            recordings?: string[];  // 從 API 獲取已保存的錄音
           }>;
         };
 
@@ -104,9 +106,11 @@ export default function AssignmentDetail() {
 
         // 處理 AI 評分數據 - 使用新的統一陣列格式
         const newAssessmentResults = new Map<number, AssessmentResult>();
+        const newRecordings = new Map<number, Blob>();
         let globalItemIndex = 0;
 
         responseData.activities?.forEach((activity) => {
+          // 處理 AI 評估結果
           if (activity.ai_assessments && Array.isArray(activity.ai_assessments)) {
             // 新的陣列格式：每個 index 直接對應題目位置
             activity.ai_assessments.forEach((assessment, localIndex) => {
@@ -116,11 +120,25 @@ export default function AssignmentDetail() {
               }
             });
           }
+
+          // 處理已保存的錄音（如果有）
+          if (activity.recordings && Array.isArray(activity.recordings)) {
+            activity.recordings.forEach((recordingUrl, localIndex) => {
+              if (recordingUrl) {
+                const currentGlobalIndex = globalItemIndex + localIndex;
+                // 將錄音 URL 轉換為 Blob（這裡簡化處理，實際應從 URL 下載）
+                // 暫時用佔位符，表示有錄音存在
+                newRecordings.set(currentGlobalIndex, new Blob(['saved'], { type: 'audio/webm' }));
+              }
+            });
+          }
+
           // 更新全局索引
           globalItemIndex += activity.items?.length || 1;
         });
 
         setAssessmentResults(newAssessmentResults);
+        setRecordings(newRecordings);
 
         const assignmentData: AssignmentDetailType = {
           id: parseInt(id || '0'),
@@ -135,7 +153,7 @@ export default function AssignmentDetail() {
             target_wpm: 100,
             target_accuracy: 90
           },
-          status: 'NOT_STARTED',
+          status: (responseData.status as 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED') || 'NOT_STARTED',
           submissions: [],
           created_at: new Date().toISOString()
         };
@@ -385,6 +403,16 @@ export default function AssignmentDetail() {
           返回作業列表
         </Button>
 
+        {/* 狀態提示 */}
+        {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED') && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-blue-600" />
+            <span className="text-blue-700">
+              {assignment.status === 'SUBMITTED' ? '作業已提交，目前為檢視模式' : '作業已評分，目前為檢視模式'}
+            </span>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -497,6 +525,7 @@ export default function AssignmentDetail() {
                     variant="outline"
                     onClick={() => deleteRecording(currentItemIndex)}
                     className="text-red-600 hover:text-red-700"
+                    disabled={assignment.status === 'GRADED' || assignment.status === 'SUBMITTED'}
                   >
                     <RotateCcw className="h-5 w-5 mr-2" />
                     重錄

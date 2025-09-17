@@ -201,12 +201,12 @@ export default function StudentAssignmentDetail() {
               <Button
                 size="sm"
                 onClick={() => handleStartActivity(progress.id)}
-                disabled={progress.status === 'SUBMITTED' && assignment?.status !== 'RETURNED'}
+                disabled={false}  // 允許查看已提交的作業
                 variant={progress.status === 'NOT_STARTED' ? 'default' : 'outline'}
               >
                 {progress.status === 'NOT_STARTED' && '開始'}
                 {progress.status === 'IN_PROGRESS' && '繼續'}
-                {(progress.status === 'SUBMITTED' || progress.status === 'GRADED') && '查看'}
+                {(progress.status === 'SUBMITTED' || progress.status === 'GRADED') && '檢視作業'}
               </Button>
             </div>
           </div>
