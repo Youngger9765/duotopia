@@ -68,6 +68,7 @@ interface Activity {
 interface ActivityResponse {
   assignment_id: number;
   title: string;
+  status?: string;  // 加入作業狀態
   total_activities: number;
   activities: Activity[];
 }
@@ -94,6 +95,8 @@ export default function StudentActivityPage() {
   // State management
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [assignmentStatus, setAssignmentStatus] = useState<string>('');  // 作業狀態
+  const [isReadOnly, setIsReadOnly] = useState(false);  // 唯讀模式
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [currentSubQuestionIndex, setCurrentSubQuestionIndex] = useState(0); // For activities with multiple items
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
@@ -154,6 +157,18 @@ export default function StudentActivityPage() {
       setActivities(data.activities);
       setAssignmentTitle(data.title);
 
+      // 設置作業狀態和唯讀模式
+      if (data.status) {
+        setAssignmentStatus(data.status);
+        // 如果作業已提交或已評分，設為唯讀模式
+        const readOnlyStatuses = ['SUBMITTED', 'GRADED'];
+        setIsReadOnly(readOnlyStatuses.includes(data.status));
+
+        if (readOnlyStatuses.includes(data.status)) {
+          console.log('🔒 Assignment is in read-only mode:', data.status);
+        }
+      }
+
       // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
       data.activities.forEach(activity => {
@@ -180,6 +195,12 @@ export default function StudentActivityPage() {
 
   // Recording controls
   const startRecording = async () => {
+    // 唯讀模式下不允許錄音
+    if (isReadOnly) {
+      toast.warning('檢視模式下無法錄音');
+      return;
+    }
+
     try {
       // Clear old recordings and AI scores when starting new recording
       const currentActivity = activities[currentActivityIndex];
@@ -826,6 +847,19 @@ export default function StudentActivityPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* 唯讀模式提示 */}
+      {isReadOnly && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+          <div className="max-w-6xl mx-auto flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-blue-600" />
+            <span className="text-blue-700">
+              {assignmentStatus === 'SUBMITTED' ? '作業已提交，目前為檢視模式' :
+               assignmentStatus === 'GRADED' ? '作業已評分，目前為檢視模式' : '檢視模式'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header with progress */}
       <div className="sticky top-0 bg-white border-b z-10">
         <div className="max-w-6xl mx-auto px-4 py-2">
@@ -850,24 +884,26 @@ export default function StudentActivityPage() {
                   自動儲存中...
                 </div>
               )}
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting}
-                size="sm"
-                variant="default"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    提交中...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-3 w-3 mr-1" />
-                    提交作業
-                  </>
-                )}
-              </Button>
+              {!isReadOnly && (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  size="sm"
+                  variant="default"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      提交中...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3 w-3 mr-1" />
+                      提交作業
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1020,7 +1056,8 @@ export default function StudentActivityPage() {
                   return (
                     <Button
                       onClick={handleSubmit}
-                      disabled={submitting}
+                      disabled={submitting || isReadOnly}
+                      style={{ display: isReadOnly ? 'none' : 'inline-flex' }}
                     >
                       {submitting ? (
                         <>
