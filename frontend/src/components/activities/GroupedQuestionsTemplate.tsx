@@ -53,6 +53,7 @@ interface GroupedQuestionsTemplateProps {
   progressId?: number | string;
   progressIds?: number[]; // 🔥 新增：每個子問題的 progress_id 數組
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
+  readOnly?: boolean; // 唯讀模式
 }
 
 export default function GroupedQuestionsTemplate({
@@ -67,7 +68,8 @@ export default function GroupedQuestionsTemplate({
   formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`,
   progressId,
   progressIds = [], // 🔥 接收 progress_id 數組
-  initialAssessmentResults
+  initialAssessmentResults,
+  readOnly = false // 唯讀模式
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
   const [isPlaying, setIsPlaying] = useState(false);
@@ -374,7 +376,8 @@ export default function GroupedQuestionsTemplate({
           {!isRecording ? (
             <Button
               size="lg"
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={readOnly}
               onClick={() => {
                 // Clear AI assessment results when starting new recording
                 setAssessmentResults(prev => {
@@ -386,7 +389,7 @@ export default function GroupedQuestionsTemplate({
               }}
             >
               <Mic className="w-5 h-5 mr-2" />
-              開始錄音
+              {readOnly ? '檢視模式' : '開始錄音'}
             </Button>
           ) : (
             <div className="flex flex-col items-center gap-4">

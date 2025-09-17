@@ -724,6 +724,7 @@ export default function StudentActivityPage() {
           progressId={activity.id}
           progressIds={answer?.progressIds} // 🔥 傳遞 progress_id 數組
           initialAssessmentResults={assessmentResults}
+          readOnly={isReadOnly}  // 傳遞唯讀狀態
         />
       );
     }

@@ -384,17 +384,26 @@ export default function StudentAssignmentDetail() {
           </CardContent>
         </Card>
 
-        {/* Score and Feedback */}
-        {assignment.status === 'GRADED' && (
-          <Card>
+        {/* Score and Feedback - 顯示於 GRADED 或 RETURNED 狀態 */}
+        {(assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
+          <Card className={assignment.status === 'RETURNED' ? 'border-orange-300' : ''}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                評分結果
+                {assignment.status === 'RETURNED' ? (
+                  <>
+                    <AlertCircle className="h-5 w-5 text-orange-600" />
+                    <span className="text-orange-600">作業已退回 - 需要修改</span>
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 className="h-5 w-5" />
+                    評分結果
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {assignment.score !== undefined && (
+              {assignment.score !== undefined && assignment.status === 'GRADED' && (
                 <div className="text-center">
                   <div className="text-4xl font-bold text-blue-600 mb-2">
                     {assignment.score}
@@ -403,12 +412,29 @@ export default function StudentAssignmentDetail() {
                 </div>
               )}
 
-              <Separator />
+              {(assignment.score !== undefined && assignment.status === 'GRADED') && <Separator />}
 
               {assignment.feedback && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2 text-blue-900">教師評語</h4>
-                  <p className="text-blue-800">{assignment.feedback}</p>
+                <div className={`rounded-lg p-4 ${
+                  assignment.status === 'RETURNED'
+                    ? 'bg-orange-50 border-2 border-orange-200'
+                    : 'bg-blue-50'
+                }`}>
+                  <h4 className={`font-medium mb-2 ${
+                    assignment.status === 'RETURNED'
+                      ? 'text-orange-900 flex items-center gap-2'
+                      : 'text-blue-900'
+                  }`}>
+                    {assignment.status === 'RETURNED' && (
+                      <AlertCircle className="h-5 w-5" />
+                    )}
+                    教師評語 {assignment.status === 'RETURNED' && '(請依照以下建議修改後重新提交)'}
+                  </h4>
+                  <p className={
+                    assignment.status === 'RETURNED'
+                      ? 'text-orange-800 whitespace-pre-wrap'
+                      : 'text-blue-800 whitespace-pre-wrap'
+                  }>{assignment.feedback}</p>
                 </div>
               )}
 
