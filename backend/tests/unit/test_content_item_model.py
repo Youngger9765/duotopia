@@ -24,9 +24,7 @@ def db_session():
 def sample_teacher(db_session):
     """Create a sample teacher"""
     teacher = Teacher(
-        email="test@example.com", 
-        password_hash="hashed_password", 
-        name="Test Teacher"
+        email="test@example.com", password_hash="hashed_password", name="Test Teacher"
     )
     db_session.add(teacher)
     db_session.commit()
@@ -40,19 +38,14 @@ class TestContentItemModel:
         """Test basic ContentItem creation"""
         # Create content first
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
         # Create content item
         content_item = ContentItem(
-            content_id=content.id,
-            order_index=0,
-            text="Hello world",
-            translation="你好世界"
+            content_id=content.id, order_index=0, text="Hello world", translation="你好世界"
         )
         db_session.add(content_item)
         db_session.commit()
@@ -69,9 +62,7 @@ class TestContentItemModel:
     def test_content_item_required_fields(self, db_session, sample_teacher):
         """Test that required fields are enforced"""
         content = Content(
-            title="Test Content",
-            type="pronunciation", 
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
@@ -113,19 +104,13 @@ class TestContentItemModel:
     def test_content_item_unique_constraint(self, db_session, sample_teacher):
         """Test unique constraint on (content_id, order_index)"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
         # Create first item
-        item1 = ContentItem(
-            content_id=content.id,
-            order_index=0,
-            text="First item"
-        )
+        item1 = ContentItem(content_id=content.id, order_index=0, text="First item")
         db_session.add(item1)
         db_session.commit()
 
@@ -134,7 +119,7 @@ class TestContentItemModel:
             item2 = ContentItem(
                 content_id=content.id,
                 order_index=0,  # Same order_index
-                text="Second item"
+                text="Second item",
             )
             db_session.add(item2)
             db_session.commit()
@@ -142,24 +127,14 @@ class TestContentItemModel:
     def test_content_item_foreign_key_cascade(self, db_session, sample_teacher):
         """Test CASCADE DELETE when content is deleted"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
         # Create content items
-        item1 = ContentItem(
-            content_id=content.id,
-            order_index=0,
-            text="Item 1"
-        )
-        item2 = ContentItem(
-            content_id=content.id,
-            order_index=1,
-            text="Item 2"
-        )
+        item1 = ContentItem(content_id=content.id, order_index=0, text="Item 1")
+        item2 = ContentItem(content_id=content.id, order_index=1, text="Item 2")
         db_session.add_all([item1, item2])
         db_session.commit()
 
@@ -178,46 +153,39 @@ class TestContentItemModel:
     def test_content_item_ordering(self, db_session, sample_teacher):
         """Test content items are properly ordered"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
         # Create items in random order
-        items_data = [
-            (2, "Third item"),
-            (0, "First item"),
-            (1, "Second item")
-        ]
+        items_data = [(2, "Third item"), (0, "First item"), (1, "Second item")]
 
         for order_index, text in items_data:
             item = ContentItem(
-                content_id=content.id,
-                order_index=order_index,
-                text=text
+                content_id=content.id, order_index=order_index, text=text
             )
             db_session.add(item)
 
         db_session.commit()
 
         # Query ordered items
-        ordered_items = db_session.query(ContentItem).filter_by(
-            content_id=content.id
-        ).order_by(ContentItem.order_index).all()
+        ordered_items = (
+            db_session.query(ContentItem)
+            .filter_by(content_id=content.id)
+            .order_by(ContentItem.order_index)
+            .all()
+        )
 
         assert len(ordered_items) == 3
         assert ordered_items[0].text == "First item"
-        assert ordered_items[1].text == "Second item" 
+        assert ordered_items[1].text == "Second item"
         assert ordered_items[2].text == "Third item"
 
     def test_content_item_optional_fields(self, db_session, sample_teacher):
         """Test optional fields work correctly"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
@@ -229,7 +197,7 @@ class TestContentItemModel:
             text="Hello world",
             translation="你好世界",
             audio_url="https://example.com/audio.mp3",
-            item_metadata={"difficulty": "easy", "theme": "greetings"}
+            item_metadata={"difficulty": "easy", "theme": "greetings"},
         )
         db_session.add(item)
         db_session.commit()
@@ -241,11 +209,7 @@ class TestContentItemModel:
         assert item.item_metadata["theme"] == "greetings"
 
         # Create item without optional fields
-        item2 = ContentItem(
-            content_id=content.id,
-            order_index=1,
-            text="Goodbye"
-        )
+        item2 = ContentItem(content_id=content.id, order_index=1, text="Goodbye")
         db_session.add(item2)
         db_session.commit()
 
@@ -257,18 +221,12 @@ class TestContentItemModel:
     def test_content_item_relationship(self, db_session, sample_teacher):
         """Test relationship with Content model"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
-        item = ContentItem(
-            content_id=content.id,
-            order_index=0,
-            text="Test item"
-        )
+        item = ContentItem(content_id=content.id, order_index=0, text="Test item")
         db_session.add(item)
         db_session.commit()
 
@@ -283,18 +241,12 @@ class TestContentItemModel:
     def test_content_item_timestamps(self, db_session, sample_teacher):
         """Test that timestamps are automatically set and updated"""
         content = Content(
-            title="Test Content",
-            type="pronunciation",
-            teacher_id=sample_teacher.id
+            title="Test Content", type="pronunciation", teacher_id=sample_teacher.id
         )
         db_session.add(content)
         db_session.flush()
 
-        item = ContentItem(
-            content_id=content.id,
-            order_index=0,
-            text="Test item"
-        )
+        item = ContentItem(content_id=content.id, order_index=0, text="Test item")
         db_session.add(item)
         db_session.commit()
 

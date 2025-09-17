@@ -251,10 +251,12 @@ async def get_assignment_activities(
             # 獲取學生的項目進度
             item_progress_list = (
                 db.query(StudentItemProgress)
-                .filter(StudentItemProgress.student_assignment_id == student_assignment.id)
+                .filter(
+                    StudentItemProgress.student_assignment_id == student_assignment.id
+                )
                 .all()
             )
-            
+
             # 建立進度索引 (content_item_id -> progress)
             progress_by_item = {p.content_item_id: p for p in item_progress_list}
 
@@ -262,7 +264,7 @@ async def get_assignment_activities(
             items = []
             for item in content_items:
                 progress = progress_by_item.get(item.id)
-                
+
                 item_data = {
                     "text": item.text,
                     "translation": item.translation,
@@ -270,12 +272,22 @@ async def get_assignment_activities(
                     "order_index": item.order_index,
                     "status": progress.status if progress else "NOT_STARTED",
                     "recording_url": progress.recording_url if progress else None,
-                    "accuracy_score": float(progress.accuracy_score) if progress and progress.accuracy_score else None,
-                    "fluency_score": float(progress.fluency_score) if progress and progress.fluency_score else None,
-                    "pronunciation_score": float(progress.pronunciation_score) if progress and progress.pronunciation_score else None,
+                    "accuracy_score": float(progress.accuracy_score)
+                    if progress and progress.accuracy_score
+                    else None,
+                    "fluency_score": float(progress.fluency_score)
+                    if progress and progress.fluency_score
+                    else None,
+                    "pronunciation_score": float(progress.pronunciation_score)
+                    if progress and progress.pronunciation_score
+                    else None,
                     "ai_feedback": progress.ai_feedback if progress else None,
-                    "submitted_at": progress.submitted_at.isoformat() if progress and progress.submitted_at else None,
-                    "ai_assessed_at": progress.ai_assessed_at.isoformat() if progress and progress.ai_assessed_at else None
+                    "submitted_at": progress.submitted_at.isoformat()
+                    if progress and progress.submitted_at
+                    else None,
+                    "ai_assessed_at": progress.ai_assessed_at.isoformat()
+                    if progress and progress.ai_assessed_at
+                    else None,
                 }
                 items.append(item_data)
 
@@ -283,7 +295,8 @@ async def get_assignment_activities(
             summary_progress = (
                 db.query(StudentContentProgress)
                 .filter(
-                    StudentContentProgress.student_assignment_id == student_assignment.id,
+                    StudentContentProgress.student_assignment_id
+                    == student_assignment.id,
                     StudentContentProgress.content_id == content.id,
                 )
                 .first()
@@ -318,7 +331,9 @@ async def get_assignment_activities(
                     "duration": 60,  # Default duration
                     "points": 100,
                     "status": (
-                        summary_progress.status.value if summary_progress.status else "NOT_STARTED"
+                        summary_progress.status.value
+                        if summary_progress.status
+                        else "NOT_STARTED"
                     ),
                     "score": summary_progress.score,
                     "completion_rate": summary_progress.completion_rate,
@@ -875,21 +890,23 @@ async def upload_student_recording(
 
         # 找到對應的 ContentItem
         if not assignment.content_id:
-            raise HTTPException(status_code=400, detail="Assignment has no content assigned")
-            
+            raise HTTPException(
+                status_code=400, detail="Assignment has no content assigned"
+            )
+
         content_item = (
             db.query(ContentItem)
             .filter(
                 ContentItem.content_id == assignment.content_id,
-                ContentItem.order_index == content_item_index
+                ContentItem.order_index == content_item_index,
             )
             .first()
         )
-        
+
         if not content_item:
             raise HTTPException(
                 status_code=404,
-                detail=f"Content item not found for index {content_item_index}"
+                detail=f"Content item not found for index {content_item_index}",
             )
 
         # 查找現有的 StudentItemProgress 記錄以獲取舊 URL
@@ -897,7 +914,7 @@ async def upload_student_recording(
             db.query(StudentItemProgress)
             .filter(
                 StudentItemProgress.student_assignment_id == assignment_id,
-                StudentItemProgress.content_item_id == content_item.id
+                StudentItemProgress.content_item_id == content_item.id,
             )
             .first()
         )
@@ -944,7 +961,7 @@ async def upload_student_recording(
                 content_item_id=content_item.id,
                 recording_url=audio_url,
                 submitted_at=datetime.utcnow(),
-                status="COMPLETED"
+                status="COMPLETED",
             )
             db.add(new_item_progress)
             print("Created new item progress record")
@@ -954,38 +971,48 @@ async def upload_student_recording(
             db.query(StudentContentProgress)
             .filter(
                 StudentContentProgress.student_assignment_id == assignment_id,
-                StudentContentProgress.content_id == assignment.content_id
+                StudentContentProgress.content_id == assignment.content_id,
             )
             .first()
         )
-        
+
         if not summary_progress:
             # 計算總題數
-            total_items = db.query(ContentItem).filter(
-                ContentItem.content_id == assignment.content_id
-            ).count()
-            
+            total_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id == assignment.content_id)
+                .count()
+            )
+
             summary_progress = StudentContentProgress(
                 student_assignment_id=assignment_id,
                 content_id=assignment.content_id,
                 order_index=0,  # 摘要記錄使用 0
                 total_items=total_items,
                 completed_items=0,
-                completion_rate=0.0
+                completion_rate=0.0,
             )
             db.add(summary_progress)
-        
+
         # 更新完成統計
-        completed_count = db.query(StudentItemProgress).filter(
-            StudentItemProgress.student_assignment_id == assignment_id,
-            StudentItemProgress.status.in_(["COMPLETED", "SUBMITTED"])
-        ).count()
-        
+        completed_count = (
+            db.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id == assignment_id,
+                StudentItemProgress.status.in_(["COMPLETED", "SUBMITTED"]),
+            )
+            .count()
+        )
+
         summary_progress.completed_items = completed_count
         if summary_progress.total_items > 0:
-            summary_progress.completion_rate = (completed_count / summary_progress.total_items) * 100
-        
-        print(f"Updated summary: {completed_count}/{summary_progress.total_items} completed")
+            summary_progress.completion_rate = (
+                completed_count / summary_progress.total_items
+            ) * 100
+
+        print(
+            f"Updated summary: {completed_count}/{summary_progress.total_items} completed"
+        )
 
         db.commit()
 
