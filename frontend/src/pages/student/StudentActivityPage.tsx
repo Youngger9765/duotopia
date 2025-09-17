@@ -74,6 +74,7 @@ interface ActivityResponse {
 
 interface Answer {
   progressId: number;
+  progressIds?: number[]; // For grouped questions with multiple progress records
   audioBlob?: Blob;
   audioUrl?: string;
   textAnswer?: string;
@@ -320,29 +321,43 @@ export default function StudentActivityPage() {
 
           if (uploadResponse.ok) {
             const result = await uploadResponse.json();
-            const { audio_url, message } = result;
+            const { audio_url, message, progress_id } = result;
             console.log('Recording uploaded successfully:', {
               url: audio_url,
-              message: message
+              message: message,
+              progress_id: progress_id
             });
 
             // 錄音成功上傳到雲端
             toast.success('錄音已上傳到雲端');
 
-            // Update with the GCS URL
+            // Update with the GCS URL and progress_id
             setAnswers(prev => {
               const newAnswers = new Map(prev);
               const answer = newAnswers.get(currentActivity.id);
               if (answer) {
                 if (currentActivity.items && currentActivity.items.length > 0) {
                   if (!answer.recordings) answer.recordings = [];
-                  // Ensure array is long enough
+                  if (!answer.progressIds) answer.progressIds = [];
+
+                  // Ensure arrays are long enough
                   while (answer.recordings.length <= currentSubQuestionIndex) {
                     answer.recordings.push('');
                   }
+                  while (answer.progressIds.length <= currentSubQuestionIndex) {
+                    answer.progressIds.push(0);
+                  }
+
                   answer.recordings[currentSubQuestionIndex] = audio_url;
+                  // 🔥 關鍵修復：存儲 progress_id 到對應的子問題索引
+                  if (progress_id) {
+                    answer.progressIds[currentSubQuestionIndex] = progress_id;
+                  }
                 } else {
                   answer.audioUrl = audio_url;
+                  if (progress_id) {
+                    answer.progressId = progress_id;
+                  }
                 }
                 answer.status = 'completed';
               }
@@ -662,6 +677,7 @@ export default function StudentActivityPage() {
           onStopRecording={stopRecording}
           formatTime={formatTime}
           progressId={activity.id}
+          progressIds={answer?.progressIds} // 🔥 傳遞 progress_id 數組
           initialAssessmentResults={assessmentResults}
         />
       );

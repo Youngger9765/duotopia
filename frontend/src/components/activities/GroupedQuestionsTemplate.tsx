@@ -51,6 +51,7 @@ interface GroupedQuestionsTemplateProps {
   onStopRecording?: () => void;
   formatTime?: (seconds: number) => string;
   progressId?: number | string;
+  progressIds?: number[]; // 🔥 新增：每個子問題的 progress_id 數組
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
 }
 
@@ -65,6 +66,7 @@ export default function GroupedQuestionsTemplate({
   onStopRecording,
   formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`,
   progressId,
+  progressIds = [], // 🔥 接收 progress_id 數組
   initialAssessmentResults
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
@@ -223,7 +225,19 @@ export default function GroupedQuestionsTemplate({
       const formData = new FormData();
       formData.append('audio_file', audioBlob, 'recording.webm');
       formData.append('reference_text', referenceText);
-      formData.append('progress_id', String(progressId || '1')); // Use actual progress ID
+      // 🔥 關鍵修復：使用對應子問題的 progress_id
+      const currentProgressId = progressIds && progressIds[currentQuestionIndex]
+        ? progressIds[currentQuestionIndex]
+        : progressId || '1';
+
+      console.log('🔍 AI評估使用 progress_id:', {
+        currentQuestionIndex,
+        progressIds,
+        progressId,
+        currentProgressId
+      });
+
+      formData.append('progress_id', String(currentProgressId));
       formData.append('item_index', String(currentQuestionIndex)); // 傳遞題目索引
 
       // Get authentication token from store

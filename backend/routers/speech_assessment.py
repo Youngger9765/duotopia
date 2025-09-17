@@ -268,8 +268,45 @@ def save_assessment_result(
     )
 
     if not progress:
-        logger.error(f"StudentItemProgress with id {progress_id} not found")
-        raise HTTPException(status_code=404, detail="Progress record not found")
+        logger.warning(
+            f"StudentItemProgress with id {progress_id} not found - "
+            "this is normal if the progress record was deleted or never created"
+        )
+        # 不拋錯，而是嘗試通過其他方式查找或創建記錄
+        # 如果有 student_assignment_id，嘗試查找對應的進度記錄
+        if student_assignment_id and item_index is not None:
+            # 通過 student_assignment_id 和 item_index 查找
+            progress = (
+                db.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == student_assignment_id,
+                    StudentItemProgress.item_index == item_index,
+                )
+                .first()
+            )
+
+            if progress:
+                logger.info(
+                    f"Found existing progress record via student_assignment_id "
+                    f"{student_assignment_id} and item_index {item_index}: {progress.id}"
+                )
+            else:
+                logger.warning(
+                    f"No progress record found for student_assignment_id "
+                    f"{student_assignment_id} and item_index {item_index}"
+                )
+                raise HTTPException(
+                    status_code=404,
+                    detail="Progress record not found - please ensure recording was uploaded first",
+                )
+        else:
+            logger.error(
+                f"StudentItemProgress with id {progress_id} not found and insufficient data to locate alternative"
+            )
+            raise HTTPException(
+                status_code=404,
+                detail="Progress record not found - please ensure recording was uploaded first",
+            )
     # 更新 AI 評估分數 (StudentItemProgress 使用獨立欄位而非 JSON)
     progress.accuracy_score = assessment_result["accuracy_score"]
     progress.fluency_score = assessment_result["fluency_score"]

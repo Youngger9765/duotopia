@@ -1007,6 +1007,7 @@ async def upload_student_recording(
             existing_item_progress.submitted_at = datetime.utcnow()
             existing_item_progress.status = "COMPLETED"
             print(f"Updated existing item progress record: {existing_item_progress.id}")
+            current_item_progress = existing_item_progress
         else:
             # 創建新記錄
             new_item_progress = StudentItemProgress(
@@ -1018,6 +1019,7 @@ async def upload_student_recording(
             )
             db.add(new_item_progress)
             print("Created new item progress record")
+            current_item_progress = new_item_progress
 
         # 從 ContentItem 找到對應的 Content
         content_item_obj = db.query(ContentItem).filter_by(id=content_item_id).first()
@@ -1052,10 +1054,14 @@ async def upload_student_recording(
 
         db.commit()
 
+        # 重新查詢以取得 ID（因為新記錄需要 commit 後才有 ID）
+        db.refresh(current_item_progress)
+
         return {
             "audio_url": audio_url,
             "assignment_id": assignment_id,
             "content_item_id": content_item_id,
+            "progress_id": current_item_progress.id,  # 🔥 新增：回傳 progress_id 給前端使用
             "storage_type": "gcs",
             "message": "Recording uploaded successfully to cloud storage",
         }
