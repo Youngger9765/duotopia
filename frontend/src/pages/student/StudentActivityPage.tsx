@@ -277,9 +277,15 @@ export default function StudentActivityPage() {
         const skipUpload = false; // 啟用 GCS 上傳
         if (!skipUpload) {
         try {
+          // 獲取當前 item 的 ID
+          const currentItem = currentActivity.items?.[currentSubQuestionIndex];
+          if (!currentItem?.id) {
+            throw new Error('Content item ID not found');
+          }
+
           const formData = new FormData();
           formData.append('assignment_id', assignmentId || '');
-          formData.append('content_item_index', currentSubQuestionIndex.toString());
+          formData.append('content_item_id', currentItem.id.toString());  // 使用 ContentItem 的 ID！
           formData.append('audio_file', audioBlob, 'recording.webm');
 
           const apiUrl = import.meta.env.VITE_API_URL || '';

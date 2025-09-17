@@ -231,8 +231,8 @@ async def get_assignment_activities(
     # 獲取作業對應的 Assignment（如果有 assignment_id）
     activities = []
 
-    # 如果有 content_id，直接獲取該內容
-    if student_assignment.content_id:
+    # 移除對 content_id 的檢查，統一使用 assignment_id 流程
+    if False:  # 此分支永遠不會執行
         content = (
             db.query(Content)
             .filter(Content.id == student_assignment.content_id)
@@ -266,6 +266,7 @@ async def get_assignment_activities(
                 progress = progress_by_item.get(item.id)
 
                 item_data = {
+                    "id": item.id,  # 加入 ContentItem 的 ID！
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
@@ -348,7 +349,7 @@ async def get_assignment_activities(
             )
 
     # 如果有 assignment_id，直接獲取所有已存在的 StudentContentProgress 記錄
-    elif student_assignment.assignment_id:
+    if student_assignment.assignment_id:
         # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
         progress_records = (
             db.query(StudentContentProgress)
@@ -854,8 +855,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
 
 @router.post("/upload-recording")
 async def upload_student_recording(
-    assignment_id: int = Form(...),
-    content_item_index: int = Form(...),
+    assignment_id: int = Form(...),  # StudentAssignment ID
+    content_item_id: int = Form(...),  # ContentItem ID (最關鍵的簡化)
     audio_file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -888,25 +889,15 @@ async def upload_student_recording(
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
 
-        # 找到對應的 ContentItem
-        if not assignment.content_id:
-            raise HTTPException(
-                status_code=400, detail="Assignment has no content assigned"
-            )
-
+        # 直接用 content_item_id 查詢
         content_item = (
-            db.query(ContentItem)
-            .filter(
-                ContentItem.content_id == assignment.content_id,
-                ContentItem.order_index == content_item_index,
-            )
-            .first()
+            db.query(ContentItem).filter(ContentItem.id == content_item_id).first()
         )
 
         if not content_item:
             raise HTTPException(
                 status_code=404,
-                detail=f"Content item not found for index {content_item_index}",
+                detail=f"Content item not found with id {content_item_id}",
             )
 
         # 查找現有的 StudentItemProgress 記錄以獲取舊 URL
@@ -1019,7 +1010,7 @@ async def upload_student_recording(
         return {
             "audio_url": audio_url,
             "assignment_id": assignment_id,
-            "content_item_index": content_item_index,
+            "content_item_id": content_item_id,
             "storage_type": "gcs",
             "message": "Recording uploaded successfully to cloud storage",
         }

@@ -295,7 +295,6 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("assignment_id", sa.Integer(), nullable=True),
         sa.Column("student_id", sa.Integer(), nullable=False),
-        sa.Column("content_id", sa.Integer(), nullable=True),
         sa.Column("classroom_id", sa.Integer(), nullable=False),
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column("instructions", sa.Text(), nullable=True),
@@ -341,10 +340,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["classroom_id"],
             ["classrooms.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["content_id"],
-            ["contents.id"],
         ),
         sa.ForeignKeyConstraint(
             ["student_id"],

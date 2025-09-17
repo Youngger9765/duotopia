@@ -314,7 +314,6 @@ class Content(Base):
 
     # Relationships
     lesson = relationship("Lesson", back_populates="contents")
-    assignments = relationship("StudentAssignment", back_populates="content")
     content_items = relationship(
         "ContentItem", back_populates="content", cascade="all, delete-orphan"
     )
@@ -390,7 +389,6 @@ class StudentAssignment(Base):
 
     # TODO: Phase 2 - 移除以下舊欄位（等資料遷移完成）
     # 這些欄位應該從 Assignment 取得，不需要重複儲存
-    content_id = Column(Integer, ForeignKey("contents.id"), nullable=True)  # 舊架構，待移除
     classroom_id = Column(
         Integer, ForeignKey("classrooms.id"), nullable=False
     )  # 可從 assignment.classroom_id 取得
@@ -422,7 +420,6 @@ class StudentAssignment(Base):
     # Relationships
     assignment = relationship("Assignment", back_populates="student_assignments")
     student = relationship("Student", back_populates="assignments")
-    content = relationship("Content", back_populates="assignments")  # 保留以兼容舊資料
     content_progress = relationship(
         "StudentContentProgress",
         back_populates="student_assignment",
@@ -519,7 +516,10 @@ class ContentItem(Base):
     )
 
     def __repr__(self):
-        return f"<ContentItem(id={self.id}, content_id={self.content_id}, order={self.order_index}, text='{self.text[:30]}...')>"
+        return (
+            f"<ContentItem(id={self.id}, content_id={self.content_id}, "
+            f"order={self.order_index}, text='{self.text[:30]}...')>"
+        )
 
 
 class StudentItemProgress(Base):
@@ -599,4 +599,8 @@ class StudentItemProgress(Base):
         return any([self.accuracy_score, self.fluency_score, self.pronunciation_score])
 
     def __repr__(self):
-        return f"<StudentItemProgress(id={self.id}, assignment={self.student_assignment_id}, item={self.content_item_id}, status={self.status})>"
+        return (
+            f"<StudentItemProgress(id={self.id}, "
+            f"assignment={self.student_assignment_id}, "
+            f"item={self.content_item_id}, status={self.status})>"
+        )
