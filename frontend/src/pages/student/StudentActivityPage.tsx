@@ -568,7 +568,16 @@ export default function StudentActivityPage() {
   };
 
   // Final submission
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.MouseEvent) => {
+    console.log('🔥 [DEBUG] handleSubmit called in StudentActivityPage!');
+    console.log('🔥 [DEBUG] Event:', e);
+
+    // 防止預設行為和事件冒泡
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const unanswered = Array.from(answers.values()).filter(
       a => a.status === 'not_started'
     );
@@ -577,12 +586,18 @@ export default function StudentActivityPage() {
       const confirm = window.confirm(
         `還有 ${unanswered.length} 題未作答，確定要提交嗎？`
       );
-      if (!confirm) return;
+      if (!confirm) {
+        console.log('🔥 [DEBUG] User cancelled submission');
+        return;
+      }
     }
 
     try {
+      console.log('🔥 [DEBUG] Starting submission...');
       setSubmitting(true);
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      console.log('🔥 [DEBUG] Calling API:', `${apiUrl}/api/students/assignments/${assignmentId}/submit`);
+
       const response = await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: {
@@ -591,14 +606,23 @@ export default function StudentActivityPage() {
         }
       });
 
+      console.log('🔥 [DEBUG] API Response status:', response.status);
+
       if (!response.ok) {
         throw new Error('Failed to submit assignment');
       }
 
       toast.success('作業提交成功！');
-      navigate(`/student/assignment/${assignmentId}`);
+      console.log('🔥 [DEBUG] Submission successful, redirecting to detail page...');
+
+      // 使用 window.location.href 確保完全重新載入並跳轉到正確的 detail 頁面
+      setTimeout(() => {
+        const detailUrl = `/student/assignment/${assignmentId}/detail`;
+        console.log('🔥 [DEBUG] Redirecting to:', detailUrl);
+        window.location.href = detailUrl;
+      }, 500);
     } catch (error) {
-      console.error('Failed to submit:', error);
+      console.error('🔥 [DEBUG] Failed to submit:', error);
       toast.error('提交失敗，請稍後再試');
     } finally {
       setSubmitting(false);

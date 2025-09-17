@@ -38,9 +38,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Unauthorized - clear auth and redirect to login
-      localStorage.removeItem('auth-storage');
-      localStorage.removeItem('student-auth-storage');
-      window.location.href = '/';
+      console.error('401 Unauthorized - Token issue detected');
+      // 暫時不要自動跳轉，讓我們可以看到實際錯誤
+      // localStorage.removeItem('auth-storage');
+      // localStorage.removeItem('student-auth-storage');
+      // window.location.href = '/';
     }
     return Promise.reject(error);
   }

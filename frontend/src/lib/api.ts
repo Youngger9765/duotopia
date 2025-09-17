@@ -33,8 +33,48 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = API_URL;
-    // Load token from localStorage if exists
-    this.token = localStorage.getItem('access_token');
+    // Token will be loaded dynamically
+    this.token = null;
+  }
+
+  private getToken(): string | null {
+    // 動態獲取 token，優先學生 token
+    const studentAuth = localStorage.getItem('student-auth-storage');
+    if (studentAuth) {
+      try {
+        const { state } = JSON.parse(studentAuth);
+        if (state?.token) {
+          console.log('🔑 [DEBUG] Using student token');
+          return state.token;
+        }
+      } catch (e) {
+        console.error('Failed to parse student auth:', e);
+      }
+    }
+
+    // 如果沒有學生 token，檢查老師 token
+    const teacherAuth = localStorage.getItem('auth-storage');
+    if (teacherAuth) {
+      try {
+        const { state } = JSON.parse(teacherAuth);
+        if (state?.token) {
+          console.log('🔑 [DEBUG] Using teacher token');
+          return state.token;
+        }
+      } catch (e) {
+        console.error('Failed to parse teacher auth:', e);
+      }
+    }
+
+    // 最後檢查舊的 access_token
+    const oldToken = localStorage.getItem('access_token');
+    if (oldToken) {
+      console.log('🔑 [DEBUG] Using old access_token');
+      return oldToken;
+    }
+
+    console.log('🔑 [DEBUG] No token found');
+    return null;
   }
 
   private async request<T>(
@@ -43,13 +83,16 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    // 每次請求都動態獲取 token
+    const currentToken = this.getToken();
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (this.token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
+    if (currentToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${currentToken}`;
     }
 
     // 🔍 DEBUG: API請求詳情
@@ -57,8 +100,8 @@ class ApiClient {
     console.log('🌐 [DEBUG] URL:', url);
     console.log('🌐 [DEBUG] Method:', options.method || 'GET');
     console.log('🌐 [DEBUG] Headers:', headers);
-    console.log('🌐 [DEBUG] Token exists:', !!this.token);
-    console.log('🌐 [DEBUG] Token preview:', this.token ? `${this.token.substring(0, 20)}...` : 'null');
+    console.log('🌐 [DEBUG] Token exists:', !!currentToken);
+    console.log('🌐 [DEBUG] Token preview:', currentToken ? `${currentToken.substring(0, 20)}...` : 'null');
 
     const response = await fetch(url, {
       ...options,
