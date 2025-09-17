@@ -23,6 +23,7 @@ interface SpeakingPracticeProps {
   onStopRecording: () => void;
   onReRecord: () => void;
   formatTime: (seconds: number) => string;
+  readOnly?: boolean; // 唯讀模式
 }
 
 export default function SpeakingPracticeTemplate({
@@ -35,7 +36,8 @@ export default function SpeakingPracticeTemplate({
   onStartRecording,
   onStopRecording,
   onReRecord,
-  formatTime
+  formatTime,
+  readOnly = false
 }: SpeakingPracticeProps) {
   const [showHints, setShowHints] = useState(false);
 
@@ -108,13 +110,14 @@ export default function SpeakingPracticeTemplate({
                 <Button
                   onClick={onStartRecording}
                   size="lg"
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={readOnly}
                 >
                   <Mic className="h-5 w-5 mr-2" />
-                  開始錄音
+                  {readOnly ? '檢視模式' : '開始錄音'}
                 </Button>
                 <p className="text-sm text-gray-600">
-                  準備好後，點擊開始錄音進行口說練習
+                  {readOnly ? '檢視模式中無法錄音' : '準備好後，點擊開始錄音進行口說練習'}
                 </p>
               </>
             ) : isRecording ? (
@@ -165,14 +168,16 @@ export default function SpeakingPracticeTemplate({
                       <CheckCircle className="h-5 w-5" />
                       已完成錄音
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onReRecord}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      重新錄音
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onReRecord}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        重新錄音
+                      </Button>
+                    )}
                   </div>
                   <audio
                     controls

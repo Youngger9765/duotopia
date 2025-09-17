@@ -33,6 +33,7 @@ interface ReadingAssessmentProps {
   formatTime: (seconds: number) => string;
   exampleAudioUrl?: string;
   progressId?: number;
+  readOnly?: boolean; // 唯讀模式
 }
 
 export default function ReadingAssessmentTemplate({
@@ -46,7 +47,8 @@ export default function ReadingAssessmentTemplate({
   onReRecord,
   formatTime,
   exampleAudioUrl,
-  progressId
+  progressId,
+  readOnly = false
 }: ReadingAssessmentProps) {
   const [, setIsPlayingExample] = useState(false);
   const [isAssessing, setIsAssessing] = useState(false);
@@ -175,7 +177,8 @@ export default function ReadingAssessmentTemplate({
           {!isRecording && !audioUrl ? (
             <button
               onClick={onStartRecording}
-              className="bg-blue-400 hover:bg-blue-500 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg"
+              className={`bg-blue-400 hover:bg-blue-500 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? 'opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100' : ''}`}
+              disabled={readOnly}
             >
               <Mic className="h-8 w-8" />
             </button>
@@ -222,7 +225,7 @@ export default function ReadingAssessmentTemplate({
 
         {/* Bottom Buttons */}
         <div className="flex space-x-4 pt-6">
-          {audioUrl && (
+          {audioUrl && !readOnly && (
             <>
               <Button
                 variant="outline"

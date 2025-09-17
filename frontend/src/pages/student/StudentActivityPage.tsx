@@ -744,6 +744,7 @@ export default function StudentActivityPage() {
             formatTime={formatTime}
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
+            readOnly={isReadOnly}
           />
         );
 
@@ -788,6 +789,7 @@ export default function StudentActivityPage() {
             onStopRecording={stopRecording}
             onReRecord={reRecord}
             formatTime={formatTime}
+            readOnly={isReadOnly}
           />
         );
 
@@ -805,6 +807,7 @@ export default function StudentActivityPage() {
             onReRecord={reRecord}
             formatTime={formatTime}
             progressId={activity.id}
+            readOnly={isReadOnly}
           />
         );
     }
