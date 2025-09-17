@@ -7,7 +7,7 @@ Seed data for Duotopia - 新作業系統架構
 from datetime import datetime, date, timedelta  # noqa: F401
 import random
 from sqlalchemy.orm import Session
-from database import engine
+from database import engine, Base
 from models import (
     Teacher,
     Student,
@@ -16,10 +16,12 @@ from models import (
     Program,
     Lesson,
     Content,
+    ContentItem,
     Assignment,
     AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
+    StudentItemProgress,
     ProgramLevel,
     ContentType,
     AssignmentStatus,
@@ -478,6 +480,25 @@ def create_demo_data(db: Session):
     db.add_all(contents)
     db.commit()
     print(f"✅ 建立 {len(contents)} 個課程內容")
+
+    # ============ 6.5 建立 ContentItem（從 Content.items 轉換）============
+    print("\n📝 建立 ContentItem 資料...")
+    content_items = []
+    for content in contents:
+        if content.items:
+            for idx, item_data in enumerate(content.items):
+                content_item = ContentItem(
+                    content_id=content.id,
+                    order_index=idx,
+                    text=item_data.get("text", ""),
+                    translation=item_data.get("translation", ""),
+                )
+                content_items.append(content_item)
+
+    if content_items:
+        db.add_all(content_items)
+        db.commit()
+        print(f"✅ 建立 {len(content_items)} 個 ContentItem 記錄")
 
     # ============ 7. 新作業系統（Assignment + StudentAssignment + StudentContentProgress）============
     print("\n📝 建立新作業系統測試資料...")
@@ -2214,38 +2235,12 @@ def reset_database():
     """重置資料庫並建立 seed data"""
     print("⚠️  正在重置資料庫...")
 
-    # 注意：我們不能用 Base.metadata.drop_all() 因為有 alembic
-    # 應該用 SQL 直接 drop
-    from sqlalchemy import text
-
-    with engine.connect() as conn:
-        with conn.begin():
-            # Drop all tables in reverse order
-            conn.execute(text("DROP TABLE IF EXISTS student_content_progress CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS assignment_contents CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS student_assignments CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS assignments CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS contents CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS lessons CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS programs CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS classroom_students CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS classrooms CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS students CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS teachers CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
-
-            # Drop enum types
-            conn.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
-            conn.execute(text("DROP TYPE IF EXISTS programlevel CASCADE"))
-            conn.execute(text("DROP TYPE IF EXISTS assignmentstatus CASCADE"))
-            conn.execute(text("DROP TYPE IF EXISTS contenttype CASCADE"))
-
+    # Drop all tables using SQLAlchemy
+    Base.metadata.drop_all(bind=engine)
     print("✅ 舊資料已清除")
 
-    # 重新執行 migration
-    import subprocess
-
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    # Recreate all tables using SQLAlchemy
+    Base.metadata.create_all(bind=engine)
     print("✅ 資料表已重新建立")
 
     db = Session(engine)

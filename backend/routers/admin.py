@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from database import get_db
+from database import get_db, engine, Base
 from models import (
     Teacher,
     Student,
@@ -12,14 +12,73 @@ from models import (
     Program,
     Lesson,
     Content,
+    ContentItem,
     Assignment,
     StudentAssignment,
+    StudentContentProgress,
+    StudentItemProgress,
 )
 import os
 import subprocess
 import sys
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+@router.post("/database/rebuild")
+async def rebuild_database(seed: bool = True, db: Session = Depends(get_db)):
+    """重建資料庫 - 刪除所有表格並重新創建"""
+    # 檢查是否在允許的環境 (development 或 staging)
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rebuild operation not allowed in production environment",
+        )
+
+    try:
+        # 關閉當前 session
+        db.close()
+
+        # Drop all tables
+        Base.metadata.drop_all(bind=engine)
+
+        # Recreate all tables
+        Base.metadata.create_all(bind=engine)
+
+        result = {
+            "success": True,
+            "message": "Database rebuilt successfully",
+            "tables_created": list(Base.metadata.tables.keys()),
+        }
+
+        # 如果需要 seed
+        if seed:
+            try:
+                seed_result = subprocess.run(
+                    [sys.executable, "seed_data.py"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+
+                if seed_result.returncode == 0:
+                    result["seed_status"] = "success"
+                    result["seed_output"] = seed_result.stdout
+                else:
+                    result["seed_status"] = "failed"
+                    result["seed_error"] = seed_result.stderr
+            except Exception as e:
+                result["seed_status"] = "error"
+                result["seed_error"] = str(e)
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Rebuild operation failed: {str(e)}",
+        )
 
 
 @router.post("/seed-database")
@@ -79,8 +138,11 @@ def get_database_stats(db: Session = Depends(get_db)) -> Dict[str, Any]:
         "program": db.query(Program).count(),
         "lesson": db.query(Lesson).count(),
         "content": db.query(Content).count(),
+        "content_item": db.query(ContentItem).count(),
         "assignment": db.query(Assignment).count(),
         "student_assignment": db.query(StudentAssignment).count(),
+        "student_content_progress": db.query(StudentContentProgress).count(),
+        "student_item_progress": db.query(StudentItemProgress).count(),
     }
 
     total_records = sum(stats.values())
@@ -102,8 +164,11 @@ def get_entity_data(
         "program": Program,
         "lesson": Lesson,
         "content": Content,
+        "content_item": ContentItem,
         "assignment": Assignment,
         "student_assignment": StudentAssignment,
+        "student_content_progress": StudentContentProgress,
+        "student_item_progress": StudentItemProgress,
     }
 
     if entity_type not in entity_map:

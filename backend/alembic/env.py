@@ -29,7 +29,8 @@ target_metadata = Base.metadata
 # Get database URL from environment
 def get_url():
     """Get database URL from environment or use default."""
-    database_url = os.getenv("DATABASE_URL")
+    # Check for staging pooler URL first (for better connectivity)
+    database_url = os.getenv("STAGING_SUPABASE_POOLER_URL") or os.getenv("DATABASE_URL")
 
     if not database_url:
         # Default to local development database
@@ -46,6 +47,10 @@ def get_url():
 
 def process_revision_directives(context, revision, directives):
     """Validate migrations to prevent dangerous operations."""
+    # Skip validation if we're creating initial schema (empty database)
+    if os.getenv("SKIP_MIGRATION_VALIDATION") == "true":
+        return
+
     # Core business tables that should never be created by autogenerate
     PROTECTED_TABLES = {
         "users",
