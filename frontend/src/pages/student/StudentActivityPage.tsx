@@ -130,7 +130,26 @@ export default function StudentActivityPage() {
 
       const data: ActivityResponse = await response.json();
       console.log('Loaded activities from API:', data.activities);
-      console.log('AI scores in activities:', data.activities.map(a => ({ id: a.id, ai_scores: a.ai_scores })));
+
+      // Log AI assessment data from items
+      data.activities.forEach((activity, idx) => {
+        if (activity.items && activity.items.length > 0) {
+          console.log(`Activity ${idx} items with AI assessment:`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            activity.items.map((item: any) => ({
+              id: item.id,
+              text: item.text?.substring(0, 20),
+              has_ai: !!item.ai_assessment,
+              scores: item.ai_assessment ? {
+                accuracy: item.ai_assessment.accuracy_score,
+                fluency: item.ai_assessment.fluency_score,
+                pronunciation: item.ai_assessment.pronunciation_score
+              } : null
+            }))
+          );
+        }
+      });
+
       setActivities(data.activities);
       setAssignmentTitle(data.title);
 
@@ -610,6 +629,27 @@ export default function StudentActivityPage() {
 
     // Check if activity has multiple items (grouped questions)
     if (activity.items && activity.items.length > 0) {
+      // Extract AI assessments from items and format for GroupedQuestionsTemplate
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aiAssessments: Record<number, any> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      activity.items.forEach((item: any, index: number) => {
+        if (item.ai_assessment) {
+          aiAssessments[index] = {
+            accuracy_score: item.ai_assessment.accuracy_score,
+            fluency_score: item.ai_assessment.fluency_score,
+            pronunciation_score: item.ai_assessment.pronunciation_score,
+            completeness_score: item.ai_assessment.completeness_score || 0,
+            word_details: []
+          };
+        }
+      });
+
+      // Use the extracted AI assessments if available, otherwise fallback to activity.ai_scores
+      const assessmentResults = Object.keys(aiAssessments).length > 0
+        ? { items: aiAssessments }
+        : activity.ai_scores;
+
       return (
         <GroupedQuestionsTemplate
           items={activity.items}
@@ -622,7 +662,7 @@ export default function StudentActivityPage() {
           onStopRecording={stopRecording}
           formatTime={formatTime}
           progressId={activity.id}
-          initialAssessmentResults={activity.ai_scores}
+          initialAssessmentResults={assessmentResults}
         />
       );
     }

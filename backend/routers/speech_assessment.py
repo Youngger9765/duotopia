@@ -16,7 +16,12 @@ from pydub import AudioSegment
 
 from database import get_db
 from auth import get_current_user
-from models import Student, StudentContentProgress, AssignmentStatus, StudentAssignment
+from models import (
+    Student,
+    StudentContentProgress,
+    StudentAssignment,
+    StudentItemProgress,
+)
 
 # 設定 logger
 logger = logging.getLogger(__name__)
@@ -250,79 +255,41 @@ def save_assessment_result(
     item_index: Optional[int] = None,
     audio_url: Optional[str] = None,
     student_assignment_id: Optional[int] = None,
-) -> StudentContentProgress:
+) -> StudentItemProgress:
     """
-    儲存評估結果到 StudentContentProgress
-    如果找不到記錄就創建新的
+    儲存評估結果到 StudentItemProgress
+    progress_id 應該是 StudentItemProgress 的 ID
     """
+    # 查找 StudentItemProgress 記錄
     progress = (
-        db.query(StudentContentProgress)
-        .filter(StudentContentProgress.id == progress_id)
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.id == progress_id)
         .first()
     )
 
-    if not progress and student_assignment_id:
-        # 創建新的 progress 記錄
-        progress = StudentContentProgress(
-            student_assignment_id=student_assignment_id,
-            content_id=None,  # 暫時設為 None
-            status=AssignmentStatus.IN_PROGRESS,
-            ai_scores={},
-            response_data={},
-        )
-        db.add(progress)
-        db.commit()
-        db.refresh(progress)
-    elif not progress:
-        raise HTTPException(
-            status_code=404,
-            detail="Progress record not found and no student_assignment_id provided",
-        )
+    if not progress:
+        logger.error(f"StudentItemProgress with id {progress_id} not found")
+        raise HTTPException(status_code=404, detail="Progress record not found")
+    # 更新 AI 評估分數 (StudentItemProgress 使用獨立欄位而非 JSON)
+    progress.accuracy_score = assessment_result["accuracy_score"]
+    progress.fluency_score = assessment_result["fluency_score"]
+    progress.pronunciation_score = assessment_result["pronunciation_score"]
 
-    # 更新 response_data 儲存錄音 URL
-    response_data = progress.response_data or {}
-    if audio_url:
-        response_data["audio_url"] = audio_url
-    progress.response_data = response_data
+    # 將完整評估結果和詞彙細節儲存為 JSON 格式的 ai_feedback
+    import json
 
-    # 更新 ai_scores 儲存微軟評估結果
-    ai_scores = progress.ai_scores or {}
+    ai_feedback = {
+        "completeness_score": assessment_result["completeness_score"],
+        "word_details": assessment_result["words"],
+    }
+    progress.ai_feedback = json.dumps(ai_feedback)
 
-    # 為多題目活動創建評分結構
-    if item_index is not None:
-        # 多題目：將評分存在 items 陣列中
-        if "items" not in ai_scores:
-            ai_scores["items"] = {}
-
-        ai_scores["items"][str(item_index)] = {
-            "accuracy_score": assessment_result["accuracy_score"],
-            "fluency_score": assessment_result["fluency_score"],
-            "completeness_score": assessment_result["completeness_score"],
-            "pronunciation_score": assessment_result["pronunciation_score"],
-            "word_details": assessment_result["words"],
-        }
-    else:
-        # 單題目：直接儲存在根層級
-        ai_scores.update(
-            {
-                "accuracy_score": assessment_result["accuracy_score"],
-                "fluency_score": assessment_result["fluency_score"],
-                "completeness_score": assessment_result["completeness_score"],
-                "pronunciation_score": assessment_result["pronunciation_score"],
-                "word_details": assessment_result["words"],
-            }
-        )
-
-    progress.ai_scores = ai_scores
-
-    # 標記 JSON 欄位已修改，確保 SQLAlchemy 偵測到變更
-    from sqlalchemy.orm.attributes import flag_modified
-
-    flag_modified(progress, "ai_scores")
+    # 更新評估時間
+    progress.ai_assessed_at = datetime.now()
 
     # 更新狀態為已完成
-    progress.status = AssignmentStatus.SUBMITTED
-    progress.completed_at = datetime.now()
+    progress.status = "SUBMITTED"
+    progress.submitted_at = datetime.now()
 
     db.commit()
     db.refresh(progress)
@@ -400,7 +367,7 @@ async def assess_pronunciation_endpoint(
         pronunciation_score=assessment_result["pronunciation_score"],
         words=assessment_result["words"],
         reference_text=reference_text,
-        created_at=updated_progress.completed_at,
+        created_at=updated_progress.submitted_at,
     )
 
 
