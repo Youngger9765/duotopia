@@ -77,6 +77,27 @@ export default function StudentAssignmentDetail() {
       const foundAssignment = assignments.find((a: AssignmentData) => a.id === parseInt(id!));
 
       if (foundAssignment) {
+        // 如果作業已提交或已評分，創建一個虛擬的活動進度項目
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let contentProgress: any[] = [];
+
+        if (foundAssignment.status === 'SUBMITTED' || foundAssignment.status === 'GRADED') {
+          contentProgress = [{
+            id: foundAssignment.assignment_id || foundAssignment.id,
+            student_assignment_id: foundAssignment.id,
+            content_id: foundAssignment.assignment_id || foundAssignment.id,
+            content: {
+              id: foundAssignment.assignment_id || foundAssignment.id,
+              title: foundAssignment.title || '作業內容',
+              type: 'reading_assessment'
+            },
+            status: foundAssignment.status,
+            score: foundAssignment.score,
+            order_index: 0,
+            estimated_time: '10 分鐘'
+          }];
+        }
+
         // Transform to StudentAssignment type
         const assignmentDetail: StudentAssignment = {
           id: foundAssignment.id,
@@ -91,8 +112,8 @@ export default function StudentAssignmentDetail() {
           created_at: foundAssignment.assigned_at || foundAssignment.created_at,
           due_date: foundAssignment.due_date,
           submitted_at: foundAssignment.submitted_at,
-          content_progress: [],
-          progress_percentage: 0
+          content_progress: contentProgress,
+          progress_percentage: contentProgress.length > 0 ? 100 : 0
         };
         setAssignment(assignmentDetail);
       } else {
@@ -156,8 +177,10 @@ export default function StudentAssignmentDetail() {
     }
   };
 
-  const handleStartActivity = (progressId: number) => {
-    navigate(`/student/assignment/${id}/activity/${progressId}`);
+  const handleStartActivity = () => {
+    // 對於已提交的作業，直接導航到作業的活動頁面
+    // 因為後端 API 使用的是 assignment ID，不是 progress ID
+    navigate(`/student/assignment/${id}/activity`);
   };
 
   const handleStartAssignment = () => {
@@ -200,7 +223,7 @@ export default function StudentAssignmentDetail() {
 
               <Button
                 size="sm"
-                onClick={() => handleStartActivity(progress.id)}
+                onClick={handleStartActivity}
                 disabled={false}  // 允許查看已提交的作業
                 variant={progress.status === 'NOT_STARTED' ? 'default' : 'outline'}
               >

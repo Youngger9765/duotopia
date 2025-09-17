@@ -536,6 +536,7 @@ async def get_assignment_activities(
     return {
         "assignment_id": assignment_id,
         "title": student_assignment.title,
+        "status": student_assignment.status.value,  # 返回作業狀態
         "total_activities": len(activities),
         "activities": activities,
     }
