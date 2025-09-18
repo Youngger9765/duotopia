@@ -471,7 +471,7 @@ export default function Home() {
                 <ul className="space-y-2 text-sm">
                   <li><a href="#" className="hover:text-white">關於我們</a></li>
                   <li><a href="#" className="hover:text-white">隱私政策</a></li>
-                  <li><a href="#" className="hover:text-white">使用條款</a></li>
+                  <li><Link to="/terms" className="hover:text-white">使用條款</Link></li>
                 </ul>
               </div>
             </div>
