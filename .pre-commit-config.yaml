@@ -9,6 +9,15 @@ repos:
   # Python formatting & linting - 使用 requirements.txt 版本
   - repo: local
     hooks:
+      # autoflake - 自動移除未使用的 imports 和變數（在 black 之前執行）
+      - id: autoflake
+        name: autoflake
+        entry: autoflake
+        language: system
+        types: [python]
+        args: ['--in-place', '--remove-all-unused-imports', '--remove-unused-variables']
+        files: ^backend/.*\.py$
+
       - id: black
         name: black
         entry: black
