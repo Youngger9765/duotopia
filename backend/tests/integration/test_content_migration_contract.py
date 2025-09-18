@@ -4,8 +4,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from app import app
-from database import get_db
 from models import (
     User,
     Content,
@@ -15,12 +13,9 @@ from models import (
     StudentItemProgress,
     Classroom,
 )
-from tests.fixtures.db_fixtures import test_db, test_client
-from tests.fixtures.user_fixtures import test_teacher, test_student, test_classroom
 import io
 import os
 from decimal import Decimal
-from datetime import datetime
 
 
 class TestContentMigrationContract:

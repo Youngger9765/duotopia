@@ -6,7 +6,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from database import Base
 from models import Content, ContentItem, Teacher
-from datetime import datetime
 
 
 @pytest.fixture

@@ -12,7 +12,6 @@ from models import (
     StudentAssignment,
     ContentItem,
     StudentItemProgress,
-    StudentContentProgress,
 )
 
 
@@ -82,9 +81,7 @@ def test_individual_question_tracking():
         # Verify each item has unique tracking capability
         for item in items[:3]:  # Test first 3
             # Each item should be trackable individually
-            progress_query = db.query(StudentItemProgress).filter_by(
-                content_item_id=item.id
-            )
+            db.query(StudentItemProgress).filter_by(content_item_id=item.id)
             print(f"  Item {item.order_index}: Can track individually ✅")
 
         print(f"✅ FIXED: {len(items)} questions can be tracked individually")

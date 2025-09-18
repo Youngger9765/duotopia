@@ -11,8 +11,6 @@ from models import (
     StudentItemProgress,
     Classroom,
 )
-from tests.fixtures.db_fixtures import test_db
-from tests.fixtures.user_fixtures import test_teacher, test_student
 from decimal import Decimal
 from datetime import datetime
 

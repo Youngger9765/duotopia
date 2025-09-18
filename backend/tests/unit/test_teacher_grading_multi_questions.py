@@ -8,15 +8,8 @@ from models import (
     StudentContentProgress,
     AssignmentStatus,
     Content,
-    Student,
-    Teacher,
-    Classroom,
-    Assignment,
-    StudentAssignment,
     ContentType,
 )
-from routers.assignments import get_student_submission
-from unittest.mock import Mock
 
 
 class TestTeacherGradingMultiQuestions:

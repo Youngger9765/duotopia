@@ -1,7 +1,5 @@
 # Basic Tests for New Models - using existing test patterns
 
-import pytest
-from decimal import Decimal
 from models import ContentItem, StudentItemProgress
 
 

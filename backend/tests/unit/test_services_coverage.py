@@ -133,7 +133,6 @@ class TestTranslationService:
         if hasattr(service, "translate_batch"):
             texts = ["Hello", "World"]  # noqa: F841
             # 測試批次翻譯
-            pass
 
 
 class TestAudioManager:
@@ -262,7 +261,6 @@ class TestServiceIntegration:
         mock_smtp.return_value = mock_smtp_instance
 
         # 測試整合場景
-        pass
 
     @patch("services.audio_upload.AudioUploadService")
     @patch("services.audio_manager.AudioManager")
@@ -272,7 +270,6 @@ class TestServiceIntegration:
         audio_manager = AudioManager()  # noqa: F841
 
         # 測試上傳後處理流程
-        pass
 
 
 class TestServiceErrorHandling:

@@ -4,7 +4,6 @@ Test recording upload functionality with new StudentItemProgress structure
 """
 
 import requests
-import io
 from database import SessionLocal
 from models import StudentAssignment, ContentItem, StudentItemProgress
 

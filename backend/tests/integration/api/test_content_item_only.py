@@ -2,7 +2,6 @@
 TDD 測試：確保系統完全使用 ContentItem，不依賴 Content.items JSONB
 """
 
-import pytest
 from sqlalchemy.orm import Session
 from models import (
     Teacher,
@@ -15,7 +14,6 @@ from models import (
     StudentAssignment,
     Student,
     Classroom,
-    StudentContentProgress,
 )
 
 

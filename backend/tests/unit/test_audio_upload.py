@@ -4,8 +4,7 @@ Audio upload service 單元測試 - 目標覆蓋率 80%
 # flake8: noqa: E402
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
-from datetime import datetime
+from unittest.mock import Mock, patch, AsyncMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
