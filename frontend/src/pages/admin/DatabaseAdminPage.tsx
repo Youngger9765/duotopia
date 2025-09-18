@@ -23,8 +23,10 @@ interface DatabaseStats {
     program: number;
     lesson: number;
     content: number;
+    content_item: number;
     assignment: number;
     student_assignment: number;
+    student_item_progress: number;
   };
   total_records: number;
 }
@@ -47,8 +49,10 @@ const entityConfig = [
   { key: 'program', name: '課程計畫', icon: BookOpen, color: 'bg-indigo-500' },
   { key: 'lesson', name: '課程單元', icon: FileText, color: 'bg-pink-500' },
   { key: 'content', name: '學習內容', icon: FileText, color: 'bg-teal-500' },
+  { key: 'content_item', name: '內容項目', icon: FileText, color: 'bg-cyan-500' },
   { key: 'assignment', name: '作業', icon: ClipboardCheck, color: 'bg-red-500' },
   { key: 'student_assignment', name: '學生作業', icon: ClipboardCheck, color: 'bg-yellow-500' },
+  { key: 'student_item_progress', name: '學生項目進度', icon: ClipboardCheck, color: 'bg-emerald-500' },
 ];
 
 export default function DatabaseAdminPage() {
