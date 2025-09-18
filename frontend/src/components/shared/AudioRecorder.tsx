@@ -2,14 +2,12 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import AudioPlayer from './AudioPlayer';
 import {
   Mic,
   MicOff,
   Square,
-  Play,
-  Pause,
   RotateCcw,
-  CheckCircle,
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -66,12 +64,10 @@ export default function AudioRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [localAudioUrl, setLocalAudioUrl] = useState<string | null>(existingAudioUrl || null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [status, setStatus] = useState<'idle' | 'recording' | 'completed' | 'error'>(externalStatus);
 
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -199,17 +195,6 @@ export default function AudioRecorder({
     startRecording();
   }, [readOnly, disabled, onReRecord, startRecording]);
 
-  // Play/pause audio
-  const togglePlayback = useCallback(() => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -260,30 +245,11 @@ export default function AudioRecorder({
           )}
 
           {localAudioUrl && !isRecording && (
-            <>
-              <audio
-                ref={audioRef}
-                src={localAudioUrl}
-                onEnded={() => setIsPlaying(false)}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={togglePlayback}
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </Button>
-              {!readOnly && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleReRecord}
-                  disabled={disabled}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
-              )}
-            </>
+            <AudioPlayer
+              audioUrl={localAudioUrl}
+              variant="compact"
+              showTitle={false}
+            />
           )}
         </div>
       );
@@ -320,29 +286,22 @@ export default function AudioRecorder({
           )}
 
           {localAudioUrl && !isRecording && (
-            <div className="flex items-center gap-2">
-              <audio
-                ref={audioRef}
-                src={localAudioUrl}
-                onEnded={() => setIsPlaying(false)}
+            <div className="space-y-2">
+              <AudioPlayer
+                audioUrl={localAudioUrl}
+                variant="compact"
+                className="mb-2"
               />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={togglePlayback}
-                className="flex-1"
-              >
-                {isPlaying ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                {isPlaying ? '暫停' : '播放錄音'}
-              </Button>
               {!readOnly && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleReRecord}
                   disabled={disabled}
+                  className="w-full"
                 >
-                  <RotateCcw className="w-4 h-4" />
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  重新錄音
                 </Button>
               )}
             </div>
@@ -413,34 +372,12 @@ export default function AudioRecorder({
         {/* Recording completed */}
         {localAudioUrl && !isRecording && (
           <div className="space-y-4">
-            <div className="flex items-center justify-center gap-2 text-green-600">
-              <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">錄音完成</span>
-            </div>
-
-            <div className="flex items-center gap-3 justify-center">
-              <audio
-                ref={audioRef}
-                src={localAudioUrl}
-                onEnded={() => setIsPlaying(false)}
-              />
-              <Button
-                variant="secondary"
-                onClick={togglePlayback}
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4 mr-2" />
-                    暫停
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    播放錄音
-                  </>
-                )}
-              </Button>
-              {!readOnly && (
+            <AudioPlayer
+              audioUrl={localAudioUrl}
+              title="已錄製音檔"
+            />
+            {!readOnly && (
+              <div className="flex justify-center">
                 <Button
                   variant="outline"
                   onClick={handleReRecord}
@@ -449,8 +386,8 @@ export default function AudioRecorder({
                   <RotateCcw className="w-4 h-4 mr-2" />
                   重新錄音
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 

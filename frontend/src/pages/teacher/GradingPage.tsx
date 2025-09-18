@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Users,
   X,
+  Mic,
 } from "lucide-react";
 import { Assignment } from "@/types";
 
@@ -827,15 +828,24 @@ export default function GradingPage() {
                             </h5>
                           </div>
 
-                          {/* 學生錄音播放器 - 使用 AudioRecorder 元件（唯讀模式） */}
-                          <AudioRecorder
-                            variant="compact"
-                            title=""
-                            existingAudioUrl={currentItem.audio_url || undefined}
-                            readOnly={true}
-                            disabled={false}
-                            className="border-0 p-0 shadow-none"
-                          />
+                          {/* 學生錄音播放器 */}
+                          {currentItem.audio_url ? (
+                            <AudioRecorder
+                              variant="compact"
+                              title=""
+                              existingAudioUrl={currentItem.audio_url}
+                              readOnly={true}
+                              disabled={false}
+                              className="border-0 p-0 shadow-none"
+                            />
+                          ) : (
+                            <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                                <Mic className="w-5 h-5 text-gray-500" />
+                              </div>
+                              <span className="text-sm text-gray-500">學生未錄製音檔</span>
+                            </div>
+                          )}
 
                           {/* AI 評分結果 - 使用共用元件 */}
                           {currentItem.ai_scores && (

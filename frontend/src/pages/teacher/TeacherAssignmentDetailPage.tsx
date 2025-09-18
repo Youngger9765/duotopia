@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import TeacherLayout from '@/components/TeacherLayout';
-import GradingModal from '@/components/GradingModal';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -78,11 +77,6 @@ export default function TeacherAssignmentDetailPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedContent, setExpandedContent] = useState(false);
 
-  // Modal 狀態
-  const [isGradingModalOpen, setIsGradingModalOpen] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-  const [selectedStudentName, setSelectedStudentName] = useState<string>('');
-  const [gradingStudentIndex, setGradingStudentIndex] = useState<number>(0);
 
   useEffect(() => {
     let isActive = true;
@@ -1098,17 +1092,7 @@ export default function TeacherAssignmentDetailPage() {
                                         className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors"
                                         onClick={() => {
                                           // 導向到批改頁面
-                                          navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`);
-                                          setSelectedStudentId(progress.student_id);
-                                          setSelectedStudentName(progress.student_name);
-                                          // 找出這個學生在列表中的位置
-                                          const submittedStudents = filteredProgress.filter(p => {
-                                            const pStatus = p.status?.toUpperCase();
-                                            return pStatus === 'SUBMITTED' || pStatus === 'RESUBMITTED';
-                                          });
-                                          const currentIndex = submittedStudents.findIndex(p => p.student_id === progress.student_id);
-                                          setGradingStudentIndex(currentIndex);
-                                          setIsGradingModalOpen(true);
+                                          navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`);
                                         }}
                                       >
                                         批改
@@ -1161,79 +1145,6 @@ export default function TeacherAssignmentDetailPage() {
           </div>
         </Card>
       </div>
-
-      {/* Grading Modal */}
-      {isGradingModalOpen && selectedStudentId && assignment && (
-        <GradingModal
-          isOpen={isGradingModalOpen}
-          onClose={() => {
-            setIsGradingModalOpen(false);
-            setSelectedStudentId(null);
-            setSelectedStudentName('');
-            // 重新載入進度資料
-            fetchStudentProgress();
-          }}
-          studentId={selectedStudentId}
-          studentName={selectedStudentName}
-          assignmentId={Number(assignmentId)}
-          assignmentTitle={assignment.title}
-          currentIndex={gradingStudentIndex + 1}
-          totalStudents={filteredProgress.filter(p =>
-            p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
-          ).length}
-          onSaveAndNext={() => {
-            // 找到下一個需要批改的學生
-            const submittedStudents = filteredProgress.filter(p =>
-              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
-            );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
-
-            if (currentIndex < submittedStudents.length - 1) {
-              // 有下一個學生
-              const nextStudent = submittedStudents[currentIndex + 1];
-              setSelectedStudentId(nextStudent.student_id);
-              setSelectedStudentName(nextStudent.student_name);
-              setGradingStudentIndex(currentIndex + 1);
-            } else {
-              // 沒有下一個學生，關閉 Modal
-              setIsGradingModalOpen(false);
-              setSelectedStudentId(null);
-              setSelectedStudentName('');
-              toast.success('所有學生作業已批改完成！');
-            }
-            // 重新載入進度資料
-            fetchStudentProgress();
-          }}
-          onPrevious={() => {
-            // 找到上一個需要批改的學生
-            const submittedStudents = filteredProgress.filter(p =>
-              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
-            );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
-
-            if (currentIndex > 0) {
-              const prevStudent = submittedStudents[currentIndex - 1];
-              setSelectedStudentId(prevStudent.student_id);
-              setSelectedStudentName(prevStudent.student_name);
-              setGradingStudentIndex(currentIndex - 1);
-            }
-          }}
-          onNext={() => {
-            // 找到下一個需要批改的學生
-            const submittedStudents = filteredProgress.filter(p =>
-              p.status === 'SUBMITTED' || p.status === 'RESUBMITTED'
-            );
-            const currentIndex = submittedStudents.findIndex(p => p.student_id === selectedStudentId);
-
-            if (currentIndex < submittedStudents.length - 1) {
-              const nextStudent = submittedStudents[currentIndex + 1];
-              setSelectedStudentId(nextStudent.student_id);
-              setSelectedStudentName(nextStudent.student_name);
-              setGradingStudentIndex(currentIndex + 1);
-            }
-          }}
-        />
-      )}
     </TeacherLayout>
   );
 }
