@@ -158,8 +158,8 @@ jobs:
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
           # 列出所有 backend images (使用正確的指令)
-          IMAGES=$(gcloud container images list-tags \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend \
+          IMAGES=$(gcloud artifacts docker tags list \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend \
             --format="value(digest)" \
             --sort-by="~timestamp" 2>/dev/null || echo "")
 
@@ -179,10 +179,10 @@ jobs:
 
             for DIGEST in $TO_DELETE; do
               echo "  Deleting: $DIGEST"
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-backend@sha256:$DIGEST"
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend@sha256:$DIGEST"
 
               # 直接刪除映像（會自動刪除相關的 tags）
-              if gcloud container images delete "${IMAGE_URI}" --force-delete-tags --quiet 2>&1; then
+              if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
                 echo "    ✅ Successfully deleted image: $DIGEST"
               else
                 echo "    ⚠️ Failed to delete image: $DIGEST"
@@ -202,8 +202,8 @@ jobs:
           echo "📌 Will keep $KEEP_COUNT most recent images"
 
           # 列出所有 frontend images (使用正確的指令)
-          IMAGES=$(gcloud container images list-tags \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend \
+          IMAGES=$(gcloud artifacts docker tags list \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend \
             --format="value(digest)" \
             --sort-by="~timestamp" 2>/dev/null || echo "")
 
@@ -223,10 +223,10 @@ jobs:
 
             for DIGEST in $TO_DELETE; do
               echo "  Deleting: $DIGEST"
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/duotopia-staging-frontend@sha256:$DIGEST"
+              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend@sha256:$DIGEST"
 
               # 直接刪除映像（會自動刪除相關的 tags）
-              if gcloud container images delete "${IMAGE_URI}" --force-delete-tags --quiet 2>&1; then
+              if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
                 echo "    ✅ Successfully deleted image: $DIGEST"
               else
                 echo "    ⚠️ Failed to delete image: $DIGEST"
