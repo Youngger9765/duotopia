@@ -127,7 +127,7 @@ jobs:
         continue-on-error: true
         with:
           reporter: github-pr-review
-          fail_on_error: false
+          fail_level: none
 
   dependency-check:
     name: 🔍 Dependency Vulnerabilities
