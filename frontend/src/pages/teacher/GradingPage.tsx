@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
+import AudioRecorder from "@/components/shared/AudioRecorder";
 import {
   User,
   Clock,
@@ -20,6 +21,7 @@ import {
   AlertCircle,
   Users,
   X,
+  Mic,
 } from "lucide-react";
 import { Assignment } from "@/types";
 
@@ -124,6 +126,10 @@ export default function GradingPage() {
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [assignmentTitle, setAssignmentTitle] = useState("");
+
+  // 音訊回饋相關
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  const [audioFeedbackUrls, setAudioFeedbackUrls] = useState<{[key: number]: string}>({});
 
   // 計算題目索引映射
   const getItemIndexMap = () => {
@@ -961,6 +967,52 @@ export default function GradingPage() {
                               placeholder="針對此題的評語..."
                               className="min-h-[80px] resize-none bg-white mt-3"
                             />
+
+                            {/* 語音評語按鈕 */}
+                            <div className="mt-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowAudioRecorder(!showAudioRecorder)}
+                                className="w-full"
+                              >
+                                <Mic className="h-4 w-4 mr-2" />
+                                {showAudioRecorder ? '隱藏語音評語' : '錄製語音評語'}
+                              </Button>
+                            </div>
+
+                            {/* 語音錄製器 */}
+                            {showAudioRecorder && (
+                              <div className="mt-3">
+                                <AudioRecorder
+                                  variant="compact"
+                                  title="錄製語音評語"
+                                  description="為學生錄製鼓勵和建議"
+                                  suggestedDuration={30}
+                                  existingAudioUrl={audioFeedbackUrls[selectedItemIndex]}
+                                  onRecordingComplete={(_blob, url) => {
+                                    // 儲存音訊 URL
+                                    setAudioFeedbackUrls(prev => ({
+                                      ...prev,
+                                      [selectedItemIndex]: url
+                                    }));
+
+                                    // TODO: 上傳音訊檔案到伺服器
+                                    console.log('Audio feedback recorded for item', selectedItemIndex, url);
+                                    toast.success('語音評語已錄製');
+                                  }}
+                                  onReRecord={() => {
+                                    // 清除現有錄音
+                                    setAudioFeedbackUrls(prev => {
+                                      const newUrls = { ...prev };
+                                      delete newUrls[selectedItemIndex];
+                                      return newUrls;
+                                    });
+                                  }}
+                                  className="border-0 p-0"
+                                />
+                              </div>
+                            )}
 
                             {/* 快速評語 */}
                             <div className="mt-2 flex flex-wrap gap-1">
