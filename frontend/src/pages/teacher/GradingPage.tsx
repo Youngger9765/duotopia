@@ -910,6 +910,7 @@ export default function GradingPage() {
                                       },
                                     });
                                   }}
+                                  disabled={submission?.status === "GRADED"}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   通過
@@ -940,6 +941,7 @@ export default function GradingPage() {
                                       },
                                     });
                                   }}
+                                  disabled={submission?.status === "GRADED"}
                                 >
                                   <X className="h-4 w-4 mr-1" />
                                   未通過
@@ -966,6 +968,8 @@ export default function GradingPage() {
                               }}
                               placeholder="針對此題的評語..."
                               className="min-h-[80px] resize-none bg-white mt-3"
+                              readOnly={submission?.status === "GRADED"}
+                              disabled={submission?.status === "GRADED"}
                             />
 
                             {/* 語音評語按鈕 */}
@@ -975,9 +979,12 @@ export default function GradingPage() {
                                 variant="outline"
                                 onClick={() => setShowAudioRecorder(!showAudioRecorder)}
                                 className="w-full"
+                                disabled={submission?.status === "GRADED" && !audioFeedbackUrls[selectedItemIndex]}
                               >
                                 <Mic className="h-4 w-4 mr-2" />
-                                {showAudioRecorder ? '隱藏語音評語' : '錄製語音評語'}
+                                {submission?.status === "GRADED" && !audioFeedbackUrls[selectedItemIndex]
+                                  ? '已批改（無語音評語）'
+                                  : showAudioRecorder ? '隱藏語音評語' : '錄製語音評語'}
                               </Button>
                             </div>
 
@@ -990,6 +997,8 @@ export default function GradingPage() {
                                   description="為學生錄製鼓勵和建議"
                                   suggestedDuration={30}
                                   existingAudioUrl={audioFeedbackUrls[selectedItemIndex]}
+                                  readOnly={submission?.status === "GRADED"}
+                                  disabled={submitting}
                                   onRecordingComplete={(_blob, url) => {
                                     // 儲存音訊 URL
                                     setAudioFeedbackUrls(prev => ({
