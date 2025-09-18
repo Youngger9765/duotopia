@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
+import AIScoreDisplay from '@/components/shared/AIScoreDisplay';
 import {
   CheckCircle,
   Mic,
@@ -11,8 +12,7 @@ import {
   Pause,
   Volume2,
   Brain,
-  Loader2,
-  Star
+  Loader2
 } from 'lucide-react';
 
 interface Question {
@@ -27,14 +27,15 @@ interface AssessmentResult {
   accuracy_score?: number;
   fluency_score?: number;
   completeness_score?: number;
+  overall_score?: number;
   words?: Array<{
     accuracy_score?: number;
-    word?: string;
+    word: string;
     error_type?: string;
   }>;
   word_details?: Array<{
     accuracy_score?: number;
-    word?: string;
+    word: string;
     error_type?: string;
   }>;
   error_type?: string;
@@ -534,99 +535,42 @@ export default function GroupedQuestionsTemplate({
         {/* 4. AI 評估結果區 - 固定顯示 */}
         <div className="mt-6">
           {assessmentResults[currentQuestionIndex] ? (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-purple-600" />
-                  AI 發音評估結果
-                </h4>
-                <button
-                  onClick={() => {
-                    setAssessmentResults(prev => {
-                      const newResults = { ...prev };
-                      delete newResults[currentQuestionIndex];
-                      return newResults;
-                    });
-                  }}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  清除結果
-                </button>
-              </div>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setAssessmentResults(prev => {
+                    const newResults = { ...prev };
+                    delete newResults[currentQuestionIndex];
+                    return newResults;
+                  });
+                }}
+                className="absolute top-4 right-4 z-10 text-sm text-gray-500 hover:text-gray-700 bg-white px-2 py-1 rounded shadow"
+              >
+                清除結果
+              </button>
 
-              {/* 總體分數 */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {assessmentResults[currentQuestionIndex].pronunciation_score?.toFixed(1) || '0'}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">總體發音</div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {assessmentResults[currentQuestionIndex].accuracy_score?.toFixed(1) || '0'}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">準確度</div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {assessmentResults[currentQuestionIndex].fluency_score?.toFixed(1) || '0'}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">流暢度</div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {assessmentResults[currentQuestionIndex].completeness_score?.toFixed(1) || '0'}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">完整度</div>
-                </div>
-              </div>
-
-              {/* 單字詳細評分 */}
-              {assessmentResults[currentQuestionIndex] && (assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details) &&
-               ((assessmentResults[currentQuestionIndex].words?.length || 0) > 0 || (assessmentResults[currentQuestionIndex].word_details?.length || 0) > 0) && (
-                <div className="space-y-2">
-                  <h5 className="text-sm font-semibold text-gray-700 mb-2">單字發音詳情：</h5>
-                  <div className="flex flex-wrap gap-2">
-                    {(assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details)?.map((word, idx: number) => {
-                      const score = word.accuracy_score || 0;
-                      // const scoreColor = score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
-                      const bgColor = score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';
-                      const borderColor = score >= 80 ? 'border-green-300' : score >= 60 ? 'border-yellow-300' : 'border-red-300';
-                      const textColor = score >= 80 ? 'text-green-800' : score >= 60 ? 'text-yellow-800' : 'text-red-800';
-
-                      return (
-                        <div
-                          key={idx}
-                          className={`${bgColor} ${borderColor} ${textColor} border rounded-lg px-3 py-1.5 text-sm font-medium`}
-                        >
-                          <span className="font-semibold">{word.word}</span>
-                          <span className="ml-2 text-xs opacity-80">({score})</span>
-                          {word.error_type && word.error_type !== 'None' && (
-                            <span className="ml-1 text-xs">⚠️</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 建議區域 */}
-              <div className="mt-4 pt-4 border-t border-purple-200">
-                <div className="flex items-start gap-2">
-                  <Star className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-700">
-                    {(assessmentResults[currentQuestionIndex]?.pronunciation_score || 0) >= 80 ? (
-                      <span className="font-medium text-green-700">表現優秀！繼續保持這樣的發音水準。</span>
-                    ) : (assessmentResults[currentQuestionIndex]?.pronunciation_score || 0) >= 60 ? (
-                      <span className="font-medium text-yellow-700">不錯！注意準確度和流暢度的平衡。</span>
-                    ) : (
-                      <span className="font-medium text-red-700">需要更多練習，特別注意標示的單字發音。</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              {/* AI Score Display - 使用共用元件 */}
+              <AIScoreDisplay
+                scores={{
+                  accuracy_score: assessmentResults[currentQuestionIndex].accuracy_score,
+                  fluency_score: assessmentResults[currentQuestionIndex].fluency_score,
+                  pronunciation_score: assessmentResults[currentQuestionIndex].pronunciation_score,
+                  completeness_score: assessmentResults[currentQuestionIndex].completeness_score,
+                  overall_score: assessmentResults[currentQuestionIndex].overall_score ||
+                    ((assessmentResults[currentQuestionIndex].accuracy_score || 0) +
+                     (assessmentResults[currentQuestionIndex].fluency_score || 0) +
+                     (assessmentResults[currentQuestionIndex].pronunciation_score || 0)) / 3,
+                  word_details: (assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details || [])
+                    .filter(w => w.word)
+                    .map(w => ({
+                      word: w.word,
+                      accuracy_score: w.accuracy_score || 0,
+                      error_type: w.error_type
+                    }))
+                }}
+                hasRecording={true}
+                title="AI 發音評估結果"
+              />
             </div>
           ) : (
             <div className="min-h-[300px] bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center">

@@ -437,26 +437,43 @@ async def get_assignment_activities(
                         if item_progress:
                             item_data["recording_url"] = item_progress.recording_url
                             item_data["status"] = item_progress.status
-                            if item_progress.has_ai_assessment:
-                                item_data["ai_assessment"] = {
-                                    "accuracy_score": float(
-                                        item_progress.accuracy_score
+                            if (
+                                item_progress.has_ai_assessment
+                                and item_progress.ai_feedback
+                            ):
+                                # 從 ai_feedback JSON 中取得分數
+                                import json
+
+                                try:
+                                    ai_feedback = (
+                                        json.loads(item_progress.ai_feedback)
+                                        if isinstance(item_progress.ai_feedback, str)
+                                        else item_progress.ai_feedback
                                     )
-                                    if item_progress.accuracy_score
-                                    else None,
-                                    "fluency_score": float(item_progress.fluency_score)
-                                    if item_progress.fluency_score
-                                    else None,
-                                    "pronunciation_score": float(
-                                        item_progress.pronunciation_score
-                                    )
-                                    if item_progress.pronunciation_score
-                                    else None,
-                                    "ai_feedback": item_progress.ai_feedback,
-                                    "assessed_at": item_progress.ai_assessed_at.isoformat()
-                                    if item_progress.ai_assessed_at
-                                    else None,
-                                }
+                                    item_data["ai_assessment"] = {
+                                        "accuracy_score": float(
+                                            ai_feedback.get("accuracy_score", 0)
+                                        ),
+                                        "fluency_score": float(
+                                            ai_feedback.get("fluency_score", 0)
+                                        ),
+                                        "pronunciation_score": float(
+                                            ai_feedback.get("pronunciation_score", 0)
+                                        ),
+                                        "completeness_score": float(
+                                            ai_feedback.get("completeness_score", 0)
+                                        ),
+                                        "word_details": ai_feedback.get(
+                                            "word_details", []
+                                        ),
+                                        "ai_feedback": item_progress.ai_feedback,
+                                        "assessed_at": item_progress.ai_assessed_at.isoformat()
+                                        if item_progress.ai_assessed_at
+                                        else None,
+                                    }
+                                except (json.JSONDecodeError, TypeError):
+                                    # 如果 JSON 解析失敗，設為 None
+                                    item_data["ai_assessment"] = None
 
                         items_with_ids.append(item_data)
 

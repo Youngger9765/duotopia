@@ -1744,40 +1744,66 @@ async def get_student_submission(
                                     "word_details": ai_data.get("word_details", []),
                                 }
                         else:
-                            # 如果沒有 ai_feedback，嘗試從舊的欄位讀取（向後相容）
-                            submission["ai_scores"] = {
-                                "accuracy_score": float(item_progress.accuracy_score)
-                                if item_progress.accuracy_score
-                                else 0,
-                                "fluency_score": float(item_progress.fluency_score)
-                                if item_progress.fluency_score
-                                else 0,
-                                "pronunciation_score": float(
-                                    item_progress.pronunciation_score
-                                )
-                                if item_progress.pronunciation_score
-                                else 0,
-                                "completeness_score": 0,
-                                "overall_score": (
-                                    (
-                                        float(item_progress.accuracy_score or 0)
-                                        + float(item_progress.fluency_score or 0)
-                                        + float(item_progress.pronunciation_score or 0)
-                                    )
-                                    / 3
-                                )
-                                if any(
-                                    [
-                                        item_progress.accuracy_score,
-                                        item_progress.fluency_score,
-                                        item_progress.pronunciation_score,
-                                    ]
-                                )
-                                else 0,
-                                "word_details": item_progress.word_details
-                                if hasattr(item_progress, "word_details")
-                                else [],
-                            }
+                            # 統一只從 ai_feedback JSON 中取得分數
+                            if item_progress.ai_feedback:
+                                try:
+                                    if isinstance(item_progress.ai_feedback, str):
+                                        ai_feedback_data = json.loads(
+                                            item_progress.ai_feedback
+                                        )
+                                    else:
+                                        ai_feedback_data = item_progress.ai_feedback
+
+                                    submission["ai_scores"] = {
+                                        "accuracy_score": float(
+                                            ai_feedback_data.get("accuracy_score", 0)
+                                        ),
+                                        "fluency_score": float(
+                                            ai_feedback_data.get("fluency_score", 0)
+                                        ),
+                                        "pronunciation_score": float(
+                                            ai_feedback_data.get(
+                                                "pronunciation_score", 0
+                                            )
+                                        ),
+                                        "completeness_score": float(
+                                            ai_feedback_data.get(
+                                                "completeness_score", 0
+                                            )
+                                        ),
+                                        "overall_score": (
+                                            (
+                                                float(
+                                                    ai_feedback_data.get(
+                                                        "accuracy_score", 0
+                                                    )
+                                                )
+                                                + float(
+                                                    ai_feedback_data.get(
+                                                        "fluency_score", 0
+                                                    )
+                                                )
+                                                + float(
+                                                    ai_feedback_data.get(
+                                                        "pronunciation_score", 0
+                                                    )
+                                                )
+                                            )
+                                            / 3
+                                        ),
+                                        "word_details": ai_feedback_data.get(
+                                            "word_details", []
+                                        ),
+                                    }
+                                except (
+                                    json.JSONDecodeError,
+                                    TypeError,
+                                    AttributeError,
+                                ):
+                                    # 如果 JSON 解析失敗，不顯示 AI 評分
+                                    submission["ai_scores"] = None
+
+                            # AI 評分已經設定完成，無需額外處理
 
                     submissions.append(submission)
                     group["submissions"].append(submission)
