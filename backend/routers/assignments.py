@@ -1624,18 +1624,19 @@ async def get_student_submission(
     submissions = []
     content_groups = []  # 用於儲存分組資訊
 
-    # 獲取所有內容進度記錄（包含個別題目的批改資訊）
-    progress_records = (
-        db.query(StudentContentProgress)
-        .filter(StudentContentProgress.student_assignment_id == assignment.id)
-        .order_by(StudentContentProgress.order_index)
+    # 獲取所有 StudentItemProgress 記錄（新系統）
+    from models import StudentItemProgress
+
+    item_progress_records = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.student_assignment_id == assignment.id)
         .all()
     )
 
-    # 建立 progress 的索引對應 - 使用 order_index 作為 key
-    progress_by_index = {}
-    for progress in progress_records:
-        progress_by_index[progress.order_index] = progress
+    # 建立以 content_item_id 為 key 的字典，方便查詢
+    progress_by_item_id = {}
+    for progress in item_progress_records:
+        progress_by_item_id[progress.content_item_id] = progress
 
     # 如果有真實的 content 資料
     if assignment_contents:
@@ -1660,6 +1661,7 @@ async def get_student_submission(
                     submission = {
                         "content_id": content.id,
                         "content_title": content.title,
+                        "content_item_id": item.id,  # 加入 content_item_id
                         "question_text": item.text if hasattr(item, "text") else "",
                         "question_translation": item.translation
                         if hasattr(item, "translation")
@@ -1676,64 +1678,105 @@ async def get_student_submission(
                         "passed": None,  # 預設未評
                     }
 
-                    # 使用 item_index 來獲取對應的 progress 記錄
-                    progress = progress_by_index.get(item_index)
+                    # 使用 content_item_id 來獲取對應的 StudentItemProgress 記錄
+                    item_progress = progress_by_item_id.get(item.id)
 
-                    # 從 progress 的 response_data 獲取學生答案和錄音
-                    if progress and progress.response_data:
-                        # 獲取學生錄音檔案 - 支援多題目的 recordings 陣列
-                        recordings = progress.response_data.get("recordings", [])
-                        if (
-                            recordings
-                            and local_item_index < len(recordings)
-                            and recordings[local_item_index]
-                        ):
-                            # 多題目：從 recordings 陣列取得對應題目的錄音
-                            submission["student_audio_url"] = recordings[
-                                local_item_index
-                            ]
+                    # 從 StudentItemProgress 直接獲取資料
+                    if item_progress:
+                        # 學生錄音檔案 - 前端使用 audio_url 欄位
+                        if item_progress.recording_url:
+                            submission[
+                                "audio_url"
+                            ] = item_progress.recording_url  # 前端用 audio_url
+                            submission[
+                                "student_audio_url"
+                            ] = item_progress.recording_url  # 保留相容性
+
+                        # 作答狀態 - 使用 status 欄位
+                        if item_progress.status == "SUBMITTED":
+                            submission["status"] = "submitted"
+
+                        # 創建 AI 評分物件 - 全部從 ai_feedback JSON 欄位讀取
+                        if item_progress.ai_feedback:
+                            # ai_feedback 是 JSON 字串，需要解析
+                            import json
+
+                            try:
+                                ai_data = (
+                                    json.loads(item_progress.ai_feedback)
+                                    if isinstance(item_progress.ai_feedback, str)
+                                    else item_progress.ai_feedback
+                                )
+                            except (json.JSONDecodeError, TypeError):
+                                ai_data = None
+
+                            if ai_data and isinstance(ai_data, dict):
+                                submission["ai_scores"] = {
+                                    "accuracy_score": float(
+                                        ai_data.get("accuracy_score", 0)
+                                    ),
+                                    "fluency_score": float(
+                                        ai_data.get("fluency_score", 0)
+                                    ),
+                                    "pronunciation_score": float(
+                                        ai_data.get("pronunciation_score", 0)
+                                    ),
+                                    "completeness_score": float(
+                                        ai_data.get("completeness_score", 0)
+                                    ),
+                                    "overall_score": float(
+                                        ai_data.get("overall_score", 0)
+                                    )
+                                    if ai_data.get("overall_score")
+                                    else (
+                                        (
+                                            float(ai_data.get("accuracy_score", 0))
+                                            + float(ai_data.get("fluency_score", 0))
+                                            + float(
+                                                ai_data.get("pronunciation_score", 0)
+                                            )
+                                            + float(
+                                                ai_data.get("completeness_score", 0)
+                                            )
+                                        )
+                                        / 4
+                                    ),
+                                    "word_details": ai_data.get("word_details", []),
+                                }
                         else:
-                            # 單題目：使用 audio_url
-                            audio_url = progress.response_data.get("audio_url")
-                            if audio_url:
-                                submission["student_audio_url"] = audio_url
-
-                        # 獲取學生文字答案（如果有）- 簡化為單一值
-                        student_answer = progress.response_data.get("student_answer")
-                        if student_answer:
-                            submission["student_answer"] = student_answer
-
-                        # 獲取語音辨識結果（如果有）- 簡化為單一值
-                        transcript = progress.response_data.get("transcript")
-                        if transcript:
-                            submission["transcript"] = transcript
-
-                        # 獲取批改資訊 - 簡化為單一值
-                        feedback = progress.response_data.get("feedback")
-                        if feedback:
-                            submission["feedback"] = feedback
-
-                        passed = progress.response_data.get("passed")
-                        if passed is not None:
-                            submission["passed"] = passed
-
-                    # 獲取 AI 評分結果（來自語音評估 API）
-                    if progress and progress.ai_scores:
-                        # 支援多題目的 AI 評分結構
-                        if (
-                            "items" in progress.ai_scores
-                            and str(local_item_index) in progress.ai_scores["items"]
-                        ):
-                            # 多題目：從 items 中取得對應題目的評分
-                            submission["ai_scores"] = progress.ai_scores["items"][
-                                str(local_item_index)
-                            ]
-                        else:
-                            # 單題目：直接使用根層級的評分
+                            # 如果沒有 ai_feedback，嘗試從舊的欄位讀取（向後相容）
                             submission["ai_scores"] = {
-                                k: v
-                                for k, v in progress.ai_scores.items()
-                                if k not in ["items"]  # 排除 items 結構
+                                "accuracy_score": float(item_progress.accuracy_score)
+                                if item_progress.accuracy_score
+                                else 0,
+                                "fluency_score": float(item_progress.fluency_score)
+                                if item_progress.fluency_score
+                                else 0,
+                                "pronunciation_score": float(
+                                    item_progress.pronunciation_score
+                                )
+                                if item_progress.pronunciation_score
+                                else 0,
+                                "completeness_score": 0,
+                                "overall_score": (
+                                    (
+                                        float(item_progress.accuracy_score or 0)
+                                        + float(item_progress.fluency_score or 0)
+                                        + float(item_progress.pronunciation_score or 0)
+                                    )
+                                    / 3
+                                )
+                                if any(
+                                    [
+                                        item_progress.accuracy_score,
+                                        item_progress.fluency_score,
+                                        item_progress.pronunciation_score,
+                                    ]
+                                )
+                                else 0,
+                                "word_details": item_progress.word_details
+                                if hasattr(item_progress, "word_details")
+                                else [],
                             }
 
                     submissions.append(submission)

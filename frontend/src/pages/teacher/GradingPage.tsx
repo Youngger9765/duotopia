@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
 import {
   User,
   Clock,
@@ -47,6 +48,18 @@ interface SubmissionItem {
   content_title?: string;
   feedback?: string;
   passed?: boolean | null;
+  ai_scores?: {
+    accuracy_score: number;
+    fluency_score: number;
+    pronunciation_score: number;
+    completeness_score: number;
+    overall_score: number;
+    word_details?: Array<{
+      word: string;
+      accuracy_score: number;
+      error_type?: string;
+    }>;
+  };
 }
 
 interface StudentSubmission {
@@ -65,6 +78,18 @@ interface StudentSubmission {
   }>;
   current_score?: number;
   current_feedback?: string;
+  ai_scores?: {
+    accuracy_score: number;
+    fluency_score: number;
+    pronunciation_score: number;
+    completeness_score: number;
+    overall_score: number;
+    word_details?: Array<{
+      word: string;
+      accuracy_score: number;
+      error_type?: string;
+    }>;
+  };
 }
 
 interface ItemFeedback {
@@ -770,24 +795,36 @@ export default function GradingPage() {
                             </div>
                           </div>
 
-                          {/* 學生答案 */}
-                          <div className={`p-4 rounded-lg border ${currentItem.student_answer ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                            <p className={`text-xs font-semibold mb-2 ${currentItem.student_answer ? 'text-blue-700' : 'text-gray-500'}`}>
-                              學生答案
-                            </p>
-                            <p className="text-base text-gray-900 leading-relaxed">
-                              {currentItem.student_answer || <span className="text-gray-400 italic">（無文字答案）</span>}
-                            </p>
-                          </div>
+                          {/* 學生答案 - 只在有資料時顯示 */}
+                          {currentItem.student_answer && (
+                            <div className="p-4 rounded-lg border bg-blue-50 border-blue-200">
+                              <p className="text-xs font-semibold mb-2 text-blue-700">
+                                學生答案
+                              </p>
+                              <p className="text-base text-gray-900 leading-relaxed">
+                                {currentItem.student_answer}
+                              </p>
+                            </div>
+                          )}
 
-                          {/* 語音辨識結果 */}
-                          <div className={`p-4 rounded-lg border ${currentItem.transcript ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                            <p className={`text-xs font-semibold mb-2 ${currentItem.transcript ? 'text-green-700' : 'text-gray-500'}`}>
-                              語音辨識結果
-                            </p>
-                            <p className="text-base text-gray-900 leading-relaxed">
-                              {currentItem.transcript || <span className="text-gray-400 italic">（無語音辨識結果）</span>}
-                            </p>
+                          {/* 語音辨識結果 - 只在有資料時顯示 */}
+                          {currentItem.transcript && (
+                            <div className="p-4 rounded-lg border bg-green-50 border-green-200">
+                              <p className="text-xs font-semibold mb-2 text-green-700">
+                                語音辨識結果
+                              </p>
+                              <p className="text-base text-gray-900 leading-relaxed">
+                                {currentItem.transcript}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* 學生回答區塊分隔 */}
+                          <div className="border-t pt-4 mt-4">
+                            <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              學生回答
+                            </h5>
                           </div>
 
                           {/* 學生錄音播放按鈕 */}
@@ -823,6 +860,15 @@ export default function GradingPage() {
                               </Button>
                             )}
                           </div>
+
+                          {/* AI 評分結果 - 使用共用元件 */}
+                          {currentItem.ai_scores && (
+                            <AIScoreDisplay
+                              scores={currentItem.ai_scores}
+                              hasRecording={!!currentItem.audio_url}
+                              title="AI 自動評分結果"
+                            />
+                          )}
 
                           {/* 分隔線 */}
                           <div className="border-t pt-4">

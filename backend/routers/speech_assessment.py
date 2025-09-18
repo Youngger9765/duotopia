@@ -316,6 +316,9 @@ def save_assessment_result(
     import json
 
     ai_feedback = {
+        "accuracy_score": assessment_result["accuracy_score"],
+        "fluency_score": assessment_result["fluency_score"],
+        "pronunciation_score": assessment_result["pronunciation_score"],
         "completeness_score": assessment_result["completeness_score"],
         "word_details": assessment_result["words"],
     }
