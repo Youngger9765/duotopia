@@ -15,13 +15,11 @@ import {
   ChevronRight,
   Save,
   ArrowLeft,
-  FileText,
   Volume2,
   CheckCircle,
   AlertCircle,
   Users,
   X,
-  Mic,
 } from "lucide-react";
 import { Assignment } from "@/types";
 
@@ -126,10 +124,6 @@ export default function GradingPage() {
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [assignmentTitle, setAssignmentTitle] = useState("");
-
-  // 音訊回饋相關
-  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [audioFeedbackUrls, setAudioFeedbackUrls] = useState<{[key: number]: string}>({});
 
   // 計算題目索引映射
   const getItemIndexMap = () => {
@@ -833,39 +827,15 @@ export default function GradingPage() {
                             </h5>
                           </div>
 
-                          {/* 學生錄音播放按鈕 */}
-                          <div className={`flex gap-2 ${!currentItem.audio_url ? 'opacity-50' : ''}`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              disabled={!currentItem.audio_url}
-                              onClick={() => {
-                                if (currentItem.audio_url) {
-                                  const audio = new Audio(currentItem.audio_url);
-                                  audio.play().catch(err => {
-                                    console.error("Failed to play audio:", err);
-                                    toast.error("無法播放錄音檔案");
-                                  });
-                                }
-                              }}
-                            >
-                              <Volume2 className="h-3 w-3 mr-2" />
-                              {currentItem.audio_url ? '播放學生錄音' : '無錄音檔案'}
-                            </Button>
-                            {currentItem.audio_url && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  window.open(currentItem.audio_url, '_blank');
-                                }}
-                                title="下載錄音檔案"
-                              >
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          {/* 學生錄音播放器 - 使用 AudioRecorder 元件（唯讀模式） */}
+                          <AudioRecorder
+                            variant="compact"
+                            title=""
+                            existingAudioUrl={currentItem.audio_url || undefined}
+                            readOnly={true}
+                            disabled={false}
+                            className="border-0 p-0 shadow-none"
+                          />
 
                           {/* AI 評分結果 - 使用共用元件 */}
                           {currentItem.ai_scores && (
@@ -876,12 +846,18 @@ export default function GradingPage() {
                             />
                           )}
 
-                          {/* 分隔線 */}
-                          <div className="border-t pt-4">
+                          {/* 教師批改區塊分隔線 */}
+                          <div className="border-t-2 border-blue-200 pt-4 mt-6">
+                            <div className="bg-blue-50 -mx-5 px-5 py-2 mb-4">
+                              <h5 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                教師批改區
+                              </h5>
+                            </div>
                             {/* 評語標題與通過按鈕 */}
                             <div className="flex items-center justify-between mb-3">
                               <label className="text-sm font-semibold">
-                                題目 {selectedItemIndex + 1} 評語
+                                題目 {selectedItemIndex + 1} 教師評語
                               </label>
                               <div className="flex gap-2">
                                 <Button
@@ -972,56 +948,6 @@ export default function GradingPage() {
                               disabled={submission?.status === "GRADED"}
                             />
 
-                            {/* 語音評語按鈕 */}
-                            <div className="mt-3">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setShowAudioRecorder(!showAudioRecorder)}
-                                className="w-full"
-                                disabled={submission?.status === "GRADED" && !audioFeedbackUrls[selectedItemIndex]}
-                              >
-                                <Mic className="h-4 w-4 mr-2" />
-                                {submission?.status === "GRADED" && !audioFeedbackUrls[selectedItemIndex]
-                                  ? '已批改（無語音評語）'
-                                  : showAudioRecorder ? '隱藏語音評語' : '錄製語音評語'}
-                              </Button>
-                            </div>
-
-                            {/* 語音錄製器 */}
-                            {showAudioRecorder && (
-                              <div className="mt-3">
-                                <AudioRecorder
-                                  variant="compact"
-                                  title="錄製語音評語"
-                                  description="為學生錄製鼓勵和建議"
-                                  suggestedDuration={30}
-                                  existingAudioUrl={audioFeedbackUrls[selectedItemIndex]}
-                                  readOnly={submission?.status === "GRADED"}
-                                  disabled={submitting}
-                                  onRecordingComplete={(_blob, url) => {
-                                    // 儲存音訊 URL
-                                    setAudioFeedbackUrls(prev => ({
-                                      ...prev,
-                                      [selectedItemIndex]: url
-                                    }));
-
-                                    // TODO: 上傳音訊檔案到伺服器
-                                    console.log('Audio feedback recorded for item', selectedItemIndex, url);
-                                    toast.success('語音評語已錄製');
-                                  }}
-                                  onReRecord={() => {
-                                    // 清除現有錄音
-                                    setAudioFeedbackUrls(prev => {
-                                      const newUrls = { ...prev };
-                                      delete newUrls[selectedItemIndex];
-                                      return newUrls;
-                                    });
-                                  }}
-                                  className="border-0 p-0"
-                                />
-                              </div>
-                            )}
 
                             {/* 快速評語 */}
                             <div className="mt-2 flex flex-wrap gap-1">
