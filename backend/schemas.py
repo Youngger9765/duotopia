@@ -285,3 +285,46 @@ class StudentContentProgressResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Teacher Review schemas
+class TeacherReviewCreate(BaseModel):
+    """Schema for creating teacher review"""
+
+    teacher_review_score: float = Field(
+        ..., ge=0, le=100, description="Teacher score 0-100"
+    )
+    teacher_feedback: str = Field(
+        ..., min_length=1, description="Teacher feedback text"
+    )
+
+
+class TeacherReviewUpdate(BaseModel):
+    """Schema for updating teacher review"""
+
+    teacher_review_score: Optional[float] = Field(None, ge=0, le=100)
+    teacher_feedback: Optional[str] = Field(None, min_length=1)
+
+
+class TeacherReviewResponse(BaseModel):
+    """Response schema for teacher review"""
+
+    student_item_progress_id: int
+    teacher_review_score: Optional[float]
+    teacher_feedback: Optional[str]
+    teacher_reviewed_at: Optional[datetime]
+    teacher_id: Optional[int]
+    review_status: str
+
+    # Include student and item info
+    student_name: Optional[str]
+    item_text: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class TeacherReviewBatchCreate(BaseModel):
+    """Schema for batch reviewing multiple items"""
+
+    item_reviews: List[Dict[str, Any]] = Field(..., description="List of item reviews")

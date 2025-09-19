@@ -547,6 +547,13 @@ class StudentItemProgress(Base):
     ai_feedback = Column(Text)
     ai_assessed_at = Column(DateTime(timezone=True))
 
+    # Teacher Review Fields (新增老師批改功能)
+    teacher_review_score = Column(DECIMAL(5, 2))  # 老師評分 (0-100)
+    teacher_feedback = Column(Text)  # 老師文字回饋
+    teacher_reviewed_at = Column(DateTime(timezone=True))  # 批改時間
+    teacher_id = Column(Integer, ForeignKey("teachers.id", ondelete="SET NULL"))  # 批改老師
+    review_status = Column(String(20), default="PENDING")  # PENDING, REVIEWED
+
     # Status tracking
     status = Column(
         String(20), default="NOT_STARTED"
@@ -563,6 +570,7 @@ class StudentItemProgress(Base):
         "StudentAssignment", back_populates="item_progress"
     )
     content_item = relationship("ContentItem", back_populates="student_progress")
+    teacher = relationship("Teacher", foreign_keys=[teacher_id])
 
     # Constraints
     __table_args__ = (
@@ -585,6 +593,20 @@ class StudentItemProgress(Base):
     def is_completed(self):
         """Check if this item is completed"""
         return self.status == "COMPLETED"
+
+    @property
+    def has_teacher_review(self):
+        """Check if teacher has reviewed this item"""
+        return (
+            self.review_status == "REVIEWED" and self.teacher_review_score is not None
+        )
+
+    @property
+    def final_score(self):
+        """Get final score (teacher review if available, otherwise AI score)"""
+        if self.has_teacher_review:
+            return float(self.teacher_review_score)
+        return self.overall_score
 
     @property
     def has_recording(self):
