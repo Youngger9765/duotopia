@@ -1,8 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, Star, Calendar, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Users, Star } from 'lucide-react';
 
 interface PricingPlan {
   name: string;
@@ -15,8 +14,6 @@ interface PricingPlan {
 }
 
 export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'halfYearly'>('monthly');
-
   const pricingPlans: PricingPlan[] = [
     {
       name: "Tutor Teachers",
@@ -60,40 +57,8 @@ export default function PricingPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             選擇適合您的方案
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             專為ESL教師設計的教學管理平台
-          </p>
-
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-gray-100 rounded-lg p-1 mb-2">
-            <button
-              onClick={() => setBillingPeriod('monthly')}
-              className={`px-8 py-3 rounded-md font-medium transition-all ${
-                billingPeriod === 'monthly'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Calendar className="w-5 h-5 inline mr-2" />
-              月付方案
-            </button>
-            <button
-              onClick={() => setBillingPeriod('halfYearly')}
-              className={`px-8 py-3 rounded-md font-medium transition-all ${
-                billingPeriod === 'halfYearly'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <TrendingUp className="w-5 h-5 inline mr-2" />
-              半年付方案
-              <Badge className={`ml-2 ${billingPeriod === 'halfYearly' ? 'bg-green-100 text-green-800' : 'bg-green-100 text-green-700'}`}>
-                省更多
-              </Badge>
-            </button>
-          </div>
-          <p className="text-sm text-gray-500">
-            {billingPeriod === 'monthly' ? '按月計費，彈性調整' : '一次付6個月，享受折扣優惠'}
           </p>
         </div>
 
@@ -101,17 +66,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8">
             {pricingPlans.map((plan, index) => {
-              const currentPrice = billingPeriod === 'monthly'
-                ? plan.monthlyPrice
-                : plan.halfYearlyPrice;
-
-              const priceLabel = billingPeriod === 'monthly'
-                ? '元/月'
-                : '元/6個月';
-
-              const savingsPercentage = billingPeriod === 'halfYearly'
-                ? calculateSavings(plan.monthlyPrice, plan.halfYearlyPrice)
-                : null;
+              const savingsPercentage = calculateSavings(plan.monthlyPrice, plan.halfYearlyPrice);
 
               return (
                 <Card
@@ -138,26 +93,41 @@ export default function PricingPage() {
                     </div>
                   </div>
 
-                  <div className="text-center mb-8">
-                    <div className="flex items-baseline justify-center">
-                      <span className="text-4xl font-bold text-gray-900">
-                        {currentPrice.toLocaleString()}
-                      </span>
-                      <span className="text-gray-600 ml-2">
-                        {priceLabel}
-                      </span>
+                  {/* 價格區塊 */}
+                  <div className="space-y-4 mb-8">
+                    {/* 月付價格 */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">月付方案</span>
+                        <div className="text-right">
+                          <span className="text-3xl font-bold text-gray-900">
+                            {plan.monthlyPrice}
+                          </span>
+                          <span className="text-gray-600 ml-1">元/月</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {billingPeriod === 'halfYearly' && savingsPercentage && (
-                      <div className="mt-3">
-                        <Badge className="bg-green-100 text-green-700">
-                          節省 {savingsPercentage}%
-                        </Badge>
-                        <p className="text-sm text-gray-500 mt-1">
-                          相當於每月 {Math.round(plan.halfYearlyPrice / 6).toLocaleString()} 元
-                        </p>
+                    {/* 半年付價格 */}
+                    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-gray-600">半年付方案</span>
+                          <Badge className="ml-2 bg-green-100 text-green-700">
+                            省 {savingsPercentage}%
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-3xl font-bold text-gray-900">
+                            {plan.halfYearlyPrice.toLocaleString()}
+                          </span>
+                          <span className="text-gray-600 ml-1">元/6月</span>
+                          <div className="text-sm text-gray-500 mt-1">
+                            相當於 {Math.round(plan.halfYearlyPrice / 6)} 元/月
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <ul className="space-y-3 mb-8">
@@ -189,19 +159,13 @@ export default function PricingPage() {
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-auto shadow-md">
             <h3 className="font-semibold text-gray-900 mb-3">付費方案說明</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-              <div className="flex items-start">
-                <Calendar className="w-4 h-4 mr-2 mt-0.5 text-blue-500" />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">月付方案</p>
-                  <p>按月計費，彈性調整</p>
-                </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900 mb-1">月付方案</p>
+                <p>按月計費，彈性調整</p>
               </div>
-              <div className="flex items-start">
-                <TrendingUp className="w-4 h-4 mr-2 mt-0.5 text-green-500" />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">半年付方案</p>
-                  <p>一次付6個月，享受折扣優惠</p>
-                </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900 mb-1">半年付方案</p>
+                <p>一次付6個月，享受折扣優惠</p>
               </div>
             </div>
           </div>
