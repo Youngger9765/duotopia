@@ -22,6 +22,7 @@ import StudentProfile from './pages/student/StudentProfile'
 import DatabaseAdminPage from './pages/admin/DatabaseAdminPage'
 import DebugPage from './pages/DebugPage'
 import TermsOfService from './pages/TermsOfService'
+import PricingPage from './pages/PricingPage'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
       <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/pricing" element={<PricingPage />} />
 
       {/* Teacher Routes */}
       <Route path="/teacher/login" element={<TeacherLogin />} />
