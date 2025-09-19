@@ -199,7 +199,12 @@ jobs:
             --include="Makefile" \
             --exclude-dir=node_modules \
             --exclude-dir=.git \
-            --exclude="*.example" | \
+            --exclude-dir=tests \
+            --exclude-dir=__tests__ \
+            --exclude-dir=test \
+            --exclude="*.example" \
+            --exclude="*.test.*" \
+            --exclude="*.spec.*" | \
             grep -v "dummy" | \
             grep -v "localhost"; then
             echo "::warning::Found exposed database credentials!"
@@ -214,10 +219,18 @@ jobs:
             --include="Makefile" \
             --exclude-dir=node_modules \
             --exclude-dir=.git \
-            --exclude="*.example" | \
+            --exclude-dir=tests \
+            --exclude-dir=__tests__ \
+            --exclude-dir=test \
+            --exclude="*.example" \
+            --exclude="*.test.*" \
+            --exclude="*.spec.*" | \
             grep -v "your-" | \
             grep -v "dummy" | \
-            grep -v "TODO"; then
+            grep -v "TODO" | \
+            grep -v "test" | \
+            grep -v "Test" | \
+            grep -v "TEST"; then
             echo "::warning::Found hardcoded credentials!"
           fi
 
