@@ -65,33 +65,36 @@ export default function PricingPage() {
           </p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
+          <div className="inline-flex items-center bg-gray-100 rounded-lg p-1 mb-2">
             <button
               onClick={() => setBillingPeriod('monthly')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-8 py-3 rounded-md font-medium transition-all ${
                 billingPeriod === 'monthly'
-                  ? 'bg-white text-gray-900 shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Calendar className="w-4 h-4 inline mr-2" />
+              <Calendar className="w-5 h-5 inline mr-2" />
               月付方案
             </button>
             <button
               onClick={() => setBillingPeriod('halfYearly')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-8 py-3 rounded-md font-medium transition-all ${
                 billingPeriod === 'halfYearly'
-                  ? 'bg-white text-gray-900 shadow-sm'
+                  ? 'bg-green-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <TrendingUp className="w-4 h-4 inline mr-2" />
+              <TrendingUp className="w-5 h-5 inline mr-2" />
               半年付方案
-              <Badge className="ml-2 bg-green-100 text-green-700">
+              <Badge className={`ml-2 ${billingPeriod === 'halfYearly' ? 'bg-green-100 text-green-800' : 'bg-green-100 text-green-700'}`}>
                 省更多
               </Badge>
             </button>
           </div>
+          <p className="text-sm text-gray-500">
+            {billingPeriod === 'monthly' ? '按月計費，彈性調整' : '一次付6個月，享受折扣優惠'}
+          </p>
         </div>
 
         {/* Pricing Cards */}
