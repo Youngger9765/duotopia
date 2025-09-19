@@ -207,12 +207,9 @@ export default function PricingPage() {
             <p className="text-gray-600 mb-4">
               需要更多學生數量或自訂方案？
             </p>
-            <Button variant="outline" className="mr-4">
-              聯絡我們
-            </Button>
-            <Button variant="link">
-              查看常見問題
-            </Button>
+            <p className="text-gray-900 font-medium">
+              請聯絡：<a href="mailto:myduotopia@gmail.com" className="text-blue-600 hover:text-blue-700 underline">myduotopia@gmail.com</a>
+            </p>
           </div>
         </div>
       </div>

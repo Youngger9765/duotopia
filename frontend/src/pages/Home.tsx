@@ -446,16 +446,21 @@ export default function Home() {
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <h3 className="text-white text-lg font-bold mb-4">Duotopia</h3>
-                <p className="text-sm">
+                <p className="text-sm mb-4">
                   AI 驅動的多元智能英語學習平台，專為亞洲學生設計
                 </p>
+                <div className="text-sm">
+                  <p className="text-gray-400 mb-1">聯絡我們</p>
+                  <a href="mailto:myduotopia@gmail.com" className="text-blue-400 hover:text-blue-300">
+                    myduotopia@gmail.com
+                  </a>
+                </div>
               </div>
               <div>
                 <h4 className="text-white font-semibold mb-4">產品</h4>
                 <ul className="space-y-2 text-sm">
                   <li><a href="#" className="hover:text-white">功能介紹</a></li>
-                  <li><a href="#" className="hover:text-white">價格方案</a></li>
-                  <li><a href="#" className="hover:text-white">更新日誌</a></li>
+                  <li><Link to="/pricing" className="hover:text-white">價格方案</Link></li>
                 </ul>
               </div>
               <div>
@@ -463,7 +468,6 @@ export default function Home() {
                 <ul className="space-y-2 text-sm">
                   <li><a href="#" className="hover:text-white">使用教學</a></li>
                   <li><a href="#" className="hover:text-white">常見問題</a></li>
-                  <li><a href="#" className="hover:text-white">聯絡我們</a></li>
                 </ul>
               </div>
               <div>
@@ -476,7 +480,7 @@ export default function Home() {
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-              <p>&copy; 2024 Duotopia. All rights reserved.</p>
+              <p>&copy; 2025 Duotopia. All rights reserved.</p>
             </div>
           </div>
         </div>
