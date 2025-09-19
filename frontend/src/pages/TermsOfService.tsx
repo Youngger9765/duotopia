@@ -112,8 +112,8 @@ export default function TermsOfService() {
               <section>
                 <h2 className="text-xl font-semibold mb-3">10. 聯絡方式</h2>
                 <div className="space-y-2 text-sm">
-                  <p>梯加有限公司</p>
-                  <p>統編：96752598</p>
+                  <p>語拓邦數位學習有限公司</p>
+                  <p>統編：60619397</p>
                   <p>若對本條款有任何疑問，請透過以下方式聯絡我們：</p>
                   <p>電子郵件：myduotopia@gmail.com</p>
                 </div>
