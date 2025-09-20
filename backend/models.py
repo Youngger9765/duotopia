@@ -18,7 +18,6 @@ from sqlalchemy import (
     DECIMAL,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -494,7 +493,7 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
-    item_metadata = Column(JSONB, default={})
+    item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -550,6 +549,7 @@ class StudentItemProgress(Base):
     # Teacher Review Fields (新增老師批改功能)
     teacher_review_score = Column(DECIMAL(5, 2))  # 老師評分 (0-100)
     teacher_feedback = Column(Text)  # 老師文字回饋
+    teacher_passed = Column(Boolean)  # 老師判定是否通過 (True/False/None)
     teacher_reviewed_at = Column(DateTime(timezone=True))  # 批改時間
     teacher_id = Column(Integer, ForeignKey("teachers.id", ondelete="SET NULL"))  # 批改老師
     review_status = Column(String(20), default="PENDING")  # PENDING, REVIEWED

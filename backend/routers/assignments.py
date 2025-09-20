@@ -23,6 +23,7 @@ from models import (
     AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
+    StudentItemProgress,
     AssignmentStatus,
 )
 from .auth import get_current_user
@@ -1683,6 +1684,11 @@ async def get_student_submission(
 
                     # 從 StudentItemProgress 直接獲取資料
                     if item_progress:
+                        # 加入老師批改的評語和通過狀態
+                        if item_progress.teacher_feedback:
+                            submission["feedback"] = item_progress.teacher_feedback
+                        if item_progress.teacher_passed is not None:
+                            submission["passed"] = item_progress.teacher_passed
                         # 學生錄音檔案 - 前端使用 audio_url 欄位
                         if item_progress.recording_url:
                             submission[
@@ -1967,6 +1973,75 @@ async def grade_student_assignment(
                                 "score": item_data.get("score"),
                             }
                         )
+
+                        # 更新 StudentItemProgress 表中的 teacher_feedback
+                        if item_data.get("feedback"):
+                            # 查找對應的 StudentItemProgress 記錄
+                            item_progress = (
+                                db.query(StudentItemProgress)
+                                .filter(
+                                    StudentItemProgress.student_assignment_id
+                                    == assignment.id,
+                                    StudentItemProgress.content_item_id
+                                    == content.content_items[i].id,
+                                )
+                                .first()
+                            )
+
+                            # 方案A：按需創建 - 如果記錄不存在，就創建一個
+                            if not item_progress:
+                                import logging
+
+                                logger = logging.getLogger(__name__)
+                                logger.info(
+                                    f"Creating StudentItemProgress on-demand: "
+                                    f"assignment_id={assignment.id}, "
+                                    f"content_item_id={content.content_items[i].id}"
+                                )
+
+                                try:
+                                    item_progress = StudentItemProgress(
+                                        student_assignment_id=assignment.id,
+                                        content_item_id=content.content_items[i].id,
+                                        status="NOT_SUBMITTED",  # 學生未提交
+                                        answer_text=None,
+                                        recording_url=None,
+                                        # AI 評分欄位保持空白
+                                        accuracy_score=None,
+                                        fluency_score=None,
+                                        pronunciation_score=None,
+                                        ai_feedback=None,
+                                        # 老師可以直接給評語
+                                        review_status="PENDING",
+                                    )
+                                    db.add(item_progress)
+                                    db.flush()  # 取得 ID 但還沒 commit
+                                except Exception as e:
+                                    logger.error(
+                                        f"Failed to create StudentItemProgress: {e}"
+                                    )
+                                    raise HTTPException(
+                                        status_code=500,
+                                        detail="Failed to save teacher feedback",
+                                    )
+
+                            # 更新老師評語和相關欄位
+                            item_progress.teacher_feedback = item_data.get(
+                                "feedback", ""
+                            )
+                            item_progress.teacher_review_score = (
+                                item_data.get("score")
+                                if item_data.get("score")
+                                else item_progress.teacher_review_score
+                            )
+                            item_progress.teacher_passed = item_data.get(
+                                "passed"
+                            )  # 儲存通過與否狀態
+                            item_progress.teacher_reviewed_at = datetime.now(
+                                timezone.utc
+                            )
+                            item_progress.teacher_id = current_teacher.id
+                            item_progress.review_status = "REVIEWED"
                     else:
                         items_feedback.append(
                             {"feedback": "", "passed": None, "score": None}

@@ -215,7 +215,23 @@ export default function GradingPage() {
         response.current_score !== null
       ) {
         setScore(response.current_score);
-        setFeedback(response.current_feedback || "");
+
+        // 處理舊格式的 feedback（包含題目評語的合併格式）
+        // 新格式只包含總評
+        const feedbackText = response.current_feedback || "";
+
+        // 檢查是否是舊格式（包含「題目 X」的評語）
+        if (feedbackText.includes("題目 ") && feedbackText.includes("總評:")) {
+          // 舊格式：提取總評部分
+          const totalFeedbackMatch = feedbackText.match(/總評:\s*([\s\S]*?)$/);
+          setFeedback(totalFeedbackMatch ? totalFeedbackMatch[1].trim() : "");
+        } else if (feedbackText.includes("題目 ")) {
+          // 舊格式但沒有總評：清空總評
+          setFeedback("");
+        } else {
+          // 新格式或純總評
+          setFeedback(feedbackText);
+        }
       } else {
         setScore(80);
         setFeedback("");
@@ -260,32 +276,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: false  // 自動儲存不更新狀態
       });
 
@@ -315,32 +311,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語（用於顯示）
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: false  // 儲存評分但不更新狀態
       });
 
@@ -370,32 +346,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語（用於顯示）
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: true  // 完成批改時更新狀態為 GRADED
       });
 

@@ -163,7 +163,7 @@ async def update_teacher_review(
 async def get_assignment_items_for_review(
     assignment_id: int,
     student_id: Optional[int] = Query(None),
-    review_status: Optional[str] = Query(None, regex="^(PENDING|REVIEWED)$"),
+    review_status: Optional[str] = Query(None, pattern="^(PENDING|REVIEWED)$"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
