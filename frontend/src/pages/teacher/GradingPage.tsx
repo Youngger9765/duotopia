@@ -1173,8 +1173,8 @@ export default function GradingPage() {
                     <label className="text-xs text-gray-600 mb-1 block">
                       1. 詳實記錄
                     </label>
-                    <div className="p-3 bg-gray-100 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-xs text-gray-700 font-mono">
+                    <div className="p-3 bg-white dark:bg-gray-50 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-800 font-mono">
 {Array.from({ length: totalQuestions }).map((_, index) => {
   const result = itemFeedbacks[index];
   return `題目 ${index + 1} ${result?.passed === true ? '✅' : result?.passed === false ? '❌' : '⬜'}: ${result?.feedback || '(尚無評語)'}
@@ -1193,7 +1193,7 @@ export default function GradingPage() {
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       placeholder="給學生的總體鼓勵和建議..."
-                      className="min-h-[60px] resize-none text-sm"
+                      className="min-h-[60px] resize-none text-sm bg-white dark:bg-white"
                     />
                   </div>
                 </div>
