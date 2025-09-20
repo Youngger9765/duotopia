@@ -21,7 +21,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  PROJECT_ID: duotopia-469413
+  PROJECT_ID: duotopia-472708
   REGION: asia-east1
   BACKEND_SERVICE: duotopia-staging-backend
   FRONTEND_SERVICE: duotopia-staging-frontend
