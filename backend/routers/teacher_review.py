@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
-import jwt
+from jose import jwt
 from core.config import settings
 
 from database import get_db

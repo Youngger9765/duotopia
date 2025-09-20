@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 from cryptography.fernet import Fernet
 import secrets
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 from passlib.context import CryptContext
 
 # 密碼雜湊設定
