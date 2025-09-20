@@ -171,6 +171,17 @@ export default function GradingPage() {
     }
   }, [assignmentId, studentId, studentList]);
 
+  // 當提交資料載入後，同步更新學生列表狀態
+  useEffect(() => {
+    if (submission && studentId) {
+      setStudentList(prev => prev.map(student =>
+        student.student_id === parseInt(studentId)
+          ? { ...student, status: submission.status }
+          : student
+      ));
+    }
+  }, [submission?.status, studentId]);
+
   const loadAssignmentInfo = async () => {
     try {
       const response = await apiClient.get(
@@ -670,16 +681,28 @@ export default function GradingPage() {
                           : "hover:bg-gray-100"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="truncate font-medium">{student.student_name}</div>
-                          <div className={`text-xs mt-0.5 ${
-                            student.status === "GRADED" ? "text-green-600" :
-                            student.status === "RETURNED" ? "text-orange-600" :
-                            student.status === "SUBMITTED" ? "text-blue-600" :
-                            "text-gray-500"
-                          }`}>
-                            {getStatusLabel(student.status)}
+                          <div className="flex items-center gap-2">
+                            <span className="truncate font-medium">{student.student_name}</span>
+                            {/* 狀態 Label */}
+                            <Badge
+                              className={`text-xs px-1.5 py-0.5 ${
+                                student.status === "GRADED"
+                                  ? "bg-green-100 text-green-700 border-green-200" :
+                                student.status === "RETURNED"
+                                  ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                student.status === "SUBMITTED" || student.status === "RESUBMITTED"
+                                  ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                student.status === "IN_PROGRESS"
+                                  ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                student.status === "NOT_ASSIGNED"
+                                  ? "bg-red-50 text-red-600 border-red-200" :
+                                "bg-gray-100 text-gray-600 border-gray-200"
+                              }`}
+                            >
+                              {getStatusLabel(student.status)}
+                            </Badge>
                           </div>
                         </div>
                         {/* 狀態圖標 */}
@@ -689,7 +712,7 @@ export default function GradingPage() {
                         {student.status === "RETURNED" && (
                           <AlertCircle className="h-3 w-3 text-orange-600 flex-shrink-0" />
                         )}
-                        {student.status === "SUBMITTED" && (
+                        {(student.status === "SUBMITTED" || student.status === "RESUBMITTED") && (
                           <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0" />
                         )}
                       </div>
