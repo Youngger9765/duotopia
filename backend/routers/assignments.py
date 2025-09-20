@@ -1534,7 +1534,7 @@ async def get_assignment_students(
     db: Session = Depends(get_db),
 ):
     """
-    獲取作業的所有學生列表
+    獲取作業的所有學生列表（包含未指派的學生）
     """
     # 驗證教師身份
     if not isinstance(current_teacher, Teacher):
@@ -1554,22 +1554,41 @@ async def get_assignment_students(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    # 獲取此作業的所有學生
-    student_assignments = (
-        db.query(StudentAssignment, Student)
-        .join(Student, StudentAssignment.student_id == Student.id)
-        .filter(StudentAssignment.assignment_id == assignment_id)
+    # 獲取教師教室中的所有學生
+    classroom_students = (
+        db.query(Student)
+        .join(ClassroomStudent, ClassroomStudent.student_id == Student.id)
+        .filter(ClassroomStudent.classroom_id == assignment.classroom_id)
         .order_by(Student.name)
         .all()
     )
 
+    # 獲取已指派此作業的學生狀態
+    student_assignments_dict = {}
+    student_assignments = (
+        db.query(StudentAssignment)
+        .filter(StudentAssignment.assignment_id == assignment_id)
+        .all()
+    )
+
+    for sa in student_assignments:
+        student_assignments_dict[sa.student_id] = (
+            sa.status.value if sa.status else "NOT_STARTED"
+        )
+
     students = []
-    for sa, student in student_assignments:
+    for student in classroom_students:
+        # 如果學生有作業記錄，使用實際狀態；否則標示為未指派
+        if student.id in student_assignments_dict:
+            status = student_assignments_dict[student.id]
+        else:
+            status = "NOT_ASSIGNED"
+
         students.append(
             {
                 "student_id": student.id,
                 "student_name": student.name,
-                "status": sa.status.value if sa.status else "NOT_STARTED",
+                "status": status,
             }
         )
 
