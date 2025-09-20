@@ -909,7 +909,7 @@ export default function GradingPage() {
                                 });
                               }}
                               placeholder="針對此題的評語..."
-                              className="min-h-[80px] resize-none bg-white mt-3"
+                              className="min-h-[80px] resize-none bg-white dark:bg-white mt-3"
                               readOnly={submission?.status === "GRADED"}
                               disabled={submission?.status === "GRADED"}
                             />
