@@ -792,7 +792,7 @@ export default function GradingPage() {
                               existingAudioUrl={currentItem.audio_url}
                               readOnly={true}
                               disabled={false}
-                              className="border-0 p-0 shadow-none"
+                              className="border-0 p-0 shadow-none bg-white dark:bg-white"
                             />
                           ) : (
                             <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
