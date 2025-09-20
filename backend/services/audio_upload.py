@@ -35,11 +35,11 @@ class AudioUploadService:
             try:
                 from google.cloud import storage
 
-                # 明確指定 service account key 檔案路徑
-                key_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)),
-                    "service-account-key.json",
-                )
+                # 明確指定 service account key 檔案路徑 (在 backend 目錄下)
+                backend_dir = os.path.dirname(os.path.dirname(__file__))
+                key_path = os.path.join(backend_dir, "service-account-key.json")
+                print(f"🔍 Looking for GCS key at: {key_path}")
+                print(f"🔍 Key exists: {os.path.exists(key_path)}")
                 if os.path.exists(key_path):
                     self.storage_client = storage.Client.from_service_account_json(
                         key_path

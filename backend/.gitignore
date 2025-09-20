@@ -63,3 +63,4 @@ tmp/
 temp/
 scripts/
 *.json
+service-account-key.json
