@@ -123,7 +123,6 @@ export default function GradingPage() {
 
   // 學生列表相關
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
-  const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [assignmentTitle, setAssignmentTitle] = useState("");
 
   // 計算題目索引映射
@@ -155,13 +154,7 @@ export default function GradingPage() {
   useEffect(() => {
     if (assignmentId && studentId) {
       loadSubmission();
-      // 找到當前學生在列表中的位置
-      const index = studentList.findIndex(
-        (s) => s.student_id === parseInt(studentId),
-      );
-      if (index !== -1) {
-        setCurrentStudentIndex(index);
-      }
+      // 學生 ID 已設定，不需要額外處理索引
     } else if (assignmentId && studentList.length > 0 && !studentId) {
       // 如果沒有指定 studentId，預設選擇第一個學生（API 只回傳被指派的學生）
       const firstStudent = studentList[0];
@@ -382,8 +375,11 @@ export default function GradingPage() {
           : student
       ));
 
-      // 切換到下一位學生
-      if (currentStudentIndex < studentList.length - 1) {
+      // 切換到下一位已指派的學生
+      const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+      const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId!));
+
+      if (currentAssignedIndex < assignedStudents.length - 1) {
         await handleNextStudent();
       }
     } catch (error) {
@@ -465,19 +461,27 @@ export default function GradingPage() {
   };
 
   const handlePreviousStudent = async () => {
-    if (currentStudentIndex > 0) {
+    // 只在已指派的學生之間切換
+    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+
+    if (currentAssignedIndex > 0) {
       // 切換前自動儲存
       await handleAutoSave();
-      const prevStudent = studentList[currentStudentIndex - 1];
+      const prevStudent = assignedStudents[currentAssignedIndex - 1];
       setSearchParams({ studentId: (prevStudent.student_id || 0).toString() });
     }
   };
 
   const handleNextStudent = async () => {
-    if (currentStudentIndex < studentList.length - 1) {
+    // 只在已指派的學生之間切換
+    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+
+    if (currentAssignedIndex < assignedStudents.length - 1) {
       // 切換前自動儲存
       await handleAutoSave();
-      const nextStudent = studentList[currentStudentIndex + 1];
+      const nextStudent = assignedStudents[currentAssignedIndex + 1];
       setSearchParams({ studentId: (nextStudent.student_id || 0).toString() });
     }
   };
@@ -609,27 +613,41 @@ export default function GradingPage() {
 
             {/* 學生切換導航 */}
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
-                {currentStudentIndex + 1} / {studentList.length} 位學生
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handlePreviousStudent}
-                  disabled={currentStudentIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleNextStudent}
-                  disabled={currentStudentIndex === studentList.length - 1}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {(() => {
+                // 只計算已指派的學生
+                const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+                const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+                const isCurrentStudentAssigned = currentAssignedIndex !== -1;
+
+                return (
+                  <>
+                    <span className="text-sm text-gray-500">
+                      {isCurrentStudentAssigned
+                        ? `${currentAssignedIndex + 1} / ${assignedStudents.length} 位已指派學生`
+                        : `未指派學生 (${assignedStudents.length} 位已指派)`
+                      }
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handlePreviousStudent}
+                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleNextStudent}
+                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === assignedStudents.length - 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
