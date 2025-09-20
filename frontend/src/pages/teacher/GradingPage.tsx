@@ -188,7 +188,9 @@ export default function GradingPage() {
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
       ) as StudentsResponse;
-      setStudentList(response.students || []);
+      // 依據 student_id 排序
+      const sortedStudents = (response.students || []).sort((a, b) => a.student_id - b.student_id);
+      setStudentList(sortedStudents);
     } catch (error) {
       console.error("Failed to load student list:", error);
       // 如果 API 還沒實作，使用模擬資料
@@ -627,36 +629,73 @@ export default function GradingPage() {
           {/* 左側 - 學生列表 */}
           <div className="col-span-2">
             <Card className="p-3">
-              <h3 className="text-sm font-medium mb-2 flex items-center gap-1 text-gray-600">
-                <Users className="h-4 w-4" />
-                學生
+              <h3 className="text-sm font-medium mb-3 flex items-center justify-between text-gray-700">
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span>學生</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  ({studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED").length}/{studentList.length})
+                </span>
               </h3>
               <div className="space-y-1">
-                {studentList.map((student) => (
-                  <button
-                    key={student.student_id}
-                    onClick={() => handleStudentSelect(student)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                      student.student_id === parseInt(studentId!)
-                        ? "bg-blue-100 text-blue-700"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="truncate">{student.student_name}</span>
-                      {/* 根據狀態顯示不同圖標 */}
-                      {student.status === "GRADED" && (
-                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                      )}
-                      {student.status === "RETURNED" && (
-                        <X className="h-3 w-3 text-orange-600 flex-shrink-0" />
-                      )}
-                      {(student.status === "SUBMITTED" || student.status === "IN_PROGRESS") && (
-                        <div className="h-3 w-3" /> // 空白佔位
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {studentList.map((student) => {
+                  // 判斷學生是否有被指派作業
+                  const isAssigned = student.status && student.status !== "NOT_ASSIGNED";
+
+                  // 取得狀態顯示文字（簡短版）
+                  const getStatusLabel = (status: string) => {
+                    const statusLabelMap: Record<string, string> = {
+                      NOT_STARTED: "未開始",
+                      IN_PROGRESS: "進行中",
+                      SUBMITTED: "已提交",
+                      GRADED: "已批改",
+                      RETURNED: "待訂正",
+                      RESUBMITTED: "重交",
+                      NOT_ASSIGNED: "未指派"
+                    };
+                    return statusLabelMap[status] || "";
+                  };
+
+                  return (
+                    <button
+                      key={student.student_id}
+                      onClick={() => isAssigned && handleStudentSelect(student)}
+                      disabled={!isAssigned}
+                      className={`w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors ${
+                        !isAssigned
+                          ? "opacity-50 cursor-not-allowed bg-gray-50"
+                          : student.student_id === parseInt(studentId!)
+                          ? "bg-blue-100 text-blue-700"
+                          : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate font-medium">{student.student_name}</div>
+                          <div className={`text-xs mt-0.5 ${
+                            student.status === "GRADED" ? "text-green-600" :
+                            student.status === "RETURNED" ? "text-orange-600" :
+                            student.status === "SUBMITTED" ? "text-blue-600" :
+                            "text-gray-500"
+                          }`}>
+                            {getStatusLabel(student.status)}
+                          </div>
+                        </div>
+                        {/* 狀態圖標 */}
+                        {student.status === "GRADED" && (
+                          <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        )}
+                        {student.status === "RETURNED" && (
+                          <AlertCircle className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                        )}
+                        {student.status === "SUBMITTED" && (
+                          <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </Card>
           </div>

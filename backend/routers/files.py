@@ -4,39 +4,18 @@
 """
 
 from fastapi import APIRouter, HTTPException, Response
-from fastapi.responses import FileResponse
-from pathlib import Path
 
 router = APIRouter(prefix="/api/files", tags=["files"])
-
-# 設定檔案儲存路徑
-UPLOAD_DIR = Path("uploads")
-RECORDINGS_DIR = UPLOAD_DIR / "recordings"
-
-# 確保目錄存在
-RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.get("/recordings/{filename}")
 async def get_recording(filename: str):
-    """獲取錄音檔案"""
-    file_path = RECORDINGS_DIR / filename
-
-    # 檢查檔案是否存在
-    if not file_path.exists():
-        # 如果檔案不存在，返回範例音檔（用於開發測試）
-        # 在生產環境中應該返回 404
-        raise HTTPException(
-            status_code=404, detail=f"Recording file not found: {filename}"
-        )
-
-    # 返回檔案
-    return FileResponse(
-        path=str(file_path),
-        media_type="audio/webm",  # 根據實際檔案格式調整
-        headers={
-            "Cache-Control": "public, max-age=3600",  # 快取 1 小時
-        },
+    """獲取錄音檔案 - 從 GCS 重定向"""
+    # 錄音檔案應該已經儲存在 GCS，這個 endpoint 只是為了相容性
+    # 實際的錄音 URL 應該直接指向 GCS
+    raise HTTPException(
+        status_code=404,
+        detail=f"Recording file not found: {filename}. Files should be accessed directly from GCS.",
     )
 
 
@@ -66,15 +45,9 @@ async def get_content_audio(content_id: int, item_index: int):
 @router.get("/test-audio")
 async def get_test_audio():
     """提供測試用音檔"""
-    # 創建一個簡單的測試音檔路徑
-    test_file = RECORDINGS_DIR / "test.mp3"
-
-    if not test_file.exists():
-        # 如果沒有測試檔案，返回說明
-        return {
-            "message": "No test audio file available",
-            "instruction": "Please place a test.mp3 file in the uploads/recordings directory",
-            "alternative": "Using online sample audio files for testing",
-        }
-
-    return FileResponse(path=str(test_file), media_type="audio/mpeg")
+    # 返回線上範例音檔
+    return {
+        "message": "Test audio endpoint",
+        "alternative": "Using online sample audio files for testing",
+        "sample_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    }
