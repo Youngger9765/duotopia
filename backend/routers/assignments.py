@@ -630,6 +630,27 @@ async def patch_assignment(
                     is_active=True,
                 )
                 db.add(student_assignment)
+                db.flush()  # 取得 student_assignment.id
+
+                # 為新增的學生創建 StudentContentProgress 記錄
+                from models import AssignmentContent
+
+                assignment_contents = (
+                    db.query(AssignmentContent)
+                    .filter(AssignmentContent.assignment_id == assignment_id)
+                    .order_by(AssignmentContent.order_index)
+                    .all()
+                )
+
+                for ac in assignment_contents:
+                    progress = StudentContentProgress(
+                        student_assignment_id=student_assignment.id,
+                        content_id=ac.content_id,
+                        status=AssignmentStatus.NOT_STARTED,
+                        order_index=ac.order_index,
+                        is_locked=False if ac.order_index == 1 else True,  # 只解鎖第一個
+                    )
+                    db.add(progress)
 
     db.commit()
 
