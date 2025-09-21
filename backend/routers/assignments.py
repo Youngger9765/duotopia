@@ -349,6 +349,26 @@ async def create_assignment(
                 is_locked=False if idx == 1 else True,  # 只解鎖第一個
             )
             db.add(progress)
+            db.flush()  # 取得 progress.id
+
+            # 為每個 ContentItem 創建 StudentItemProgress
+            from models import ContentItem
+
+            content_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id == content_id)
+                .order_by(ContentItem.order_index)
+                .all()
+            )
+
+            for item in content_items:
+                item_progress = StudentItemProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_item_id=item.id,
+                    status="NOT_STARTED",
+                    has_ai_assessment=False,
+                )
+                db.add(item_progress)
 
     db.commit()
 
@@ -633,7 +653,7 @@ async def patch_assignment(
                 db.flush()  # 取得 student_assignment.id
 
                 # 為新增的學生創建 StudentContentProgress 記錄
-                from models import AssignmentContent
+                from models import AssignmentContent, ContentItem, StudentItemProgress
 
                 assignment_contents = (
                     db.query(AssignmentContent)
@@ -651,6 +671,24 @@ async def patch_assignment(
                         is_locked=False if ac.order_index == 1 else True,  # 只解鎖第一個
                     )
                     db.add(progress)
+                    db.flush()  # 取得 progress.id
+
+                    # 為每個 ContentItem 創建 StudentItemProgress
+                    content_items = (
+                        db.query(ContentItem)
+                        .filter(ContentItem.content_id == ac.content_id)
+                        .order_by(ContentItem.order_index)
+                        .all()
+                    )
+
+                    for item in content_items:
+                        item_progress = StudentItemProgress(
+                            student_assignment_id=student_assignment.id,
+                            content_item_id=item.id,
+                            status="NOT_STARTED",
+                            has_ai_assessment=False,
+                        )
+                        db.add(item_progress)
 
     db.commit()
 
