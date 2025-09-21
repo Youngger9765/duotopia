@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import TeacherLogin from './pages/TeacherLogin'
 import TeacherRegister from './pages/TeacherRegister'
+import { TeacherVerifyEmail } from './pages/TeacherVerifyEmail'
+import { TeacherEmailVerification } from './pages/TeacherEmailVerification'
 import TeacherDashboardWithSidebar from './pages/TeacherDashboardWithSidebar'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherClassrooms from './pages/teacher/TeacherClassrooms'
@@ -23,6 +25,7 @@ import DatabaseAdminPage from './pages/admin/DatabaseAdminPage'
 import DebugPage from './pages/DebugPage'
 import TermsOfService from './pages/TermsOfService'
 import PricingPage from './pages/PricingPage'
+import TestSubscription from './pages/TestSubscription'
 import { Toaster } from 'sonner'
 
 function App() {
@@ -42,6 +45,8 @@ function App() {
       {/* Teacher Routes */}
       <Route path="/teacher/login" element={<TeacherLogin />} />
       <Route path="/teacher/register" element={<TeacherRegister />} />
+      <Route path="/teacher/verify-email" element={<TeacherEmailVerification />} />
+      <Route path="/teacher/verify-email-prompt" element={<TeacherVerifyEmail />} />
       <Route path="/teacher/dashboard-old" element={<TeacherDashboardWithSidebar />} />
 
       {/* New Teacher Routes with separate pages */}
@@ -82,6 +87,9 @@ function App() {
 
       {/* Debug 頁面 */}
       <Route path="/debug" element={<DebugPage />} />
+
+      {/* Test Pages */}
+      <Route path="/test-sub" element={<TestSubscription />} />
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />

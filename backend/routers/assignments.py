@@ -241,6 +241,13 @@ async def create_assignment(
             status_code=403, detail="Only teachers can create assignments"
         )
 
+    # 驗證教師訂閱狀態
+    if not current_user.can_assign_homework:
+        raise HTTPException(
+            status_code=403,
+            detail="Your subscription has expired. Please recharge to create assignments.",
+        )
+
     # 驗證班級存在且屬於當前教師
     classroom = (
         db.query(Classroom)

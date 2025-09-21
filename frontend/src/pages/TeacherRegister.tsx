@@ -39,13 +39,31 @@ export default function TeacherRegister() {
     setIsLoading(true);
 
     try {
-      await apiClient.teacherRegister({
+      interface RegisterResponse {
+        verification_required?: boolean;
+        message?: string;
+        email?: string;
+      }
+      const response = await apiClient.teacherRegister({
         email: formData.email,
         password: formData.password,
         name: formData.name,
         phone: formData.phone || undefined,
-      });
-      navigate('/teacher/dashboard');
+      }) as RegisterResponse;
+
+      // 🔴 不要自動登入！顯示驗證提示
+      if (response.verification_required) {
+        // 導向到驗證提示頁面或顯示成功訊息
+        navigate('/teacher/verify-email-prompt', {
+          state: {
+            email: formData.email,
+            message: response.message || '註冊成功！請檢查您的 Email 信箱並點擊驗證連結。'
+          }
+        });
+      } else {
+        // 舊的邏輯（不應該發生）
+        navigate('/teacher/dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '註冊失敗，請稍後再試');
     } finally {

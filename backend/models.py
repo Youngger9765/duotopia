@@ -16,6 +16,7 @@ from sqlalchemy import (
     Enum,
     Float,
     DECIMAL,
+    Numeric,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -50,6 +51,19 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"  # 重新提交（訂正後待批改）
 
 
+class TransactionType(str, enum.Enum):
+    TRIAL = "TRIAL"  # 試用期啟動
+    RECHARGE = "RECHARGE"  # 充值
+    EXPIRED = "EXPIRED"  # 到期
+    REFUND = "REFUND"  # 退款
+
+
+class TransactionStatus(str, enum.Enum):
+    PENDING = "PENDING"  # 處理中
+    SUCCESS = "SUCCESS"  # 成功
+    FAILED = "FAILED"  # 失敗
+
+
 class ContentType(str, enum.Enum):
     READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
     # Phase 2 擴展
@@ -75,6 +89,15 @@ class Teacher(Base):
     is_active = Column(Boolean, default=True)
     is_demo = Column(Boolean, default=False)  # 標記 demo 帳號
 
+    # Email 驗證字段
+    email_verified = Column(Boolean, default=False)  # email 是否已驗證
+    email_verified_at = Column(DateTime(timezone=True))  # email 驗證時間
+    email_verification_token = Column(String(100))  # email 驗證 token
+    email_verification_sent_at = Column(DateTime(timezone=True))  # 最後發送驗證信時間
+
+    # 訂閱系統
+    subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -86,6 +109,49 @@ class Teacher(Base):
         "Program", back_populates="teacher", cascade="all, delete-orphan"
     )
     assignments = relationship("Assignment", back_populates="teacher")
+    subscription_transactions = relationship(
+        "TeacherSubscriptionTransaction",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def subscription_status(self):
+        """獲取訂閱狀態"""
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+
+        # 簡單邏輯：有天數就是已訂閱，沒天數就是未訂閱
+        if self.subscription_end_date and self.subscription_end_date > now:
+            return "subscribed"
+        else:
+            return "expired"
+
+    @property
+    def days_remaining(self):
+        """獲取剩餘天數"""
+        from datetime import datetime, timezone
+
+        if not self.subscription_end_date:
+            return 0
+        elif self.subscription_end_date > datetime.now(timezone.utc):
+            return (self.subscription_end_date - datetime.now(timezone.utc)).days
+        else:
+            return 0
+
+    @property
+    def can_assign_homework(self):
+        """是否可以分派作業"""
+        from datetime import datetime, timezone
+
+        # Demo 帳號永遠可以分派作業
+        if self.is_demo:
+            return True
+        # 有有效訂閱才能分派作業
+        return self.subscription_end_date and self.subscription_end_date > datetime.now(
+            timezone.utc
+        )
 
     def __repr__(self):
         return f"<Teacher {self.name} ({self.email})>"
@@ -624,3 +690,29 @@ class StudentItemProgress(Base):
             f"assignment={self.student_assignment_id}, "
             f"item={self.content_item_id}, status={self.status})>"
         )
+
+
+# ============ 訂閱交易系統 ============
+class TeacherSubscriptionTransaction(Base):
+    """教師訂閱交易記錄"""
+
+    __tablename__ = "teacher_subscription_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(
+        Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
+    )
+    transaction_type = Column(Enum(TransactionType), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=True)  # 充值金額（可為空，如試用期）
+    months = Column(Integer, nullable=False)  # 訂閱月數
+    previous_end_date = Column(DateTime(timezone=True), nullable=True)  # 交易前的到期日
+    new_end_date = Column(DateTime(timezone=True), nullable=False)  # 交易後的到期日
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # 關聯
+    teacher = relationship("Teacher", back_populates="subscription_transactions")
+
+    def __repr__(self):
+        return f"<TeacherSubscriptionTransaction({self.teacher_id}, {self.transaction_type}, {self.months}個月)>"
