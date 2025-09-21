@@ -366,7 +366,6 @@ async def create_assignment(
                     student_assignment_id=student_assignment.id,
                     content_item_id=item.id,
                     status="NOT_STARTED",
-                    has_ai_assessment=False,
                 )
                 db.add(item_progress)
 
@@ -686,7 +685,6 @@ async def patch_assignment(
                             student_assignment_id=student_assignment.id,
                             content_item_id=item.id,
                             status="NOT_STARTED",
-                            has_ai_assessment=False,
                         )
                         db.add(item_progress)
 

@@ -13,7 +13,7 @@ from models import (
     ContentItem,
     StudentItemProgress,
     AssignmentStatus,
-    # AssignmentContent,
+    AssignmentContent,
     StudentContentProgress,
 )
 from auth import (
@@ -230,124 +230,6 @@ async def get_assignment_activities(
     # 獲取作業對應的 Assignment（如果有 assignment_id）
     activities = []
 
-    # 移除對 content_id 的檢查，統一使用 assignment_id 流程
-    if False:  # 此分支永遠不會執行
-        content = (
-            db.query(Content)
-            .filter(Content.id == student_assignment.content_id)
-            .first()
-        )
-
-        if content:
-            # 獲取內容項目
-            content_items = (
-                db.query(ContentItem)
-                .filter(ContentItem.content_id == content.id)
-                .order_by(ContentItem.order_index)
-                .all()
-            )
-
-            # 獲取學生的項目進度
-            item_progress_list = (
-                db.query(StudentItemProgress)
-                .filter(
-                    StudentItemProgress.student_assignment_id == student_assignment.id
-                )
-                .all()
-            )
-
-            # 建立進度索引 (content_item_id -> progress)
-            progress_by_item = {p.content_item_id: p for p in item_progress_list}
-
-            # 轉換為前端格式
-            items = []
-            for item in content_items:
-                progress = progress_by_item.get(item.id)
-
-                item_data = {
-                    "id": item.id,  # 加入 ContentItem 的 ID！
-                    "text": item.text,
-                    "translation": item.translation,
-                    "audio_url": item.audio_url,
-                    "order_index": item.order_index,
-                    "status": progress.status if progress else "NOT_STARTED",
-                    "recording_url": progress.recording_url if progress else None,
-                    "accuracy_score": float(progress.accuracy_score)
-                    if progress and progress.accuracy_score
-                    else None,
-                    "fluency_score": float(progress.fluency_score)
-                    if progress and progress.fluency_score
-                    else None,
-                    "pronunciation_score": float(progress.pronunciation_score)
-                    if progress and progress.pronunciation_score
-                    else None,
-                    "ai_feedback": progress.ai_feedback if progress else None,
-                    "submitted_at": progress.submitted_at.isoformat()
-                    if progress and progress.submitted_at
-                    else None,
-                    "ai_assessed_at": progress.ai_assessed_at.isoformat()
-                    if progress and progress.ai_assessed_at
-                    else None,
-                }
-                items.append(item_data)
-
-            # 檢查或創建摘要統計
-            summary_progress = (
-                db.query(StudentContentProgress)
-                .filter(
-                    StudentContentProgress.student_assignment_id
-                    == student_assignment.id,
-                    StudentContentProgress.content_id == content.id,
-                )
-                .first()
-            )
-
-            if not summary_progress:
-                summary_progress = StudentContentProgress(
-                    student_assignment_id=student_assignment.id,
-                    content_id=content.id,
-                    order_index=0,
-                    total_items=len(content_items),
-                    completed_items=0,
-                    completion_rate=0.0,
-                    status=AssignmentStatus.NOT_STARTED,
-                )
-                db.add(summary_progress)
-                db.commit()
-                db.refresh(summary_progress)
-
-            activities.append(
-                {
-                    "id": summary_progress.id,
-                    "content_id": content.id,
-                    "order": 1,
-                    "type": (
-                        content.type.value if content.type else "reading_assessment"
-                    ),
-                    "title": content.title,
-                    "items": items,  # New structured format
-                    "content": items,  # Backward compatibility
-                    "target_text": items,  # For reading assessment
-                    "duration": 60,  # Default duration
-                    "points": 100,
-                    "status": (
-                        summary_progress.status.value
-                        if summary_progress.status
-                        else "NOT_STARTED"
-                    ),
-                    "score": summary_progress.score,
-                    "completion_rate": summary_progress.completion_rate,
-                    "completed_items": summary_progress.completed_items,
-                    "total_items": summary_progress.total_items,
-                    "completed_at": (
-                        summary_progress.completed_at.isoformat()
-                        if summary_progress.completed_at
-                        else None
-                    ),
-                }
-            )
-
-    # 如果有 assignment_id，直接獲取所有已存在的 StudentContentProgress 記錄
     if student_assignment.assignment_id:
         # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
         progress_records = (
@@ -358,6 +240,59 @@ async def get_assignment_activities(
             .order_by(StudentContentProgress.order_index)
             .all()
         )
+
+        # 如果沒有 progress_records，自動創建
+        if not progress_records:
+            # 獲取作業的所有 assignment_contents
+            assignment_contents = (
+                db.query(AssignmentContent)
+                .filter(
+                    AssignmentContent.assignment_id == student_assignment.assignment_id
+                )
+                .order_by(AssignmentContent.order_index)
+                .all()
+            )
+
+            # 為每個 assignment_content 創建 StudentContentProgress
+            for idx, ac in enumerate(assignment_contents):
+                progress = StudentContentProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_id=ac.content_id,
+                    status=AssignmentStatus.NOT_STARTED,
+                    order_index=idx,
+                )
+                db.add(progress)
+                progress_records.append(progress)
+
+                # 同時創建 StudentItemProgress
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == ac.content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                for item in content_items:
+                    item_progress = StudentItemProgress(
+                        student_assignment_id=student_assignment.id,
+                        content_item_id=item.id,
+                        status="NOT_STARTED",
+                    )
+                    db.add(item_progress)
+
+            # 提交到資料庫
+            db.commit()
+
+            # 重新查詢以獲取 ID
+            progress_records = (
+                db.query(StudentContentProgress)
+                .filter(
+                    StudentContentProgress.student_assignment_id
+                    == student_assignment.id
+                )
+                .order_by(StudentContentProgress.order_index)
+                .all()
+            )
 
         # 優化：批次查詢所有 content，避免 N+1 問題
         content_ids = [progress.content_id for progress in progress_records]
