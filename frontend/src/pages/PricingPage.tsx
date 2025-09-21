@@ -8,7 +8,6 @@ interface PricingPlan {
   description: string;
   studentRange: string;
   monthlyPrice: number;
-  halfYearlyPrice: number;
   features: string[];
   popular?: boolean;
 }
@@ -20,7 +19,6 @@ export default function PricingPage() {
       description: "小型家教ESL教師",
       studentRange: "1-100人",
       monthlyPrice: 230,
-      halfYearlyPrice: 1190,
       features: [
         "支援 1-100 位學生",
         "完整功能使用權",
@@ -32,7 +30,6 @@ export default function PricingPage() {
       description: "校園ESL教師",
       studentRange: "101-200人",
       monthlyPrice: 330,
-      halfYearlyPrice: 1790,
       features: [
         "支援 101-200 位學生",
         "完整功能使用權",
@@ -42,12 +39,6 @@ export default function PricingPage() {
     }
   ];
 
-  // 計算節省的百分比
-  const calculateSavings = (monthlyPrice: number, halfYearlyPrice: number) => {
-    const sixMonthsPrice = monthlyPrice * 6;
-    const savings = ((sixMonthsPrice - halfYearlyPrice) / sixMonthsPrice * 100).toFixed(0);
-    return savings;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
@@ -66,8 +57,6 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8">
             {pricingPlans.map((plan, index) => {
-              const savingsPercentage = calculateSavings(plan.monthlyPrice, plan.halfYearlyPrice);
-
               return (
                 <Card
                   key={index}
@@ -94,37 +83,15 @@ export default function PricingPage() {
                   </div>
 
                   {/* 價格區塊 */}
-                  <div className="space-y-4 mb-8">
-                    {/* 月付價格 */}
-                    <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="mb-8">
+                    <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">月付方案</span>
                         <div className="text-right">
                           <span className="text-3xl font-bold text-gray-900">
-                            {plan.monthlyPrice}
+                            NT$ {plan.monthlyPrice}
                           </span>
-                          <span className="text-gray-600 ml-1">元/月</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 半年付價格 */}
-                    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-gray-600">半年付方案</span>
-                          <Badge className="ml-2 bg-green-100 text-green-700">
-                            省 {savingsPercentage}%
-                          </Badge>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-3xl font-bold text-gray-900">
-                            {plan.halfYearlyPrice.toLocaleString()}
-                          </span>
-                          <span className="text-gray-600 ml-1">元/6月</span>
-                          <div className="text-sm text-gray-500 mt-1">
-                            相當於 {Math.round(plan.halfYearlyPrice / 6)} 元/月
-                          </div>
+                          <span className="text-gray-600 ml-1">/月</span>
                         </div>
                       </div>
                     </div>
@@ -158,15 +125,9 @@ export default function PricingPage() {
         <div className="mt-16 text-center">
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-auto shadow-md">
             <h3 className="font-semibold text-gray-900 mb-3">付費方案說明</h3>
-            <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-              <div className="text-left">
-                <p className="font-medium text-gray-900 mb-1">月付方案</p>
-                <p>按月計費，彈性調整</p>
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900 mb-1">半年付方案</p>
-                <p>一次付6個月，享受折扣優惠</p>
-              </div>
+            <div className="text-sm text-gray-600">
+              <p className="font-medium text-gray-900 mb-1">月付方案</p>
+              <p>按月計費，彈性調整，隨時升級或調整您的方案</p>
             </div>
           </div>
 
