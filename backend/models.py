@@ -101,7 +101,17 @@ class Teacher(Base):
     password_reset_expires_at = Column(DateTime(timezone=True))  # token 過期時間
 
     # 訂閱系統
+    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
+    subscription_status_db = Column(
+        "subscription_status", String, nullable=True
+    )  # 訂閱狀態（與 DB 一致，但不使用）
+    subscription_start_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱開始日
     subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
+    subscription_renewed_at = Column(DateTime(timezone=True), nullable=True)  # 最後續訂時間
+    trial_start_date = Column(DateTime(timezone=True), nullable=True)  # 試用開始日
+    trial_end_date = Column(DateTime(timezone=True), nullable=True)  # 試用結束日
+    monthly_message_limit = Column(Integer, nullable=True)  # 每月訊息限制（與 DB 一致，但不使用）
+    messages_used_this_month = Column(Integer, nullable=True)  # 本月已用訊息（與 DB 一致，但不使用）
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -215,6 +225,9 @@ class Classroom(Base):
     description = Column(Text)
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    school = Column(String(255), nullable=True)  # 學校名稱（與 DB 一致，但不使用）
+    grade = Column(String(50), nullable=True)  # 年級（與 DB 一致，但不使用）
+    academic_year = Column(String(20), nullable=True)  # 學年度（與 DB 一致，但不使用）
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -290,6 +303,7 @@ class Program(Base):
     """
 
     # 課程屬性
+    is_public = Column(Boolean, nullable=True)  # 是否公開（與 DB 一致，但不使用）
     estimated_hours = Column(Integer)  # 預計時數
     order_index = Column(Integer, default=1)  # 排序順序
     tags = Column(JSON, nullable=True)  # 標籤
@@ -615,6 +629,7 @@ class StudentItemProgress(Base):
     # Recording data
     recording_url = Column(Text)
     answer_text = Column(Text)
+    transcription = Column(Text)  # AI 轉錄文字（與 DB 一致）
     submitted_at = Column(DateTime(timezone=True))
 
     # AI Assessment (flattened structure for better querying)
@@ -715,13 +730,25 @@ class TeacherSubscriptionTransaction(Base):
         Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
     )
     transaction_type = Column(Enum(TransactionType), nullable=False)
+    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
     amount = Column(Numeric(10, 2), nullable=True)  # 充值金額（可為空，如試用期）
+    currency = Column(String(3), nullable=True)  # 貨幣（與 DB 一致，但不使用）
+    status = Column(String, nullable=False, default="SUCCESS")  # 交易狀態（與 DB 一致）
     months = Column(Integer, nullable=False)  # 訂閱月數
+    period_start = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間開始（與 DB 一致）
+    period_end = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間結束（與 DB 一致）
     previous_end_date = Column(DateTime(timezone=True), nullable=True)  # 交易前的到期日
     new_end_date = Column(DateTime(timezone=True), nullable=False)  # 交易後的到期日
+    transaction_metadata = Column("metadata", JSON, nullable=True)  # 額外資料（與 DB 一致，但不使用）
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )  # 更新時間（與 DB 一致）
 
     # 關聯
     teacher = relationship("Teacher", back_populates="subscription_transactions")
