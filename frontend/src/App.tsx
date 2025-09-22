@@ -4,6 +4,8 @@ import TeacherLogin from './pages/TeacherLogin'
 import TeacherRegister from './pages/TeacherRegister'
 import { TeacherVerifyEmail } from './pages/TeacherVerifyEmail'
 import { TeacherEmailVerification } from './pages/TeacherEmailVerification'
+import TeacherForgotPassword from './pages/TeacherForgotPassword'
+import TeacherResetPassword from './pages/TeacherResetPassword'
 import TeacherDashboardWithSidebar from './pages/TeacherDashboardWithSidebar'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherClassrooms from './pages/teacher/TeacherClassrooms'
@@ -45,6 +47,8 @@ function App() {
       {/* Teacher Routes */}
       <Route path="/teacher/login" element={<TeacherLogin />} />
       <Route path="/teacher/register" element={<TeacherRegister />} />
+      <Route path="/teacher/forgot-password" element={<TeacherForgotPassword />} />
+      <Route path="/teacher/reset-password" element={<TeacherResetPassword />} />
       <Route path="/teacher/verify-email" element={<TeacherEmailVerification />} />
       <Route path="/teacher/verify-email-prompt" element={<TeacherVerifyEmail />} />
       <Route path="/teacher/dashboard-old" element={<TeacherDashboardWithSidebar />} />

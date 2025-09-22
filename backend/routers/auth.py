@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional  # noqa: F401
@@ -7,7 +7,7 @@ from database import get_db
 from models import Teacher, Student
 from auth import verify_password, create_access_token, get_password_hash
 from services.email_service import email_service
-from datetime import timedelta  # noqa: F401
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -301,3 +301,128 @@ async def get_current_user(
 async def validate_token():
     """驗證 API 是否正常運作"""
     return {"status": "auth endpoint working", "version": "1.0.0"}
+
+
+# ========== 密碼重設功能 ==========
+
+
+@router.post("/teacher/forgot-password")
+async def forgot_password(
+    email: str = Body(..., embed=True), db: Session = Depends(get_db)
+):
+    """教師忘記密碼 - 發送重設郵件"""
+    from services.email_service import email_service
+
+    # 查找教師
+    teacher = db.query(Teacher).filter(Teacher.email == email).first()
+
+    # 不論是否找到都返回相同訊息（安全性考量）
+    if not teacher:
+        return {"message": "如果該電子郵件存在，我們已發送密碼重設連結", "success": True}
+
+    # 檢查是否已驗證 email
+    if not teacher.email_verified:
+        return {"message": "如果該電子郵件存在，我們已發送密碼重設連結", "success": True}
+
+    # 檢查發送頻率限制（5分鐘內不能重複發送）
+    if teacher.password_reset_sent_at:
+        # 確保兩個時間都是 naive 或都是 aware
+        current_time = datetime.utcnow()
+        reset_time = teacher.password_reset_sent_at
+        # 如果 reset_time 是 aware，轉換為 naive
+        if reset_time.tzinfo is not None:
+            reset_time = reset_time.replace(tzinfo=None)
+
+        time_diff = current_time - reset_time
+        if time_diff < timedelta(minutes=5):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="請稍後再試，密碼重設郵件每5分鐘只能發送一次",
+            )
+
+    # 發送密碼重設郵件
+    success = email_service.send_password_reset_email(db, teacher)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="發送郵件失敗，請稍後再試"
+        )
+
+    return {"message": "如果該電子郵件存在，我們已發送密碼重設連結", "success": True}
+
+
+@router.post("/teacher/reset-password")
+async def reset_password(
+    token: str = Body(...), new_password: str = Body(...), db: Session = Depends(get_db)
+):
+    """使用 token 重設密碼"""
+    from auth import get_password_hash
+
+    # 查找擁有此 token 的教師
+    teacher = db.query(Teacher).filter(Teacher.password_reset_token == token).first()
+
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="無效或過期的重設連結"
+        )
+
+    # 檢查 token 是否過期
+    if teacher.password_reset_expires_at:
+        current_time = datetime.utcnow()
+        expires_at = teacher.password_reset_expires_at
+        # 如果 expires_at 是 aware，轉換為 naive
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+
+        if current_time > expires_at:
+            # 清除過期的 token
+            teacher.password_reset_token = None
+            teacher.password_reset_expires_at = None
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="重設連結已過期，請重新申請"
+            )
+
+    # 驗證密碼強度
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="密碼至少需要6個字元"
+        )
+
+    # 更新密碼
+    teacher.password_hash = get_password_hash(new_password)
+
+    # 清除 token
+    teacher.password_reset_token = None
+    teacher.password_reset_sent_at = None
+    teacher.password_reset_expires_at = None
+
+    db.commit()
+
+    return {"message": "密碼已成功重設", "success": True}
+
+
+@router.get("/teacher/verify-reset-token")
+async def verify_reset_token(token: str, db: Session = Depends(get_db)):
+    """驗證密碼重設 token 是否有效"""
+
+    # 查找擁有此 token 的教師
+    teacher = db.query(Teacher).filter(Teacher.password_reset_token == token).first()
+
+    if not teacher:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="無效的重設連結")
+
+    # 檢查 token 是否過期
+    if teacher.password_reset_expires_at:
+        current_time = datetime.utcnow()
+        expires_at = teacher.password_reset_expires_at
+        # 如果 expires_at 是 aware，轉換為 naive
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+
+        if current_time > expires_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="重設連結已過期"
+            )
+
+    return {"valid": True, "email": teacher.email, "name": teacher.name}

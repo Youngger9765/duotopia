@@ -95,6 +95,11 @@ class Teacher(Base):
     email_verification_token = Column(String(100))  # email 驗證 token
     email_verification_sent_at = Column(DateTime(timezone=True))  # 最後發送驗證信時間
 
+    # 密碼重設字段
+    password_reset_token = Column(String(100))  # 密碼重設 token
+    password_reset_sent_at = Column(DateTime(timezone=True))  # 最後發送密碼重設郵件時間
+    password_reset_expires_at = Column(DateTime(timezone=True))  # token 過期時間
+
     # 訂閱系統
     subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
 

@@ -42,19 +42,19 @@ export default function TeacherLogin() {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleQuickLogin = async (email: string) => {
     setIsLoading(true);
     setError('');
 
-    console.log('🔑 [DEBUG] Demo登入開始');
-    console.log('🔑 [DEBUG] Demo登入資料:', { email: 'demo@duotopia.com', password: 'demo123' });
+    console.log('🔑 [DEBUG] 快速登入開始');
+    console.log('🔑 [DEBUG] 快速登入資料:', { email, password: 'demo123' });
 
     try {
       const result = await apiClient.teacherLogin({
-        email: 'demo@duotopia.com',
+        email,
         password: 'demo123',
       });
-      console.log('🔑 [DEBUG] Demo登入成功，結果:', result);
+      console.log('🔑 [DEBUG] 快速登入成功，結果:', result);
       console.log('🔑 [DEBUG] localStorage 檢查:', {
         auth_storage: localStorage.getItem('auth-storage'),
         keys: Object.keys(localStorage)
@@ -62,8 +62,8 @@ export default function TeacherLogin() {
 
       navigate('/teacher/dashboard');
     } catch (err) {
-      console.error('🔑 [ERROR] Demo登入失敗:', err);
-      setError('Demo 帳號登入失敗');
+      console.error('🔑 [ERROR] 快速登入失敗:', err);
+      setError(`${email} 帳號登入失敗`);
     } finally {
       setIsLoading(false);
     }
@@ -151,28 +151,70 @@ export default function TeacherLogin() {
                   '登入'
                 )}
               </Button>
+
+              <div className="text-center">
+                <Link
+                  to="/teacher/forgot-password"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  忘記密碼？
+                </Link>
+              </div>
             </form>
 
-            {/* Demo Login Button */}
+            {/* Quick Login Buttons */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">或</span>
+                <span className="px-2 bg-white text-gray-500">測試帳號快速登入</span>
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-            >
-              <Zap className="mr-2 h-4 w-4" />
-              Demo 教師快速登入
-            </Button>
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleQuickLogin('demo@duotopia.com')}
+                disabled={isLoading}
+              >
+                <Zap className="mr-2 h-4 w-4 text-green-600" />
+                <div className="flex-1 text-left">
+                  <div className="font-medium">Demo 教師（已充值300天）</div>
+                  <div className="text-xs text-gray-500">demo@duotopia.com</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleQuickLogin('trial@duotopia.com')}
+                disabled={isLoading}
+              >
+                <Zap className="mr-2 h-4 w-4 text-blue-600" />
+                <div className="flex-1 text-left">
+                  <div className="font-medium">試用教師（30天試用期）</div>
+                  <div className="text-xs text-gray-500">trial@duotopia.com</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleQuickLogin('expired@duotopia.com')}
+                disabled={isLoading}
+              >
+                <Zap className="mr-2 h-4 w-4 text-red-600" />
+                <div className="flex-1 text-left">
+                  <div className="font-medium">過期教師（未訂閱）</div>
+                  <div className="text-xs text-gray-500">expired@duotopia.com</div>
+                </div>
+              </Button>
+            </div>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-2">
@@ -190,8 +232,13 @@ export default function TeacherLogin() {
           </CardFooter>
         </Card>
 
-        <div className="mt-4 text-center text-xs text-gray-500">
-          Demo 帳號：demo@duotopia.com / demo123
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
+          <div className="font-semibold mb-1">🔐 測試帳號密碼均為：demo123</div>
+          <div className="space-y-1">
+            <div>✅ demo@duotopia.com - 已充值300天</div>
+            <div>🎁 trial@duotopia.com - 30天試用期</div>
+            <div>❌ expired@duotopia.com - 未訂閱/已過期</div>
+          </div>
         </div>
       </div>
     </div>

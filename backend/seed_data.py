@@ -35,16 +35,47 @@ def create_demo_data(db: Session):
     print("🌱 開始建立 Demo 資料（新作業系統架構）...")
 
     # ============ 1. Demo 教師 ============
+    # 1.1 充值300天的 Demo 教師
     demo_teacher = Teacher(
         email="demo@duotopia.com",
         password_hash=get_password_hash("demo123"),
         name="Demo 老師",
         is_demo=True,
         is_active=True,
+        email_verified=True,
+        subscription_end_date=datetime.now() + timedelta(days=300),
     )
     db.add(demo_teacher)
+
+    # 1.2 未充值的教師（已驗證但沒有訂閱）
+    expired_teacher = Teacher(
+        email="expired@duotopia.com",
+        password_hash=get_password_hash("demo123"),
+        name="過期老師",
+        is_demo=False,
+        is_active=True,
+        email_verified=True,
+        subscription_end_date=datetime.now() - timedelta(days=10),  # 10天前過期
+    )
+    db.add(expired_teacher)
+
+    # 1.3 剛驗證得到30天試用的教師
+    trial_teacher = Teacher(
+        email="trial@duotopia.com",
+        password_hash=get_password_hash("demo123"),
+        name="試用老師",
+        is_demo=False,
+        is_active=True,
+        email_verified=True,
+        subscription_end_date=datetime.now() + timedelta(days=30),  # 30天試用期
+    )
+    db.add(trial_teacher)
+
     db.commit()
-    print("✅ 建立 Demo 教師: demo@duotopia.com / demo123")
+    print("✅ 建立 3 個教師帳號:")
+    print("   - demo@duotopia.com (充值300天)")
+    print("   - expired@duotopia.com (未訂閱/已過期)")
+    print("   - trial@duotopia.com (30天試用期)")
 
     # ============ 2. Demo 班級 ============
     classroom_a = Classroom(
@@ -1709,8 +1740,18 @@ def create_demo_data(db: Session):
     print("=" * 60)
     print("\n📝 測試帳號：")
     print("\n【教師登入】")
-    print("  Email: demo@duotopia.com")
-    print("  密碼: demo123")
+    print("\n  1️⃣ 已充值帳號（剩餘300天）:")
+    print("     Email: demo@duotopia.com")
+    print("     密碼: demo123")
+    print("     狀態: ✅ 已訂閱，剩餘300天")
+    print("\n  2️⃣ 未充值/過期帳號:")
+    print("     Email: expired@duotopia.com")
+    print("     密碼: demo123")
+    print("     狀態: ❌ 未訂閱/已過期（10天前過期）")
+    print("\n  3️⃣ 試用期帳號（剩餘30天）:")
+    print("     Email: trial@duotopia.com")
+    print("     密碼: demo123")
+    print("     狀態: 🎁 試用期，剩餘30天")
     print("\n【學生登入】")
     print("  方式: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生")
     print("\n  五年級A班:")

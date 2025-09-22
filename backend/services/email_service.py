@@ -434,6 +434,138 @@ class EmailService:
         # 重新發送
         return self.send_teacher_verification_email(db, teacher)
 
+    # ========== 密碼重設功能 ==========
+
+    def send_password_reset_email(self, db: Session, teacher: Teacher) -> bool:
+        """發送密碼重設郵件
+
+        Args:
+            db: 資料庫 session
+            teacher: 教師物件
+
+        Returns:
+            是否成功發送
+        """
+        try:
+            # 生成新的重設 token
+            reset_token = self.generate_verification_token()
+
+            # 更新教師的重設資訊
+            teacher.password_reset_token = reset_token
+            teacher.password_reset_sent_at = datetime.utcnow()
+            teacher.password_reset_expires_at = datetime.utcnow() + timedelta(
+                hours=2
+            )  # 2小時後過期
+            db.commit()
+
+            # 構建重設連結
+            reset_url = (
+                f"{self.frontend_url}/teacher/reset-password?token={reset_token}"
+            )
+
+            # 構建 HTML 內容
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: #2563eb; color: white; padding: 20px;
+                        text-align: center; border-radius: 8px 8px 0 0; }}
+                    .content {{ background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }}
+                    .button {{ display: inline-block; background: #2563eb; color: white;
+                        padding: 12px 24px; text-decoration: none; border-radius: 6px;
+                        font-weight: bold; }}
+                    .warning {{ background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Duotopia - 密碼重設</h1>
+                    </div>
+                    <div class="content">
+                        <h2>您好，{teacher.name}！</h2>
+                        <p>我們收到了您的密碼重設請求。</p>
+
+                        <p>請點擊下方按鈕重設您的密碼：</p>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{reset_url}" class="button" style="color: white;">重設密碼</a>
+                        </div>
+
+                        <div class="warning">
+                            <strong>⚠️ 安全提醒：</strong><br>
+                            • 此連結將在 2 小時後失效<br>
+                            • 如果您沒有要求重設密碼，請忽略此郵件<br>
+                            • 請勿將此連結分享給他人
+                        </div>
+
+                        <p style="color: #666; font-size: 14px;">
+                            如果按鈕無法點擊，請複製以下連結到瀏覽器：<br>
+                            <code>{reset_url}</code>
+                        </p>
+
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+                        <p style="color: #999; font-size: 12px; text-align: center;">
+                            此為系統自動發送的郵件，請勿回覆<br>
+                            © 2024 Duotopia - AI 驅動的英語學習平台
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            # 純文字版本
+            text_content = f"""
+            您好，{teacher.name}！
+
+            我們收到了您的密碼重設請求。
+
+            請使用以下連結重設您的密碼：
+            {reset_url}
+
+            此連結將在 2 小時後失效。
+
+            如果您沒有要求重設密碼，請忽略此郵件。
+
+            Duotopia 團隊
+            """
+
+            # 創建 email 訊息
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "Duotopia - 重設您的密碼"
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = teacher.email
+
+            # 添加內容
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+            # 如果 SMTP 未設定，只記錄日誌（開發模式）
+            if not self.smtp_user or not self.smtp_password:
+                logger.info(f"[開發模式] 密碼重設連結: {reset_url}")
+                print(f"\n📧 [開發模式] 密碼重設 Email 已發送到: {teacher.email}")
+                print(f"🔗 密碼重設連結: {reset_url}")
+                return True
+
+            # 發送 email
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"密碼重設郵件已發送到: {teacher.email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"發送密碼重設郵件失敗 ({teacher.email}): {str(e)}")
+            return False
+
 
 # 全域 email 服務實例
 email_service = EmailService()
