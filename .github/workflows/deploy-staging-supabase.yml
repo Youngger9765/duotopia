@@ -363,8 +363,8 @@ jobs:
           --region $REGION \
           --allow-unauthenticated \
           --port 8080 \
-          --memory 256Mi \
-          --cpu 0.5 \
+          --memory 512Mi \
+          --cpu 1 \
           --max-instances 3 \
           --min-instances 0 \
           --cpu-throttling \
