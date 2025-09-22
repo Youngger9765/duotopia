@@ -103,31 +103,34 @@ jobs:
       run: python -c "import main; print('Backend imports successfully')"
 
   # Security Scanning Jobs
-  secret-scanning:
-    name: 🔐 Secret Detection
-    runs-on: ubuntu-latest
-    continue-on-error: true  # Don't block deployment on security issues
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for better detection
+  # TEMPORARILY DISABLED: Secret scanning causing Docker build hang (2025-09-22)
+  # Issue: reviewdog/action-detect-secrets Docker build stuck at gcc installation
+  # Will re-enable after investigating alternative secret scanning tools
+  # secret-scanning:
+  #   name: 🔐 Secret Detection
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true  # Don't block deployment on security issues
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0  # Fetch all history for better detection
 
-      - name: Run Trufflehog
-        uses: trufflesecurity/trufflehog@main
-        continue-on-error: true
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
+  #     - name: Run Trufflehog
+  #       uses: trufflesecurity/trufflehog@main
+  #       continue-on-error: true
+  #       with:
+  #         path: ./
+  #         base: ${{ github.event.repository.default_branch }}
+  #         head: HEAD
+  #         extra_args: --debug --only-verified
 
-      - name: Detect Secrets
-        uses: reviewdog/action-detect-secrets@v0.29.1
-        continue-on-error: true
-        with:
-          reporter: github-pr-review
-          fail_level: none
+  #     - name: Detect Secrets
+  #       uses: reviewdog/action-detect-secrets@v0.29.1
+  #       continue-on-error: true
+  #       with:
+  #         reporter: github-pr-review
+  #         fail_level: none
 
   dependency-check:
     name: 🔍 Dependency Vulnerabilities
@@ -555,7 +558,8 @@ jobs:
   # Security Report
   security-report:
     name: 📊 Security Report
-    needs: [secret-scanning, dependency-check, code-scanning, credential-check]
+    # Temporarily removed secret-scanning from needs due to Docker build issues
+    needs: [dependency-check, code-scanning, credential-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -565,7 +569,7 @@ jobs:
           echo ""
           echo "| Check | Status |"
           echo "|-------|--------|"
-          echo "| Secret Detection | ${{ needs.secret-scanning.result }} |"
+          echo "| Secret Detection | (Temporarily Disabled) |"
           echo "| Dependency Check | ${{ needs.dependency-check.result }} |"
           echo "| Code Analysis | ${{ needs.code-scanning.result }} |"
           echo "| Credential Check | ${{ needs.credential-check.result }} |"
