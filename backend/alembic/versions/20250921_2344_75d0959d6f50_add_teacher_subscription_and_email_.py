@@ -60,9 +60,8 @@ def upgrade() -> None:
     # These columns (academic_year, grade, school) do not exist in the database
     # NOTE: Removed incorrect drop of ix_content_items_content_id index
     # The index does not exist in the database
-    op.create_unique_constraint(
-        "_content_item_order_uc", "content_items", ["content_id", "order_index"]
-    )
+    # NOTE: Removed incorrect creation of _content_item_order_uc constraint
+    # The constraint already exists in the database
     op.add_column(
         "lessons", sa.Column("estimated_minutes", sa.Integer(), nullable=True)
     )
@@ -70,7 +69,11 @@ def upgrade() -> None:
     # The column may already exist in staging database
     op.drop_constraint("lessons_program_id_fkey", "lessons", type_="foreignkey")
     op.create_foreign_key(None, "lessons", "programs", ["program_id"], ["id"])
-    op.add_column("programs", sa.Column("is_template", sa.Boolean(), nullable=False))
+    op.add_column(
+        "programs",
+        sa.Column("is_template", sa.Boolean(), nullable=True, server_default="false"),
+    )
+    op.alter_column("programs", "is_template", nullable=False)
     op.add_column("programs", sa.Column("classroom_id", sa.Integer(), nullable=True))
     op.add_column(
         "programs", sa.Column("source_type", sa.String(length=20), nullable=True)
