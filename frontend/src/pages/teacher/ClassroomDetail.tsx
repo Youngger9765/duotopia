@@ -812,7 +812,16 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                   </TabsTrigger>
                   <TabsTrigger
                     value="assignments"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium ${
+                      !canAssignHomework ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={!canAssignHomework}
+                    onClick={(e) => {
+                      if (!canAssignHomework) {
+                        e.preventDefault();
+                        toast.error('您的訂閱已過期，無法使用作業管理功能。請先充值續訂。');
+                      }
+                    }}
                   >
                     <FileText className="h-5 w-5 mr-2" />
                     作業管理
