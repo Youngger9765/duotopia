@@ -65,6 +65,13 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(isTemplateMode ? 'programs' : 'students');
+
+  // Teacher subscription state
+  const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
+  const [teacherData, setTeacherData] = useState<{
+    subscription_status?: string;
+    days_remaining?: number;
+  } | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
@@ -119,6 +126,7 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
         fetchPrograms();
         fetchStudents();
         fetchAssignments();
+        fetchTeacherPermissions();
       }
     }
   }, [id, isTemplateMode]);
@@ -244,6 +252,24 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
       setAssignments([]);
+    }
+  };
+
+  const fetchTeacherPermissions = async () => {
+    try {
+      const dashboardData = await apiClient.getTeacherDashboard() as {
+        can_assign_homework?: boolean;
+        subscription_status?: string;
+        days_remaining?: number;
+      };
+      setCanAssignHomework(dashboardData.can_assign_homework || false);
+      setTeacherData({
+        subscription_status: dashboardData.subscription_status,
+        days_remaining: dashboardData.days_remaining
+      });
+    } catch (err) {
+      console.error('Failed to fetch teacher permissions:', err);
+      setCanAssignHomework(false);
     }
   };
 
@@ -786,7 +812,16 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                   </TabsTrigger>
                   <TabsTrigger
                     value="assignments"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium ${
+                      !canAssignHomework ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={!canAssignHomework}
+                    onClick={(e) => {
+                      if (!canAssignHomework) {
+                        e.preventDefault();
+                        toast.error('您的訂閱已過期，無法使用作業管理功能。請先充值續訂。');
+                      }
+                    }}
                   >
                     <FileText className="h-5 w-5 mr-2" />
                     作業管理
@@ -1271,13 +1306,38 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                 {/* Header with Create Button */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">作業列表</h3>
-                  <Button
-                    onClick={() => setShowAssignmentDialog(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2 text-white" />
-                    指派新作業
-                  </Button>
+                  <div className="flex items-center space-x-3">
+                    {!canAssignHomework && teacherData && (
+                      <div className="text-sm text-gray-600 bg-yellow-50 px-3 py-1 rounded-lg border border-yellow-200">
+                        <span className="font-medium">⚠️ 訂閱已過期</span>
+                        <br />
+                        <span className="text-xs">
+                          {teacherData.subscription_status === 'subscribed'
+                            ? `剩餘 ${teacherData.days_remaining || 0} 天`
+                            : '需要訂閱才能指派作業'
+                          }
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      onClick={() => {
+                        if (!canAssignHomework) {
+                          toast.error('您的訂閱已過期，無法指派作業。請先充值續訂。');
+                          return;
+                        }
+                        setShowAssignmentDialog(true);
+                      }}
+                      disabled={!canAssignHomework}
+                      className={`${
+                        canAssignHomework
+                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      指派新作業
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Assignment Stats - Using Real Data */}
