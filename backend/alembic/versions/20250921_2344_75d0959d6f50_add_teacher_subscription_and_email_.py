@@ -36,7 +36,8 @@ def upgrade() -> None:
     op.create_foreign_key(
         None, "assignment_contents", "assignments", ["assignment_id"], ["id"]
     )
-    op.drop_column("assignments", "status")
+    # NOTE: Removed incorrect drop of assignments.status column
+    # The column may not exist in staging database
     op.add_column(
         "classroom_students", sa.Column("is_active", sa.Boolean(), nullable=True)
     )
