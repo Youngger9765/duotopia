@@ -51,7 +51,8 @@ elif environment == "production":
     # 生產環境只允許生產域名
     allowed_origins = [
         "https://duotopia-469413.web.app",
-        "https://duotopia.com",  # 如果有自定義域名
+        "https://duotopia.net",  # 自定義域名
+        "https://duotopia.co",  # 自定義域名
         "https://duotopia-production-frontend-316409492201.asia-east1.run.app",  # Production Cloud Run frontend
     ]
 else:
