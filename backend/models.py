@@ -160,10 +160,7 @@ class Teacher(Base):
         """是否可以分派作業"""
         from datetime import datetime, timezone
 
-        # Demo 帳號永遠可以分派作業
-        if self.is_demo:
-            return True
-        # 有有效訂閱才能分派作業
+        # 只有有效訂閱才能分派作業
         return self.subscription_end_date and self.subscription_end_date > datetime.now(
             timezone.utc
         )
