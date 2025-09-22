@@ -290,7 +290,7 @@ jobs:
 
         if [ "${{ steps.env_vars.outputs.ENV_NAME }}" == "production" ]; then
           echo "DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_POOLER_URL || secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
@@ -298,7 +298,7 @@ jobs:
           echo "🆓 Using Supabase Production"
         else
           echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL || secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
