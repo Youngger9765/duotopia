@@ -118,7 +118,7 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {/* Test Mode Button - Only show for demo@duotopia.com */}
+            {/* Demo Mode Button - Only show for demo@duotopia.com */}
             {dashboardData.teacher.email === 'demo@duotopia.com' && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
@@ -126,10 +126,10 @@ export default function TeacherDashboard() {
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  開啟訂閱測試工具
+                  模擬訂閱充值（測試用）
                 </Button>
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  此按鈕僅供 demo 帳號測試使用
+                  點擊可模擬充值、過期等不同訂閱狀態
                 </p>
               </div>
             )}

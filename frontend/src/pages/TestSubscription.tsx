@@ -77,7 +77,7 @@ export default function TestSubscription() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">訂閱狀態測試工具</h1>
+      <h1 className="text-3xl font-bold mb-8">訂閱模擬測試</h1>
 
       {/* 當前狀態 */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -205,7 +205,7 @@ export default function TestSubscription() {
       </div>
 
       <div className="mt-6 text-sm text-gray-500 text-center">
-        測試帳號：demo@duotopia.com | 此工具直接操作資料庫，無需登入
+        測試帳號：demo@duotopia.com | 僅供模擬測試使用
       </div>
     </div>
   );
