@@ -440,6 +440,13 @@ class AssignmentContent(Base):
     assignment = relationship("Assignment", back_populates="contents")
     content = relationship("Content")
 
+    # Constraints - 確保同一作業不會重複包含相同內容
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id", "content_id", name="unique_assignment_content"
+        ),
+    )
+
     def __repr__(self):
         return f"<AssignmentContent assignment={self.assignment_id} content={self.content_id}>"
 

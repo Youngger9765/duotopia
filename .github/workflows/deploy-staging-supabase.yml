@@ -360,13 +360,13 @@ jobs:
           --region $REGION \
           --allow-unauthenticated \
           --port 8080 \
-          --memory 512Mi \
-          --cpu 1 \
-          --max-instances 10 \
+          --memory 256Mi \
+          --cpu 0.5 \
+          --max-instances 3 \
           --min-instances 0 \
           --cpu-throttling \
-          --concurrency 80 \
-          --cpu-boost \
+          --concurrency 40 \
+          --no-cpu-boost \
           --set-env-vars="$ENV_VARS"
 
     - name: Get backend URL and create .env
@@ -398,13 +398,13 @@ jobs:
           --region $REGION \
           --allow-unauthenticated \
           --port 80 \
-          --memory 256Mi \
-          --cpu 1 \
-          --max-instances 5 \
+          --memory 128Mi \
+          --cpu 0.25 \
+          --max-instances 2 \
           --min-instances 0 \
           --cpu-throttling \
-          --concurrency 80 \
-          --cpu-boost
+          --concurrency 10 \
+          --no-cpu-boost
 
     - name: 🧹 Cleanup Old Container Images
       run: |
