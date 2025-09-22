@@ -38,9 +38,8 @@ def upgrade() -> None:
     )
     # NOTE: Removed incorrect drop of assignments.status column
     # The column may not exist in staging database
-    op.add_column(
-        "classroom_students", sa.Column("is_active", sa.Boolean(), nullable=True)
-    )
+    # NOTE: Removed incorrect add of classroom_students.is_active column
+    # The column may already exist in staging database
     op.drop_constraint("unique_classroom_student", "classroom_students", type_="unique")
     op.drop_constraint(
         "classroom_students_classroom_id_fkey", "classroom_students", type_="foreignkey"
@@ -72,7 +71,8 @@ def upgrade() -> None:
     op.add_column(
         "lessons", sa.Column("estimated_minutes", sa.Integer(), nullable=True)
     )
-    op.add_column("lessons", sa.Column("is_active", sa.Boolean(), nullable=True))
+    # NOTE: Removed incorrect add of lessons.is_active column
+    # The column may already exist in staging database
     op.drop_constraint("lessons_program_id_fkey", "lessons", type_="foreignkey")
     op.create_foreign_key(None, "lessons", "programs", ["program_id"], ["id"])
     op.add_column("programs", sa.Column("is_template", sa.Boolean(), nullable=False))
@@ -84,7 +84,8 @@ def upgrade() -> None:
     op.add_column("programs", sa.Column("estimated_hours", sa.Integer(), nullable=True))
     op.add_column("programs", sa.Column("order_index", sa.Integer(), nullable=True))
     op.add_column("programs", sa.Column("tags", sa.JSON(), nullable=True))
-    op.add_column("programs", sa.Column("is_active", sa.Boolean(), nullable=True))
+    # NOTE: Removed incorrect add of programs.is_active column
+    # The column may already exist in staging database
     op.add_column(
         "programs", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True)
     )
