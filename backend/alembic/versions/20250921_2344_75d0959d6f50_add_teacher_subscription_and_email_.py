@@ -117,17 +117,10 @@ def upgrade() -> None:
     )
 
     # ===== 3. 新增其他真正不存在的欄位 =====
-    op.add_column(
-        "student_item_progress", sa.Column("transcription", sa.Text(), nullable=True)
-    )
-    op.add_column("programs", sa.Column("is_public", sa.Boolean(), nullable=True))
-    op.add_column(
-        "classrooms", sa.Column("school", sa.String(length=255), nullable=True)
-    )
-    op.add_column("classrooms", sa.Column("grade", sa.String(length=50), nullable=True))
-    op.add_column(
-        "classrooms", sa.Column("academic_year", sa.String(length=20), nullable=True)
-    )
+    # 註：這些欄位在 initial migration a1b2c3d4e5f6 已經創建，移除避免重複
+    # - student_item_progress.transcription
+    # - programs.is_public
+    # - classrooms.school, grade, academic_year
 
     # ===== 4. 更新外鍵（保留原有的重要操作） =====
     op.drop_constraint(
@@ -183,18 +176,20 @@ def upgrade() -> None:
     )
 
     # ===== 5. 刪除和重建約束 =====
-    op.drop_constraint(
-        "_student_item_progress_uc", "student_item_progress", type_="unique"
-    )
-    op.create_unique_constraint(
-        "unique_student_item_progress",
-        "student_item_progress",
-        ["student_assignment_id", "content_item_id"],
-    )
+    # 註：initial migration 已經創建了正確的約束，不需要重建
+    # op.drop_constraint(
+    #     "_student_item_progress_uc", "student_item_progress", type_="unique"
+    # )
+    # op.create_unique_constraint(
+    #     "unique_student_item_progress",
+    #     "student_item_progress",
+    #     ["student_assignment_id", "content_item_id"],
+    # )
 
-    op.create_unique_constraint(
-        "unique_classroom_student", "classroom_students", ["classroom_id", "student_id"]
-    )
+    # 註：unique_classroom_student 約束在 initial migration 已經創建
+    # op.create_unique_constraint(
+    #     "unique_classroom_student", "classroom_students", ["classroom_id", "student_id"]
+    # )
 
     # ===== 6. 刪除存在的索引 =====
     op.drop_index("ix_students_email", table_name="students")
@@ -207,11 +202,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """回滾操作"""
     # 回滾新增的欄位
-    op.drop_column("classrooms", "academic_year")
-    op.drop_column("classrooms", "grade")
-    op.drop_column("classrooms", "school")
-    op.drop_column("programs", "is_public")
-    op.drop_column("student_item_progress", "transcription")
+    # 註：這些欄位在 initial migration 已存在，不需要刪除
+    # op.drop_column("classrooms", "academic_year")
+    # op.drop_column("classrooms", "grade")
+    # op.drop_column("classrooms", "school")
+    # op.drop_column("programs", "is_public")
+    # op.drop_column("student_item_progress", "transcription")
     op.drop_column("teachers", "messages_used_this_month")
     op.drop_column("teachers", "monthly_message_limit")
     op.drop_column("teachers", "trial_end_date")
