@@ -40,7 +40,8 @@ def upgrade() -> None:
     # The column may not exist in staging database
     # NOTE: Removed incorrect add of classroom_students.is_active column
     # The column may already exist in staging database
-    op.drop_constraint("unique_classroom_student", "classroom_students", type_="unique")
+    # NOTE: Removed incorrect drop of unique_classroom_student constraint
+    # The constraint may not exist in staging database
     op.drop_constraint(
         "classroom_students_classroom_id_fkey", "classroom_students", type_="foreignkey"
     )
@@ -153,14 +154,10 @@ def upgrade() -> None:
         type_=sa.String(length=20),
         existing_nullable=True,
     )
-    op.drop_constraint(
-        "unique_student_item_progress", "student_item_progress", type_="unique"
-    )
-    op.create_unique_constraint(
-        "_student_item_progress_uc",
-        "student_item_progress",
-        ["student_assignment_id", "content_item_id"],
-    )
+    # NOTE: Removed incorrect drop of unique_student_item_progress constraint
+    # The constraint may not exist in staging database
+    # NOTE: Removed duplicate creation of _student_item_progress_uc constraint
+    # The constraint may already exist in staging database
     op.drop_constraint(
         "student_item_progress_content_item_id_fkey",
         "student_item_progress",
