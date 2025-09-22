@@ -112,11 +112,4 @@ app.include_router(test_subscription.router, prefix="/api/test", tags=["test"]) 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
-    # Cloud Run 需要更長的超時時間
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-        access_log=True,
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

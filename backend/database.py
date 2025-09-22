@@ -10,11 +10,6 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
 )
 
-# 修復 Supabase 的 DATABASE_URL 格式問題
-# Supabase 提供 postgres:// 但 SQLAlchemy 需要 postgresql://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
