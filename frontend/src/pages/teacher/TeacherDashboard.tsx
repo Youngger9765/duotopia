@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import TeacherLayout from '@/components/TeacherLayout';
-import { Users, UserCheck, BookOpen } from 'lucide-react';
+import { Users, UserCheck, BookOpen, Settings } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardData {
   teacher: {
@@ -26,11 +28,16 @@ interface DashboardData {
     email: string;
     classroom_name: string;
   }>;
+  subscription_status?: string;
+  subscription_end_date?: string;
+  days_remaining?: number;
+  can_assign_homework?: boolean;
 }
 
 export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
@@ -77,6 +84,57 @@ export default function TeacherDashboard() {
         <h2 className="text-3xl font-bold text-gray-900 mb-6">
           歡迎回來，{dashboardData.teacher.name}！
         </h2>
+
+        {/* Subscription Status Card - Always Show */}
+        <Card className={`mb-6 ${
+          dashboardData.subscription_status === 'subscribed'
+            ? 'bg-gradient-to-r from-green-50 to-blue-50 border-green-200'
+            : 'bg-gradient-to-r from-red-50 to-gray-50 border-red-200'
+        }`}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {dashboardData.subscription_status === 'subscribed' ? '✅ 訂閱狀態：已訂閱' : '⚠️ 訂閱狀態：未訂閱'}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {dashboardData.subscription_status === 'subscribed'
+                    ? `您的訂閱將在 ${dashboardData.days_remaining || 0} 天後到期`
+                    : '您目前沒有有效訂閱，部分功能將受限'}
+                </p>
+                {dashboardData.subscription_end_date && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    到期日: {new Date(dashboardData.subscription_end_date).toLocaleDateString('zh-TW')}
+                  </p>
+                )}
+              </div>
+              <div className="text-center">
+                <div className={`text-3xl font-bold ${
+                  dashboardData.subscription_status === 'subscribed' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {(dashboardData.days_remaining ?? 0) > 0 ? dashboardData.days_remaining : 0}
+                </div>
+                <div className="text-sm text-gray-600">剩餘天數</div>
+              </div>
+            </div>
+
+            {/* Demo Mode Button - Only show for demo@duotopia.com */}
+            {dashboardData.teacher.email === 'demo@duotopia.com' && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Button
+                  onClick={() => navigate('/test-sub')}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  模擬訂閱充值（測試用）
+                </Button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  點擊可模擬充值、過期等不同訂閱狀態
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

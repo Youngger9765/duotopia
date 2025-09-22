@@ -28,33 +28,18 @@ class AudioUploadService:
             "video/webm",  # 某些瀏覽器會將 webm 音檔標記為 video/webm
         ]
         self.environment = os.getenv("ENVIRONMENT", "development")
-        self.use_local_storage = self.environment == "development"
-
-        # 本地開發用的儲存目錄
-        if self.use_local_storage:
-            self.local_storage_dir = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)), "local_recordings"
-            )
-            os.makedirs(self.local_storage_dir, exist_ok=True)
-            print(
-                f"⚠️  Local development mode: Files will be saved to {self.local_storage_dir}"
-            )
 
     def _get_storage_client(self):
         """延遲初始化 GCS client"""
-        # 本地開發模式不需要 GCS client
-        if self.use_local_storage:
-            return None
-
         if not self.storage_client:
             try:
                 from google.cloud import storage
 
-                # 明確指定 service account key 檔案路徑
-                key_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)),
-                    "service-account-key.json",
-                )
+                # 明確指定 service account key 檔案路徑 (在 backend 目錄下)
+                backend_dir = os.path.dirname(os.path.dirname(__file__))
+                key_path = os.path.join(backend_dir, "service-account-key.json")
+                print(f"🔍 Looking for GCS key at: {key_path}")
+                print(f"🔍 Key exists: {os.path.exists(key_path)}")
                 if os.path.exists(key_path):
                     self.storage_client = storage.Client.from_service_account_json(
                         key_path
@@ -135,28 +120,7 @@ class AudioUploadService:
             else:
                 filename = f"recording_{timestamp}_{file_id}.{extension}"
 
-            # 本地開發模式：儲存到本地並返回 data URL
-            if self.use_local_storage:
-                try:
-                    # 儲存到本地目錄
-                    local_path = os.path.join(self.local_storage_dir, filename)
-                    with open(local_path, "wb") as f:
-                        f.write(content)
-
-                    # 儲存成功，顯示訊息
-                    print(f"✅ Local recording saved: {local_path}")
-
-                    # 返回簡化的 URL（前端會處理）
-                    return f"/local_recordings/{filename}"
-
-                except Exception as e:
-                    print(f"Local storage failed: {e}")
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Failed to save recording locally: {str(e)}",
-                    )
-
-            # 生產環境：上傳到 GCS
+            # 上傳到 GCS
             client = self._get_storage_client()
             if not client:
                 raise HTTPException(

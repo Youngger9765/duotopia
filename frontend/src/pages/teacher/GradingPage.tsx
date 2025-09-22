@@ -123,7 +123,6 @@ export default function GradingPage() {
 
   // 學生列表相關
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
-  const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [assignmentTitle, setAssignmentTitle] = useState("");
 
   // 計算題目索引映射
@@ -155,13 +154,7 @@ export default function GradingPage() {
   useEffect(() => {
     if (assignmentId && studentId) {
       loadSubmission();
-      // 找到當前學生在列表中的位置
-      const index = studentList.findIndex(
-        (s) => s.student_id === parseInt(studentId),
-      );
-      if (index !== -1) {
-        setCurrentStudentIndex(index);
-      }
+      // 學生 ID 已設定，不需要額外處理索引
     } else if (assignmentId && studentList.length > 0 && !studentId) {
       // 如果沒有指定 studentId，預設選擇第一個學生（API 只回傳被指派的學生）
       const firstStudent = studentList[0];
@@ -170,6 +163,17 @@ export default function GradingPage() {
       }
     }
   }, [assignmentId, studentId, studentList]);
+
+  // 當提交資料載入後，同步更新學生列表狀態
+  useEffect(() => {
+    if (submission && studentId) {
+      setStudentList(prev => prev.map(student =>
+        student.student_id === parseInt(studentId)
+          ? { ...student, status: submission.status }
+          : student
+      ));
+    }
+  }, [submission?.status, studentId]);
 
   const loadAssignmentInfo = async () => {
     try {
@@ -188,7 +192,9 @@ export default function GradingPage() {
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
       ) as StudentsResponse;
-      setStudentList(response.students || []);
+      // 依據 student_id 排序
+      const sortedStudents = (response.students || []).sort((a, b) => a.student_id - b.student_id);
+      setStudentList(sortedStudents);
     } catch (error) {
       console.error("Failed to load student list:", error);
       // 如果 API 還沒實作，使用模擬資料
@@ -215,7 +221,23 @@ export default function GradingPage() {
         response.current_score !== null
       ) {
         setScore(response.current_score);
-        setFeedback(response.current_feedback || "");
+
+        // 處理舊格式的 feedback（包含題目評語的合併格式）
+        // 新格式只包含總評
+        const feedbackText = response.current_feedback || "";
+
+        // 檢查是否是舊格式（包含「題目 X」的評語）
+        if (feedbackText.includes("題目 ") && feedbackText.includes("總評:")) {
+          // 舊格式：提取總評部分
+          const totalFeedbackMatch = feedbackText.match(/總評:\s*([\s\S]*?)$/);
+          setFeedback(totalFeedbackMatch ? totalFeedbackMatch[1].trim() : "");
+        } else if (feedbackText.includes("題目 ")) {
+          // 舊格式但沒有總評：清空總評
+          setFeedback("");
+        } else {
+          // 新格式或純總評
+          setFeedback(feedbackText);
+        }
       } else {
         setScore(80);
         setFeedback("");
@@ -260,32 +282,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: false  // 自動儲存不更新狀態
       });
 
@@ -315,32 +317,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語（用於顯示）
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: false  // 儲存評分但不更新狀態
       });
 
@@ -370,32 +352,12 @@ export default function GradingPage() {
         });
       });
 
-      // 合併個別題目評語到總評語（用於顯示）
-      const itemFeedbackTexts: string[] = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        if (fb.feedback && fb.feedback.trim()) {
-          const passStatus =
-            fb.passed === true ? "✅" : fb.passed === false ? "❌" : "";
-          itemFeedbackTexts.push(
-            `題目 ${parseInt(index) + 1} ${passStatus}: ${fb.feedback}`,
-          );
-        }
-      });
-
-      // 詳實記錄（各題評語）
-      const detailedRecord = itemFeedbackTexts.length > 0
-        ? itemFeedbackTexts.join("\n")
-        : "";
-
-      // 組合完整回饋：詳實記錄 + 總評
-      const combinedFeedback = detailedRecord +
-        (feedback ? `\n\n總評: ${feedback}` : "");
-
+      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: combinedFeedback,
-        item_results: itemResults,
+        feedback: feedback || "",  // 傳送總評
+        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
         update_status: true  // 完成批改時更新狀態為 GRADED
       });
 
@@ -413,8 +375,11 @@ export default function GradingPage() {
           : student
       ));
 
-      // 切換到下一位學生
-      if (currentStudentIndex < studentList.length - 1) {
+      // 切換到下一位已指派的學生
+      const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+      const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId!));
+
+      if (currentAssignedIndex < assignedStudents.length - 1) {
         await handleNextStudent();
       }
     } catch (error) {
@@ -496,19 +461,27 @@ export default function GradingPage() {
   };
 
   const handlePreviousStudent = async () => {
-    if (currentStudentIndex > 0) {
+    // 只在已指派的學生之間切換
+    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+
+    if (currentAssignedIndex > 0) {
       // 切換前自動儲存
       await handleAutoSave();
-      const prevStudent = studentList[currentStudentIndex - 1];
+      const prevStudent = assignedStudents[currentAssignedIndex - 1];
       setSearchParams({ studentId: (prevStudent.student_id || 0).toString() });
     }
   };
 
   const handleNextStudent = async () => {
-    if (currentStudentIndex < studentList.length - 1) {
+    // 只在已指派的學生之間切換
+    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+
+    if (currentAssignedIndex < assignedStudents.length - 1) {
       // 切換前自動儲存
       await handleAutoSave();
-      const nextStudent = studentList[currentStudentIndex + 1];
+      const nextStudent = assignedStudents[currentAssignedIndex + 1];
       setSearchParams({ studentId: (nextStudent.student_id || 0).toString() });
     }
   };
@@ -640,27 +613,41 @@ export default function GradingPage() {
 
             {/* 學生切換導航 */}
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
-                {currentStudentIndex + 1} / {studentList.length} 位學生
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handlePreviousStudent}
-                  disabled={currentStudentIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleNextStudent}
-                  disabled={currentStudentIndex === studentList.length - 1}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {(() => {
+                // 只計算已指派的學生
+                const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
+                const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+                const isCurrentStudentAssigned = currentAssignedIndex !== -1;
+
+                return (
+                  <>
+                    <span className="text-sm text-gray-500">
+                      {isCurrentStudentAssigned
+                        ? `${currentAssignedIndex + 1} / ${assignedStudents.length} 位已指派學生`
+                        : `未指派學生 (${assignedStudents.length} 位已指派)`
+                      }
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handlePreviousStudent}
+                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleNextStudent}
+                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === assignedStudents.length - 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -671,36 +658,85 @@ export default function GradingPage() {
           {/* 左側 - 學生列表 */}
           <div className="col-span-2">
             <Card className="p-3">
-              <h3 className="text-sm font-medium mb-2 flex items-center gap-1 text-gray-600">
-                <Users className="h-4 w-4" />
-                學生
+              <h3 className="text-sm font-medium mb-3 flex items-center justify-between text-gray-700">
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span>學生</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  ({studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED").length}/{studentList.length})
+                </span>
               </h3>
               <div className="space-y-1">
-                {studentList.map((student) => (
-                  <button
-                    key={student.student_id}
-                    onClick={() => handleStudentSelect(student)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                      student.student_id === parseInt(studentId!)
-                        ? "bg-blue-100 text-blue-700"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="truncate">{student.student_name}</span>
-                      {/* 根據狀態顯示不同圖標 */}
-                      {student.status === "GRADED" && (
-                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                      )}
-                      {student.status === "RETURNED" && (
-                        <X className="h-3 w-3 text-orange-600 flex-shrink-0" />
-                      )}
-                      {(student.status === "SUBMITTED" || student.status === "IN_PROGRESS") && (
-                        <div className="h-3 w-3" /> // 空白佔位
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {studentList.map((student) => {
+                  // 判斷學生是否有被指派作業
+                  const isAssigned = student.status && student.status !== "NOT_ASSIGNED";
+
+                  // 取得狀態顯示文字（簡短版）
+                  const getStatusLabel = (status: string) => {
+                    const statusLabelMap: Record<string, string> = {
+                      NOT_STARTED: "未開始",
+                      IN_PROGRESS: "進行中",
+                      SUBMITTED: "已提交",
+                      GRADED: "已批改",
+                      RETURNED: "待訂正",
+                      RESUBMITTED: "重交",
+                      NOT_ASSIGNED: "未指派"
+                    };
+                    return statusLabelMap[status] || "";
+                  };
+
+                  return (
+                    <button
+                      key={student.student_id}
+                      onClick={() => isAssigned && handleStudentSelect(student)}
+                      disabled={!isAssigned}
+                      className={`w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors ${
+                        !isAssigned
+                          ? "opacity-50 cursor-not-allowed bg-gray-50"
+                          : student.student_id === parseInt(studentId!)
+                          ? "bg-blue-100 text-blue-700"
+                          : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate font-medium">{student.student_name}</span>
+                            {/* 狀態 Label */}
+                            <Badge
+                              className={`text-xs px-1.5 py-0.5 ${
+                                student.status === "GRADED"
+                                  ? "bg-green-100 text-green-700 border-green-200" :
+                                student.status === "RETURNED"
+                                  ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                student.status === "SUBMITTED" || student.status === "RESUBMITTED"
+                                  ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                student.status === "IN_PROGRESS"
+                                  ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                student.status === "NOT_ASSIGNED"
+                                  ? "bg-red-50 text-red-600 border-red-200" :
+                                "bg-gray-100 text-gray-600 border-gray-200"
+                              }`}
+                            >
+                              {getStatusLabel(student.status)}
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* 狀態圖標 */}
+                        {student.status === "GRADED" && (
+                          <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        )}
+                        {student.status === "RETURNED" && (
+                          <AlertCircle className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                        )}
+                        {(student.status === "SUBMITTED" || student.status === "RESUBMITTED") && (
+                          <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </Card>
           </div>
@@ -836,7 +872,7 @@ export default function GradingPage() {
                               existingAudioUrl={currentItem.audio_url}
                               readOnly={true}
                               disabled={false}
-                              className="border-0 p-0 shadow-none"
+                              className="border-0 p-0 shadow-none bg-white dark:bg-white"
                             />
                           ) : (
                             <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
@@ -953,7 +989,7 @@ export default function GradingPage() {
                                 });
                               }}
                               placeholder="針對此題的評語..."
-                              className="min-h-[80px] resize-none bg-white mt-3"
+                              className="min-h-[80px] resize-none bg-white dark:bg-white mt-3"
                               readOnly={submission?.status === "GRADED"}
                               disabled={submission?.status === "GRADED"}
                             />
@@ -1217,8 +1253,8 @@ export default function GradingPage() {
                     <label className="text-xs text-gray-600 mb-1 block">
                       1. 詳實記錄
                     </label>
-                    <div className="p-3 bg-gray-100 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-xs text-gray-700 font-mono">
+                    <div className="p-3 bg-white dark:bg-gray-50 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-800 font-mono">
 {Array.from({ length: totalQuestions }).map((_, index) => {
   const result = itemFeedbacks[index];
   return `題目 ${index + 1} ${result?.passed === true ? '✅' : result?.passed === false ? '❌' : '⬜'}: ${result?.feedback || '(尚無評語)'}
@@ -1237,7 +1273,7 @@ export default function GradingPage() {
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       placeholder="給學生的總體鼓勵和建議..."
-                      className="min-h-[60px] resize-none text-sm"
+                      className="min-h-[60px] resize-none text-sm bg-white dark:bg-white"
                     />
                   </div>
                 </div>

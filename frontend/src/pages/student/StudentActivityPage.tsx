@@ -700,7 +700,7 @@ export default function StudentActivityPage() {
             fluency_score: item.ai_assessment.fluency_score,
             pronunciation_score: item.ai_assessment.pronunciation_score,
             completeness_score: item.ai_assessment.completeness_score || 0,
-            word_details: []
+            word_details: item.ai_assessment.word_details || []
           };
         }
       });

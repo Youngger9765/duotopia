@@ -87,6 +87,11 @@ class TeacherDashboard(BaseModel):
     program_count: int
     classrooms: List[ClassroomSummary]
     recent_students: List[StudentSummary]
+    # Subscription information
+    subscription_status: str
+    subscription_end_date: Optional[str]
+    days_remaining: int
+    can_assign_homework: bool
 
 
 # ============ Teacher Endpoints ============
@@ -168,6 +173,13 @@ async def get_teacher_dashboard(
         program_count=program_count,
         classrooms=classroom_summaries,
         recent_students=recent_students,
+        # Subscription information
+        subscription_status=current_teacher.subscription_status,
+        subscription_end_date=current_teacher.subscription_end_date.isoformat()
+        if current_teacher.subscription_end_date
+        else None,
+        days_remaining=current_teacher.days_remaining,
+        can_assign_homework=current_teacher.can_assign_homework,
     )
 
 

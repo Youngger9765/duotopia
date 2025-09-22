@@ -23,6 +23,7 @@ from models import (
     AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
+    StudentItemProgress,
     AssignmentStatus,
 )
 from .auth import get_current_user
@@ -240,6 +241,13 @@ async def create_assignment(
             status_code=403, detail="Only teachers can create assignments"
         )
 
+    # 驗證教師訂閱狀態
+    if not current_user.can_assign_homework:
+        raise HTTPException(
+            status_code=403,
+            detail="Your subscription has expired. Please recharge to create assignments.",
+        )
+
     # 驗證班級存在且屬於當前教師
     classroom = (
         db.query(Classroom)
@@ -348,6 +356,25 @@ async def create_assignment(
                 is_locked=False if idx == 1 else True,  # 只解鎖第一個
             )
             db.add(progress)
+            db.flush()  # 取得 progress.id
+
+            # 為每個 ContentItem 創建 StudentItemProgress
+            from models import ContentItem
+
+            content_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id == content_id)
+                .order_by(ContentItem.order_index)
+                .all()
+            )
+
+            for item in content_items:
+                item_progress = StudentItemProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_item_id=item.id,
+                    status="NOT_STARTED",
+                )
+                db.add(item_progress)
 
     db.commit()
 
@@ -629,6 +656,44 @@ async def patch_assignment(
                     is_active=True,
                 )
                 db.add(student_assignment)
+                db.flush()  # 取得 student_assignment.id
+
+                # 為新增的學生創建 StudentContentProgress 記錄
+                from models import AssignmentContent, ContentItem, StudentItemProgress
+
+                assignment_contents = (
+                    db.query(AssignmentContent)
+                    .filter(AssignmentContent.assignment_id == assignment_id)
+                    .order_by(AssignmentContent.order_index)
+                    .all()
+                )
+
+                for ac in assignment_contents:
+                    progress = StudentContentProgress(
+                        student_assignment_id=student_assignment.id,
+                        content_id=ac.content_id,
+                        status=AssignmentStatus.NOT_STARTED,
+                        order_index=ac.order_index,
+                        is_locked=False if ac.order_index == 1 else True,  # 只解鎖第一個
+                    )
+                    db.add(progress)
+                    db.flush()  # 取得 progress.id
+
+                    # 為每個 ContentItem 創建 StudentItemProgress
+                    content_items = (
+                        db.query(ContentItem)
+                        .filter(ContentItem.content_id == ac.content_id)
+                        .order_by(ContentItem.order_index)
+                        .all()
+                    )
+
+                    for item in content_items:
+                        item_progress = StudentItemProgress(
+                            student_assignment_id=student_assignment.id,
+                            content_item_id=item.id,
+                            status="NOT_STARTED",
+                        )
+                        db.add(item_progress)
 
     db.commit()
 
@@ -1533,7 +1598,7 @@ async def get_assignment_students(
     db: Session = Depends(get_db),
 ):
     """
-    獲取作業的所有學生列表
+    獲取作業的所有學生列表（包含未指派的學生）
     """
     # 驗證教師身份
     if not isinstance(current_teacher, Teacher):
@@ -1553,22 +1618,41 @@ async def get_assignment_students(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    # 獲取此作業的所有學生
-    student_assignments = (
-        db.query(StudentAssignment, Student)
-        .join(Student, StudentAssignment.student_id == Student.id)
-        .filter(StudentAssignment.assignment_id == assignment_id)
+    # 獲取教師教室中的所有學生
+    classroom_students = (
+        db.query(Student)
+        .join(ClassroomStudent, ClassroomStudent.student_id == Student.id)
+        .filter(ClassroomStudent.classroom_id == assignment.classroom_id)
         .order_by(Student.name)
         .all()
     )
 
+    # 獲取已指派此作業的學生狀態
+    student_assignments_dict = {}
+    student_assignments = (
+        db.query(StudentAssignment)
+        .filter(StudentAssignment.assignment_id == assignment_id)
+        .all()
+    )
+
+    for sa in student_assignments:
+        student_assignments_dict[sa.student_id] = (
+            sa.status.value if sa.status else "NOT_STARTED"
+        )
+
     students = []
-    for sa, student in student_assignments:
+    for student in classroom_students:
+        # 如果學生有作業記錄，使用實際狀態；否則標示為未指派
+        if student.id in student_assignments_dict:
+            status = student_assignments_dict[student.id]
+        else:
+            status = "NOT_ASSIGNED"
+
         students.append(
             {
                 "student_id": student.id,
                 "student_name": student.name,
-                "status": sa.status.value if sa.status else "NOT_STARTED",
+                "status": status,
             }
         )
 
@@ -1683,6 +1767,11 @@ async def get_student_submission(
 
                     # 從 StudentItemProgress 直接獲取資料
                     if item_progress:
+                        # 加入老師批改的評語和通過狀態
+                        if item_progress.teacher_feedback:
+                            submission["feedback"] = item_progress.teacher_feedback
+                        if item_progress.teacher_passed is not None:
+                            submission["passed"] = item_progress.teacher_passed
                         # 學生錄音檔案 - 前端使用 audio_url 欄位
                         if item_progress.recording_url:
                             submission[
@@ -1744,40 +1833,66 @@ async def get_student_submission(
                                     "word_details": ai_data.get("word_details", []),
                                 }
                         else:
-                            # 如果沒有 ai_feedback，嘗試從舊的欄位讀取（向後相容）
-                            submission["ai_scores"] = {
-                                "accuracy_score": float(item_progress.accuracy_score)
-                                if item_progress.accuracy_score
-                                else 0,
-                                "fluency_score": float(item_progress.fluency_score)
-                                if item_progress.fluency_score
-                                else 0,
-                                "pronunciation_score": float(
-                                    item_progress.pronunciation_score
-                                )
-                                if item_progress.pronunciation_score
-                                else 0,
-                                "completeness_score": 0,
-                                "overall_score": (
-                                    (
-                                        float(item_progress.accuracy_score or 0)
-                                        + float(item_progress.fluency_score or 0)
-                                        + float(item_progress.pronunciation_score or 0)
-                                    )
-                                    / 3
-                                )
-                                if any(
-                                    [
-                                        item_progress.accuracy_score,
-                                        item_progress.fluency_score,
-                                        item_progress.pronunciation_score,
-                                    ]
-                                )
-                                else 0,
-                                "word_details": item_progress.word_details
-                                if hasattr(item_progress, "word_details")
-                                else [],
-                            }
+                            # 統一只從 ai_feedback JSON 中取得分數
+                            if item_progress.ai_feedback:
+                                try:
+                                    if isinstance(item_progress.ai_feedback, str):
+                                        ai_feedback_data = json.loads(
+                                            item_progress.ai_feedback
+                                        )
+                                    else:
+                                        ai_feedback_data = item_progress.ai_feedback
+
+                                    submission["ai_scores"] = {
+                                        "accuracy_score": float(
+                                            ai_feedback_data.get("accuracy_score", 0)
+                                        ),
+                                        "fluency_score": float(
+                                            ai_feedback_data.get("fluency_score", 0)
+                                        ),
+                                        "pronunciation_score": float(
+                                            ai_feedback_data.get(
+                                                "pronunciation_score", 0
+                                            )
+                                        ),
+                                        "completeness_score": float(
+                                            ai_feedback_data.get(
+                                                "completeness_score", 0
+                                            )
+                                        ),
+                                        "overall_score": (
+                                            (
+                                                float(
+                                                    ai_feedback_data.get(
+                                                        "accuracy_score", 0
+                                                    )
+                                                )
+                                                + float(
+                                                    ai_feedback_data.get(
+                                                        "fluency_score", 0
+                                                    )
+                                                )
+                                                + float(
+                                                    ai_feedback_data.get(
+                                                        "pronunciation_score", 0
+                                                    )
+                                                )
+                                            )
+                                            / 3
+                                        ),
+                                        "word_details": ai_feedback_data.get(
+                                            "word_details", []
+                                        ),
+                                    }
+                                except (
+                                    json.JSONDecodeError,
+                                    TypeError,
+                                    AttributeError,
+                                ):
+                                    # 如果 JSON 解析失敗，不顯示 AI 評分
+                                    submission["ai_scores"] = None
+
+                            # AI 評分已經設定完成，無需額外處理
 
                     submissions.append(submission)
                     group["submissions"].append(submission)
@@ -1941,6 +2056,75 @@ async def grade_student_assignment(
                                 "score": item_data.get("score"),
                             }
                         )
+
+                        # 更新 StudentItemProgress 表中的 teacher_feedback
+                        if item_data.get("feedback"):
+                            # 查找對應的 StudentItemProgress 記錄
+                            item_progress = (
+                                db.query(StudentItemProgress)
+                                .filter(
+                                    StudentItemProgress.student_assignment_id
+                                    == assignment.id,
+                                    StudentItemProgress.content_item_id
+                                    == content.content_items[i].id,
+                                )
+                                .first()
+                            )
+
+                            # 方案A：按需創建 - 如果記錄不存在，就創建一個
+                            if not item_progress:
+                                import logging
+
+                                logger = logging.getLogger(__name__)
+                                logger.info(
+                                    f"Creating StudentItemProgress on-demand: "
+                                    f"assignment_id={assignment.id}, "
+                                    f"content_item_id={content.content_items[i].id}"
+                                )
+
+                                try:
+                                    item_progress = StudentItemProgress(
+                                        student_assignment_id=assignment.id,
+                                        content_item_id=content.content_items[i].id,
+                                        status="NOT_SUBMITTED",  # 學生未提交
+                                        answer_text=None,
+                                        recording_url=None,
+                                        # AI 評分欄位保持空白
+                                        accuracy_score=None,
+                                        fluency_score=None,
+                                        pronunciation_score=None,
+                                        ai_feedback=None,
+                                        # 老師可以直接給評語
+                                        review_status="PENDING",
+                                    )
+                                    db.add(item_progress)
+                                    db.flush()  # 取得 ID 但還沒 commit
+                                except Exception as e:
+                                    logger.error(
+                                        f"Failed to create StudentItemProgress: {e}"
+                                    )
+                                    raise HTTPException(
+                                        status_code=500,
+                                        detail="Failed to save teacher feedback",
+                                    )
+
+                            # 更新老師評語和相關欄位
+                            item_progress.teacher_feedback = item_data.get(
+                                "feedback", ""
+                            )
+                            item_progress.teacher_review_score = (
+                                item_data.get("score")
+                                if item_data.get("score")
+                                else item_progress.teacher_review_score
+                            )
+                            item_progress.teacher_passed = item_data.get(
+                                "passed"
+                            )  # 儲存通過與否狀態
+                            item_progress.teacher_reviewed_at = datetime.now(
+                                timezone.utc
+                            )
+                            item_progress.teacher_id = current_teacher.id
+                            item_progress.review_status = "REVIEWED"
                     else:
                         items_feedback.append(
                             {"feedback": "", "passed": None, "score": None}

@@ -46,6 +46,10 @@ interface DashboardData {
   program_count: number;
   classrooms: ClassroomSummary[];
   recent_students: StudentSummary[];
+  subscription_status?: string;
+  subscription_end_date?: string;
+  days_remaining?: number;
+  can_assign_homework?: boolean;
 }
 
 interface ClassroomDetail {
@@ -297,6 +301,31 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
       <h2 className="text-3xl font-bold text-gray-900 mb-6">
         歡迎回來，{dashboardData.teacher.name}！
       </h2>
+
+      {/* Subscription Status Card */}
+      {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
+        <Card className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">🎉 30天免費試用期</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  您的免費試用將在 {dashboardData.days_remaining} 天後到期
+                </p>
+                {dashboardData.subscription_end_date && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    到期日: {new Date(dashboardData.subscription_end_date).toLocaleDateString('zh-TW')}
+                  </p>
+                )}
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600">{dashboardData.days_remaining}</div>
+                <div className="text-sm text-gray-600">天</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

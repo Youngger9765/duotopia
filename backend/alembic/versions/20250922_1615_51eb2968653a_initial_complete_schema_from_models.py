@@ -1,19 +1,18 @@
-"""initial_complete_schema
+"""initial_complete_schema_from_models
 
-Revision ID: 6c42743b461f
+Revision ID: 51eb2968653a
 Revises:
-Create Date: 2025-09-02 20:37:11.825929
+Create Date: 2025-09-22 16:15:18.256288
 
 """
-
-from typing import Sequence, Union  # noqa: F401
+from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "6c42743b461f"
+revision: str = "51eb2968653a"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,7 +29,12 @@ def upgrade() -> None:
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column("birthdate", sa.Date(), nullable=False),
         sa.Column("password_changed", sa.Boolean(), nullable=True),
-        sa.Column("parent_email", sa.String(length=255), nullable=True),
+        sa.Column("email_verified", sa.Boolean(), nullable=True),
+        sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("email_verification_token", sa.String(length=100), nullable=True),
+        sa.Column(
+            "email_verification_sent_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("parent_phone", sa.String(length=20), nullable=True),
         sa.Column("avatar_url", sa.String(length=500), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
@@ -46,7 +50,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_students_email"), "students", ["email"], unique=True)
+    op.create_index(op.f("ix_students_email"), "students", ["email"], unique=False)
     op.create_index(op.f("ix_students_id"), "students", ["id"], unique=False)
     op.create_table(
         "teachers",
@@ -58,6 +62,26 @@ def upgrade() -> None:
         sa.Column("avatar_url", sa.String(length=500), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
         sa.Column("is_demo", sa.Boolean(), nullable=True),
+        sa.Column("email_verified", sa.Boolean(), nullable=True),
+        sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("email_verification_token", sa.String(length=100), nullable=True),
+        sa.Column(
+            "email_verification_sent_at", sa.DateTime(timezone=True), nullable=True
+        ),
+        sa.Column("password_reset_token", sa.String(length=100), nullable=True),
+        sa.Column("password_reset_sent_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "password_reset_expires_at", sa.DateTime(timezone=True), nullable=True
+        ),
+        sa.Column("subscription_type", sa.String(), nullable=True),
+        sa.Column("subscription_status", sa.String(), nullable=True),
+        sa.Column("subscription_start_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("subscription_end_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("subscription_renewed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("trial_start_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("trial_end_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("monthly_message_limit", sa.Integer(), nullable=True),
+        sa.Column("messages_used_this_month", sa.Integer(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -80,6 +104,9 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("teacher_id", sa.Integer(), nullable=False),
+        sa.Column("school", sa.String(length=255), nullable=True),
+        sa.Column("grade", sa.String(length=50), nullable=True),
+        sa.Column("academic_year", sa.String(length=20), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
         sa.Column(
             "created_at",
@@ -95,6 +122,46 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_classrooms_id"), "classrooms", ["id"], unique=False)
+    op.create_table(
+        "teacher_subscription_transactions",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("teacher_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "transaction_type",
+            sa.Enum("TRIAL", "RECHARGE", "EXPIRED", "REFUND", name="transactiontype"),
+            nullable=False,
+        ),
+        sa.Column("subscription_type", sa.String(), nullable=True),
+        sa.Column("amount", sa.Numeric(precision=10, scale=2), nullable=True),
+        sa.Column("currency", sa.String(length=3), nullable=True),
+        sa.Column("status", sa.String(), nullable=False),
+        sa.Column("months", sa.Integer(), nullable=False),
+        sa.Column("period_start", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("period_end", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("previous_end_date", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("new_end_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("metadata", sa.JSON(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["teacher_id"], ["teachers.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_teacher_subscription_transactions_id"),
+        "teacher_subscription_transactions",
+        ["id"],
+        unique=False,
+    )
     op.create_table(
         "assignments",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -158,11 +225,17 @@ def upgrade() -> None:
             sa.Enum("PRE_A", "A1", "A2", "B1", "B2", "C1", "C2", name="programlevel"),
             nullable=True,
         ),
+        sa.Column("is_template", sa.Boolean(), nullable=False),
+        sa.Column("classroom_id", sa.Integer(), nullable=True),
         sa.Column("teacher_id", sa.Integer(), nullable=False),
-        sa.Column("classroom_id", sa.Integer(), nullable=False),
+        sa.Column("source_type", sa.String(length=20), nullable=True),
+        sa.Column("source_metadata", sa.JSON(), nullable=True),
+        sa.Column("is_public", sa.Boolean(), nullable=True),
         sa.Column("estimated_hours", sa.Integer(), nullable=True),
         sa.Column("order_index", sa.Integer(), nullable=True),
+        sa.Column("tags", sa.JSON(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -171,8 +244,7 @@ def upgrade() -> None:
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
-            ["classroom_id"],
-            ["classrooms.id"],
+            ["classroom_id"], ["classrooms.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
             ["teacher_id"],
@@ -205,61 +277,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_lessons_id"), "lessons", ["id"], unique=False)
     op.create_table(
-        "contents",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("lesson_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "type", sa.Enum("READING_ASSESSMENT", name="contenttype"), nullable=True
-        ),
-        sa.Column("title", sa.String(length=200), nullable=False),
-        sa.Column("order_index", sa.Integer(), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=True),
-        sa.Column("items", sa.JSON(), nullable=True),
-        sa.Column("target_wpm", sa.Integer(), nullable=True),
-        sa.Column("target_accuracy", sa.Float(), nullable=True),
-        sa.Column("time_limit_seconds", sa.Integer(), nullable=True),
-        sa.Column("level", sa.String(length=10), nullable=True),
-        sa.Column("tags", sa.JSON(), nullable=True),
-        sa.Column("is_public", sa.Boolean(), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-        ),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["lesson_id"],
-            ["lessons.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(op.f("ix_contents_id"), "contents", ["id"], unique=False)
-    op.create_table(
-        "assignment_contents",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("assignment_id", sa.Integer(), nullable=False),
-        sa.Column("content_id", sa.Integer(), nullable=False),
-        sa.Column("order_index", sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["assignment_id"],
-            ["assignments.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["content_id"],
-            ["contents.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_assignment_contents_id"), "assignment_contents", ["id"], unique=False
-    )
-    op.create_table(
         "student_assignments",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("assignment_id", sa.Integer(), nullable=True),
         sa.Column("student_id", sa.Integer(), nullable=False),
-        sa.Column("content_id", sa.Integer(), nullable=True),
         sa.Column("classroom_id", sa.Integer(), nullable=False),
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column("instructions", sa.Text(), nullable=True),
@@ -307,10 +328,6 @@ def upgrade() -> None:
             ["classrooms.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["content_id"],
-            ["contents.id"],
-        ),
-        sa.ForeignKeyConstraint(
             ["student_id"],
             ["students.id"],
         ),
@@ -319,6 +336,84 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_student_assignments_id"), "student_assignments", ["id"], unique=False
     )
+    op.create_table(
+        "contents",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("lesson_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "type", sa.Enum("READING_ASSESSMENT", name="contenttype"), nullable=True
+        ),
+        sa.Column("title", sa.String(length=200), nullable=False),
+        sa.Column("order_index", sa.Integer(), nullable=True),
+        sa.Column("is_active", sa.Boolean(), nullable=True),
+        sa.Column("target_wpm", sa.Integer(), nullable=True),
+        sa.Column("target_accuracy", sa.Float(), nullable=True),
+        sa.Column("time_limit_seconds", sa.Integer(), nullable=True),
+        sa.Column("level", sa.String(length=10), nullable=True),
+        sa.Column("tags", sa.JSON(), nullable=True),
+        sa.Column("is_public", sa.Boolean(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["lesson_id"],
+            ["lessons.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_contents_id"), "contents", ["id"], unique=False)
+    op.create_table(
+        "assignment_contents",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("assignment_id", sa.Integer(), nullable=False),
+        sa.Column("content_id", sa.Integer(), nullable=False),
+        sa.Column("order_index", sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["assignment_id"],
+            ["assignments.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["content_id"],
+            ["contents.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "assignment_id", "content_id", name="unique_assignment_content"
+        ),
+    )
+    op.create_index(
+        op.f("ix_assignment_contents_id"), "assignment_contents", ["id"], unique=False
+    )
+    op.create_table(
+        "content_items",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("content_id", sa.Integer(), nullable=False),
+        sa.Column("order_index", sa.Integer(), nullable=False),
+        sa.Column("text", sa.Text(), nullable=False),
+        sa.Column("translation", sa.Text(), nullable=True),
+        sa.Column("audio_url", sa.Text(), nullable=True),
+        sa.Column("item_metadata", sa.JSON(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
+        sa.ForeignKeyConstraint(["content_id"], ["contents.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("content_id", "order_index", name="_content_item_order_uc"),
+    )
+    op.create_index(op.f("ix_content_items_id"), "content_items", ["id"], unique=False)
     op.create_table(
         "student_content_progress",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -363,22 +458,83 @@ def upgrade() -> None:
         ["id"],
         unique=False,
     )
+    op.create_table(
+        "student_item_progress",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("student_assignment_id", sa.Integer(), nullable=False),
+        sa.Column("content_item_id", sa.Integer(), nullable=False),
+        sa.Column("recording_url", sa.Text(), nullable=True),
+        sa.Column("answer_text", sa.Text(), nullable=True),
+        sa.Column("transcription", sa.Text(), nullable=True),
+        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("accuracy_score", sa.DECIMAL(precision=5, scale=2), nullable=True),
+        sa.Column("fluency_score", sa.DECIMAL(precision=5, scale=2), nullable=True),
+        sa.Column(
+            "pronunciation_score", sa.DECIMAL(precision=5, scale=2), nullable=True
+        ),
+        sa.Column("ai_feedback", sa.Text(), nullable=True),
+        sa.Column("ai_assessed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "teacher_review_score", sa.DECIMAL(precision=5, scale=2), nullable=True
+        ),
+        sa.Column("teacher_feedback", sa.Text(), nullable=True),
+        sa.Column("teacher_passed", sa.Boolean(), nullable=True),
+        sa.Column("teacher_reviewed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("teacher_id", sa.Integer(), nullable=True),
+        sa.Column("review_status", sa.String(length=20), nullable=True),
+        sa.Column("status", sa.String(length=20), nullable=True),
+        sa.Column("attempts", sa.Integer(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
+        sa.ForeignKeyConstraint(
+            ["content_item_id"], ["content_items.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["student_assignment_id"], ["student_assignments.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["teacher_id"], ["teachers.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "student_assignment_id", "content_item_id", name="_student_item_progress_uc"
+        ),
+    )
+    op.create_index(
+        op.f("ix_student_item_progress_id"),
+        "student_item_progress",
+        ["id"],
+        unique=False,
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    # SAFE: These drop_table operations are part of the downgrade process for initial schema migration
+    op.drop_index(
+        op.f("ix_student_item_progress_id"), table_name="student_item_progress"
+    )
+    op.drop_table("student_item_progress")
     op.drop_index(
         op.f("ix_student_content_progress_id"), table_name="student_content_progress"
     )
     op.drop_table("student_content_progress")
-    op.drop_index(op.f("ix_student_assignments_id"), table_name="student_assignments")
-    op.drop_table("student_assignments")
+    op.drop_index(op.f("ix_content_items_id"), table_name="content_items")
+    op.drop_table("content_items")
     op.drop_index(op.f("ix_assignment_contents_id"), table_name="assignment_contents")
     op.drop_table("assignment_contents")
     op.drop_index(op.f("ix_contents_id"), table_name="contents")
     op.drop_table("contents")
+    op.drop_index(op.f("ix_student_assignments_id"), table_name="student_assignments")
+    op.drop_table("student_assignments")
     op.drop_index(op.f("ix_lessons_id"), table_name="lessons")
     op.drop_table("lessons")
     op.drop_index(op.f("ix_programs_id"), table_name="programs")
@@ -387,6 +543,11 @@ def downgrade() -> None:
     op.drop_table("classroom_students")
     op.drop_index(op.f("ix_assignments_id"), table_name="assignments")
     op.drop_table("assignments")
+    op.drop_index(
+        op.f("ix_teacher_subscription_transactions_id"),
+        table_name="teacher_subscription_transactions",
+    )
+    op.drop_table("teacher_subscription_transactions")
     op.drop_index(op.f("ix_classrooms_id"), table_name="classrooms")
     op.drop_table("classrooms")
     op.drop_index(op.f("ix_teachers_id"), table_name="teachers")

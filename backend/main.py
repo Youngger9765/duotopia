@@ -22,6 +22,9 @@ from routers import (
     programs,
     speech_assessment,
     admin,
+    teacher_review,
+    subscription,
+    test_subscription,
 )
 from api import debug
 
@@ -71,16 +74,7 @@ if not os.path.exists(static_dir):
     os.makedirs(static_dir)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Local recordings for development
-if environment == "development":
-    local_recordings_dir = os.path.join(os.path.dirname(__file__), "local_recordings")
-    if not os.path.exists(local_recordings_dir):
-        os.makedirs(local_recordings_dir)
-    app.mount(
-        "/local_recordings",
-        StaticFiles(directory=local_recordings_dir),
-        name="local_recordings",
-    )
+# GCS is used for all file storage - no local storage needed
 
 
 @app.get("/")
@@ -100,6 +94,7 @@ async def health_check():
 # Include routers
 app.include_router(public.router)  # 公開路由優先，不需要認證
 app.include_router(auth.router)
+app.include_router(subscription.router)  # 訂閱路由
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(assignments.router)
@@ -107,8 +102,10 @@ app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
 app.include_router(programs.router)  # 課程管理路由
 app.include_router(speech_assessment.router)  # 語音評估路由
+app.include_router(teacher_review.router)  # 老師批改路由
 app.include_router(admin.router)  # 管理路由
 app.include_router(debug.router)  # Debug 路由
+app.include_router(test_subscription.router, prefix="/api/test", tags=["test"])  # 測試路由
 
 
 if __name__ == "__main__":

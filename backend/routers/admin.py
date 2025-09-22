@@ -17,6 +17,7 @@ from models import (
     StudentAssignment,
     StudentContentProgress,
     StudentItemProgress,
+    TeacherSubscriptionTransaction,
 )
 import os
 import subprocess
@@ -143,6 +144,9 @@ def get_database_stats(db: Session = Depends(get_db)) -> Dict[str, Any]:
         "student_assignment": db.query(StudentAssignment).count(),
         "student_content_progress": db.query(StudentContentProgress).count(),
         "student_item_progress": db.query(StudentItemProgress).count(),
+        "teacher_subscription_transaction": db.query(
+            TeacherSubscriptionTransaction
+        ).count(),
     }
 
     total_records = sum(stats.values())
@@ -169,6 +173,7 @@ def get_entity_data(
         "student_assignment": StudentAssignment,
         "student_content_progress": StudentContentProgress,
         "student_item_progress": StudentItemProgress,
+        "teacher_subscription_transaction": TeacherSubscriptionTransaction,
     }
 
     if entity_type not in entity_map:

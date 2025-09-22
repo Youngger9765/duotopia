@@ -16,9 +16,9 @@ from sqlalchemy import (
     Enum,
     Float,
     DECIMAL,
+    Numeric,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -51,6 +51,19 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"  # 重新提交（訂正後待批改）
 
 
+class TransactionType(str, enum.Enum):
+    TRIAL = "TRIAL"  # 試用期啟動
+    RECHARGE = "RECHARGE"  # 充值
+    EXPIRED = "EXPIRED"  # 到期
+    REFUND = "REFUND"  # 退款
+
+
+class TransactionStatus(str, enum.Enum):
+    PENDING = "PENDING"  # 處理中
+    SUCCESS = "SUCCESS"  # 成功
+    FAILED = "FAILED"  # 失敗
+
+
 class ContentType(str, enum.Enum):
     READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
     # Phase 2 擴展
@@ -76,6 +89,30 @@ class Teacher(Base):
     is_active = Column(Boolean, default=True)
     is_demo = Column(Boolean, default=False)  # 標記 demo 帳號
 
+    # Email 驗證字段
+    email_verified = Column(Boolean, default=False)  # email 是否已驗證
+    email_verified_at = Column(DateTime(timezone=True))  # email 驗證時間
+    email_verification_token = Column(String(100))  # email 驗證 token
+    email_verification_sent_at = Column(DateTime(timezone=True))  # 最後發送驗證信時間
+
+    # 密碼重設字段
+    password_reset_token = Column(String(100))  # 密碼重設 token
+    password_reset_sent_at = Column(DateTime(timezone=True))  # 最後發送密碼重設郵件時間
+    password_reset_expires_at = Column(DateTime(timezone=True))  # token 過期時間
+
+    # 訂閱系統
+    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
+    subscription_status_db = Column(
+        "subscription_status", String, nullable=True
+    )  # 訂閱狀態（與 DB 一致，但不使用）
+    subscription_start_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱開始日
+    subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
+    subscription_renewed_at = Column(DateTime(timezone=True), nullable=True)  # 最後續訂時間
+    trial_start_date = Column(DateTime(timezone=True), nullable=True)  # 試用開始日
+    trial_end_date = Column(DateTime(timezone=True), nullable=True)  # 試用結束日
+    monthly_message_limit = Column(Integer, nullable=True)  # 每月訊息限制（與 DB 一致，但不使用）
+    messages_used_this_month = Column(Integer, nullable=True)  # 本月已用訊息（與 DB 一致，但不使用）
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -87,6 +124,49 @@ class Teacher(Base):
         "Program", back_populates="teacher", cascade="all, delete-orphan"
     )
     assignments = relationship("Assignment", back_populates="teacher")
+    subscription_transactions = relationship(
+        "TeacherSubscriptionTransaction",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def subscription_status(self):
+        """獲取訂閱狀態"""
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+
+        # 簡單邏輯：有天數就是已訂閱，沒天數就是未訂閱
+        if self.subscription_end_date and self.subscription_end_date > now:
+            return "subscribed"
+        else:
+            return "expired"
+
+    @property
+    def days_remaining(self):
+        """獲取剩餘天數"""
+        from datetime import datetime, timezone
+
+        if not self.subscription_end_date:
+            return 0
+        elif self.subscription_end_date > datetime.now(timezone.utc):
+            return (self.subscription_end_date - datetime.now(timezone.utc)).days
+        else:
+            return 0
+
+    @property
+    def can_assign_homework(self):
+        """是否可以分派作業"""
+        from datetime import datetime, timezone
+
+        # Demo 帳號永遠可以分派作業
+        if self.is_demo:
+            return True
+        # 有有效訂閱才能分派作業
+        return self.subscription_end_date and self.subscription_end_date > datetime.now(
+            timezone.utc
+        )
 
     def __repr__(self):
         return f"<Teacher {self.name} ({self.email})>"
@@ -145,6 +225,9 @@ class Classroom(Base):
     description = Column(Text)
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    school = Column(String(255), nullable=True)  # 學校名稱（與 DB 一致，但不使用）
+    grade = Column(String(50), nullable=True)  # 年級（與 DB 一致，但不使用）
+    academic_year = Column(String(20), nullable=True)  # 學年度（與 DB 一致，但不使用）
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -220,6 +303,7 @@ class Program(Base):
     """
 
     # 課程屬性
+    is_public = Column(Boolean, nullable=True)  # 是否公開（與 DB 一致，但不使用）
     estimated_hours = Column(Integer)  # 預計時數
     order_index = Column(Integer, default=1)  # 排序順序
     tags = Column(JSON, nullable=True)  # 標籤
@@ -370,6 +454,13 @@ class AssignmentContent(Base):
     assignment = relationship("Assignment", back_populates="contents")
     content = relationship("Content")
 
+    # Constraints - 確保同一作業不會重複包含相同內容
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id", "content_id", name="unique_assignment_content"
+        ),
+    )
+
     def __repr__(self):
         return f"<AssignmentContent assignment={self.assignment_id} content={self.content_id}>"
 
@@ -494,7 +585,7 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
-    item_metadata = Column(JSONB, default={})
+    item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -538,6 +629,7 @@ class StudentItemProgress(Base):
     # Recording data
     recording_url = Column(Text)
     answer_text = Column(Text)
+    transcription = Column(Text)  # AI 轉錄文字（與 DB 一致）
     submitted_at = Column(DateTime(timezone=True))
 
     # AI Assessment (flattened structure for better querying)
@@ -546,6 +638,14 @@ class StudentItemProgress(Base):
     pronunciation_score = Column(DECIMAL(5, 2))
     ai_feedback = Column(Text)
     ai_assessed_at = Column(DateTime(timezone=True))
+
+    # Teacher Review Fields (新增老師批改功能)
+    teacher_review_score = Column(DECIMAL(5, 2))  # 老師評分 (0-100)
+    teacher_feedback = Column(Text)  # 老師文字回饋
+    teacher_passed = Column(Boolean)  # 老師判定是否通過 (True/False/None)
+    teacher_reviewed_at = Column(DateTime(timezone=True))  # 批改時間
+    teacher_id = Column(Integer, ForeignKey("teachers.id", ondelete="SET NULL"))  # 批改老師
+    review_status = Column(String(20), default="PENDING")  # PENDING, REVIEWED
 
     # Status tracking
     status = Column(
@@ -563,6 +663,7 @@ class StudentItemProgress(Base):
         "StudentAssignment", back_populates="item_progress"
     )
     content_item = relationship("ContentItem", back_populates="student_progress")
+    teacher = relationship("Teacher", foreign_keys=[teacher_id])
 
     # Constraints
     __table_args__ = (
@@ -587,6 +688,20 @@ class StudentItemProgress(Base):
         return self.status == "COMPLETED"
 
     @property
+    def has_teacher_review(self):
+        """Check if teacher has reviewed this item"""
+        return (
+            self.review_status == "REVIEWED" and self.teacher_review_score is not None
+        )
+
+    @property
+    def final_score(self):
+        """Get final score (teacher review if available, otherwise AI score)"""
+        if self.has_teacher_review:
+            return float(self.teacher_review_score)
+        return self.overall_score
+
+    @property
     def has_recording(self):
         """Check if recording exists"""
         return self.recording_url is not None and self.recording_url != ""
@@ -602,3 +717,41 @@ class StudentItemProgress(Base):
             f"assignment={self.student_assignment_id}, "
             f"item={self.content_item_id}, status={self.status})>"
         )
+
+
+# ============ 訂閱交易系統 ============
+class TeacherSubscriptionTransaction(Base):
+    """教師訂閱交易記錄"""
+
+    __tablename__ = "teacher_subscription_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(
+        Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
+    )
+    transaction_type = Column(Enum(TransactionType), nullable=False)
+    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
+    amount = Column(Numeric(10, 2), nullable=True)  # 充值金額（可為空，如試用期）
+    currency = Column(String(3), nullable=True)  # 貨幣（與 DB 一致，但不使用）
+    status = Column(String, nullable=False, default="SUCCESS")  # 交易狀態（與 DB 一致）
+    months = Column(Integer, nullable=False)  # 訂閱月數
+    period_start = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間開始（與 DB 一致）
+    period_end = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間結束（與 DB 一致）
+    previous_end_date = Column(DateTime(timezone=True), nullable=True)  # 交易前的到期日
+    new_end_date = Column(DateTime(timezone=True), nullable=False)  # 交易後的到期日
+    transaction_metadata = Column("metadata", JSON, nullable=True)  # 額外資料（與 DB 一致，但不使用）
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )  # 更新時間（與 DB 一致）
+
+    # 關聯
+    teacher = relationship("Teacher", back_populates="subscription_transactions")
+
+    def __repr__(self):
+        return f"<TeacherSubscriptionTransaction({self.teacher_id}, {self.transaction_type}, {self.months}個月)>"

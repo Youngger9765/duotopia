@@ -43,6 +43,10 @@ interface DashboardData {
   program_count: number;
   classrooms: ClassroomSummary[];
   recent_students: StudentSummary[];
+  subscription_status?: string;
+  subscription_end_date?: string;
+  days_remaining?: number;
+  can_assign_homework?: boolean;
 }
 
 // Removed unused interfaces - they're in TeacherDashboardWithSidebar.tsx
@@ -124,6 +128,11 @@ export default function TeacherDashboard() {
               {dashboardData.teacher.is_demo && (
                 <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">Demo 帳號</span>
               )}
+              {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
+                <span className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full font-medium">
+                  🎉 免費試用剩餘 {dashboardData.days_remaining} 天
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
@@ -149,6 +158,31 @@ export default function TeacherDashboard() {
             管理您的班級、課程與學生學習進度
           </p>
         </div>
+
+        {/* Subscription Status Card */}
+        {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
+          <Card className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">🎉 30天免費試用期</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    您的免費試用將在 {dashboardData.days_remaining} 天後到期
+                  </p>
+                  {dashboardData.subscription_end_date && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      到期日: {new Date(dashboardData.subscription_end_date).toLocaleDateString('zh-TW')}
+                    </p>
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">{dashboardData.days_remaining}</div>
+                  <div className="text-sm text-gray-600">天</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
