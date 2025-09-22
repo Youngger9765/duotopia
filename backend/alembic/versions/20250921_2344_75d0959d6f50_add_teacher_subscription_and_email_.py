@@ -54,17 +54,10 @@ def upgrade() -> None:
     op.create_foreign_key(
         None, "classroom_students", "classrooms", ["classroom_id"], ["id"]
     )
-    op.add_column(
-        "classrooms",
-        sa.Column(
-            "level",
-            sa.Enum("PRE_A", "A1", "A2", "B1", "B2", "C1", "C2", name="programlevel"),
-            nullable=True,
-        ),
-    )
-    op.drop_column("classrooms", "academic_year")
-    op.drop_column("classrooms", "grade")
-    op.drop_column("classrooms", "school")
+    # NOTE: Removed incorrect add of classrooms.level column
+    # The column already exists in the database
+    # NOTE: Removed incorrect drop of classrooms columns
+    # These columns (academic_year, grade, school) do not exist in the database
     op.drop_index("ix_content_items_content_id", table_name="content_items")
     op.create_unique_constraint(
         "_content_item_order_uc", "content_items", ["content_id", "order_index"]
@@ -93,7 +86,8 @@ def upgrade() -> None:
     op.create_foreign_key(
         None, "programs", "classrooms", ["classroom_id"], ["id"], ondelete="CASCADE"
     )
-    op.drop_column("programs", "is_public")
+    # NOTE: Removed incorrect drop of programs.is_public column
+    # The column does not exist in the database
     op.add_column(
         "student_assignments",
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
