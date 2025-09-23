@@ -68,17 +68,23 @@ export default function StudentTable({
       newSelected.add(id);
     }
     setSelectedIds(newSelected);
-    if (onBulkAction && newSelected.size > 0) {
+    if (onBulkAction) {
       // Notify parent about selection
       onBulkAction('selection', Array.from(newSelected));
     }
   };
 
   const toggleSelectAll = () => {
+    let newSelected: Set<number>;
     if (selectedIds.size === students.length) {
-      setSelectedIds(new Set());
+      newSelected = new Set();
     } else {
-      setSelectedIds(new Set(students.map(s => s.id)));
+      newSelected = new Set(students.map(s => s.id));
+    }
+    setSelectedIds(newSelected);
+    if (onBulkAction) {
+      // Notify parent about selection
+      onBulkAction('selection', Array.from(newSelected));
     }
   };
 
