@@ -151,6 +151,28 @@ export default function StudentActivityPage() {
               } : null
             }))
           );
+
+          // Debug teacher feedback
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const teacherFeedbackData = activity.items.map((item: any) => ({
+            id: item.id,
+            text: item.text?.substring(0, 30),
+            teacher_feedback: item.teacher_feedback,
+            teacher_passed: item.teacher_passed,
+            teacher_review_score: item.teacher_review_score
+          }));
+
+          console.log(`[DEBUG] Activity ${idx} teacher feedback:`, teacherFeedbackData);
+
+          // 詳細顯示每個 item 的評語
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          teacherFeedbackData.forEach((item: any, i: number) => {
+            if (item.teacher_feedback) {
+              console.log(`  ✅ Item ${i+1} (ID: ${item.id}) 有評語: "${item.teacher_feedback}"`);
+            } else {
+              console.log(`  ❌ Item ${i+1} (ID: ${item.id}) 沒有評語`);
+            }
+          });
         }
       });
 
