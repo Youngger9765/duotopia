@@ -273,10 +273,8 @@ export function StudentImportDialog({
 
       if (successCount > 0) {
         toast.success(`成功匯入 ${successCount} 位學生`);
-        setTimeout(() => {
-          onSuccess();
-          handleClose();
-        }, 1500);
+        onSuccess(); // 更新父組件的資料
+        // 不自動關閉，讓用戶查看結果
       }
     } catch (error) {
       console.error('Import failed:', error);
@@ -480,12 +478,64 @@ export function StudentImportDialog({
 
           {/* 匯入結果 */}
           {(successCount > 0 || failCount > 0) && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                匯入完成！成功: {successCount} 筆，失敗: {failCount} 筆
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert className={successCount > 0 ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                {successCount > 0 ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                )}
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-lg">
+                      匯入完成
+                    </p>
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span>成功匯入: <strong>{successCount}</strong> 位學生</span>
+                      </div>
+                      {failCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <X className="h-4 w-4 text-red-600" />
+                          <span>匯入失敗: <strong>{failCount}</strong> 位學生</span>
+                        </div>
+                      )}
+                    </div>
+                    {duplicateAction === 'skip' && successCount > 0 && (
+                      <p className="text-sm text-gray-600">
+                        已跳過重複的學生資料
+                      </p>
+                    )}
+                    {duplicateAction === 'update' && successCount > 0 && (
+                      <p className="text-sm text-gray-600">
+                        已更新重複學生的資料
+                      </p>
+                    )}
+                    {duplicateAction === 'add_suffix' && successCount > 0 && (
+                      <p className="text-sm text-gray-600">
+                        重複的學生已加上編號區分
+                      </p>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+
+              {/* 下一步提示 */}
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-medium">下一步：</p>
+                    <ul className="list-disc list-inside text-sm space-y-1">
+                      <li>學生預設密碼為生日（格式：YYYYMMDD）</li>
+                      <li>請提醒學生首次登入後修改密碼</li>
+                      <li>可以到「我的學生」頁面查看匯入的學生</li>
+                    </ul>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
 
           {/* 操作按鈕 */}
@@ -497,12 +547,21 @@ export function StudentImportDialog({
             >
               取消
             </Button>
-            <Button
-              onClick={handleImport}
-              disabled={preview.filter(s => s.isValid).length === 0 || importing}
-            >
-              {importing ? '匯入中...' : `匯入 ${preview.filter(s => s.isValid).length} 位學生`}
-            </Button>
+            {(successCount > 0 || failCount > 0) ? (
+              <Button
+                onClick={handleClose}
+                variant="default"
+              >
+                完成
+              </Button>
+            ) : (
+              <Button
+                onClick={handleImport}
+                disabled={preview.filter(s => s.isValid).length === 0 || importing}
+              >
+                {importing ? '匯入中...' : `匯入 ${preview.filter(s => s.isValid).length} 位學生`}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

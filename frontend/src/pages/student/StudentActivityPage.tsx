@@ -8,7 +8,6 @@ import { useStudentAuthStore } from '@/stores/studentAuthStore';
 import { toast } from 'sonner';
 import ReadingAssessmentTemplate from '@/components/activities/ReadingAssessmentTemplate';
 import ListeningClozeTemplate from '@/components/activities/ListeningClozeTemplate';
-import SpeakingPracticeTemplate from '@/components/activities/SpeakingPracticeTemplate';
 import GroupedQuestionsTemplate from '@/components/activities/GroupedQuestionsTemplate';
 import {
   ChevronLeft,
@@ -109,6 +108,7 @@ export default function StudentActivityPage() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
+  const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
 
   // Load activities from API
   useEffect(() => {
@@ -194,12 +194,15 @@ export default function StudentActivityPage() {
   };
 
   // Recording controls
-  const startRecording = async () => {
+  const startRecording = async (isReRecord: boolean = false) => {
     // 唯讀模式下不允許錄音
     if (isReadOnly) {
       toast.warning('檢視模式下無法錄音');
       return;
     }
+
+    // Set re-recording flag
+    isReRecording.current = isReRecord;
 
     try {
       // Clear old recordings and AI scores when starting new recording
@@ -314,8 +317,10 @@ export default function StudentActivityPage() {
           });
         }
 
-        // Upload to GCS
-        const skipUpload = false; // 啟用 GCS 上傳
+        // Upload to GCS (skip if this is for re-recording)
+        const skipUpload = isReRecording.current;
+        isReRecording.current = false; // Reset flag
+
         if (!skipUpload) {
         try {
           // 獲取當前 item 的 ID
@@ -434,9 +439,32 @@ export default function StudentActivityPage() {
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Start recording timer
+      // Start recording timer with 45 second limit
+      let hasReachedLimit = false;
       recordingInterval.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime(prev => {
+          const newTime = prev + 1;
+          // Auto stop at 45 seconds
+          if (newTime >= 45 && !hasReachedLimit) {
+            hasReachedLimit = true;
+            // Clear interval first to prevent further updates
+            if (recordingInterval.current) {
+              clearInterval(recordingInterval.current);
+              recordingInterval.current = null;
+            }
+            // Stop recording after state update
+            setTimeout(() => {
+              if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                setMediaRecorder(null);
+                setIsRecording(false);
+                toast.info('錄音已達 45 秒上限，自動停止');
+              }
+            }, 0);
+            return 45; // Keep time at 45
+          }
+          return newTime;
+        });
       }, 1000);
 
     } catch (error) {
@@ -777,20 +805,11 @@ export default function StudentActivityPage() {
 
       case 'speaking_practice':
       case 'speaking_scenario':
+        // 這些活動類型目前已禁用
         return (
-          <SpeakingPracticeTemplate
-            topic={activity.title}
-            prompts={activity.prompts || [activity.content]}
-            suggestedDuration={activity.duration || 60}
-            audioUrl={answer?.audioUrl}
-            isRecording={isRecording}
-            recordingTime={recordingTime}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onReRecord={reRecord}
-            formatTime={formatTime}
-            readOnly={isReadOnly}
-          />
+          <div className="text-center p-8 text-gray-500">
+            <p>此活動類型目前不可用</p>
+          </div>
         );
 
       default:
