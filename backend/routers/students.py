@@ -372,6 +372,24 @@ async def get_assignment_activities(
                         if item_progress:
                             item_data["recording_url"] = item_progress.recording_url
                             item_data["status"] = item_progress.status
+
+                            # 加入老師評語相關資料
+                            item_data[
+                                "teacher_feedback"
+                            ] = item_progress.teacher_feedback
+                            item_data["teacher_passed"] = item_progress.teacher_passed
+                            item_data["teacher_review_score"] = (
+                                float(item_progress.teacher_review_score)
+                                if item_progress.teacher_review_score
+                                else None
+                            )
+                            item_data["teacher_reviewed_at"] = (
+                                item_progress.teacher_reviewed_at.isoformat()
+                                if item_progress.teacher_reviewed_at
+                                else None
+                            )
+                            item_data["review_status"] = item_progress.review_status
+
                             if (
                                 item_progress.has_ai_assessment
                                 and item_progress.ai_feedback

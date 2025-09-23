@@ -13,13 +13,19 @@ import {
   Volume2,
   Brain,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  MessageSquare
 } from 'lucide-react';
 
 interface Question {
   text?: string;
   translation?: string;
   audio_url?: string;
+  teacher_feedback?: string;
+  teacher_passed?: boolean;
+  teacher_review_score?: number;
+  teacher_reviewed_at?: string;
+  review_status?: string;
   [key: string]: unknown;
 }
 
@@ -74,6 +80,22 @@ export default function GroupedQuestionsTemplate({
   readOnly = false // 唯讀模式
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
+
+  // Debug: 顯示當前題目的評語資料
+  console.log('[GroupedQuestionsTemplate] 當前題目資料:', {
+    index: currentQuestionIndex,
+    totalItems: items.length,
+    currentQuestion: currentQuestion,
+    hasTeacherFeedback: !!currentQuestion?.teacher_feedback,
+    teacherFeedback: currentQuestion?.teacher_feedback,
+    teacherPassed: currentQuestion?.teacher_passed,
+    teacherPassedType: typeof currentQuestion?.teacher_passed,
+    teacherPassedIsNull: currentQuestion?.teacher_passed === null,
+    teacherPassedIsTrue: currentQuestion?.teacher_passed === true,
+    teacherPassedIsFalse: currentQuestion?.teacher_passed === false,
+    teacherScore: currentQuestion?.teacher_review_score
+  });
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -368,6 +390,45 @@ export default function GroupedQuestionsTemplate({
               {currentQuestion?.translation || <span className="text-gray-400 italic">無翻譯</span>}
             </div>
           </div>
+
+          {/* 4. 老師評語 - 如果有的話就顯示 */}
+          {currentQuestion?.teacher_feedback && (
+            <div className={`relative p-4 bg-white rounded-lg border-2 shadow-sm ${
+              currentQuestion.teacher_passed === true
+                ? 'border-green-400 bg-green-50'
+                : currentQuestion.teacher_passed === false
+                ? 'border-red-400 bg-red-50'
+                : 'border-blue-400 bg-blue-50'
+            }`}>
+              <div className="absolute -top-3 left-4 px-2 bg-white">
+                <span className={`text-sm font-semibold flex items-center gap-1 ${
+                  currentQuestion.teacher_passed === true
+                    ? 'text-green-600'
+                    : currentQuestion.teacher_passed === false
+                    ? 'text-red-600'
+                    : 'text-blue-600'
+                }`}>
+                  <MessageSquare className="w-4 h-4" />
+                  老師評語
+                  {currentQuestion.teacher_passed !== null && currentQuestion.teacher_passed !== undefined && (
+                    <span className={currentQuestion.teacher_passed ? 'text-green-600' : 'text-red-600'}>
+                      {currentQuestion.teacher_passed ? '（通過）' : '（未通過）'}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="mt-2 space-y-2">
+                <div className="text-gray-700">
+                  {currentQuestion.teacher_feedback}
+                </div>
+                {currentQuestion.teacher_reviewed_at && (
+                  <div className="text-xs text-gray-500">
+                    批改時間：{new Date(currentQuestion.teacher_reviewed_at).toLocaleString('zh-TW')}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
