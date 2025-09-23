@@ -591,6 +591,17 @@ class ApiClient {
     });
   }
 
+  async batchImportStudents(students: Array<{
+    name: string;
+    classroom_name: string;
+    birthdate: string | number;
+  }>, duplicateAction: 'skip' | 'update' | 'add_suffix' = 'skip') {
+    return this.request('/api/teachers/students/batch-import', {
+      method: 'POST',
+      body: JSON.stringify({ students, duplicate_action: duplicateAction }),
+    });
+  }
+
   // ============ Audio Upload Methods ============
   async uploadAudio(audioBlob: Blob, duration: number, contentId?: number, itemIndex?: number) {
     const formData = new FormData();
