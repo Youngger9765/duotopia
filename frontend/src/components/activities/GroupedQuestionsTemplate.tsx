@@ -12,7 +12,8 @@ import {
   Pause,
   Volume2,
   Brain,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
 
 interface Question {
@@ -372,7 +373,10 @@ export default function GroupedQuestionsTemplate({
 
       {/* 學生作答錄音區 */}
       <div className="border-t pt-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">學生作答區</h3>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">學生作答區</h3>
+          <span className="text-sm text-gray-500">(錄音最長 45 秒)</span>
+        </div>
         <div className="flex items-center justify-center">
           {!isRecording ? (
             <Button
@@ -394,19 +398,75 @@ export default function GroupedQuestionsTemplate({
             </Button>
           ) : (
             <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-3">
+              {/* 錄音時間顯示 */}
+              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                recordingTime >= 45
+                  ? 'bg-red-100 border-2 border-red-500 animate-pulse'
+                  : ''
+              }`}>
                 <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                <span className="text-lg font-medium">{formatTime(recordingTime)}</span>
+                <span className={`text-lg font-medium ${
+                  recordingTime >= 45 ? 'text-red-700 font-bold' : 'text-red-600'
+                }`}>
+                  {formatTime(recordingTime)}
+                </span>
+                <span className="text-sm text-gray-500">/ 0:45</span>
               </div>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={onStopRecording}
-                className="border-red-600 text-red-600 hover:bg-red-50"
-              >
-                <Square className="w-5 h-5 mr-2" />
-                停止錄音
-              </Button>
+
+              {/* 超過時間警告 */}
+              {recordingTime >= 45 && (
+                <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-2">
+                  <p className="text-red-700 font-semibold flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    已達錄音時間上限！
+                  </p>
+                </div>
+              )}
+
+              {/* 按鈕組 */}
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={onStopRecording}
+                  className="border-red-600 text-red-600 hover:bg-red-50"
+                >
+                  <Square className="w-5 h-5 mr-2" />
+                  停止錄音
+                </Button>
+
+                {/* 45秒時顯示重新錄製按鈕 */}
+                {recordingTime >= 45 && (
+                  <Button
+                    size="lg"
+                    variant="default"
+                    onClick={() => {
+                      // 清除現有錄音
+                      if (recordings && currentQuestionIndex !== undefined) {
+                        recordings[currentQuestionIndex] = '';
+                      }
+
+                      // 停止但不上傳 (傳送 true 以跳過上傳)
+                      if (typeof onStopRecording === 'function') {
+                        // @ts-ignore
+                        onStopRecording(true);
+                      }
+
+                      // 稍後重新開始
+                      setTimeout(() => {
+                        onStartRecording?.();
+                      }, 100);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <RotateCcw className="w-5 h-5 mr-2" />
+                    重新錄製
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
