@@ -4,7 +4,8 @@ import TeacherLayout from '@/components/TeacherLayout';
 import StudentTable, { Student } from '@/components/StudentTable';
 import { StudentDialogs } from '@/components/StudentDialogs';
 import { ClassroomAssignDialog } from '@/components/ClassroomAssignDialog';
-import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download, School, Trash2 } from 'lucide-react';
+import { StudentImportDialog } from '@/components/StudentImportDialog';
+import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download, School, Trash2, Upload } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import { Classroom } from '@/types';
@@ -24,6 +25,7 @@ export default function TeacherStudents() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     fetchClassrooms();
@@ -322,6 +324,10 @@ export default function TeacherStudents() {
               <Download className="h-4 w-4 mr-2" />
               匯出名單
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              批次匯入
+            </Button>
             <Button size="sm" onClick={handleCreateStudent}>
               <Plus className="h-4 w-4 mr-2" />
               新增學生
@@ -428,6 +434,17 @@ export default function TeacherStudents() {
         }}
         classrooms={classrooms}
         studentCount={selectedStudentIds.length}
+      />
+
+      {/* Student Import Dialog */}
+      <StudentImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onSuccess={() => {
+          fetchClassrooms();
+          setShowImportDialog(false);
+        }}
+        classrooms={classrooms}
       />
     </TeacherLayout>
   );

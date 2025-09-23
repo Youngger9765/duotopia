@@ -1017,6 +1017,316 @@ async def batch_create_students(
     }
 
 
+class BatchImportStudent(BaseModel):
+    name: str
+    classroom_name: str
+    birthdate: Any  # Can be string, int (Excel serial), etc.
+
+
+class BatchImportRequest(BaseModel):
+    students: List[BatchImportStudent]
+    duplicate_action: Optional[str] = "skip"  # "skip", "update", or "add_suffix"
+
+
+def parse_birthdate(birthdate_value: Any) -> Optional[date]:
+    """Parse various date formats into a date object"""
+    from datetime import datetime, timedelta
+    import re
+
+    if birthdate_value is None:
+        return None
+
+    # Convert to string for processing
+    date_str = str(birthdate_value).strip()
+
+    # Handle Excel serial date numbers (days since 1900-01-01)
+    if date_str.isdigit() and len(date_str) == 5:
+        try:
+            excel_serial = int(date_str)
+            # Excel uses 1900-01-01 as day 1, but has a bug counting 1900 as leap year
+            # So we use 1899-12-30 as base
+            base_date = datetime(1899, 12, 30)
+            result_date = base_date + timedelta(days=excel_serial)
+            return result_date.date()
+        except Exception:
+            pass
+
+    # Handle YYYYMMDD format
+    if re.match(r"^\d{8}$", date_str):
+        try:
+            return datetime.strptime(date_str, "%Y%m%d").date()
+        except Exception:
+            pass
+
+    # Handle YYYY-MM-DD format
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    # Handle YYYY/MM/DD format
+    if re.match(r"^\d{4}/\d{2}/\d{2}$", date_str):
+        try:
+            return datetime.strptime(date_str, "%Y/%m/%d").date()
+        except Exception:
+            pass
+
+    # Handle MM/DD/YYYY format
+    if re.match(r"^\d{2}/\d{2}/\d{4}$", date_str):
+        try:
+            return datetime.strptime(date_str, "%m/%d/%Y").date()
+        except Exception:
+            pass
+
+    # Handle Chinese format YYYY年MM月DD日
+    chinese_match = re.match(r"^(\d{4})年(\d{1,2})月(\d{1,2})日$", date_str)
+    if chinese_match:
+        try:
+            year, month, day = chinese_match.groups()
+            return date(int(year), int(month), int(day))
+        except Exception:
+            pass
+
+    return None
+
+
+@router.post("/students/batch-import")
+async def batch_import_students(
+    import_data: BatchImportRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """批次匯入學生（支持班級名稱而非ID）"""
+    from datetime import datetime
+    import uuid
+
+    if not import_data.students:
+        raise HTTPException(status_code=400, detail="沒有提供學生資料")
+
+    # Get all teacher's classrooms
+    teacher_classrooms = (
+        db.query(Classroom)
+        .filter(
+            Classroom.teacher_id == current_teacher.id, Classroom.is_active.is_(True)
+        )
+        .all()
+    )
+    classroom_map = {c.name: c for c in teacher_classrooms}
+
+    success_count = 0
+    error_count = 0
+    errors = []
+    created_students = []
+
+    for idx, student_data in enumerate(import_data.students):
+        try:
+            # Validate required fields
+            if not student_data.name or not student_data.name.strip():
+                errors.append(
+                    {"row": idx + 1, "name": student_data.name, "error": "缺少必要欄位：學生姓名"}
+                )
+                error_count += 1
+                continue
+
+            if (
+                not student_data.classroom_name
+                or not student_data.classroom_name.strip()
+            ):
+                errors.append(
+                    {"row": idx + 1, "name": student_data.name, "error": "缺少必要欄位：班級"}
+                )
+                error_count += 1
+                continue
+
+            if not student_data.birthdate:
+                errors.append(
+                    {"row": idx + 1, "name": student_data.name, "error": "缺少必要欄位：生日"}
+                )
+                error_count += 1
+                continue
+
+            # Clean data
+            student_name = student_data.name.strip()
+            classroom_name = student_data.classroom_name.strip()
+
+            # Parse birthdate
+            birthdate = parse_birthdate(student_data.birthdate)
+            if not birthdate:
+                errors.append(
+                    {
+                        "row": idx + 1,
+                        "name": student_name,
+                        "error": f"無效的日期格式：{student_data.birthdate}",
+                    }
+                )
+                error_count += 1
+                continue
+
+            # Check if birthdate is in the future
+            if birthdate > datetime.now().date():
+                errors.append(
+                    {"row": idx + 1, "name": student_name, "error": "生日不能是未來日期"}
+                )
+                error_count += 1
+                continue
+
+            # Check if classroom exists
+            classroom = classroom_map.get(classroom_name)
+            if not classroom:
+                errors.append(
+                    {
+                        "row": idx + 1,
+                        "name": student_name,
+                        "error": f"班級「{classroom_name}」不存在",
+                    }
+                )
+                error_count += 1
+                continue
+
+            # Check if student already exists in this classroom
+            existing_enrollment = (
+                db.query(ClassroomStudent)
+                .join(Student)
+                .filter(
+                    Student.name == student_name,
+                    ClassroomStudent.classroom_id == classroom.id,
+                    ClassroomStudent.is_active.is_(True),
+                )
+                .first()
+            )
+
+            if existing_enrollment:
+                duplicate_action = import_data.duplicate_action or "skip"
+
+                if duplicate_action == "skip":
+                    # Skip duplicate student
+                    errors.append(
+                        {
+                            "row": idx + 1,
+                            "name": student_name,
+                            "error": f"學生「{student_name}」已存在於班級「{classroom_name}」（已跳過）",
+                        }
+                    )
+                    error_count += 1
+                    continue
+
+                elif duplicate_action == "update":
+                    # Update existing student's birthdate
+                    existing_student = (
+                        db.query(Student)
+                        .filter(Student.id == existing_enrollment.student_id)
+                        .first()
+                    )
+
+                    if existing_student:
+                        existing_student.birthdate = birthdate
+                        # Update password if it hasn't been changed
+                        if not existing_student.password_changed:
+                            existing_student.password_hash = get_password_hash(
+                                birthdate.strftime("%Y%m%d")
+                            )
+                        db.flush()
+
+                        created_students.append(
+                            {
+                                "id": existing_student.id,
+                                "name": existing_student.name,
+                                "email": existing_student.email,
+                                "classroom_name": classroom_name,
+                                "default_password": birthdate.strftime("%Y%m%d")
+                                if not existing_student.password_changed
+                                else None,
+                                "action": "updated",
+                            }
+                        )
+                        success_count += 1
+                        continue
+
+                elif duplicate_action == "add_suffix":
+                    # Add suffix to make name unique
+                    suffix_num = 2
+                    new_name = f"{student_name}-{suffix_num}"
+
+                    # Find next available suffix
+                    while True:
+                        existing = (
+                            db.query(ClassroomStudent)
+                            .join(Student)
+                            .filter(
+                                Student.name == new_name,
+                                ClassroomStudent.classroom_id == classroom.id,
+                                ClassroomStudent.is_active.is_(True),
+                            )
+                            .first()
+                        )
+                        if not existing:
+                            break
+                        suffix_num += 1
+                        new_name = f"{student_name}-{suffix_num}"
+
+                    student_name = new_name  # Use the new name with suffix
+
+            # Generate email if not provided
+            email = f"student_{uuid.uuid4().hex[:8]}@duotopia.local"
+
+            # Create student
+            default_password = birthdate.strftime("%Y%m%d")
+            student = Student(
+                name=student_name,
+                email=email,
+                birthdate=birthdate,
+                password_hash=get_password_hash(default_password),
+                password_changed=False,
+                target_wpm=80,
+                target_accuracy=0.8,
+                is_active=True,
+            )
+            db.add(student)
+            db.flush()  # Get the ID
+
+            # Add to classroom
+            enrollment = ClassroomStudent(
+                classroom_id=classroom.id, student_id=student.id, is_active=True
+            )
+            db.add(enrollment)
+
+            created_students.append(
+                {
+                    "id": student.id,
+                    "name": student.name,
+                    "email": student.email,
+                    "classroom_name": classroom_name,
+                    "default_password": default_password,
+                }
+            )
+
+            success_count += 1
+
+        except Exception as e:
+            errors.append(
+                {
+                    "row": idx + 1,
+                    "name": student_data.name
+                    if hasattr(student_data, "name")
+                    else "Unknown",
+                    "error": str(e),
+                }
+            )
+            error_count += 1
+
+    # Commit all successful imports
+    if success_count > 0:
+        db.commit()
+
+    return {
+        "success_count": success_count,
+        "error_count": error_count,
+        "errors": errors,
+        "created_students": created_students,
+    }
+
+
 # ------------ Program CRUD ------------
 class ProgramCreate(BaseModel):
     name: str
