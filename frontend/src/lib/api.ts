@@ -3,6 +3,7 @@
  */
 
 import { API_URL } from '../config/api';
+import { retryAIAnalysis } from '../utils/retryHelper';
 
 export interface LoginRequest {
   email: string;
@@ -657,6 +658,21 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // AI 分析相關方法（包含重試機制）
+  async analyzeWithRetry<T>(
+    endpoint: string,
+    data?: unknown,
+    onRetry?: (attempt: number, error: Error) => void
+  ): Promise<T> {
+    return retryAIAnalysis(
+      () => this.request<T>(endpoint, {
+        method: 'POST',
+        body: data ? JSON.stringify(data) : undefined,
+      }),
+      onRetry
+    );
   }
 }
 

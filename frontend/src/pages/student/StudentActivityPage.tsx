@@ -20,6 +20,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { retryAudioUpload } from '@/utils/retryHelper';
 
 // Activity type from API
 interface Activity {
@@ -359,22 +360,40 @@ export default function StudentActivityPage() {
           const apiUrl = import.meta.env.VITE_API_URL || '';
           console.log('Uploading recording to:', `${apiUrl}/api/students/upload-recording`);
 
-          const uploadResponse = await fetch(`${apiUrl}/api/students/upload-recording`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData
-          });
+          const result = await retryAudioUpload(
+            async () => {
+              const uploadResponse = await fetch(`${apiUrl}/api/students/upload-recording`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                },
+                body: formData
+              });
 
-          if (uploadResponse.ok) {
-            const result = await uploadResponse.json();
-            const { audio_url, message, progress_id } = result;
-            console.log('Recording uploaded successfully:', {
-              url: audio_url,
-              message: message,
-              progress_id: progress_id
-            });
+              if (!uploadResponse.ok) {
+                const error = new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+                if (uploadResponse.status >= 500) {
+                  // Server errors are retryable
+                  throw error;
+                }
+                // Client errors (4xx) should not be retried
+                throw Object.assign(error, { noRetry: true });
+              }
+
+              return await uploadResponse.json();
+            },
+            (attempt, error) => {
+              console.log(`上傳失敗，正在重試... (第 ${attempt}/3 次)`, error);
+              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+            }
+          );
+
+          const { audio_url, message, progress_id } = result;
+          console.log('Recording uploaded successfully:', {
+            url: audio_url,
+            message: message,
+            progress_id: progress_id
+          });
 
             // 錄音成功上傳到雲端
             toast.success('錄音已上傳到雲端');
@@ -436,11 +455,6 @@ export default function StudentActivityPage() {
 
             // Save to server with the URL - autoSave will handle the updated recordings array
             await autoSave();
-          } else {
-            const errorText = await uploadResponse.text();
-            console.error('Upload failed with status:', uploadResponse.status, errorText);
-            throw new Error(`Upload failed: ${uploadResponse.status}`);
-          }
         } catch (error) {
           console.error('Failed to upload recording:', error);
 

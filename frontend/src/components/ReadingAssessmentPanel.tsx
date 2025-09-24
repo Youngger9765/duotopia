@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
+import { retryAudioUpload } from '@/utils/retryHelper';
 
 interface ContentRow {
   id: string | number;
@@ -275,11 +276,17 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       if (selectedSource === 'recording' && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
         try {
-          const result = await apiClient.uploadAudio(
-            audioBlobRef.current,
-            recordingDurationRef.current || 1,
-            Number(contentId),
-            Number(itemIndex)
+          const result = await retryAudioUpload(
+            () => apiClient.uploadAudio(
+              audioBlobRef.current!,
+              recordingDurationRef.current || 1,
+              Number(contentId),
+              Number(itemIndex)
+            ),
+            (attempt, error) => {
+              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              console.error(`Upload attempt ${attempt} failed:`, error);
+            }
           );
 
           if (result && result.audio_url) {
@@ -289,8 +296,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             throw new Error('No audio URL returned');
           }
         } catch (err) {
-          console.error('Upload failed:', err);
-          toast.error('上傳失敗，請重試');
+          console.error('Upload failed after retries:', err);
+          toast.error('上傳失敗，請檢查網路連線後重試');
         } finally {
           setIsUploading(false);
         }
@@ -325,11 +332,17 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
       if (recordedAudio && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
         setIsUploading(true);
         try {
-          const result = await apiClient.uploadAudio(
-            audioBlobRef.current,
-            recordingDurationRef.current || 1,
-            Number(contentId),
-            Number(itemIndex)
+          const result = await retryAudioUpload(
+            () => apiClient.uploadAudio(
+              audioBlobRef.current!,
+              recordingDurationRef.current || 1,
+              Number(contentId),
+              Number(itemIndex)
+            ),
+            (attempt, error) => {
+              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              console.error(`Upload attempt ${attempt} failed:`, error);
+            }
           );
 
           if (result && result.audio_url) {
@@ -339,8 +352,8 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             throw new Error('No audio URL returned');
           }
         } catch (err) {
-          console.error('Upload failed:', err);
-          toast.error('上傳失敗，請重試');
+          console.error('Upload failed after retries:', err);
+          toast.error('上傳失敗，請檢查網路連線後重試');
         } finally {
           setIsUploading(false);
         }

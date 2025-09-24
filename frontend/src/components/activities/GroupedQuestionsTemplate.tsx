@@ -16,6 +16,7 @@ import {
   RotateCcw,
   MessageSquare
 } from 'lucide-react';
+import { retryAIAnalysis } from '@/utils/retryHelper';
 
 interface Question {
   text?: string;
@@ -272,21 +273,35 @@ export default function GroupedQuestionsTemplate({
         return;
       }
 
-      // Call API
+      // Call API with retry mechanism
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const result = await retryAIAnalysis(
+        async () => {
+          const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (!assessResponse.ok) {
+            const error = new Error(`AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`);
+            if (assessResponse.status >= 500 || assessResponse.status === 429) {
+              // Server errors and rate limits are retryable
+              throw error;
+            }
+            // Client errors (4xx except 429) should not be retried
+            throw Object.assign(error, { noRetry: true });
+          }
+
+          return await assessResponse.json();
         },
-        body: formData
-      });
-
-      if (!assessResponse.ok) {
-        throw new Error('評估失敗');
-      }
-
-      const result = await assessResponse.json();
+        (attempt, error) => {
+          console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+          toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+        }
+      );
 
       // Store result
       setAssessmentResults(prev => ({
