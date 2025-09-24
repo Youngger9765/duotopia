@@ -559,6 +559,38 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
     }
   };
 
+  const handleDeleteContent = async (lessonId: number, contentId: number, contentTitle: string) => {
+    if (!confirm(`確定要刪除內容「${contentTitle}」嗎？此操作無法復原。`)) {
+      return;
+    }
+
+    try {
+      // 呼叫 API 刪除內容
+      await apiClient.deleteContent(contentId);
+
+      // 更新本地狀態 - 從對應的 lesson 中移除該 content
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => ({
+          ...program,
+          lessons: program.lessons?.map((lesson: Lesson) => {
+            if (lesson.id === lessonId) {
+              return {
+                ...lesson,
+                contents: lesson.contents?.filter((c) => c.id !== contentId)
+              };
+            }
+            return lesson;
+          })
+        }))
+      );
+
+      toast.success(`內容「${contentTitle}」已刪除`);
+    } catch (error) {
+      console.error('Failed to delete content:', error);
+      toast.error('刪除內容失敗，請稍後再試');
+    }
+  };
+
   const handleDeleteLessonConfirm = async (lessonId: number) => {
     try {
       // 找到包含這個 lesson 的 program
@@ -1296,6 +1328,15 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                                         </div>
                                         <div className="flex items-center space-x-2">
                                           <span className="text-sm text-gray-500">{content.estimated_time || '10 分鐘'}</span>
+                                          <div
+                                            className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteContent(lesson.id, content.id, content.title);
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                          </div>
                                         </div>
                                       </div>
                                     ))

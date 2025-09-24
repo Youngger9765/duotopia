@@ -1586,16 +1586,37 @@ async def delete_program(
 
     # 檢查相關資料
     lesson_count = db.query(Lesson).filter(Lesson.program_id == program_id).count()
-    content_count = (
-        db.query(Content).join(Lesson).filter(Lesson.program_id == program_id).count()
-    )
-    assignment_count = (
-        db.query(StudentAssignment)
-        .join(Content)
-        .join(Lesson)
-        .filter(Lesson.program_id == program_id)
-        .count()
-    )
+
+    # 先取得所有相關 lesson 的 ID
+    lesson_ids = [
+        lesson.id
+        for lesson in db.query(Lesson.id).filter(Lesson.program_id == program_id).all()
+    ]
+
+    content_count = 0
+    assignment_count = 0
+
+    if lesson_ids:
+        # 計算 content 數量
+        content_count = (
+            db.query(Content).filter(Content.lesson_id.in_(lesson_ids)).count()
+        )
+
+        # 取得所有相關 content 的 ID
+        content_ids = [
+            c.id
+            for c in db.query(Content.id)
+            .filter(Content.lesson_id.in_(lesson_ids))
+            .all()
+        ]
+
+        if content_ids:
+            # 計算 assignment 數量
+            assignment_count = (
+                db.query(StudentAssignment)
+                .filter(StudentAssignment.content_id.in_(content_ids))
+                .count()
+            )
 
     # 軟刪除 - 保留資料以供日後參考
     program.is_active = False
@@ -2148,11 +2169,11 @@ async def delete_content(
         raise HTTPException(status_code=404, detail="Content not found")
 
     # 檢查是否有相關的作業
-    from models import StudentAssignment
+    from models import AssignmentContent
 
     assignment_count = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.content_id == content_id)
+        db.query(AssignmentContent)
+        .filter(AssignmentContent.content_id == content_id)
         .count()
     )
 
