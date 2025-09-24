@@ -109,6 +109,9 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
   const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
   const [draggedLesson, setDraggedLesson] = useState<{programId: number, lessonIndex: number} | null>(null);
 
+  // Accordion states - 追蹤展開的 programs
+  const [expandedPrograms, setExpandedPrograms] = useState<string>("");
+
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -521,26 +524,72 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
     fetchPrograms(); // Refresh data
   };
 
-  const handleSaveLesson = () => {
-    // 重新載入所有課程資料以確保同步
-    // 這樣可以獲得正確的 ID、順序和所有關聯資料
-    fetchPrograms();
-    toast.success(lessonDialogType === 'create' ? '單元已新增' : '單元已更新');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleSaveLesson = (lesson: any) => {
+    const savedLesson = lesson;
+    // 直接更新 state 而不是重新載入整個頁面
+    if (lessonDialogType === 'create' && lessonProgramId) {
+      // 新增單元：找到對應的 program 並加入新單元
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => {
+          if (program.id === lessonProgramId) {
+            return {
+              ...program,
+              lessons: [...(program.lessons || []), savedLesson]
+            };
+          }
+          return program;
+        })
+      );
+      // 確保新增單元的 program 保持展開狀態
+      setExpandedPrograms(`program-${lessonProgramId}`);
+      toast.success(`單元「${savedLesson.name}」已新增`);
+    } else if (lessonDialogType === 'edit') {
+      // 編輯單元：更新對應的單元
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => ({
+          ...program,
+          lessons: program.lessons?.map(lesson =>
+            lesson.id === savedLesson.id ? savedLesson : lesson
+          ) || []
+        }))
+      );
+      toast.success(`單元「${savedLesson.name}」已更新`);
+    }
   };
 
-  const handleDeleteLessonConfirm = (lessonId: number) => {
-    const updatedPrograms = programs.map(program => {
-      if (program.lessons) {
-        return {
-          ...program,
-          lessons: program.lessons.filter(l => l.id !== lessonId)
-        };
+  const handleDeleteLessonConfirm = async (lessonId: number) => {
+    try {
+      // 找到包含這個 lesson 的 program
+      const programWithLesson = programs.find(p =>
+        p.lessons?.some(l => l.id === lessonId)
+      );
+
+      if (!programWithLesson) {
+        toast.error('找不到單元所屬的課程');
+        return;
       }
-      return program;
-    });
-    setPrograms(updatedPrograms);
-    // TODO: Call API to delete lesson
-    console.log('Lesson deleted:', lessonId);
+
+      // 呼叫 API 刪除單元
+      await apiClient.deleteLesson(programWithLesson.id, lessonId);
+
+      // 更新本地狀態
+      const updatedPrograms = programs.map(program => {
+        if (program.lessons) {
+          return {
+            ...program,
+            lessons: program.lessons.filter(l => l.id !== lessonId)
+          };
+        }
+        return program;
+      });
+      setPrograms(updatedPrograms);
+
+      toast.success('單元已刪除');
+    } catch (error) {
+      console.error('Failed to delete lesson:', error);
+      toast.error('刪除單元失敗，請稍後再試');
+    }
   };
 
   const handleReorderPrograms = async (dragIndex: number, dropIndex: number) => {
@@ -866,7 +915,13 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
               </div>
 
               {programs.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  value={expandedPrograms}
+                  onValueChange={setExpandedPrograms}
+                >
                   {programs.map((program, programIndex) => (
                     <div key={program.id} className="relative">
                       {/* 插入指示器 - 顯示在項目上方 */}
