@@ -111,6 +111,7 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
 
   // Accordion states - 追蹤展開的 programs
   const [expandedPrograms, setExpandedPrograms] = useState<string>("");
+  const [expandedLessons, setExpandedLessons] = useState<string>("");
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -707,6 +708,17 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
         });
 
         toast.success('內容已創建成功');
+
+        // Find the program ID for this lesson and keep both program and lesson expanded
+        const programWithLesson = programs.find(p =>
+          p.lessons?.some(l => l.id === selection.lessonId)
+        );
+
+        if (programWithLesson) {
+          setExpandedPrograms(`program-${programWithLesson.id}`);
+          setExpandedLessons(`lesson-${programWithLesson.id}-${selection.lessonId}`);
+        }
+
         await refreshPrograms();
       } catch (error) {
         console.error('Failed to create content:', error);
@@ -1055,7 +1067,13 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="pl-14 pr-4">
-                          <Accordion type="single" collapsible className="w-full">
+                          <Accordion
+                            type="single"
+                            collapsible
+                            className="w-full"
+                            value={expandedLessons}
+                            onValueChange={setExpandedLessons}
+                          >
                             {(program.lessons || []).map((lesson, lessonIndex) => (
                               <div key={lesson.id} className="relative">
                                 {/* 插入指示器 - 顯示在單元上方 */}
@@ -1904,6 +1922,19 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                   // ReadingAssessmentPanel handles save internally
                   // Just close the editor on successful save
                   setShowReadingEditor(false);
+
+                  // Keep the lesson expanded after saving
+                  if (editorLessonId) {
+                    const programWithLesson = programs.find(p =>
+                      p.lessons?.some(l => l.id === editorLessonId)
+                    );
+
+                    if (programWithLesson) {
+                      setExpandedPrograms(`program-${programWithLesson.id}`);
+                      setExpandedLessons(`lesson-${programWithLesson.id}-${editorLessonId}`);
+                    }
+                  }
+
                   setEditorLessonId(null);
                   setEditorContentId(null);
                   await refreshPrograms();
