@@ -120,20 +120,12 @@ export function LessonDialog({
   };
 
   const handleDelete = async () => {
-    if (!lesson?.id || !onDelete || !programId) return;
+    if (!lesson?.id || !onDelete) return;
 
-    setLoading(true);
-    try {
-      await apiClient.deleteLesson(programId, lesson.id);
-      toast.success(`單元「${lesson.name}」已刪除`);
-      onDelete(lesson.id);
-      onClose();
-    } catch (error) {
-      console.error('Failed to delete lesson:', error);
-      toast.error('刪除失敗，請稍後再試');
-    } finally {
-      setLoading(false);
-    }
+    // 直接呼叫 callback，讓父組件處理實際的刪除邏輯
+    // 父組件會根據是否為模板模式使用不同的 API
+    onDelete(lesson.id);
+    onClose();
   };
 
   if (!dialogType) return null;
