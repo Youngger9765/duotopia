@@ -1718,12 +1718,19 @@ async def delete_lesson(
         .count()
     )
 
-    assignment_count = (
-        db.query(StudentAssignment)
-        .join(Content)
-        .filter(Content.lesson_id == lesson_id)
-        .count()
-    )
+    # 先查詢這個 lesson 相關的所有 content IDs
+    content_ids = [
+        c.id for c in db.query(Content.id).filter(Content.lesson_id == lesson_id).all()
+    ]
+
+    # 使用 content IDs 來計算作業數量
+    assignment_count = 0
+    if content_ids:
+        assignment_count = (
+            db.query(StudentAssignment)
+            .filter(StudentAssignment.content_id.in_(content_ids))
+            .count()
+        )
 
     # 軟刪除 lesson
     lesson.is_active = False
