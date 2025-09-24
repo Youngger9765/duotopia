@@ -491,6 +491,13 @@ class ApiClient {
     });
   }
 
+  // Template lesson methods (for public version courses)
+  async deleteTemplateLesson(lessonId: number) {
+    return this.request(`/api/teachers/lessons/${lessonId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============ Content Methods ============
   async getContentDetail(contentId: number): Promise<{
     id: number;
