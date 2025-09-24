@@ -24,6 +24,7 @@ import StudentLayout from './components/StudentLayout'
 import EmailVerification from './pages/EmailVerification'
 import StudentProfile from './pages/student/StudentProfile'
 import DatabaseAdminPage from './pages/admin/DatabaseAdminPage'
+import AdminMonitoringPage from './pages/admin/AdminMonitoringPage'
 import DebugPage from './pages/DebugPage'
 import TermsOfService from './pages/TermsOfService'
 import PricingPage from './pages/PricingPage'
@@ -89,6 +90,9 @@ function App() {
         <Route path="settings" element={<div className="p-8 text-center">設定頁面開發中...</div>} />
       </Route>
 
+      {/* Admin Pages - No Auth Required */}
+      <Route path="/admin/monitoring" element={<AdminMonitoringPage />} />
+      
       {/* Debug 頁面 */}
       <Route path="/debug" element={<DebugPage />} />
 

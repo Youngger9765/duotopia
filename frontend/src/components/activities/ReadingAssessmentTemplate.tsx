@@ -11,6 +11,7 @@ import {
   Star
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { retryAIAnalysis } from '@/utils/retryHelper';
 
 interface AssessmentResult {
   overallScore: number;
@@ -91,21 +92,35 @@ export default function ReadingAssessmentTemplate({
         return;
       }
 
-      // Call assessment API
-      const apiResponse = await fetch('/api/speech/assess', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      // Call assessment API with retry mechanism
+      const result = await retryAIAnalysis(
+        async () => {
+          const apiResponse = await fetch('/api/speech/assess', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (!apiResponse.ok) {
+            const errorData = await apiResponse.json().catch(() => ({ detail: 'AI Analysis failed' }));
+            const error = new Error(errorData.detail || `AI Analysis failed: ${apiResponse.status}`);
+            if (apiResponse.status >= 500 || apiResponse.status === 429) {
+              // Server errors and rate limits are retryable
+              throw error;
+            }
+            // Client errors (4xx except 429) should not be retried
+            throw Object.assign(error, { noRetry: true });
+          }
+
+          return await apiResponse.json();
         },
-        body: formData
-      });
-
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({ detail: '評估失敗' }));
-        throw new Error(errorData.detail || '評估失敗');
-      }
-
-      const result = await apiResponse.json();
+        (attempt, error) => {
+          console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+          toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+        }
+      );
       setAssessmentResult({
         overallScore: result.overall_score,
         accuracyScore: result.accuracy_score,
