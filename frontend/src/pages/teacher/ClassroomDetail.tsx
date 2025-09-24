@@ -570,8 +570,14 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
         return;
       }
 
-      // 呼叫 API 刪除單元
-      await apiClient.deleteLesson(programWithLesson.id, lessonId);
+      // 公版課程使用不同的 API endpoint
+      if (isTemplateMode) {
+        // 公版課程直接使用 lesson ID 刪除
+        await apiClient.deleteTemplateLesson(lessonId);
+      } else {
+        // 一般課程使用 program/lesson 路徑
+        await apiClient.deleteLesson(programWithLesson.id, lessonId);
+      }
 
       // 更新本地狀態
       const updatedPrograms = programs.map(program => {
