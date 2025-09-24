@@ -4,7 +4,6 @@
 
 # Core Framework
 fastapi==0.104.1
-starlette==0.26.1
 uvicorn==0.24.0
 python-multipart==0.0.6
 
