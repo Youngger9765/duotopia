@@ -181,6 +181,10 @@ async def get_template_program(
     }
 
     for lesson in template.lessons:
+        # 跳過已被軟刪除的單元
+        if not lesson.is_active:
+            continue
+
         lesson_data = {
             "id": lesson.id,
             "name": lesson.name,  # 使用 name 欄位
@@ -191,6 +195,9 @@ async def get_template_program(
         }
 
         for content in lesson.contents:
+            # 跳過已被軟刪除的內容
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
             content_items = content.content_items or []
             content_data = {
                 "id": content.id,
