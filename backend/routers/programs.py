@@ -358,8 +358,12 @@ async def copy_from_template(
     db.add(new_program)
     db.flush()  # 取得 new_program.id
 
-    # 深度複製 Lessons
+    # 深度複製 Lessons (只複製 is_active=True 的單元)
     for lesson in template.lessons:
+        # 跳過已被軟刪除的單元
+        if not lesson.is_active:
+            continue
+
         new_lesson = Lesson(
             program_id=new_program.id,
             name=lesson.name,
@@ -370,10 +374,32 @@ async def copy_from_template(
         db.add(new_lesson)
         db.flush()
 
-        # 複製 lesson 的 contents（引用相同的 content，不複製）
+        # 複製 lesson 的 contents
         for content in lesson.contents:
-            # 這裡可以選擇是否複製 content 關聯
-            pass
+            # 跳過已被軟刪除的內容
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
+
+            # 創建新的 content 複本
+            new_content = Content(
+                lesson_id=new_lesson.id,
+                title=content.title,
+                type=content.type,
+                content_items=content.content_items,
+                target_wpm=content.target_wpm
+                if hasattr(content, "target_wpm")
+                else None,
+                target_accuracy=content.target_accuracy
+                if hasattr(content, "target_accuracy")
+                else None,
+                time_limit_seconds=content.time_limit_seconds
+                if hasattr(content, "time_limit_seconds")
+                else None,
+                order_index=content.order_index
+                if hasattr(content, "order_index")
+                else 0,
+            )
+            db.add(new_content)
 
     db.commit()
     db.refresh(new_program)
