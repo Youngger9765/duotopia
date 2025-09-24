@@ -19,13 +19,13 @@ describe('AdminMonitoringPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset fetch mock
-    (global.fetch as any).mockReset();
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockReset();
   });
 
   describe('Component Rendering', () => {
     it('should render without authentication requirement', () => {
       renderWithRouter(<AdminMonitoringPage />);
-      
+
       expect(screen.getByText(/系統監控面板/i)).toBeInTheDocument();
       expect(screen.getByText(/錄音上傳狀態/i)).toBeInTheDocument();
       expect(screen.getByText(/AI 分析狀態/i)).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe('AdminMonitoringPage', () => {
 
     it('should display monitoring sections', () => {
       renderWithRouter(<AdminMonitoringPage />);
-      
+
       // Check for main sections
       expect(screen.getByText(/即時狀態/i)).toBeInTheDocument();
       expect(screen.getByText(/重試統計/i)).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('AdminMonitoringPage', () => {
         last_updated: new Date().toISOString()
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockStatus
       });
@@ -76,7 +76,7 @@ describe('AdminMonitoringPage', () => {
         last_updated: new Date().toISOString()
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockStatus
       });
@@ -94,17 +94,17 @@ describe('AdminMonitoringPage', () => {
 
   describe('Manual Testing', () => {
     it('should allow manual audio upload test', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ 
-          success: true, 
+        json: async () => ({
+          success: true,
           audio_url: 'https://example.com/test.mp3',
           message: '測試上傳成功'
         })
       });
 
       renderWithRouter(<AdminMonitoringPage />);
-      
+
       const testButton = screen.getByText(/測試錄音上傳/i);
       fireEvent.click(testButton);
 
@@ -114,9 +114,9 @@ describe('AdminMonitoringPage', () => {
     });
 
     it('should allow manual AI analysis test', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ 
+        json: async () => ({
           success: true,
           overall_score: 85,
           message: 'AI 分析測試成功'
@@ -124,7 +124,7 @@ describe('AdminMonitoringPage', () => {
       });
 
       renderWithRouter(<AdminMonitoringPage />);
-      
+
       const testButton = screen.getByText(/測試 AI 分析/i);
       fireEvent.click(testButton);
 
@@ -160,7 +160,7 @@ describe('AdminMonitoringPage', () => {
         }
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockRetryStats
       });
@@ -172,7 +172,7 @@ describe('AdminMonitoringPage', () => {
         expect(screen.getByText(/錄音上傳重試統計/i)).toBeInTheDocument();
         expect(screen.getByText(/總重試次數: 25/i)).toBeInTheDocument();
         expect(screen.getByText(/重試後成功: 20/i)).toBeInTheDocument();
-        
+
         // AI analysis retry stats
         expect(screen.getByText(/AI 分析重試統計/i)).toBeInTheDocument();
         expect(screen.getByText(/總重試次數: 15/i)).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('AdminMonitoringPage', () => {
         }
       ];
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockErrorLogs
       });
@@ -219,14 +219,14 @@ describe('AdminMonitoringPage', () => {
   describe('Auto Refresh', () => {
     it('should auto-refresh status every 5 seconds', async () => {
       vi.useFakeTimers();
-      
+
       const mockStatus = {
         total_uploads: 100,
         successful: 95,
         failed: 5
       };
 
-      (global.fetch as any)
+      (global.fetch as unknown as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => mockStatus
@@ -260,7 +260,7 @@ describe('AdminMonitoringPage', () => {
         failed: 5
       };
 
-      (global.fetch as any)
+      (global.fetch as unknown as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
           ok: true,
           json: async () => mockStatus
@@ -287,7 +287,7 @@ describe('AdminMonitoringPage', () => {
 
   describe('Connection Status', () => {
     it('should show connection status to backend', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ status: 'healthy' })
       });
@@ -300,7 +300,7 @@ describe('AdminMonitoringPage', () => {
     });
 
     it('should show error when backend is unreachable', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
       renderWithRouter(<AdminMonitoringPage />);
 
