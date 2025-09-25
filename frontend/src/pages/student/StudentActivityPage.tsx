@@ -195,22 +195,31 @@ export default function StudentActivityPage() {
       // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
       data.activities.forEach(activity => {
-        // For reading_assessment type, get audio from recordings array
-        let audioUrl = activity.audio_url || undefined;
-        if (!audioUrl && activity.recordings && activity.recordings.length > 0) {
-          // Use first recording for reading_assessment
-          audioUrl = activity.recordings[0];
+        // 統一處理：所有音頻資料都從 items 的 recording_url 取得
+        let recordings: string[] = [];
+        let audioUrl: string | undefined = undefined;
+
+        if (activity.items && activity.items.length > 0) {
+          // 對於有 items 的活動，從每個 item 的 recording_url 建立 recordings 陣列
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          recordings = activity.items.map((item: any) => item.recording_url || '');
+
+          // 對於 reading_assessment 類型（只有一個 item），設定 audioUrl
+          if (activity.type === 'reading_assessment' && recordings[0]) {
+            audioUrl = recordings[0];
+          }
         }
+        // 注意：不再使用 activity.recordings 或 activity.audio_url（這些是舊的資料格式）
 
         initialAnswers.set(activity.id, {
           progressId: activity.id,
           status: activity.status === 'NOT_STARTED' ? 'not_started' :
                   activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
           startTime: new Date(),
-          audioUrl: audioUrl,
-          recordings: activity.recordings || [], // Load existing recordings
-          answers: activity.answers || [], // Load existing answers
-          userAnswers: [] // For listening activities
+          audioUrl: audioUrl, // 用於 reading_assessment 播放
+          recordings: recordings, // 用於 grouped_questions 多題播放
+          answers: activity.answers || [], // 文字答案
+          userAnswers: [] // 聽力填空答案
         });
       });
       setAnswers(initialAnswers);
@@ -784,7 +793,7 @@ export default function StudentActivityPage() {
       return (
         <GroupedQuestionsTemplate
           items={activity.items}
-          recordings={answer?.recordings || activity.recordings || []}
+          recordings={answer?.recordings || []} // 只使用 answer 中的 recordings（從 items 提取的）
           answers={activity.answers}
           currentQuestionIndex={currentSubQuestionIndex}
           isRecording={isRecording}
@@ -793,9 +802,9 @@ export default function StudentActivityPage() {
           onStopRecording={stopRecording}
           formatTime={formatTime}
           progressId={activity.id}
-          progressIds={answer?.progressIds} // 🔥 傳遞 progress_id 數組
+          progressIds={answer?.progressIds}
           initialAssessmentResults={assessmentResults}
-          readOnly={isReadOnly}  // 傳遞唯讀狀態
+          readOnly={isReadOnly}
         />
       );
     }
