@@ -541,6 +541,7 @@ class ApiClient {
     target_wpm?: number;
     target_accuracy?: number;
     time_limit_seconds?: number;
+    order_index?: number;
   }) {
     return this.request(`/api/teachers/contents/${contentId}`, {
       method: 'PUT',

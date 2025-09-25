@@ -1286,24 +1286,23 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                                             });
                                             setPrograms(updatedPrograms);
 
-                                            // 呼叫 API 更新順序 - 暫時註解，order_index 不是 content 的屬性
-                                            // const updateOrderPromises = contentsWithNewOrder.map(content =>
-                                            //   apiClient.updateContent(content.id, {
-                                            //     order_index: content.order_index
-                                            //   })
-                                            // );
+                                            // 呼叫 API 更新順序
+                                            const updateOrderPromises = contentsWithNewOrder.map(content =>
+                                              apiClient.updateContent(content.id, {
+                                                order_index: content.order_index
+                                              })
+                                            );
 
-                                            // Promise.all(updateOrderPromises)
-                                            //   .then(() => {
-                                            //     toast.success('內容順序已更新');
-                                            //   })
-                                            //   .catch((error) => {
-                                            //     console.error('Failed to update content order:', error);
-                                            //     toast.error('更新順序失敗');
-                                            //     // 重新載入以恢復正確順序
-                                            //     fetchPrograms();
-                                            //   });
-                                            toast.success('內容順序已更新');
+                                            Promise.all(updateOrderPromises)
+                                              .then(() => {
+                                                toast.success('內容順序已更新');
+                                              })
+                                              .catch((error) => {
+                                                console.error('Failed to update content order:', error);
+                                                toast.error('更新順序失敗');
+                                                // 重新載入以恢復正確順序
+                                                fetchPrograms();
+                                              });
                                           }
                                         }}
                                         onClick={() => handleContentClick({
