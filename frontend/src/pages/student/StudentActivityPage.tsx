@@ -195,12 +195,19 @@ export default function StudentActivityPage() {
       // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
       data.activities.forEach(activity => {
+        // For reading_assessment type, get audio from recordings array
+        let audioUrl = activity.audio_url || undefined;
+        if (!audioUrl && activity.recordings && activity.recordings.length > 0) {
+          // Use first recording for reading_assessment
+          audioUrl = activity.recordings[0];
+        }
+
         initialAnswers.set(activity.id, {
           progressId: activity.id,
           status: activity.status === 'NOT_STARTED' ? 'not_started' :
                   activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
           startTime: new Date(),
-          audioUrl: activity.audio_url || undefined,
+          audioUrl: audioUrl,
           recordings: activity.recordings || [], // Load existing recordings
           answers: activity.answers || [], // Load existing answers
           userAnswers: [] // For listening activities
