@@ -51,32 +51,32 @@ interface AssessmentResult {
 
 interface GroupedQuestionsTemplateProps {
   items: Question[];
-  recordings?: string[];
   answers?: string[];
   currentQuestionIndex?: number;
   isRecording?: boolean;
   recordingTime?: number;
   onStartRecording?: () => void;
   onStopRecording?: () => void;
+  onUpdateItemRecording?: (index: number, recordingUrl: string) => void; // 更新單一 item 的錄音
   formatTime?: (seconds: number) => string;
   progressId?: number | string;
-  progressIds?: number[]; // 🔥 新增：每個子問題的 progress_id 數組
+  progressIds?: number[]; // 每個子問題的 progress_id 數組
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
   readOnly?: boolean; // 唯讀模式
 }
 
 export default function GroupedQuestionsTemplate({
   items,
-  recordings = [],
   answers = [],
   currentQuestionIndex = 0,
   isRecording = false,
   recordingTime = 0,
   onStartRecording,
   onStopRecording,
+  onUpdateItemRecording,
   formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`,
   progressId,
-  progressIds = [], // 🔥 接收 progress_id 數組
+  progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
   readOnly = false // 唯讀模式
 }: GroupedQuestionsTemplateProps) {
@@ -133,12 +133,14 @@ export default function GroupedQuestionsTemplate({
 
   // 檢查題目是否已完成
   const isQuestionCompleted = (index: number) => {
-    return recordings[index] || answers[index];
+    const recording = items[index]?.recording_url;
+    return recording || answers[index];
   };
 
   // 播放/暫停音檔
   const togglePlayback = () => {
-    if (!recordings[currentQuestionIndex]) return;
+    const currentRecording = items[currentQuestionIndex]?.recording_url;
+    if (!currentRecording) return;
 
     if (isPlaying && audioRef.current) {
       audioRef.current.pause();
@@ -151,7 +153,7 @@ export default function GroupedQuestionsTemplate({
         audioRef.current.pause();
       }
 
-      const audio = new Audio(recordings[currentQuestionIndex]);
+      const audio = new Audio(currentRecording as string);
       audioRef.current = audio;
 
       audio.addEventListener('loadedmetadata', () => {
@@ -198,8 +200,9 @@ export default function GroupedQuestionsTemplate({
     }
 
     // Preload duration for current recording if it exists
-    if (recordings[currentQuestionIndex]) {
-      const tempAudio = new Audio(recordings[currentQuestionIndex]);
+    const currentRecording = items[currentQuestionIndex]?.recording_url;
+    if (currentRecording) {
+      const tempAudio = new Audio(currentRecording as string);
       tempAudio.addEventListener('loadedmetadata', () => {
         const dur = tempAudio.duration;
         if (dur && isFinite(dur) && !isNaN(dur)) {
@@ -220,7 +223,7 @@ export default function GroupedQuestionsTemplate({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [currentQuestionIndex, recordings]);
+  }, [currentQuestionIndex, items]);
 
   // 格式化時間
   const formatAudioTime = (seconds: number) => {
@@ -234,7 +237,7 @@ export default function GroupedQuestionsTemplate({
 
   // AI 發音評估
   const handleAssessment = async () => {
-    const audioUrl = recordings[currentQuestionIndex];
+    const audioUrl = items[currentQuestionIndex]?.recording_url;
     const referenceText = currentQuestion?.text;
 
     if (!audioUrl || !referenceText) {
@@ -245,7 +248,7 @@ export default function GroupedQuestionsTemplate({
     setIsAssessing(true);
     try {
       // Convert blob URL to blob
-      const response = await fetch(audioUrl);
+      const response = await fetch(audioUrl as string);
       const audioBlob = await response.blob();
 
       // Create form data
@@ -521,8 +524,8 @@ export default function GroupedQuestionsTemplate({
                     variant="default"
                     onClick={() => {
                       // 清除現有錄音
-                      if (recordings && currentQuestionIndex !== undefined) {
-                        recordings[currentQuestionIndex] = '';
+                      if (onUpdateItemRecording && currentQuestionIndex !== undefined) {
+                        onUpdateItemRecording(currentQuestionIndex, '');
                       }
 
                       // 停止但不上傳 (傳送 true 以跳過上傳)
@@ -549,7 +552,7 @@ export default function GroupedQuestionsTemplate({
 
         {/* 2. 錄音結果區 - 固定顯示 */}
         <div className="mt-6">
-          {recordings[currentQuestionIndex] ? (
+          {items[currentQuestionIndex]?.recording_url ? (
             <div className="max-w-lg mx-auto">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 shadow-sm">
                 <div className="flex items-center gap-4">
@@ -609,7 +612,9 @@ export default function GroupedQuestionsTemplate({
                       setCurrentTime(0);
                       if (onStartRecording) {
                         // Clear current recording
-                        recordings[currentQuestionIndex] = '';
+                        if (onUpdateItemRecording && currentQuestionIndex !== undefined) {
+                          onUpdateItemRecording(currentQuestionIndex, '');
+                        }
                         onStartRecording();
                       }
                     }}
@@ -636,7 +641,7 @@ export default function GroupedQuestionsTemplate({
 
         {/* 3. AI 評估按鈕區 - 智慧顯示 */}
         <div className="mt-6 flex justify-center min-h-[60px] items-center">
-          {!recordings[currentQuestionIndex] ? (
+          {!items[currentQuestionIndex]?.recording_url ? (
             <div className="text-gray-400 text-sm">請先錄音後進行 AI 評估</div>
           ) : assessmentResults[currentQuestionIndex] ? (
             <div className="text-center">

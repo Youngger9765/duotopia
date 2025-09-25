@@ -342,6 +342,97 @@ pytest --junitxml=test-results.xml
 - **測試指南**: 詳見 [docs/TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)
 - **部署狀態**: 詳見 [docs/DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)
 
+## 🎯 錄音播放架構重構 TDD (2024-12-27)
+
+### 測試需求規格
+
+#### 1. **GroupedQuestionsTemplate 播放測試**
+```typescript
+// 測試案例：切換題目時應正確播放對應錄音
+describe('GroupedQuestionsTemplate', () => {
+  it('應該直接從當前 item 播放錄音', () => {
+    // Given: 有 3 個題目，每個都有 recording_url
+    const items = [
+      { id: 1, text: '題目1', recording_url: 'audio1.webm' },
+      { id: 2, text: '題目2', recording_url: 'audio2.webm' },
+      { id: 3, text: '題目3', recording_url: 'audio3.webm' }
+    ];
+
+    // When: 切換到第 2 題
+    currentQuestionIndex = 1;
+
+    // Then: 應該播放 items[1].recording_url
+    expect(播放的URL).toBe('audio2.webm');
+    // 不應該使用 recordings[1]
+    expect(不使用recordings陣列).toBe(true);
+  });
+});
+```
+
+#### 2. **ReadingAssessmentTemplate 播放測試**
+```typescript
+describe('ReadingAssessmentTemplate', () => {
+  it('應該直接從 item 播放錄音', () => {
+    // Given: reading_assessment 只有一個 item
+    const item = { id: 1, text: '朗讀內容', recording_url: 'reading.webm' };
+
+    // Then: 直接播放 item.recording_url
+    expect(audioUrl).toBe('reading.webm');
+    // 不需要陣列處理
+    expect(不使用recordings陣列).toBe(true);
+  });
+});
+```
+
+#### 3. **重新錄音測試**
+```typescript
+it('重新錄音應更新對應 item 的 recording_url', () => {
+  // When: 第 2 題重新錄音
+  重新錄音(題目索引: 1, 新錄音: 'new_audio2.webm');
+
+  // Then: 只更新 items[1].recording_url
+  expect(items[1].recording_url).toBe('new_audio2.webm');
+  // 其他題目不受影響
+  expect(items[0].recording_url).toBe('audio1.webm');
+  expect(items[2].recording_url).toBe('audio3.webm');
+});
+```
+
+#### 4. **頁面重刷測試**
+```typescript
+it('重刷頁面後應能播放所有錄音', () => {
+  // Given: 從 API 載入資料
+  const apiData = {
+    items: [
+      { recording_url: 'saved1.webm' },
+      { recording_url: 'saved2.webm' }
+    ]
+  };
+
+  // When: 切換題目
+  // Then: 每個題目都能正常播放其 recording_url
+  題目.forEach((item, index) => {
+    切換到題目(index);
+    expect(可以播放).toBe(true);
+    expect(播放URL).toBe(item.recording_url);
+  });
+});
+```
+
+### 重構原則
+1. **移除 recordings 陣列** - 不需要額外維護錄音陣列
+2. **直接使用 item.recording_url** - 資料在哪，就從哪取用
+3. **簡化狀態管理** - 只需要 currentQuestionIndex
+4. **保持向後相容** - 確保現有功能不受影響
+
+### 驗收標準
+- [ ] 所有題型都能正常錄音
+- [ ] 切換題目時播放正確的錄音
+- [ ] 重新錄音只影響當前題目
+- [ ] 頁面重刷後所有錄音可播放
+- [ ] 程式碼更簡潔直觀
+- [ ] 移除不必要的陣列操作
+
 ---
 
 **記住**：每次修改都要自己測試過，不要讓用戶一直幫你抓錯！

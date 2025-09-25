@@ -39,13 +39,14 @@ interface Activity {
   completed_at: string | null;
   // For activities with multiple items (questions)
   items?: Array<{
+    id?: number;
     text?: string;
     translation?: string;
     audio_url?: string;
+    recording_url?: string; // Direct recording URL from StudentItemProgress
     [key: string]: unknown;
   }>;
   item_count?: number;
-  recordings?: string[];
   answers?: string[];
   // Additional fields for different activity types
   blanks?: string[];
@@ -80,7 +81,6 @@ interface Answer {
   audioUrl?: string;
   textAnswer?: string;
   userAnswers?: string[]; // For listening cloze
-  recordings?: string[]; // For grouped questions
   answers?: string[]; // For grouped questions answers
   startTime: Date;
   endTime?: Date;
@@ -195,31 +195,21 @@ export default function StudentActivityPage() {
       // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
       data.activities.forEach(activity => {
-        // 統一處理：所有音頻資料都從 items 的 recording_url 取得
-        let recordings: string[] = [];
+        // For reading_assessment with single item, extract audioUrl directly
         let audioUrl: string | undefined = undefined;
-
-        if (activity.items && activity.items.length > 0) {
-          // 對於有 items 的活動，從每個 item 的 recording_url 建立 recordings 陣列
+        if (activity.type === 'reading_assessment' && activity.items?.[0]) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          recordings = activity.items.map((item: any) => item.recording_url || '');
-
-          // 對於 reading_assessment 類型（只有一個 item），設定 audioUrl
-          if (activity.type === 'reading_assessment' && recordings[0]) {
-            audioUrl = recordings[0];
-          }
+          audioUrl = (activity.items[0] as any).recording_url || '';
         }
-        // 注意：不再使用 activity.recordings 或 activity.audio_url（這些是舊的資料格式）
 
         initialAnswers.set(activity.id, {
           progressId: activity.id,
           status: activity.status === 'NOT_STARTED' ? 'not_started' :
                   activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
           startTime: new Date(),
-          audioUrl: audioUrl, // 用於 reading_assessment 播放
-          recordings: recordings, // 用於 grouped_questions 多題播放
-          answers: activity.answers || [], // 文字答案
-          userAnswers: [] // 聽力填空答案
+          audioUrl: audioUrl, // Only for reading_assessment single recording
+          answers: activity.answers || [], // Text answers for grouped questions
+          userAnswers: [] // For listening cloze
         });
       });
       setAnswers(initialAnswers);
@@ -252,36 +242,22 @@ export default function StudentActivityPage() {
         setActivities(prevActivities => {
           const newActivities = [...prevActivities];
           const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
-          if (activityIndex !== -1) {
-            const recordings = [...(newActivities[activityIndex].recordings || [])];
-            // Ensure array is long enough
-            while (recordings.length <= currentSubQuestionIndex) {
-              recordings.push('');
+          if (activityIndex !== -1 && newActivities[activityIndex].items) {
+            // Clear the recording_url for the current item
+            const newItems = [...newActivities[activityIndex].items!];
+            if (newItems[currentSubQuestionIndex]) {
+              newItems[currentSubQuestionIndex] = {
+                ...newItems[currentSubQuestionIndex],
+                recording_url: '' // Clear current recording
+              };
             }
-            recordings[currentSubQuestionIndex] = ''; // Clear current recording
             newActivities[activityIndex] = {
               ...newActivities[activityIndex],
-              recordings: recordings,
+              items: newItems,
               ai_scores: undefined // Clear AI scores
             };
           }
           return newActivities;
-        });
-
-        // Also clear from answers
-        setAnswers(prev => {
-          const newAnswers = new Map(prev);
-          const answer = newAnswers.get(currentActivity.id);
-          if (answer) {
-            if (!answer.recordings) answer.recordings = [];
-            // Ensure array is long enough
-            while (answer.recordings.length <= currentSubQuestionIndex) {
-              answer.recordings.push('');
-            }
-            answer.recordings[currentSubQuestionIndex] = '';
-            newAnswers.set(currentActivity.id, answer);
-          }
-          return newAnswers;
         });
       }
 
@@ -313,43 +289,39 @@ export default function StudentActivityPage() {
             answers: []
           };
 
-          // For grouped questions, store recordings per sub-question
+          // For grouped questions, update item's recording_url locally
           if (currentActivity.items && currentActivity.items.length > 0) {
-            if (!answer.recordings) answer.recordings = [];
-            // Ensure array is long enough
-            while (answer.recordings.length <= currentSubQuestionIndex) {
-              answer.recordings.push('');
-            }
-            answer.recordings[currentSubQuestionIndex] = localAudioUrl;
+            // We'll update the items in activities state instead
           } else {
             // For single questions, store directly
-            answer.audioBlob = audioBlob;
-            answer.audioUrl = localAudioUrl;
+            (answer as Answer).audioBlob = audioBlob;
+            (answer as Answer).audioUrl = localAudioUrl;
           }
 
           answer.status = 'in_progress';  // Keep as in_progress until uploaded
-          answer.endTime = new Date();
+          (answer as Answer).endTime = new Date();
 
           newAnswers.set(currentActivity.id, answer);
           return newAnswers;
         });
 
-        // Update activity's recordings array for display
+        // Update activity's item recording_url for display
         if (currentActivity.items && currentActivity.items.length > 0) {
           // Update activities state to trigger re-render
           setActivities(prevActivities => {
             const newActivities = [...prevActivities];
             const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
-            if (activityIndex !== -1) {
-              const recordings = [...(newActivities[activityIndex].recordings || [])];
-              // Ensure array is long enough
-              while (recordings.length <= currentSubQuestionIndex) {
-                recordings.push('');
+            if (activityIndex !== -1 && newActivities[activityIndex].items) {
+              const newItems = [...newActivities[activityIndex].items!];
+              if (newItems[currentSubQuestionIndex]) {
+                newItems[currentSubQuestionIndex] = {
+                  ...newItems[currentSubQuestionIndex],
+                  recording_url: localAudioUrl
+                };
               }
-              recordings[currentSubQuestionIndex] = localAudioUrl;
               newActivities[activityIndex] = {
                 ...newActivities[activityIndex],
-                recordings: recordings
+                items: newItems
               };
             }
             return newActivities;
@@ -420,18 +392,13 @@ export default function StudentActivityPage() {
               const answer = newAnswers.get(currentActivity.id);
               if (answer) {
                 if (currentActivity.items && currentActivity.items.length > 0) {
-                  if (!answer.recordings) answer.recordings = [];
                   if (!answer.progressIds) answer.progressIds = [];
 
-                  // Ensure arrays are long enough
-                  while (answer.recordings.length <= currentSubQuestionIndex) {
-                    answer.recordings.push('');
-                  }
+                  // Ensure progressIds array is long enough
                   while (answer.progressIds.length <= currentSubQuestionIndex) {
                     answer.progressIds.push(0);
                   }
 
-                  answer.recordings[currentSubQuestionIndex] = audio_url;
                   // 🔥 關鍵修復：存儲 progress_id 到對應的子問題索引
                   if (progress_id) {
                     answer.progressIds[currentSubQuestionIndex] = progress_id;
@@ -453,16 +420,17 @@ export default function StudentActivityPage() {
               setActivities(prevActivities => {
                 const newActivities = [...prevActivities];
                 const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
-                if (activityIndex !== -1) {
-                  const recordings = [...(newActivities[activityIndex].recordings || [])];
-                  // Ensure array is long enough
-                  while (recordings.length <= currentSubQuestionIndex) {
-                    recordings.push('');
+                if (activityIndex !== -1 && newActivities[activityIndex].items) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[currentSubQuestionIndex]) {
+                    newItems[currentSubQuestionIndex] = {
+                      ...newItems[currentSubQuestionIndex],
+                      recording_url: audio_url
+                    };
                   }
-                  recordings[currentSubQuestionIndex] = audio_url;
                   newActivities[activityIndex] = {
                     ...newActivities[activityIndex],
-                    recordings: recordings
+                    items: newItems
                   };
                 }
                 return newActivities;
@@ -642,10 +610,10 @@ export default function StudentActivityPage() {
 
       // For activities with multiple items (grouped questions)
       if (currentActivity.items && currentActivity.items.length > 0) {
-        // Save recordings array and answers array
-        saveData.recordings = answer.recordings || [];
+        // Save current item index and answers
         saveData.answers = answer.answers || [];
         saveData.item_index = currentSubQuestionIndex;
+        // Note: recordings are now saved via upload-recording API, not here
       } else {
         // For single activities, save single audio_url
         saveData.audio_url = audioUrl || answer.audioUrl;
@@ -793,13 +761,33 @@ export default function StudentActivityPage() {
       return (
         <GroupedQuestionsTemplate
           items={activity.items}
-          recordings={answer?.recordings || []} // 只使用 answer 中的 recordings（從 items 提取的）
           answers={activity.answers}
           currentQuestionIndex={currentSubQuestionIndex}
           isRecording={isRecording}
           recordingTime={recordingTime}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
+          onUpdateItemRecording={(index, url) => {
+            // Update the item's recording_url when recording is done
+            setActivities(prevActivities => {
+              const newActivities = [...prevActivities];
+              const activityIndex = newActivities.findIndex(a => a.id === activity.id);
+              if (activityIndex !== -1 && newActivities[activityIndex].items) {
+                const newItems = [...newActivities[activityIndex].items!];
+                if (newItems[index]) {
+                  newItems[index] = {
+                    ...newItems[index],
+                    recording_url: url
+                  };
+                }
+                newActivities[activityIndex] = {
+                  ...newActivities[activityIndex],
+                  items: newItems
+                };
+              }
+              return newActivities;
+            });
+          }}
           formatTime={formatTime}
           progressId={activity.id}
           progressIds={answer?.progressIds}
@@ -1000,9 +988,10 @@ export default function StudentActivityPage() {
 
                     {/* Question buttons */}
                     <div className="flex gap-1">
-                      {activity.items.map((_, itemIndex) => {
+                      {activity.items.map((item, itemIndex) => {
                         const isActiveItem = isActiveActivity && currentSubQuestionIndex === itemIndex;
-                        const isCompleted = activity.recordings?.[itemIndex] || activity.answers?.[itemIndex];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const isCompleted = (item as any).recording_url || activity.answers?.[itemIndex];
 
                         return (
                           <button
