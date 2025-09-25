@@ -450,27 +450,16 @@ async def get_assignment_activities(
                 activity_data["content"] = ""
                 activity_data["target_text"] = ""
 
-                # 統一處理錄音和 AI 評分（一律使用陣列模式）
-                if progress.response_data:
-                    # 處理錄音
-                    recordings = progress.response_data.get("recordings", [])
-                    audio_url = progress.response_data.get("audio_url")
-
-                    # 如果是舊格式的 audio_url，轉換為陣列格式
-                    if audio_url and not recordings:
-                        recordings = [audio_url]
-
-                    activity_data["recordings"] = recordings
-                    activity_data["answers"] = progress.response_data.get("answers", [])
-
-                    # 處理 AI 評分 - 統一從 response_data 中讀取陣列格式
-                    ai_assessments = progress.response_data.get("ai_assessments", [])
-                    activity_data["ai_assessments"] = ai_assessments
-                else:
-                    # 沒有 response_data 的情況
-                    activity_data["recordings"] = []
-                    activity_data["answers"] = []
-                    activity_data["ai_assessments"] = []
+                # 現在統一使用 StudentItemProgress 的資料，不再從 response_data 讀取
+                # recordings 和 AI 評分都應該從 items 的 recording_url 和 ai_assessment 取得
+                # 保留這些空陣列只是為了向後相容，未來應該移除
+                activity_data["recordings"] = []
+                activity_data["answers"] = (
+                    progress.response_data.get("answers", [])
+                    if progress.response_data
+                    else []
+                )
+                activity_data["ai_assessments"] = []
 
                 activities.append(activity_data)
 
