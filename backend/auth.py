@@ -21,11 +21,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fals
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """驗證密碼"""
+    # Truncate password to 72 bytes for bcrypt compatibility
+    plain_password = (
+        plain_password[:72]
+        if len(plain_password.encode("utf-8")) > 72
+        else plain_password
+    )
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """密碼雜湊"""
+    # Truncate password to 72 bytes for bcrypt compatibility
+    password = password[:72] if len(password.encode("utf-8")) > 72 else password
     return pwd_context.hash(password)
 
 
