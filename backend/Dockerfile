@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     wget \
     ffmpeg \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 創建非 root 使用者
