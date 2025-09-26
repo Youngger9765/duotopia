@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta  # noqa: F401
 from typing import Optional, Dict, Any  # noqa: F401
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -15,26 +15,28 @@ SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """驗證密碼"""
-    # Truncate password to 72 bytes for bcrypt compatibility
-    plain_password = (
-        plain_password[:72]
-        if len(plain_password.encode("utf-8")) > 72
-        else plain_password
+    # Ensure password is encoded properly and truncated if needed
+    password_bytes = plain_password.encode("utf-8")[:72]
+    hashed_bytes = (
+        hashed_password.encode("utf-8")
+        if isinstance(hashed_password, str)
+        else hashed_password
     )
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 
 def get_password_hash(password: str) -> str:
     """密碼雜湊"""
-    # Truncate password to 72 bytes for bcrypt compatibility
-    password = password[:72] if len(password.encode("utf-8")) > 72 else password
-    return pwd_context.hash(password)
+    # Ensure password is encoded properly and truncated if needed
+    password_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
