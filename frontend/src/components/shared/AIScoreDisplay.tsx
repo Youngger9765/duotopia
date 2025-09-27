@@ -169,21 +169,6 @@ export default function AIScoreDisplay({
 
       </div>
 
-      {/* 文本對比（如果有） */}
-      {scores.reference_text && scores.recognized_text && (
-        <Card className="mb-4 p-3">
-          <div className="space-y-2">
-            <div>
-              <span className="text-xs font-medium text-gray-600">參考文本：</span>
-              <p className="text-sm text-gray-800">{scores.reference_text}</p>
-            </div>
-            <div>
-              <span className="text-xs font-medium text-gray-600">識別文本：</span>
-              <p className="text-sm text-gray-800">{scores.recognized_text}</p>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* 切換視圖標籤 */}
       {showDetailed && hasDetailedData && (
