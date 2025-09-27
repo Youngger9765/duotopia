@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import AIScoreDisplay from '@/components/shared/AIScoreDisplay';
+import AIScoreDisplayWrapper from '@/components/shared/AIScoreDisplayIndex';
 import {
   CheckCircle,
   Mic,
@@ -36,16 +36,45 @@ interface AssessmentResult {
   fluency_score?: number;
   completeness_score?: number;
   overall_score?: number;
+  prosody_score?: number;
   words?: Array<{
     accuracy_score?: number;
     word: string;
     error_type?: string;
   }>;
   word_details?: Array<{
-    accuracy_score?: number;
+    accuracy_score: number;
     word: string;
     error_type?: string;
   }>;
+  detailed_words?: Array<{
+    index: number;
+    word: string;
+    accuracy_score: number;
+    error_type?: string;
+    syllables?: Array<{
+      index: number;
+      syllable: string;
+      accuracy_score: number;
+    }>;
+    phonemes?: Array<{
+      index: number;
+      phoneme: string;
+      accuracy_score: number;
+    }>;
+  }>;
+  reference_text?: string;
+  recognized_text?: string;
+  analysis_summary?: {
+    total_words: number;
+    problematic_words: string[];
+    low_score_phonemes: Array<{
+      phoneme: string;
+      score: number;
+      in_word: string;
+    }>;
+    assessment_time?: string;
+  };
   error_type?: string;
 }
 
@@ -691,24 +720,8 @@ export default function GroupedQuestionsTemplate({
               </button>
 
               {/* AI Score Display - 使用共用元件 */}
-              <AIScoreDisplay
-                scores={{
-                  accuracy_score: assessmentResults[currentQuestionIndex].accuracy_score,
-                  fluency_score: assessmentResults[currentQuestionIndex].fluency_score,
-                  pronunciation_score: assessmentResults[currentQuestionIndex].pronunciation_score,
-                  completeness_score: assessmentResults[currentQuestionIndex].completeness_score,
-                  overall_score: assessmentResults[currentQuestionIndex].overall_score ||
-                    ((assessmentResults[currentQuestionIndex].accuracy_score || 0) +
-                     (assessmentResults[currentQuestionIndex].fluency_score || 0) +
-                     (assessmentResults[currentQuestionIndex].pronunciation_score || 0)) / 3,
-                  word_details: (assessmentResults[currentQuestionIndex].words || assessmentResults[currentQuestionIndex].word_details || [])
-                    .filter(w => w.word)
-                    .map(w => ({
-                      word: w.word,
-                      accuracy_score: w.accuracy_score || 0,
-                      error_type: w.error_type
-                    }))
-                }}
+              <AIScoreDisplayWrapper
+                scores={assessmentResults[currentQuestionIndex]}
                 hasRecording={true}
                 title="AI 發音評估結果"
               />
