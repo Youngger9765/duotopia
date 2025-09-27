@@ -195,6 +195,24 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             # 取得評估結果
             pronunciation_result = speechsdk.PronunciationAssessmentResult(result)
 
+            # 記錄原始結果以便調試
+            import json
+
+            result_json = json.loads(result.json)
+            nbest = result_json.get("NBest", [{}])[0]
+            print("\n🔍 Azure Speech API Raw Result:")
+            print(f"Words count: {len(nbest.get('Words', []))}")
+            if nbest.get("Words"):
+                first_word = nbest["Words"][0]
+                print(f"First word: {first_word.get('Word')}")
+                print(f"Has Syllables: {'Syllables' in first_word}")
+                print(f"Has Phonemes: {'Phonemes' in first_word}")
+                if "Syllables" in first_word:
+                    print(f"Syllables count: {len(first_word.get('Syllables', []))}")
+                if "Phonemes" in first_word:
+                    print(f"Phonemes count: {len(first_word.get('Phonemes', []))}")
+            print(json.dumps(nbest, indent=2)[:2000])  # 只印前2000字元
+
             # 解析結果 - 包含韻律分數（如果有）
             assessment_result = {
                 "accuracy_score": pronunciation_result.accuracy_score,

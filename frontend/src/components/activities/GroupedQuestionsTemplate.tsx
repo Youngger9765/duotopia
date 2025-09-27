@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import AIScoreDisplayWrapper from '@/components/shared/AIScoreDisplayIndex';
+import AIScoreDisplay from '@/components/shared/AIScoreDisplay';
 import {
   CheckCircle,
   Mic,
@@ -720,7 +720,7 @@ export default function GroupedQuestionsTemplate({
               </button>
 
               {/* AI Score Display - 使用共用元件 */}
-              <AIScoreDisplayWrapper
+              <AIScoreDisplay
                 scores={assessmentResults[currentQuestionIndex]}
                 hasRecording={true}
                 title="AI 發音評估結果"

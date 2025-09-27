@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
-import AIScoreDisplayWrapper from "@/components/shared/AIScoreDisplayIndex";
+import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
 import AudioRecorder from "@/components/shared/AudioRecorder";
 import {
   User,
@@ -885,7 +885,7 @@ export default function GradingPage() {
 
                           {/* AI 評分結果 - 使用共用元件 */}
                           {currentItem.ai_scores && (
-                            <AIScoreDisplayWrapper
+                            <AIScoreDisplay
                               scores={currentItem.ai_scores}
                               hasRecording={!!currentItem.audio_url}
                               title="AI 自動評分結果"
