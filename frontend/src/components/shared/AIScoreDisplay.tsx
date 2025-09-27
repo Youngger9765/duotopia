@@ -2,10 +2,28 @@ import { Brain, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+interface PhonemeDetail {
+  index: number;
+  phoneme: string;
+  accuracy_score: number;
+}
+
+interface SyllableDetail {
+  index: number;
+  syllable: string;
+  accuracy_score: number;
+}
+
 interface WordDetail {
   word: string;
   accuracy_score: number;
   error_type?: string;
+  syllables?: SyllableDetail[];
+  phonemes?: PhonemeDetail[];
+}
+
+interface DetailedWord extends WordDetail {
+  index: number;
 }
 
 interface AIScores {
@@ -14,7 +32,20 @@ interface AIScores {
   pronunciation_score?: number;
   completeness_score?: number;
   overall_score?: number;
+  prosody_score?: number;
   word_details?: WordDetail[];
+  detailed_words?: DetailedWord[];
+  reference_text?: string;
+  recognized_text?: string;
+  analysis_summary?: {
+    total_words: number;
+    problematic_words: string[];
+    low_score_phonemes: Array<{
+      phoneme: string;
+      score: number;
+      in_word: string;
+    }>;
+  };
 }
 
 interface AIScoreDisplayProps {
@@ -29,7 +60,6 @@ export default function AIScoreDisplay({
   title = "AI 自動評分結果"
 }: AIScoreDisplayProps) {
   if (!scores) return null;
-
 
   // Calculate overall score if not provided
   const overallScore = scores.overall_score ||
