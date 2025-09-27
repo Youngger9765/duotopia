@@ -177,7 +177,7 @@ class TestJWTTokens:
 class TestTeacherAuthentication:
     """Test teacher authentication"""
 
-    def test_authenticate_valid_teacher(self, db):
+    def test_authenticate_valid_teacher(self, db_session):
         """Test authenticating valid teacher"""
         # Create teacher
         teacher = Teacher(
@@ -187,19 +187,21 @@ class TestTeacherAuthentication:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
-        db.refresh(teacher)
+        db_session.add(teacher)
+        db_session.commit()
+        db_session.refresh(teacher)
 
         # Authenticate
-        result = authenticate_teacher(db, "auth@duotopia.com", "correct_password")
+        result = authenticate_teacher(
+            db_session, "auth@duotopia.com", "correct_password"
+        )
 
         assert result is not None
         assert result.id == teacher.id
         assert result.email == "auth@duotopia.com"
         assert result.name == "Auth Teacher"
 
-    def test_authenticate_teacher_wrong_password(self, db):
+    def test_authenticate_teacher_wrong_password(self, db_session):
         """Test authenticating teacher with wrong password"""
         # Create teacher
         teacher = Teacher(
@@ -209,19 +211,23 @@ class TestTeacherAuthentication:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Try wrong password
-        result = authenticate_teacher(db, "auth2@duotopia.com", "wrong_password")
+        result = authenticate_teacher(
+            db_session, "auth2@duotopia.com", "wrong_password"
+        )
         assert result is None
 
-    def test_authenticate_teacher_not_exists(self, db):
+    def test_authenticate_teacher_not_exists(self, db_session):
         """Test authenticating non-existent teacher"""
-        result = authenticate_teacher(db, "nonexistent@duotopia.com", "password")
+        result = authenticate_teacher(
+            db_session, "nonexistent@duotopia.com", "password"
+        )
         assert result is None
 
-    def test_authenticate_inactive_teacher(self, db):
+    def test_authenticate_inactive_teacher(self, db_session):
         """Test authenticating inactive teacher"""
         # Create inactive teacher
         teacher = Teacher(
@@ -231,17 +237,17 @@ class TestTeacherAuthentication:
             is_active=False,  # Inactive
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Should still authenticate (business logic decision)
-        result = authenticate_teacher(db, "inactive@duotopia.com", "password")
+        result = authenticate_teacher(db_session, "inactive@duotopia.com", "password")
         # Current implementation may or may not authenticate inactive users
         # Test the actual behavior
         if result:
             assert result.is_active is False
 
-    def test_authenticate_teacher_case_sensitivity(self, db):
+    def test_authenticate_teacher_case_sensitivity(self, db_session):
         """Test email case sensitivity in authentication"""
         # Create teacher with lowercase email
         teacher = Teacher(
@@ -251,8 +257,8 @@ class TestTeacherAuthentication:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Try different cases
         test_cases = [
@@ -262,7 +268,7 @@ class TestTeacherAuthentication:
         ]
 
         for email in test_cases:
-            result = authenticate_teacher(db, email, "password")
+            result = authenticate_teacher(db_session, email, "password")
             # Current implementation behavior - test what actually happens
             # If case-sensitive, only first should work
             # If case-insensitive, all should work
@@ -274,7 +280,7 @@ class TestTeacherAuthentication:
 class TestStudentAuthentication:
     """Test student authentication"""
 
-    def test_authenticate_valid_student(self, db):
+    def test_authenticate_valid_student(self, db_session):
         """Test authenticating valid student"""
         # Create student
         student = Student(
@@ -284,18 +290,18 @@ class TestStudentAuthentication:
             birthdate=datetime(2010, 1, 1).date(),
             is_active=True,
         )
-        db.add(student)
-        db.commit()
-        db.refresh(student)
+        db_session.add(student)
+        db_session.commit()
+        db_session.refresh(student)
 
         # Authenticate
-        result = authenticate_student(db, "authstudent@example.com", "20100101")
+        result = authenticate_student(db_session, "authstudent@example.com", "20100101")
 
         assert result is not None
         assert result.id == student.id
         assert result.email == "authstudent@example.com"
 
-    def test_authenticate_student_wrong_password(self, db):
+    def test_authenticate_student_wrong_password(self, db_session):
         """Test authenticating student with wrong password"""
         # Create student
         student = Student(
@@ -305,16 +311,18 @@ class TestStudentAuthentication:
             birthdate=datetime(2010, 1, 1).date(),
             is_active=True,
         )
-        db.add(student)
-        db.commit()
+        db_session.add(student)
+        db_session.commit()
 
         # Try wrong password
-        result = authenticate_student(db, "authstudent2@example.com", "20100102")
+        result = authenticate_student(
+            db_session, "authstudent2@example.com", "20100102"
+        )
         assert result is None
 
-    def test_authenticate_student_not_exists(self, db):
+    def test_authenticate_student_not_exists(self, db_session):
         """Test authenticating non-existent student"""
-        result = authenticate_student(db, "nonexistent@example.com", "20100101")
+        result = authenticate_student(db_session, "nonexistent@example.com", "20100101")
         assert result is None
 
 

@@ -53,7 +53,7 @@ class TestPasswordFunctions:
 class TestTeacherAuthentication:
     """Test teacher authentication function coverage"""
 
-    def test_authenticate_teacher_success(self, db: Session):
+    def test_authenticate_teacher_success(self, db_session: Session):
         """Test successful teacher authentication"""
         # Create teacher with known password
         password = "test_password_123"
@@ -64,22 +64,24 @@ class TestTeacherAuthentication:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
-        db.refresh(teacher)
+        db_session.add(teacher)
+        db_session.commit()
+        db_session.refresh(teacher)
 
         # Authenticate successfully
-        result = authenticate_teacher(db, "auth_test@duotopia.com", password)
+        result = authenticate_teacher(db_session, "auth_test@duotopia.com", password)
         assert result is not None
         assert result.id == teacher.id
         assert result.email == teacher.email
 
-    def test_authenticate_teacher_not_exists(self, db: Session):
+    def test_authenticate_teacher_not_exists(self, db_session: Session):
         """Test authenticating non-existent teacher"""
-        result = authenticate_teacher(db, "nonexistent@duotopia.com", "password")
+        result = authenticate_teacher(
+            db_session, "nonexistent@duotopia.com", "password"
+        )
         assert result is None
 
-    def test_authenticate_teacher_wrong_password(self, db: Session):
+    def test_authenticate_teacher_wrong_password(self, db_session: Session):
         """Test authenticating teacher with wrong password"""
         # Create teacher
         teacher = Teacher(
@@ -89,18 +91,20 @@ class TestTeacherAuthentication:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Try with wrong password
-        result = authenticate_teacher(db, "wrong_pass@duotopia.com", "wrong_password")
+        result = authenticate_teacher(
+            db_session, "wrong_pass@duotopia.com", "wrong_password"
+        )
         assert result is None
 
 
 class TestStudentAuthentication:
     """Test student authentication function coverage"""
 
-    def test_authenticate_student_success(self, db: Session):
+    def test_authenticate_student_success(self, db_session: Session):
         """Test successful student authentication"""
         # Create student with known password
         from datetime import date
@@ -112,22 +116,24 @@ class TestStudentAuthentication:
             password_hash=get_password_hash(password),
             birthdate=date(2000, 1, 1),  # 修正：使用 date 物件而不是字串
         )
-        db.add(student)
-        db.commit()
-        db.refresh(student)
+        db_session.add(student)
+        db_session.commit()
+        db_session.refresh(student)
 
         # Authenticate successfully
-        result = authenticate_student(db, "auth_student@test.com", password)
+        result = authenticate_student(db_session, "auth_student@test.com", password)
         assert result is not None
         assert result.id == student.id
         assert result.email == student.email
 
-    def test_authenticate_student_not_exists(self, db: Session):
+    def test_authenticate_student_not_exists(self, db_session: Session):
         """Test authenticating non-existent student"""
-        result = authenticate_student(db, "nonexistent_student@test.com", "password")
+        result = authenticate_student(
+            db_session, "nonexistent_student@test.com", "password"
+        )
         assert result is None
 
-    def test_authenticate_student_wrong_password(self, db: Session):
+    def test_authenticate_student_wrong_password(self, db_session: Session):
         """Test authenticating student with wrong password"""
         # Create student
         from datetime import date
@@ -138,11 +144,13 @@ class TestStudentAuthentication:
             password_hash=get_password_hash("correct_password"),
             birthdate=date(2000, 1, 1),  # 修正：使用 date 物件而不是字串
         )
-        db.add(student)
-        db.commit()
+        db_session.add(student)
+        db_session.commit()
 
         # Try with wrong password
-        result = authenticate_student(db, "wrong_student@test.com", "wrong_password")
+        result = authenticate_student(
+            db_session, "wrong_student@test.com", "wrong_password"
+        )
         assert result is None
 
 
@@ -173,7 +181,7 @@ class TestAuthEdgeCases:
         assert verify_password(long_password, hashed)
         assert not verify_password("short", hashed)
 
-    def test_case_sensitive_email_auth(self, db: Session):
+    def test_case_sensitive_email_auth(self, db_session: Session):
         """Test that email authentication is case sensitive or insensitive"""
         password = "test_password"
         teacher = Teacher(
@@ -183,19 +191,19 @@ class TestAuthEdgeCases:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Test exact case
-        result1 = authenticate_teacher(db, "CaseTest@Duotopia.com", password)
+        result1 = authenticate_teacher(db_session, "CaseTest@Duotopia.com", password)
         assert result1 is not None
 
         # Test different case
-        authenticate_teacher(db, "casetest@duotopia.com", password)
+        authenticate_teacher(db_session, "casetest@duotopia.com", password)
         # This depends on database collation - might be None or the teacher
         # Both outcomes are valid depending on setup
 
-    def test_whitespace_in_credentials(self, db: Session):
+    def test_whitespace_in_credentials(self, db_session: Session):
         """Test handling whitespace in email and password"""
         password = "test_password"
         teacher = Teacher(
@@ -205,15 +213,15 @@ class TestAuthEdgeCases:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Test with trailing/leading spaces (should probably fail)
-        result = authenticate_teacher(db, " whitespace@duotopia.com ", password)
+        result = authenticate_teacher(db_session, " whitespace@duotopia.com ", password)
         # This should fail as emails with spaces aren't the same
         assert result is None
 
-    def test_null_password_handling(self, db: Session):
+    def test_null_password_handling(self, db_session: Session):
         """Test handling of null/empty passwords in authentication"""
         teacher = Teacher(
             email="nullpass@duotopia.com",
@@ -222,15 +230,15 @@ class TestAuthEdgeCases:
             is_active=True,
             is_demo=False,
         )
-        db.add(teacher)
-        db.commit()
+        db_session.add(teacher)
+        db_session.commit()
 
         # Should authenticate with empty password
-        result = authenticate_teacher(db, "nullpass@duotopia.com", "")
+        result = authenticate_teacher(db_session, "nullpass@duotopia.com", "")
         assert result is not None
 
         # Should not authenticate with non-empty password
-        result2 = authenticate_teacher(db, "nullpass@duotopia.com", "not_empty")
+        result2 = authenticate_teacher(db_session, "nullpass@duotopia.com", "not_empty")
         assert result2 is None
 
 

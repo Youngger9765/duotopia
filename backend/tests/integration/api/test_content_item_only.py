@@ -17,27 +17,29 @@ from models import (
 )
 
 
-def test_content_should_not_have_items_jsonb_field(db: Session):
+def test_content_should_not_have_items_jsonb_field(db_session: Session):
     """測試 Content 不應該有 items JSONB 欄位"""
     # 建立基本測試資料
     teacher = Teacher(
         name="Test Teacher", email="teacher@test.com", password_hash="hash"
     )
-    db.add(teacher)
-    db.commit()
+    db_session.add(teacher)
+    db_session.commit()
 
     program = Program(name="Test Program", description="Test", teacher_id=teacher.id)
-    db.add(program)
-    db.commit()
+    db_session.add(program)
+    db_session.commit()
 
     lesson = Lesson(name="Test Lesson", program_id=program.id)
-    db.add(lesson)
-    db.commit()
+    db_session.add(lesson)
+    db_session.commit()
 
     # 建立 Content
-    content = Content(title="Test Content", lesson_id=lesson.id, type="pronunciation")
-    db.add(content)
-    db.commit()
+    content = Content(
+        title="Test Content", lesson_id=lesson.id, type="reading_assessment"
+    )
+    db_session.add(content)
+    db_session.commit()
 
     # Content 不應該有 items 屬性（JSONB）
     assert not hasattr(content, "items") or content.items is None
@@ -46,25 +48,25 @@ def test_content_should_not_have_items_jsonb_field(db: Session):
     assert hasattr(content, "content_items")
 
 
-def test_create_content_with_content_items(db: Session):
+def test_create_content_with_content_items(db_session: Session):
     """測試建立 Content 時自動建立 ContentItem 記錄"""
     # 準備資料
     teacher = Teacher(name="Teacher", email="t@test.com", password_hash="hash")
-    db.add(teacher)
-    db.commit()
+    db_session.add(teacher)
+    db_session.commit()
 
     program = Program(name="Program", description="Test", teacher_id=teacher.id)
-    db.add(program)
-    db.commit()
+    db_session.add(program)
+    db_session.commit()
 
     lesson = Lesson(name="Lesson", program_id=program.id)
-    db.add(lesson)
-    db.commit()
+    db_session.add(lesson)
+    db_session.commit()
 
     # 建立 Content
-    content = Content(title="Greetings", lesson_id=lesson.id, type="pronunciation")
-    db.add(content)
-    db.commit()
+    content = Content(title="Greetings", lesson_id=lesson.id, type="reading_assessment")
+    db_session.add(content)
+    db_session.commit()
 
     # 建立對應的 ContentItem 記錄
     items_data = [
@@ -80,13 +82,13 @@ def test_create_content_with_content_items(db: Session):
             text=item_data["text"],
             translation=item_data["translation"],
         )
-        db.add(content_item)
+        db_session.add(content_item)
 
-    db.commit()
+    db_session.commit()
 
     # 驗證
     content_items = (
-        db.query(ContentItem)
+        db_session.query(ContentItem)
         .filter_by(content_id=content.id)
         .order_by(ContentItem.order_index)
         .all()
@@ -97,28 +99,28 @@ def test_create_content_with_content_items(db: Session):
     assert content_items[2].text == "How are you?"
 
     # 透過關聯取得
-    db.refresh(content)
+    db_session.refresh(content)
     assert len(content.content_items) == 3
 
 
-def test_api_returns_content_items_not_jsonb(db: Session):
+def test_api_returns_content_items_not_jsonb(db_session: Session):
     """測試 API 返回 ContentItem 資料而非 JSONB"""
     # 建立測試資料
     teacher = Teacher(name="Teacher", email="api@test.com", password_hash="hash")
-    db.add(teacher)
-    db.commit()
+    db_session.add(teacher)
+    db_session.commit()
 
     program = Program(name="Program", description="Test", teacher_id=teacher.id)
-    db.add(program)
-    db.commit()
+    db_session.add(program)
+    db_session.commit()
 
     lesson = Lesson(name="Lesson", program_id=program.id)
-    db.add(lesson)
-    db.commit()
+    db_session.add(lesson)
+    db_session.commit()
 
-    content = Content(title="Numbers", lesson_id=lesson.id, type="pronunciation")
-    db.add(content)
-    db.commit()
+    content = Content(title="Numbers", lesson_id=lesson.id, type="reading_assessment")
+    db_session.add(content)
+    db_session.commit()
 
     # 建立 ContentItem
     for i in range(1, 4):
@@ -128,12 +130,12 @@ def test_api_returns_content_items_not_jsonb(db: Session):
             text=f"Number {i}",
             translation=f"數字 {i}",
         )
-        db.add(item)
-    db.commit()
+        db_session.add(item)
+    db_session.commit()
 
     # 模擬 API 邏輯：取得 Content 的 items
     content_items = (
-        db.query(ContentItem)
+        db_session.query(ContentItem)
         .filter_by(content_id=content.id)
         .order_by(ContentItem.order_index)
         .all()
@@ -157,7 +159,7 @@ def test_api_returns_content_items_not_jsonb(db: Session):
     assert items_response[0]["text"] == "Number 1"
 
 
-def test_student_assignment_uses_content_items(db: Session):
+def test_student_assignment_uses_content_items(db_session: Session):
     """測試學生作業正確使用 ContentItem"""
     # 建立完整測試環境
     teacher = Teacher(name="Teacher", email="assign@test.com", password_hash="hash")
@@ -169,43 +171,45 @@ def test_student_assignment_uses_content_items(db: Session):
         birthdate="2010-01-01",
     )
     db.add_all([teacher, student])
-    db.commit()
+    db_session.commit()
 
     program = Program(name="Program", description="Test", teacher_id=teacher.id)
-    db.add(program)
-    db.commit()
+    db_session.add(program)
+    db_session.commit()
 
     lesson = Lesson(name="Lesson", program_id=program.id)
-    db.add(lesson)
-    db.commit()
+    db_session.add(lesson)
+    db_session.commit()
 
     classroom = Classroom(name="Class A", teacher_id=teacher.id)
-    db.add(classroom)
-    db.commit()
+    db_session.add(classroom)
+    db_session.commit()
 
     # 建立 Content 和 ContentItem
-    content = Content(title="Test Content", lesson_id=lesson.id, type="pronunciation")
-    db.add(content)
-    db.commit()
+    content = Content(
+        title="Test Content", lesson_id=lesson.id, type="reading_assessment"
+    )
+    db_session.add(content)
+    db_session.commit()
 
     content_item = ContentItem(
         content_id=content.id, order_index=0, text="Test item", translation="測試項目"
     )
-    db.add(content_item)
-    db.commit()
+    db_session.add(content_item)
+    db_session.commit()
 
     # 建立作業
     assignment = Assignment(
         title="Test Assignment", classroom_id=classroom.id, teacher_id=teacher.id
     )
-    db.add(assignment)
-    db.commit()
+    db_session.add(assignment)
+    db_session.commit()
 
     assignment_content = AssignmentContent(
         assignment_id=assignment.id, content_id=content.id, order_index=0
     )
-    db.add(assignment_content)
-    db.commit()
+    db_session.add(assignment_content)
+    db_session.commit()
 
     student_assignment = StudentAssignment(
         assignment_id=assignment.id,
@@ -214,12 +218,12 @@ def test_student_assignment_uses_content_items(db: Session):
         title=assignment.title,
         status="NOT_STARTED",
     )
-    db.add(student_assignment)
-    db.commit()
+    db_session.add(student_assignment)
+    db_session.commit()
 
     # 驗證可以透過關聯鏈找到 ContentItem
     assignment_contents = (
-        db.query(AssignmentContent).filter_by(assignment_id=assignment.id).all()
+        db_session.query(AssignmentContent).filter_by(assignment_id=assignment.id).all()
     )
 
     for ac in assignment_contents:
@@ -230,10 +234,10 @@ def test_student_assignment_uses_content_items(db: Session):
         assert content_items[0].text == "Test item"
 
 
-def test_no_jsonb_items_in_database(db: Session):
+def test_no_jsonb_items_in_database(db_session: Session):
     """測試資料庫中不應該有 items JSONB 欄位的資料"""
     # 直接查詢 Content 表
-    contents = db.query(Content).all()
+    contents = db_session.query(Content).all()
 
     for content in contents:
         # 如果 items 屬性還存在，它應該是 None 或空
@@ -241,7 +245,9 @@ def test_no_jsonb_items_in_database(db: Session):
             assert content.items is None or content.items == []
 
         # 應該有對應的 ContentItem 記錄
-        item_count = db.query(ContentItem).filter_by(content_id=content.id).count()
+        item_count = (
+            db_session.query(ContentItem).filter_by(content_id=content.id).count()
+        )
         # 如果 Content 有資料，應該要有 ContentItem
         if content.title and content.lesson_id:
             assert item_count >= 0  # 可能是 0（空內容）或更多

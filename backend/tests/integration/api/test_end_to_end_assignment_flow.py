@@ -23,7 +23,7 @@ from models import (
 )
 
 
-def test_complete_assignment_workflow(db: Session):
+def test_complete_assignment_workflow(db_session: Session):
     """
     測試完整的作業流程：
     1. 教師建立作業
@@ -39,22 +39,22 @@ def test_complete_assignment_workflow(db: Session):
     teacher = Teacher(
         name="Test Teacher", email="teacher@test.com", password_hash="hashed"
     )
-    db.add(teacher)
-    db.flush()
+    db_session.add(teacher)
+    db_session.flush()
 
     # 建立課程架構
     program = Program(name="Test Program", description="Test", teacher_id=teacher.id)
-    db.add(program)
-    db.flush()
+    db_session.add(program)
+    db_session.flush()
 
     lesson = Lesson(name="Test Lesson", program_id=program.id)
-    db.add(lesson)
-    db.flush()
+    db_session.add(lesson)
+    db_session.flush()
 
     # 建立班級
     classroom = Classroom(name="Test Class", teacher_id=teacher.id)
-    db.add(classroom)
-    db.flush()
+    db_session.add(classroom)
+    db_session.flush()
 
     # 建立學生
     from datetime import date
@@ -66,8 +66,8 @@ def test_complete_assignment_workflow(db: Session):
         student_number="20230001",
         birthdate=date(2012, 1, 1),
     )
-    db.add(student)
-    db.flush()
+    db_session.add(student)
+    db_session.flush()
 
     # 建立內容
     content1 = Content(
@@ -87,7 +87,7 @@ def test_complete_assignment_workflow(db: Session):
         ],
     )
     db.add_all([content1, content2])
-    db.flush()
+    db_session.flush()
 
     # 建立 ContentItem
     content_items = []
@@ -100,9 +100,9 @@ def test_complete_assignment_workflow(db: Session):
                 translation=item_data.get("translation", ""),
             )
             content_items.append(content_item)
-            db.add(content_item)
+            db_session.add(content_item)
 
-    db.flush()
+    db_session.flush()
 
     print(f"✅ 建立了 {len(content_items)} 個 ContentItem")
 
@@ -116,8 +116,8 @@ def test_complete_assignment_workflow(db: Session):
         classroom_id=classroom.id,
         teacher_id=teacher.id,
     )
-    db.add(assignment)
-    db.flush()
+    db_session.add(assignment)
+    db_session.flush()
 
     # 建立 AssignmentContent 關聯
     assignment_contents = [
@@ -129,7 +129,7 @@ def test_complete_assignment_workflow(db: Session):
         ),
     ]
     db.add_all(assignment_contents)
-    db.flush()
+    db_session.flush()
 
     # 為學生建立 StudentAssignment（不含 content_id！）
     student_assignment = StudentAssignment(
@@ -141,8 +141,8 @@ def test_complete_assignment_workflow(db: Session):
         status=AssignmentStatus.NOT_STARTED,
         is_active=True,
     )
-    db.add(student_assignment)
-    db.flush()
+    db_session.add(student_assignment)
+    db_session.flush()
 
     # 為每個內容建立進度記錄
     for idx, ac in enumerate(assignment_contents, 1):
@@ -152,9 +152,9 @@ def test_complete_assignment_workflow(db: Session):
             status=AssignmentStatus.NOT_STARTED,
             order_index=idx,
         )
-        db.add(progress)
+        db_session.add(progress)
 
-    db.commit()
+    db_session.commit()
 
     print(f"✅ 建立作業：{assignment.title}")
     print("✅ 建立 StudentAssignment（無 content_id）")
@@ -188,16 +188,16 @@ def test_complete_assignment_workflow(db: Session):
 
     # 模擬 get_assignment_activities API 邏輯
     progress_records = (
-        db.query(StudentContentProgress)
+        db_session.query(StudentContentProgress)
         .filter(StudentContentProgress.student_assignment_id == student_assignment.id)
         .all()
     )
 
     activities = []
     for progress in progress_records:
-        content = db.query(Content).filter_by(id=progress.content_id).first()
+        content = db_session.query(Content).filter_by(id=progress.content_id).first()
         content_items_for_content = (
-            db.query(ContentItem)
+            db_session.query(ContentItem)
             .filter_by(content_id=content.id)
             .order_by(ContentItem.order_index)
             .all()
@@ -235,7 +235,7 @@ def test_complete_assignment_workflow(db: Session):
     print(f"📍 對 ContentItem {content_item_id} 錄音: '{first_item['text']}'")
 
     # 模擬錄音上傳 API
-    content_item = db.query(ContentItem).filter_by(id=content_item_id).first()
+    content_item = db_session.query(ContentItem).filter_by(id=content_item_id).first()
     assert content_item is not None
 
     # 建立或更新 StudentItemProgress
@@ -245,8 +245,8 @@ def test_complete_assignment_workflow(db: Session):
         recording_url="https://storage.googleapis.com/test/recording.webm",
         status=AssignmentStatus.SUBMITTED,
     )
-    db.add(item_progress)
-    db.commit()
+    db_session.add(item_progress)
+    db_session.commit()
 
     print(f"✅ 建立 StudentItemProgress for ContentItem {content_item_id}")
 
@@ -255,7 +255,7 @@ def test_complete_assignment_workflow(db: Session):
 
     # 檢查資料一致性
     item_progress_check = (
-        db.query(StudentItemProgress)
+        db_session.query(StudentItemProgress)
         .filter_by(
             student_assignment_id=student_assignment.id, content_item_id=content_item_id
         )
@@ -267,10 +267,14 @@ def test_complete_assignment_workflow(db: Session):
     assert item_progress_check.status == AssignmentStatus.SUBMITTED
 
     # 檢查可以反向查詢
-    content_item_check = db.query(ContentItem).filter_by(id=content_item_id).first()
+    content_item_check = (
+        db_session.query(ContentItem).filter_by(id=content_item_id).first()
+    )
     content_check = content_item_check.content
     assignment_content_check = (
-        db.query(AssignmentContent).filter_by(content_id=content_check.id).first()
+        db_session.query(AssignmentContent)
+        .filter_by(content_id=content_check.id)
+        .first()
     )
     assignment_check = assignment_content_check.assignment
 

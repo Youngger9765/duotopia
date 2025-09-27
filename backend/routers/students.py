@@ -416,8 +416,25 @@ async def get_assignment_activities(
                                         "completeness_score": float(
                                             ai_feedback.get("completeness_score", 0)
                                         ),
+                                        "prosody_score": ai_feedback.get(
+                                            "prosody_score"
+                                        ),
+                                        # 舊版相容性
                                         "word_details": ai_feedback.get(
                                             "word_details", []
+                                        ),
+                                        # 🔥 新版詳細分析資料
+                                        "detailed_words": ai_feedback.get(
+                                            "detailed_words", []
+                                        ),
+                                        "reference_text": ai_feedback.get(
+                                            "reference_text", ""
+                                        ),
+                                        "recognized_text": ai_feedback.get(
+                                            "recognized_text", ""
+                                        ),
+                                        "analysis_summary": ai_feedback.get(
+                                            "analysis_summary", {}
                                         ),
                                         "ai_feedback": item_progress.ai_feedback,
                                         "assessed_at": item_progress.ai_assessed_at.isoformat()

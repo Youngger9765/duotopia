@@ -65,8 +65,13 @@ class AssessmentResponse(BaseModel):
     fluency_score: float
     completeness_score: float
     pronunciation_score: float
-    words: List[Dict[str, Any]]
+    words: List[Dict[str, Any]]  # 保留舊版相容性
+    detailed_words: Optional[List[Dict[str, Any]]] = None  # 新版詳細資料
+    word_details: Optional[List[Dict[str, Any]]] = None  # 舊版簡化資料
     reference_text: str
+    recognized_text: Optional[str] = None
+    prosody_score: Optional[float] = None
+    analysis_summary: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
 
@@ -158,6 +163,9 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             subscription=speech_key, region=speech_region
         )
 
+        # 🔥 設定語言為美式英語以支援韻律評估
+        speech_config.speech_recognition_language = "en-US"
+
         # 設定發音評估 - 啟用韻律評估
         pronunciation_config = speechsdk.PronunciationAssessmentConfig(
             reference_text=reference_text,
@@ -169,8 +177,10 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         # 啟用韻律評估（如果 SDK 支援）
         try:
             pronunciation_config.enable_prosody_assessment = True
-        except Exception:
-            logger.info("Prosody assessment not available in current SDK version")
+            logger.info("✅ Prosody assessment enabled successfully")
+        except Exception as e:
+            logger.warning(f"⚠️ Prosody assessment not available: {e}")
+            logger.info("韻律評估可能需要特定的 SDK 版本或語言支援")
 
         # 從記憶體創建音訊流
         audio_stream = speechsdk.audio.PushAudioInputStream()
@@ -226,81 +236,106 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
 
             # 嘗試取得韻律分數
             if hasattr(pronunciation_result, "prosody_score"):
-                assessment_result["prosody_score"] = pronunciation_result.prosody_score
+                prosody_score = pronunciation_result.prosody_score
+                assessment_result["prosody_score"] = prosody_score
+                logger.info(f"🎵 韻律分數: {prosody_score}")
+            else:
+                assessment_result["prosody_score"] = None
+                logger.info("ℹ️ 韻律分數不可用 - 可能因為語言不支援或 SDK 版本限制")
 
-            # 解析單字詳細資料（包含音節和音素）
-            logger.debug(f"Parsing {len(pronunciation_result.words)} words...")
-            for idx, word in enumerate(pronunciation_result.words):
-                logger.debug(f"Processing word {idx}: {word.word}")
+            # 🔥 修復：直接解析 JSON 資料而不依賴 SDK 物件屬性
+            # Azure Speech SDK 的 Python 物件沒有正確暴露 Syllables/Phonemes 屬性
+            # 但 result.json 包含完整的資料
+            words_from_json = nbest.get("Words", [])
+            logger.debug(f"Parsing {len(words_from_json)} words from JSON...")
+
+            for idx, word_json in enumerate(words_from_json):
+                logger.debug(f"Processing word {idx}: {word_json.get('Word')}")
                 try:
-                    # 檢查 error_type 是否有 name 屬性
-                    error_type = None
-                    if word.error_type:
-                        if hasattr(word.error_type, "name"):
-                            error_type = word.error_type.name
-                        else:
-                            error_type = str(word.error_type)
-
                     # 建立單字資料結構
                     word_data = {
                         "index": idx,
-                        "word": word.word,
-                        "accuracy_score": word.accuracy_score,
-                        "error_type": error_type,
+                        "word": word_json.get("Word", ""),
+                        "accuracy_score": word_json.get(
+                            "PronunciationAssessment", {}
+                        ).get("AccuracyScore", 0),
+                        "error_type": word_json.get("PronunciationAssessment", {}).get(
+                            "ErrorType", "None"
+                        ),
                         "syllables": [],
                         "phonemes": [],
                     }
 
-                    # 解析音節資訊（如果有）
-                    if hasattr(word, "syllables") and word.syllables:
-                        for syl_idx, syllable in enumerate(word.syllables):
-                            syllable_data = {
-                                "index": syl_idx,
-                                "syllable": syllable.syllable
-                                if hasattr(syllable, "syllable")
-                                else "",
-                                "accuracy_score": syllable.accuracy_score
-                                if hasattr(syllable, "accuracy_score")
-                                else 0,
-                            }
-                            word_data["syllables"].append(syllable_data)
-                            logger.debug(f"  Syllable {syl_idx}: {syllable_data}")
+                    # 解析音節資訊（從 JSON）
+                    syllables_json = word_json.get("Syllables", [])
+                    logger.debug(
+                        f"Found {len(syllables_json)} syllables for word '{word_data['word']}'"
+                    )
 
-                    # 解析音素資訊（如果有）
-                    if hasattr(word, "phonemes") and word.phonemes:
-                        for pho_idx, phoneme in enumerate(word.phonemes):
-                            phoneme_data = {
-                                "index": pho_idx,
-                                "phoneme": phoneme.phoneme
-                                if hasattr(phoneme, "phoneme")
-                                else "",
-                                "accuracy_score": phoneme.accuracy_score
-                                if hasattr(phoneme, "accuracy_score")
-                                else 0,
-                            }
-                            word_data["phonemes"].append(phoneme_data)
-                            logger.debug(f"  Phoneme {pho_idx}: {phoneme_data}")
+                    for syl_idx, syllable_json in enumerate(syllables_json):
+                        syllable_data = {
+                            "index": syl_idx,
+                            "syllable": syllable_json.get("Syllable", ""),
+                            "accuracy_score": syllable_json.get(
+                                "PronunciationAssessment", {}
+                            ).get("AccuracyScore", 0),
+                        }
+                        word_data["syllables"].append(syllable_data)
+                        logger.debug(f"  Syllable {syl_idx}: {syllable_data}")
+
+                    # 解析音素資訊（從 JSON）
+                    phonemes_json = word_json.get("Phonemes", [])
+                    logger.debug(
+                        f"Found {len(phonemes_json)} phonemes for word '{word_data['word']}'"
+                    )
+
+                    for pho_idx, phoneme_json in enumerate(phonemes_json):
+                        phoneme_data = {
+                            "index": pho_idx,
+                            "phoneme": phoneme_json.get("Phoneme", ""),
+                            "accuracy_score": phoneme_json.get(
+                                "PronunciationAssessment", {}
+                            ).get("AccuracyScore", 0),
+                        }
+                        word_data["phonemes"].append(phoneme_data)
+                        logger.debug(f"  Phoneme {pho_idx}: {phoneme_data}")
 
                     assessment_result["words"].append(word_data)
                     logger.debug(
-                        f"Processed word: {word.word} (score: {word.accuracy_score}, "
+                        f"✅ Processed word: {word_data['word']} (score: {word_data['accuracy_score']}, "
                         f"syllables: {len(word_data['syllables'])}, phonemes: {len(word_data['phonemes'])})"
                     )
+
                 except Exception as e:
                     logger.error(f"Error processing word {idx}: {e}")
-                    logger.debug(f"Word object details: {word}")
+                    logger.debug(f"Word JSON details: {word_json}")
                     # 不要中斷，繼續處理其他單字
                     word_data = {
                         "index": idx,
-                        "word": word.word if hasattr(word, "word") else "",
-                        "accuracy_score": word.accuracy_score
-                        if hasattr(word, "accuracy_score")
+                        "word": word_json.get("Word", "") if word_json else "",
+                        "accuracy_score": word_json.get(
+                            "PronunciationAssessment", {}
+                        ).get("AccuracyScore", 0)
+                        if word_json
                         else 0,
                         "error_type": "ProcessingError",
                         "syllables": [],
                         "phonemes": [],
                     }
                     assessment_result["words"].append(word_data)
+
+            # 🔥 修復：在原始結果中加入 detailed_words 便於前端使用
+            assessment_result["detailed_words"] = assessment_result["words"]
+
+            # 為相容性加入 word_details
+            assessment_result["word_details"] = [
+                {
+                    "word": w["word"],
+                    "accuracy_score": w["accuracy_score"],
+                    "error_type": w["error_type"],
+                }
+                for w in assessment_result["words"]
+            ]
 
             return assessment_result
 
@@ -519,15 +554,20 @@ async def assess_pronunciation_endpoint(
         student_assignment_id=student_assignment_id,
     )
 
-    # 回傳結果
+    # 回傳結果 - 包含完整的詳細資料
     return AssessmentResponse(
         id=updated_progress.id,
         accuracy_score=assessment_result["accuracy_score"],
         fluency_score=assessment_result["fluency_score"],
         completeness_score=assessment_result["completeness_score"],
         pronunciation_score=assessment_result["pronunciation_score"],
-        words=assessment_result["words"],
+        words=assessment_result["words"],  # 保留舊版相容性
+        detailed_words=assessment_result.get("detailed_words"),  # 🔥 新版詳細資料
+        word_details=assessment_result.get("word_details"),  # 舊版簡化資料
         reference_text=reference_text,
+        recognized_text=assessment_result.get("recognized_text"),
+        prosody_score=assessment_result.get("prosody_score"),
+        analysis_summary=assessment_result.get("analysis_summary"),
         created_at=updated_progress.submitted_at,
     )
 

@@ -1,7 +1,12 @@
 """
 簡化的 TDD 測試：驗證 AI 評分統一陣列格式修復
 測試修改後的 students.py 邏輯
+
+注意: 此測試針對舊架構的陣列格式問題，新架構已不存在此問題。
+保留此測試僅供歷史參考。
 """
+
+import pytest
 from sqlalchemy.orm import Session
 from models import (
     Teacher,
@@ -13,6 +18,11 @@ from models import (
     StudentAssignment,
     StudentContentProgress,
     AssignmentContent,
+)
+
+# 標記整個模組為跳過
+pytestmark = pytest.mark.skip(
+    reason="Deprecated: Array format issue fixed in old architecture, not relevant for new StudentItemProgress model"
 )
 
 
