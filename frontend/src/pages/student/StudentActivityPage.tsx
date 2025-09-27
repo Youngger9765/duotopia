@@ -748,7 +748,13 @@ export default function StudentActivityPage() {
             fluency_score: item.ai_assessment.fluency_score,
             pronunciation_score: item.ai_assessment.pronunciation_score,
             completeness_score: item.ai_assessment.completeness_score || 0,
-            word_details: item.ai_assessment.word_details || []
+            prosody_score: item.ai_assessment.prosody_score,
+            // 🔥 傳遞完整的詳細分析資料
+            word_details: item.ai_assessment.word_details || [],
+            detailed_words: item.ai_assessment.detailed_words || [],
+            reference_text: item.ai_assessment.reference_text || '',
+            recognized_text: item.ai_assessment.recognized_text || '',
+            analysis_summary: item.ai_assessment.analysis_summary || {}
           };
         }
       });

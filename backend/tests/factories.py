@@ -117,10 +117,24 @@ class TestDataFactory:
             lesson_id=lesson.id,
             title=title,
             type="READING_ASSESSMENT",
-            items=items,
         )
         db.add(content)
         db.commit()
+
+        # 建立 ContentItem 關聯物件
+        from models import ContentItem
+
+        for idx, item in enumerate(items):
+            content_item = ContentItem(
+                content_id=content.id,
+                text=item.get("text", ""),
+                translation=item.get("translation", ""),
+                audio_url=item.get("audio_url", ""),
+                order_index=idx,
+            )
+            db.add(content_item)
+        db.commit()
+
         return content
 
     @staticmethod
@@ -233,6 +247,30 @@ class TestDataFactory:
                 ],
             }
 
+        # 建立 StudentItemProgress（新系統）而非 StudentContentProgress
+        from models import StudentItemProgress
+
+        item_progress = None
+        # 獲取第一個 ContentItem
+        content_item = content.content_items[0] if content.content_items else None
+
+        if content_item:
+            # 建立 StudentItemProgress 記錄
+            import json
+
+            item_progress = StudentItemProgress(
+                student_assignment_id=student_assignment.id,
+                content_item_id=content_item.id,
+                recording_url="https://storage.googleapis.com/test-bucket/recording.webm",
+                ai_feedback=json.dumps(ai_scores_data)
+                if ai_scores_data
+                else None,  # 轉換為 JSON 字串
+                status="SUBMITTED",
+            )
+            db.add(item_progress)
+            db.commit()
+
+        # 為了相容性，也建立舊的 StudentContentProgress（某些測試可能仍需要）
         progress = StudentContentProgress(
             student_assignment_id=student_assignment.id,
             content_id=content.id,

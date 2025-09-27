@@ -46,28 +46,7 @@ class TestAIFeedbackIntegration:
             ],
         )
 
-        # Override the default progress response data and AI scores
-        progress = data["progress"]
-        progress.response_data = {
-            "audio_url": "https://storage.googleapis.com/test-bucket/recording.webm",
-            "student_answer": "Hello how are you today",
-            "transcript": "Hello how are you today",
-        }
-        progress.ai_scores = {
-            "accuracy_score": 85.5,
-            "fluency_score": 78.2,
-            "completeness_score": 92.0,
-            "pronunciation_score": 88.7,
-            "word_details": [
-                {"word": "Hello", "accuracy_score": 95.0, "error_type": None},
-                {
-                    "word": "how",
-                    "accuracy_score": 82.5,
-                    "error_type": "slight_mispronunciation",
-                },
-            ],
-        }
-        db_session.commit()
+        # The progress data is already set in the factory, no need to override
 
         # Call the API function directly (bypassing auth for testing)
         try:

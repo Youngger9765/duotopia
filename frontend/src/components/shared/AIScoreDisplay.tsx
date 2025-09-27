@@ -1,7 +1,7 @@
 import { Brain, Star, AlertCircle, Mic } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -79,6 +79,14 @@ export default function AIScoreDisplay({
   const wordsToDisplay = scores.detailed_words || scores.word_details || [];
   const hasDetailedData = !!(scores.detailed_words && scores.detailed_words.length > 0);
 
+  // 當有詳細資料時，預設顯示詳細分析標籤（但允許用戶切換）
+  useEffect(() => {
+    if (hasDetailedData && selectedTab === 'overview') {
+      // 只在初始載入時自動切換，不要在用戶手動切換後再次自動切換
+      setSelectedTab('detailed');
+    }
+  }, [hasDetailedData]); // 移除 selectedTab 依賴，避免無限循環
+
   // Calculate overall score if not provided
   const overallScore = scores.overall_score ||
     Math.round(
@@ -126,7 +134,7 @@ export default function AIScoreDisplay({
       </div>
 
       {/* 總體分數 */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {/* 總體發音 */}
         <div className="bg-white rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-purple-600">
@@ -159,15 +167,6 @@ export default function AIScoreDisplay({
           <div className="text-xs text-gray-600 mt-1">完整度</div>
         </div>
 
-        {/* 韻律（如果有） */}
-        {scores.prosody_score !== undefined && (
-          <div className="bg-white rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {Math.round(scores.prosody_score)}
-            </div>
-            <div className="text-xs text-gray-600 mt-1">韻律</div>
-          </div>
-        )}
       </div>
 
       {/* 文本對比（如果有） */}
@@ -189,10 +188,25 @@ export default function AIScoreDisplay({
       {/* 切換視圖標籤 */}
       {showDetailed && hasDetailedData && (
         <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as 'overview' | 'detailed' | 'phoneme')} className="mb-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">總覽</TabsTrigger>
-            <TabsTrigger value="detailed">詳細分析</TabsTrigger>
-            <TabsTrigger value="phoneme">音素層級</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+            <TabsTrigger
+              value="overview"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
+            >
+              總覽
+            </TabsTrigger>
+            <TabsTrigger
+              value="detailed"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
+            >
+              詳細分析
+            </TabsTrigger>
+            <TabsTrigger
+              value="phoneme"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
+            >
+              音素層級
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -229,27 +243,32 @@ export default function AIScoreDisplay({
 
           <TabsContent value="detailed" className="mt-4 space-y-3">
             {/* Word → Syllable → Phoneme 鑽取視圖 */}
-            <Accordion type="single" collapsible className="w-full">
-              {scores.detailed_words?.map((word) => (
-                <AccordionItem key={word.index} value={`word-${word.index}`}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{word.word}</span>
-                        <Badge
-                          variant={word.accuracy_score >= thresholds.word ? 'default' : 'destructive'}
-                          className="text-xs"
-                        >
-                          {Math.round(word.accuracy_score)}
-                        </Badge>
-                        {word.error_type && word.error_type !== 'None' && (
-                          <Badge variant="outline" className="text-xs">
-                            {word.error_type}
-                          </Badge>
-                        )}
+            <div className="space-y-2">
+              <h5 className="text-sm font-semibold text-gray-700">單字發音詳情：</h5>
+              <Accordion type="single" collapsible className="w-full space-y-2">
+                {scores.detailed_words?.map((word) => (
+                  <AccordionItem key={word.index} value={`word-${word.index}`} className="border-none">
+                    <AccordionTrigger className="hover:no-underline p-0">
+                      <div className={cn(
+                        "border rounded-lg px-3 py-1.5 text-sm font-medium w-full flex items-center justify-between",
+                        getScoreColor(word.accuracy_score, 'word').bg,
+                        getScoreColor(word.accuracy_score, 'word').border,
+                        getScoreColor(word.accuracy_score, 'word').text,
+                        "hover:shadow-md transition-all duration-200"
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{word.word}</span>
+                          <span className="text-xs opacity-80">({Math.round(word.accuracy_score)})</span>
+                          {word.error_type && word.error_type !== 'None' && (
+                            <span className="text-xs">⚠️</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs opacity-60">
+                          <span>展開詳情</span>
+                          <span className="transform transition-transform duration-200 group-data-[state=open]:rotate-180">▼</span>
+                        </div>
                       </div>
-                    </div>
-                  </AccordionTrigger>
+                    </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3 pl-4">
                       {/* 音節分析 */}
@@ -302,7 +321,8 @@ export default function AIScoreDisplay({
                   </AccordionContent>
                 </AccordionItem>
               ))}
-            </Accordion>
+              </Accordion>
+            </div>
           </TabsContent>
 
           <TabsContent value="phoneme" className="mt-4">

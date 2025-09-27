@@ -296,6 +296,16 @@ export default function GroupedQuestionsTemplate({
         currentProgressId
       });
 
+      console.log('🚨 詳細 progress_id 除錯:', {
+        'progressIds 陣列': progressIds,
+        'progressIds 長度': progressIds?.length,
+        'progressIds 型別': typeof progressIds,
+        'progressId (fallback)': progressId,
+        'currentQuestionIndex': currentQuestionIndex,
+        '計算出的 currentProgressId': currentProgressId,
+        '是否為字串': typeof currentProgressId === 'string' ? true : false
+      });
+
       formData.append('progress_id', String(currentProgressId));
       formData.append('item_index', String(currentQuestionIndex)); // 傳遞題目索引
 
@@ -334,6 +344,24 @@ export default function GroupedQuestionsTemplate({
           toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
         }
       );
+
+      // 🔍 詳細記錄AI評估結果
+      console.log('🎯 AI評估完整回應:', JSON.stringify(result, null, 2));
+      console.log('🔍 詳細分析 - detailed_words:', result.detailed_words);
+      console.log('🔍 basic word_details:', result.word_details);
+      console.log('🔍 有detailed_words嗎?', !!(result.detailed_words && result.detailed_words.length > 0));
+
+      if (result.detailed_words && result.detailed_words.length > 0) {
+        result.detailed_words.forEach((word: {
+          word: string;
+          syllables?: Array<{ index: number; syllable: string; accuracy_score: number }>;
+          phonemes?: Array<{ index: number; phoneme: string; accuracy_score: number }>
+        }, idx: number) => {
+          console.log(`🔍 Word ${idx}:`, word.word);
+          console.log(`   - syllables:`, word.syllables?.length || 0, word.syllables);
+          console.log(`   - phonemes:`, word.phonemes?.length || 0, word.phonemes);
+        });
+      }
 
       // Store result
       setAssessmentResults(prev => ({
@@ -721,6 +749,7 @@ export default function GroupedQuestionsTemplate({
 
               {/* AI Score Display - 使用共用元件 */}
               <AIScoreDisplay
+                key={`assessment-${currentQuestionIndex}-${assessmentResults[currentQuestionIndex]?.detailed_words ? 'detailed' : 'basic'}`}
                 scores={assessmentResults[currentQuestionIndex]}
                 hasRecording={true}
                 title="AI 發音評估結果"

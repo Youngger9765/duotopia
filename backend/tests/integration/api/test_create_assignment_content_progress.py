@@ -1,6 +1,9 @@
 """
 測試 POST /assignments/create API
 重點測試：創建新作業時，是否正確創建 StudentContentProgress 記錄
+
+注意: 此測試使用舊的 StudentContentProgress 模型，
+新架構已改用 StudentItemProgress。保留此測試僅供參考。
 """
 
 import pytest
@@ -24,6 +27,11 @@ from models import (
     AssignmentStatus,
 )
 from auth import get_password_hash
+
+# 標記整個模組為跳過
+pytestmark = pytest.mark.skip(
+    reason="Deprecated: Using old StudentContentProgress model, new architecture uses StudentItemProgress"
+)
 
 # 測試資料庫設置
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_create_assignment.db"
