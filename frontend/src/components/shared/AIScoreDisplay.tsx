@@ -1,15 +1,9 @@
 import { Brain, Star, AlertCircle, Mic } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 
 interface PhonemeDetail {
   index: number;
@@ -71,7 +65,7 @@ export default function AIScoreDisplay({
   title = "AI 自動評分結果",
   showDetailed = true
 }: AIScoreDisplayEnhancedProps) {
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'detailed' | 'phoneme'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'phoneme'>('overview');
 
   if (!scores) return null;
 
@@ -79,13 +73,7 @@ export default function AIScoreDisplay({
   const wordsToDisplay = scores.detailed_words || scores.word_details || [];
   const hasDetailedData = !!(scores.detailed_words && scores.detailed_words.length > 0);
 
-  // 當有詳細資料時，預設顯示詳細分析標籤（但允許用戶切換）
-  useEffect(() => {
-    if (hasDetailedData && selectedTab === 'overview') {
-      // 只在初始載入時自動切換，不要在用戶手動切換後再次自動切換
-      setSelectedTab('detailed');
-    }
-  }, [hasDetailedData]); // 移除 selectedTab 依賴，避免無限循環
+  // 保持預設顯示總覽
 
   // Calculate overall score if not provided
   const overallScore = scores.overall_score ||
@@ -172,19 +160,13 @@ export default function AIScoreDisplay({
 
       {/* 切換視圖標籤 */}
       {showDetailed && hasDetailedData && (
-        <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as 'overview' | 'detailed' | 'phoneme')} className="mb-4">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+        <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as 'overview' | 'phoneme')} className="mb-4">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
             <TabsTrigger
               value="overview"
               className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
             >
               總覽
-            </TabsTrigger>
-            <TabsTrigger
-              value="detailed"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
-            >
-              詳細分析
             </TabsTrigger>
             <TabsTrigger
               value="phoneme"
@@ -226,89 +208,6 @@ export default function AIScoreDisplay({
             </div>
           </TabsContent>
 
-          <TabsContent value="detailed" className="mt-4 space-y-3">
-            {/* Word → Syllable → Phoneme 鑽取視圖 */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-semibold text-gray-700">單字發音詳情：</h5>
-              <Accordion type="single" collapsible className="w-full space-y-2">
-                {scores.detailed_words?.map((word) => (
-                  <AccordionItem key={word.index} value={`word-${word.index}`} className="border-none">
-                    <AccordionTrigger className="hover:no-underline p-0">
-                      <div className={cn(
-                        "border rounded-lg px-3 py-1.5 text-sm font-medium w-full flex items-center justify-between",
-                        getScoreColor(word.accuracy_score, 'word').bg,
-                        getScoreColor(word.accuracy_score, 'word').border,
-                        getScoreColor(word.accuracy_score, 'word').text,
-                        "hover:shadow-md transition-all duration-200"
-                      )}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{word.word}</span>
-                          <span className="text-xs opacity-80">({Math.round(word.accuracy_score)})</span>
-                          {word.error_type && word.error_type !== 'None' && (
-                            <span className="text-xs">⚠️</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs opacity-60">
-                          <span>展開詳情</span>
-                          <span className="transform transition-transform duration-200 group-data-[state=open]:rotate-180">▼</span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 pl-4">
-                      {/* 音節分析 */}
-                      {word.syllables && word.syllables.length > 0 && (
-                        <div>
-                          <div className="text-xs font-medium text-gray-600 mb-2">音節分析：</div>
-                          <div className="flex flex-wrap gap-2">
-                            {word.syllables.map(syllable => {
-                              const colors = getScoreColor(syllable.accuracy_score, 'syllable');
-                              return (
-                                <Badge
-                                  key={syllable.index}
-                                  className={cn("text-xs", colors.bg, colors.text)}
-                                >
-                                  {syllable.syllable}: {Math.round(syllable.accuracy_score)}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 音素分析 */}
-                      {word.phonemes && word.phonemes.length > 0 && (
-                        <div>
-                          <div className="text-xs font-medium text-gray-600 mb-2">音素分析：</div>
-                          <div className="flex flex-wrap gap-1">
-                            {word.phonemes.map(phoneme => {
-                              const score = phoneme.accuracy_score;
-                              const colors = getScoreColor(score, 'phoneme');
-
-                              return (
-                                <div
-                                  key={phoneme.index}
-                                  className={cn(
-                                    "px-2 py-1 rounded text-xs font-mono",
-                                    colors.bg,
-                                    colors.text
-                                  )}
-                                  title={`音素: ${phoneme.phoneme}, 分數: ${Math.round(score)}`}
-                                >
-                                  /{phoneme.phoneme}/ {Math.round(score)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-              </Accordion>
-            </div>
-          </TabsContent>
 
           <TabsContent value="phoneme" className="mt-4">
             {/* 音素層級總覽 */}
@@ -432,7 +331,6 @@ export default function AIScoreDisplay({
       {/* AI 評語提示 */}
       <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
         💡 提示：AI 評分僅供參考，請根據學生實際表現進行最終評分
-        {hasDetailedData && " | 🎯 點擊單字查看詳細音素分析"}
       </div>
     </div>
   );
