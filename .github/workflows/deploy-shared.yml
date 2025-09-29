@@ -15,11 +15,11 @@ on:
       - 'pyproject.toml'
       - 'setup.py'
       - 'setup.cfg'
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
-      - 'docs/**'
+      # 排除不需要的檔案
+      - '!**.md'
+      - '!LICENSE'
+      - '!.gitignore'
+      - '!docs/**'
 
 jobs:
   detect-required-deployments:

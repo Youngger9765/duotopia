@@ -7,18 +7,17 @@ on:
     paths:
       # 前端相關檔案
       - 'frontend/**'
+      - '!frontend/**/*.md'
+      - '!frontend/tests/**'
+      - '!frontend/**/*.test.ts'
+      - '!frontend/**/*.test.tsx'
+      - '!frontend/**/*.spec.ts'
+      - '!frontend/**/*.spec.tsx'
       - 'package*.json'
       - 'tsconfig*.json'
       - '.eslintrc*'
       - '.prettierrc*'
       - '.github/workflows/deploy-frontend.yml'
-    paths-ignore:
-      - '**.md'
-      - 'frontend/tests/**'  # 測試檔案變更不觸發部署
-      - '**/*.test.ts'
-      - '**/*.test.tsx'
-      - '**/*.spec.ts'
-      - '**/*.spec.tsx'
 
 env:
   PROJECT_ID: duotopia-472708
