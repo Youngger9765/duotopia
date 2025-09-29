@@ -92,7 +92,7 @@ function App() {
 
       {/* Admin Pages - No Auth Required */}
       <Route path="/admin/monitoring" element={<AdminMonitoringPage />} />
-      
+
       {/* Debug 頁面 */}
       <Route path="/debug" element={<DebugPage />} />
 

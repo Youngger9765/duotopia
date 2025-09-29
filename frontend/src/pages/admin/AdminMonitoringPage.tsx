@@ -119,14 +119,14 @@ export default function AdminMonitoringPage() {
   // Setup auto-refresh
   useEffect(() => {
     fetchMonitoringData();
-    
+
     // Only auto-refresh if enabled
     if (autoRefreshEnabled) {
       intervalRef.current = setInterval(() => {
         fetchMonitoringData();
       }, 5000);
     }
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -184,7 +184,7 @@ export default function AdminMonitoringPage() {
             </Button>
           </div>
         </div>
-        
+
         {/* Auto-refresh toggle */}
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <input
@@ -212,7 +212,7 @@ export default function AdminMonitoringPage() {
           <Zap className="w-5 h-5 mr-2" />
           即時測試工具 - 真實錄音與評分
         </h2>
-        
+
         <TestRecordingPanel />
       </div>
 
@@ -227,7 +227,7 @@ export default function AdminMonitoringPage() {
             TODO: 待連接真實數據
           </Badge>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-6">
           {/* Audio Upload Status */}
           <Card className="bg-gray-50">
@@ -254,7 +254,7 @@ export default function AdminMonitoringPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
@@ -266,12 +266,12 @@ export default function AdminMonitoringPage() {
                         失敗: {audioStatus.failed}
                       </span>
                     </div>
-                    <Progress 
-                      value={getSuccessRate(audioStatus.successful, audioStatus.total_uploads)} 
+                    <Progress
+                      value={getSuccessRate(audioStatus.successful, audioStatus.total_uploads)}
                       className="h-2"
                     />
                   </div>
-                  
+
                   <div className="pt-2 border-t text-xs text-gray-500">
                     最後更新: {formatTimestamp(audioStatus.last_updated)}
                   </div>
@@ -307,7 +307,7 @@ export default function AdminMonitoringPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
@@ -319,17 +319,17 @@ export default function AdminMonitoringPage() {
                         失敗: {aiStatus.failed}
                       </span>
                     </div>
-                    <Progress 
-                      value={getSuccessRate(aiStatus.successful, aiStatus.total_analyses)} 
+                    <Progress
+                      value={getSuccessRate(aiStatus.successful, aiStatus.total_analyses)}
                       className="h-2"
                     />
                   </div>
-                  
+
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="w-4 h-4 mr-1" />
                     平均處理時間: {aiStatus.avg_processing_time}秒
                   </div>
-                  
+
                   <div className="pt-2 border-t text-xs text-gray-500">
                     最後更新: {formatTimestamp(aiStatus.last_updated)}
                   </div>
@@ -353,7 +353,7 @@ export default function AdminMonitoringPage() {
             TODO: 待連接真實數據
           </Badge>
         </div>
-        
+
         {retryStats && (
           <div className="grid md:grid-cols-2 gap-6">
             {/* Audio Upload Retry Stats */}
@@ -374,7 +374,7 @@ export default function AdminMonitoringPage() {
                       重試後失敗: {retryStats.audio_upload.failed_after_retry}
                     </span>
                   </div>
-                  
+
                   <div className="pt-2 border-t">
                     <p className="text-sm text-gray-500 mb-2">重試分布</p>
                     <div className="space-y-1">
@@ -382,7 +382,7 @@ export default function AdminMonitoringPage() {
                         <div key={attempts} className="flex items-center text-sm">
                           <span className="w-20">第 {attempts} 次:</span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
-                            <div 
+                            <div
                               className="bg-blue-500 h-4 rounded-full"
                               style={{ width: `${(count / retryStats.audio_upload.total_retries) * 100}%` }}
                             />
@@ -414,7 +414,7 @@ export default function AdminMonitoringPage() {
                       重試後失敗: {retryStats.ai_analysis.failed_after_retry}
                     </span>
                   </div>
-                  
+
                   <div className="pt-2 border-t">
                     <p className="text-sm text-gray-500 mb-2">重試分布</p>
                     <div className="space-y-1">
@@ -422,7 +422,7 @@ export default function AdminMonitoringPage() {
                         <div key={attempts} className="flex items-center text-sm">
                           <span className="w-20">第 {attempts} 次:</span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
-                            <div 
+                            <div
                               className="bg-purple-500 h-4 rounded-full"
                               style={{ width: `${(count / retryStats.ai_analysis.total_retries) * 100}%` }}
                             />
@@ -450,7 +450,7 @@ export default function AdminMonitoringPage() {
             TODO: 待連接真實數據
           </Badge>
         </div>
-        
+
         <Card className="bg-gray-50">
           <CardContent className="p-0">
             {errorLogs.length > 0 ? (

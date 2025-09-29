@@ -14,9 +14,9 @@ describe('Retry Helper Integration Tests', () => {
         .mockResolvedValueOnce({ audio_url: 'https://example.com/audio.mp3' });
 
       const onRetry = vi.fn();
-      
+
       const result = await retryAudioUpload(mockUpload, onRetry);
-      
+
       expect(result).toEqual({ audio_url: 'https://example.com/audio.mp3' });
       expect(mockUpload).toHaveBeenCalledTimes(3);
       expect(onRetry).toHaveBeenCalledTimes(2);
@@ -33,11 +33,11 @@ describe('Retry Helper Integration Tests', () => {
         .mockRejectedValueOnce(new Error('ValidationError: File too large'));
 
       const onRetry = vi.fn();
-      
+
       await expect(retryAudioUpload(mockUpload, onRetry))
         .rejects
         .toThrow('ValidationError: File too large');
-      
+
       expect(mockUpload).toHaveBeenCalledTimes(1);
       expect(onRetry).not.toHaveBeenCalled();
     });
@@ -48,7 +48,7 @@ describe('Retry Helper Integration Tests', () => {
         .mockResolvedValueOnce({ audio_url: 'https://example.com/audio.mp3' });
 
       const result = await retryAudioUpload(mockUpload);
-      
+
       expect(result).toEqual({ audio_url: 'https://example.com/audio.mp3' });
       expect(mockUpload).toHaveBeenCalledTimes(2);
     });
@@ -62,9 +62,9 @@ describe('Retry Helper Integration Tests', () => {
         .mockResolvedValueOnce({ score: 85, feedback: 'Good job!' });
 
       const onRetry = vi.fn();
-      
+
       const result = await retryAIAnalysis(mockAnalyze, onRetry);
-      
+
       expect(result).toEqual({ score: 85, feedback: 'Good job!' });
       expect(mockAnalyze).toHaveBeenCalledTimes(3);
       expect(onRetry).toHaveBeenCalledTimes(2);
@@ -76,7 +76,7 @@ describe('Retry Helper Integration Tests', () => {
         .mockResolvedValueOnce({ score: 90 });
 
       const result = await retryAIAnalysis(mockAnalyze);
-      
+
       expect(result).toEqual({ score: 90 });
       expect(mockAnalyze).toHaveBeenCalledTimes(2);
     });
@@ -88,7 +88,7 @@ describe('Retry Helper Integration Tests', () => {
       await expect(retryAIAnalysis(mockAnalyze))
         .rejects
         .toThrow('401 Unauthorized');
-      
+
       expect(mockAnalyze).toHaveBeenCalledTimes(1);
     });
 
@@ -101,7 +101,7 @@ describe('Retry Helper Integration Tests', () => {
       const startTime = Date.now();
       const result = await retryAIAnalysis(mockAnalyze);
       const endTime = Date.now();
-      
+
       expect(result).toEqual({ success: true });
       expect(mockAnalyze).toHaveBeenCalledTimes(3);
       // Should take at least 2000ms (first delay) + 4000ms (second delay)
@@ -122,7 +122,7 @@ describe('Retry Helper Integration Tests', () => {
       });
 
       const result = await retryAudioUpload(mockUpload);
-      
+
       expect(result).toEqual({ audio_url: 'https://example.com/audio.mp3' });
       expect(callCount).toBe(3);
     });
@@ -135,7 +135,7 @@ describe('Retry Helper Integration Tests', () => {
         .mockResolvedValueOnce({ analysis: 'completed' });
 
       const result = await retryAIAnalysis(mockAnalyze);
-      
+
       expect(result).toEqual({ analysis: 'completed' });
       expect(mockAnalyze).toHaveBeenCalledTimes(3);
     }, 15000); // Increase timeout

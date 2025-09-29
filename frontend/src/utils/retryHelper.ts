@@ -30,39 +30,39 @@ export async function retryWithBackoff<T>(
   } = options;
 
   let lastError: Error;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      
+
       // 檢查是否應該重試
       if (!shouldRetry(lastError)) {
         throw lastError;
       }
-      
+
       // 如果是最後一次嘗試，直接拋出錯誤
       if (attempt === maxRetries) {
         throw lastError;
       }
-      
+
       // 呼叫重試回調
       if (onRetry) {
         onRetry(attempt, lastError);
       }
-      
+
       // 計算延遲時間（指數退避）
       const delay = Math.min(
         initialDelay * Math.pow(backoffMultiplier, attempt - 1),
         maxDelay
       );
-      
+
       // 等待指定時間後重試
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError!;
 }
 
@@ -97,9 +97,9 @@ export async function retryAudioUpload<T>(
         'ECONNRESET',
         'ETIMEDOUT',
       ];
-      
+
       const errorMessage = error.message || '';
-      return retryableErrors.some(retryableError => 
+      return retryableErrors.some(retryableError =>
         errorMessage.includes(retryableError)
       );
     },
@@ -139,9 +139,9 @@ export async function retryAIAnalysis<T>(
         'rate limit',
         'quota exceeded',
       ];
-      
+
       const errorMessage = error.message?.toLowerCase() || '';
-      return retryableErrors.some(retryableError => 
+      return retryableErrors.some(retryableError =>
         errorMessage.includes(retryableError.toLowerCase())
       );
     },

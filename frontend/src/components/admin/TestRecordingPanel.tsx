@@ -57,7 +57,7 @@ export default function TestRecordingPanel() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -134,11 +134,11 @@ export default function TestRecordingPanel() {
     if (audioUrl && !isPlaying) {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-      
+
       audio.onended = () => {
         setIsPlaying(false);
       };
-      
+
       audio.play();
       setIsPlaying(true);
     } else if (audioRef.current && isPlaying) {
@@ -188,25 +188,25 @@ export default function TestRecordingPanel() {
       // Step 2: 上傳錄音
       toast.info('步驟 2/4: 上傳錄音...');
       let uploadAttempts = 0;
-      
+
       await retryAudioUpload(
         async () => {
           uploadAttempts++;
-          
+
 
           const formData = new FormData();
           formData.append('audio_file', audioBlob, 'test.webm');
           formData.append('test_mode', 'true');
-          
+
           const response = await fetch(`${apiUrl}/api/admin/test-audio-upload`, {
             method: 'POST',
             body: formData
           });
-          
+
           if (!response.ok) {
             throw new Error(`Upload failed: ${response.status}`);
           }
-          
+
           return await response.json();
         },
         (attempt, error) => {
@@ -223,22 +223,22 @@ export default function TestRecordingPanel() {
       // Step 3: AI 分析
       toast.info('步驟 3/4: AI 語音分析...');
       let analysisAttempts = 0;
-      
+
       const analysisResult = await retryAIAnalysis(
         async () => {
           analysisAttempts++;
-          
+
 
           const formData = new FormData();
           formData.append('audio_file', audioBlob, 'test.webm');
           formData.append('reference_text', TEST_SENTENCE.text);
           formData.append('progress_id', '1'); // Test progress ID
-          
+
           // 使用 fetch 直接呼叫，避免 apiClient 的 JSON headers 覆蓋 FormData
           try {
             const token = localStorage.getItem('token');
             const apiUrl = import.meta.env.VITE_API_URL || '';
-            
+
             const response = await fetch(`${apiUrl}/api/speech/assess`, {
               method: 'POST',
               headers: token ? {
@@ -246,11 +246,11 @@ export default function TestRecordingPanel() {
               } : undefined,
               body: formData
             });
-            
+
             if (!response.ok) {
               const errorText = await response.text();
               console.error('AI 分析錯誤:', errorText);
-              
+
               // 如果是認證問題，回退到 mock 資料
               if (response.status === 401 || response.status === 403) {
                 console.log('使用 mock 資料回應（無認證）');
@@ -274,14 +274,14 @@ export default function TestRecordingPanel() {
                   ]
                 };
               }
-              
+
               throw new Error(`AI analysis failed: ${response.status} ${errorText}`);
             }
-            
+
             return await response.json();
           } catch (error: unknown) {
             console.error('AI 分析失敗:', error);
-            
+
             // 網路錯誤時回退到 mock 資料
             if (error instanceof Error && error.message.includes('fetch')) {
               console.log('使用 mock 資料回應（網路錯誤）');
@@ -318,7 +318,7 @@ export default function TestRecordingPanel() {
       result.analysisStatus = 'success';
       result.analysisAttempts = analysisAttempts;
       toast.success(`✓ 分析正常${analysisAttempts > 1 ? ` (重試 ${analysisAttempts-1} 次)` : ''}`);
-      
+
       // Step 4: 讀取結果（模擬從 DB 讀取）
       toast.info('步驟 4/4: 讀取分析結果...');
       if (analysisResult) {
@@ -328,14 +328,14 @@ export default function TestRecordingPanel() {
           fluency: analysisResult.fluency_score || Math.floor(Math.random() * 30) + 70,
           pronunciation: analysisResult.pronunciation_score || Math.floor(Math.random() * 30) + 70
         };
-        
+
         // 儲存單字詳細資料
         result.wordDetails = analysisResult.words || analysisResult.word_details || [];
-        
+
         result.dbReadStatus = 'success';
         toast.success('✓ 讀取 DB 結果正常');
       }
-      
+
     } catch (error) {
       console.error('測試失敗:', error);
       toast.error('測試失敗: ' + (error as Error).message);
@@ -357,7 +357,7 @@ export default function TestRecordingPanel() {
   const quickTestLogin = async () => {
     try {
       toast.info('正在使用 Demo Teacher 帳號登入...');
-      
+
       // 使用 demo teacher 帳號登入
       const response = await fetch(`${apiUrl}/api/auth/teacher/login`, {
         method: 'POST',
@@ -369,13 +369,13 @@ export default function TestRecordingPanel() {
           password: 'demo123'
         })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         // 儲存 teacher token
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('userType', 'teacher');
-        
+
         // 儲存教師資料
         const teacherAuthData = {
           state: {
@@ -405,15 +405,15 @@ export default function TestRecordingPanel() {
     localStorage.removeItem('userType');
     localStorage.removeItem('teacher-auth-storage');
     localStorage.removeItem('student-auth-storage');
-    
+
     // 重設狀態
     setIsLoggedIn(false);
     setTestResult(null);
     setAudioUrl(null);
     setAudioBlob(null);
-    
+
     toast.info('已登出，返回首頁...');
-    
+
     // 延遲跳轉到首頁
     setTimeout(() => {
       window.location.href = '/';
@@ -435,25 +435,25 @@ export default function TestRecordingPanel() {
               {isLoggedIn ? '已登入 Demo Teacher' : '快速登入 Demo Teacher 帳號'}
             </div>
             <div className="text-sm text-gray-600">
-              {isLoggedIn 
-                ? '已使用 demo@duotopia.com 登入，可以進行真實 AI 分析' 
+              {isLoggedIn
+                ? '已使用 demo@duotopia.com 登入，可以進行真實 AI 分析'
                 : '使用 demo@duotopia.com (密碼: demo123) 進行真實 AI 分析測試'}
             </div>
           </div>
           <div className="flex gap-2 ml-4">
             {isLoggedIn ? (
               <>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="secondary"
                   disabled
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
                   已登入
                 </Button>
-                <Button 
+                <Button
                   onClick={handleLogout}
-                  size="sm" 
+                  size="sm"
                   variant="outline"
                   className="text-red-600 hover:text-red-700 hover:border-red-300"
                 >
@@ -462,9 +462,9 @@ export default function TestRecordingPanel() {
                 </Button>
               </>
             ) : (
-              <Button 
-                onClick={quickTestLogin} 
-                size="sm" 
+              <Button
+                onClick={quickTestLogin}
+                size="sm"
                 variant="default"
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -485,8 +485,8 @@ export default function TestRecordingPanel() {
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
               <h3 className="text-lg font-semibold mb-2">請先登入</h3>
               <p className="text-gray-600 mb-4">需要先登入 Demo Teacher 帳號才能使用錄音測試功能</p>
-              <Button 
-                onClick={quickTestLogin} 
+              <Button
+                onClick={quickTestLogin}
                 variant="default"
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -496,7 +496,7 @@ export default function TestRecordingPanel() {
             </div>
           </div>
         )}
-        
+
         <CardHeader>
           <CardTitle className="flex items-center">
             <Mic className="w-5 h-5 mr-2" />
@@ -529,8 +529,8 @@ export default function TestRecordingPanel() {
           {/* Control buttons */}
           <div className="flex gap-3">
             {!isRecording && !audioUrl && (
-              <Button 
-                onClick={startRecording} 
+              <Button
+                onClick={startRecording}
                 variant="default"
                 disabled={!isLoggedIn}
               >
@@ -540,8 +540,8 @@ export default function TestRecordingPanel() {
             )}
 
             {isRecording && (
-              <Button 
-                onClick={stopRecording} 
+              <Button
+                onClick={stopRecording}
                 variant="destructive"
                 disabled={!isLoggedIn}
               >
@@ -552,24 +552,24 @@ export default function TestRecordingPanel() {
 
             {audioUrl && !isRecording && (
               <>
-                <Button 
-                  onClick={playRecording} 
+                <Button
+                  onClick={playRecording}
                   variant="outline"
                   disabled={!isLoggedIn}
                 >
                   {isPlaying ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                   {isPlaying ? '暫停' : '播放'}
                 </Button>
-                <Button 
-                  onClick={resetRecording} 
+                <Button
+                  onClick={resetRecording}
                   variant="outline"
                   disabled={!isLoggedIn}
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   重新錄音
                 </Button>
-                <Button 
-                  onClick={runCompleteAnalysis} 
+                <Button
+                  onClick={runCompleteAnalysis}
                   variant="default"
                   disabled={!isLoggedIn || isAnalyzing}
                   className="bg-blue-600 hover:bg-blue-700"
@@ -615,31 +615,31 @@ export default function TestRecordingPanel() {
                     <Badge variant="destructive">✗ 失敗</Badge>
                   )}
                 </div>
-                
+
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">2. 上傳正常</span>
                   {testResult.uploadStatus === 'success' ? (
                     <Badge variant="default" className="bg-green-500">
-                      ✓ 正常 {testResult.uploadAttempts && testResult.uploadAttempts > 1 && 
+                      ✓ 正常 {testResult.uploadAttempts && testResult.uploadAttempts > 1 &&
                         `(重試 ${testResult.uploadAttempts-1} 次)`}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
                   )}
                 </div>
-                
+
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">3. 分析正常</span>
                   {testResult.analysisStatus === 'success' ? (
                     <Badge variant="default" className="bg-green-500">
-                      ✓ 正常 {testResult.analysisAttempts && testResult.analysisAttempts > 1 && 
+                      ✓ 正常 {testResult.analysisAttempts && testResult.analysisAttempts > 1 &&
                         `(重試 ${testResult.analysisAttempts-1} 次)`}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
                   )}
                 </div>
-                
+
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">4. 讀取 DB 結果正常</span>
                   {testResult.dbReadStatus === 'success' ? (
@@ -689,17 +689,17 @@ export default function TestRecordingPanel() {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Word Level Details */}
                 {testResult.wordDetails && testResult.wordDetails.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-blue-200">
                     <h5 className="font-medium mb-2 text-sm">單字詳細評分</h5>
                     <div className="flex flex-wrap gap-2">
                       {testResult.wordDetails.map((word, idx) => (
-                        <div 
+                        <div
                           key={idx}
                           className={`px-3 py-1 rounded-lg border ${
-                            word.accuracy_score >= 80 
+                            word.accuracy_score >= 80
                               ? 'bg-green-50 border-green-300 text-green-700'
                               : word.accuracy_score >= 60
                               ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
@@ -716,7 +716,7 @@ export default function TestRecordingPanel() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Mock data warning */}
                 {testResult.isMockData && (
                   <Alert className="mt-4 border-yellow-200 bg-yellow-50">
