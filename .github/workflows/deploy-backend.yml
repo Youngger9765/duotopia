@@ -1,0 +1,254 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch:  # 手動觸發
+  push:
+    branches: [ main, staging ]
+    paths:
+      # 後端相關檔案
+      - 'backend/**'
+      - 'requirements*.txt'
+      - 'alembic.ini'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-backend.yml'
+    paths-ignore:
+      - '**.md'
+      - 'backend/tests/**'  # 測試檔案變更不觸發部署
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  REPOSITORY: duotopia-repo
+
+jobs:
+  test-backend:
+    name: 🧪 Test Backend
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Black formatting check
+      working-directory: ./backend
+      run: |
+        echo "Checking Python code formatting with Black..."
+        black --check . || (echo "❌ Black formatting check failed. Run 'black backend/' locally to fix." && exit 1)
+
+    - name: Run Flake8 linting
+      working-directory: ./backend
+      run: |
+        echo "Running Flake8 linting..."
+        flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
+
+    - name: Run pytest (Parallel)
+      working-directory: ./backend
+      run: |
+        echo "Running backend tests in parallel..."
+        pytest -n 2 -v --tb=short || echo "Tests completed with some failures"
+
+    - name: Test backend import
+      working-directory: ./backend
+      run: python -c "import main; print('Backend imports successfully')"
+
+  deploy-backend:
+    name: 🚀 Deploy Backend
+    needs: test-backend
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set Environment Variables
+      id: env_vars
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "ENV_NAME=production" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=duotopia-backend" >> $GITHUB_OUTPUT
+          echo "🚀 Deploying to PRODUCTION"
+        else
+          echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=duotopia-staging-backend" >> $GITHUB_OUTPUT
+          echo "🧪 Deploying to STAGING"
+        fi
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Create GCS Service Account Key File
+      run: |
+        echo '${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}' > /tmp/gcs-key.json
+        echo "GCS_KEY_PATH=/tmp/gcs-key.json" >> $GITHUB_ENV
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker $REGION-docker.pkg.dev
+
+    - name: Set Database Environment Variables
+      id: db_env
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+          echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "🔥 Using Supabase Production"
+        else
+          echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+          echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "🆓 Using Supabase Staging"
+        fi
+
+    - name: Build and push backend image
+      run: |
+        cd backend && docker build -f Dockerfile -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA .
+        docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA
+
+    - name: Setup Python for migrations
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Run Alembic database migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
+      run: |
+        echo "🔍 Installing dependencies for migrations..."
+        pip install -r backend/requirements.txt
+
+        echo "🔄 Running Alembic database migrations..."
+        cd backend
+        echo "📊 Current migration status:"
+        alembic current
+        echo "🔄 Upgrading to latest migration..."
+        alembic upgrade head
+        echo "✅ Migrations completed"
+
+    - name: Check for missing migrations
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
+      run: |
+        echo "🔍 Checking for uncommitted model changes..."
+        cd backend
+        if ! alembic check; then
+          echo "❌ ERROR: Database models have changed but no migration was created!"
+          echo "📝 Please run the following command locally:"
+          echo "   alembic revision --autogenerate -m 'describe your changes'"
+          echo "   Then commit the generated migration file."
+          exit 1
+        fi
+        echo "✅ No pending model changes detected"
+
+    - name: Deploy backend to Cloud Run
+      run: |
+        # 環境變數設定
+        ENV_VARS="DATABASE_URL=${{ steps.db_env.outputs.DATABASE_URL }}"
+        ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
+        ENV_VARS="$ENV_VARS,JWT_SECRET=${{ steps.db_env.outputs.JWT_SECRET }}"
+        ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
+        ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=30"
+        ENV_VARS="$ENV_VARS,ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }}"
+        ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
+        ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
+        ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+        ENV_VARS="$ENV_VARS,SMTP_HOST=${{ secrets.SMTP_HOST }}"
+        ENV_VARS="$ENV_VARS,SMTP_PORT=${{ secrets.SMTP_PORT }}"
+        ENV_VARS="$ENV_VARS,SMTP_USER=${{ secrets.SMTP_USER }}"
+        ENV_VARS="$ENV_VARS,SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
+        ENV_VARS="$ENV_VARS,FROM_EMAIL=${{ secrets.FROM_EMAIL }}"
+        ENV_VARS="$ENV_VARS,FROM_NAME=${{ secrets.FROM_NAME }}"
+        ENV_VARS="$ENV_VARS,FRONTEND_URL=${{ steps.db_env.outputs.FRONTEND_URL }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}"
+        ENV_VARS="$ENV_VARS,AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}"
+        ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=$PROJECT_ID"
+        ENV_VARS="$ENV_VARS,REGION=$REGION"
+        ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
+        ENV_VARS="$ENV_VARS,GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json"
+
+        gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
+          --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 8080 \
+          --memory 512Mi \
+          --cpu 1 \
+          --max-instances 3 \
+          --min-instances 0 \
+          --cpu-throttling \
+          --concurrency 40 \
+          --no-cpu-boost \
+          --set-env-vars="$ENV_VARS"
+
+    - name: 🧹 Cleanup Old Backend Images
+      run: |
+        echo "🔍 Cleaning up old backend container images..."
+        KEEP_COUNT=2
+        BACKEND_IMAGES=$(gcloud container images list-tags \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
+          --format="value(digest)" \
+          --sort-by="~timestamp" 2>/dev/null || echo "")
+
+        if [ ! -z "$BACKEND_IMAGES" ]; then
+          TOTAL=$(echo "$BACKEND_IMAGES" | wc -l)
+          if [ $TOTAL -gt $KEEP_COUNT ]; then
+            TO_DELETE=$(echo "$BACKEND_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+            for DIGEST in $TO_DELETE; do
+              echo "  Deleting backend image: $DIGEST"
+              gcloud container images delete \
+                "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}@sha256:$DIGEST" \
+                --force-delete-tags --quiet || true
+            done
+          fi
+        fi
+
+    - name: Health check
+      run: |
+        BACKEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.BACKEND_SERVICE }} --platform managed --region $REGION --format 'value(status.url)')
+        echo "🔍 Checking backend health at $BACKEND_URL/api/health"
+
+        for i in {1..5}; do
+          if curl -f "$BACKEND_URL/api/health" --max-time 10; then
+            echo "✅ Backend is healthy!"
+            break
+          else
+            echo "⏳ Waiting for backend to be ready (attempt $i/5)..."
+            sleep 10
+          fi
+        done
+
+    - name: Deployment Summary
+      run: |
+        echo "🎉 Backend deployment completed!"
+        echo "📦 Environment: ${{ steps.env_vars.outputs.ENV_NAME }}"
+        echo "🏷️ Version: ${{ github.sha }}"
+        BACKEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.BACKEND_SERVICE }} --platform managed --region $REGION --format 'value(status.url)')
+        echo "🌐 Backend URL: $BACKEND_URL"

@@ -1,0 +1,142 @@
+name: Deploy Shared Changes
+
+on:
+  workflow_dispatch:  # 手動觸發
+  push:
+    branches: [ main, staging ]
+    paths:
+      # 共用設定檔案
+      - 'docker-compose*.yml'
+      - 'Makefile'
+      - '.env.example'
+      - '.dockerignore'
+      - '.github/workflows/deploy-shared.yml'
+      # 根目錄重要檔案
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'setup.cfg'
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'docs/**'
+
+jobs:
+  detect-required-deployments:
+    name: 🔍 Detect Required Deployments
+    runs-on: ubuntu-latest
+    outputs:
+      deploy-backend: ${{ steps.check.outputs.backend }}
+      deploy-frontend: ${{ steps.check.outputs.frontend }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Check what needs deployment
+      id: check
+      run: |
+        # 檢查變更的檔案
+        CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+
+        # 預設都需要部署
+        DEPLOY_BACKEND="true"
+        DEPLOY_FRONTEND="true"
+
+        # 如果只有特定檔案變更，可能不需要全部部署
+        if echo "$CHANGED_FILES" | grep -q "^\.env\.example$"; then
+          echo "📝 Environment example changed - may need manual review"
+        fi
+
+        if echo "$CHANGED_FILES" | grep -q "^Makefile$"; then
+          echo "🔧 Makefile changed - checking if it affects deployment"
+          # 可以進一步分析 Makefile 的變更內容
+        fi
+
+        echo "backend=$DEPLOY_BACKEND" >> $GITHUB_OUTPUT
+        echo "frontend=$DEPLOY_FRONTEND" >> $GITHUB_OUTPUT
+
+  trigger-backend:
+    name: 🔄 Trigger Backend Deployment
+    needs: detect-required-deployments
+    if: needs.detect-required-deployments.outputs.deploy-backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Backend Workflow
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-backend.yml',
+            ref: '${{ github.ref }}'
+          });
+          console.log('✅ Triggered backend deployment');
+
+  trigger-frontend:
+    name: 🔄 Trigger Frontend Deployment
+    needs: detect-required-deployments
+    if: needs.detect-required-deployments.outputs.deploy-frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Frontend Workflow
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-frontend.yml',
+            ref: '${{ github.ref }}'
+          });
+          console.log('✅ Triggered frontend deployment');
+
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    if: always()
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run dependency check
+      run: |
+        echo "🔍 Checking for security vulnerabilities..."
+
+        # Check Python dependencies
+        if [ -f "requirements.txt" ]; then
+          pip install safety
+          safety check --json || true
+        fi
+
+        # Check Node dependencies
+        if [ -f "package.json" ]; then
+          npm audit --audit-level=critical || true
+        fi
+
+  notify-deployment:
+    name: 📢 Notify Deployment
+    needs: [trigger-backend, trigger-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deployment Status
+      run: |
+        echo "🚀 Shared configuration changes deployed!"
+        echo "📦 Branch: ${{ github.ref_name }}"
+        echo "🏷️ Commit: ${{ github.sha }}"
+        echo "👤 Author: ${{ github.actor }}"
+        echo "💬 Message: ${{ github.event.head_commit.message }}"
+
+        if [[ "${{ needs.trigger-backend.result }}" == "success" ]]; then
+          echo "✅ Backend deployment triggered"
+        fi
+
+        if [[ "${{ needs.trigger-frontend.result }}" == "success" ]]; then
+          echo "✅ Frontend deployment triggered"
+        fi
