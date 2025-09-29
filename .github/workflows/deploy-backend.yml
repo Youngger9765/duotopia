@@ -192,6 +192,9 @@ jobs:
         ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
         ENV_VARS="$ENV_VARS,GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json"
 
+        # 設定 min-instances = 0 最大化節省成本
+        MIN_INSTANCES=0  # Production 和 Staging 都設為 0 節省成本
+
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \
           --platform managed \
@@ -201,9 +204,9 @@ jobs:
           --memory 512Mi \
           --cpu 1 \
           --max-instances 3 \
-          --min-instances 0 \
+          --min-instances $MIN_INSTANCES \
           --cpu-throttling \
-          --concurrency 40 \
+          --concurrency 25 \
           --no-cpu-boost \
           --set-env-vars="$ENV_VARS"
 

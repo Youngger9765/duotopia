@@ -155,18 +155,21 @@ jobs:
 
     - name: Deploy frontend to Cloud Run
       run: |
+        # 設定 min-instances = 0 最大化節省成本
+        MIN_INSTANCES=0  # Production 和 Staging 都設為 0 節省成本
+
         gcloud run deploy ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA \
           --platform managed \
           --region $REGION \
           --allow-unauthenticated \
           --port 80 \
-          --memory 256Mi \
+          --memory 512Mi \
           --cpu 1 \
-          --max-instances 2 \
-          --min-instances 0 \
+          --max-instances 3 \
+          --min-instances $MIN_INSTANCES \
           --cpu-throttling \
-          --concurrency 10 \
+          --concurrency 50 \
           --no-cpu-boost
 
     - name: 🧹 Cleanup Old Frontend Images
