@@ -7,13 +7,12 @@ on:
     paths:
       # 後端相關檔案
       - 'backend/**'
+      - '!backend/**/*.md'
+      - '!backend/tests/**'
       - 'requirements*.txt'
       - 'alembic.ini'
       - 'Dockerfile'
       - '.github/workflows/deploy-backend.yml'
-    paths-ignore:
-      - '**.md'
-      - 'backend/tests/**'  # 測試檔案變更不觸發部署
 
 env:
   PROJECT_ID: duotopia-472708
