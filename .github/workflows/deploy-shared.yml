@@ -21,6 +21,10 @@ on:
       - '!.gitignore'
       - '!docs/**'
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   detect-required-deployments:
     name: 🔍 Detect Required Deployments
