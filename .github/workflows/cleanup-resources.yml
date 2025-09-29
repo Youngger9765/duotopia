@@ -30,7 +30,7 @@ on:
           - '5'
 
 env:
-  PROJECT_ID: duotopia-469413
+  PROJECT_ID: duotopia-472708
   REGION: asia-east1
   REPOSITORY: duotopia-repo
 
