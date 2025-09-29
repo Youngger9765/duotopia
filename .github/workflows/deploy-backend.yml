@@ -244,9 +244,55 @@ jobs:
           fi
         done
 
+    - name: 🔍 Deployment Verification
+      run: |
+        echo "🔍 Verifying deployment success..."
+
+        # 1️⃣ Cloud Run 部署確認
+        echo "📦 Checking Cloud Run revision..."
+        LATEST_REVISION=$(gcloud run revisions list \
+          --service ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --limit 1 \
+          --format 'value(metadata.name)')
+
+        CREATION_TIME=$(gcloud run revisions describe $LATEST_REVISION \
+          --service ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --format 'value(metadata.creationTimestamp)')
+
+        echo "✅ Latest revision: $LATEST_REVISION"
+        echo "✅ Created at: $CREATION_TIME"
+
+        # 2️⃣ 服務健康檢查
+        echo "🩺 Checking service health..."
+        BACKEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)')
+
+        HEALTH_RESPONSE=$(curl -s "$BACKEND_URL/health" || echo "ERROR")
+        if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
+          echo "✅ Health check passed"
+          echo "$HEALTH_RESPONSE" | jq '.' || echo "$HEALTH_RESPONSE"
+        else
+          echo "❌ Health check failed: $HEALTH_RESPONSE"
+          exit 1
+        fi
+
+        # 3️⃣ 環境變數驗證
+        echo "🔧 Verifying environment configuration..."
+        if echo "$HEALTH_RESPONSE" | grep -q '"environment": "${{ steps.env_vars.outputs.ENV_NAME }}"'; then
+          echo "✅ Environment correctly set to: ${{ steps.env_vars.outputs.ENV_NAME }}"
+        else
+          echo "⚠️ Environment configuration may not match"
+        fi
+
     - name: Deployment Summary
       run: |
-        echo "🎉 Backend deployment completed!"
+        echo "🎉 Backend deployment completed and verified!"
         echo "📦 Environment: ${{ steps.env_vars.outputs.ENV_NAME }}"
         echo "🏷️ Version: ${{ github.sha }}"
         BACKEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.BACKEND_SERVICE }} --platform managed --region $REGION --format 'value(status.url)')

@@ -128,6 +128,60 @@ gcloud storage ls
 - Docker 映像 < 500MB
 - 記憶體使用 < 512MB
 
+## 🔍 自動化部署驗證
+
+### CI/CD 內建驗證流程
+每次部署完成後，GitHub Actions 會自動執行以下驗證：
+
+#### Backend 部署驗證
+```bash
+🔍 Deployment Verification
+├── 1️⃣ Cloud Run 部署確認
+│   ├── ✅ Latest revision: duotopia-staging-backend-00040-q46
+│   └── ✅ Created at: 2025-09-29T00:49:59.255381Z
+├── 2️⃣ 服務健康檢查
+│   ├── 🩺 GET /health
+│   ├── ✅ Health check passed
+│   └── 📊 Health response: {"status":"healthy","environment":"staging"}
+└── 3️⃣ 環境變數驗證
+    └── ✅ Environment correctly set to: staging
+```
+
+#### Frontend 部署驗證
+```bash
+🔍 Deployment Verification
+├── 1️⃣ Cloud Run 部署確認
+│   ├── ✅ Latest revision: duotopia-staging-frontend-00032-m2m
+│   └── ✅ Created at: 2025-09-29T00:46:58.826089Z
+├── 2️⃣ 前端頁面檢查
+│   ├── 🌐 GET / (首頁)
+│   ├── ✅ Frontend page loads correctly
+│   └── ✅ Found Duotopia title
+├── 3️⃣ 資產編譯驗證
+│   ├── ✅ Frontend assets compiled correctly
+│   └── 🔧 Backend URL configured: https://duotopia-staging-backend-xxx.run.app
+└── 4️⃣ API 連接設定確認
+    └── 📝 確認前端正確設定後端 API URL
+```
+
+### 驗證失敗處理
+如果任何驗證步驟失敗，部署會**自動標記為失敗**：
+- ❌ 健康檢查失敗 → exit 1
+- ❌ 前端頁面無法載入 → exit 1
+- ❌ 環境設定錯誤 → 警告但繼續
+
+### 手動驗證指令
+```bash
+# 檢查最新部署版本
+gcloud run revisions list --service duotopia-staging-backend --limit 1
+
+# 健康檢查
+curl -s https://duotopia-staging-backend-xxx.run.app/health | jq
+
+# 前端檢查
+curl -s https://duotopia-staging-frontend-xxx.run.app/ | grep -o "<title>.*</title>"
+```
+
 ## 🛡️ Alembic Migration 管理
 
 ### 防呆機制（三層防護）

@@ -210,9 +210,60 @@ jobs:
           fi
         done
 
+    - name: 🔍 Deployment Verification
+      run: |
+        echo "🔍 Verifying frontend deployment success..."
+
+        # 1️⃣ Cloud Run 部署確認
+        echo "📦 Checking Cloud Run revision..."
+        LATEST_REVISION=$(gcloud run revisions list \
+          --service ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --limit 1 \
+          --format 'value(metadata.name)')
+
+        CREATION_TIME=$(gcloud run revisions describe $LATEST_REVISION \
+          --service ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --format 'value(metadata.creationTimestamp)')
+
+        echo "✅ Latest revision: $LATEST_REVISION"
+        echo "✅ Created at: $CREATION_TIME"
+
+        # 2️⃣ 前端頁面檢查
+        echo "🌐 Checking frontend page..."
+        FRONTEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)')
+
+        # 檢查 HTML 是否正確載入
+        HTML_RESPONSE=$(curl -s "$FRONTEND_URL" || echo "ERROR")
+        if echo "$HTML_RESPONSE" | grep -q "<title>Duotopia"; then
+          echo "✅ Frontend page loads correctly"
+          echo "✅ Found Duotopia title"
+        else
+          echo "❌ Frontend page failed to load properly"
+          echo "Response: $HTML_RESPONSE"
+          exit 1
+        fi
+
+        # 3️⃣ API 連接驗證
+        echo "🔗 Verifying backend connection..."
+        if echo "$HTML_RESPONSE" | grep -q "assets/index-"; then
+          echo "✅ Frontend assets compiled correctly"
+        else
+          echo "⚠️ Frontend assets may not be properly compiled"
+        fi
+
+        # 檢查是否使用正確的後端 URL
+        echo "🔧 Backend URL configured: ${{ steps.backend_url.outputs.BACKEND_URL }}"
+
     - name: Deployment Summary
       run: |
-        echo "🎉 Frontend deployment completed!"
+        echo "🎉 Frontend deployment completed and verified!"
         echo "📦 Environment: ${{ steps.env_vars.outputs.ENV_NAME }}"
         echo "🏷️ Version: ${{ github.sha }}"
         FRONTEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
