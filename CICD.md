@@ -13,7 +13,7 @@
 ## 📋 部署前檢查清單
 
 ### 1. 配置檢查
-- [ ] 確認 `gcloud config get-value project` 顯示 `duotopia-469413`
+- [ ] 確認 `gcloud config get-value project` 顯示 `duotopia-472708`
 - [ ] 確認區域是 `asia-east1`
 - [ ] 確認沒有硬編碼的 localhost URL
 - [ ] 確認沒有舊的 import 路徑
@@ -400,16 +400,16 @@ gcloud config configurations activate duotopia
 # 驗證當前配置
 gcloud config list
 # 應該顯示：
-# account = purpleice9765@msn.com
-# project = duotopia-469413
+# account = myduotopia@gmail.com
+# project = duotopia-472708
 
 # 或直接設定專案
-gcloud config set project duotopia-469413
+gcloud config set project duotopia-472708
 ```
 
 ### 重要提醒
 - **部署前必須確認專案**: `gcloud config get-value project`
-- **應該顯示**: `duotopia-469413`
+- **應該顯示**: `duotopia-472708`
 - **區域**: `asia-east1`
 
 ### 🛡️ 隔離環境部署（避免專案互相干擾）
@@ -421,8 +421,8 @@ export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.11
 # 驗證環境
 gcloud config list
 # 應該顯示：
-# account = terraform-deploy@duotopia-469413.iam.gserviceaccount.com
-# project = duotopia-469413
+# account = myduotopia@gmail.com
+# project = duotopia-472708
 ```
 
 ## 🚨 部署後測試規則
