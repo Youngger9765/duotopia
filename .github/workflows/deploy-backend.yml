@@ -97,8 +97,11 @@ jobs:
 
     - name: Create GCS Service Account Key File
       run: |
-        echo '${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}' > backend/service-account-key.json
+        echo "${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}" > backend/service-account-key.json
         echo "✅ Created GCS service account key file for Docker build"
+        echo "📊 Key file size: $(wc -c < backend/service-account-key.json) bytes"
+        echo "🔍 Validating JSON format..."
+        python3 -m json.tool backend/service-account-key.json > /dev/null && echo "✅ JSON is valid" || echo "❌ JSON is invalid"
 
     - name: Configure Docker for Artifact Registry
       run: |
