@@ -488,20 +488,28 @@ export default function StudentAssignmentDetail() {
               <div>
                 <div className="text-sm text-gray-600 mb-2">詳實記錄</div>
                 {assignment.content_progress && assignment.content_progress.length > 0 ? (
-                  <div className="space-y-1">
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
                     {assignment.content_progress.map((progress: any) => {
                       const items = progress.items || [];
+                      let questionNumber = 0;
                       return items.map((item: any, idx: number) => {
                         const hasFeedback = item.teacher_feedback !== undefined && item.teacher_feedback !== null;
                         if (!hasFeedback) return null;
+                        questionNumber++;
 
                         return (
-                          <div key={`${progress.id}-${idx}`} className="text-sm">
-                            <span className="font-medium">Q{idx + 1}</span>
-                            <span className="ml-2">{item.teacher_passed ? '✅' : '❌'}</span>
-                            {item.teacher_feedback && (
-                              <span className="text-gray-600 ml-1 text-xs">{item.teacher_feedback}</span>
-                            )}
+                          <div key={`${progress.id}-${idx}`} className="flex items-start gap-2 text-sm">
+                            <span className="flex-shrink-0">
+                              {item.teacher_passed ? '✅' : '❌'}
+                            </span>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500 truncate">
+                                {item.text || `題目 ${questionNumber}`}
+                              </div>
+                              <div className="text-xs text-gray-700">
+                                {item.teacher_feedback}
+                              </div>
+                            </div>
                           </div>
                         );
                       });
