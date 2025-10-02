@@ -998,6 +998,15 @@ export default function StudentActivityPage() {
                         const isActiveItem = isActiveActivity && currentSubQuestionIndex === itemIndex;
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const isCompleted = (item as any).recording_url || activity.answers?.[itemIndex];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const teacherFeedback = (item as any).teacher_feedback;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const teacherPassed = (item as any).teacher_passed;
+
+                        // 判斷狀態
+                        const hasTeacherGraded = teacherFeedback !== undefined && teacherFeedback !== null;
+                        const isTeacherPassed = hasTeacherGraded && teacherPassed === true;
+                        const needsCorrection = hasTeacherGraded && teacherPassed === false;
 
                         return (
                           <button
@@ -1012,17 +1021,20 @@ export default function StudentActivityPage() {
                             className={cn(
                               "relative w-8 h-8 rounded-md border transition-all",
                               "flex items-center justify-center text-xs font-medium",
-                              isActiveItem
-                                ? "bg-blue-600 text-white border-blue-600"
+                              // 老師批改的顏色優先級最高
+                              needsCorrection
+                                ? "bg-red-100 text-red-800 border-red-400"  // 老師批改未通過 - 紅色
+                                : isTeacherPassed
+                                ? "bg-green-100 text-green-800 border-green-400"  // 老師批改通過 - 綠色
                                 : isCompleted
-                                ? "bg-green-50 text-green-700 border-green-300"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                ? "bg-yellow-100 text-yellow-800 border-yellow-400"  // 學生已完成但未批改 - 黃色
+                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",  // 未作答 - 白色
+                              // 當前選中的題目用粗邊框
+                              isActiveItem && "border-2 border-blue-600"
                             )}
+                            title={needsCorrection ? "需要訂正" : ""}
                           >
                             {itemIndex + 1}
-                            {isCompleted && !isActiveItem && (
-                              <CheckCircle className="absolute -top-1 -right-1 w-3 h-3 text-green-600 bg-white rounded-full" />
-                            )}
                           </button>
                         );
                       })}
