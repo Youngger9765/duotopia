@@ -227,7 +227,6 @@ jobs:
           --format 'value(metadata.name)')
 
         CREATION_TIME=$(gcloud run revisions describe $LATEST_REVISION \
-          --service ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --platform managed \
           --region $REGION \
           --format 'value(metadata.creationTimestamp)')
