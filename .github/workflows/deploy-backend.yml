@@ -95,13 +95,8 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    - name: Create GCS Service Account Key File
-      run: |
-        echo "${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}" > backend/service-account-key.json
-        echo "✅ Created GCS service account key file for Docker build"
-        echo "📊 Key file size: $(wc -c < backend/service-account-key.json) bytes"
-        echo "🔍 Validating JSON format..."
-        python3 -m json.tool backend/service-account-key.json > /dev/null && echo "✅ JSON is valid" || echo "❌ JSON is invalid"
+    # Cloud Run 有預設的 service account，不需要額外的 key file
+    # GCS 會自動使用 Cloud Run 的認證
 
     - name: Configure Docker for Artifact Registry
       run: |
@@ -196,7 +191,6 @@ jobs:
         ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=$PROJECT_ID"
         ENV_VARS="$ENV_VARS,REGION=$REGION"
         ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
-        ENV_VARS="$ENV_VARS,GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json"
 
         # 設定 min-instances = 0 最大化節省成本
         MIN_INSTANCES=0  # Production 和 Staging 都設為 0 節省成本

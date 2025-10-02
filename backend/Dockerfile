@@ -32,8 +32,9 @@ COPY router[s] ./routers/
 COPY cor[e] ./core/
 COPY ap[i] ./api/
 
-# 複製 GCS service account key（必須存在）
-COPY service-account-key.json ./service-account-key.json
+# 複製 GCS service account key（如果存在）
+# 注意：Cloud Run 有預設認證，不需要額外的 key file
+COPY service-account-key.jso[n] ./service-account-key.json
 
 # 變更檔案擁有者
 RUN chown -R appuser:appuser /app
