@@ -32,8 +32,8 @@ COPY router[s] ./routers/
 COPY cor[e] ./core/
 COPY ap[i] ./api/
 
-# 複製 GCS service account key（如果存在）
-COPY service-account-key.jso[n] ./service-account-key.json
+# 複製 GCS service account key（必須存在）
+COPY service-account-key.json ./service-account-key.json
 
 # 變更檔案擁有者
 RUN chown -R appuser:appuser /app
