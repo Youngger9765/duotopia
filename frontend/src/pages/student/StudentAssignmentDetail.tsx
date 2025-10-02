@@ -101,12 +101,14 @@ export default function StudentAssignmentDetail() {
           const activities = data.activities || data;
 
           // Transform activities to content progress format
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           contentProgress = activities.map((activity: any, index: number) => {
             // Count items within this activity
             const items = activity.items || [];
             totalCount += items.length;
 
             // Count completed items
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             items.forEach((item: any) => {
               if (item.recording_url || item.answer || item.teacher_feedback) {
                 completedCount++;
@@ -247,6 +249,7 @@ export default function StudentAssignmentDetail() {
     let failedCount = 0;
     let ungradedCount = 0;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     items.forEach((item: any) => {
       if (item.teacher_feedback !== undefined && item.teacher_feedback !== null) {
         if (item.teacher_passed === true) {
@@ -489,9 +492,11 @@ export default function StudentAssignmentDetail() {
                 <div className="text-sm text-gray-600 mb-2">詳實記錄</div>
                 {assignment.content_progress && assignment.content_progress.length > 0 ? (
                   <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {assignment.content_progress.map((progress: any) => {
                       const items = progress.items || [];
                       let questionNumber = 0;
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       return items.map((item: any, idx: number) => {
                         const hasFeedback = item.teacher_feedback !== undefined && item.teacher_feedback !== null;
                         if (!hasFeedback) return null;
