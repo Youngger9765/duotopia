@@ -192,8 +192,35 @@ export default function GradingPage() {
       const response = await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
       ) as StudentsResponse;
-      // 依據 student_id 排序
-      const sortedStudents = (response.students || []).sort((a, b) => a.student_id - b.student_id);
+
+      // 自定義排序邏輯：
+      // 1. 進行中(IN_PROGRESS)、待訂正(RETURNED) 排最前面
+      // 2. 未開始(NOT_STARTED) 第二群
+      // 3. 未指派(NOT_ASSIGNED) 最後
+      // 其他狀態（已提交、已批改等）按原有順序
+      const statusPriority: Record<string, number> = {
+        'IN_PROGRESS': 1,   // 進行中
+        'RETURNED': 1,      // 待訂正
+        'SUBMITTED': 2,     // 已提交
+        'RESUBMITTED': 2,   // 重新提交
+        'NOT_STARTED': 3,   // 未開始
+        'GRADED': 4,        // 已批改
+        'NOT_ASSIGNED': 99, // 未指派
+      };
+
+      const sortedStudents = (response.students || []).sort((a, b) => {
+        const aPriority = statusPriority[a.status] || 50;
+        const bPriority = statusPriority[b.status] || 50;
+
+        // 先按優先級排序
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        // 同優先級按 student_id 排序
+        return a.student_id - b.student_id;
+      });
+
       setStudentList(sortedStudents);
     } catch (error) {
       console.error("Failed to load student list:", error);
