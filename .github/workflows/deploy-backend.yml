@@ -173,7 +173,7 @@ jobs:
         ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
         ENV_VARS="$ENV_VARS,JWT_SECRET=${{ steps.db_env.outputs.JWT_SECRET }}"
         ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
-        ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=30"
+        ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=10080"
         ENV_VARS="$ENV_VARS,ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }}"
         ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
         ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
