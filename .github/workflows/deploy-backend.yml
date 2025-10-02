@@ -97,8 +97,8 @@ jobs:
 
     - name: Create GCS Service Account Key File
       run: |
-        echo '${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}' > /tmp/gcs-key.json
-        echo "GCS_KEY_PATH=/tmp/gcs-key.json" >> $GITHUB_ENV
+        echo '${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}' > backend/service-account-key.json
+        echo "✅ Created GCS service account key file for Docker build"
 
     - name: Configure Docker for Artifact Registry
       run: |
@@ -129,6 +129,9 @@ jobs:
       run: |
         cd backend && docker build -f Dockerfile -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA .
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA
+        # 清理敏感檔案
+        rm -f service-account-key.json
+        echo "🧹 Cleaned up service account key file"
 
     - name: Setup Python for migrations
       uses: actions/setup-python@v4
