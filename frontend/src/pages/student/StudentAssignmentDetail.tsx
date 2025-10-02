@@ -447,14 +447,14 @@ export default function StudentAssignmentDetail() {
           </CardContent>
         </Card>
 
-        {/* Content Progress - Moved to top */}
+        {/* Total Score and Progress Card - Combined */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              活動進度
+              <BarChart3 className="h-5 w-5" />
+              總評
             </CardTitle>
-            {/* 整體進度顯示在標題區域 */}
+            {/* 整體進度顯示 */}
             <div className="mt-3">
               <div className="flex items-center gap-2">
                 <Progress value={assignment.progress_percentage || 0} className="flex-1 h-2" />
@@ -464,29 +464,22 @@ export default function StudentAssignmentDetail() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {assignment.content_progress && assignment.content_progress.length > 0 ? (
-              assignment.content_progress
-                .sort((a, b) => a.order_index - b.order_index)
-                .map(renderContentProgress)
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>此作業尚未包含活動內容</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Total Score Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              總評
-            </CardTitle>
-          </CardHeader>
           <CardContent className="space-y-4">
+            {/* 活動進度 */}
+            <div className="space-y-3 pb-4 border-b">
+              <div className="text-sm font-medium text-gray-700">活動進度</div>
+              {assignment.content_progress && assignment.content_progress.length > 0 ? (
+                assignment.content_progress
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map(renderContentProgress)
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm">此作業尚未包含活動內容</p>
+                </div>
+              )}
+            </div>
+
             {/* 分數顯示 */}
             <div className="text-center pb-4 border-b">
               <div className="text-4xl font-bold text-blue-600 mb-2">
