@@ -16,7 +16,6 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  User,
   FileText,
   Headphones,
   Mic
@@ -381,18 +380,12 @@ export default function StudentAssignmentDetail() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{assignment.title}</CardTitle>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    <span>班級作業</span>
+                {assignment.estimated_time && (
+                  <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
+                    <Clock className="h-4 w-4" />
+                    <span>預估時間: {assignment.estimated_time}</span>
                   </div>
-                  {assignment.estimated_time && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>預估時間: {assignment.estimated_time}</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
               <Badge className={statusDisplay.color}>
                 {statusDisplay.icon}
@@ -430,6 +423,32 @@ export default function StudentAssignmentDetail() {
               </div>
             )}
 
+            {/* 活動進度 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  活動進度
+                </h3>
+                <span className="text-sm font-medium text-gray-600">
+                  {assignment.completed_count || 0} / {assignment.content_count || 0} 完成
+                </span>
+              </div>
+              <Progress value={assignment.progress_percentage || 0} className="h-2" />
+              <div className="space-y-2">
+                {assignment.content_progress && assignment.content_progress.length > 0 ? (
+                  assignment.content_progress
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map(renderContentProgress)
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">此作業尚未包含活動內容</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Quick Start Button */}
             {canStart && (
               <div className="pt-4 border-t">
@@ -447,37 +466,6 @@ export default function StudentAssignmentDetail() {
           </CardContent>
         </Card>
 
-        {/* Activity Progress Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              活動進度
-            </CardTitle>
-            {/* 整體進度顯示 */}
-            <div className="mt-3">
-              <div className="flex items-center gap-2">
-                <Progress value={assignment.progress_percentage || 0} className="flex-1 h-2" />
-                <span className="text-sm font-medium text-gray-600">
-                  {assignment.completed_count || 0} / {assignment.content_count || 0} 完成
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {assignment.content_progress && assignment.content_progress.length > 0 ? (
-              assignment.content_progress
-                .sort((a, b) => a.order_index - b.order_index)
-                .map(renderContentProgress)
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm">此作業尚未包含活動內容</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Total Score Card */}
         <Card className="mb-6">
           <CardHeader>
@@ -486,23 +474,20 @@ export default function StudentAssignmentDetail() {
               總評
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* 分數顯示 */}
-            <div className="text-center pb-4 border-b">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
-                {assignment.score !== undefined ? assignment.score : '--'}
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* 分數顯示 */}
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-2">分數</div>
+                <div className="text-4xl font-bold text-blue-600">
+                  {assignment.score !== undefined ? assignment.score : '--'}
+                </div>
               </div>
-              <div className="text-gray-600">分數</div>
-            </div>
 
-            {/* 總評語回饋 */}
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-gray-700">總評語回饋</div>
-
-              {/* 顯示每題的評分詳情 */}
-              {assignment.content_progress && assignment.content_progress.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs text-gray-600 mb-1">詳實記錄</div>
+              {/* 詳實記錄 */}
+              <div>
+                <div className="text-sm text-gray-600 mb-2">詳實記錄</div>
+                {assignment.content_progress && assignment.content_progress.length > 0 ? (
                   <div className="space-y-1">
                     {assignment.content_progress.map((progress: any) => {
                       const items = progress.items || [];
@@ -511,25 +496,30 @@ export default function StudentAssignmentDetail() {
                         if (!hasFeedback) return null;
 
                         return (
-                          <div key={`${progress.id}-${idx}`} className="flex items-start gap-2 text-sm">
-                            <span className="flex-shrink-0">
-                              題目 {idx + 1} {item.teacher_passed ? '✅' : '❌'}:
-                            </span>
-                            <span className="text-gray-600">{item.text || '請多練習'}</span>
+                          <div key={`${progress.id}-${idx}`} className="text-sm">
+                            <span className="font-medium">Q{idx + 1}</span>
+                            <span className="ml-2">{item.teacher_passed ? '✅' : '❌'}</span>
+                            {item.teacher_feedback && (
+                              <span className="text-gray-600 ml-1 text-xs">{item.teacher_feedback}</span>
+                            )}
                           </div>
                         );
                       });
                     })}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="text-sm text-gray-500">尚無評分記錄</div>
+                )}
+              </div>
 
               {/* 總評 */}
-              <div className="text-xs text-gray-600">2. 總評</div>
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-gray-700">
-                  {assignment.feedback || '尚無總評'}
-                </p>
+              <div>
+                <div className="text-sm text-gray-600 mb-2">總評</div>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    {assignment.feedback || '尚無總評'}
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
