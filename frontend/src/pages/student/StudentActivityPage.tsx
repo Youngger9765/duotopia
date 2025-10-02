@@ -767,7 +767,7 @@ export default function StudentActivityPage() {
       return (
         <GroupedQuestionsTemplate
           items={activity.items}
-          answers={activity.answers}
+          // answers={activity.answers} // 目前未使用
           currentQuestionIndex={currentSubQuestionIndex}
           isRecording={isRecording}
           recordingTime={recordingTime}
@@ -1060,100 +1060,69 @@ export default function StudentActivityPage() {
       </div>
 
       {/* Main content */}
-      <div className="max-w-4xl mx-auto p-4 mt-6">
+      <div className="w-full px-2 mt-3">
         <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl mb-2">
+          <CardHeader className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-lg">
                   第 {currentActivity.order} 題：{currentActivity.title}
                 </CardTitle>
                 {getActivityTypeBadge(currentActivity.type)}
               </div>
-              <Badge className="bg-blue-100 text-blue-800">
-                {currentActivity.points} 分
-              </Badge>
+
+              <div className="flex items-center gap-3">
+                {/* Navigation buttons */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousActivity}
+                  disabled={currentActivityIndex === 0 && currentSubQuestionIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  上一題
+                </Button>
+
+                {(() => {
+                  // Check if it's the last activity
+                  const isLastActivity = currentActivityIndex === activities.length - 1;
+                  const isLastSubQuestion = currentActivity.items
+                    ? currentSubQuestionIndex === currentActivity.items.length - 1
+                    : true;
+
+                  if (isLastActivity && isLastSubQuestion) {
+                    return (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                      >
+                        {submitting ? '提交中...' : '提交作業'}
+                        <Send className="h-4 w-4 ml-1" />
+                      </Button>
+                    );
+                  }
+
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextActivity}
+                    >
+                      下一題
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  );
+                })()}
+              </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="p-3">
             {/* Render activity-specific content */}
             {renderActivityContent(currentActivity)}
 
-            {/* Navigation buttons */}
-            <div className="flex items-center justify-between pt-6">
-              <Button
-                variant="outline"
-                onClick={handlePreviousActivity}
-                disabled={currentActivityIndex === 0 && currentSubQuestionIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                上一題
-              </Button>
-
-              <span className="text-sm text-gray-600">
-                {(() => {
-                  // Calculate current question number across all activities
-                  let currentQuestion = 0;
-                  let totalQuestions = 0;
-
-                  for (let i = 0; i < activities.length; i++) {
-                    const activity = activities[i];
-                    const questionCount = activity.items?.length || 1;
-
-                    if (i < currentActivityIndex) {
-                      currentQuestion += questionCount;
-                    } else if (i === currentActivityIndex) {
-                      currentQuestion += (activity.items ? currentSubQuestionIndex + 1 : 1);
-                    }
-
-                    totalQuestions += questionCount;
-                  }
-
-                  return `${currentQuestion} / ${totalQuestions}`;
-                })()}
-              </span>
-
-              {(() => {
-                const currentActivity = activities[currentActivityIndex];
-                const isLastActivity = currentActivityIndex === activities.length - 1;
-                const isLastSubQuestion = currentActivity.items
-                  ? currentSubQuestionIndex === currentActivity.items.length - 1
-                  : true;
-                const isLastQuestion = isLastActivity && isLastSubQuestion;
-
-                if (isLastQuestion) {
-                  return (
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={submitting || isReadOnly}
-                      style={{ display: isReadOnly ? 'none' : 'inline-flex' }}
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          提交中...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          完成並提交
-                        </>
-                      )}
-                    </Button>
-                  );
-                }
-
-                return (
-                  <Button
-                    onClick={handleNextActivity}
-                  >
-                    下一題
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                );
-              })()}
-            </div>
           </CardContent>
         </Card>
 

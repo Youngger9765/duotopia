@@ -1,4 +1,4 @@
-import { Brain, Star, AlertCircle, Mic } from 'lucide-react';
+import { Star, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -61,8 +61,8 @@ interface AIScoreDisplayEnhancedProps {
 
 export default function AIScoreDisplay({
   scores,
-  hasRecording = false,
-  title = "AI 自動評分結果",
+  // hasRecording = false, // 暫時未使用
+  // title = "AI 自動評分結果", // 暫時未使用
   showDetailed = true
 }: AIScoreDisplayEnhancedProps) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'phoneme'>('overview');
@@ -100,26 +100,7 @@ export default function AIScoreDisplay({
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200 shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-purple-600" />
-          {title}
-        </h4>
-        <div className="flex gap-2">
-          {hasRecording && (
-            <Badge className="bg-green-100 text-green-700">
-              <Mic className="w-3 h-3 mr-1" />
-              已錄製
-            </Badge>
-          )}
-          {hasDetailedData && (
-            <Badge className="bg-blue-100 text-blue-700">
-              詳細分析
-            </Badge>
-          )}
-        </div>
-      </div>
+      {/* Header - 移除標題和右上方的已錄製、詳細分析標籤 */}
 
       {/* 總體分數 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
