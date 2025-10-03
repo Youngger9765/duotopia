@@ -256,7 +256,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testHealthCheck}
                 disabled={loading.health}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
                 {loading.health ? '測試中...' : '1. 測試健康檢查'}
               </button>
@@ -264,7 +264,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testAuth}
                 disabled={loading.auth}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
                 {loading.auth ? '測試中...' : '2. 測試認證狀態'}
               </button>
@@ -272,7 +272,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testAzureEnv}
                 disabled={loading.azure}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
                 {loading.azure ? '測試中...' : '3. 測試 Azure 環境'}
               </button>
@@ -280,7 +280,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testMicrophone}
                 disabled={loading.mic}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
                 {loading.mic ? '測試中...' : '4. 測試麥克風權限'}
               </button>
@@ -289,7 +289,7 @@ const DebugPage: React.FC = () => {
                 <button
                   onClick={startRecording}
                   disabled={isRecording}
-                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300"
+                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 dark:bg-green-400 dark:hover:bg-green-500 disabled:bg-gray-300"
                 >
                   {isRecording ? '錄音中...' : '5. 開始錄音'}
                 </button>
@@ -297,7 +297,7 @@ const DebugPage: React.FC = () => {
                 <button
                   onClick={stopRecording}
                   disabled={!isRecording}
-                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-300"
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500 disabled:bg-gray-300"
                 >
                   6. 停止錄音
                 </button>
@@ -306,7 +306,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testUpload}
                 disabled={loading.upload || !audioBlob}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
                 {loading.upload ? '測試中...' : '7. 測試上傳 (無認證)'}
               </button>
@@ -314,7 +314,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testFullAssessment}
                 disabled={loading.assessment || !audioBlob}
-                className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 dark:bg-purple-400 dark:hover:bg-purple-500 disabled:bg-gray-300"
               >
                 {loading.assessment ? '測試中...' : '8. 測試完整評估'}
               </button>
@@ -322,7 +322,7 @@ const DebugPage: React.FC = () => {
               <button
                 onClick={testGCSUpload}
                 disabled={loading.gcs || !audioBlob}
-                className="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:bg-gray-300"
+                className="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 dark:bg-indigo-400 dark:hover:bg-indigo-500 disabled:bg-gray-300"
               >
                 {loading.gcs ? '測試中...' : '9. 測試 GCS 上傳'}
               </button>

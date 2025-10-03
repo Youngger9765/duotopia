@@ -492,7 +492,7 @@ export default function AssignmentDetail() {
                 <Button
                   size="lg"
                   onClick={startRecording}
-                  className="bg-red-500 hover:bg-red-600"
+                  className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500"
                   disabled={assignment.status === 'GRADED' || assignment.status === 'SUBMITTED'}
                 >
                   <Mic className="h-5 w-5 mr-2" />
@@ -548,7 +548,7 @@ export default function AssignmentDetail() {
                     size="lg"
                     onClick={() => assessPronunciation(currentItemIndex)}
                     disabled={assessing}
-                    className="bg-blue-500 hover:bg-blue-600"
+                    className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500"
                   >
                     <Upload className="h-5 w-5 mr-2" />
                     {assessing ? '評測中...' : '上傳與評測'}
@@ -661,7 +661,7 @@ export default function AssignmentDetail() {
             <Button
               onClick={submitAssignment}
               disabled={recordings.size !== itemsLength || submitting}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
             >
               <Send className="h-4 w-4 mr-2" />
               {submitting ? '提交中...' : '提交作業'}

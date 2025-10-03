@@ -317,7 +317,7 @@ export default function StudentAssignmentList() {
               disabled={!canStart && assignment.status !== 'GRADED' && assignment.status !== 'SUBMITTED' && assignment.status !== 'RETURNED'}
               className={`w-full font-medium transition-all ${
                 canStart || assignment.status === 'RETURNED'
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
+                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
               data-testid="assignment-action-button"

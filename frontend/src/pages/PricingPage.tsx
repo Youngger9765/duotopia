@@ -109,8 +109,8 @@ export default function PricingPage() {
                   <Button
                     className={`w-full ${
                       plan.popular
-                        ? 'bg-blue-600 hover:bg-blue-700'
-                        : 'bg-gray-800 hover:bg-gray-900'
+                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+                        : 'bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800'
                     } text-white`}
                   >
                     立即訂閱

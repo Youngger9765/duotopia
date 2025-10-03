@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func
+from sqlalchemy import func, text
 from pydantic import BaseModel
 from database import get_db
 from models import (
@@ -14,11 +14,13 @@ from models import (
     Content,
     ContentItem,
     ContentType,
+    AssignmentContent,
+    StudentAssignment,
     ProgramLevel,
 )
 from auth import verify_token, get_password_hash
 from typing import List, Optional, Dict, Any  # noqa: F401
-from datetime import date  # noqa: F401
+from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
@@ -189,7 +191,6 @@ async def get_teacher_classrooms(
     db: Session = Depends(get_db),
 ):
     """取得教師的所有班級"""
-    from sqlalchemy import func
 
     # Get classrooms with students (only active classrooms)
     classrooms = (
@@ -498,7 +499,6 @@ async def get_all_students(
 
     # IMPORTANT: Also get recently created unassigned students (last 24 hours)
     # This allows teachers to see and assign students they just created
-    from datetime import datetime, timedelta
 
     twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
 
@@ -611,7 +611,6 @@ async def create_student(
         # If format is wrong, try to handle common formats
         try:
             # Try format with slashes
-            from datetime import datetime
 
             birthdate = datetime.strptime(student_data.birthdate, "%Y/%m/%d").date()
         except ValueError:
@@ -778,9 +777,6 @@ async def update_student(
 
     # Check if birthdate is being changed and student is using default password
     if update_data.birthdate is not None and not student.password_changed:
-        from datetime import datetime
-        from auth import get_password_hash
-
         # Parse new birthdate
         new_birthdate = datetime.strptime(update_data.birthdate, "%Y-%m-%d").date()
         student.birthdate = new_birthdate
@@ -941,7 +937,6 @@ async def reset_student_password(
         raise HTTPException(status_code=400, detail="Student birthdate not set")
 
     # Reset password to birthdate (YYYYMMDD format)
-    from auth import get_password_hash
 
     default_password = student.birthdate.strftime("%Y%m%d")
     student.password_hash = get_password_hash(default_password)
@@ -1030,7 +1025,6 @@ class BatchImportRequest(BaseModel):
 
 def parse_birthdate(birthdate_value: Any) -> Optional[date]:
     """Parse various date formats into a date object"""
-    from datetime import datetime, timedelta
     import re
 
     if birthdate_value is None:
@@ -1098,7 +1092,6 @@ async def batch_import_students(
     db: Session = Depends(get_db),
 ):
     """批次匯入學生（支持班級名稱而非ID）"""
-    from datetime import datetime
     import uuid
 
     if not import_data.students:
@@ -1472,9 +1465,6 @@ async def get_program(
     db: Session = Depends(get_db),
 ):
     """取得單一課程資料"""
-    # Import selectinload for nested loading
-    from sqlalchemy.orm import selectinload
-
     program = (
         db.query(Program)
         .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
@@ -1573,7 +1563,6 @@ async def delete_program(
     db: Session = Depends(get_db),
 ):
     """刪除課程 - 使用軟刪除保護資料完整性"""
-    from models import StudentAssignment, Content, Lesson
 
     program = (
         db.query(Program)
@@ -1719,7 +1708,6 @@ async def delete_lesson(
     db: Session = Depends(get_db),
 ):
     """刪除課程單元 - 使用軟刪除保護資料完整性"""
-    from models import StudentAssignment, Content
 
     # 驗證 lesson 屬於當前教師
     lesson = (
@@ -2019,7 +2007,6 @@ async def update_content(
     if update_data.items is not None:
         # 處理 ContentItem 更新
         # 先取得現有的 ContentItem
-        from models import ContentItem
 
         existing_items = (
             db.query(ContentItem).filter(ContentItem.content_id == content.id).all()
@@ -2038,7 +2025,6 @@ async def update_content(
                     audio_manager.delete_old_audio(existing_item.audio_url)
 
         # 使用參數化查詢刪除所有現有的 ContentItem，確保唯一約束不衝突
-        from sqlalchemy import text
 
         db.execute(
             text("DELETE FROM content_items WHERE content_id = :content_id"),
@@ -2169,7 +2155,6 @@ async def delete_content(
         raise HTTPException(status_code=404, detail="Content not found")
 
     # 檢查是否有相關的作業
-    from models import AssignmentContent
 
     assignment_count = (
         db.query(AssignmentContent)
@@ -2359,7 +2344,6 @@ async def upload_audio(
 
             if content:
                 # 查找對應的 ContentItem
-                from models import ContentItem
 
                 content_items = (
                     db.query(ContentItem)

@@ -546,7 +546,7 @@ export default function TeacherAssignmentDetailPage() {
             {/* 批改作業按鈕 */}
             <Button
               onClick={() => navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               批改作業

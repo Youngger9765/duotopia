@@ -887,7 +887,7 @@ export function AssignmentDialog({
                 <Button
                   onClick={handleSubmit}
                   disabled={loading || !canProceed()}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                 >
                   {loading ? (
                     <>創建中...</>

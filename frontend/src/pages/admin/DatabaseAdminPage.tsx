@@ -181,7 +181,7 @@ export default function DatabaseAdminPage() {
               onClick={handleSeedDatabase}
               disabled={seeding}
               size="sm"
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
             >
               {seeding ? (
                 <>

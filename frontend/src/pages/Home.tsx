@@ -422,7 +422,7 @@ export default function Home() {
                   完成作業、練習口說、查看學習進度
                 </p>
                 <Link to="/student/login" className="block">
-                  <Button className="w-full bg-green-600 hover:bg-green-700">
+                  <Button className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                     學生登入
                   </Button>
                 </Link>
