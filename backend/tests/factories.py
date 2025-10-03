@@ -15,9 +15,11 @@ from models import (
     Program,
     Lesson,
     Content,
+    ContentItem,
     Assignment,
     StudentAssignment,
     StudentContentProgress,
+    StudentItemProgress,
     AssignmentContent,
     AssignmentStatus,
 )
@@ -122,7 +124,6 @@ class TestDataFactory:
         db.commit()
 
         # 建立 ContentItem 關聯物件
-        from models import ContentItem
 
         for idx, item in enumerate(items):
             content_item = ContentItem(
@@ -248,7 +249,6 @@ class TestDataFactory:
             }
 
         # 建立 StudentItemProgress（新系統）而非 StudentContentProgress
-        from models import StudentItemProgress
 
         item_progress = None
         # 獲取第一個 ContentItem

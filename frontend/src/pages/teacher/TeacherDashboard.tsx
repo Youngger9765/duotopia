@@ -123,7 +123,7 @@ export default function TeacherDashboard() {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
                   onClick={() => navigate('/test-sub')}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white"
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   模擬訂閱充值（測試用）

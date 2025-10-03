@@ -5,7 +5,7 @@ from typing import Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import Teacher, Student
-from auth import verify_password, create_access_token, get_password_hash
+from auth import verify_password, create_access_token, get_password_hash, verify_token
 from services.email_service import email_service
 from datetime import datetime, timedelta
 
@@ -259,8 +259,6 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
     """取得當前登入的使用者資訊"""
-    from auth import verify_token
-
     # 解碼 token
     payload = verify_token(token)
     if not payload:
@@ -311,8 +309,6 @@ async def forgot_password(
     email: str = Body(..., embed=True), db: Session = Depends(get_db)
 ):
     """教師忘記密碼 - 發送重設郵件"""
-    from services.email_service import email_service
-
     # 查找教師
     teacher = db.query(Teacher).filter(Teacher.email == email).first()
 
@@ -356,8 +352,6 @@ async def reset_password(
     token: str = Body(...), new_password: str = Body(...), db: Session = Depends(get_db)
 ):
     """使用 token 重設密碼"""
-    from auth import get_password_hash
-
     # 查找擁有此 token 的教師
     teacher = db.query(Teacher).filter(Teacher.password_reset_token == token).first()
 

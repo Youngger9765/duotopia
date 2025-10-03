@@ -6,7 +6,7 @@ from datetime import datetime  # noqa: F401
 from typing import List  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from database import get_db
 from models import Program, Lesson, Teacher, Classroom, Content
@@ -538,7 +538,6 @@ async def get_copyable_programs(
 ):
     """取得教師班級的課程（只顯示班級課程，不含公版模板），並標記重複狀態"""
     # 只取得班級課程 - 使用 joinedload 來載入 classroom 關聯
-    from sqlalchemy.orm import joinedload
 
     classroom_programs = (
         db.query(Program)

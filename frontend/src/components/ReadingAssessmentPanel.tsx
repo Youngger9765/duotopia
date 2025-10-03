@@ -459,7 +459,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               <Button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
+                className="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-400 dark:hover:bg-yellow-500 text-black"
                 title="使用免費的 Microsoft Edge TTS 生成語音"
               >
                 {isGenerating ? 'Generating...' : 'Generate'}

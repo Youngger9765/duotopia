@@ -192,7 +192,7 @@ export default function ReadingAssessmentTemplate({
           {!isRecording && !audioUrl ? (
             <button
               onClick={onStartRecording}
-              className={`bg-blue-400 hover:bg-blue-500 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? 'opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100' : ''}`}
+              className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? 'opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100' : ''}`}
               disabled={readOnly}
             >
               <Mic className="h-8 w-8" />
@@ -200,7 +200,7 @@ export default function ReadingAssessmentTemplate({
           ) : isRecording ? (
             <button
               onClick={onStopRecording}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-full p-6 transition-all duration-200 animate-pulse shadow-lg"
+              className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500 text-white rounded-full p-6 transition-all duration-200 animate-pulse shadow-lg"
             >
               <MicOff className="h-8 w-8" />
             </button>
@@ -255,7 +255,7 @@ export default function ReadingAssessmentTemplate({
                 <Button
                   onClick={handleAssessment}
                   disabled={isAssessing}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white"
                 >
                   {isAssessing ? (
                     <>

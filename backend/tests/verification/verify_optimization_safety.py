@@ -9,7 +9,7 @@ import traceback
 
 sys.path.append(".")
 
-from sqlalchemy import create_engine, func  # noqa: E402
+from sqlalchemy import create_engine, func, event  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from database import Base  # noqa: E402
 from tests.factories import TestDataFactory  # noqa: E402
@@ -184,8 +184,6 @@ def test_performance_improvement():
     print("\n" + "=" * 60)
     print("測試：查詢性能改進")
     print("=" * 60)
-
-    from sqlalchemy import event
 
     # 建立測試資料庫
     engine = create_engine("sqlite:///:memory:")

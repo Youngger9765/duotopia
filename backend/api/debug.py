@@ -142,7 +142,6 @@ async def test_azure_speech_no_auth(
     """測試 Azure Speech Assessment (無認證版本)"""
     try:
         import tempfile
-        import os
 
         # 保存臨時檔案
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:

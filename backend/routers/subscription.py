@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from database import get_db
 from models import Teacher
 from auth import verify_token
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -88,8 +88,6 @@ async def recharge_subscription(
 
     try:
         # 更新訂閱結束日期
-        from datetime import timezone
-
         current_time = datetime.now(timezone.utc)
         current_end_date = teacher.subscription_end_date or current_time
 
@@ -142,8 +140,6 @@ async def mock_expire_subscription(
 
     if request.force_expire:
         # 設置訂閱為昨天過期
-        from datetime import timezone
-
         teacher.subscription_end_date = datetime.now(timezone.utc) - timedelta(days=1)
         db.commit()
         db.refresh(teacher)
