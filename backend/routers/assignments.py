@@ -17,6 +17,7 @@ from models import (
     Classroom,
     ClassroomStudent,
     Content,
+    ContentItem,
     Lesson,
     Program,
     Assignment,
@@ -359,7 +360,6 @@ async def create_assignment(
             db.flush()  # 取得 progress.id
 
             # 為每個 ContentItem 創建 StudentItemProgress
-            from models import ContentItem
 
             content_items = (
                 db.query(ContentItem)
@@ -618,8 +618,6 @@ async def patch_assignment(
 
         if assignment_ids_to_delete:
             # 先刪除相關的 StudentContentProgress 記錄
-            from models import StudentContentProgress
-
             db.query(StudentContentProgress).filter(
                 StudentContentProgress.student_assignment_id.in_(
                     assignment_ids_to_delete
@@ -659,7 +657,6 @@ async def patch_assignment(
                 db.flush()  # 取得 student_assignment.id
 
                 # 為新增的學生創建 StudentContentProgress 記錄
-                from models import AssignmentContent, ContentItem, StudentItemProgress
 
                 assignment_contents = (
                     db.query(AssignmentContent)
@@ -933,8 +930,6 @@ async def get_assignment_detail(
     student_ids = [sa.student_id for sa in student_assignments]
 
     # 🔥 修復：取得班級的全部學生，並標示指派狀態
-    from models import ClassroomStudent
-
     all_students = (
         db.query(Student)
         .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
@@ -1055,8 +1050,6 @@ async def get_assignment_progress(
         )
 
     # 🔥 修復：取得班級全部學生，並標示指派狀態
-    from models import ClassroomStudent
-
     # 取得學生作業進度
     student_assignments = (
         db.query(StudentAssignment)
@@ -1709,8 +1702,6 @@ async def get_student_submission(
     content_groups = []  # 用於儲存分組資訊
 
     # 獲取所有 StudentItemProgress 記錄（新系統）
-    from models import StudentItemProgress
-
     item_progress_records = (
         db.query(StudentItemProgress)
         .filter(StudentItemProgress.student_assignment_id == assignment.id)
