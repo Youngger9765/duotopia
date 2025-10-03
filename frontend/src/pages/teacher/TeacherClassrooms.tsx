@@ -173,69 +173,71 @@ export default function TeacherClassrooms() {
     <TeacherLayout>
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold text-gray-900">我的班級</h2>
-          <div className="flex items-center space-x-4">
-            <Button onClick={fetchClassrooms} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              重新載入
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">我的班級</h2>
+          <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
+            <Button onClick={fetchClassrooms} variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">重新載入</span>
             </Button>
-            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              新增班級
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-none">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">新增班級</span>
+              <span className="sm:hidden">新增</span>
             </Button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">總班級數</p>
-                <p className="text-2xl font-bold">{classrooms.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600">總班級數</p>
+                <p className="text-xl sm:text-2xl font-bold">{classrooms.length}</p>
               </div>
-              <GraduationCap className="h-8 w-8 text-blue-500" />
+              <GraduationCap className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">總學生數</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs sm:text-sm text-gray-600">總學生數</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {classrooms.reduce((sum, c) => sum + c.student_count, 0)}
                 </p>
               </div>
-              <Users className="h-8 w-8 text-green-500" />
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">活躍班級</p>
-                <p className="text-2xl font-bold">{classrooms.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600">活躍班級</p>
+                <p className="text-xl sm:text-2xl font-bold">{classrooms.length}</p>
               </div>
-              <BookOpen className="h-8 w-8 text-purple-500" />
+              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
             </div>
           </div>
         </div>
 
         {/* Classrooms Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <Table>
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
             <TableCaption>
               共 {classrooms.length} 個班級
             </TableCaption>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px] text-left">ID</TableHead>
-                <TableHead className="text-left">班級名稱</TableHead>
-                <TableHead className="text-left">描述</TableHead>
-                <TableHead className="text-left">等級</TableHead>
-                <TableHead className="text-left">學生數</TableHead>
-                <TableHead className="text-left">課程數</TableHead>
-                <TableHead className="text-left">建立時間</TableHead>
-                <TableHead className="text-left">操作</TableHead>
+                <TableHead className="w-[50px] text-left text-xs sm:text-sm">ID</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm min-w-[120px]">班級名稱</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm hidden sm:table-cell min-w-[100px]">描述</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm min-w-[60px]">等級</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm min-w-[80px]">學生數</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm hidden lg:table-cell min-w-[80px]">課程數</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm hidden md:table-cell min-w-[100px]">建立時間</TableHead>
+                <TableHead className="text-left text-xs sm:text-sm min-w-[80px]">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,22 +246,22 @@ export default function TeacherClassrooms() {
                   key={classroom.id}
                   className="hover:bg-gray-50"
                 >
-                  <TableCell className="font-medium">{classroom.id}</TableCell>
+                  <TableCell className="font-medium text-xs sm:text-sm">{classroom.id}</TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <GraduationCap className="h-4 w-4 text-blue-600" />
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                       </div>
                       <Link
                         to={`/teacher/classroom/${classroom.id}`}
-                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-xs sm:text-sm truncate"
                       >
                         {classroom.name}
                       </Link>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <p className="text-sm text-gray-500 max-w-xs truncate">
+                  <TableCell className="hidden sm:table-cell">
+                    <p className="text-xs sm:text-sm text-gray-500 max-w-xs truncate">
                       {classroom.description || '暫無描述'}
                     </p>
                   </TableCell>
@@ -268,35 +270,36 @@ export default function TeacherClassrooms() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1 text-gray-400" />
-                      {classroom.student_count}
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{classroom.student_count}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center">
-                      <BookOpen className="h-4 w-4 mr-1 text-gray-400" />
-                      {classroom.program_count || 0}
+                      <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{classroom.program_count || 0}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{formatDate(classroom.created_at)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs sm:text-sm">{formatDate(classroom.created_at)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         title="編輯"
                         onClick={() => handleEdit(classroom)}
+                        className="p-1 sm:p-2"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         title="刪除"
                         onClick={() => setDeleteConfirmId(classroom.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -304,6 +307,7 @@ export default function TeacherClassrooms() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
 
         {/* Empty State */}
@@ -329,38 +333,38 @@ export default function TeacherClassrooms() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="name" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <label htmlFor="name" className="text-left sm:text-right text-sm font-medium">
                   班級名稱
                 </label>
                 <input
                   id="name"
                   value={editFormData.name}
                   onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="col-span-3 px-3 py-2 border rounded-md"
+                  className="col-span-1 sm:col-span-3 px-3 py-2 border rounded-md text-sm"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="description" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">
+                <label htmlFor="description" className="text-left sm:text-right text-sm font-medium">
                   描述
                 </label>
                 <textarea
                   id="description"
                   value={editFormData.description}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                  className="col-span-3 px-3 py-2 border rounded-md"
+                  className="col-span-1 sm:col-span-3 px-3 py-2 border rounded-md text-sm"
                   rows={3}
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="level" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <label htmlFor="level" className="text-left sm:text-right text-sm font-medium">
                   等級
                 </label>
                 <select
                   id="level"
                   value={editFormData.level}
                   onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
-                  className="col-span-3 px-3 py-2 border rounded-md"
+                  className="col-span-1 sm:col-span-3 px-3 py-2 border rounded-md text-sm"
                 >
                   <option value="preA">Pre-A</option>
                   <option value="A1">A1</option>
@@ -372,11 +376,11 @@ export default function TeacherClassrooms() {
                 </select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingClassroom(null)}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setEditingClassroom(null)} className="w-full sm:w-auto">
                 取消
               </Button>
-              <Button onClick={handleSaveEdit}>
+              <Button onClick={handleSaveEdit} className="w-full sm:w-auto">
                 儲存
               </Button>
             </DialogFooter>
@@ -396,13 +400,14 @@ export default function TeacherClassrooms() {
                 班級內的學生和課程資料將會保留，但不再與此班級關聯。
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)} className="w-full sm:w-auto">
                 取消
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
+                className="w-full sm:w-auto"
               >
                 確認刪除
               </Button>
@@ -421,19 +426,19 @@ export default function TeacherClassrooms() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">班級名稱</label>
+                <label className="text-sm font-medium block mb-1">班級名稱</label>
                 <input
                   type="text"
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
                   value={createFormData.name}
                   onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
                   placeholder="例如：五年級A班"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">描述</label>
+                <label className="text-sm font-medium block mb-1">描述</label>
                 <textarea
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
                   value={createFormData.description}
                   onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
                   placeholder="班級描述（選填）"
@@ -441,9 +446,9 @@ export default function TeacherClassrooms() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">級別</label>
+                <label className="text-sm font-medium block mb-1">級別</label>
                 <select
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
                   value={createFormData.level}
                   onChange={(e) => setCreateFormData({ ...createFormData, level: e.target.value })}
                 >
@@ -456,11 +461,11 @@ export default function TeacherClassrooms() {
                 </select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="w-full sm:w-auto">
                 取消
               </Button>
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} className="w-full sm:w-auto">
                 建立
               </Button>
             </DialogFooter>
