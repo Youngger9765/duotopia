@@ -918,10 +918,10 @@ export default function StudentActivityPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* 唯讀模式提示 */}
       {isReadOnly && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+        <div className="bg-blue-50 border-b border-blue-200 px-2 sm:px-4 py-2">
           <div className="max-w-6xl mx-auto flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-blue-600" />
-            <span className="text-blue-700">
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+            <span className="text-xs sm:text-sm text-blue-700 truncate">
               {assignmentStatus === 'SUBMITTED' ? '作業已提交，目前為檢視模式' :
                assignmentStatus === 'GRADED' ? '作業已評分，目前為檢視模式' : '檢視模式'}
             </span>
@@ -931,26 +931,30 @@ export default function StudentActivityPage() {
 
       {/* Header with progress */}
       <div className="sticky top-0 bg-white border-b z-10">
-        <div className="max-w-6xl mx-auto px-4 py-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2">
+          {/* Mobile header layout */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(`/student/assignment/${assignmentId}/detail`)}
+                className="flex-shrink-0 px-2 sm:px-3"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                返回作業
+                <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="hidden sm:inline">返回作業</span>
+                <span className="sm:hidden">返回</span>
               </Button>
-              <div className="h-6 w-px bg-gray-300" />
-              <h1 className="text-base font-semibold">{assignmentTitle}</h1>
+              <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
+              <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">{assignmentTitle}</h1>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 justify-end">
               {saving && (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="flex items-center gap-1 sm:gap-2 text-xs text-gray-600">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  自動儲存中...
+                  <span className="hidden sm:inline">自動儲存中...</span>
+                  <span className="sm:hidden">儲存中</span>
                 </div>
               )}
               {!isReadOnly && (
@@ -959,16 +963,19 @@ export default function StudentActivityPage() {
                   disabled={submitting}
                   size="sm"
                   variant="default"
+                  className="px-2 sm:px-3"
                 >
                   {submitting ? (
                     <>
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      提交中...
+                      <span className="hidden sm:inline">提交中...</span>
+                      <span className="sm:hidden">提交</span>
                     </>
                   ) : (
                     <>
                       <Send className="h-3 w-3 mr-1" />
-                      提交作業
+                      <span className="hidden sm:inline">提交作業</span>
+                      <span className="sm:hidden">提交</span>
                     </>
                   )}
                 </Button>
@@ -976,8 +983,8 @@ export default function StudentActivityPage() {
             </div>
           </div>
 
-          {/* Activity navigation - Grouped by content with sub-questions (horizontal layout) */}
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          {/* Activity navigation - Mobile-optimized horizontal scrolling */}
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
             {activities.map((activity, activityIndex) => {
               const answer = answers.get(activity.id);
               const isActiveActivity = activityIndex === currentActivityIndex;
@@ -985,15 +992,15 @@ export default function StudentActivityPage() {
               // If activity has items, show them as sub-questions
               if (activity.items && activity.items.length > 0) {
                 return (
-                  <div key={activity.id} className="flex items-center gap-2 flex-shrink-0">
-                    {/* Content title */}
+                  <div key={activity.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    {/* Content title - Compact for mobile */}
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap">{activity.title}</span>
-                      <Badge variant="outline" className="text-xs px-1 py-0 h-5">{activity.items.length}題</Badge>
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap max-w-[80px] sm:max-w-none truncate sm:truncate-none">{activity.title}</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0 h-4 sm:h-5 min-w-[30px] text-center">{activity.items.length}題</Badge>
                     </div>
 
-                    {/* Question buttons */}
-                    <div className="flex gap-1">
+                    {/* Question buttons - Smaller on mobile */}
+                    <div className="flex gap-0.5 sm:gap-1">
                       {activity.items.map((item, itemIndex) => {
                         const isActiveItem = isActiveActivity && currentSubQuestionIndex === itemIndex;
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1019,8 +1026,9 @@ export default function StudentActivityPage() {
                               }
                             }}
                             className={cn(
-                              "relative w-8 h-8 rounded-md border transition-all",
+                              "relative w-6 h-6 sm:w-8 sm:h-8 rounded border transition-all",
                               "flex items-center justify-center text-xs font-medium",
+                              "min-w-[24px] sm:min-w-[32px]", // Ensure minimum width
                               // 老師批改的顏色優先級最高
                               needsCorrection
                                 ? "bg-red-100 text-red-800 border-red-400"  // 老師批改未通過 - 紅色
@@ -1072,27 +1080,30 @@ export default function StudentActivityPage() {
       </div>
 
       {/* Main content */}
-      <div className="w-full px-2 mt-3">
+      <div className="w-full px-2 sm:px-4 mt-3">
         <Card>
-          <CardHeader className="py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-lg">
+          <CardHeader className="py-2 sm:py-3">
+            {/* Mobile: Stack title and buttons vertically */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+                <CardTitle className="text-base sm:text-lg leading-tight">
                   第 {currentActivity.order} 題：{currentActivity.title}
                 </CardTitle>
                 {getActivityTypeBadge(currentActivity.type)}
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Navigation buttons */}
+              {/* Navigation buttons - Mobile: horizontal layout */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handlePreviousActivity}
                   disabled={currentActivityIndex === 0 && currentSubQuestionIndex === 0}
+                  className="flex-1 sm:flex-none min-w-0"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  上一題
+                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">上一題</span>
+                  <span className="sm:hidden">上一題</span>
                 </Button>
 
                 {(() => {
@@ -1109,9 +1120,11 @@ export default function StudentActivityPage() {
                         size="sm"
                         onClick={handleSubmit}
                         disabled={submitting}
+                        className="flex-1 sm:flex-none min-w-0"
                       >
-                        {submitting ? '提交中...' : '提交作業'}
-                        <Send className="h-4 w-4 ml-1" />
+                        <span className="hidden sm:inline">{submitting ? '提交中...' : '提交作業'}</span>
+                        <span className="sm:hidden">{submitting ? '提交中' : '提交'}</span>
+                        <Send className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                       </Button>
                     );
                   }
@@ -1121,9 +1134,11 @@ export default function StudentActivityPage() {
                       variant="outline"
                       size="sm"
                       onClick={handleNextActivity}
+                      className="flex-1 sm:flex-none min-w-0"
                     >
-                      下一題
-                      <ChevronRight className="h-4 w-4 ml-1" />
+                      <span className="hidden sm:inline">下一題</span>
+                      <span className="sm:hidden">下一題</span>
+                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                     </Button>
                   );
                 })()}
@@ -1131,34 +1146,34 @@ export default function StudentActivityPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="p-3">
+          <CardContent className="p-2 sm:p-3">
             {/* Render activity-specific content */}
             {renderActivityContent(currentActivity)}
 
           </CardContent>
         </Card>
 
-        {/* Status summary */}
-        <Card className="mt-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-3 gap-4 text-center">
+        {/* Status summary - Mobile-optimized */}
+        <Card className="mt-4 sm:mt-6">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {Array.from(answers.values()).filter(a => a.status === 'completed').length}
                 </div>
-                <p className="text-sm text-gray-600">已完成</p>
+                <p className="text-xs sm:text-sm text-gray-600">已完成</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-600">
                   {Array.from(answers.values()).filter(a => a.status === 'in_progress').length}
                 </div>
-                <p className="text-sm text-gray-600">進行中</p>
+                <p className="text-xs sm:text-sm text-gray-600">進行中</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-400">
+                <div className="text-xl sm:text-2xl font-bold text-gray-400">
                   {Array.from(answers.values()).filter(a => a.status === 'not_started').length}
                 </div>
-                <p className="text-sm text-gray-600">未開始</p>
+                <p className="text-xs sm:text-sm text-gray-600">未開始</p>
               </div>
             </div>
           </CardContent>

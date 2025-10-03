@@ -423,11 +423,11 @@ export default function GroupedQuestionsTemplate({
 
   return (
     <div className="w-full">
-      {/* 三欄式佈局 - 使用全寬度 */}
-      <div className="grid grid-cols-12 gap-4 w-full">
-        {/* 左欄：圖片區域 - 只有圖片存在時才顯示 */}
+      {/* 響應式佈局 - 手機垂直堆疊，桌面三欄式 */}
+      <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-4 w-full">
+        {/* 圖片區域 - 手機全寬，桌面3欄 */}
         {currentQuestion?.image_url && (
-          <div className="col-span-3">
+          <div className="w-full sm:col-span-3">
             <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
               <img
                 src={currentQuestion.image_url}
@@ -451,12 +451,12 @@ export default function GroupedQuestionsTemplate({
           </div>
         )}
 
-        {/* 中欄：題目和學生作答區 - 根據是否有圖片調整寬度 */}
-        <div className={`${currentQuestion?.image_url ? 'col-span-5' : 'col-span-6'} space-y-3`}>
+        {/* 題目和學生作答區 - 手機全寬，桌面根據是否有圖片調整 */}
+        <div className={`w-full ${currentQuestion?.image_url ? 'sm:col-span-5' : 'sm:col-span-6'} space-y-3`}>
           {/* 題目區域 - 更精簡版 */}
           <div className="bg-white rounded-lg border border-gray-200 p-3">
-            {/* 題目文字與音檔同一行 */}
-            <div className="flex items-center gap-3 mb-2">
+            {/* 題目文字與音檔 - 手機優化間距 */}
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
               <button
                 onClick={() => {
                   if (questionAudioRef.current) {
@@ -485,8 +485,8 @@ export default function GroupedQuestionsTemplate({
                 <Volume2 className="w-4 h-4" />
               </button>
 
-              {/* 題目文字 - 加大字體，可點擊單字發音 */}
-              <div className="text-lg font-medium text-gray-800 flex-1">
+              {/* 題目文字 - 響應式字體大小 */}
+              <div className="text-base sm:text-lg font-medium text-gray-800 flex-1">
                 {currentQuestion?.text ? (
                   <div className="flex flex-wrap gap-1">
                     {currentQuestion.text.split(' ').map((word, index) => (
@@ -535,9 +535,9 @@ export default function GroupedQuestionsTemplate({
               </select>
             </div>
 
-            {/* 翻譯 - 有才顯示，字體加大 */}
+            {/* 翻譯 - 響應式字體和內距 */}
             {currentQuestion?.translation && (
-              <div className="flex items-center gap-2 text-base text-purple-600 bg-purple-50 rounded px-3 py-2">
+              <div className="flex items-center gap-2 text-sm sm:text-base text-purple-600 bg-purple-50 rounded px-2 sm:px-3 py-1.5 sm:py-2">
                 <Languages className="w-4 h-4" />
                 <span>{currentQuestion.translation}</span>
               </div>
@@ -546,7 +546,7 @@ export default function GroupedQuestionsTemplate({
 
           {/* 學生錄音區 - 超精簡版 */}
           <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-base font-medium text-gray-700 mb-2">學生作答</div>
+            <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">學生作答</div>
 
             {/* 錄音控制 - 一行搞定 */}
             <div className="flex items-center gap-2">
@@ -605,7 +605,7 @@ export default function GroupedQuestionsTemplate({
                   ) : (
                     <>
                       <button
-                        className="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+                        className="w-12 h-12 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
                         disabled={readOnly}
                         onClick={() => {
                           setAssessmentResults(prev => {
@@ -617,9 +617,9 @@ export default function GroupedQuestionsTemplate({
                         }}
                         title={readOnly ? '檢視模式' : '開始錄音'}
                       >
-                        <Mic className="w-6 h-6" />
+                        <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
-                      <span className="text-base text-gray-600">
+                      <span className="text-sm sm:text-base text-gray-600">
                         {readOnly ? '檢視模式' : '開始錄音'}
                       </span>
                     </>
@@ -657,7 +657,7 @@ export default function GroupedQuestionsTemplate({
                   : 'border-blue-400 bg-blue-50'
                 : 'border-gray-200 bg-gray-50 opacity-50'
             }`}>
-              <div className={`text-base font-medium mb-1 flex items-center gap-1 ${
+              <div className={`text-sm sm:text-base font-medium mb-1 flex items-center gap-1 ${
                 currentQuestion?.teacher_feedback
                   ? currentQuestion.teacher_passed === true
                     ? 'text-green-600'
@@ -674,7 +674,7 @@ export default function GroupedQuestionsTemplate({
                   </span>
                 )}
               </div>
-              <div className="text-base text-gray-700">
+              <div className="text-sm sm:text-base text-gray-700">
                 {currentQuestion?.teacher_feedback || <span className="text-gray-400">尚無老師評語</span>}
               </div>
               {currentQuestion?.teacher_reviewed_at && (
@@ -686,8 +686,8 @@ export default function GroupedQuestionsTemplate({
           }
         </div>
 
-        {/* 右欄：AI分析 - 根據是否有圖片調整寬度 */}
-        <div className={`${currentQuestion?.image_url ? 'col-span-4' : 'col-span-6'} space-y-4`}>
+        {/* AI分析 - 手機全寬，桌面根據是否有圖片調整 */}
+        <div className={`w-full ${currentQuestion?.image_url ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-4`}>
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             {items[currentQuestionIndex]?.recording_url && !assessmentResults[currentQuestionIndex] ? (
