@@ -121,51 +121,55 @@ export default function TeacherDashboard() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Duotopia</h1>
-              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">教師後台</span>
-              {dashboardData.teacher.is_demo && (
-                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">Demo 帳號</span>
-              )}
-              {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
-                <span className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full font-medium">
-                  🎉 免費試用剩餘 {dashboardData.days_remaining} 天
-                </span>
-              )}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+              <div className="flex items-center space-x-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Duotopia</h1>
+                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded whitespace-nowrap">教師後台</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {dashboardData.teacher.is_demo && (
+                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded whitespace-nowrap">Demo 帳號</span>
+                )}
+                {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
+                  <span className="px-3 py-1 text-xs sm:text-sm bg-green-100 text-green-700 rounded-full font-medium whitespace-nowrap">
+                    🎉 免費試用剩餘 {dashboardData.days_remaining} 天
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
+            <div className="flex items-center justify-between w-full sm:w-auto sm:space-x-4">
+              <div className="text-left sm:text-right">
                 <p className="text-sm font-medium text-gray-900">{dashboardData.teacher.name}</p>
                 <p className="text-xs text-gray-500">{dashboardData.teacher.email}</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                登出
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-4">
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">登出</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             歡迎回來，{dashboardData.teacher.name}！
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             管理您的班級、課程與學生學習進度
           </p>
         </div>
 
         {/* Subscription Status Card */}
         {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
-          <Card className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">🎉 30天免費試用期</h3>
+          <Card className="mb-6 sm:mb-8 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+                <div className="flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">🎉 30天免費試用期</h3>
                   <p className="text-sm text-gray-600 mt-1">
                     您的免費試用將在 {dashboardData.days_remaining} 天後到期
                   </p>
@@ -175,8 +179,8 @@ export default function TeacherDashboard() {
                     </p>
                   )}
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">{dashboardData.days_remaining}</div>
+                <div className="text-center sm:text-right">
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600">{dashboardData.days_remaining}</div>
                   <div className="text-sm text-gray-600">天</div>
                 </div>
               </div>
@@ -185,14 +189,14 @@ export default function TeacherDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">班級數量</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">班級數量</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.classroom_count}</div>
+              <div className="text-xl sm:text-2xl font-bold">{dashboardData.classroom_count}</div>
               <p className="text-xs text-muted-foreground">
                 管理中的班級
               </p>
@@ -201,11 +205,11 @@ export default function TeacherDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">學生總數</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">學生總數</CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.student_count}</div>
+              <div className="text-xl sm:text-2xl font-bold">{dashboardData.student_count}</div>
               <p className="text-xs text-muted-foreground">
                 所有班級學生
               </p>
@@ -214,11 +218,11 @@ export default function TeacherDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">課程計畫</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">課程計畫</CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.program_count}</div>
+              <div className="text-xl sm:text-2xl font-bold">{dashboardData.program_count}</div>
               <p className="text-xs text-muted-foreground">
                 建立的課程
               </p>
@@ -226,7 +230,7 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Classrooms */}
           <Card>
             <CardHeader>
@@ -242,16 +246,16 @@ export default function TeacherDashboard() {
               {dashboardData.classrooms.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">尚未建立班級</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {dashboardData.classrooms.map((classroom) => (
-                    <div key={classroom.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{classroom.name}</h4>
-                        <p className="text-sm text-gray-500">{classroom.description}</p>
+                    <div key={classroom.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border rounded-lg space-y-2 sm:space-y-0">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm sm:text-base">{classroom.name}</h4>
+                        <p className="text-xs sm:text-sm text-gray-500">{classroom.description}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{classroom.student_count} 位學生</p>
-                        <Button variant="outline" size="sm" className="mt-2">
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto sm:text-right">
+                        <p className="text-xs sm:text-sm font-medium">{classroom.student_count} 位學生</p>
+                        <Button variant="outline" size="sm" className="ml-4 sm:ml-0 sm:mt-2">
                           管理
                         </Button>
                       </div>
@@ -259,7 +263,7 @@ export default function TeacherDashboard() {
                   ))}
                 </div>
               )}
-              <Button className="w-full mt-4">
+              <Button className="w-full mt-4" size="sm">
                 <Users className="h-4 w-4 mr-2" />
                 建立新班級
               </Button>
@@ -284,25 +288,25 @@ export default function TeacherDashboard() {
                 <div className="space-y-3">
                   {dashboardData.recent_students.map((student) => (
                     <div key={student.id} className="flex items-center justify-between p-3 border rounded">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-sm font-medium text-blue-600">
                             {student.name.charAt(0)}
                           </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{student.name}</p>
-                          <p className="text-xs text-gray-500">{student.classroom_name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{student.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{student.classroom_name}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="flex-shrink-0">
                         <Clock className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
                 </div>
               )}
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4" size="sm">
                 查看所有學生
               </Button>
             </CardContent>
@@ -310,25 +314,25 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <Card className="mt-8">
+        <Card className="mt-6 sm:mt-8">
           <CardHeader>
-            <CardTitle>快速動作</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">快速動作</CardTitle>
+            <CardDescription className="text-sm">
               常用功能快捷入口
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="h-20 flex flex-col">
-                <BookOpen className="h-6 w-6 mb-2" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <Button variant="outline" className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm">
+                <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
                 建立課程
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col">
-                <Users className="h-6 w-6 mb-2" />
+              <Button variant="outline" className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
                 管理學生
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col">
-                <TrendingUp className="h-6 w-6 mb-2" />
+              <Button variant="outline" className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm sm:col-span-2 lg:col-span-1">
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
                 查看統計
               </Button>
             </div>

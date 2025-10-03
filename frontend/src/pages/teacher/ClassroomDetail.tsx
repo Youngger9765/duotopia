@@ -824,28 +824,30 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
       <div className="relative">
         <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[50%]' : ''}`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(isTemplateMode ? '/teacher/programs' : '/teacher/classrooms')}
+              className="flex-shrink-0"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              返回
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">返回</span>
             </Button>
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900">{isTemplateMode ? templateProgram?.name : classroom?.name}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">{isTemplateMode ? templateProgram?.name : classroom?.name}</h2>
               {(isTemplateMode ? templateProgram?.description : classroom?.description) && (
-                <p className="text-gray-600 mt-1">{isTemplateMode ? templateProgram?.description : classroom?.description}</p>
+                <p className="text-sm sm:text-base text-gray-600 mt-1 truncate">{isTemplateMode ? templateProgram?.description : classroom?.description}</p>
               )}
             </div>
           </div>
           {!isTemplateMode && (
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                班級設定
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">班級設定</span>
+                <span className="sm:hidden">設定</span>
               </Button>
             </div>
           )}
@@ -853,33 +855,33 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
 
         {/* Stats - only show for classroom mode */}
         {!isTemplateMode && (
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">學生數</p>
-                  <p className="text-2xl font-bold">{classroom?.student_count || 0}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">學生數</p>
+                  <p className="text-xl sm:text-2xl font-bold">{classroom?.student_count || 0}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-500" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">課程數</p>
-                  <p className="text-2xl font-bold">{programs.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">課程數</p>
+                  <p className="text-xl sm:text-2xl font-bold">{programs.length}</p>
                 </div>
-                <BookOpen className="h-8 w-8 text-green-500" />
+                <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">等級</p>
-                  <p className="text-2xl font-bold">{classroom?.level || 'A1'}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">等級</p>
+                  <p className="text-xl sm:text-2xl font-bold">{classroom?.level || 'A1'}</p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 font-bold">L</span>
+                <div className="h-6 w-6 sm:h-8 sm:w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-purple-600 font-bold text-sm sm:text-base">L</span>
                 </div>
               </div>
             </div>
@@ -889,29 +891,29 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="border-b bg-gray-50 px-6 py-3">
+            <div className="border-b bg-gray-50 px-3 sm:px-6 py-3">
               {isTemplateMode ? (
                 /* Template mode - no tabs, just show programs */
                 <div className="h-12" />
               ) : (
-                <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-12 bg-white border">
+                <TabsList className="grid w-full max-w-[700px] grid-cols-1 sm:grid-cols-3 h-auto sm:h-12 bg-white border gap-1 sm:gap-0">
                   <TabsTrigger
                     value="students"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto"
                   >
-                    <Users className="h-5 w-5 mr-2" />
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                     學生列表
                   </TabsTrigger>
                   <TabsTrigger
                     value="programs"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto"
                   >
-                    <BookOpen className="h-5 w-5 mr-2" />
+                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                     課程列表
                   </TabsTrigger>
                   <TabsTrigger
                     value="assignments"
-                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white text-base font-medium ${
+                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto ${
                       !canAssignHomework ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                     disabled={!canAssignHomework}
@@ -922,7 +924,7 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                       }
                     }}
                   >
-                    <FileText className="h-5 w-5 mr-2" />
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                     作業管理
                   </TabsTrigger>
                 </TabsList>
@@ -931,10 +933,10 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
 
             {/* Students Tab - only show for classroom mode */}
             {!isTemplateMode && (
-              <TabsContent value="students" className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">班級學生</h3>
-                  <Button size="sm" onClick={handleCreateStudent}>
+              <TabsContent value="students" className="p-3 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
+                  <h3 className="text-base sm:text-lg font-semibold">班級學生</h3>
+                  <Button size="sm" onClick={handleCreateStudent} className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     新增學生
                   </Button>

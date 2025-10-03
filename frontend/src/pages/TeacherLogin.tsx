@@ -196,7 +196,7 @@ export default function TeacherLogin() {
               >
                 <Zap className="mr-2 h-4 w-4 text-blue-600" />
                 <div className="flex-1 text-left">
-                  <div className="font-medium">試用教師（30天試用期）</div>
+                  <div className="font-medium text-xs sm:text-sm truncate">試用教師（30天試用期）</div>
                   <div className="text-xs text-gray-500">trial@duotopia.com</div>
                 </div>
               </Button>
