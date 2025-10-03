@@ -266,15 +266,15 @@ export default function StudentAssignmentDetail() {
 
     return (
       <Card key={progress.id} className="hover:shadow-sm transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="p-2 bg-blue-50 rounded-lg">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="p-1.5 sm:p-2 bg-blue-50 rounded-lg flex-shrink-0">
                 {contentTypeIcon}
               </div>
-              <div className="flex-1">
-                <h4 className="font-medium">{progress.content?.title || `活動 ${progress.order_index + 1}`}</h4>
-                <p className="text-sm text-gray-600">
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-sm sm:text-base truncate">{progress.content?.title || `活動 ${progress.order_index + 1}`}</h4>
+                <p className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                   {progress.content?.type === 'reading_assessment' && '朗讀評測'}
                   {progress.content?.type === 'listening' && '聽力練習'}
                   {progress.content?.type === 'grouped_questions' && '基礎問候語練習'}
@@ -283,7 +283,7 @@ export default function StudentAssignmentDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {/* 顯示題目評分狀態 */}
               {items.length > 0 && (
                 <div className="flex items-center gap-2 text-sm">
@@ -324,6 +324,7 @@ export default function StudentAssignmentDetail() {
                 onClick={handleStartActivity}
                 disabled={false}  // 允許查看已提交的作業
                 variant={progress.status === 'NOT_STARTED' ? 'default' : 'outline'}
+                className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
                 {progress.status === 'NOT_STARTED' && '開始'}
                 {progress.status === 'IN_PROGRESS' && '繼續'}
@@ -382,7 +383,7 @@ export default function StudentAssignmentDetail() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-2xl mb-2">{assignment.title}</CardTitle>
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl mb-2 break-words">{assignment.title}</CardTitle>
                 {assignment.estimated_time && (
                   <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
@@ -482,7 +483,7 @@ export default function StudentAssignmentDetail() {
               {/* 分數顯示 */}
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">分數</div>
-                <div className="text-4xl font-bold text-blue-600">
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-600">
                   {assignment.score !== undefined ? assignment.score : '--'}
                 </div>
               </div>

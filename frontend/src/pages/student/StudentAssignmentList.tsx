@@ -242,32 +242,34 @@ export default function StudentAssignmentList() {
         className="hover:shadow-lg transition-all duration-200 border-gray-200"
         data-testid="assignment-card"
       >
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-3">
+        <CardHeader className="p-4 sm:p-5">
+          <div className="flex flex-col gap-3">
             <div className="flex-1">
-              <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
+              <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 leading-relaxed">
                 {assignment.title}
               </CardTitle>
               {assignment.classroom_name && (
-                <p className="text-sm text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-500 mt-2">
                   {assignment.classroom_name} {assignment.teacher_name && `• ${assignment.teacher_name}`}
                 </p>
               )}
             </div>
-            <Badge className={`${statusDisplay.color} flex items-center gap-1 px-3 py-1`}>
-              {statusIcon}
-              <span className="font-medium">{statusDisplay.text}</span>
-            </Badge>
+            <div className="flex items-start">
+              <Badge className={`${statusDisplay.color} flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap`}>
+                {statusIcon}
+                <span className="font-medium">{statusDisplay.text}</span>
+              </Badge>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3">
+        <CardContent className="p-4 sm:p-5 pt-0 space-y-4">
           {/* Progress */}
           {(assignment.status !== 'NOT_STARTED') && (
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-gray-600 font-medium">完成進度</span>
-                <span className="font-semibold text-gray-900">
+            <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                <span className="text-sm sm:text-base text-gray-600 font-medium">完成進度</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-900">
                   {assignment.completed_count || 0} / {assignment.content_count || 1} 個活動
                 </span>
               </div>
@@ -279,22 +281,22 @@ export default function StudentAssignmentList() {
           )}
 
           {/* Details */}
-          <div className="flex flex-wrap gap-3 text-sm">
-            <div className="flex items-center gap-1.5 text-gray-600">
-              <BookOpen className="h-4 w-4 text-gray-400" />
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
               <span>{assignment.content_type || '朗讀練習'}</span>
             </div>
             {assignment.estimated_time && (
-              <div className="flex items-center gap-1.5 text-gray-600">
-                <Clock className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
                 <span>{assignment.estimated_time}</span>
               </div>
             )}
             {dueDateInfo && (
-              <div className={`flex items-center gap-1.5 font-medium ${
+              <div className={`flex items-center gap-2 text-sm sm:text-base font-medium ${
                 dueDateInfo.isOverdue ? 'text-red-600' : 'text-gray-700'
               }`}>
-                <Calendar className={`h-4 w-4 ${dueDateInfo.isOverdue ? 'text-red-500' : 'text-gray-400'}`} />
+                <Calendar className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${dueDateInfo.isOverdue ? 'text-red-500' : 'text-gray-400'}`} />
                 <span>{dueDateInfo.text}</span>
               </div>
             )}
@@ -302,20 +304,20 @@ export default function StudentAssignmentList() {
 
           {/* Score */}
           {assignment.score !== undefined && assignment.status === 'GRADED' && (
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">
+            <div className="flex items-center gap-2 pt-2">
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+              <span className="text-sm sm:text-base font-medium text-green-600">
                 分數: {assignment.score}
               </span>
             </div>
           )}
 
           {/* Action Button */}
-          <div className="pt-3 mt-2 border-t border-gray-100">
+          <div className="pt-4 mt-3 border-t border-gray-100">
             <Button
               onClick={() => handleStartAssignment(assignment.id)}
               disabled={!canStart && assignment.status !== 'GRADED' && assignment.status !== 'SUBMITTED' && assignment.status !== 'RETURNED'}
-              className={`w-full font-medium transition-all ${
+              className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
                 canStart || assignment.status === 'RETURNED'
                   ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -353,7 +355,7 @@ export default function StudentAssignmentList() {
   }
 
   return (
-    <div className="p-4 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Assignment Flow Status */}
@@ -554,7 +556,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {notStartedAssignments.map(renderAssignmentCard)}
                 </div>
               );
@@ -574,7 +576,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {inProgressAssignments.map(renderAssignmentCard)}
                 </div>
               );
@@ -594,7 +596,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {submittedAssignments.map(renderAssignmentCard)}
                 </div>
               );
@@ -614,7 +616,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {gradedAssignments.map(renderAssignmentCard)}
                 </div>
               );
@@ -634,7 +636,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {returnedAssignments.map(renderAssignmentCard)}
                 </div>
               );
@@ -654,7 +656,7 @@ export default function StudentAssignmentList() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {resubmittedAssignments.map(renderAssignmentCard)}
                 </div>
               );

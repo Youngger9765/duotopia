@@ -339,51 +339,51 @@ export default function StudentDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">完成作業</p>
-                  <p className="text-2xl font-bold">{stats.completedAssignments}</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">完成作業</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.completedAssignments}</p>
                 </div>
-                <BookOpen className="h-8 w-8 text-blue-500" />
+                <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">平均分數</p>
-                  <p className="text-2xl font-bold">{stats.averageScore}分</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">平均分數</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.averageScore}分</p>
                 </div>
-                <Trophy className="h-8 w-8 text-yellow-500" />
+                <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">練習時間</p>
-                  <p className="text-2xl font-bold">{stats.totalPracticeTime}分</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">練習時間</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.totalPracticeTime}分</p>
                 </div>
-                <Clock className="h-8 w-8 text-green-500" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">連續天數</p>
-                  <p className="text-2xl font-bold">{stats.streak}天</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">連續天數</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.streak}天</p>
                 </div>
-                <Target className="h-8 w-8 text-purple-500" />
+                <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
