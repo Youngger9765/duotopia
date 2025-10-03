@@ -88,6 +88,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-import-patterns
+        name: Check for problematic Python import patterns
+        entry: python backend/hooks/check_import_patterns.py
+        language: system
+        types: [python]
+        files: ^backend/.*\.py$
+        pass_filenames: true
+
   # 🔒 Secret Detection - CRITICAL SECURITY
   # TODO: Re-enable detect-secrets after fixing baseline compatibility
   # - repo: https://github.com/Yelp/detect-secrets
