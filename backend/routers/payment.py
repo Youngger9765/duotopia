@@ -171,6 +171,7 @@ async def process_payment(
 
         # Payment successful - update teacher's subscription
         current_teacher.subscription_end_date = new_end_date
+        current_teacher.subscription_type = payment_request.plan_name
 
         # Get transaction ID from response
         external_transaction_id = gateway_response.get("rec_trade_id")

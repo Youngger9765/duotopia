@@ -137,9 +137,10 @@ export default function PricingPage() {
     setIsProcessing(false);
   };
 
-  // Check user login status
+  // Check user login status and subscription
   useEffect(() => {
     checkUserStatus();
+    checkSubscriptionStatus();
   }, []);
 
   const checkUserStatus = () => {
@@ -192,6 +193,41 @@ export default function PricingPage() {
       });
     } else {
       setUserInfo(teacherInfo || studentInfo || { isLoggedIn: false });
+    }
+  };
+
+  const checkSubscriptionStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
+    if (!teacherAuthStr) return;
+
+    try {
+      const teacherAuth = JSON.parse(teacherAuthStr);
+      if (!teacherAuth?.state?.isAuthenticated) return;
+
+      // Check if user has active subscription
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/subscription/status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // If user has active subscription, redirect to subscription management
+        if (data.is_active) {
+          toast.info('您已有訂閱方案，導向訂閱管理頁面');
+          setTimeout(() => {
+            navigate('/teacher/subscription');
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
     }
   };
 
