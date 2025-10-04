@@ -167,7 +167,14 @@ interface GooglePayResult {
   total_amount?: string;
   currency?: string;
   order_id?: string;
-  shippingAddress?: any;
+  shippingAddress?: {
+    name?: string;
+    phone_number?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    zip_code?: string;
+  };
   payerEmail?: string;
   payerPhone?: string;
 }

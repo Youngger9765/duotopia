@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -7,14 +6,13 @@ interface TeacherSubscriptionBannerProps {
   isActive: boolean;
   endDate: string | null;
   daysRemaining: number;
-  plan: string | null;
+  plan?: string | null;
 }
 
 export default function TeacherSubscriptionBanner({
   isActive,
   endDate,
-  daysRemaining,
-  plan
+  daysRemaining
 }: TeacherSubscriptionBannerProps) {
   const navigate = useNavigate();
 

@@ -14,8 +14,6 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import TeacherLayout from '@/components/TeacherLayout';
 import TapPayPayment from '@/components/payment/TapPayPayment';
@@ -40,7 +38,6 @@ interface Transaction {
 }
 
 export default function TeacherSubscription() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
