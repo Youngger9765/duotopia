@@ -14,6 +14,7 @@ import TeacherTemplatePrograms from './pages/teacher/TeacherTemplatePrograms'
 import ClassroomDetail from './pages/teacher/ClassroomDetail'
 import TeacherAssignmentDetailPage from './pages/teacher/TeacherAssignmentDetailPage'
 import GradingPage from './pages/teacher/GradingPage'
+import TeacherSubscription from './pages/teacher/TeacherSubscription'
 import StudentLogin from './pages/StudentLogin'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentAssignmentList from './pages/student/StudentAssignmentList'
@@ -64,6 +65,7 @@ function App() {
       <Route path="/teacher/students" element={<TeacherStudents />} />
       <Route path="/teacher/programs" element={<TeacherTemplatePrograms />} />
       <Route path="/teacher/template-programs/:id" element={<ClassroomDetail isTemplateMode={true} />} />
+      <Route path="/teacher/subscription" element={<TeacherSubscription />} />
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />

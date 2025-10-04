@@ -1,9 +1,16 @@
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, Star } from 'lucide-react';
+import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import TapPayPayment from '@/components/payment/TapPayPayment';
+import TeacherLoginModal from '@/components/TeacherLoginModal';
+import { toast } from 'sonner';
 
 interface PricingPlan {
+  id: string;
   name: string;
   description: string;
   studentRange: string;
@@ -13,8 +20,17 @@ interface PricingPlan {
 }
 
 export default function PricingPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [userInfo, setUserInfo] = useState<{ isLoggedIn: boolean; name?: string; email?: string; role?: string } | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<PricingPlan | null>(null);
   const pricingPlans: PricingPlan[] = [
     {
+      id: 'tutor',
       name: "Tutor Teachers",
       description: "小型家教ESL教師",
       studentRange: "1-100人",
@@ -22,10 +38,13 @@ export default function PricingPage() {
       features: [
         "支援 1-100 位學生",
         "完整功能使用權",
-        "標準客服支援"
+        "標準客服支援",
+        "AI 智能評分",
+        "學習進度追蹤"
       ]
     },
     {
+      id: 'school',
       name: "School Teachers",
       description: "校園ESL教師",
       studentRange: "101-200人",
@@ -33,16 +52,259 @@ export default function PricingPage() {
       features: [
         "支援 101-200 位學生",
         "完整功能使用權",
-        "優先客服支援"
+        "優先客服支援",
+        "進階數據分析",
+        "多班級管理",
+        "批次作業指派"
       ],
       popular: true
     }
   ];
 
+  const handleSelectPlan = (plan: PricingPlan) => {
+
+    // Check teacher auth storage (Zustand store persisted in localStorage)
+    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
+    let isTeacherLoggedIn = false;
+    let teacherRole = null;
+
+    if (teacherAuthStr) {
+      try {
+        const teacherAuth = JSON.parse(teacherAuthStr);
+        isTeacherLoggedIn = teacherAuth?.state?.isAuthenticated === true;
+        teacherRole = teacherAuth?.state?.user?.role || 'teacher';
+      } catch (e) {
+        console.error('[DEBUG] Error parsing teacher-auth-storage:', e);
+      }
+    }
+
+    // Also check legacy token storage
+    const legacyToken = localStorage.getItem('token');
+    const userRole = localStorage.getItem('role');
+
+
+    // User is not logged in if neither auth method exists
+    if (!isTeacherLoggedIn && !legacyToken) {
+      // Store the plan and open login modal
+      setPendingPlan(plan);
+      setShowLoginModal(true);
+      toast.info('請先登入才能訂閱方案');
+      return;
+    }
+
+    // Check if a student is logged in instead
+    const studentAuthStr = localStorage.getItem('student-auth-storage');
+    let isStudentLoggedIn = false;
+
+    if (studentAuthStr) {
+      try {
+        const studentAuth = JSON.parse(studentAuthStr);
+        isStudentLoggedIn = studentAuth?.state?.isAuthenticated === true;
+      } catch (e) {
+        console.error('[DEBUG] Error parsing student-auth-storage:', e);
+      }
+    }
+
+    if (isStudentLoggedIn || userRole === 'student') {
+      toast.error('學生帳號無法訂閱教師方案，請使用教師帳號');
+      return;
+    }
+
+    setSelectedPlan(plan);
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = async (transactionId: string) => {
+    setIsProcessing(true);
+    try {
+      // Mock API call - will be replaced with real API
+      console.log('Payment successful, transaction ID:', transactionId);
+      toast.success(`成功訂閱 ${selectedPlan?.name} 方案！`);
+      setShowPaymentDialog(false);
+      // Navigate to dashboard after successful payment
+      setTimeout(() => {
+        navigate('/teacher/dashboard');
+      }, 2000);
+    } catch (error) {
+      toast.error('訂閱處理發生錯誤，請聯繫客服');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast.error(`付款失敗: ${error}`);
+    setIsProcessing(false);
+  };
+
+  // Check user login status
+  useEffect(() => {
+    checkUserStatus();
+  }, []);
+
+  const checkUserStatus = () => {
+    // Check teacher auth storage
+    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
+    let teacherInfo = null;
+
+    if (teacherAuthStr) {
+      try {
+        const teacherAuth = JSON.parse(teacherAuthStr);
+        if (teacherAuth?.state?.isAuthenticated) {
+          teacherInfo = {
+            isLoggedIn: true,
+            name: teacherAuth.state.user?.name || teacherAuth.state.user?.email?.split('@')[0] || '教師',
+            email: teacherAuth.state.user?.email,
+            role: 'teacher'
+          };
+        }
+      } catch (e) {}
+    }
+
+    // Check student auth storage
+    const studentAuthStr = localStorage.getItem('student-auth-storage');
+    let studentInfo = null;
+
+    if (studentAuthStr) {
+      try {
+        const studentAuth = JSON.parse(studentAuthStr);
+        if (studentAuth?.state?.isAuthenticated) {
+          studentInfo = {
+            isLoggedIn: true,
+            name: studentAuth.state.student?.name || `學生 ${studentAuth.state.student?.id}`,
+            email: studentAuth.state.student?.email,
+            role: 'student'
+          };
+        }
+      } catch (e) {}
+    }
+
+    // Check legacy token
+    const legacyToken = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const role = localStorage.getItem('role');
+
+    if (legacyToken && !teacherInfo && !studentInfo) {
+      setUserInfo({
+        isLoggedIn: true,
+        name: username || '用戶',
+        role: role || 'teacher'
+      });
+    } else {
+      setUserInfo(teacherInfo || studentInfo || { isLoggedIn: false });
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear all auth data
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('teacher-auth-storage');
+    localStorage.removeItem('student-auth-storage');
+    localStorage.removeItem('auth-storage');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('selectedPlan');
+
+    setUserInfo({ isLoggedIn: false });
+    toast.success('已成功登出');
+  };
+
+  // Check if user came back from login with a selected plan
+  useEffect(() => {
+    const savedPlan = localStorage.getItem('selectedPlan');
+
+    if (savedPlan && userInfo?.isLoggedIn && userInfo?.role === 'teacher') {
+      try {
+        const planData = JSON.parse(savedPlan);
+        const plan = pricingPlans.find(p => p.id === planData.id);
+        if (plan) {
+          // Auto-open payment dialog for returning users
+          setSelectedPlan(plan);
+          setShowPaymentDialog(true);
+          // Clear the saved plan
+          localStorage.removeItem('selectedPlan');
+          toast.success('已為您自動開啟付款頁面');
+        }
+      } catch (error) {
+        console.error('Error parsing saved plan:', error);
+      }
+    }
+  }, [pricingPlans, userInfo]);
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* User Status Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-2xl font-bold text-blue-600">
+              Duotopia
+            </Link>
+            <span className="text-gray-400">|</span>
+            <span className="text-gray-600">訂閱方案</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {userInfo?.isLoggedIn ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-gray-600" />
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">
+                      {userInfo.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {userInfo.role === 'teacher' ? '教師帳號' : '學生帳號'}
+                    </div>
+                  </div>
+                </div>
+
+                {userInfo.role === 'teacher' ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/teacher/dashboard')}
+                  >
+                    返回後台
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/student/dashboard')}
+                  >
+                    返回學習區
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  登出
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowLoginModal(true)}
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                教師登入
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12">
         {/* Header Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -51,6 +313,14 @@ export default function PricingPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             專為ESL教師設計的教學管理平台
           </p>
+
+          {userInfo?.isLoggedIn && userInfo.role === 'student' && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 max-w-md mx-auto">
+              <p className="text-sm text-yellow-800">
+                ⚠️ 學生帳號無法訂閱教師方案，請使用教師帳號登入
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Pricing Cards */}
@@ -107,14 +377,25 @@ export default function PricingPage() {
                   </ul>
 
                   <Button
+                    onClick={() => handleSelectPlan(plan)}
+                    disabled={userInfo?.role === 'student'}
                     className={`w-full ${
-                      plan.popular
-                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-                        : 'bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800'
-                    } text-white`}
+                      userInfo?.role === 'student'
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                        : plan.popular
+                          ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white'
+                          : 'bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-white'
+                    }`}
                   >
-                    立即訂閱
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    {userInfo?.role === 'student' ? '學生無法訂閱' : '立即訂閱'}
                   </Button>
+
+                  {userInfo?.role === 'student' && (
+                    <p className="text-xs text-red-500 mt-2 text-center">
+                      請先登出，使用教師帳號登入才能訂閱
+                    </p>
+                  )}
                 </Card>
               );
             })}
@@ -141,6 +422,54 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>完成付款</DialogTitle>
+            <DialogDescription className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-green-600" />
+              安全的付款流程 - 您選擇了 {selectedPlan?.name} 方案
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPlan && (
+            <TapPayPayment
+              amount={selectedPlan.monthlyPrice}
+              planName={selectedPlan.name}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              onCancel={() => setShowPaymentDialog(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Login Modal */}
+      <TeacherLoginModal
+        isOpen={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          setPendingPlan(null);
+        }}
+        onLoginSuccess={(user) => {
+          // Update user status immediately after login
+          checkUserStatus();
+          setShowLoginModal(false);
+
+          // Small delay to ensure state is updated
+          setTimeout(() => {
+            // If there was a pending plan, open payment dialog
+            if (pendingPlan) {
+              setSelectedPlan(pendingPlan);
+              setShowPaymentDialog(true);
+              setPendingPlan(null);
+            }
+          }, 100);
+        }}
+        selectedPlan={pendingPlan}
+      />
     </div>
   );
 }

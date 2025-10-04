@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>測試價格頁面登入檢查</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .status { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>測試價格頁面登入檢查</h1>
+
+    <div class="status">
+        <h3>目前 localStorage 狀態:</h3>
+        <pre id="current-status"></pre>
+    </div>
+
+    <div>
+        <h3>測試案例:</h3>
+
+        <button onclick="testCase1()" style="background: #ffcccb;">
+            案例1: 未登入狀態 (應該要跳轉)
+        </button>
+
+        <button onclick="testCase2()" style="background: #90EE90;">
+            案例2: 教師已登入 (應該可以付款)
+        </button>
+
+        <button onclick="testCase3()" style="background: #ffeb9c;">
+            案例3: 學生已登入 (應該被拒絕)
+        </button>
+
+        <button onclick="testCase4()" style="background: #ffcccb;">
+            案例4: 無效 token (應該要跳轉)
+        </button>
+    </div>
+
+    <div>
+        <h3>操作:</h3>
+        <button onclick="clearAll()">清除所有資料</button>
+        <button onclick="goToPricing()">前往價格頁面</button>
+        <button onclick="checkConsole()">查看瀏覽器 Console</button>
+    </div>
+
+    <div id="test-result" class="status"></div>
+
+    <script>
+        function updateStatus() {
+            // Parse auth storage objects
+            let teacherAuth = null;
+            let studentAuth = null;
+
+            try {
+                const teacherStr = localStorage.getItem('teacher-auth-storage');
+                if (teacherStr) teacherAuth = JSON.parse(teacherStr);
+            } catch (e) {}
+
+            try {
+                const studentStr = localStorage.getItem('student-auth-storage');
+                if (studentStr) studentAuth = JSON.parse(studentStr);
+            } catch (e) {}
+
+            const status = {
+                '教師登入狀態': teacherAuth?.state?.isAuthenticated || false,
+                '學生登入狀態': studentAuth?.state?.isAuthenticated || false,
+                token: localStorage.getItem('token'),
+                'teacher-auth-storage': teacherAuth ? '已登入' : '未登入',
+                'student-auth-storage': studentAuth ? '已登入' : '未登入',
+                selectedPlan: localStorage.getItem('selectedPlan'),
+                '所有 keys': Object.keys(localStorage)
+            };
+            document.getElementById('current-status').textContent = JSON.stringify(status, null, 2);
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            updateStatus();
+            showResult('已清除所有 localStorage 資料', 'success');
+        }
+
+        function testCase1() {
+            clearAll();
+            showResult('設定案例1: 未登入狀態\n點擊 "前往價格頁面" 然後點 "立即訂閱"\n預期: 應該顯示 "請先登入才能訂閱方案" 並跳轉到登入頁', 'error');
+        }
+
+        function testCase2() {
+            clearAll();
+            localStorage.setItem('token', 'valid_teacher_token_12345');
+            localStorage.setItem('role', 'teacher');
+            localStorage.setItem('username', 'teacher_wang');
+            updateStatus();
+            showResult('設定案例2: 教師已登入\n點擊 "前往價格頁面" 然後點 "立即訂閱"\n預期: 應該直接顯示付款表單', 'success');
+        }
+
+        function testCase3() {
+            clearAll();
+            localStorage.setItem('token', 'valid_student_token_67890');
+            localStorage.setItem('role', 'student');
+            localStorage.setItem('username', 'student_lee');
+            updateStatus();
+            showResult('設定案例3: 學生已登入\n點擊 "前往價格頁面" 然後點 "立即訂閱"\n預期: 應該顯示 "學生帳號無法訂閱教師方案"', 'error');
+        }
+
+        function testCase4() {
+            clearAll();
+            localStorage.setItem('token', 'null');
+            localStorage.setItem('role', 'teacher');
+            updateStatus();
+            showResult('設定案例4: 無效 token (字串 "null")\n點擊 "前往價格頁面" 然後點 "立即訂閱"\n預期: 應該顯示 "請先登入才能訂閱方案" 並跳轉到登入頁', 'error');
+        }
+
+        function goToPricing() {
+            window.open('http://localhost:5173/pricing', '_blank');
+        }
+
+        function checkConsole() {
+            alert('請按 F12 打開開發者工具，查看 Console 標籤中的 [DEBUG] 訊息');
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.className = 'status ' + type;
+            resultDiv.innerHTML = '<h3>測試說明:</h3><pre>' + message + '</pre>';
+        }
+
+        // 初始化
+        updateStatus();
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

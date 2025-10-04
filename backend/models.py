@@ -718,25 +718,70 @@ class StudentItemProgress(Base):
 
 # ============ 訂閱交易系統 ============
 class TeacherSubscriptionTransaction(Base):
-    """教師訂閱交易記錄"""
+    """教師訂閱交易記錄 - 支援多種支付方式的完整金流記錄"""
 
     __tablename__ = "teacher_subscription_transactions"
 
+    # 基本欄位
     id = Column(Integer, primary_key=True, index=True)
     teacher_id = Column(
         Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
     )
+
+    # 1. 用戶識別
+    teacher_email = Column(String(255), nullable=True, index=True)  # 直接儲存教師 email
+
+    # 2. 交易基本資訊
     transaction_type = Column(Enum(TransactionType), nullable=False)
-    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
+    subscription_type = Column(String, nullable=True)  # 訂閱類型
     amount = Column(Numeric(10, 2), nullable=True)  # 充值金額（可為空，如試用期）
-    currency = Column(String(3), nullable=True)  # 貨幣（與 DB 一致，但不使用）
-    status = Column(String, nullable=False, default="SUCCESS")  # 交易狀態（與 DB 一致）
+    currency = Column(String(3), nullable=True, default="TWD")  # 貨幣
+    status = Column(String, nullable=False, default="PENDING", index=True)  # 交易狀態
     months = Column(Integer, nullable=False)  # 訂閱月數
-    period_start = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間開始（與 DB 一致）
-    period_end = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間結束（與 DB 一致）
+
+    # 3. 時間相關
+    period_start = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間開始
+    period_end = Column(DateTime(timezone=True), nullable=True)  # 訂閱期間結束
     previous_end_date = Column(DateTime(timezone=True), nullable=True)  # 交易前的到期日
     new_end_date = Column(DateTime(timezone=True), nullable=False)  # 交易後的到期日
-    transaction_metadata = Column("metadata", JSON, nullable=True)  # 額外資料（與 DB 一致，但不使用）
+    processed_at = Column(DateTime(timezone=True), nullable=True)  # 實際處理時間
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # 過期時間（PENDING 狀態用）
+
+    # 4. 防重複扣款
+    idempotency_key = Column(
+        String(255), nullable=True, unique=True, index=True
+    )  # 防重複扣款
+    retry_count = Column(Integer, nullable=False, default=0)  # 重試次數
+
+    # 5. 稽核追蹤
+    ip_address = Column(String(45), nullable=True)  # 支援 IPv6
+    user_agent = Column(Text, nullable=True)  # 瀏覽器/裝置資訊
+    request_id = Column(String(255), nullable=True)  # API 請求 ID
+
+    # 6. 支付詳情
+    payment_provider = Column(
+        String(50), nullable=True, index=True
+    )  # tappay/line_pay/paypal
+    payment_method = Column(
+        String(50), nullable=True
+    )  # credit_card/bank_transfer/e_wallet
+    external_transaction_id = Column(String(255), nullable=True, index=True)  # 外部交易 ID
+
+    # 7. 錯誤處理
+    failure_reason = Column(Text, nullable=True)  # 失敗原因
+    error_code = Column(String(50), nullable=True)  # 錯誤代碼
+    gateway_response = Column(JSON, nullable=True)  # 金流商完整回應
+
+    # 8. 退款相關
+    refunded_amount = Column(Numeric(10, 2), nullable=True, default=0)  # 已退款金額
+    refund_status = Column(String(20), nullable=True)  # 退款狀態
+    original_transaction_id = Column(
+        Integer, ForeignKey("teacher_subscription_transactions.id"), nullable=True
+    )  # 原始交易（退款時參照）
+
+    # 9. 其他
+    webhook_status = Column(String(20), nullable=True)  # Webhook 通知狀態
+    transaction_metadata = Column("metadata", JSON, nullable=True)  # 額外資料（向後相容）
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

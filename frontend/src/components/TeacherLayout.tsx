@@ -8,7 +8,8 @@ import {
   LogOut,
   Home,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { useState, useEffect } from 'react';
@@ -58,6 +59,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     { id: 'classrooms', label: '我的班級', icon: GraduationCap, path: '/teacher/classrooms' },
     { id: 'students', label: '所有學生', icon: Users, path: '/teacher/students' },
     { id: 'programs', label: '公版課程', icon: BookOpen, path: '/teacher/programs' },
+    { id: 'subscription', label: '訂閱管理', icon: CreditCard, path: '/teacher/subscription' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
