@@ -13,7 +13,6 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 批改作業並追蹤成效
 
 ### 1.2 當前開發狀態
-- **架構遷移**：已從 Base44 遷移至自建 FastAPI + PostgreSQL（Supabase 託管）架構
 - **技術棧**：前端 React + TypeScript，後端 FastAPI + PostgreSQL
 - **部署環境**：Google Cloud Run + Supabase（PostgreSQL，Staging 環境；Cloud SQL 於 Staging 已暫停以節省成本）
 - **開發重點**：Phase 1 - 個體教師核心功能
@@ -65,6 +64,23 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
   - ❌ 無法新增學生
   - ✅ 可查看現有班級和學生
   - ✅ 可批改已提交的作業
+
+#### 1.5.7 TapPay 金流整合
+**支付方案**：
+- **Tutor Teachers**：NT$230/月
+- **School Teachers**：NT$330/月
+
+**TapPay 負責處理**：
+- 信用卡資料安全（PCI DSS Level 1 合規）
+- 支付處理和銀行溝通
+- 電子發票開立與管理（已開通電子發票服務）
+- 風險控管和盜刷偵測
+
+**我們負責處理**：
+- 訂閱狀態管理和功能權限控制
+- 交易記錄和稽核追蹤
+- 用戶介面和支付流程整合
+- 通過 TapPay API 查詢發票資訊
   - ✅ 可查看歷史數據
 
 ### 1.6 使用者情境（Key Scenarios）
@@ -303,7 +319,8 @@ Student 表欄位：
 （工程補充與 API 細節請見 `docs/API_FORMAT.md`）
 
 ## 四、範圍界定與非目標（Phase 1）
-- 非目標：多校/機構角色、家長入口、金流/收費、深度 AI 批改（自動逐句建議與誤差對齊）、即時多人互動、行動裝置原生 App。
+- 非目標：多校/機構角色、家長入口、深度 AI 批改（自動逐句建議與誤差對齊）、即時多人互動、行動裝置原生 App。
+- ✅ **已實作**：TapPay 金流整合、教師訂閱付費機制
 - 可延後：作業複製、批量截止日管理、通知中心、更多活動類型、報告自動化。
 - 必要：教師單人閉環、朗讀評測活動、作業生命週期（含退回訂正）、學生端流暢錄音體驗與自動保存。
 
@@ -1439,7 +1456,6 @@ duotopia/
 ├── backend/           # Python + FastAPI
 ├── shared/           # 共用類型定義
 ├── terraform/        # 基礎設施即代碼
-├── legacy/           # 原始程式碼（Base44 版本）
 ├── .github/          # CI/CD workflows
 ├── docker-compose.yml # 本地開發環境
 └── Makefile          # 快捷指令
@@ -1544,12 +1560,10 @@ terraform apply
 1. **學生登入**: 使用 email + 生日(YYYYMMDD) 格式作為密碼
 2. **多語言支援**: 所有標題和描述使用 `Record<string, string>` 格式
 3. **Cloud SQL 連線**: 確保 Cloud Run 與 Cloud SQL 在同一區域 (asia-east1)
-4. **Base44 遷移**: 完全不要使用 legacy/ 資料夾中的舊代碼
-5. **API 路由**: 前端使用 /api 前綴，Vite 會代理到後端的 8000 port
-6. **Python 虛擬環境**: 後端開發時記得啟動 venv
+4. **API 路由**: 前端使用 /api 前綴，Vite 會代理到後端的 8000 port
+5. **Python 虛擬環境**: 後端開發時記得啟動 venv
 
 ### 10.8 聯絡資訊
-- Project ID: duotopia-469413
 - Region: asia-east1
 - Support: 透過 GitHub Issues 回報問題
 
@@ -1557,9 +1571,16 @@ terraform apply
 
 Duotopia 致力於打造最適合台灣學生的英語學習平台，透過完整的功能設計、友善的使用介面、以及強大的 AI 技術，協助教師提升教學效率，幫助學生快樂學習。本 PRD 將持續更新，以反映產品發展的最新狀態。
 
+## 十二、附錄：金流與安全參考文件
+
+### 相關文件連結
+- 📋 [金流安全檢查清單](docs/payment/PAYMENT_SECURITY_CHECKLIST.md) - 運營必備的安全檢查項目
+- 🇹🇼 [台灣金流法規遵循](docs/payment/TAIWAN_PAYMENT_COMPLIANCE.md) - 台灣支付相關法規參考
+- 💳 [TapPay 責任分工分析](docs/payment/TAPPAY_COVERAGE_ANALYSIS.md) - TapPay 與商戶的責任劃分
+
 ---
-*文件版本：4.2*
-*最後更新：2025年9月*
-*重點：Phase 1 個體教師版（✅ 100% 完成！）*
+*文件版本：4.3*
+*最後更新：2025年10月*
+*重點：Phase 1 個體教師版（✅ 100% 完成！）+ TapPay 金流整合完成*
 *狀態：MVP 功能全部完成，可正式上線使用*
 *下一步：Phase 2 擴展功能（統計圖表、多活動類型等）*
