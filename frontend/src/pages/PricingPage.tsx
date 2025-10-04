@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, Link } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn } from 'lucide-react';
@@ -21,10 +21,8 @@ interface PricingPlan {
 
 export default function PricingPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [userInfo, setUserInfo] = useState<{ isLoggedIn: boolean; name?: string; email?: string; role?: string } | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PricingPlan | null>(null);
@@ -66,13 +64,11 @@ export default function PricingPage() {
     // Check teacher auth storage (Zustand store persisted in localStorage)
     const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
     let isTeacherLoggedIn = false;
-    let teacherRole = null;
 
     if (teacherAuthStr) {
       try {
         const teacherAuth = JSON.parse(teacherAuthStr);
         isTeacherLoggedIn = teacherAuth?.state?.isAuthenticated === true;
-        teacherRole = teacherAuth?.state?.user?.role || 'teacher';
       } catch (e) {
         console.error('[DEBUG] Error parsing teacher-auth-storage:', e);
       }
@@ -115,7 +111,6 @@ export default function PricingPage() {
   };
 
   const handlePaymentSuccess = async (transactionId: string) => {
-    setIsProcessing(true);
     try {
       // Mock API call - will be replaced with real API
       console.log('Payment successful, transaction ID:', transactionId);
@@ -126,15 +121,13 @@ export default function PricingPage() {
         navigate('/teacher/dashboard');
       }, 2000);
     } catch (error) {
+      console.error('Payment error:', error);
       toast.error('訂閱處理發生錯誤，請聯繫客服');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const handlePaymentError = (error: string) => {
     toast.error(`付款失敗: ${error}`);
-    setIsProcessing(false);
   };
 
   // Check user login status and subscription
@@ -159,7 +152,9 @@ export default function PricingPage() {
             role: 'teacher'
           };
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[DEBUG] Error parsing teacher-auth-storage in checkUserStatus:', e);
+      }
     }
 
     // Check student auth storage
@@ -177,7 +172,9 @@ export default function PricingPage() {
             role: 'student'
           };
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[DEBUG] Error parsing student-auth-storage in checkUserStatus:', e);
+      }
     }
 
     // Check legacy token
@@ -489,7 +486,7 @@ export default function PricingPage() {
           setShowLoginModal(false);
           setPendingPlan(null);
         }}
-        onLoginSuccess={(user) => {
+        onLoginSuccess={() => {
           // Update user status immediately after login
           checkUserStatus();
           setShowLoginModal(false);
@@ -504,7 +501,7 @@ export default function PricingPage() {
             }
           }, 100);
         }}
-        selectedPlan={pendingPlan}
+        selectedPlan={pendingPlan || undefined}
       />
     </div>
   );

@@ -9,11 +9,25 @@ import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import SubscriptionProgressBanner from './SubscriptionProgressBanner';
 
+interface SelectedPlan {
+  id: string;
+  name: string;
+  monthlyPrice: number;
+}
+
+interface User {
+  id: number | string;
+  email: string;
+  name?: string;
+  role?: string;
+  is_demo?: boolean;
+}
+
 interface TeacherLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: any) => void;
-  selectedPlan?: any;
+  onLoginSuccess: (user: User) => void;
+  selectedPlan?: SelectedPlan;
 }
 
 export default function TeacherLoginModal({
@@ -63,16 +77,17 @@ export default function TeacherLoginModal({
       toast.success('登入成功！');
       onLoginSuccess(response.user);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { status?: number; data?: { detail?: string } }; message?: string };
       console.error('Login error:', err);
-      if (err.response?.status === 401) {
+      if (error.response?.status === 401) {
         setError('電子郵件或密碼錯誤，請檢查您的登入資訊');
-      } else if (err.response?.status === 500) {
+      } else if (error.response?.status === 500) {
         setError('伺服器錯誤，請稍後再試');
-      } else if (err.message?.includes('Network')) {
+      } else if (error.message?.includes('Network')) {
         setError('網路連線錯誤，請檢查網路連線');
       } else {
-        setError(`登入失敗：${err.response?.data?.detail || err.message || '請稍後再試'}`);
+        setError(`登入失敗：${error.response?.data?.detail || error.message || '請稍後再試'}`);
       }
     } finally {
       setIsLoading(false);
