@@ -5,6 +5,102 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Duotopia - 英語學習平台</title>
+    <!-- TapPay SDK - Will be activated when real keys are provided -->
+    <!-- <script src="https://js.tappaysdk.com/sdk/tpdirect/v5.17.0" crossorigin="anonymous"></script> -->
+
+    <!-- Mock TapPay SDK for development -->
+    <script>
+      // Mock TapPay SDK for development
+      window.TPDirect = {
+        setupSDK: function(appId, appKey, serverType) {
+          console.log('[Mock TapPay] Setup SDK:', { appId, serverType });
+        },
+        card: {
+          setup: function(config) {
+            console.log('[Mock TapPay] Card setup:', config);
+            // Create mock input fields
+            setTimeout(() => {
+              const fields = config.fields;
+              Object.keys(fields).forEach(fieldName => {
+                const element = document.querySelector(fields[fieldName].element);
+                if (element) {
+                  const input = document.createElement('input');
+                  input.type = 'text';
+                  input.placeholder = fields[fieldName].placeholder;
+                  input.style.cssText = 'width:100%;padding:12px;border:1px solid #ddd;border-radius:4px;';
+
+                  // Auto-format expiration date
+                  if (fieldName === 'expirationDate') {
+                    input.maxLength = 5;
+                    input.addEventListener('input', function(e) {
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length >= 2) {
+                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                      }
+                      e.target.value = value;
+                    });
+                  } else if (fieldName === 'number') {
+                    // Auto-format card number with spaces
+                    input.maxLength = 19;
+                    input.addEventListener('input', function(e) {
+                      let value = e.target.value.replace(/\s/g, '');
+                      let formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                      e.target.value = formatted;
+                    });
+                  } else if (fieldName === 'ccv') {
+                    input.maxLength = 3;
+                    input.addEventListener('input', function(e) {
+                      e.target.value = e.target.value.replace(/\D/g, '');
+                    });
+                  }
+
+                  element.innerHTML = '';
+                  element.appendChild(input);
+                }
+              });
+            }, 100);
+          },
+          onUpdate: function(callback) {
+            console.log('[Mock TapPay] Card onUpdate registered');
+            // Simulate updates
+            setTimeout(() => {
+              callback({
+                canGetPrime: true,
+                hasError: false,
+                status: { number: 2, expiry: 2, ccv: 2 }
+              });
+            }, 1000);
+          },
+          getPrime: function(callback) {
+            console.log('[Mock TapPay] Getting prime token...');
+            // Simulate getting prime token
+            setTimeout(() => {
+              callback({
+                status: 0,
+                msg: 'Success',
+                prime: 'mock_prime_token_' + Date.now(),
+                card_info: {
+                  bincode: '424242',
+                  lastfour: '4242',
+                  issuer: 'Mock Bank',
+                  funding: 0,
+                  type: 1,
+                  level: 'PLATINUM',
+                  country: 'Taiwan',
+                  countryCode: 'TW'
+                }
+              });
+            }, 500);
+          },
+          getTappayFieldsStatus: function() {
+            return {
+              canGetPrime: true,
+              status: { number: 2, expiry: 2, ccv: 2 }
+            };
+          }
+        }
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

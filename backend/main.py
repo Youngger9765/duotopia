@@ -25,7 +25,7 @@ from routers import (
     admin_monitoring,
     teacher_review,
     subscription,
-    test_subscription,
+    payment,
 )
 from api import debug
 
@@ -98,6 +98,7 @@ async def health_check():
 app.include_router(public.router)  # 公開路由優先，不需要認證
 app.include_router(auth.router)
 app.include_router(subscription.router)  # 訂閱路由
+app.include_router(payment.router, prefix="/api", tags=["payment"])  # 金流路由
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(assignments.router)
@@ -109,7 +110,6 @@ app.include_router(teacher_review.router)  # 老師批改路由
 app.include_router(admin.router)  # 管理路由
 app.include_router(admin_monitoring.router)  # 監控路由（無需認證）
 app.include_router(debug.router)  # Debug 路由
-app.include_router(test_subscription.router, prefix="/api/test", tags=["test"])  # 測試路由
 
 
 if __name__ == "__main__":

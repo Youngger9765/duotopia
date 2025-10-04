@@ -169,8 +169,18 @@ class ApiClient {
 
   logout() {
     this.token = null;
+    // Clear all authentication related data
     localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('username');
+    localStorage.removeItem('teacher-auth-storage');
+    localStorage.removeItem('student-auth-storage');
+    localStorage.removeItem('auth-storage');
+    localStorage.removeItem('userType');
+    // Clear any selected plan
+    localStorage.removeItem('selectedPlan');
   }
 
   isAuthenticated(): boolean {

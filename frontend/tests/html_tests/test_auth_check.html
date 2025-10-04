@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth Check</title>
+</head>
+<body>
+    <h1>測試登入檢查</h1>
+
+    <div>
+        <h2>LocalStorage 狀態:</h2>
+        <pre id="storage-status"></pre>
+    </div>
+
+    <div>
+        <button onclick="clearAuth()">清除登入資訊</button>
+        <button onclick="setFakeAuth()">設定假的登入資訊</button>
+        <button onclick="window.location.href='http://localhost:5173/pricing'">前往價格頁面</button>
+    </div>
+
+    <script>
+        function showStorageStatus() {
+            const status = {
+                token: localStorage.getItem('token'),
+                role: localStorage.getItem('role'),
+                selectedPlan: localStorage.getItem('selectedPlan'),
+                username: localStorage.getItem('username')
+            };
+            document.getElementById('storage-status').textContent = JSON.stringify(status, null, 2);
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('username');
+            localStorage.removeItem('selectedPlan');
+            showStorageStatus();
+            alert('已清除登入資訊');
+        }
+
+        function setFakeAuth() {
+            localStorage.setItem('token', 'fake_token_for_testing');
+            localStorage.setItem('role', 'teacher');
+            localStorage.setItem('username', 'test_teacher');
+            showStorageStatus();
+            alert('已設定假的登入資訊');
+        }
+
+        // 初始顯示
+        showStorageStatus();
+        setInterval(showStorageStatus, 1000); // 每秒更新
+    </script>
+</body>
+</html>
