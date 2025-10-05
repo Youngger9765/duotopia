@@ -94,9 +94,10 @@ export default function TeacherLoginModal({
     }
   };
 
-  const handleDemoLogin = async () => {
-    setEmail('demo@duotopia.com');
-    setPassword('demo123');
+  const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setError('');
 
     // Auto-submit with demo credentials
     setTimeout(() => {
@@ -174,32 +175,45 @@ export default function TeacherLoginModal({
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  登入中...
-                </>
-              ) : (
-                '登入'
-              )}
-            </Button>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                登入中...
+              </>
+            ) : (
+              '登入'
+            )}
+          </Button>
+        </form>
 
+        <div className="mt-4 pt-4 border-t">
+          <p className="text-sm text-gray-600 mb-3 text-center">試用帳號（密碼: demo123）</p>
+          <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
-              onClick={handleDemoLogin}
+              className="flex-1"
+              onClick={() => handleDemoLogin('demo@duotopia.com', 'demo123')}
               disabled={isLoading}
             >
-              試用帳號
+              Demo (有訂閱)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleDemoLogin('expired@duotopia.com', 'demo123')}
+              disabled={isLoading}
+            >
+              Expired (已過期)
             </Button>
           </div>
-        </form>
+        </div>
 
         <div className="mt-4 pt-4 border-t text-center">
           <p className="text-sm text-gray-600">
