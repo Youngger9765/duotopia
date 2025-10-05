@@ -149,6 +149,9 @@ jobs:
 
         docker build -f $DOCKERFILE \
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
+          --build-arg VITE_TAPPAY_APP_ID=${{ secrets.VITE_TAPPAY_APP_ID }} \
+          --build-arg VITE_TAPPAY_APP_KEY=${{ secrets.VITE_TAPPAY_APP_KEY }} \
+          --build-arg VITE_TAPPAY_SERVER_TYPE=${{ secrets.VITE_TAPPAY_SERVER_TYPE }} \
           -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA .
 
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA
