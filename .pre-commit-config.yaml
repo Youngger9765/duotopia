@@ -112,28 +112,15 @@ repos:
       - id: check-merge-conflict
 
   # ==========================================
-  # 🎨 PUSH-TIME: 格式化（不擋 commit）
+  # 🎨 手動執行格式化（不擋 commit/push）
   # ==========================================
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
-        stages: [push]
-        files: ^backend/.*\.py$
-
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v2.2.1
-    hooks:
-      - id: autoflake
-        args: ['--in-place', '--remove-all-unused-imports', '--remove-unused-variables']
-        stages: [push]
-        files: ^backend/.*\.py$
-
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        stages: [push]
-        files: frontend/src/.*\.(ts|tsx|js|jsx|css|json)$
-        additional_dependencies:
-          - prettier@3.2.5
+  # 格式化工具已移到手動執行：
+  #
+  # 前端格式化:
+  #   npx prettier --write frontend/src
+  #
+  # 後端格式化:
+  #   cd backend && black . && autoflake --in-place --recursive .
+  #
+  # 或使用 pre-commit 手動執行:
+  #   pre-commit run --all-files black autoflake prettier
