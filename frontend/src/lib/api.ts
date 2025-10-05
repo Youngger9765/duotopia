@@ -6,6 +6,80 @@ import { API_URL } from '../config/api';
 import { retryAIAnalysis } from '../utils/retryHelper';
 import { clearAllAuth } from './authUtils';
 
+/**
+ * Custom API Error class for better error handling
+ */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public detail: string,
+    public originalError?: unknown
+  ) {
+    super(detail)
+    this.name = 'ApiError'
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ApiError)
+    }
+  }
+
+  /**
+   * Check if error is unauthorized (401)
+   */
+  isUnauthorized(): boolean {
+    return this.status === 401
+  }
+
+  /**
+   * Check if error is forbidden (403)
+   */
+  isForbidden(): boolean {
+    return this.status === 403
+  }
+
+  /**
+   * Check if error is not found (404)
+   */
+  isNotFound(): boolean {
+    return this.status === 404
+  }
+
+  /**
+   * Check if error is validation error (422)
+   */
+  isValidationError(): boolean {
+    return this.status === 422
+  }
+
+  /**
+   * Check if error is server error (5xx)
+   */
+  isServerError(): boolean {
+    return this.status >= 500 && this.status < 600
+  }
+
+  /**
+   * Get error code if available
+   */
+  getErrorCode(): string | undefined {
+    if (this.originalError && typeof this.originalError === 'object') {
+      return (this.originalError as { code?: string }).code
+    }
+    return undefined
+  }
+
+  /**
+   * Get validation errors if available
+   */
+  getValidationErrors(): Record<string, string> | undefined {
+    if (this.originalError && typeof this.originalError === 'object') {
+      return (this.originalError as { errors?: Record<string, string> }).errors
+    }
+    return undefined
+  }
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -95,28 +169,49 @@ class ApiClient {
     console.log('🌐 [DEBUG] Token exists:', !!currentToken);
     console.log('🌐 [DEBUG] Token preview:', currentToken ? `${currentToken.substring(0, 20)}...` : 'null');
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    console.log('🌐 [DEBUG] Response status:', response.status);
-    console.log('🌐 [DEBUG] Response ok:', response.ok);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      console.error('🌐 [ERROR] API請求失敗:', {
-        url,
-        status: response.status,
-        error
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
       });
-      // Pass the full error object as JSON string for better error handling
-      throw new Error(JSON.stringify(error));
-    }
 
-    const result = await response.json();
-    console.log('🌐 [DEBUG] API請求成功，回應數據:', result);
-    return result;
+      console.log('🌐 [DEBUG] Response status:', response.status);
+      console.log('🌐 [DEBUG] Response ok:', response.ok);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error('🌐 [ERROR] API請求失敗:', {
+          url,
+          status: response.status,
+          error
+        });
+
+        // Extract detail message
+        const detail = typeof error === 'object' && error !== null && 'detail' in error
+          ? String(error.detail)
+          : `HTTP ${response.status} Error`
+
+        // Throw ApiError instead of generic Error
+        throw new ApiError(response.status, detail, error);
+      }
+
+      const result = await response.json();
+      console.log('🌐 [DEBUG] API請求成功，回應數據:', result);
+      return result;
+    } catch (err) {
+      // If it's already an ApiError, re-throw it
+      if (err instanceof ApiError) {
+        throw err;
+      }
+
+      // Wrap network errors in ApiError
+      console.error('🌐 [ERROR] Network error:', err);
+      throw new ApiError(
+        0, // Network errors have no HTTP status
+        err instanceof Error ? err.message : 'Network error occurred',
+        err
+      );
+    }
   }
 
   // ============ Auth Methods ============
