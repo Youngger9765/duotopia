@@ -81,7 +81,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           variant="ghost"
           size="sm"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="ml-auto md:block hidden"
+          className="ml-auto md:block hidden h-10 min-h-10 w-10"
         >
           {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -102,7 +102,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                 >
                   <Button
                     variant={active ? 'default' : 'ghost'}
-                    className={`w-full justify-start ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
+                    className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
                   >
                     <Icon className="h-4 w-4" />
                     {!sidebarCollapsed && <span className="ml-2">{item.label}</span>}
@@ -146,7 +146,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
+          className={`w-full justify-start h-12 min-h-12 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
@@ -167,7 +167,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="h-12 min-h-12 w-12">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
