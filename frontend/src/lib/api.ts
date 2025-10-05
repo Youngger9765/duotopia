@@ -4,6 +4,7 @@
 
 import { API_URL } from '../config/api';
 import { retryAIAnalysis } from '../utils/retryHelper';
+import { clearAllAuth } from './authUtils';
 
 export interface LoginRequest {
   email: string;
@@ -54,7 +55,7 @@ class ApiClient {
     }
 
     // 如果沒有學生 token，檢查老師 token
-    const teacherAuth = localStorage.getItem('auth-storage');
+    const teacherAuth = localStorage.getItem('teacher-auth-storage');
     if (teacherAuth) {
       try {
         const { state } = JSON.parse(teacherAuth);
@@ -65,13 +66,6 @@ class ApiClient {
       } catch (e) {
         console.error('Failed to parse teacher auth:', e);
       }
-    }
-
-    // 最後檢查舊的 access_token
-    const oldToken = localStorage.getItem('access_token');
-    if (oldToken) {
-      console.log('🔑 [DEBUG] Using old access_token');
-      return oldToken;
     }
 
     console.log('🔑 [DEBUG] No token found');
@@ -131,24 +125,14 @@ class ApiClient {
   // ============ Auth Methods ============
   async teacherLogin(data: LoginRequest): Promise<LoginResponse> {
     console.log('🔑 [DEBUG] teacherLogin 方法被調用');
-    console.log('🔑 [DEBUG] 登入前 token 狀態:', this.token);
 
     const response = await this.request<LoginResponse>('/api/auth/teacher/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
 
-    // Save token
-    console.log('🔑 [DEBUG] 準備保存 token:', response.access_token?.substring(0, 20) + '...');
-    this.token = response.access_token;
-    localStorage.setItem('access_token', response.access_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-
-    console.log('🔑 [DEBUG] Token 已保存到 localStorage');
-    console.log('🔑 [DEBUG] 驗證 localStorage:', {
-      access_token: localStorage.getItem('access_token')?.substring(0, 20) + '...',
-      user: localStorage.getItem('user')
-    });
+    console.log('🔑 [DEBUG] 登入成功，返回 response');
+    // Note: Token storage is handled by teacherAuthStore in the calling component
 
     return response;
   }
@@ -159,27 +143,13 @@ class ApiClient {
       body: JSON.stringify(data),
     });
 
-    // Save token
-    this.token = response.access_token;
-    localStorage.setItem('access_token', response.access_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-
+    // Note: Token storage is handled by teacherAuthStore in the calling component
     return response;
   }
 
   logout() {
+    clearAllAuth();
     this.token = null;
-    // Clear all authentication related data
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    localStorage.removeItem('username');
-    localStorage.removeItem('teacher-auth-storage');
-    localStorage.removeItem('student-auth-storage');
-    localStorage.removeItem('auth-storage');
-    localStorage.removeItem('userType');
-    // Clear any selected plan
     localStorage.removeItem('selectedPlan');
   }
 

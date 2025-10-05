@@ -8,6 +8,7 @@ import { Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import SubscriptionProgressBanner from './SubscriptionProgressBanner';
+import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
 
 interface SelectedPlan {
   id: string;
@@ -49,21 +50,13 @@ export default function TeacherLoginModal({
     try {
       const response = await apiClient.teacherLogin({ email, password });
 
-      // Store auth data
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('role', 'teacher');
-      localStorage.setItem('username', response.user?.name || email);
-
-      // Store teacher auth in Zustand format
-      const teacherAuthData = {
-        state: {
-          isAuthenticated: true,
-          user: response.user,
-          token: response.access_token
-        },
-        version: 0
-      };
-      localStorage.setItem('teacher-auth-storage', JSON.stringify(teacherAuthData));
+      // Use teacherAuthStore to store auth data
+      useTeacherAuthStore.getState().login(response.access_token, {
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        is_demo: response.user.is_demo
+      });
 
       // If there was a selected plan, store it for auto-open after login
       if (selectedPlan) {

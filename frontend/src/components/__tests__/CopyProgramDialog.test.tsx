@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
   apiClient: {
-    getTeacherPrograms: vi.fn(),
+    getCopyablePrograms: vi.fn(),
     copyProgramToClassroom: vi.fn(),
   }
 }))
@@ -53,7 +53,7 @@ describe('CopyProgramDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue(mockTeacherPrograms)
+    vi.mocked(apiClient.getCopyablePrograms).mockResolvedValue(mockTeacherPrograms)
   })
 
   const renderComponent = (open = true) => {
@@ -213,7 +213,7 @@ describe('CopyProgramDialog', () => {
   })
 
   it('should show empty state when no programs available', async () => {
-    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue([])
+    vi.mocked(apiClient.getCopyablePrograms).mockResolvedValue([])
 
     renderComponent()
 
@@ -242,7 +242,7 @@ describe('CopyProgramDialog', () => {
       ...p,
       already_in_classroom: i === 0 // First program is already in classroom
     }))
-    vi.mocked(apiClient.getTeacherPrograms).mockResolvedValue(programsWithStatus)
+    vi.mocked(apiClient.getCopyablePrograms).mockResolvedValue(programsWithStatus)
 
     renderComponent()
 

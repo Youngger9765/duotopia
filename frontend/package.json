@@ -23,7 +23,10 @@
     "test:api:realtime": "vitest run src/lib/__tests__/api.realtime.test.ts",
     "test:api:all": "vitest run src/lib/__tests__/api.*.test.ts",
     "test:api:ci": "vitest run src/lib/__tests__/api.comprehensive.test.ts src/lib/__tests__/api.realtime.test.ts",
-    "test:replace-e2e": "npm run test:api:ci && echo '✅ API tests complete - E2E replacement ready!'"
+    "test:replace-e2e": "npm run test:api:ci && echo '✅ API tests complete - E2E replacement ready!'",
+    "test:e2e": "playwright test",
+    "test:e2e:auth": "playwright test tests/e2e/teacher-auth-refactor.spec.ts --project=chromium",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

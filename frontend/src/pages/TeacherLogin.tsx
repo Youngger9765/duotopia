@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, User, Lock, Zap, Home } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
@@ -28,8 +29,16 @@ export default function TeacherLogin() {
     try {
       const result = await apiClient.teacherLogin(formData);
       console.log('🔑 [DEBUG] 登入成功，結果:', result);
+
+      useTeacherAuthStore.getState().login(result.access_token, {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        is_demo: result.user.is_demo
+      });
+
       console.log('🔑 [DEBUG] localStorage 檢查:', {
-        auth_storage: localStorage.getItem('auth-storage'),
+        teacher_auth_storage: localStorage.getItem('teacher-auth-storage'),
         keys: Object.keys(localStorage)
       });
 
@@ -55,8 +64,16 @@ export default function TeacherLogin() {
         password: 'demo123',
       });
       console.log('🔑 [DEBUG] 快速登入成功，結果:', result);
+
+      useTeacherAuthStore.getState().login(result.access_token, {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        is_demo: result.user.is_demo
+      });
+
       console.log('🔑 [DEBUG] localStorage 檢查:', {
-        auth_storage: localStorage.getItem('auth-storage'),
+        teacher_auth_storage: localStorage.getItem('teacher-auth-storage'),
         keys: Object.keys(localStorage)
       });
 

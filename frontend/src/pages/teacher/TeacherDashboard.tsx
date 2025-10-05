@@ -50,6 +50,10 @@ export default function TeacherDashboard() {
       setDashboardData(data);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
+      // 如果是 401 錯誤，轉到登入頁
+      if (err instanceof Error && err.message.includes('401')) {
+        navigate('/teacher/login');
+      }
     } finally {
       setLoading(false);
     }

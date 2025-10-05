@@ -10,6 +10,7 @@ import json
 BACKEND_URL = "http://localhost:8000"
 FRONTEND_URL = "http://localhost:5173"
 
+
 def test_backend_tappay_config():
     """測試 Backend TapPay 配置是否正確"""
     print("🔍 測試 1: Backend TapPay Service 配置")
@@ -17,7 +18,7 @@ def test_backend_tappay_config():
     # 登入取得 token
     login_response = requests.post(
         f"{BACKEND_URL}/api/auth/teacher/login",
-        json={"email": "demo@duotopia.com", "password": "demo123"}
+        json={"email": "demo@duotopia.com", "password": "demo123"},
     )
 
     if login_response.status_code == 401:
@@ -40,8 +41,8 @@ def test_backend_tappay_config():
             "amount": 230,
             "plan_name": "Tutor Teachers",
             "details": {"item_name": "Test"},
-            "cardholder": {"name": "Test", "email": "test@example.com"}
-        }
+            "cardholder": {"name": "Test", "email": "test@example.com"},
+        },
     )
 
     print(f"   狀態碼: {payment_response.status_code}")
@@ -55,6 +56,7 @@ def test_backend_tappay_config():
 
     print("✅ Backend TapPay 配置正確（會嘗試調用 TapPay API）")
     return True
+
 
 def test_frontend_tappay_config():
     """測試 Frontend 是否能載入 TapPay 配置"""
@@ -78,6 +80,7 @@ def test_frontend_tappay_config():
 
     print("✅ Frontend 配置正確")
     return True
+
 
 def main():
     print("=" * 60)
@@ -106,6 +109,7 @@ def main():
     else:
         print("\n❌ 測試失敗，請檢查配置")
         return 1
+
 
 if __name__ == "__main__":
     exit(main())
