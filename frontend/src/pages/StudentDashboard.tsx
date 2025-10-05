@@ -310,7 +310,7 @@ export default function StudentDashboard() {
                           size="sm"
                           onClick={handleEmailUpdate}
                           disabled={isSendingEmail || !newEmail || !newEmail.includes('@')}
-                          className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600"
                         >
                           {isSendingEmail ? (
                             <>
@@ -318,7 +318,7 @@ export default function StudentDashboard() {
                               發送中...
                             </>
                           ) : (
-                            '發送驗證信'
+                            '驗證我的 Email'
                           )}
                         </Button>
                       </div>
