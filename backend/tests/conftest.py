@@ -41,16 +41,25 @@ def shared_test_session(test_engine):
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 在每個測試開始前清理所有資料
-    for table in reversed(Base.metadata.sorted_tables):
-        session.execute(table.delete())
-    session.commit()
+    # 🔧 在每個測試開始前清理所有資料（不刪除 schema）
+    try:
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(table.delete())
+        session.commit()
+    except Exception:
+        session.rollback()
+        # 如果清理失敗，可能是 table 不存在，重新創建
+        Base.metadata.create_all(bind=test_engine)
 
     try:
         yield session
     finally:
-        session.rollback()
-        session.close()
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        finally:
+            session.close()
 
 
 @pytest.fixture(scope="function")
@@ -60,8 +69,11 @@ def test_session(shared_test_session):
 
 
 @pytest.fixture(scope="function")
-def test_client(shared_test_session):
+def test_client(shared_test_session, test_engine):
     """Create a test client with database override using shared session"""
+
+    # 🔧 確保 tables 存在（防止第一次請求時 table 不存在）
+    Base.metadata.create_all(bind=test_engine)
 
     def override_get_db():
         try:
@@ -86,16 +98,25 @@ def db_session(test_engine):
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 在每個測試開始前清理所有資料
-    for table in reversed(Base.metadata.sorted_tables):
-        session.execute(table.delete())
-    session.commit()
+    # 🔧 在每個測試開始前清理所有資料（不刪除 schema）
+    try:
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(table.delete())
+        session.commit()
+    except Exception:
+        session.rollback()
+        # 如果清理失敗，可能是 table 不存在，重新創建
+        Base.metadata.create_all(bind=test_engine)
 
     try:
         yield session
     finally:
-        session.rollback()
-        session.close()
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        finally:
+            session.close()
 
 
 # Auth test fixtures
