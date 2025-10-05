@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 from database import Base, get_db
 from main import app
 import models  # noqa: F401 - Import models to register them
+from models import Teacher
+from auth import get_password_hash
 
 
 # 全域引擎，確保所有測試使用同一個
@@ -94,3 +96,38 @@ def db_session(test_engine):
     finally:
         session.rollback()
         session.close()
+
+
+# Auth test fixtures
+@pytest.fixture
+def demo_teacher(shared_test_session):
+    """Create a demo teacher for testing"""
+    teacher = Teacher(
+        email="test@duotopia.com",
+        password_hash=get_password_hash("test123"),
+        name="Test Teacher",
+        is_active=True,
+        is_demo=False,
+        email_verified=True,  # Verified email
+    )
+    shared_test_session.add(teacher)
+    shared_test_session.commit()
+    shared_test_session.refresh(teacher)
+    return teacher
+
+
+@pytest.fixture
+def inactive_teacher(shared_test_session):
+    """Create an inactive teacher for testing"""
+    teacher = Teacher(
+        email="inactive@duotopia.com",
+        password_hash=get_password_hash("test123"),
+        name="Inactive Teacher",
+        is_active=False,  # Inactive account
+        is_demo=False,
+        email_verified=False,  # Not verified
+    )
+    shared_test_session.add(teacher)
+    shared_test_session.commit()
+    shared_test_session.refresh(teacher)
+    return teacher
