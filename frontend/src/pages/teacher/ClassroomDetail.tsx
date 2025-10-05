@@ -218,7 +218,7 @@ export default function ClassroomDetail({
   const fetchTemplateProgramData = async () => {
     try {
       setLoading(true);
-       
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = (await apiClient.getTemplateProgramDetail(
         Number(id),

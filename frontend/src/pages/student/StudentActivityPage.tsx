@@ -1087,14 +1087,18 @@ export default function StudentActivityPage() {
                         const isActiveItem =
                           isActiveActivity &&
                           currentSubQuestionIndex === itemIndex;
-                         
+
                         const isCompleted =
                           ("recording_url" in item && item.recording_url) ||
                           activity.answers?.[itemIndex];
                         const teacherFeedback =
-                          "teacher_feedback" in item ? item.teacher_feedback : undefined;
+                          "teacher_feedback" in item
+                            ? item.teacher_feedback
+                            : undefined;
                         const teacherPassed =
-                          "teacher_passed" in item ? item.teacher_passed : undefined;
+                          "teacher_passed" in item
+                            ? item.teacher_passed
+                            : undefined;
 
                         // 判斷狀態
                         const hasTeacherGraded =
