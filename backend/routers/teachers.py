@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, text
 from pydantic import BaseModel
 from database import get_db
+from schemas import ProgramUpdate
 from models import (
     Teacher,
     Classroom,
@@ -1329,12 +1330,6 @@ class ProgramCreate(BaseModel):
     estimated_hours: Optional[int] = None
 
 
-class ProgramUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    estimated_hours: Optional[int] = None
-
-
 class LessonCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -1467,7 +1462,11 @@ async def get_program(
     """取得單一課程資料"""
     program = (
         db.query(Program)
-        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Program.id == program_id,
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
         .options(
             selectinload(Program.lessons)
             .selectinload(Lesson.contents)
@@ -1531,19 +1530,31 @@ async def update_program(
     """更新課程資料"""
     program = (
         db.query(Program)
-        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Program.id == program_id,
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
-    if update_data.name is not None:
-        program.name = update_data.name
-    if update_data.description is not None:
-        program.description = update_data.description
-    if update_data.estimated_hours is not None:
-        program.estimated_hours = update_data.estimated_hours
+    # 使用 model_dump 來獲取所有提交的欄位（包含 None 值的）
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    if "name" in update_dict:
+        program.name = update_dict["name"]
+    if "description" in update_dict:
+        program.description = update_dict["description"]
+    if "estimated_hours" in update_dict:
+        program.estimated_hours = update_dict["estimated_hours"]
+    if "level" in update_dict:
+        # 將字串轉換為 ProgramLevel enum
+        program.level = ProgramLevel(update_dict["level"])
+    if "tags" in update_dict:
+        program.tags = update_dict["tags"]
 
     db.commit()
     db.refresh(program)
@@ -1553,6 +1564,8 @@ async def update_program(
         "name": program.name,
         "description": program.description,
         "estimated_hours": program.estimated_hours,
+        "level": program.level.value if program.level else "A1",
+        "tags": program.tags or [],
     }
 
 
@@ -1566,7 +1579,11 @@ async def delete_program(
 
     program = (
         db.query(Program)
-        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Program.id == program_id,
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1637,7 +1654,11 @@ async def add_lesson(
     """新增課程單元"""
     program = (
         db.query(Program)
-        .filter(Program.id == program_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Program.id == program_id,
+            Program.teacher_id == current_teacher.id,
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1676,7 +1697,12 @@ async def update_lesson(
     lesson = (
         db.query(Lesson)
         .join(Program)
-        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Lesson.id == lesson_id,
+            Program.teacher_id == current_teacher.id,
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1713,7 +1739,12 @@ async def delete_lesson(
     lesson = (
         db.query(Lesson)
         .join(Program)
-        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Lesson.id == lesson_id,
+            Program.teacher_id == current_teacher.id,
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1865,7 +1896,12 @@ async def create_content(
     lesson = (
         db.query(Lesson)
         .join(Program)
-        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Lesson.id == lesson_id,
+            Program.teacher_id == current_teacher.id,
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1929,7 +1965,13 @@ async def get_content_detail(
         db.query(Content)
         .join(Lesson)
         .join(Program)
-        .filter(Content.id == content_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Content.id == content_id,
+            Program.teacher_id == current_teacher.id,
+            Content.is_active.is_(True),
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -1990,7 +2032,13 @@ async def update_content(
         db.query(Content)
         .join(Lesson)
         .join(Program)
-        .filter(Content.id == content_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Content.id == content_id,
+            Program.teacher_id == current_teacher.id,
+            Content.is_active.is_(True),
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 
@@ -2147,7 +2195,13 @@ async def delete_content(
         db.query(Content)
         .join(Lesson)
         .join(Program)
-        .filter(Content.id == content_id, Program.teacher_id == current_teacher.id)
+        .filter(
+            Content.id == content_id,
+            Program.teacher_id == current_teacher.id,
+            Content.is_active.is_(True),
+            Lesson.is_active.is_(True),
+            Program.is_active.is_(True),
+        )
         .first()
     )
 

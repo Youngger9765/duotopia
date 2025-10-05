@@ -50,8 +50,12 @@ class ProgramCreate(ProgramBase):
     pass
 
 
-class ProgramUpdate(ProgramBase):
+class ProgramUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
+    level: Optional[str] = None  # 改用 str，由後端轉換為 Enum
+    estimated_hours: Optional[int] = None
+    tags: Optional[List[str]] = None
 
 
 class ProgramResponse(ProgramBase):
