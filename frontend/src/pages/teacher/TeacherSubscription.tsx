@@ -173,7 +173,7 @@ export default function TeacherSubscription() {
         <CardContent>
           {subscription && subscription.is_active ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-semibold">{subscription.plan || '未知方案'}</h3>
@@ -184,15 +184,15 @@ export default function TeacherSubscription() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">訂閱狀態良好</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                   <Button
                     onClick={handleRenewal}
-                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white w-full sm:w-auto"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     續訂加值 30 天
                   </Button>
-                  <Button onClick={handleUpgrade} variant="outline">
+                  <Button onClick={handleUpgrade} variant="outline" className="w-full sm:w-auto">
                     升級方案
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -274,29 +274,29 @@ export default function TeacherSubscription() {
               {transactions.map((txn) => (
                 <div
                   key={txn.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors gap-4"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <CreditCard className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                      <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h4 className="font-semibold">{txn.subscription_type}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold dark:text-gray-100">{txn.subscription_type}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
                         {formatDate(txn.created_at)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         訂閱 {txn.months} 個月
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-semibold text-lg">
+                  <div className="flex items-center justify-between sm:justify-end gap-4">
+                    <div className="text-left sm:text-right">
+                      <p className="font-semibold text-lg dark:text-gray-100">
                         {txn.currency} ${txn.amount}
                       </p>
-                      <p className="text-xs text-gray-500">{txn.type}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{txn.type}</p>
                     </div>
                     {getStatusBadge(txn.status)}
                   </div>
