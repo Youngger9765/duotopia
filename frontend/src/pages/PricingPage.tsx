@@ -207,71 +207,82 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* User Status Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-2xl font-bold text-blue-600">
-              Duotopia
-            </Link>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">訂閱方案</span>
-          </div>
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            {/* Logo Section */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link to="/" className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                Duotopia
+              </Link>
+              <span className="text-gray-400 dark:text-gray-500 hidden sm:inline">|</span>
+              <span className="text-sm sm:text-base text-gray-600 dark:text-gray-300">訂閱方案</span>
+            </div>
 
-          <div className="flex items-center gap-4">
-            {userInfo?.isLoggedIn ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-gray-600" />
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      {userInfo.name}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {userInfo.role === 'teacher' ? '教師帳號' : '學生帳號'}
+            {/* User Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              {userInfo?.isLoggedIn ? (
+                <>
+                  {/* User Info */}
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
+                    <div className="text-left sm:text-right">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {userInfo.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {userInfo.role === 'teacher' ? '教師帳號' : '學生帳號'}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {userInfo.role === 'teacher' ? (
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {userInfo.role === 'teacher' ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate('/teacher/dashboard')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        返回後台
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate('/student/dashboard')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        返回學習區
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="flex-1 sm:flex-none"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      登出
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    onClick={() => navigate('/teacher/dashboard')}
+                    onClick={() => setShowLoginModal(true)}
+                    className="w-full sm:w-auto"
                   >
-                    返回後台
+                    <LogIn className="w-4 h-4 mr-2" />
+                    教師登入
                   </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate('/student/dashboard')}
-                  >
-                    返回學習區
-                  </Button>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  登出
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setShowLoginModal(true)}
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  教師登入
-                </Button>
-
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
