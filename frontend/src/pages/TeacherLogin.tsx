@@ -91,7 +91,7 @@ export default function TeacherLogin() {
       {/* Home link */}
       <div className="absolute top-4 left-4">
         <Link to="/">
-          <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+          <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 h-12 min-h-12">
             <Home className="h-4 w-4" />
             <span>返回首頁</span>
           </Button>
@@ -156,7 +156,7 @@ export default function TeacherLogin() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 min-h-12"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -193,11 +193,11 @@ export default function TeacherLogin() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-14 min-h-14 py-3"
                 onClick={() => handleQuickLogin('demo@duotopia.com')}
                 disabled={isLoading}
               >
-                <Zap className="mr-2 h-4 w-4 text-green-600" />
+                <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
                 <div className="flex-1 text-left">
                   <div className="font-medium">Demo 教師（已充值300天）</div>
                   <div className="text-xs text-gray-500">demo@duotopia.com</div>
@@ -207,11 +207,11 @@ export default function TeacherLogin() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-14 min-h-14 py-3"
                 onClick={() => handleQuickLogin('trial@duotopia.com')}
                 disabled={isLoading}
               >
-                <Zap className="mr-2 h-4 w-4 text-blue-600" />
+                <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
                 <div className="flex-1 text-left">
                   <div className="font-medium text-xs sm:text-sm truncate">試用教師（30天試用期）</div>
                   <div className="text-xs text-gray-500">trial@duotopia.com</div>
@@ -221,11 +221,11 @@ export default function TeacherLogin() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-14 min-h-14 py-3"
                 onClick={() => handleQuickLogin('expired@duotopia.com')}
                 disabled={isLoading}
               >
-                <Zap className="mr-2 h-4 w-4 text-red-600" />
+                <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
                 <div className="flex-1 text-left">
                   <div className="font-medium">過期教師（未訂閱）</div>
                   <div className="text-xs text-gray-500">expired@duotopia.com</div>

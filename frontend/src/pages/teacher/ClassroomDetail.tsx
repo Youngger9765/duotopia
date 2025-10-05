@@ -16,7 +16,7 @@ import ContentTypeDialog from '@/components/ContentTypeDialog';
 import ReadingAssessmentPanel from '@/components/ReadingAssessmentPanel';
 import { AssignmentDialog } from '@/components/AssignmentDialog';
 import { StudentCompletionDashboard } from '@/components/StudentCompletionDashboard';
-import { ArrowLeft, Users, BookOpen, Plus, Settings, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Plus, Edit, Clock, FileText, ListOrdered, X, Save, Mic, Trash2, GripVertical } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -842,15 +842,6 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
               )}
             </div>
           </div>
-          {!isTemplateMode && (
-            <div className="flex items-center space-x-2 w-full sm:w-auto">
-              <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-                <Settings className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">班級設定</span>
-                <span className="sm:hidden">設定</span>
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Stats - only show for classroom mode */}
@@ -896,24 +887,26 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                 /* Template mode - no tabs, just show programs */
                 <div className="h-12" />
               ) : (
-                <TabsList className="grid w-full max-w-[700px] grid-cols-1 sm:grid-cols-3 h-auto sm:h-12 bg-white border gap-1 sm:gap-0">
+                <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-auto sm:h-12 bg-white dark:bg-gray-800 border dark:border-gray-700 gap-2 p-2">
                   <TabsTrigger
                     value="students"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                   >
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                    學生列表
+                    <Users className="h-5 w-5 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">學生列表</span>
+                    <span className="sm:hidden text-[10px]">學生</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="programs"
-                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                   >
-                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                    課程列表
+                    <BookOpen className="h-5 w-5 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">課程列表</span>
+                    <span className="sm:hidden text-[10px]">課程</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="assignments"
-                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white text-sm sm:text-base font-medium h-10 sm:h-auto ${
+                    className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                       !canAssignHomework ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                     disabled={!canAssignHomework}
@@ -924,8 +917,9 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                       }
                     }}
                   >
-                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                    作業管理
+                    <FileText className="h-5 w-5 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">作業管理</span>
+                    <span className="sm:hidden text-[10px]">作業</span>
                   </TabsTrigger>
                 </TabsList>
               )}
@@ -955,11 +949,11 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
             )}
 
             {/* Programs Tab */}
-            <TabsContent value="programs" className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">{isTemplateMode ? '模板課程內容' : '班級課程'}</h3>
+            <TabsContent value="programs" className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+                <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">{isTemplateMode ? '模板課程內容' : '班級課程'}</h3>
                 {!isTemplateMode && (
-                  <Button size="sm" onClick={() => setShowCopyDialog(true)}>
+                  <Button size="sm" onClick={() => setShowCopyDialog(true)} className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     建立課程
                   </Button>
@@ -1028,16 +1022,15 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                           setDropIndicatorProgram(null);
                         }}>
                       <AccordionTrigger className="hover:no-underline group">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <div className="flex items-center space-x-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-2 sm:pr-4 gap-3">
+                          <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 flex-1">
                             <div
-                              className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
+                              className="hidden sm:block cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
                               title="拖曳以重新排序"
                               draggable
                               onDragStart={(e) => {
                                 e.stopPropagation();
                                 e.dataTransfer.effectAllowed = 'move';
-                                // 創建自定義拖曳預覽
                                 const preview = document.createElement('div');
                                 preview.style.position = 'absolute';
                                 preview.style.top = '-1000px';
@@ -1060,41 +1053,64 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                             >
                               <GripVertical className="h-5 w-5 text-gray-400" />
                             </div>
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <BookOpen className="h-5 w-5 text-blue-600" />
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <div className="text-left">
-                              <div className="flex items-center space-x-2">
-                                <h4 className="font-semibold">{program.name}</h4>
+                            <div className="text-left flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 truncate">{program.name}</h4>
                                 <div
-                                  className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
+                                  className="h-7 w-7 sm:h-6 sm:w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditProgram(program.id);
                                   }}
                                 >
-                                  <Edit className="h-3 w-3" />
+                                  <Edit className="h-4 w-4 sm:h-3 sm:w-3 dark:text-gray-400" />
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-500">{program.description || '暫無描述'}</p>
+                              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{program.description || '暫無描述'}</p>
+                              {/* Mobile: Show badges here */}
+                              <div className="flex items-center gap-2 mt-2 sm:hidden">
+                                {getLevelBadge(program.level)}
+                                {program.estimated_hours && (
+                                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    <span>{program.estimated_hours}h</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-4">
+                          {/* Desktop: Show badges and delete button */}
+                          <div className="hidden sm:flex items-center space-x-4 flex-shrink-0">
                             {getLevelBadge(program.level)}
                             {program.estimated_hours && (
-                              <div className="flex items-center text-sm text-gray-500">
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                                 <Clock className="h-4 w-4 mr-1" />
                                 <span>{program.estimated_hours} 小時</span>
                               </div>
                             )}
                             <div
-                              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
+                              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteProgram(program.id);
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                            </div>
+                          </div>
+                          {/* Mobile: Delete button at end */}
+                          <div className="sm:hidden absolute right-2 top-3">
+                            <div
+                              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProgram(program.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                             </div>
                           </div>
                         </div>
@@ -1422,17 +1438,16 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
 
             {/* Assignments Tab - only show for classroom mode */}
             {!isTemplateMode && (
-              <TabsContent value="assignments" className="p-6">
-              <div className="space-y-6">
+              <TabsContent value="assignments" className="p-3 sm:p-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Header with Create Button */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">作業列表</h3>
-                  <div className="flex items-center space-x-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">作業列表</h3>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                     {!canAssignHomework && teacherData && (
-                      <div className="text-sm text-gray-600 bg-yellow-50 px-3 py-1 rounded-lg border border-yellow-200">
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
                         <span className="font-medium">⚠️ 訂閱已過期</span>
-                        <br />
-                        <span className="text-xs">
+                        <span className="text-xs ml-2">
                           {teacherData.subscription_status === 'subscribed'
                             ? `剩餘 ${teacherData.days_remaining || 0} 天`
                             : '需要訂閱才能指派作業'
@@ -1449,7 +1464,7 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                         setShowAssignmentDialog(true);
                       }}
                       disabled={!canAssignHomework}
-                      className={`${
+                      className={`w-full sm:w-auto h-12 min-h-12 ${
                         canAssignHomework
                           ? 'bg-blue-500 hover:bg-blue-600 text-white'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -1462,112 +1477,185 @@ export default function ClassroomDetail({ isTemplateMode = false }: ClassroomDet
                 </div>
 
                 {/* Assignment Stats - Using Real Data */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">總作業數</div>
-                    <div className="text-2xl font-bold text-blue-600">{assignments.length}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">總作業數</div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{assignments.length}</div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">已完成</div>
-                    <div className="text-2xl font-bold text-green-600">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">已完成</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {assignments.filter(a => a.status === 'completed').length}
                     </div>
                   </div>
-                  <div className="bg-yellow-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">進行中</div>
-                    <div className="text-2xl font-bold text-yellow-600">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">進行中</div>
+                    <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                       {assignments.filter(a => a.status === 'in_progress' || a.status === 'not_started').length}
                     </div>
                   </div>
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">已逾期</div>
-                    <div className="text-2xl font-bold text-red-600">
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">已逾期</div>
+                    <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       {assignments.filter(a => a.status === 'overdue').length}
                     </div>
                   </div>
                 </div>
 
                 {/* Assignment List */}
-                <div className="border rounded-lg">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">作業標題</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">內容類型</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">指派對象</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">截止日期</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">完成狀態</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {assignments.length > 0 ? (
-                        assignments.map((assignment) => {
-                          const completionRate = assignment.completion_rate || 0;
-                          const contentTypeLabels: Record<string, { label: string; color: string }> = {
-                            'READING_ASSESSMENT': { label: '朗讀評測', color: 'bg-blue-100 text-blue-800' },
-                            'SPEAKING_PRACTICE': { label: '口說練習', color: 'bg-purple-100 text-purple-800' },
-                            'SPEAKING_SCENARIO': { label: '情境對話', color: 'bg-green-100 text-green-800' },
-                            'LISTENING_CLOZE': { label: '聽力填空', color: 'bg-orange-100 text-orange-800' },
-                            'SENTENCE_MAKING': { label: '造句練習', color: 'bg-indigo-100 text-indigo-800' },
-                            'SPEAKING_QUIZ': { label: '口說測驗', color: 'bg-red-100 text-red-800' },
-                          };
-                          const typeInfo = contentTypeLabels[assignment.content_type || ''] || { label: assignment.content_type || '未知類型', color: 'bg-gray-100 text-gray-800' };
+                {assignments.length > 0 ? (
+                  <>
+                    {/* Mobile: Card Layout */}
+                    <div className="md:hidden space-y-3">
+                      {assignments.map((assignment) => {
+                        const completionRate = assignment.completion_rate || 0;
+                        const contentTypeLabels: Record<string, { label: string; color: string }> = {
+                          'READING_ASSESSMENT': { label: '朗讀評測', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+                          'SPEAKING_PRACTICE': { label: '口說練習', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+                          'SPEAKING_SCENARIO': { label: '情境對話', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+                          'LISTENING_CLOZE': { label: '聽力填空', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+                          'SENTENCE_MAKING': { label: '造句練習', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+                          'SPEAKING_QUIZ': { label: '口說測驗', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+                        };
+                        const typeInfo = contentTypeLabels[assignment.content_type || ''] || { label: assignment.content_type || '未知類型', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
 
-                          return (
-                            <tr key={assignment.id} className="border-b hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                <div className="font-medium">{assignment.title}</div>
-                                <div className="text-sm text-gray-500">{assignment.instructions || '無說明'}</div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>
-                                  {typeInfo.label}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-sm">
-                                {assignment.student_count ? `${assignment.student_count} 人` : '全班'}
-                              </td>
-                              <td className="px-4 py-3 text-sm">
-                                {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('zh-TW') : '無期限'}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className="bg-green-500 h-2 rounded-full"
-                                      style={{width: `${completionRate}%`}}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm text-gray-600">{completionRate}%</span>
+                        return (
+                          <div key={assignment.id} className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3">
+                            {/* Title & Type */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">{assignment.title}</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">{assignment.instructions || '無說明'}</p>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${typeInfo.color}`}>
+                                {typeInfo.label}
+                              </span>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">指派對象</div>
+                                <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
+                                  {assignment.student_count ? `${assignment.student_count} 人` : '全班'}
                                 </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-blue-600 hover:text-blue-700"
-                                  onClick={() => {
-                                    navigate(`/teacher/classroom/${id}/assignment/${assignment.id}`);
-                                  }}
-                                >
-                                  查看詳情
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                            尚未指派任何作業
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">截止日期</div>
+                                <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
+                                  {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('zh-TW') : '無期限'}
+                                </div>
+                              </div>
+                            </div>
 
-                </div>
+                            {/* Progress Bar */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">完成進度</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{completionRate}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-green-500 dark:bg-green-600 h-2 rounded-full transition-all"
+                                  style={{width: `${completionRate}%`}}
+                                ></div>
+                              </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              onClick={() => {
+                                navigate(`/teacher/classroom/${id}/assignment/${assignment.id}`);
+                              }}
+                            >
+                              查看詳情
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop: Table Layout */}
+                    <div className="hidden md:block border dark:border-gray-700 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+                          <tr>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">作業標題</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">內容類型</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">指派對象</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">截止日期</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">完成狀態</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assignments.map((assignment) => {
+                            const completionRate = assignment.completion_rate || 0;
+                            const contentTypeLabels: Record<string, { label: string; color: string }> = {
+                              'READING_ASSESSMENT': { label: '朗讀評測', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+                              'SPEAKING_PRACTICE': { label: '口說練習', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+                              'SPEAKING_SCENARIO': { label: '情境對話', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+                              'LISTENING_CLOZE': { label: '聽力填空', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+                              'SENTENCE_MAKING': { label: '造句練習', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+                              'SPEAKING_QUIZ': { label: '口說測驗', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+                            };
+                            const typeInfo = contentTypeLabels[assignment.content_type || ''] || { label: assignment.content_type || '未知類型', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
+
+                            return (
+                              <tr key={assignment.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700/50 dark:border-gray-600">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium dark:text-gray-100">{assignment.title}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{assignment.instructions || '無說明'}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>
+                                    {typeInfo.label}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm dark:text-gray-300">
+                                  {assignment.student_count ? `${assignment.student_count} 人` : '全班'}
+                                </td>
+                                <td className="px-4 py-3 text-sm dark:text-gray-300">
+                                  {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('zh-TW') : '無期限'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                      <div
+                                        className="bg-green-500 dark:bg-green-600 h-2 rounded-full"
+                                        style={{width: `${completionRate}%`}}
+                                      ></div>
+                                    </div>
+                                    <span className="text-sm text-gray-600 dark:text-gray-400 w-10">{completionRate}%</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 h-10 min-h-10"
+                                    onClick={() => {
+                                      navigate(`/teacher/classroom/${id}/assignment/${assignment.id}`);
+                                    }}
+                                  >
+                                    查看詳情
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
+                    尚未指派任何作業
+                  </div>
+                )}
               </div>
             </TabsContent>
             )}
