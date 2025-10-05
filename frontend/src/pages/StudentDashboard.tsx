@@ -257,28 +257,28 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 lg:p-6">
+      <div className="max-w-full mx-auto">
         {/* Welcome Message */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             你好，{user?.name || '同學'}！歡迎回到 Duotopia 🚀
           </h1>
-          <p className="text-gray-600">繼續你的英語學習之旅吧</p>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">繼續你的英語學習之旅吧</p>
 
           {/* Email 狀態顯示 */}
           {currentEmail && (
-            <div className="mt-4 flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm bg-gray-50 px-3 py-2 rounded-lg">
-                <Mail className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">{currentEmail}</span>
+            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border dark:border-gray-700">
+                <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-gray-700 dark:text-gray-300 text-sm sm:text-base">{currentEmail}</span>
                 {emailVerified ? (
-                  <div className="flex items-center gap-1 text-blue-600">
+                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-xs font-medium">已驗證</span>
                   </div>
                 ) : (
-                  <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                  <Badge variant="outline" className="text-xs text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600">
                     待驗證
                   </Badge>
                 )}
@@ -287,9 +287,9 @@ export default function StudentDashboard() {
                 size="sm"
                 variant="ghost"
                 onClick={() => navigate('/student/profile')}
-                className="text-xs flex items-center gap-1 hover:bg-gray-100"
+                className="text-xs sm:text-sm flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 h-10 min-h-10 dark:text-gray-300"
               >
-                <User className="h-3 w-3" />
+                <User className="h-4 w-4" />
                 個人資料
               </Button>
             </div>
@@ -298,64 +298,61 @@ export default function StudentDashboard() {
 
         {/* Email Setup Form */}
         {(showEmailPrompt || showEmailSetup) && (
-          <Card className="mb-6 bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-full">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-blue-900 mb-3">
+          <Card className="mb-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <div className="hidden sm:block bg-blue-100 dark:bg-blue-900 p-2 rounded-full flex-shrink-0">
+                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100 text-base sm:text-lg">
                       📧 設定 Email 通知
                     </h3>
+                    <Button
+                      variant="ghost"
+                      onClick={handleEmailPromptClose}
+                      className="text-blue-400 hover:text-blue-600 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900 h-8 w-8 p-0 flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
 
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-blue-800 mb-2">
-                          你的 Email 地址
-                        </label>
-                        <Input
-                          type="email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="請輸入你的 Email 地址"
-                          className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                        你的 Email 地址
+                      </label>
+                      <Input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="請輸入你的 Email 地址"
+                        className="w-full border-blue-300 dark:border-blue-700 focus:border-blue-500 focus:ring-blue-500 dark:bg-blue-950/50 dark:text-gray-100 text-sm sm:text-base"
+                      />
+                    </div>
 
-                      <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="flex-1 text-xs sm:text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 p-2 sm:p-3 rounded">
                         <p>📌 點擊「發送驗證信」後，會發送驗證信到你的 Email，點擊信中連結即可完成設定</p>
                       </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          onClick={handleEmailUpdate}
-                          disabled={isSendingEmail || !newEmail || !newEmail.includes('@')}
-                          className="bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600"
-                        >
-                          {isSendingEmail ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              發送中...
-                            </>
-                          ) : (
-                            '驗證我的 Email'
-                          )}
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={handleEmailUpdate}
+                        disabled={isSendingEmail || !newEmail || !newEmail.includes('@')}
+                        className="bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 h-12 min-h-12 px-4 sm:px-6 w-full sm:w-auto whitespace-nowrap"
+                      >
+                        {isSendingEmail ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            發送中...
+                          </>
+                        ) : (
+                          '驗證我的 Email'
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleEmailPromptClose}
-                  className="text-blue-400 hover:text-blue-600 hover:bg-blue-100"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -424,7 +421,7 @@ export default function StudentDashboard() {
                 variant="outline"
                 size="sm"
                 onClick={handleViewAllAssignments}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 h-12 min-h-12 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 查看全部
                 <ChevronRight className="h-4 w-4" />
@@ -432,63 +429,78 @@ export default function StudentDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {assignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors gap-3 sm:gap-4"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold">{assignment.title}</h3>
-                      <Badge className={getStatusColor(assignment.status || '')}>
-                        {getStatusText(assignment.status || '')}
-                      </Badge>
-                      {assignment.content && (
-                        <span className="text-xs text-gray-500">
-                          ({assignment.content.type === 'reading_assessment' ? '朗讀評測' : assignment.content.type})
-                        </span>
-                      )}
+                  <div className="flex-1 min-w-0 space-y-2 sm:space-y-2">
+                    {/* Title and Badge Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
+                        {assignment.title}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={getStatusColor(assignment.status || '')}>
+                          {getStatusText(assignment.status || '')}
+                        </Badge>
+                        {assignment.content && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ({assignment.content.type === 'reading_assessment' ? '朗讀評測' : assignment.content.type})
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+
+                    {/* Due Date and Score - Stack on mobile */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-300">
                       {assignment.due_date && (
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          截止日期：{new Date(assignment.due_date).toLocaleDateString('zh-TW')}
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">
+                            截止日期：{new Date(assignment.due_date).toLocaleDateString('zh-TW')}
+                          </span>
                         </span>
                       )}
                       {assignment.score !== undefined && (
                         <span className="flex items-center gap-1">
-                          <Trophy className="h-3 w-3" />
+                          <Trophy className="h-4 w-4 flex-shrink-0" />
                           得分：{assignment.score}分
                         </span>
                       )}
                     </div>
+
                     {assignment.instructions && (
-                      <p className="text-sm text-gray-500 mt-1">{assignment.instructions}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                        {assignment.instructions}
+                      </p>
                     )}
                   </div>
 
-                  {(assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS') && (
-                    <Button
-                      onClick={() => handleStartAssignment(assignment.id)}
-                      className="ml-4"
-                    >
-                      開始練習
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  )}
+                  {/* Action Button - Full width on mobile */}
+                  <div className="flex-shrink-0 sm:ml-4">
+                    {(assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS') && (
+                      <Button
+                        onClick={() => handleStartAssignment(assignment.id)}
+                        className="w-full sm:w-auto h-12 min-h-12"
+                      >
+                        開始練習
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    )}
 
-                  {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleStartAssignment(assignment.id)}
-                      className="ml-4"
-                    >
-                      查看結果
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  )}
+                    {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleStartAssignment(assignment.id)}
+                        className="w-full sm:w-auto h-12 min-h-12 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                      >
+                        查看結果
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
