@@ -22,8 +22,10 @@ def get_test_engine():
     """獲取全域測試引擎"""
     global _test_engine
     if _test_engine is None:
+        # 🔧 使用 file-based SQLite 而不是 in-memory
+        # in-memory database 在 FastAPI TestClient 的異步環境中可能無法正確共享
         _test_engine = create_engine(
-            "sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False}
+            "sqlite:///./test.db", echo=False, connect_args={"check_same_thread": False}
         )
         Base.metadata.create_all(_test_engine)
     return _test_engine
@@ -32,24 +34,39 @@ def get_test_engine():
 @pytest.fixture(scope="session")
 def test_engine():
     """Create a shared test database engine"""
-    return get_test_engine()
+    engine = get_test_engine()
+    yield engine
+    # 🧹 Cleanup: 刪除測試資料庫檔案
+    import os
+
+    if os.path.exists("./test.db"):
+        os.remove("./test.db")
+
+
+@pytest.fixture(scope="function", autouse=True)
+def ensure_tables(test_engine):
+    """🔧 Ensure tables exist before EVERY test (autouse)"""
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    # Cleanup happens in shared_test_session
 
 
 @pytest.fixture(scope="function")
 def shared_test_session(test_engine):
     """Create a shared test database session that will be used by both test_session and test_client"""
+    # 🔧 確保 tables 存在（每個測試開始前都檢查）
+    Base.metadata.create_all(bind=test_engine)
+
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 🔧 在每個測試開始前清理所有資料（不刪除 schema）
+    # 🔧 清理所有資料（保留 schema）
     try:
         for table in reversed(Base.metadata.sorted_tables):
             session.execute(table.delete())
         session.commit()
     except Exception:
         session.rollback()
-        # 如果清理失敗，可能是 table 不存在，重新創建
-        Base.metadata.create_all(bind=test_engine)
 
     try:
         yield session
@@ -69,11 +86,8 @@ def test_session(shared_test_session):
 
 
 @pytest.fixture(scope="function")
-def test_client(shared_test_session, test_engine):
+def test_client(shared_test_session):
     """Create a test client with database override using shared session"""
-
-    # 🔧 確保 tables 存在（防止第一次請求時 table 不存在）
-    Base.metadata.create_all(bind=test_engine)
 
     def override_get_db():
         try:
@@ -95,18 +109,19 @@ def test_client(shared_test_session, test_engine):
 @pytest.fixture(scope="function")
 def db_session(test_engine):
     """提供資料庫 session 的別名，支援舊有測試"""
+    # 🔧 確保 tables 存在
+    Base.metadata.create_all(bind=test_engine)
+
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 🔧 在每個測試開始前清理所有資料（不刪除 schema）
+    # 🔧 清理所有資料（保留 schema）
     try:
         for table in reversed(Base.metadata.sorted_tables):
             session.execute(table.delete())
         session.commit()
     except Exception:
         session.rollback()
-        # 如果清理失敗，可能是 table 不存在，重新創建
-        Base.metadata.create_all(bind=test_engine)
 
     try:
         yield session
