@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 import {
   Mic,
   MicOff,
@@ -19,8 +19,8 @@ import {
   CheckCircle,
   Upload,
   // Star
-} from 'lucide-react';
-import { AssignmentDetail as AssignmentDetailType } from '@/types';
+} from "lucide-react";
+import { AssignmentDetail as AssignmentDetailType } from "@/types";
 
 interface AssessmentResult {
   pronunciation_score?: number;
@@ -44,14 +44,18 @@ export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [assignment, setAssignment] = useState<AssignmentDetailType | null>(null);
+  const [assignment, setAssignment] = useState<AssignmentDetailType | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
   const [isPlaying, setIsPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState<Map<number, AssessmentResult>>(new Map());
+  const [assessmentResults, setAssessmentResults] = useState<
+    Map<number, AssessmentResult>
+  >(new Map());
   const [assessing, setAssessing] = useState(false);
   const [, setRecordingItemIndex] = useState<number | null>(null); // 記住正在錄音的題目（內部狀態）
 
@@ -84,7 +88,7 @@ export default function AssignmentDetail() {
       if (response.data) {
         const responseData = response.data as {
           title?: string;
-          status?: string;  // 從 API 獲取作業狀態
+          status?: string; // 從 API 獲取作業狀態
           activities?: Array<{
             items?: Array<{
               text?: string;
@@ -92,17 +96,18 @@ export default function AssignmentDetail() {
               audio_url?: string;
             }>;
             ai_assessments?: Array<AssessmentResult | null>;
-            recordings?: string[];  // 從 API 獲取已保存的錄音
+            recordings?: string[]; // 從 API 獲取已保存的錄音
           }>;
         };
 
-        const items = responseData.activities?.flatMap((activity) =>
-          (activity.items || []).map(item => ({
-            text: item.text || '',
-            translation: item.translation,
-            audio_url: item.audio_url
-          }))
-        ) || [];
+        const items =
+          responseData.activities?.flatMap((activity) =>
+            (activity.items || []).map((item) => ({
+              text: item.text || "",
+              translation: item.translation,
+              audio_url: item.audio_url,
+            })),
+          ) || [];
 
         // 處理 AI 評分數據 - 使用新的統一陣列格式
         const newAssessmentResults = new Map<number, AssessmentResult>();
@@ -111,7 +116,10 @@ export default function AssignmentDetail() {
 
         responseData.activities?.forEach((activity) => {
           // 處理 AI 評估結果
-          if (activity.ai_assessments && Array.isArray(activity.ai_assessments)) {
+          if (
+            activity.ai_assessments &&
+            Array.isArray(activity.ai_assessments)
+          ) {
             // 新的陣列格式：每個 index 直接對應題目位置
             activity.ai_assessments.forEach((assessment, localIndex) => {
               if (assessment) {
@@ -128,7 +136,10 @@ export default function AssignmentDetail() {
                 const currentGlobalIndex = globalItemIndex + localIndex;
                 // 將錄音 URL 轉換為 Blob（這裡簡化處理，實際應從 URL 下載）
                 // 暫時用佔位符，表示有錄音存在
-                newRecordings.set(currentGlobalIndex, new Blob(['saved'], { type: 'audio/webm' }));
+                newRecordings.set(
+                  currentGlobalIndex,
+                  new Blob(["saved"], { type: "audio/webm" }),
+                );
               }
             });
           }
@@ -141,27 +152,32 @@ export default function AssignmentDetail() {
         setRecordings(newRecordings);
 
         const assignmentData: AssignmentDetailType = {
-          id: parseInt(id || '0'),
-          title: responseData.title || '作業',
-          description: '練習作業',
+          id: parseInt(id || "0"),
+          title: responseData.title || "作業",
+          description: "練習作業",
           content: {
-            id: parseInt(id || '0'),
-            title: responseData.title || '作業內容',
-            type: 'reading_assessment',
+            id: parseInt(id || "0"),
+            title: responseData.title || "作業內容",
+            type: "reading_assessment",
             items: items,
             items_count: items.length,
             target_wpm: 100,
-            target_accuracy: 90
+            target_accuracy: 90,
           },
-          status: (responseData.status as 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED') || 'NOT_STARTED',
+          status:
+            (responseData.status as
+              | "NOT_STARTED"
+              | "IN_PROGRESS"
+              | "SUBMITTED"
+              | "GRADED") || "NOT_STARTED",
           submissions: [],
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         };
         setAssignment(assignmentData);
       }
     } catch (error) {
-      console.error('Failed to load assignment:', error);
-      toast.error('無法載入作業詳情');
+      console.error("Failed to load assignment:", error);
+      toast.error("無法載入作業詳情");
       // 不要自動跳轉，讓用戶可以重試或手動返回
     } finally {
       setLoading(false);
@@ -172,7 +188,7 @@ export default function AssignmentDetail() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
+        mimeType: "audio/webm",
       });
 
       audioChunksRef.current = [];
@@ -188,20 +204,21 @@ export default function AssignmentDetail() {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
         // 使用錄音時的 index，而不是當前的 index
-        setRecordings(prev => new Map(prev).set(recordingIndex, audioBlob));
+        setRecordings((prev) => new Map(prev).set(recordingIndex, audioBlob));
         setRecordingItemIndex(null);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
       setIsRecording(true);
-
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      toast.error('無法啟動錄音，請檢查麥克風權限');
+      console.error("Failed to start recording:", error);
+      toast.error("無法啟動錄音，請檢查麥克風權限");
     }
   };
 
@@ -209,7 +226,7 @@ export default function AssignmentDetail() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      toast.success('錄音已儲存');
+      toast.success("錄音已儲存");
     }
   };
 
@@ -231,17 +248,17 @@ export default function AssignmentDetail() {
   };
 
   const deleteRecording = (index: number) => {
-    setRecordings(prev => {
+    setRecordings((prev) => {
       const newMap = new Map(prev);
       newMap.delete(index);
       return newMap;
     });
-    setAssessmentResults(prev => {
+    setAssessmentResults((prev) => {
       const newMap = new Map(prev);
       newMap.delete(index);
       return newMap;
     });
-    toast.info('錄音已刪除');
+    toast.info("錄音已刪除");
   };
 
   const assessPronunciation = async (index: number) => {
@@ -249,7 +266,7 @@ export default function AssignmentDetail() {
     const currentItemText = assignment?.content.items?.[index]?.text;
 
     if (!recording || !currentItemText) {
-      toast.error('無錄音檔案或參考文本');
+      toast.error("無錄音檔案或參考文本");
       return;
     }
 
@@ -258,29 +275,33 @@ export default function AssignmentDetail() {
 
       // 創建 FormData
       const formData = new FormData();
-      formData.append('audio_file', recording, 'recording.webm');
-      formData.append('reference_text', currentItemText);
-      formData.append('progress_id', `${index + 1}`); // 暫時使用 index 作為 progress_id
-      formData.append('assignment_id', id || ''); // 加入 assignment ID
+      formData.append("audio_file", recording, "recording.webm");
+      formData.append("reference_text", currentItemText);
+      formData.append("progress_id", `${index + 1}`); // 暫時使用 index 作為 progress_id
+      formData.append("assignment_id", id || ""); // 加入 assignment ID
 
-      const response = await apiClient.post<{ data?: Record<string, unknown> }>('/api/speech/assess', formData);
+      const response = await apiClient.post<{ data?: Record<string, unknown> }>(
+        "/api/speech/assess",
+        formData,
+      );
 
       if (response.data) {
-        setAssessmentResults(prev => new Map(prev).set(index, response.data as AssessmentResult));
-        toast.success('AI 發音評測完成！');
+        setAssessmentResults((prev) =>
+          new Map(prev).set(index, response.data as AssessmentResult),
+        );
+        toast.success("AI 發音評測完成！");
       }
-
     } catch (error) {
-      console.error('Assessment failed:', error);
-      toast.error('評測失敗，請稍後再試');
+      console.error("Assessment failed:", error);
+      toast.error("評測失敗，請稍後再試");
     } finally {
       setAssessing(false);
     }
   };
 
   const submitAssignment = async (e?: React.MouseEvent) => {
-    console.log('🔥 [DEBUG] submitAssignment 被呼叫了！');
-    console.log('🔥 [DEBUG] Event:', e);
+    console.log("🔥 [DEBUG] submitAssignment 被呼叫了！");
+    console.log("🔥 [DEBUG] Event:", e);
 
     // 防止預設行為和事件冒泡
     if (e) {
@@ -289,25 +310,25 @@ export default function AssignmentDetail() {
     }
 
     if (!assignment) {
-      console.log('🔥 [DEBUG] No assignment, returning');
+      console.log("🔥 [DEBUG] No assignment, returning");
       return;
     }
 
     // 檢查是否所有項目都有錄音
     const itemsLength = assignment.content.items?.length || 0;
     const missingRecordings = itemsLength - recordings.size;
-    console.log('🔥 [DEBUG] Items length:', itemsLength);
-    console.log('🔥 [DEBUG] Recordings size:', recordings.size);
-    console.log('🔥 [DEBUG] Missing recordings:', missingRecordings);
+    console.log("🔥 [DEBUG] Items length:", itemsLength);
+    console.log("🔥 [DEBUG] Recordings size:", recordings.size);
+    console.log("🔥 [DEBUG] Missing recordings:", missingRecordings);
 
     if (missingRecordings > 0) {
       toast.warning(`還有 ${missingRecordings} 個項目未錄音`);
       return;
     }
 
-    console.log('🚀 [DEBUG] 開始提交作業');
-    console.log('🚀 [DEBUG] Assignment ID:', id);
-    console.log('🚀 [DEBUG] 當前 URL:', window.location.href);
+    console.log("🚀 [DEBUG] 開始提交作業");
+    console.log("🚀 [DEBUG] Assignment ID:", id);
+    console.log("🚀 [DEBUG] 當前 URL:", window.location.href);
 
     try {
       setSubmitting(true);
@@ -319,43 +340,51 @@ export default function AssignmentDetail() {
           item_index: index,
           audio_url: `mock://recording-${index}`, // 實際應上傳到 GCS
           duration: 5, // 實際應計算錄音長度
-          transcript: assignment.content.items?.[index]?.text || ''
+          transcript: assignment.content.items?.[index]?.text || "",
         })),
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
       };
 
-      console.log('🚀 [DEBUG] 提交數據:', submissionData);
-      console.log('🚀 [DEBUG] API endpoint:', `/api/students/assignments/${id}/submit`);
+      console.log("🚀 [DEBUG] 提交數據:", submissionData);
+      console.log(
+        "🚀 [DEBUG] API endpoint:",
+        `/api/students/assignments/${id}/submit`,
+      );
 
-      const response = await apiClient.post(`/api/students/assignments/${id}/submit`, submissionData);
+      const response = await apiClient.post(
+        `/api/students/assignments/${id}/submit`,
+        submissionData,
+      );
 
-      console.log('🚀 [DEBUG] 提交成功！響應:', response);
-      toast.success('作業提交成功！');
+      console.log("🚀 [DEBUG] 提交成功！響應:", response);
+      toast.success("作業提交成功！");
 
       // 直接跳轉到包含 /detail 的正確 URL
       const targetUrl = `/student/assignment/${id}/detail`;
-      console.log('🚀 [DEBUG] 準備跳轉到:', targetUrl);
-      console.log('🚀 [DEBUG] 目前的 location.href:', window.location.href);
-      console.log('🚀 [DEBUG] 目前的 location.pathname:', window.location.pathname);
+      console.log("🚀 [DEBUG] 準備跳轉到:", targetUrl);
+      console.log("🚀 [DEBUG] 目前的 location.href:", window.location.href);
+      console.log(
+        "🚀 [DEBUG] 目前的 location.pathname:",
+        window.location.pathname,
+      );
 
       // 強制跳轉，使用 setTimeout 確保 toast 顯示
       setTimeout(() => {
-        console.log('🚀 [DEBUG] 執行跳轉！');
-        console.log('🚀 [DEBUG] window.location.href = ', targetUrl);
+        console.log("🚀 [DEBUG] 執行跳轉！");
+        console.log("🚀 [DEBUG] window.location.href = ", targetUrl);
         window.location.href = targetUrl;
-        console.log('🚀 [DEBUG] 跳轉指令已執行');
+        console.log("🚀 [DEBUG] 跳轉指令已執行");
       }, 500);
-
     } catch (error: unknown) {
-      console.error('❌ [DEBUG] 提交失敗:', error);
+      console.error("❌ [DEBUG] 提交失敗:", error);
       if (error instanceof Error) {
-        console.error('❌ [DEBUG] 錯誤類型:', error.constructor.name);
-        console.error('❌ [DEBUG] 錯誤訊息:', error.message);
-        console.error('❌ [DEBUG] 錯誤堆疊:', error.stack);
+        console.error("❌ [DEBUG] 錯誤類型:", error.constructor.name);
+        console.error("❌ [DEBUG] 錯誤訊息:", error.message);
+        console.error("❌ [DEBUG] 錯誤堆疊:", error.stack);
       }
-      toast.error('提交失敗，請稍後再試');
+      toast.error("提交失敗，請稍後再試");
     } finally {
-      console.log('🚀 [DEBUG] finally 區塊執行');
+      console.log("🚀 [DEBUG] finally 區塊執行");
       setSubmitting(false);
     }
   };
@@ -376,7 +405,10 @@ export default function AssignmentDetail() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-gray-600">找不到作業</p>
-          <Button onClick={() => navigate('/student/dashboard')} className="mt-4">
+          <Button
+            onClick={() => navigate("/student/dashboard")}
+            className="mt-4"
+          >
             返回作業列表
           </Button>
         </div>
@@ -386,7 +418,8 @@ export default function AssignmentDetail() {
 
   const currentItem = assignment.content.items?.[currentItemIndex];
   const itemsLength = assignment.content.items?.length || 0;
-  const progress = itemsLength > 0 ? ((currentItemIndex + 1) / itemsLength) * 100 : 0;
+  const progress =
+    itemsLength > 0 ? ((currentItemIndex + 1) / itemsLength) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
@@ -396,7 +429,7 @@ export default function AssignmentDetail() {
       <div className="max-w-4xl mx-auto mb-6">
         <Button
           variant="ghost"
-          onClick={() => navigate('/student/dashboard')}
+          onClick={() => navigate("/student/dashboard")}
           className="mb-4"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
@@ -404,11 +437,14 @@ export default function AssignmentDetail() {
         </Button>
 
         {/* 狀態提示 */}
-        {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED') && (
+        {(assignment.status === "SUBMITTED" ||
+          assignment.status === "GRADED") && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-blue-600" />
             <span className="text-blue-700">
-              {assignment.status === 'SUBMITTED' ? '作業已提交，目前為檢視模式' : '作業已評分，目前為檢視模式'}
+              {assignment.status === "SUBMITTED"
+                ? "作業已提交，目前為檢視模式"
+                : "作業已評分，目前為檢視模式"}
             </span>
           </div>
         )}
@@ -419,18 +455,29 @@ export default function AssignmentDetail() {
               <div>
                 <CardTitle className="text-2xl">{assignment.title}</CardTitle>
                 {assignment.instructions && (
-                  <p className="text-gray-600 mt-2">{assignment.instructions}</p>
+                  <p className="text-gray-600 mt-2">
+                    {assignment.instructions}
+                  </p>
                 )}
               </div>
-              <Badge className={
-                assignment.status === 'GRADED' ? 'bg-green-100 text-green-800' :
-                assignment.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
-                'bg-gray-100 text-gray-800'
-              }>
-                {assignment.status === 'NOT_STARTED' ? '未開始' :
-                 assignment.status === 'IN_PROGRESS' ? '進行中' :
-                 assignment.status === 'SUBMITTED' ? '已提交' :
-                 assignment.status === 'GRADED' ? '已評分' : assignment.status}
+              <Badge
+                className={
+                  assignment.status === "GRADED"
+                    ? "bg-green-100 text-green-800"
+                    : assignment.status === "SUBMITTED"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-gray-100 text-gray-800"
+                }
+              >
+                {assignment.status === "NOT_STARTED"
+                  ? "未開始"
+                  : assignment.status === "IN_PROGRESS"
+                    ? "進行中"
+                    : assignment.status === "SUBMITTED"
+                      ? "已提交"
+                      : assignment.status === "GRADED"
+                        ? "已評分"
+                        : assignment.status}
               </Badge>
             </div>
 
@@ -493,7 +540,10 @@ export default function AssignmentDetail() {
                   size="lg"
                   onClick={startRecording}
                   className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500"
-                  disabled={assignment.status === 'GRADED' || assignment.status === 'SUBMITTED'}
+                  disabled={
+                    assignment.status === "GRADED" ||
+                    assignment.status === "SUBMITTED"
+                  }
                 >
                   <Mic className="h-5 w-5 mr-2" />
                   開始錄音
@@ -517,7 +567,11 @@ export default function AssignmentDetail() {
                     onClick={() => playRecording(currentItemIndex)}
                     disabled={isPlaying}
                   >
-                    {isPlaying ? <Pause className="h-5 w-5 mr-2" /> : <Play className="h-5 w-5 mr-2" />}
+                    {isPlaying ? (
+                      <Pause className="h-5 w-5 mr-2" />
+                    ) : (
+                      <Play className="h-5 w-5 mr-2" />
+                    )}
                     播放
                   </Button>
                   <Button
@@ -525,7 +579,10 @@ export default function AssignmentDetail() {
                     variant="outline"
                     onClick={() => deleteRecording(currentItemIndex)}
                     className="text-red-600 hover:text-red-700"
-                    disabled={assignment.status === 'GRADED' || assignment.status === 'SUBMITTED'}
+                    disabled={
+                      assignment.status === "GRADED" ||
+                      assignment.status === "SUBMITTED"
+                    }
                   >
                     <RotateCcw className="h-5 w-5 mr-2" />
                     重錄
@@ -551,7 +608,7 @@ export default function AssignmentDetail() {
                     className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500"
                   >
                     <Upload className="h-5 w-5 mr-2" />
-                    {assessing ? '評測中...' : '上傳與評測'}
+                    {assessing ? "評測中..." : "上傳與評測"}
                   </Button>
                 )}
               </div>
@@ -561,7 +618,9 @@ export default function AssignmentDetail() {
             {assessmentResults.has(currentItemIndex) && (
               <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
                 <div className="text-center mb-4">
-                  <h4 className="text-xl font-bold text-blue-800 mb-2">🤖 AI 發音評測結果</h4>
+                  <h4 className="text-xl font-bold text-blue-800 mb-2">
+                    🤖 AI 發音評測結果
+                  </h4>
                 </div>
 
                 {(() => {
@@ -607,20 +666,23 @@ export default function AssignmentDetail() {
                   if (words.length > 0) {
                     return (
                       <div className="mt-4">
-                        <h5 className="font-medium text-gray-700 mb-2">單字評分詳情：</h5>
+                        <h5 className="font-medium text-gray-700 mb-2">
+                          單字評分詳情：
+                        </h5>
                         <div className="flex flex-wrap gap-2">
                           {words.map((word, wordIndex: number) => (
                             <span
                               key={wordIndex}
                               className={`px-3 py-1 rounded-full text-sm font-medium ${
                                 (word.accuracy_score || 0) >= 90
-                                  ? 'bg-green-100 text-green-800 border-green-200 border'
+                                  ? "bg-green-100 text-green-800 border-green-200 border"
                                   : (word.accuracy_score || 0) >= 70
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200 border'
-                                  : 'bg-red-100 text-red-800 border-red-200 border'
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-200 border"
+                                    : "bg-red-100 text-red-800 border-red-200 border"
                               }`}
                             >
-                              {word.word} ({word.accuracy_score?.toFixed(0) || 0})
+                              {word.word} (
+                              {word.accuracy_score?.toFixed(0) || 0})
                             </span>
                           ))}
                         </div>
@@ -638,7 +700,7 @@ export default function AssignmentDetail() {
         <div className="flex justify-between items-center">
           <Button
             variant="outline"
-            onClick={() => setCurrentItemIndex(prev => Math.max(0, prev - 1))}
+            onClick={() => setCurrentItemIndex((prev) => Math.max(0, prev - 1))}
             disabled={currentItemIndex === 0}
           >
             上一題
@@ -652,7 +714,7 @@ export default function AssignmentDetail() {
 
           {currentItemIndex < itemsLength - 1 ? (
             <Button
-              onClick={() => setCurrentItemIndex(prev => prev + 1)}
+              onClick={() => setCurrentItemIndex((prev) => prev + 1)}
               disabled={!recordings.has(currentItemIndex)}
             >
               下一題
@@ -664,21 +726,23 @@ export default function AssignmentDetail() {
               className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
             >
               <Send className="h-4 w-4 mr-2" />
-              {submitting ? '提交中...' : '提交作業'}
+              {submitting ? "提交中..." : "提交作業"}
             </Button>
           )}
         </div>
       </div>
 
       {/* Score Display (if graded) */}
-      {assignment.status === 'GRADED' && assignment.score !== null && (
+      {assignment.status === "GRADED" && assignment.score !== null && (
         <Card className="max-w-4xl mx-auto mt-6">
           <CardHeader>
             <CardTitle>評分結果</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center mb-4">
-              <div className="text-4xl font-bold text-blue-600">{assignment.score}</div>
+              <div className="text-4xl font-bold text-blue-600">
+                {assignment.score}
+              </div>
               <div className="text-gray-600">分數</div>
             </div>
             {assignment.feedback && (

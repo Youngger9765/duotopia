@@ -1,14 +1,25 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import TeacherLayout from '@/components/TeacherLayout';
-import StudentTable, { Student } from '@/components/StudentTable';
-import { StudentDialogs } from '@/components/StudentDialogs';
-import { ClassroomAssignDialog } from '@/components/ClassroomAssignDialog';
-import { StudentImportDialog } from '@/components/StudentImportDialog';
-import { Users, RefreshCw, Filter, Plus, UserCheck, UserX, Download, School, Trash2, Upload } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
-import { Classroom } from '@/types';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import TeacherLayout from "@/components/TeacherLayout";
+import StudentTable, { Student } from "@/components/StudentTable";
+import { StudentDialogs } from "@/components/StudentDialogs";
+import { ClassroomAssignDialog } from "@/components/ClassroomAssignDialog";
+import { StudentImportDialog } from "@/components/StudentImportDialog";
+import {
+  Users,
+  RefreshCw,
+  Filter,
+  Plus,
+  UserCheck,
+  UserX,
+  Download,
+  School,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
+import { Classroom } from "@/types";
 
 // Extended classroom interface for this page (if needed in future)
 // interface ClassroomWithStudents extends Classroom {
@@ -19,11 +30,15 @@ export default function TeacherStudents() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
-  const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
+  const [selectedClassroom, setSelectedClassroom] = useState<number | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [dialogType, setDialogType] = useState<'view' | 'create' | 'edit' | 'delete' | null>(null);
+  const [dialogType, setDialogType] = useState<
+    "view" | "create" | "edit" | "delete" | null
+  >(null);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
@@ -36,16 +51,17 @@ export default function TeacherStudents() {
       setLoading(true);
 
       // Fetch classrooms for the dropdown
-      const classroomData = await apiClient.getTeacherClassrooms() as Classroom[];
+      const classroomData =
+        (await apiClient.getTeacherClassrooms()) as Classroom[];
       setClassrooms(classroomData);
 
       // Fetch all students (including those without classroom)
-      const studentsData = await apiClient.getAllStudents() as Array<{
+      const studentsData = (await apiClient.getAllStudents()) as Array<{
         id: number;
         name: string;
         email: string;
         student_id?: string;
-        classroom?: {id: number; name: string};
+        classroom?: { id: number; name: string };
         classroom_id?: number;
       }>;
 
@@ -55,38 +71,40 @@ export default function TeacherStudents() {
         name: string;
         email: string;
         student_number?: string;
-        classroom?: {id: number; name: string};
+        classroom?: { id: number; name: string };
         classroom_id?: number;
         birthdate?: string;
         phone?: string;
         password_changed?: boolean;
         enrollment_date?: string;
-        status?: 'active' | 'inactive' | 'suspended';
+        status?: "active" | "inactive" | "suspended";
         last_login?: string | null;
         classroom_name?: string;
       }
 
       // Format students data
-      const studentsWithDetails = studentsData.map((student: ExtendedStudentResponse) => {
-        return {
-          id: student.id,
-          name: student.name,
-          email: student.email,
-          student_number: student.student_number || '',
-          birthdate: student.birthdate || '',
-          phone: student.phone || '',
-          password_changed: student.password_changed || false,
-          enrollment_date: student.enrollment_date || '',
-          status: student.status || 'active' as const,
-          last_login: student.last_login || null,
-          classroom_id: student.classroom_id,
-          classroom_name: student.classroom_name || '未分配',
-        };
-      });
+      const studentsWithDetails = studentsData.map(
+        (student: ExtendedStudentResponse) => {
+          return {
+            id: student.id,
+            name: student.name,
+            email: student.email,
+            student_number: student.student_number || "",
+            birthdate: student.birthdate || "",
+            phone: student.phone || "",
+            password_changed: student.password_changed || false,
+            enrollment_date: student.enrollment_date || "",
+            status: student.status || ("active" as const),
+            last_login: student.last_login || null,
+            classroom_id: student.classroom_id,
+            classroom_name: student.classroom_name || "未分配",
+          };
+        },
+      );
 
       setAllStudents(studentsWithDetails);
     } catch (err) {
-      console.error('Fetch classrooms error:', err);
+      console.error("Fetch classrooms error:", err);
       // Don't use mock data - show real error
       setAllStudents([]);
     } finally {
@@ -96,7 +114,7 @@ export default function TeacherStudents() {
 
   // 過濾並排序學生
   const filteredStudents = allStudents
-    .filter(student => {
+    .filter((student) => {
       // 班級篩選邏輯
       let matchesClassroom = true;
       if (selectedClassroom === null) {
@@ -110,26 +128,27 @@ export default function TeacherStudents() {
         matchesClassroom = student.classroom_id === selectedClassroom;
       }
 
-      const matchesSearch = !searchTerm ||
+      const matchesSearch =
+        !searchTerm ||
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (student.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (student.email || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchesClassroom && matchesSearch;
     })
     .sort((a, b) => a.id - b.id); // 按 ID 排序
 
   const handleCreateStudent = () => {
     setSelectedStudent(null);
-    setDialogType('create');
+    setDialogType("create");
   };
 
   const handleViewStudent = (student: Student) => {
     setSelectedStudent(student);
-    setDialogType('view');
+    setDialogType("view");
   };
 
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student);
-    setDialogType('edit');
+    setDialogType("edit");
   };
 
   const handleResetPassword = async (student: Student) => {
@@ -143,8 +162,8 @@ export default function TeacherStudents() {
       // Refresh data
       fetchClassrooms();
     } catch (error) {
-      console.error('Failed to reset password:', error);
-      toast.error('重設密碼失敗，請稍後再試');
+      console.error("Failed to reset password:", error);
+      toast.error("重設密碼失敗，請稍後再試");
     }
   };
 
@@ -160,8 +179,8 @@ export default function TeacherStudents() {
       // Refresh data after delete
       fetchClassrooms();
     } catch (error) {
-      console.error('Failed to delete student:', error);
-      toast.error('刪除學生失敗，請稍後再試');
+      console.error("Failed to delete student:", error);
+      toast.error("刪除學生失敗，請稍後再試");
     }
   };
 
@@ -172,35 +191,48 @@ export default function TeacherStudents() {
 
   const handleSwitchToEdit = () => {
     // Switch from view to edit mode
-    setDialogType('edit');
+    setDialogType("edit");
   };
 
   const handleExportStudents = () => {
     // 準備 CSV 資料
-    const headers = ['姓名', 'Email', '學號', '生日', '班級', '密碼狀態', '最後登入'];
-    const rows = filteredStudents.map(student => [
+    const headers = [
+      "姓名",
+      "Email",
+      "學號",
+      "生日",
+      "班級",
+      "密碼狀態",
+      "最後登入",
+    ];
+    const rows = filteredStudents.map((student) => [
       student.name,
-      student.email || '-',
-      student.student_number || '-',
-      student.birthdate || '-',
-      student.classroom_name || '未分配',
-      student.password_changed ? '已更改' : '預設密碼',
-      student.last_login || '從未登入'
+      student.email || "-",
+      student.student_number || "-",
+      student.birthdate || "-",
+      student.classroom_name || "未分配",
+      student.password_changed ? "已更改" : "預設密碼",
+      student.last_login || "從未登入",
     ]);
 
     // 建立 CSV 內容
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
 
     // 建立下載連結
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `學生名單_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `學生名單_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -210,17 +242,17 @@ export default function TeacherStudents() {
 
   const handleBulkAction = async (action: string, studentIds: number[]) => {
     // Handle selection update
-    if (action === 'selection') {
+    if (action === "selection") {
       setSelectedStudentIds(studentIds);
       return;
     }
 
     setSelectedStudentIds(studentIds);
 
-    if (action === 'assign') {
+    if (action === "assign") {
       // Show classroom selection dialog
       setShowAssignDialog(true);
-    } else if (action === 'delete') {
+    } else if (action === "delete") {
       if (confirm(`確定要刪除 ${studentIds.length} 位學生嗎？`)) {
         try {
           for (const studentId of studentIds) {
@@ -229,14 +261,12 @@ export default function TeacherStudents() {
           toast.success(`成功刪除 ${studentIds.length} 位學生`);
           fetchClassrooms();
         } catch (error) {
-          console.error('Failed to delete students:', error);
-          toast.error('刪除失敗，請稍後再試');
+          console.error("Failed to delete students:", error);
+          toast.error("刪除失敗，請稍後再試");
         }
       }
     }
   };
-
-
 
   if (loading) {
     return (
@@ -256,7 +286,9 @@ export default function TeacherStudents() {
       <div>
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">所有學生</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            所有學生
+          </h2>
 
           {/* Bulk Actions Bar */}
           {selectedStudentIds.length > 0 && (
@@ -268,7 +300,7 @@ export default function TeacherStudents() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleBulkAction('assign', selectedStudentIds)}
+                  onClick={() => handleBulkAction("assign", selectedStudentIds)}
                   className="flex-1 sm:flex-none"
                 >
                   <School className="h-4 w-4 mr-2" />
@@ -278,7 +310,7 @@ export default function TeacherStudents() {
                   size="sm"
                   variant="outline"
                   className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex-1 sm:flex-none"
-                  onClick={() => handleBulkAction('delete', selectedStudentIds)}
+                  onClick={() => handleBulkAction("delete", selectedStudentIds)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   批量刪除
@@ -301,11 +333,17 @@ export default function TeacherStudents() {
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <select
-                  value={selectedClassroom === null ? '' : (selectedClassroom === 0 ? '0' : selectedClassroom.toString())}
+                  value={
+                    selectedClassroom === null
+                      ? ""
+                      : selectedClassroom === 0
+                        ? "0"
+                        : selectedClassroom.toString()
+                  }
                   onChange={(e) => {
-                    if (e.target.value === '') {
+                    if (e.target.value === "") {
                       setSelectedClassroom(null);
-                    } else if (e.target.value === '0') {
+                    } else if (e.target.value === "0") {
                       setSelectedClassroom(0);
                     } else {
                       setSelectedClassroom(Number(e.target.value));
@@ -326,22 +364,41 @@ export default function TeacherStudents() {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={fetchClassrooms} variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <Button
+                onClick={fetchClassrooms}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">重新載入</span>
                 <span className="sm:hidden">載入</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExportStudents} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportStudents}
+                className="flex-1 sm:flex-none"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">匯出名單</span>
                 <span className="sm:hidden">匯出</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportDialog(true)}
+                className="flex-1 sm:flex-none"
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">批次匯入</span>
                 <span className="sm:hidden">匯入</span>
               </Button>
-              <Button size="sm" onClick={handleCreateStudent} className="flex-1 sm:flex-none">
+              <Button
+                size="sm"
+                onClick={handleCreateStudent}
+                className="flex-1 sm:flex-none"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 新增學生
               </Button>
@@ -354,8 +411,12 @@ export default function TeacherStudents() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">總學生數</p>
-                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  總學生數
+                </p>
+                <p className="text-2xl font-bold dark:text-gray-100">
+                  {filteredStudents.length}
+                </p>
               </div>
               <Users className="h-8 w-8 text-blue-500 dark:text-blue-400" />
             </div>
@@ -363,8 +424,12 @@ export default function TeacherStudents() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">活躍學生</p>
-                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'active').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  活躍學生
+                </p>
+                <p className="text-2xl font-bold dark:text-gray-100">
+                  {filteredStudents.filter((s) => s.status === "active").length}
+                </p>
               </div>
               <UserCheck className="h-8 w-8 text-green-500 dark:text-green-400" />
             </div>
@@ -372,8 +437,15 @@ export default function TeacherStudents() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">未活躍</p>
-                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'inactive').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  未活躍
+                </p>
+                <p className="text-2xl font-bold dark:text-gray-100">
+                  {
+                    filteredStudents.filter((s) => s.status === "inactive")
+                      .length
+                  }
+                </p>
               </div>
               <UserX className="h-8 w-8 text-yellow-500 dark:text-yellow-400" />
             </div>
@@ -381,11 +453,20 @@ export default function TeacherStudents() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">已停權</p>
-                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'suspended').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  已停權
+                </p>
+                <p className="text-2xl font-bold dark:text-gray-100">
+                  {
+                    filteredStudents.filter((s) => s.status === "suspended")
+                      .length
+                  }
+                </p>
               </div>
               <div className="h-8 w-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                <span className="text-red-600 dark:text-red-400 font-bold">!</span>
+                <span className="text-red-600 dark:text-red-400 font-bold">
+                  !
+                </span>
               </div>
             </div>
           </div>
@@ -404,10 +485,10 @@ export default function TeacherStudents() {
             onBulkAction={handleBulkAction}
             emptyMessage={
               searchTerm
-                ? '找不到符合條件的學生'
+                ? "找不到符合條件的學生"
                 : selectedClassroom
-                  ? '此班級暫無學生'
-                  : '尚未建立學生'
+                  ? "此班級暫無學生"
+                  : "尚未建立學生"
             }
           />
         </div>
@@ -433,16 +514,20 @@ export default function TeacherStudents() {
           (async () => {
             try {
               for (const studentId of selectedStudentIds) {
-                await apiClient.updateStudent(studentId, { classroom_id: classroomId });
+                await apiClient.updateStudent(studentId, {
+                  classroom_id: classroomId,
+                });
               }
-              const classroom = classrooms.find(c => c.id === classroomId);
-              toast.success(`成功分配 ${selectedStudentIds.length} 位學生到「${classroom?.name}」`);
+              const classroom = classrooms.find((c) => c.id === classroomId);
+              toast.success(
+                `成功分配 ${selectedStudentIds.length} 位學生到「${classroom?.name}」`,
+              );
               setSelectedStudentIds([]);
               setShowAssignDialog(false);
               fetchClassrooms();
             } catch (error) {
-              console.error('Failed to assign students:', error);
-              toast.error('分配失敗，請稍後再試');
+              console.error("Failed to assign students:", error);
+              toast.error("分配失敗，請稍後再試");
             }
           })();
         }}

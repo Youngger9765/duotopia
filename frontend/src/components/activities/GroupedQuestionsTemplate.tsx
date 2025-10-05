@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import AIScoreDisplay from '@/components/shared/AIScoreDisplay';
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
 import {
   Mic,
   Square,
@@ -13,9 +13,9 @@ import {
   Loader2,
   MessageSquare,
   Languages,
-  X
-} from 'lucide-react';
-import { retryAIAnalysis } from '@/utils/retryHelper';
+  X,
+} from "lucide-react";
+import { retryAIAnalysis } from "@/utils/retryHelper";
 
 interface Question {
   text?: string;
@@ -103,16 +103,17 @@ export default function GroupedQuestionsTemplate({
   onStartRecording,
   onStopRecording,
   onUpdateItemRecording,
-  formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`,
+  formatTime = (s) =>
+    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
   progressId,
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
-  readOnly = false // 唯讀模式
+  readOnly = false, // 唯讀模式
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
 
   // Debug: 顯示當前題目的評語資料
-  console.log('[GroupedQuestionsTemplate] 當前題目資料:', {
+  console.log("[GroupedQuestionsTemplate] 當前題目資料:", {
     index: currentQuestionIndex,
     totalItems: items.length,
     currentQuestion: currentQuestion,
@@ -123,7 +124,7 @@ export default function GroupedQuestionsTemplate({
     teacherPassedIsNull: currentQuestion?.teacher_passed === null,
     teacherPassedIsTrue: currentQuestion?.teacher_passed === true,
     teacherPassedIsFalse: currentQuestion?.teacher_passed === false,
-    teacherScore: currentQuestion?.teacher_review_score
+    teacherScore: currentQuestion?.teacher_review_score,
   });
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -132,16 +133,24 @@ export default function GroupedQuestionsTemplate({
   const [isAssessing, setIsAssessing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0); // 播放倍速
   const questionAudioRef = useRef<HTMLAudioElement | null>(null); // 題目音檔播放器
-  const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResult>>(() => {
+  const [assessmentResults, setAssessmentResults] = useState<
+    Record<number, AssessmentResult>
+  >(() => {
     // 如果有初始 AI 評分，處理多題目的評分結構
-    if (initialAssessmentResults && Object.keys(initialAssessmentResults).length > 0) {
+    if (
+      initialAssessmentResults &&
+      Object.keys(initialAssessmentResults).length > 0
+    ) {
       // 檢查是否有多題目的評分結構 (items)
-      if (initialAssessmentResults.items && typeof initialAssessmentResults.items === 'object') {
+      if (
+        initialAssessmentResults.items &&
+        typeof initialAssessmentResults.items === "object"
+      ) {
         const itemsResults: Record<number, AssessmentResult> = {};
         const items = initialAssessmentResults.items as Record<string, unknown>;
 
         // 將 items 中的評分轉換為數字索引的結果
-        Object.keys(items).forEach(key => {
+        Object.keys(items).forEach((key) => {
           const index = parseInt(key);
           if (!isNaN(index) && items[key]) {
             itemsResults[index] = items[key] as AssessmentResult;
@@ -151,7 +160,9 @@ export default function GroupedQuestionsTemplate({
         return itemsResults;
       }
       // 如果這是一個單獨的評分結果（不是分組的）
-      else if (!Object.prototype.hasOwnProperty.call(initialAssessmentResults, '0')) {
+      else if (
+        !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
+      ) {
         return { 0: initialAssessmentResults as AssessmentResult };
       }
       return initialAssessmentResults as Record<number, AssessmentResult>;
@@ -187,14 +198,14 @@ export default function GroupedQuestionsTemplate({
       const audio = new Audio(currentRecording as string);
       audioRef.current = audio;
 
-      audio.addEventListener('loadedmetadata', () => {
+      audio.addEventListener("loadedmetadata", () => {
         const dur = audio.duration;
         if (dur && isFinite(dur) && !isNaN(dur)) {
           setDuration(dur);
         }
       });
 
-      audio.addEventListener('ended', () => {
+      audio.addEventListener("ended", () => {
         setIsPlaying(false);
         setCurrentTime(0);
         if (progressIntervalRef.current) {
@@ -244,7 +255,7 @@ export default function GroupedQuestionsTemplate({
     const currentRecording = items[currentQuestionIndex]?.recording_url;
     if (currentRecording) {
       const tempAudio = new Audio(currentRecording as string);
-      tempAudio.addEventListener('loadedmetadata', () => {
+      tempAudio.addEventListener("loadedmetadata", () => {
         const dur = tempAudio.duration;
         if (dur && isFinite(dur) && !isNaN(dur)) {
           setDuration(dur);
@@ -282,8 +293,8 @@ export default function GroupedQuestionsTemplate({
       questionAudioRef.current = audio;
 
       // 播放音檔
-      audio.play().catch(err => {
-        console.log('自動播放失敗，可能需要用戶互動:', err);
+      audio.play().catch((err) => {
+        console.log("自動播放失敗，可能需要用戶互動:", err);
       });
     }
 
@@ -299,11 +310,11 @@ export default function GroupedQuestionsTemplate({
   // 格式化時間
   const formatAudioTime = (seconds: number) => {
     if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
-      return '0:00';
+      return "0:00";
     }
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   // AI 發音評估
@@ -312,7 +323,7 @@ export default function GroupedQuestionsTemplate({
     const referenceText = currentQuestion?.text;
 
     if (!audioUrl || !referenceText) {
-      toast.error('請先錄音並確保有參考文本');
+      toast.error("請先錄音並確保有參考文本");
       return;
     }
 
@@ -324,53 +335,56 @@ export default function GroupedQuestionsTemplate({
 
       // Create form data
       const formData = new FormData();
-      formData.append('audio_file', audioBlob, 'recording.webm');
-      formData.append('reference_text', referenceText);
+      formData.append("audio_file", audioBlob, "recording.webm");
+      formData.append("reference_text", referenceText);
       // 🔥 關鍵修復：使用對應子問題的 progress_id
-      const currentProgressId = progressIds && progressIds[currentQuestionIndex]
-        ? progressIds[currentQuestionIndex]
-        : progressId || '1';
+      const currentProgressId =
+        progressIds && progressIds[currentQuestionIndex]
+          ? progressIds[currentQuestionIndex]
+          : progressId || "1";
 
-      console.log('🔍 AI評估使用 progress_id:', {
+      console.log("🔍 AI評估使用 progress_id:", {
         currentQuestionIndex,
         progressIds,
         progressId,
-        currentProgressId
+        currentProgressId,
       });
 
-      console.log('🚨 詳細 progress_id 除錯:', {
-        'progressIds 陣列': progressIds,
-        'progressIds 長度': progressIds?.length,
-        'progressIds 型別': typeof progressIds,
-        'progressId (fallback)': progressId,
-        'currentQuestionIndex': currentQuestionIndex,
-        '計算出的 currentProgressId': currentProgressId,
-        '是否為字串': typeof currentProgressId === 'string' ? true : false
+      console.log("🚨 詳細 progress_id 除錯:", {
+        "progressIds 陣列": progressIds,
+        "progressIds 長度": progressIds?.length,
+        "progressIds 型別": typeof progressIds,
+        "progressId (fallback)": progressId,
+        currentQuestionIndex: currentQuestionIndex,
+        "計算出的 currentProgressId": currentProgressId,
+        是否為字串: typeof currentProgressId === "string" ? true : false,
       });
 
-      formData.append('progress_id', String(currentProgressId));
-      formData.append('item_index', String(currentQuestionIndex)); // 傳遞題目索引
+      formData.append("progress_id", String(currentProgressId));
+      formData.append("item_index", String(currentQuestionIndex)); // 傳遞題目索引
 
       // Get authentication token from store
       if (!token) {
-        toast.error('請重新登入');
+        toast.error("請重新登入");
         return;
       }
 
       // Call API with retry mechanism
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       const result = await retryAIAnalysis(
         async () => {
           const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Authorization': `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
-            body: formData
+            body: formData,
           });
 
           if (!assessResponse.ok) {
-            const error = new Error(`AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`);
+            const error = new Error(
+              `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
+            );
             if (assessResponse.status >= 500 || assessResponse.status === 429) {
               // Server errors and rate limits are retryable
               throw error;
@@ -384,42 +398,65 @@ export default function GroupedQuestionsTemplate({
         (attempt, error) => {
           console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
           toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
-        }
+        },
       );
 
       // 🔍 詳細記錄AI評估結果
-      console.log('🎯 AI評估完整回應:', JSON.stringify(result, null, 2));
-      console.log('🔍 詳細分析 - detailed_words:', result.detailed_words);
-      console.log('🔍 basic word_details:', result.word_details);
-      console.log('🔍 有detailed_words嗎?', !!(result.detailed_words && result.detailed_words.length > 0));
+      console.log("🎯 AI評估完整回應:", JSON.stringify(result, null, 2));
+      console.log("🔍 詳細分析 - detailed_words:", result.detailed_words);
+      console.log("🔍 basic word_details:", result.word_details);
+      console.log(
+        "🔍 有detailed_words嗎?",
+        !!(result.detailed_words && result.detailed_words.length > 0),
+      );
 
       if (result.detailed_words && result.detailed_words.length > 0) {
-        result.detailed_words.forEach((word: {
-          word: string;
-          syllables?: Array<{ index: number; syllable: string; accuracy_score: number }>;
-          phonemes?: Array<{ index: number; phoneme: string; accuracy_score: number }>
-        }, idx: number) => {
-          console.log(`🔍 Word ${idx}:`, word.word);
-          console.log(`   - syllables:`, word.syllables?.length || 0, word.syllables);
-          console.log(`   - phonemes:`, word.phonemes?.length || 0, word.phonemes);
-        });
+        result.detailed_words.forEach(
+          (
+            word: {
+              word: string;
+              syllables?: Array<{
+                index: number;
+                syllable: string;
+                accuracy_score: number;
+              }>;
+              phonemes?: Array<{
+                index: number;
+                phoneme: string;
+                accuracy_score: number;
+              }>;
+            },
+            idx: number,
+          ) => {
+            console.log(`🔍 Word ${idx}:`, word.word);
+            console.log(
+              `   - syllables:`,
+              word.syllables?.length || 0,
+              word.syllables,
+            );
+            console.log(
+              `   - phonemes:`,
+              word.phonemes?.length || 0,
+              word.phonemes,
+            );
+          },
+        );
       }
 
       // Store result
-      setAssessmentResults(prev => ({
+      setAssessmentResults((prev) => ({
         ...prev,
-        [currentQuestionIndex]: result
+        [currentQuestionIndex]: result,
       }));
 
-      toast.success('AI 發音評估完成！');
+      toast.success("AI 發音評估完成！");
     } catch (error) {
-      console.error('Assessment error:', error);
-      toast.error('AI 評估失敗，請稍後再試');
+      console.error("Assessment error:", error);
+      toast.error("AI 評估失敗，請稍後再試");
     } finally {
       setIsAssessing(false);
     }
   };
-
 
   return (
     <div className="w-full">
@@ -452,7 +489,9 @@ export default function GroupedQuestionsTemplate({
         )}
 
         {/* 題目和學生作答區 - 手機全寬，桌面根據是否有圖片調整 */}
-        <div className={`w-full ${currentQuestion?.image_url ? 'sm:col-span-5' : 'sm:col-span-6'} space-y-3`}>
+        <div
+          className={`w-full ${currentQuestion?.image_url ? "sm:col-span-5" : "sm:col-span-6"} space-y-3`}
+        >
           {/* 題目區域 - 更精簡版 */}
           <div className="bg-white rounded-lg border border-gray-200 p-3">
             {/* 題目文字與音檔 - 手機優化間距 */}
@@ -477,10 +516,12 @@ export default function GroupedQuestionsTemplate({
                 disabled={!currentQuestion?.audio_url}
                 className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
                   currentQuestion?.audio_url
-                    ? 'bg-green-100 hover:bg-green-200 text-green-600 cursor-pointer'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    ? "bg-green-100 hover:bg-green-200 text-green-600 cursor-pointer"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
-                title={currentQuestion?.audio_url ? "播放參考音檔" : "無參考音檔"}
+                title={
+                  currentQuestion?.audio_url ? "播放參考音檔" : "無參考音檔"
+                }
               >
                 <Volume2 className="w-4 h-4" />
               </button>
@@ -489,18 +530,20 @@ export default function GroupedQuestionsTemplate({
               <div className="text-base sm:text-lg font-medium text-gray-800 flex-1">
                 {currentQuestion?.text ? (
                   <div className="flex flex-wrap gap-1">
-                    {currentQuestion.text.split(' ').map((word, index) => (
+                    {currentQuestion.text.split(" ").map((word, index) => (
                       <span
                         key={index}
                         className="cursor-pointer hover:text-blue-600 hover:underline transition-colors px-1"
                         onClick={() => {
                           // 使用 Web Speech API 發音
-                          if ('speechSynthesis' in window) {
+                          if ("speechSynthesis" in window) {
                             // 取消之前的發音
                             window.speechSynthesis.cancel();
 
-                            const utterance = new SpeechSynthesisUtterance(word);
-                            utterance.lang = 'en-US'; // 設定為英文發音
+                            const utterance = new SpeechSynthesisUtterance(
+                              word,
+                            );
+                            utterance.lang = "en-US"; // 設定為英文發音
                             utterance.rate = 1.0; // 正常速度
                             utterance.pitch = 1.0; // 正常音調
                             utterance.volume = 1.0; // 最大音量
@@ -546,7 +589,9 @@ export default function GroupedQuestionsTemplate({
 
           {/* 學生錄音區 - 超精簡版 */}
           <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">學生作答</div>
+            <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">
+              學生作答
+            </div>
 
             {/* 錄音控制 - 一行搞定 */}
             <div className="flex items-center gap-2">
@@ -563,7 +608,10 @@ export default function GroupedQuestionsTemplate({
                         {isPlaying ? (
                           <Pause className="w-3 h-3" fill="currentColor" />
                         ) : (
-                          <Play className="w-3 h-3 ml-0.5" fill="currentColor" />
+                          <Play
+                            className="w-3 h-3 ml-0.5"
+                            fill="currentColor"
+                          />
                         )}
                       </button>
 
@@ -573,7 +621,10 @@ export default function GroupedQuestionsTemplate({
                           <div
                             className="h-full bg-green-500 rounded-full transition-all duration-100"
                             style={{
-                              width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
+                              width:
+                                duration > 0
+                                  ? `${(currentTime / duration) * 100}%`
+                                  : "0%",
                             }}
                           />
                         </div>
@@ -589,16 +640,29 @@ export default function GroupedQuestionsTemplate({
                           setIsPlaying(false);
                           setCurrentTime(0);
                           setDuration(0);
-                          if (onUpdateItemRecording && currentQuestionIndex !== undefined) {
-                            onUpdateItemRecording(currentQuestionIndex, '');
+                          if (
+                            onUpdateItemRecording &&
+                            currentQuestionIndex !== undefined
+                          ) {
+                            onUpdateItemRecording(currentQuestionIndex, "");
                           }
                           // 不自動開始新的錄音，只是清除
                         }}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                         title="清除錄音"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     </>
@@ -608,19 +672,19 @@ export default function GroupedQuestionsTemplate({
                         className="w-12 h-12 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
                         disabled={readOnly}
                         onClick={() => {
-                          setAssessmentResults(prev => {
+                          setAssessmentResults((prev) => {
                             const newResults = { ...prev };
                             delete newResults[currentQuestionIndex];
                             return newResults;
                           });
                           onStartRecording?.();
                         }}
-                        title={readOnly ? '檢視模式' : '開始錄音'}
+                        title={readOnly ? "檢視模式" : "開始錄音"}
                       >
                         <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
                       <span className="text-sm sm:text-base text-gray-600">
-                        {readOnly ? '檢視模式' : '開始錄音'}
+                        {readOnly ? "檢視模式" : "開始錄音"}
                       </span>
                     </>
                   )}
@@ -648,38 +712,56 @@ export default function GroupedQuestionsTemplate({
 
           {/* 老師評語 - 始終顯示，無評語時禁用狀態 */}
           {
-            <div className={`rounded-lg border-2 p-3 ${
-              currentQuestion?.teacher_feedback
-                ? currentQuestion.teacher_passed === true
-                  ? 'border-green-400 bg-green-50'
-                  : currentQuestion.teacher_passed === false
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-blue-400 bg-blue-50'
-                : 'border-gray-200 bg-gray-50 opacity-50'
-            }`}>
-              <div className={`text-sm sm:text-base font-medium mb-1 flex items-center gap-1 ${
+            <div
+              className={`rounded-lg border-2 p-3 ${
                 currentQuestion?.teacher_feedback
                   ? currentQuestion.teacher_passed === true
-                    ? 'text-green-600'
+                    ? "border-green-400 bg-green-50"
                     : currentQuestion.teacher_passed === false
-                    ? 'text-red-600'
-                    : 'text-blue-600'
-                  : 'text-gray-400'
-              }`}>
+                      ? "border-red-400 bg-red-50"
+                      : "border-blue-400 bg-blue-50"
+                  : "border-gray-200 bg-gray-50 opacity-50"
+              }`}
+            >
+              <div
+                className={`text-sm sm:text-base font-medium mb-1 flex items-center gap-1 ${
+                  currentQuestion?.teacher_feedback
+                    ? currentQuestion.teacher_passed === true
+                      ? "text-green-600"
+                      : currentQuestion.teacher_passed === false
+                        ? "text-red-600"
+                        : "text-blue-600"
+                    : "text-gray-400"
+                }`}
+              >
                 <MessageSquare className="w-4 h-4" />
                 老師評語
-                {currentQuestion?.teacher_feedback && currentQuestion.teacher_passed !== null && currentQuestion.teacher_passed !== undefined && (
-                  <span className={currentQuestion.teacher_passed ? 'text-green-600' : 'text-red-600'}>
-                    {currentQuestion.teacher_passed ? '（通過）' : '（未通過）'}
-                  </span>
-                )}
+                {currentQuestion?.teacher_feedback &&
+                  currentQuestion.teacher_passed !== null &&
+                  currentQuestion.teacher_passed !== undefined && (
+                    <span
+                      className={
+                        currentQuestion.teacher_passed
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
+                      {currentQuestion.teacher_passed
+                        ? "（通過）"
+                        : "（未通過）"}
+                    </span>
+                  )}
               </div>
               <div className="text-sm sm:text-base text-gray-700">
-                {currentQuestion?.teacher_feedback || <span className="text-gray-400">尚無老師評語</span>}
+                {currentQuestion?.teacher_feedback || (
+                  <span className="text-gray-400">尚無老師評語</span>
+                )}
               </div>
               {currentQuestion?.teacher_reviewed_at && (
                 <div className="text-sm text-gray-500 mt-1">
-                  {new Date(currentQuestion.teacher_reviewed_at).toLocaleString('zh-TW')}
+                  {new Date(currentQuestion.teacher_reviewed_at).toLocaleString(
+                    "zh-TW",
+                  )}
                 </div>
               )}
             </div>
@@ -687,10 +769,13 @@ export default function GroupedQuestionsTemplate({
         </div>
 
         {/* AI分析 - 手機全寬，桌面根據是否有圖片調整 */}
-        <div className={`w-full ${currentQuestion?.image_url ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-4`}>
+        <div
+          className={`w-full ${currentQuestion?.image_url ? "sm:col-span-4" : "sm:col-span-6"} space-y-4`}
+        >
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            {items[currentQuestionIndex]?.recording_url && !assessmentResults[currentQuestionIndex] ? (
+            {items[currentQuestionIndex]?.recording_url &&
+            !assessmentResults[currentQuestionIndex] ? (
               <div className="flex justify-end mb-3">
                 <Button
                   size="sm"
@@ -716,7 +801,7 @@ export default function GroupedQuestionsTemplate({
               <div className="relative">
                 <button
                   onClick={() => {
-                    setAssessmentResults(prev => {
+                    setAssessmentResults((prev) => {
                       const newResults = { ...prev };
                       delete newResults[currentQuestionIndex];
                       return newResults;
@@ -739,8 +824,8 @@ export default function GroupedQuestionsTemplate({
                 <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
                   {items[currentQuestionIndex]?.recording_url
-                    ? '點擊上方按鈕開始評估'
-                    : '請先錄音'}
+                    ? "點擊上方按鈕開始評估"
+                    : "請先錄音"}
                 </p>
               </div>
             )}

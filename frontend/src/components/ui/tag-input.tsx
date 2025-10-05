@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { X } from 'lucide-react';
+import * as React from "react";
+import { X } from "lucide-react";
 
 interface TagInputProps {
   value: string[];
@@ -13,19 +13,19 @@ interface TagInputProps {
 export function TagInput({
   value = [],
   onChange,
-  placeholder = '輸入後按 Enter 新增標籤',
+  placeholder = "輸入後按 Enter 新增標籤",
   maxTags = 10,
   disabled = false,
-  className = '',
+  className = "",
 }: TagInputProps) {
-  const [inputValue, setInputValue] = React.useState('');
+  const [inputValue, setInputValue] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       addTag();
-    } else if (e.key === 'Backspace' && inputValue === '' && value.length > 0) {
+    } else if (e.key === "Backspace" && inputValue === "" && value.length > 0) {
       // Remove last tag when backspace is pressed with empty input
       removeTag(value.length - 1);
     }
@@ -37,7 +37,7 @@ export function TagInput({
     // Validate tag
     if (!newTag) return;
     if (value.includes(newTag)) {
-      setInputValue('');
+      setInputValue("");
       return; // Don't add duplicate tags
     }
     if (value.length >= maxTags) {
@@ -46,7 +46,7 @@ export function TagInput({
     }
 
     onChange([...value, newTag]);
-    setInputValue('');
+    setInputValue("");
   };
 
   const removeTag = (indexToRemove: number) => {
@@ -56,7 +56,7 @@ export function TagInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     // If user types comma, add tag instead
-    if (newValue.endsWith(',')) {
+    if (newValue.endsWith(",")) {
       setInputValue(newValue.slice(0, -1));
       addTag();
     } else {
@@ -105,7 +105,7 @@ export function TagInput({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onBlur={handleInputBlur}
-          placeholder={value.length === 0 ? placeholder : ''}
+          placeholder={value.length === 0 ? placeholder : ""}
           disabled={disabled}
           className="flex-1 min-w-[120px] outline-none bg-transparent text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
@@ -139,7 +139,7 @@ export function TagInputWithSuggestions({
   ...props
 }: TagInputWithSuggestionsProps) {
   const availableSuggestions = suggestions.filter(
-    (s) => !value.includes(s.value)
+    (s) => !value.includes(s.value),
   );
 
   const handleSuggestionClick = (tag: string) => {
@@ -154,7 +154,9 @@ export function TagInputWithSuggestions({
 
       {showSuggestions && availableSuggestions.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">建議標籤（點擊新增）：</p>
+          <p className="text-xs text-muted-foreground">
+            建議標籤（點擊新增）：
+          </p>
           <div className="flex flex-wrap gap-1">
             {availableSuggestions.slice(0, 8).map((suggestion) => (
               <button

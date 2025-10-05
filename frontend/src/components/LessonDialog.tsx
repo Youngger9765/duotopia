@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { AlertTriangle } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 interface Lesson {
   id?: number;
@@ -23,9 +23,9 @@ interface Lesson {
 
 interface LessonDialogProps {
   lesson: Lesson | null;
-  dialogType: 'create' | 'edit' | 'delete' | null;
+  dialogType: "create" | "edit" | "delete" | null;
   programId?: number;
-  currentLessonCount?: number;  // For auto-setting order
+  currentLessonCount?: number; // For auto-setting order
   onClose: () => void;
   onSave: (lesson: Lesson) => void;
   onDelete?: (lessonId: number) => void;
@@ -38,34 +38,34 @@ export function LessonDialog({
   currentLessonCount = 0,
   onClose,
   onSave,
-  onDelete
+  onDelete,
 }: LessonDialogProps) {
   const [formData, setFormData] = useState<Lesson>({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     order_index: 1,
     estimated_minutes: 30,
-    program_id: programId
+    program_id: programId,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (lesson && (dialogType === 'edit' || dialogType === 'delete')) {
+    if (lesson && (dialogType === "edit" || dialogType === "delete")) {
       setFormData({
         name: lesson.name,
-        description: lesson.description || '',
+        description: lesson.description || "",
         order_index: lesson.order_index || 1,
         estimated_minutes: lesson.estimated_minutes || 30,
-        program_id: lesson.program_id || programId
+        program_id: lesson.program_id || programId,
       });
-    } else if (dialogType === 'create') {
+    } else if (dialogType === "create") {
       setFormData({
-        name: '',
-        description: '',
-        order_index: currentLessonCount + 1,  // Auto-set to last position
+        name: "",
+        description: "",
+        order_index: currentLessonCount + 1, // Auto-set to last position
         estimated_minutes: 30,
-        program_id: programId
+        program_id: programId,
       });
     }
   }, [lesson, dialogType, programId]);
@@ -74,11 +74,11 @@ export function LessonDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = '單元名稱為必填';
+      newErrors.name = "單元名稱為必填";
     }
 
     if (!formData.estimated_minutes || formData.estimated_minutes < 1) {
-      newErrors.estimated_minutes = '預估時間必須大於 0';
+      newErrors.estimated_minutes = "預估時間必須大於 0";
     }
 
     setErrors(newErrors);
@@ -90,30 +90,30 @@ export function LessonDialog({
 
     setLoading(true);
     try {
-      if (dialogType === 'create' && programId) {
+      if (dialogType === "create" && programId) {
         const newLesson = await apiClient.createLesson(programId, {
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,
-          estimated_minutes: formData.estimated_minutes
+          estimated_minutes: formData.estimated_minutes,
         });
         toast.success(`單元「${formData.name}」已新增`);
         onSave(newLesson as Lesson);
-      } else if (dialogType === 'edit' && lesson?.id && programId) {
+      } else if (dialogType === "edit" && lesson?.id && programId) {
         await apiClient.updateLesson(lesson.id, {
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,
-          estimated_minutes: formData.estimated_minutes
+          estimated_minutes: formData.estimated_minutes,
         });
         toast.success(`單元「${formData.name}」已更新`);
         onSave({ ...lesson, ...formData });
       }
       onClose();
     } catch (error) {
-      console.error('Failed to save lesson:', error);
-      toast.error('儲存失敗，請稍後再試');
-      setErrors({ submit: '儲存失敗，請稍後再試' });
+      console.error("Failed to save lesson:", error);
+      toast.error("儲存失敗，請稍後再試");
+      setErrors({ submit: "儲存失敗，請稍後再試" });
     } finally {
       setLoading(false);
     }
@@ -131,18 +131,19 @@ export function LessonDialog({
   if (!dialogType) return null;
 
   // Create/Edit Dialog
-  if (dialogType === 'create' || dialogType === 'edit') {
+  if (dialogType === "create" || dialogType === "edit") {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle>
-              {dialogType === 'create' ? '新增單元' : '編輯單元'}
+              {dialogType === "create" ? "新增單元" : "編輯單元"}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create'
-                ? '為課程新增學習單元'
-                : '修改單元資訊'}
+              {dialogType === "create" ? "為課程新增學習單元" : "修改單元資訊"}
             </DialogDescription>
           </DialogHeader>
 
@@ -155,11 +156,15 @@ export function LessonDialog({
                 id="name"
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? 'border-red-500' : ''}`}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
                 placeholder="例：Unit 1: Greetings 打招呼"
               />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-xs text-red-500 mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>
@@ -169,7 +174,9 @@ export function LessonDialog({
               <textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 className="w-full mt-1 px-3 py-2 border rounded-md"
                 placeholder="學習目標與內容簡述..."
                 rows={3}
@@ -185,23 +192,34 @@ export function LessonDialog({
                   id="minutes"
                   type="number"
                   value={formData.estimated_minutes}
-                  onChange={(e) => setFormData({ ...formData, estimated_minutes: parseInt(e.target.value) || 0 })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.estimated_minutes ? 'border-red-500' : ''}`}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      estimated_minutes: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.estimated_minutes ? "border-red-500" : ""}`}
                   placeholder="30"
                   min="1"
                 />
-                {errors.estimated_minutes && <p className="text-xs text-red-500 mt-1">{errors.estimated_minutes}</p>}
+                {errors.estimated_minutes && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.estimated_minutes}
+                  </p>
+                )}
               </div>
             </div>
 
-            {dialogType === 'create' && (
+            {dialogType === "create" && (
               <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
                 ℹ️ 單元將自動排在課程最後
               </div>
             )}
 
             {errors.submit && (
-              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
+              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">
+                {errors.submit}
+              </p>
             )}
           </div>
 
@@ -210,7 +228,11 @@ export function LessonDialog({
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? '處理中...' : dialogType === 'create' ? '新增' : '儲存'}
+              {loading
+                ? "處理中..."
+                : dialogType === "create"
+                  ? "新增"
+                  : "儲存"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -219,10 +241,13 @@ export function LessonDialog({
   }
 
   // Delete Confirmation Dialog
-  if (dialogType === 'delete' && lesson) {
+  if (dialogType === "delete" && lesson) {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -238,10 +263,14 @@ export function LessonDialog({
               <p className="text-sm text-gray-600">單元資料：</p>
               <p className="font-medium mt-1">{lesson.name}</p>
               {lesson.description && (
-                <p className="text-sm text-gray-500 mt-1">{lesson.description}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {lesson.description}
+                </p>
               )}
               {lesson.estimated_minutes && (
-                <p className="text-sm text-gray-500 mt-1">預估時間：{lesson.estimated_minutes} 分鐘</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  預估時間：{lesson.estimated_minutes} 分鐘
+                </p>
               )}
             </div>
           </div>
@@ -255,7 +284,7 @@ export function LessonDialog({
               onClick={handleDelete}
               disabled={loading}
             >
-              {loading ? '刪除中...' : '確認刪除'}
+              {loading ? "刪除中..." : "確認刪除"}
             </Button>
           </DialogFooter>
         </DialogContent>

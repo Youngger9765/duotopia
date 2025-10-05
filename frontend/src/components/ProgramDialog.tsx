@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,14 +7,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { AlertTriangle } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { Program } from '@/types';
+} from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { Program } from "@/types";
 
 interface ProgramDialogProps {
   program: Program | null;
-  dialogType: 'create' | 'edit' | 'delete' | null;
+  dialogType: "create" | "edit" | "delete" | null;
   classroomId?: number;
   onClose: () => void;
   onSave: (program: Program) => void;
@@ -37,34 +37,34 @@ export function ProgramDialog({
   classroomId,
   onClose,
   onSave,
-  onDelete
+  onDelete,
 }: ProgramDialogProps) {
   const [formData, setFormData] = useState<ProgramFormData>({
-    name: '',
-    description: '',
-    level: 'A1',
+    name: "",
+    description: "",
+    level: "A1",
     estimated_hours: 20,
-    classroom_id: classroomId
+    classroom_id: classroomId,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (program && (dialogType === 'edit' || dialogType === 'delete')) {
+    if (program && (dialogType === "edit" || dialogType === "delete")) {
       setFormData({
         name: program.name,
-        description: program.description || '',
-        level: program.level || 'A1',
+        description: program.description || "",
+        level: program.level || "A1",
         estimated_hours: program.estimated_hours || 20,
-        classroom_id: program.classroom_id || classroomId
+        classroom_id: program.classroom_id || classroomId,
       });
-    } else if (dialogType === 'create') {
+    } else if (dialogType === "create") {
       setFormData({
-        name: '',
-        description: '',
-        level: 'A1',
+        name: "",
+        description: "",
+        level: "A1",
         estimated_hours: 20,
-        classroom_id: classroomId
+        classroom_id: classroomId,
       });
     }
   }, [program, dialogType, classroomId]);
@@ -73,11 +73,11 @@ export function ProgramDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = '課程名稱為必填';
+      newErrors.name = "課程名稱為必填";
     }
 
     if (!formData.level) {
-      newErrors.level = '程度為必填';
+      newErrors.level = "程度為必填";
     }
 
     setErrors(newErrors);
@@ -89,13 +89,13 @@ export function ProgramDialog({
 
     setLoading(true);
     try {
-      if (dialogType === 'create') {
+      if (dialogType === "create") {
         const newProgram = await apiClient.createProgram({
           name: formData.name,
           description: formData.description,
           level: formData.level,
           classroom_id: formData.classroom_id || classroomId!,
-          estimated_hours: formData.estimated_hours
+          estimated_hours: formData.estimated_hours,
         });
         // Ensure the new program has all required Program properties
         const completeProgram: Program = {
@@ -103,14 +103,14 @@ export function ProgramDialog({
           id: (newProgram as Program)?.id || 0, // Default ID if not provided
         };
         onSave(completeProgram);
-      } else if (dialogType === 'edit' && program?.id) {
+      } else if (dialogType === "edit" && program?.id) {
         // For classroom programs, we might need different API endpoint
         // TODO: Check if this is a classroom program update
         await apiClient.updateProgram(program.id!, {
           name: formData.name,
           description: formData.description,
           level: formData.level,
-          estimated_hours: formData.estimated_hours
+          estimated_hours: formData.estimated_hours,
         });
         // Ensure the updated program has all required Program properties
         const updatedProgram: Program = {
@@ -122,8 +122,8 @@ export function ProgramDialog({
       }
       onClose();
     } catch (error) {
-      console.error('Failed to save program:', error);
-      setErrors({ submit: '儲存失敗，請稍後再試' });
+      console.error("Failed to save program:", error);
+      setErrors({ submit: "儲存失敗，請稍後再試" });
     } finally {
       setLoading(false);
     }
@@ -138,8 +138,8 @@ export function ProgramDialog({
       onDelete(program.id);
       onClose();
     } catch (error) {
-      console.error('Failed to delete program:', error);
-      alert('刪除失敗，請稍後再試');
+      console.error("Failed to delete program:", error);
+      alert("刪除失敗，請稍後再試");
     } finally {
       setLoading(false);
     }
@@ -148,18 +148,21 @@ export function ProgramDialog({
   if (!dialogType) return null;
 
   // Create/Edit Dialog
-  if (dialogType === 'create' || dialogType === 'edit') {
+  if (dialogType === "create" || dialogType === "edit") {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle>
-              {dialogType === 'create' ? '建立新課程' : '編輯課程'}
+              {dialogType === "create" ? "建立新課程" : "編輯課程"}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create'
-                ? '為班級建立新的課程內容'
-                : '修改課程資訊'}
+              {dialogType === "create"
+                ? "為班級建立新的課程內容"
+                : "修改課程資訊"}
             </DialogDescription>
           </DialogHeader>
 
@@ -172,11 +175,15 @@ export function ProgramDialog({
                 id="name"
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? 'border-red-500' : ''}`}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
                 placeholder="例：五年級英語基礎課程"
               />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-xs text-red-500 mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>
@@ -186,7 +193,9 @@ export function ProgramDialog({
               <textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 className="w-full mt-1 px-3 py-2 border rounded-md"
                 placeholder="課程的簡短描述..."
                 rows={3}
@@ -201,8 +210,10 @@ export function ProgramDialog({
                 <select
                   id="level"
                   value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.level ? 'border-red-500' : ''}`}
+                  onChange={(e) =>
+                    setFormData({ ...formData, level: e.target.value })
+                  }
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.level ? "border-red-500" : ""}`}
                 >
                   <option value="PREA">Pre-A</option>
                   <option value="A1">A1</option>
@@ -212,7 +223,9 @@ export function ProgramDialog({
                   <option value="C1">C1</option>
                   <option value="C2">C2</option>
                 </select>
-                {errors.level && <p className="text-xs text-red-500 mt-1">{errors.level}</p>}
+                {errors.level && (
+                  <p className="text-xs text-red-500 mt-1">{errors.level}</p>
+                )}
               </div>
 
               <div>
@@ -223,7 +236,12 @@ export function ProgramDialog({
                   id="hours"
                   type="number"
                   value={formData.estimated_hours}
-                  onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      estimated_hours: parseInt(e.target.value) || 0,
+                    })
+                  }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                   placeholder="20"
                   min="1"
@@ -232,7 +250,9 @@ export function ProgramDialog({
             </div>
 
             {errors.submit && (
-              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
+              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">
+                {errors.submit}
+              </p>
             )}
           </div>
 
@@ -241,7 +261,11 @@ export function ProgramDialog({
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? '處理中...' : dialogType === 'create' ? '建立' : '儲存'}
+              {loading
+                ? "處理中..."
+                : dialogType === "create"
+                  ? "建立"
+                  : "儲存"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -250,17 +274,21 @@ export function ProgramDialog({
   }
 
   // Delete Confirmation Dialog
-  if (dialogType === 'delete' && program) {
+  if (dialogType === "delete" && program) {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
               <span>確認刪除課程</span>
             </DialogTitle>
             <DialogDescription>
-              確定要刪除課程「{program.name}」嗎？此操作將同時刪除所有相關的單元。
+              確定要刪除課程「{program.name}
+              」嗎？此操作將同時刪除所有相關的單元。
             </DialogDescription>
           </DialogHeader>
 
@@ -269,7 +297,9 @@ export function ProgramDialog({
               <p className="text-sm text-gray-600">課程資料：</p>
               <p className="font-medium mt-1">{program.name}</p>
               {program.description && (
-                <p className="text-sm text-gray-500 mt-1">{program.description}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {program.description}
+                </p>
               )}
             </div>
           </div>
@@ -283,7 +313,7 @@ export function ProgramDialog({
               onClick={handleDelete}
               disabled={loading}
             >
-              {loading ? '刪除中...' : '確認刪除'}
+              {loading ? "刪除中..." : "確認刪除"}
             </Button>
           </DialogFooter>
         </DialogContent>

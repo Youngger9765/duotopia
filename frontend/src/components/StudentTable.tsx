@@ -1,6 +1,6 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -9,8 +9,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Edit, Users, Plus, Eye, RotateCcw, Trash2, Copy, CheckSquare, Square } from 'lucide-react';
+} from "@/components/ui/table";
+import {
+  Edit,
+  Users,
+  Plus,
+  Eye,
+  RotateCcw,
+  Trash2,
+  Copy,
+  CheckSquare,
+  Square,
+} from "lucide-react";
 
 export interface Student {
   id: number;
@@ -51,12 +61,14 @@ export default function StudentTable({
   onResetPassword,
   onDeleteStudent,
   onBulkAction,
-  emptyMessage = '尚無學生',
+  emptyMessage = "尚無學生",
   emptyDescription,
   selectedIds: externalSelectedIds,
-  onSelectionChange
+  onSelectionChange,
 }: StudentTableProps) {
-  const [internalSelectedIds, setInternalSelectedIds] = React.useState<Set<number>>(new Set());
+  const [internalSelectedIds, setInternalSelectedIds] = React.useState<
+    Set<number>
+  >(new Set());
   const selectedIds = externalSelectedIds || internalSelectedIds;
   const setSelectedIds = onSelectionChange || setInternalSelectedIds;
 
@@ -70,7 +82,7 @@ export default function StudentTable({
     setSelectedIds(newSelected);
     if (onBulkAction) {
       // Notify parent about selection
-      onBulkAction('selection', Array.from(newSelected));
+      onBulkAction("selection", Array.from(newSelected));
     }
   };
 
@@ -79,35 +91,51 @@ export default function StudentTable({
     if (selectedIds.size === students.length) {
       newSelected = new Set();
     } else {
-      newSelected = new Set(students.map(s => s.id));
+      newSelected = new Set(students.map((s) => s.id));
     }
     setSelectedIds(newSelected);
     if (onBulkAction) {
       // Notify parent about selection
-      onBulkAction('selection', Array.from(newSelected));
+      onBulkAction("selection", Array.from(newSelected));
     }
   };
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return '-';
+    if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
-      case 'active':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">活躍</span>;
-      case 'inactive':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">未活躍</span>;
-      case 'suspended':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">已停權</span>;
+      case "active":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            活躍
+          </span>
+        );
+      case "inactive":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            未活躍
+          </span>
+        );
+      case "suspended":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            已停權
+          </span>
+        );
       default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">未知</span>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            未知
+          </span>
+        );
     }
   };
 
@@ -117,7 +145,9 @@ export default function StudentTable({
         <Users className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
         <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
         {emptyDescription && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">{emptyDescription}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+            {emptyDescription}
+          </p>
         )}
         {onAddStudent && (
           <Button className="mt-4" size="sm" onClick={onAddStudent}>
@@ -135,7 +165,10 @@ export default function StudentTable({
       <div className="md:hidden">
         <div className="p-4 space-y-4">
           {students.map((student) => (
-            <div key={student.id} className="border dark:border-gray-700 rounded-lg p-4 space-y-3 bg-white dark:bg-gray-800">
+            <div
+              key={student.id}
+              className="border dark:border-gray-700 rounded-lg p-4 space-y-3 bg-white dark:bg-gray-800"
+            >
               {/* Header with selection */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3 flex-1">
@@ -159,8 +192,12 @@ export default function StudentTable({
                     </span>
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium dark:text-gray-100">{student.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">ID: {student.id}</p>
+                    <p className="font-medium dark:text-gray-100">
+                      {student.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      ID: {student.id}
+                    </p>
                   </div>
                 </div>
                 {getStatusBadge(student.status)}
@@ -169,18 +206,26 @@ export default function StudentTable({
               {/* Info Grid */}
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Email: </span>
-                  <span className="dark:text-gray-200">{student.email || '-'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Email:{" "}
+                  </span>
+                  <span className="dark:text-gray-200">
+                    {student.email || "-"}
+                  </span>
                 </div>
                 {student.phone && (
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">電話: </span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      電話:{" "}
+                    </span>
                     <span className="dark:text-gray-200">{student.phone}</span>
                   </div>
                 )}
                 {showClassroom && (
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">班級: </span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      班級:{" "}
+                    </span>
                     {student.classroom_name ? (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                         {student.classroom_name}
@@ -193,22 +238,32 @@ export default function StudentTable({
                   </div>
                 )}
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">密碼: </span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    密碼:{" "}
+                  </span>
                   {student.password_changed ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                       已更改
                     </span>
                   ) : student.birthdate ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 font-mono">
-                      {student.birthdate?.replace(/-/g, '')}
+                      {student.birthdate?.replace(/-/g, "")}
                     </span>
                   ) : (
-                    <span className="text-gray-500 dark:text-gray-400">未設定</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      未設定
+                    </span>
                   )}
                 </div>
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">最後登入: </span>
-                  <span className="dark:text-gray-200">{student.last_login ? formatDate(student.last_login) : '從未登入'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    最後登入:{" "}
+                  </span>
+                  <span className="dark:text-gray-200">
+                    {student.last_login
+                      ? formatDate(student.last_login)
+                      : "從未登入"}
+                  </span>
                 </div>
               </div>
 
@@ -262,192 +317,216 @@ export default function StudentTable({
       {/* Desktop Table View */}
       <div className="hidden md:block">
         <Table>
-      <TableCaption>
-        共 {students.length} 位學生
-      </TableCaption>
-      <TableHeader>
-        <TableRow>
-          {onBulkAction && (
-            <TableHead className="w-[40px]">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSelectAll}
-                className="p-0 h-8 w-8"
-              >
-                {selectedIds.size === students.length && students.length > 0 ? (
-                  <CheckSquare className="h-4 w-4" />
-                ) : (
-                  <Square className="h-4 w-4" />
-                )}
-              </Button>
-            </TableHead>
-          )}
-          <TableHead className="w-[50px] text-left">ID</TableHead>
-          <TableHead className="text-left min-w-[120px]">學生姓名</TableHead>
-          <TableHead className="text-left min-w-[250px]">聯絡資訊</TableHead>
-          <TableHead className="text-left min-w-[100px] whitespace-nowrap">密碼狀態</TableHead>
-          <TableHead className="text-left w-[80px]">狀態</TableHead>
-          <TableHead className="text-left min-w-[100px] whitespace-nowrap">最後登入</TableHead>
-          <TableHead className="text-left w-[120px]">操作</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {students.map((student) => (
-          <TableRow key={student.id}>
-            {onBulkAction && (
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleSelect(student.id)}
-                  className="p-0 h-8 w-8"
-                >
-                  {selectedIds.has(student.id) ? (
-                    <CheckSquare className="h-4 w-4" />
-                  ) : (
-                    <Square className="h-4 w-4" />
-                  )}
-                </Button>
-              </TableCell>
-            )}
-            <TableCell className="font-medium">{student.id}</TableCell>
-            <TableCell>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-600">
-                    {student.name.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium">{student.name}</p>
-                  {student.phone && (
-                    <p className="text-xs text-gray-500">{student.phone}</p>
-                  )}
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div>
-                <div className="text-sm">{student.email || '-'}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  {showClassroom && (
-                    student.classroom_name ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
-                        {student.classroom_name}
-                      </span>
+          <TableCaption>共 {students.length} 位學生</TableCaption>
+          <TableHeader>
+            <TableRow>
+              {onBulkAction && (
+                <TableHead className="w-[40px]">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                    className="p-0 h-8 w-8"
+                  >
+                    {selectedIds.size === students.length &&
+                    students.length > 0 ? (
+                      <CheckSquare className="h-4 w-4" />
                     ) : (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                        未分配
-                      </span>
-                    )
-                  )}
-                  {student.student_number && (
-                    <span className="text-xs text-gray-500">#{student.student_number}</span>
-                  )}
-                </div>
-              </div>
-            </TableCell>
-            <TableCell className="whitespace-nowrap">
-              <div className="inline-flex items-center space-x-1">
-                {student.password_changed ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 whitespace-nowrap">
-                    已更改
-                  </span>
-                ) : (
-                  <>
-                    {student.birthdate ? (
-                      <>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 font-mono whitespace-nowrap">
-                          {student.birthdate?.replace(/-/g, '') || ''}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title={`複製密碼: ${student.birthdate?.replace(/-/g, '') || ''}`}
-                          onClick={() => {
-                            const password = student.birthdate?.replace(/-/g, '') || '';
-                            navigator.clipboard.writeText(password);
-                            toast.success(`密碼已複製: ${password}`);
-                          }}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-700 whitespace-nowrap">
-                        未設定生日
-                      </span>
+                      <Square className="h-4 w-4" />
                     )}
-                  </>
-                )}
-                {student.password_changed && onResetPassword && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="重設為預設密碼"
-                    onClick={() => onResetPassword(student)}
-                    className="h-7 px-2"
-                  >
-                    <RotateCcw className="h-3 w-3" />
                   </Button>
+                </TableHead>
+              )}
+              <TableHead className="w-[50px] text-left">ID</TableHead>
+              <TableHead className="text-left min-w-[120px]">
+                學生姓名
+              </TableHead>
+              <TableHead className="text-left min-w-[250px]">
+                聯絡資訊
+              </TableHead>
+              <TableHead className="text-left min-w-[100px] whitespace-nowrap">
+                密碼狀態
+              </TableHead>
+              <TableHead className="text-left w-[80px]">狀態</TableHead>
+              <TableHead className="text-left min-w-[100px] whitespace-nowrap">
+                最後登入
+              </TableHead>
+              <TableHead className="text-left w-[120px]">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => (
+              <TableRow key={student.id}>
+                {onBulkAction && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleSelect(student.id)}
+                      className="p-0 h-8 w-8"
+                    >
+                      {selectedIds.has(student.id) ? (
+                        <CheckSquare className="h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
                 )}
-              </div>
-            </TableCell>
-            <TableCell className="whitespace-nowrap">{getStatusBadge(student.status)}</TableCell>
-            <TableCell className="whitespace-nowrap">
-              {student.last_login ? (
-                <div>
-                  <div className="text-sm">{formatDate(student.last_login)}</div>
-                  <div className="text-xs text-gray-500">
-                    {Math.floor((Date.now() - new Date(student.last_login).getTime()) / (1000 * 60 * 60 * 24))} 天前
+                <TableCell className="font-medium">{student.id}</TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-blue-600">
+                        {student.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium">{student.name}</p>
+                      {student.phone && (
+                        <p className="text-xs text-gray-500">{student.phone}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ) : '-'}
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center space-x-2">
-                {onViewStudent && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="查看詳情"
-                    onClick={() => onViewStudent(student)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                )}
-                {onEditStudent && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="編輯"
-                    onClick={() => onEditStudent(student)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                )}
-                {onDeleteStudent && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="刪除"
-                    onClick={() => {
-                      if (confirm(`確定要刪除學生「${student.name}」嗎？此操作無法復原。`)) {
-                        onDeleteStudent(student);
-                      }
-                    }}
-                    className="hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <div className="text-sm">{student.email || "-"}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {showClassroom &&
+                        (student.classroom_name ? (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                            {student.classroom_name}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                            未分配
+                          </span>
+                        ))}
+                      {student.student_number && (
+                        <span className="text-xs text-gray-500">
+                          #{student.student_number}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <div className="inline-flex items-center space-x-1">
+                    {student.password_changed ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 whitespace-nowrap">
+                        已更改
+                      </span>
+                    ) : (
+                      <>
+                        {student.birthdate ? (
+                          <>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 font-mono whitespace-nowrap">
+                              {student.birthdate?.replace(/-/g, "") || ""}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={`複製密碼: ${student.birthdate?.replace(/-/g, "") || ""}`}
+                              onClick={() => {
+                                const password =
+                                  student.birthdate?.replace(/-/g, "") || "";
+                                navigator.clipboard.writeText(password);
+                                toast.success(`密碼已複製: ${password}`);
+                              }}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-700 whitespace-nowrap">
+                            未設定生日
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {student.password_changed && onResetPassword && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="重設為預設密碼"
+                        onClick={() => onResetPassword(student)}
+                        className="h-7 px-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {getStatusBadge(student.status)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {student.last_login ? (
+                    <div>
+                      <div className="text-sm">
+                        {formatDate(student.last_login)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {Math.floor(
+                          (Date.now() -
+                            new Date(student.last_login).getTime()) /
+                            (1000 * 60 * 60 * 24),
+                        )}{" "}
+                        天前
+                      </div>
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {onViewStudent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="查看詳情"
+                        onClick={() => onViewStudent(student)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onEditStudent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="編輯"
+                        onClick={() => onEditStudent(student)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDeleteStudent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="刪除"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `確定要刪除學生「${student.name}」嗎？此操作無法復原。`,
+                            )
+                          ) {
+                            onDeleteStudent(student);
+                          }
+                        }}
+                        className="hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
       </div>
     </>

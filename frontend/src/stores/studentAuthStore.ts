@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface StudentUser {
   id: number;
@@ -50,12 +50,12 @@ export const useStudentAuthStore = create<StudentAuthState>()(
       },
     }),
     {
-      name: 'student-auth-storage',
+      name: "student-auth-storage",
       partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );

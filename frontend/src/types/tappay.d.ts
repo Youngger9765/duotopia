@@ -7,7 +7,11 @@ declare global {
 }
 
 interface TPDirect {
-  setupSDK: (appId: number, appKey: string, serverType: 'sandbox' | 'production') => void;
+  setupSDK: (
+    appId: number,
+    appKey: string,
+    serverType: "sandbox" | "production",
+  ) => void;
 
   card: {
     setup: (config: CardSetupConfig) => void;
@@ -22,12 +26,18 @@ interface TPDirect {
 
   applePay?: {
     setupMerchant: (config: ApplePayMerchantConfig) => void;
-    setupPaymentRequest: (config: ApplePaymentRequest, callback: (result: ApplePayResult) => void) => void;
+    setupPaymentRequest: (
+      config: ApplePaymentRequest,
+      callback: (result: ApplePayResult) => void,
+    ) => void;
   };
 
   googlePay?: {
     setupGooglePay: (config: GooglePayConfig) => void;
-    setupPaymentRequest: (config: GooglePaymentRequest, callback: (result: GooglePayResult) => void) => void;
+    setupPaymentRequest: (
+      config: GooglePaymentRequest,
+      callback: (result: GooglePayResult) => void,
+    ) => void;
   };
 }
 
@@ -147,7 +157,7 @@ interface GooglePaymentRequest {
   allowPrepaidCards?: boolean;
   billingAddressRequired?: boolean;
   billingAddressParameters?: {
-    format?: 'MIN' | 'FULL';
+    format?: "MIN" | "FULL";
     phoneNumberRequired?: boolean;
   };
   emailRequired?: boolean;

@@ -1,44 +1,58 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
-import { apiClient } from '../lib/api';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { apiClient } from "../lib/api";
 
 export default function TeacherForgotPassword() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     setSuccess(false);
 
     try {
-      const response = await apiClient.post('/api/auth/teacher/forgot-password', {
-        email
-      });
+      const response = await apiClient.post(
+        "/api/auth/teacher/forgot-password",
+        {
+          email,
+        },
+      );
 
-      if (response && typeof response === 'object' && 'success' in response && response.success) {
+      if (
+        response &&
+        typeof response === "object" &&
+        "success" in response &&
+        response.success
+      ) {
         setSuccess(true);
       }
     } catch (err) {
       if (err instanceof Error) {
         // 檢查是否是太頻繁的請求
-        if (err.message.includes('429')) {
-          setError('請稍後再試，密碼重設郵件每5分鐘只能發送一次');
+        if (err.message.includes("429")) {
+          setError("請稍後再試，密碼重設郵件每5分鐘只能發送一次");
         } else {
-          setError(err.message || '發送失敗，請稍後再試');
+          setError(err.message || "發送失敗，請稍後再試");
         }
       } else {
-        setError('發送失敗，請稍後再試');
+        setError("發送失敗，請稍後再試");
       }
     } finally {
       setIsLoading(false);
@@ -55,9 +69,7 @@ export default function TeacherForgotPassword() {
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
               <CardTitle className="text-2xl">郵件已發送</CardTitle>
-              <CardDescription>
-                請檢查您的郵件信箱
-              </CardDescription>
+              <CardDescription>請檢查您的郵件信箱</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -84,7 +96,7 @@ export default function TeacherForgotPassword() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => navigate('/teacher/login')}
+                  onClick={() => navigate("/teacher/login")}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   返回登入頁面
@@ -138,18 +150,14 @@ export default function TeacherForgotPassword() {
                 </Alert>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     發送中...
                   </>
                 ) : (
-                  '發送重設連結'
+                  "發送重設連結"
                 )}
               </Button>
 

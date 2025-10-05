@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { useState, useEffect, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   RefreshCw,
   Activity,
@@ -15,9 +15,9 @@ import {
   WifiOff,
   BarChart3,
   FileAudio,
-  Zap
-} from 'lucide-react';
-import TestRecordingPanel from '@/components/admin/TestRecordingPanel';
+  Zap,
+} from "lucide-react";
+import TestRecordingPanel from "@/components/admin/TestRecordingPanel";
 
 interface AudioUploadStatus {
   total_uploads: number;
@@ -55,14 +55,16 @@ interface RetryStatistics {
 interface ErrorLog {
   id: number;
   timestamp: string;
-  type: 'audio_upload' | 'ai_analysis';
+  type: "audio_upload" | "ai_analysis";
   error: string;
   retry_count: number;
   resolved: boolean;
 }
 
 export default function AdminMonitoringPage() {
-  const [audioStatus, setAudioStatus] = useState<AudioUploadStatus | null>(null);
+  const [audioStatus, setAudioStatus] = useState<AudioUploadStatus | null>(
+    null,
+  );
   const [aiStatus, setAIStatus] = useState<AIAnalysisStatus | null>(null);
   const [retryStats, setRetryStats] = useState<RetryStatistics | null>(null);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
@@ -71,7 +73,7 @@ export default function AdminMonitoringPage() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false); // 預設關閉自動更新
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const apiUrl = import.meta.env.VITE_API_URL || "";
 
   // Fetch all monitoring data
   const fetchMonitoringData = async () => {
@@ -81,7 +83,9 @@ export default function AdminMonitoringPage() {
       setIsOnline(healthResponse.ok);
 
       // Fetch audio upload status
-      const audioResponse = await fetch(`${apiUrl}/api/admin/audio-upload-status`);
+      const audioResponse = await fetch(
+        `${apiUrl}/api/admin/audio-upload-status`,
+      );
       if (audioResponse.ok) {
         const data = await audioResponse.json();
         setAudioStatus(data);
@@ -108,13 +112,12 @@ export default function AdminMonitoringPage() {
         setErrorLogs(data);
       }
     } catch (error) {
-      console.error('Failed to fetch monitoring data:', error);
+      console.error("Failed to fetch monitoring data:", error);
       setIsOnline(false);
     } finally {
       setIsLoading(false);
     }
   };
-
 
   // Setup auto-refresh
   useEffect(() => {
@@ -140,7 +143,7 @@ export default function AdminMonitoringPage() {
   };
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('zh-TW');
+    return new Date(timestamp).toLocaleString("zh-TW");
   };
 
   if (isLoading) {
@@ -161,7 +164,10 @@ export default function AdminMonitoringPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">系統監控面板</h1>
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <Badge
+              variant="secondary"
+              className="bg-yellow-100 text-yellow-800 border-yellow-300"
+            >
               <AlertCircle className="w-3 h-3 mr-1" />
               MOCK DATA
             </Badge>
@@ -171,14 +177,14 @@ export default function AdminMonitoringPage() {
           </div>
           <div className="flex items-center gap-4">
             <Badge variant={isOnline ? "default" : "destructive"}>
-              {isOnline ? <Wifi className="w-4 h-4 mr-1" /> : <WifiOff className="w-4 h-4 mr-1" />}
-              連線狀態: {isOnline ? '正常' : '離線'}
+              {isOnline ? (
+                <Wifi className="w-4 h-4 mr-1" />
+              ) : (
+                <WifiOff className="w-4 h-4 mr-1" />
+              )}
+              連線狀態: {isOnline ? "正常" : "離線"}
             </Badge>
-            <Button
-              onClick={fetchMonitoringData}
-              size="sm"
-              variant="outline"
-            >
+            <Button onClick={fetchMonitoringData} size="sm" variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
               手動重新整理
             </Button>
@@ -245,12 +251,18 @@ export default function AdminMonitoringPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">總上傳數</p>
-                      <p className="text-2xl font-bold">總上傳數: {audioStatus.total_uploads}</p>
+                      <p className="text-2xl font-bold">
+                        總上傳數: {audioStatus.total_uploads}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500">成功率</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {getSuccessRate(audioStatus.successful, audioStatus.total_uploads)}%
+                        {getSuccessRate(
+                          audioStatus.successful,
+                          audioStatus.total_uploads,
+                        )}
+                        %
                       </p>
                     </div>
                   </div>
@@ -267,7 +279,10 @@ export default function AdminMonitoringPage() {
                       </span>
                     </div>
                     <Progress
-                      value={getSuccessRate(audioStatus.successful, audioStatus.total_uploads)}
+                      value={getSuccessRate(
+                        audioStatus.successful,
+                        audioStatus.total_uploads,
+                      )}
                       className="h-2"
                     />
                   </div>
@@ -298,12 +313,18 @@ export default function AdminMonitoringPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">總分析數</p>
-                      <p className="text-2xl font-bold">總分析數: {aiStatus.total_analyses}</p>
+                      <p className="text-2xl font-bold">
+                        總分析數: {aiStatus.total_analyses}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500">成功率</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {getSuccessRate(aiStatus.successful, aiStatus.total_analyses)}%
+                        {getSuccessRate(
+                          aiStatus.successful,
+                          aiStatus.total_analyses,
+                        )}
+                        %
                       </p>
                     </div>
                   </div>
@@ -320,7 +341,10 @@ export default function AdminMonitoringPage() {
                       </span>
                     </div>
                     <Progress
-                      value={getSuccessRate(aiStatus.successful, aiStatus.total_analyses)}
+                      value={getSuccessRate(
+                        aiStatus.successful,
+                        aiStatus.total_analyses,
+                      )}
                       className="h-2"
                     />
                   </div>
@@ -364,11 +388,14 @@ export default function AdminMonitoringPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>總重試次數: {retryStats.audio_upload.total_retries}</span>
+                    <span>
+                      總重試次數: {retryStats.audio_upload.total_retries}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600">
-                      重試後成功: {retryStats.audio_upload.successful_after_retry}
+                      重試後成功:{" "}
+                      {retryStats.audio_upload.successful_after_retry}
                     </span>
                     <span className="text-red-600">
                       重試後失敗: {retryStats.audio_upload.failed_after_retry}
@@ -378,13 +405,20 @@ export default function AdminMonitoringPage() {
                   <div className="pt-2 border-t">
                     <p className="text-sm text-gray-500 mb-2">重試分布</p>
                     <div className="space-y-1">
-                      {Object.entries(retryStats.audio_upload.retry_distribution).map(([attempts, count]) => (
-                        <div key={attempts} className="flex items-center text-sm">
+                      {Object.entries(
+                        retryStats.audio_upload.retry_distribution,
+                      ).map(([attempts, count]) => (
+                        <div
+                          key={attempts}
+                          className="flex items-center text-sm"
+                        >
                           <span className="w-20">第 {attempts} 次:</span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
                             <div
                               className="bg-blue-500 h-4 rounded-full"
-                              style={{ width: `${(count / retryStats.audio_upload.total_retries) * 100}%` }}
+                              style={{
+                                width: `${(count / retryStats.audio_upload.total_retries) * 100}%`,
+                              }}
                             />
                           </div>
                           <span className="w-10 text-right">{count}</span>
@@ -404,11 +438,14 @@ export default function AdminMonitoringPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>總重試次數: {retryStats.ai_analysis.total_retries}</span>
+                    <span>
+                      總重試次數: {retryStats.ai_analysis.total_retries}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600">
-                      重試後成功: {retryStats.ai_analysis.successful_after_retry}
+                      重試後成功:{" "}
+                      {retryStats.ai_analysis.successful_after_retry}
                     </span>
                     <span className="text-red-600">
                       重試後失敗: {retryStats.ai_analysis.failed_after_retry}
@@ -418,13 +455,20 @@ export default function AdminMonitoringPage() {
                   <div className="pt-2 border-t">
                     <p className="text-sm text-gray-500 mb-2">重試分布</p>
                     <div className="space-y-1">
-                      {Object.entries(retryStats.ai_analysis.retry_distribution).map(([attempts, count]) => (
-                        <div key={attempts} className="flex items-center text-sm">
+                      {Object.entries(
+                        retryStats.ai_analysis.retry_distribution,
+                      ).map(([attempts, count]) => (
+                        <div
+                          key={attempts}
+                          className="flex items-center text-sm"
+                        >
                           <span className="w-20">第 {attempts} 次:</span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
                             <div
                               className="bg-purple-500 h-4 rounded-full"
-                              style={{ width: `${(count / retryStats.ai_analysis.total_retries) * 100}%` }}
+                              style={{
+                                width: `${(count / retryStats.ai_analysis.total_retries) * 100}%`,
+                              }}
                             />
                           </div>
                           <span className="w-10 text-right">{count}</span>
@@ -460,11 +504,21 @@ export default function AdminMonitoringPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={log.type === 'audio_upload' ? 'default' : 'secondary'}>
-                            {log.type === 'audio_upload' ? '錄音上傳' : 'AI 分析'}
+                          <Badge
+                            variant={
+                              log.type === "audio_upload"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {log.type === "audio_upload"
+                              ? "錄音上傳"
+                              : "AI 分析"}
                           </Badge>
-                          <Badge variant={log.resolved ? 'outline' : 'destructive'}>
-                            {log.resolved ? '已解決' : '未解決'}
+                          <Badge
+                            variant={log.resolved ? "outline" : "destructive"}
+                          >
+                            {log.resolved ? "已解決" : "未解決"}
                           </Badge>
                           <span className="text-xs text-gray-500">
                             重試 {log.retry_count} 次

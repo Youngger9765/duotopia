@@ -1,17 +1,10 @@
-import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import {
-  Mic,
-  MicOff,
-  RotateCcw,
-  CheckCircle,
-  Brain,
-  Star
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { retryAIAnalysis } from '@/utils/retryHelper';
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { Mic, MicOff, RotateCcw, CheckCircle, Brain, Star } from "lucide-react";
+import { toast } from "sonner";
+import { retryAIAnalysis } from "@/utils/retryHelper";
 
 interface AssessmentResult {
   overallScore: number;
@@ -49,11 +42,12 @@ export default function ReadingAssessmentTemplate({
   formatTime,
   exampleAudioUrl,
   progressId,
-  readOnly = false
+  readOnly = false,
 }: ReadingAssessmentProps) {
   const [, setIsPlayingExample] = useState(false);
   const [isAssessing, setIsAssessing] = useState(false);
-  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
+  const [assessmentResult, setAssessmentResult] =
+    useState<AssessmentResult | null>(null);
   const exampleAudioRef = useRef<HTMLAudioElement>(null);
 
   // const handlePlayExample = () => {
@@ -69,7 +63,7 @@ export default function ReadingAssessmentTemplate({
 
   const handleAssessment = async () => {
     if (!audioUrl || !progressId) {
-      toast.error('錄音檔案或進度ID不存在');
+      toast.error("錄音檔案或進度ID不存在");
       return;
     }
 
@@ -81,31 +75,35 @@ export default function ReadingAssessmentTemplate({
 
       // Create form data
       const formData = new FormData();
-      formData.append('audio_file', audioBlob, 'recording.webm');
-      formData.append('reference_text', targetText);
-      formData.append('progress_id', progressId.toString());
+      formData.append("audio_file", audioBlob, "recording.webm");
+      formData.append("reference_text", targetText);
+      formData.append("progress_id", progressId.toString());
 
       // Get authentication token from store
       const { token } = useStudentAuthStore();
       if (!token) {
-        toast.error('請重新登入');
+        toast.error("請重新登入");
         return;
       }
 
       // Call assessment API with retry mechanism
       const result = await retryAIAnalysis(
         async () => {
-          const apiResponse = await fetch('/api/speech/assess', {
-            method: 'POST',
+          const apiResponse = await fetch("/api/speech/assess", {
+            method: "POST",
             headers: {
-              'Authorization': `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
-            body: formData
+            body: formData,
           });
 
           if (!apiResponse.ok) {
-            const errorData = await apiResponse.json().catch(() => ({ detail: 'AI Analysis failed' }));
-            const error = new Error(errorData.detail || `AI Analysis failed: ${apiResponse.status}`);
+            const errorData = await apiResponse
+              .json()
+              .catch(() => ({ detail: "AI Analysis failed" }));
+            const error = new Error(
+              errorData.detail || `AI Analysis failed: ${apiResponse.status}`,
+            );
             if (apiResponse.status >= 500 || apiResponse.status === 429) {
               // Server errors and rate limits are retryable
               throw error;
@@ -119,7 +117,7 @@ export default function ReadingAssessmentTemplate({
         (attempt, error) => {
           console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
           toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
-        }
+        },
       );
       setAssessmentResult({
         overallScore: result.overall_score,
@@ -127,28 +125,30 @@ export default function ReadingAssessmentTemplate({
         fluencyScore: result.fluency_score,
         completenessScore: result.completeness_score,
         pronunciationScore: result.pronunciation_score,
-        feedback: result.feedback
+        feedback: result.feedback,
       });
 
-      toast.success('AI 發音評估完成！');
+      toast.success("AI 發音評估完成！");
     } catch (error) {
-      console.error('Assessment error:', error);
-      toast.error(error instanceof Error ? error.message : 'AI 評估失敗，請重試');
+      console.error("Assessment error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "AI 評估失敗，請重試",
+      );
     } finally {
       setIsAssessing(false);
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getScoreBadgeVariant = (score: number) => {
-    if (score >= 80) return 'default';
-    if (score >= 60) return 'secondary';
-    return 'destructive';
+    if (score >= 80) return "default";
+    if (score >= 60) return "secondary";
+    return "destructive";
   };
 
   return (
@@ -182,9 +182,7 @@ export default function ReadingAssessmentTemplate({
           <h2 className="text-3xl font-medium text-gray-900 leading-relaxed">
             {targetText}
           </h2>
-          <p className="text-lg text-gray-600">
-            {content}
-          </p>
+          <p className="text-lg text-gray-600">{content}</p>
         </div>
 
         {/* Recording Button */}
@@ -192,7 +190,7 @@ export default function ReadingAssessmentTemplate({
           {!isRecording && !audioUrl ? (
             <button
               onClick={onStartRecording}
-              className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? 'opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100' : ''}`}
+              className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100" : ""}`}
               disabled={readOnly}
             >
               <Mic className="h-8 w-8" />
@@ -220,11 +218,7 @@ export default function ReadingAssessmentTemplate({
         {/* Audio Player After Recording */}
         {audioUrl && (
           <div className="space-y-4">
-            <audio
-              controls
-              src={audioUrl}
-              className="w-full h-10"
-            />
+            <audio controls src={audioUrl} className="w-full h-10" />
           </div>
         )}
 
@@ -301,25 +295,33 @@ export default function ReadingAssessmentTemplate({
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">準確度</div>
-                <div className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}>
+                <div
+                  className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}
+                >
                   {assessmentResult.accuracyScore}分
                 </div>
               </div>
               <div className="bg-white rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">流暢度</div>
-                <div className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}>
+                <div
+                  className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}
+                >
                   {assessmentResult.fluencyScore}分
                 </div>
               </div>
               <div className="bg-white rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">完整度</div>
-                <div className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}>
+                <div
+                  className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}
+                >
                   {assessmentResult.completenessScore}分
                 </div>
               </div>
               <div className="bg-white rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">發音分數</div>
-                <div className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}>
+                <div
+                  className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}
+                >
                   {assessmentResult.pronunciationScore}分
                 </div>
               </div>

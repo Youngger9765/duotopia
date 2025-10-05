@@ -1,29 +1,29 @@
-import React from 'react';
-import { Check } from 'lucide-react';
+import React from "react";
+import { Check } from "lucide-react";
 
 interface SubscriptionProgressBannerProps {
-  currentStep: 'select-plan' | 'login' | 'payment' | 'complete';
+  currentStep: "select-plan" | "login" | "payment" | "complete";
   selectedPlan?: string;
 }
 
 export default function SubscriptionProgressBanner({
   currentStep,
-  selectedPlan
+  selectedPlan,
 }: SubscriptionProgressBannerProps) {
   const steps = [
-    { id: 'select-plan', label: '選擇方案', icon: '1' },
-    { id: 'login', label: '登入帳號', icon: '2' },
-    { id: 'payment', label: '填寫付款資訊', icon: '3' },
-    { id: 'complete', label: '完成訂閱', icon: '4' }
+    { id: "select-plan", label: "選擇方案", icon: "1" },
+    { id: "login", label: "登入帳號", icon: "2" },
+    { id: "payment", label: "填寫付款資訊", icon: "3" },
+    { id: "complete", label: "完成訂閱", icon: "4" },
   ];
 
   const getStepStatus = (stepId: string) => {
-    const currentIndex = steps.findIndex(s => s.id === currentStep);
-    const stepIndex = steps.findIndex(s => s.id === stepId);
+    const currentIndex = steps.findIndex((s) => s.id === currentStep);
+    const stepIndex = steps.findIndex((s) => s.id === stepId);
 
-    if (stepIndex < currentIndex) return 'completed';
-    if (stepIndex === currentIndex) return 'active';
-    return 'pending';
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "active";
+    return "pending";
   };
 
   return (
@@ -49,14 +49,16 @@ export default function SubscriptionProgressBanner({
                     <div
                       className={`
                         w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm
-                        ${status === 'completed'
-                          ? 'bg-green-500 text-white'
-                          : status === 'active'
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-200'
-                            : 'bg-gray-300 text-gray-600'}
+                        ${
+                          status === "completed"
+                            ? "bg-green-500 text-white"
+                            : status === "active"
+                              ? "bg-blue-600 text-white ring-4 ring-blue-200"
+                              : "bg-gray-300 text-gray-600"
+                        }
                       `}
                     >
-                      {status === 'completed' ? (
+                      {status === "completed" ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <span>{step.icon}</span>
@@ -66,11 +68,13 @@ export default function SubscriptionProgressBanner({
                   <span
                     className={`
                       text-xs mt-2 font-medium whitespace-nowrap
-                      ${status === 'active'
-                        ? 'text-blue-700'
-                        : status === 'completed'
-                          ? 'text-green-700'
-                          : 'text-gray-500'}
+                      ${
+                        status === "active"
+                          ? "text-blue-700"
+                          : status === "completed"
+                            ? "text-green-700"
+                            : "text-gray-500"
+                      }
                     `}
                   >
                     {step.label}
@@ -82,7 +86,7 @@ export default function SubscriptionProgressBanner({
                     <div className="h-1 bg-gray-300 rounded">
                       <div
                         className={`h-full rounded transition-all duration-500 ${
-                          status === 'completed' ? 'bg-green-500 w-full' : 'w-0'
+                          status === "completed" ? "bg-green-500 w-full" : "w-0"
                         }`}
                       />
                     </div>

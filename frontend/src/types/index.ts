@@ -106,12 +106,12 @@ export interface Program {
 
 // ============ Assignment Status Types ============
 export type AssignmentStatusEnum =
-  | 'NOT_STARTED'
-  | 'IN_PROGRESS'
-  | 'SUBMITTED'
-  | 'GRADED'
-  | 'RETURNED'
-  | 'RESUBMITTED';
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "GRADED"
+  | "RETURNED"
+  | "RESUBMITTED";
 
 // ============ Teacher Assignment Types ============
 export interface AssignmentSubmission {
@@ -333,7 +333,7 @@ export interface ContentFormData {
 }
 
 // ============ Dialog Types ============
-export type DialogType = 'view' | 'create' | 'edit' | 'delete' | null;
+export type DialogType = "view" | "create" | "edit" | "delete" | null;
 
 // ============ Dashboard Types ============
 export interface DashboardStats {
@@ -393,14 +393,14 @@ export interface ApiError {
 }
 
 // ============ Utility Types ============
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 
 export interface SortConfig {
   key: string;
   direction: SortOrder;
 }
 
-export type LoadingState = 'idle' | 'loading' | 'succeeded' | 'failed';
+export type LoadingState = "idle" | "loading" | "succeeded" | "failed";
 
 // ============ Component Props Types ============
 export interface TableColumn<T> {

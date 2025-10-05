@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 interface ContentType {
   type: string;
@@ -20,49 +20,49 @@ interface ContentType {
 
 const contentTypes: ContentType[] = [
   {
-    type: 'reading_assessment',
-    name: '朗讀錄音',
-    description: '學生朗讀課文並錄音',
-    icon: '📖',
+    type: "reading_assessment",
+    name: "朗讀錄音",
+    description: "學生朗讀課文並錄音",
+    icon: "📖",
     recommended: true,
-    disabled: false
+    disabled: false,
   },
   {
-    type: 'speaking_practice',
-    name: '口說練習',
-    description: '自由口說練習，AI 提供即時回饋',
-    icon: '🎙️',
+    type: "speaking_practice",
+    name: "口說練習",
+    description: "自由口說練習，AI 提供即時回饋",
+    icon: "🎙️",
     recommended: true,
-    disabled: true
+    disabled: true,
   },
   {
-    type: 'speaking_scenario',
-    name: '情境對話',
-    description: '在特定情境下進行對話練習',
-    icon: '💬',
-    disabled: true
+    type: "speaking_scenario",
+    name: "情境對話",
+    description: "在特定情境下進行對話練習",
+    icon: "💬",
+    disabled: true,
   },
   {
-    type: 'listening_cloze',
-    name: '聽力填空',
-    description: '聽音檔後填入缺少的單字',
-    icon: '🎧',
-    disabled: true
+    type: "listening_cloze",
+    name: "聽力填空",
+    description: "聽音檔後填入缺少的單字",
+    icon: "🎧",
+    disabled: true,
   },
   {
-    type: 'sentence_making',
-    name: '造句練習',
-    description: '使用指定單字或句型造句',
-    icon: '✍️',
-    disabled: true
+    type: "sentence_making",
+    name: "造句練習",
+    description: "使用指定單字或句型造句",
+    icon: "✍️",
+    disabled: true,
   },
   {
-    type: 'speaking_quiz',
-    name: '口說測驗',
-    description: '回答問題測試口說能力',
-    icon: '🎯',
-    disabled: true
-  }
+    type: "speaking_quiz",
+    name: "口說測驗",
+    description: "回答問題測試口說能力",
+    icon: "🎯",
+    disabled: true,
+  },
 ];
 
 interface ContentTypeDialogProps {
@@ -85,7 +85,7 @@ export default function ContentTypeDialog({
   open,
   onClose,
   onSelect,
-  lessonInfo
+  lessonInfo,
 }: ContentTypeDialogProps) {
   const [loading, setLoading] = useState(false);
 
@@ -97,13 +97,13 @@ export default function ContentTypeDialog({
       type: contentType.type,
       lessonId: lessonInfo.lessonId,
       programName: lessonInfo.programName,
-      lessonName: lessonInfo.lessonName
+      lessonName: lessonInfo.lessonName,
     });
     onClose();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, contentType: ContentType) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleSelect(contentType);
     }
@@ -113,7 +113,10 @@ export default function ContentTypeDialog({
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="bg-white max-w-3xl" style={{ backgroundColor: 'white' }}>
+      <DialogContent
+        className="bg-white max-w-3xl"
+        style={{ backgroundColor: "white" }}
+      >
         <DialogHeader>
           <DialogTitle>選擇內容類型</DialogTitle>
           <DialogDescription>
@@ -139,8 +142,8 @@ export default function ContentTypeDialog({
                 onKeyDown={(e) => handleKeyDown(e, contentType)}
                 className={`p-4 border rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                   contentType.disabled
-                    ? 'opacity-50 cursor-not-allowed bg-gray-50'
-                    : 'cursor-pointer hover:shadow-lg hover:border-blue-400'
+                    ? "opacity-50 cursor-not-allowed bg-gray-50"
+                    : "cursor-pointer hover:shadow-lg hover:border-blue-400"
                 }`}
               >
                 <div className="flex items-start space-x-3">

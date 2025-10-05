@@ -1,14 +1,8 @@
-import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  CheckCircle,
-  Headphones
-} from 'lucide-react';
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Play, Pause, RotateCcw, CheckCircle, Headphones } from "lucide-react";
 
 interface ListeningClozeProps {
   content: string;
@@ -25,7 +19,7 @@ export default function ListeningClozeTemplate({
   blanks,
   userAnswers,
   onAnswerChange,
-  showAnswers = false
+  showAnswers = false,
 }: ListeningClozeProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playCount, setPlayCount] = useState(0);
@@ -38,7 +32,7 @@ export default function ListeningClozeTemplate({
       audioRef.current.pause();
     } else {
       audioRef.current.play();
-      setPlayCount(prev => prev + 1);
+      setPlayCount((prev) => prev + 1);
     }
     setIsPlaying(!isPlaying);
   };
@@ -48,7 +42,7 @@ export default function ListeningClozeTemplate({
     audioRef.current.currentTime = 0;
     audioRef.current.play();
     setIsPlaying(true);
-    setPlayCount(prev => prev + 1);
+    setPlayCount((prev) => prev + 1);
   };
 
   // Parse content and replace blanks with input fields
@@ -64,7 +58,7 @@ export default function ListeningClozeTemplate({
             type="text"
             className="w-32 mx-2 inline-block"
             placeholder={`空格 ${blankIndex + 1}`}
-            value={userAnswers[blankIndex] || ''}
+            value={userAnswers[blankIndex] || ""}
             onChange={(e) => {
               const currentIndex = blankIndex;
               onAnswerChange(currentIndex, e.target.value);
@@ -99,17 +93,12 @@ export default function ListeningClozeTemplate({
               )}
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={handleReplay}
-            >
+            <Button variant="outline" onClick={handleReplay}>
               <RotateCcw className="h-4 w-4 mr-2" />
               重播
             </Button>
 
-            <Badge variant="secondary">
-              已播放 {playCount} 次
-            </Badge>
+            <Badge variant="secondary">已播放 {playCount} 次</Badge>
           </div>
 
           <audio
@@ -127,9 +116,7 @@ export default function ListeningClozeTemplate({
       {/* Fill in the blanks section */}
       <div className="bg-gray-50 rounded-lg p-6">
         <h3 className="font-medium mb-4">填空作答</h3>
-        <div className="text-lg leading-relaxed">
-          {renderContent()}
-        </div>
+        <div className="text-lg leading-relaxed">{renderContent()}</div>
       </div>
 
       {/* Show answers if needed (for review) */}

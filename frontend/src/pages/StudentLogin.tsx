@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
-import { useStudentAuthStore, StudentUser } from '@/stores/studentAuthStore';
-import { authService } from '@/services/authService';
-import { teacherService } from '@/services/teacherService';
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ArrowLeft, ChevronRight, Home } from "lucide-react";
+import { useStudentAuthStore, StudentUser } from "@/stores/studentAuthStore";
+import { authService } from "@/services/authService";
+import { teacherService } from "@/services/teacherService";
 
 interface TeacherHistory {
   email: string;
@@ -33,20 +33,22 @@ export default function StudentLogin() {
 
   // Multi-step form state
   const [step, setStep] = useState(1);
-  const [teacherEmail, setTeacherEmail] = useState('');
+  const [teacherEmail, setTeacherEmail] = useState("");
   const [, setSelectedTeacher] = useState<TeacherHistory | null>(null);
   const [teacherHistory, setTeacherHistory] = useState<TeacherHistory[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
+  const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(
+    null,
+  );
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Load teacher history from localStorage
   useEffect(() => {
-    const history = localStorage.getItem('teacherHistory');
+    const history = localStorage.getItem("teacherHistory");
     if (history) {
       setTeacherHistory(JSON.parse(history));
     }
@@ -55,7 +57,7 @@ export default function StudentLogin() {
   // Step 1: Teacher selection
   const handleTeacherSubmit = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       // Validate teacher email exists
       const response = await teacherService.validateTeacher(teacherEmail);
@@ -63,28 +65,29 @@ export default function StudentLogin() {
         const teacher = {
           email: teacherEmail,
           name: response.name,
-          lastUsed: new Date()
+          lastUsed: new Date(),
         };
 
         // Save to history
         const updatedHistory = [
           teacher,
-          ...teacherHistory.filter(t => t.email !== teacherEmail)
+          ...teacherHistory.filter((t) => t.email !== teacherEmail),
         ].slice(0, 5); // Keep last 5 teachers
 
-        localStorage.setItem('teacherHistory', JSON.stringify(updatedHistory));
+        localStorage.setItem("teacherHistory", JSON.stringify(updatedHistory));
         setTeacherHistory(updatedHistory);
         setSelectedTeacher(teacher);
 
         // Load classrooms for this teacher
-        const classroomsData = await teacherService.getPublicClassrooms(teacherEmail);
+        const classroomsData =
+          await teacherService.getPublicClassrooms(teacherEmail);
         setClassrooms(classroomsData);
         setStep(2);
       } else {
-        setError('找不到此教師帳號');
+        setError("找不到此教師帳號");
       }
     } catch {
-      setError('無法驗證教師帳號，請稍後再試');
+      setError("無法驗證教師帳號，請稍後再試");
     } finally {
       setLoading(false);
     }
@@ -93,17 +96,19 @@ export default function StudentLogin() {
   // Step 2: Classroom selection
   const handleClassroomSelect = async (classroom: Classroom) => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       setSelectedClassroom(classroom);
       // Load students for this classroom
-      const studentsData = await teacherService.getClassroomStudents(classroom.id);
+      const studentsData = await teacherService.getClassroomStudents(
+        classroom.id,
+      );
       // Sort students by ID
       const sortedStudents = [...studentsData].sort((a, b) => a.id - b.id);
       setStudents(sortedStudents);
       setStep(3);
     } catch {
-      setError('無法載入班級學生資料');
+      setError("無法載入班級學生資料");
     } finally {
       setLoading(false);
     }
@@ -120,45 +125,62 @@ export default function StudentLogin() {
     if (!selectedStudent) return;
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const response = await authService.studentLogin({
         id: selectedStudent.id,
-        password: password
+        password: password,
       });
 
       if (response.access_token) {
         login(response.access_token, {
           ...response.user,
-          student_number: response.user.student_number || response.user.id.toString(),
+          student_number:
+            response.user.student_number || response.user.id.toString(),
           classroom_id: selectedClassroom?.id || 0,
           classroom_name: selectedClassroom?.name,
-          teacher_name: teacherHistory.find(t => t.email === teacherEmail)?.name
+          teacher_name: teacherHistory.find((t) => t.email === teacherEmail)
+            ?.name,
         } as StudentUser);
-        navigate('/student/dashboard');
+        navigate("/student/dashboard");
       }
     } catch {
-      setError('密碼錯誤，請重新輸入');
+      setError("密碼錯誤，請重新輸入");
     } finally {
       setLoading(false);
     }
   };
 
   const handleBack = () => {
-    setError('');
+    setError("");
     if (step > 1) {
       setStep(step - 1);
     }
   };
 
   // Avatar component
-  const Avatar = ({ name, size = 'normal' }: { name: string; size?: 'normal' | 'small' }) => {
-    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-yellow-500'];
+  const Avatar = ({
+    name,
+    size = "normal",
+  }: {
+    name: string;
+    size?: "normal" | "small";
+  }) => {
+    const colors = [
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-yellow-500",
+    ];
     const colorIndex = name.charCodeAt(0) % colors.length;
-    const sizeClasses = size === 'small' ? 'w-12 h-12 text-lg' : 'w-20 h-20 text-2xl';
+    const sizeClasses =
+      size === "small" ? "w-12 h-12 text-lg" : "w-20 h-20 text-2xl";
 
     return (
-      <div className={`${sizeClasses} ${colors[colorIndex]} rounded-full flex items-center justify-center text-white font-bold`}>
+      <div
+        className={`${sizeClasses} ${colors[colorIndex]} rounded-full flex items-center justify-center text-white font-bold`}
+      >
         {name.charAt(0).toUpperCase()}
       </div>
     );
@@ -169,7 +191,10 @@ export default function StudentLogin() {
       {/* Home link */}
       <div className="absolute top-4 left-4">
         <Link to="/">
-          <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
             <Home className="h-4 w-4" />
             <span>返回首頁</span>
           </Button>
@@ -201,7 +226,9 @@ export default function StudentLogin() {
           {/* Step 1: Teacher Email */}
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-center">請輸入老師 Email</h2>
+              <h2 className="text-2xl font-semibold text-center">
+                請輸入老師 Email
+              </h2>
 
               <div className="space-y-4">
                 <Input
@@ -210,7 +237,7 @@ export default function StudentLogin() {
                   value={teacherEmail}
                   onChange={(e) => setTeacherEmail(e.target.value)}
                   className="text-lg py-6"
-                  onKeyPress={(e) => e.key === 'Enter' && handleTeacherSubmit()}
+                  onKeyPress={(e) => e.key === "Enter" && handleTeacherSubmit()}
                 />
 
                 <Button
@@ -229,30 +256,36 @@ export default function StudentLogin() {
                   variant="outline"
                   className="w-full py-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200"
                   onClick={() => {
-                    setTeacherEmail('demo@duotopia.com');
+                    setTeacherEmail("demo@duotopia.com");
                   }}
                 >
-                  <span className="text-purple-600 font-medium">🎯 使用 Demo 教師 (demo@duotopia.com)</span>
+                  <span className="text-purple-600 font-medium">
+                    🎯 使用 Demo 教師 (demo@duotopia.com)
+                  </span>
                 </Button>
               </div>
 
               {teacherHistory.length > 0 && (
                 <div className="space-y-3 mt-6">
-                  <p className="text-sm text-gray-600">或選擇最近使用過的老師：</p>
+                  <p className="text-sm text-gray-600">
+                    或選擇最近使用過的老師：
+                  </p>
                   <div className="space-y-2">
-                    {teacherHistory.filter(t => t.email !== 'demo@duotopia.com').map((teacher) => (
-                      <Button
-                        key={teacher.email}
-                        variant="outline"
-                        className="w-full justify-start py-4"
-                        onClick={() => {
-                          setTeacherEmail(teacher.email);
-                          handleTeacherSubmit();
-                        }}
-                      >
-                        {teacher.email}
-                      </Button>
-                    ))}
+                    {teacherHistory
+                      .filter((t) => t.email !== "demo@duotopia.com")
+                      .map((teacher) => (
+                        <Button
+                          key={teacher.email}
+                          variant="outline"
+                          className="w-full justify-start py-4"
+                          onClick={() => {
+                            setTeacherEmail(teacher.email);
+                            handleTeacherSubmit();
+                          }}
+                        >
+                          {teacher.email}
+                        </Button>
+                      ))}
                   </div>
                 </div>
               )}
@@ -264,7 +297,9 @@ export default function StudentLogin() {
           {/* Step 2: Classroom Selection */}
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-center">請選擇你的班級和名字</h2>
+              <h2 className="text-2xl font-semibold text-center">
+                請選擇你的班級和名字
+              </h2>
 
               <div className="space-y-3">
                 {classrooms.map((classroom) => (
@@ -274,7 +309,9 @@ export default function StudentLogin() {
                     className="w-full justify-between py-6 text-left"
                     onClick={() => handleClassroomSelect(classroom)}
                   >
-                    <span className="text-lg font-medium">{classroom.name}</span>
+                    <span className="text-lg font-medium">
+                      {classroom.name}
+                    </span>
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 ))}
@@ -288,7 +325,9 @@ export default function StudentLogin() {
           {step === 3 && selectedClassroom && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-xl font-semibold">{selectedClassroom.name}</h2>
+                <h2 className="text-xl font-semibold">
+                  {selectedClassroom.name}
+                </h2>
                 <p className="text-gray-600 mt-1">請選擇你的名字</p>
               </div>
 
@@ -313,7 +352,9 @@ export default function StudentLogin() {
           {step === 4 && selectedStudent && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-semibold">你好，{selectedStudent.name}！</h2>
+                <h2 className="text-2xl font-semibold">
+                  你好，{selectedStudent.name}！
+                </h2>
               </div>
 
               <div className="space-y-4">
@@ -323,7 +364,7 @@ export default function StudentLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="text-lg py-6"
-                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  onKeyPress={(e) => e.key === "Enter" && handleLogin()}
                 />
 
                 <Button
@@ -339,8 +380,8 @@ export default function StudentLogin() {
                   className="w-full"
                   onClick={() => {
                     setSelectedStudent(null);
-                    setPassword('');
-                    setError('');
+                    setPassword("");
+                    setError("");
                     setStep(3);
                   }}
                 >
@@ -352,9 +393,12 @@ export default function StudentLogin() {
               {error && <p className="text-red-500 text-center">{error}</p>}
 
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800 font-medium mb-1">💡 測試提示</p>
+                <p className="text-sm text-yellow-800 font-medium mb-1">
+                  💡 測試提示
+                </p>
                 <p className="text-xs text-yellow-700">
-                  Demo 學生預設密碼：<span className="font-mono font-bold">20120101</span>
+                  Demo 學生預設密碼：
+                  <span className="font-mono font-bold">20120101</span>
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
                   正式使用時，密碼為學生的生日 (格式：YYYYMMDD)

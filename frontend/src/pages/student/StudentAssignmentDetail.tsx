@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { toast } from "sonner";
 import {
   ChevronLeft,
   BookOpen,
@@ -18,13 +18,13 @@ import {
   BarChart3,
   FileText,
   Headphones,
-  Mic
-} from 'lucide-react';
+  Mic,
+} from "lucide-react";
 import {
   StudentAssignment,
   StudentContentProgress,
-  AssignmentStatusEnum
-} from '@/types';
+  AssignmentStatusEnum,
+} from "@/types";
 
 export default function StudentAssignmentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,15 +43,18 @@ export default function StudentAssignmentDetail() {
   const loadAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
 
       // 1. Get all assignments to find the specific one
-      const assignmentsResponse = await fetch(`${apiUrl}/api/students/assignments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const assignmentsResponse = await fetch(
+        `${apiUrl}/api/students/assignments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
       if (!assignmentsResponse.ok) {
         throw new Error(`HTTP error! status: ${assignmentsResponse.status}`);
@@ -73,10 +76,12 @@ export default function StudentAssignmentDetail() {
         submitted_at?: string;
       }
       const assignments = await assignmentsResponse.json();
-      const foundAssignment = assignments.find((a: AssignmentData) => a.id === parseInt(id!));
+      const foundAssignment = assignments.find(
+        (a: AssignmentData) => a.id === parseInt(id!),
+      );
 
       if (!foundAssignment) {
-        throw new Error('Assignment not found');
+        throw new Error("Assignment not found");
       }
 
       // 2. Get activities for this assignment
@@ -86,16 +91,19 @@ export default function StudentAssignmentDetail() {
       let totalCount = 0;
 
       try {
-        const activitiesResponse = await fetch(`${apiUrl}/api/students/assignments/${id}/activities`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const activitiesResponse = await fetch(
+          `${apiUrl}/api/students/assignments/${id}/activities`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
 
         if (activitiesResponse.ok) {
           const data = await activitiesResponse.json();
-          console.log('Activities API response:', data);
+          console.log("Activities API response:", data);
 
           // Get activities from the response (may be wrapped in an object)
           const activities = data.activities || data;
@@ -122,23 +130,26 @@ export default function StudentAssignmentDetail() {
               content: {
                 id: activity.content_id || activity.id,
                 title: activity.title || `活動 ${index + 1}`,
-                type: activity.type || 'grouped_questions',
-                items: activity.items || []
+                type: activity.type || "grouped_questions",
+                items: activity.items || [],
               },
-              status: activity.status || 'NOT_STARTED',
+              status: activity.status || "NOT_STARTED",
               score: activity.score,
-              order_index: activity.order_index !== undefined ? activity.order_index : index,
-              estimated_time: activity.estimated_time || '5 分鐘',
+              order_index:
+                activity.order_index !== undefined
+                  ? activity.order_index
+                  : index,
+              estimated_time: activity.estimated_time || "5 分鐘",
               items: activity.items || [],
               answers: activity.answers,
               recording_url: activity.recording_url,
               teacher_feedback: activity.teacher_feedback,
-              teacher_passed: activity.teacher_passed
+              teacher_passed: activity.teacher_passed,
             };
           });
         }
       } catch (error) {
-        console.error('Failed to load activities:', error);
+        console.error("Failed to load activities:", error);
         // Continue without activities data
       }
 
@@ -149,7 +160,7 @@ export default function StudentAssignmentDetail() {
         student_number: foundAssignment.student_id,
         classroom_id: foundAssignment.classroom_id,
         title: foundAssignment.title,
-        status: foundAssignment.status || 'NOT_STARTED',
+        status: foundAssignment.status || "NOT_STARTED",
         score: foundAssignment.score,
         feedback: foundAssignment.feedback,
         is_active: foundAssignment.is_active !== false,
@@ -157,23 +168,24 @@ export default function StudentAssignmentDetail() {
         due_date: foundAssignment.due_date,
         submitted_at: foundAssignment.submitted_at,
         content_progress: contentProgress,
-        progress_percentage: totalCount > 0 ? (completedCount / totalCount) * 100 : 0,
+        progress_percentage:
+          totalCount > 0 ? (completedCount / totalCount) * 100 : 0,
         completed_count: completedCount,
-        content_count: totalCount
+        content_count: totalCount,
       };
 
-      console.log('Assignment detail:', {
+      console.log("Assignment detail:", {
         score: assignmentDetail.score,
         completed: completedCount,
         total: totalCount,
-        activities: contentProgress.length
+        activities: contentProgress.length,
       });
 
       setAssignment(assignmentDetail);
     } catch (error) {
-      console.error('Failed to load assignment detail:', error);
-      toast.error('無法載入作業詳情');
-      navigate('/student/assignments');
+      console.error("Failed to load assignment detail:", error);
+      toast.error("無法載入作業詳情");
+      navigate("/student/assignments");
     } finally {
       setLoading(false);
     }
@@ -181,28 +193,56 @@ export default function StudentAssignmentDetail() {
 
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
-      case 'NOT_STARTED':
-        return { text: '未開始', color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-4 w-4" /> };
-      case 'IN_PROGRESS':
-        return { text: '進行中', color: 'bg-blue-100 text-blue-800', icon: <Play className="h-4 w-4" /> };
-      case 'SUBMITTED':
-        return { text: '已提交', color: 'bg-yellow-100 text-yellow-800', icon: <CheckCircle className="h-4 w-4" /> };
-      case 'GRADED':
-        return { text: '已評分', color: 'bg-green-100 text-green-800', icon: <BarChart3 className="h-4 w-4" /> };
-      case 'RETURNED':
-        return { text: '已退回', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="h-4 w-4" /> };
-      case 'RESUBMITTED':
-        return { text: '重新提交', color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-4 w-4" /> };
+      case "NOT_STARTED":
+        return {
+          text: "未開始",
+          color: "bg-gray-100 text-gray-800",
+          icon: <Clock className="h-4 w-4" />,
+        };
+      case "IN_PROGRESS":
+        return {
+          text: "進行中",
+          color: "bg-blue-100 text-blue-800",
+          icon: <Play className="h-4 w-4" />,
+        };
+      case "SUBMITTED":
+        return {
+          text: "已提交",
+          color: "bg-yellow-100 text-yellow-800",
+          icon: <CheckCircle className="h-4 w-4" />,
+        };
+      case "GRADED":
+        return {
+          text: "已評分",
+          color: "bg-green-100 text-green-800",
+          icon: <BarChart3 className="h-4 w-4" />,
+        };
+      case "RETURNED":
+        return {
+          text: "已退回",
+          color: "bg-orange-100 text-orange-800",
+          icon: <AlertCircle className="h-4 w-4" />,
+        };
+      case "RESUBMITTED":
+        return {
+          text: "重新提交",
+          color: "bg-purple-100 text-purple-800",
+          icon: <CheckCircle className="h-4 w-4" />,
+        };
       default:
-        return { text: status, color: 'bg-gray-100 text-gray-800', icon: <BookOpen className="h-4 w-4" /> };
+        return {
+          text: status,
+          color: "bg-gray-100 text-gray-800",
+          icon: <BookOpen className="h-4 w-4" />,
+        };
     }
   };
 
   const getContentTypeIcon = (type?: string) => {
     switch (type) {
-      case 'reading_assessment':
+      case "reading_assessment":
         return <Mic className="h-4 w-4" />;
-      case 'listening':
+      case "listening":
         return <Headphones className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
@@ -220,11 +260,11 @@ export default function StudentAssignmentDetail() {
     if (diffDays < 0) {
       return { text: `已逾期 ${Math.abs(diffDays)} 天`, isOverdue: true };
     } else if (diffDays === 0) {
-      return { text: '今天到期', isOverdue: false };
+      return { text: "今天到期", isOverdue: false };
     } else if (diffDays <= 3) {
       return { text: `${diffDays} 天後到期`, isOverdue: false };
     } else {
-      return { text: due.toLocaleDateString('zh-TW'), isOverdue: false };
+      return { text: due.toLocaleDateString("zh-TW"), isOverdue: false };
     }
   };
 
@@ -251,7 +291,10 @@ export default function StudentAssignmentDetail() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     items.forEach((item: any) => {
-      if (item.teacher_feedback !== undefined && item.teacher_feedback !== null) {
+      if (
+        item.teacher_feedback !== undefined &&
+        item.teacher_feedback !== null
+      ) {
         if (item.teacher_passed === true) {
           passedCount++;
         } else if (item.teacher_passed === false) {
@@ -273,11 +316,16 @@ export default function StudentAssignmentDetail() {
                 {contentTypeIcon}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm sm:text-base truncate">{progress.content?.title || `活動 ${progress.order_index + 1}`}</h4>
+                <h4 className="font-medium text-sm sm:text-base truncate">
+                  {progress.content?.title ||
+                    `活動 ${progress.order_index + 1}`}
+                </h4>
                 <p className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-                  {progress.content?.type === 'reading_assessment' && '朗讀評測'}
-                  {progress.content?.type === 'listening' && '聽力練習'}
-                  {progress.content?.type === 'grouped_questions' && '基礎問候語練習'}
+                  {progress.content?.type === "reading_assessment" &&
+                    "朗讀評測"}
+                  {progress.content?.type === "listening" && "聽力練習"}
+                  {progress.content?.type === "grouped_questions" &&
+                    "基礎問候語練習"}
                   {progress.estimated_time && ` • ${progress.estimated_time}`}
                 </p>
               </div>
@@ -313,7 +361,7 @@ export default function StudentAssignmentDetail() {
                 <span className="ml-1">{statusDisplay.text}</span>
               </Badge>
 
-              {progress.score !== undefined && progress.status === 'GRADED' && (
+              {progress.score !== undefined && progress.status === "GRADED" && (
                 <div className="text-sm font-medium text-green-600">
                   {progress.score}分
                 </div>
@@ -322,13 +370,17 @@ export default function StudentAssignmentDetail() {
               <Button
                 size="sm"
                 onClick={handleStartActivity}
-                disabled={false}  // 允許查看已提交的作業
-                variant={progress.status === 'NOT_STARTED' ? 'default' : 'outline'}
+                disabled={false} // 允許查看已提交的作業
+                variant={
+                  progress.status === "NOT_STARTED" ? "default" : "outline"
+                }
                 className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
-                {progress.status === 'NOT_STARTED' && '開始'}
-                {progress.status === 'IN_PROGRESS' && '繼續'}
-                {(progress.status === 'SUBMITTED' || progress.status === 'GRADED') && '檢視作業'}
+                {progress.status === "NOT_STARTED" && "開始"}
+                {progress.status === "IN_PROGRESS" && "繼續"}
+                {(progress.status === "SUBMITTED" ||
+                  progress.status === "GRADED") &&
+                  "檢視作業"}
               </Button>
             </div>
           </div>
@@ -353,7 +405,7 @@ export default function StudentAssignmentDetail() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-gray-600 mb-4">找不到作業詳情</p>
-          <Button onClick={() => navigate('/student/assignments')}>
+          <Button onClick={() => navigate("/student/assignments")}>
             返回作業列表
           </Button>
         </div>
@@ -363,7 +415,10 @@ export default function StudentAssignmentDetail() {
 
   const statusDisplay = getStatusDisplay(assignment.status);
   const dueDateInfo = formatDueDate(assignment.due_date);
-  const canStart = assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS' || assignment.status === 'RETURNED';
+  const canStart =
+    assignment.status === "NOT_STARTED" ||
+    assignment.status === "IN_PROGRESS" ||
+    assignment.status === "RETURNED";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
@@ -371,7 +426,7 @@ export default function StudentAssignmentDetail() {
         {/* Header */}
         <Button
           variant="ghost"
-          onClick={() => navigate('/student/assignments')}
+          onClick={() => navigate("/student/assignments")}
           className="mb-6"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
@@ -383,7 +438,9 @@ export default function StudentAssignmentDetail() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-lg sm:text-xl lg:text-2xl mb-2 break-words">{assignment.title}</CardTitle>
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl mb-2 break-words">
+                  {assignment.title}
+                </CardTitle>
                 {assignment.estimated_time && (
                   <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
@@ -401,27 +458,34 @@ export default function StudentAssignmentDetail() {
           <CardContent className="space-y-6">
             {/* Due Date */}
             {dueDateInfo && (
-              <div className={`flex items-center gap-2 text-sm ${
-                dueDateInfo.isOverdue ? 'text-red-600' : 'text-gray-600'
-              }`}>
+              <div
+                className={`flex items-center gap-2 text-sm ${
+                  dueDateInfo.isOverdue ? "text-red-600" : "text-gray-600"
+                }`}
+              >
                 <Calendar className="h-4 w-4" />
                 <span>{dueDateInfo.text}</span>
               </div>
             )}
 
             {/* Assignment Targets */}
-            {(assignment.contents?.[0]?.target_wpm || assignment.contents?.[0]?.target_accuracy) && (
+            {(assignment.contents?.[0]?.target_wpm ||
+              assignment.contents?.[0]?.target_accuracy) && (
               <div className="flex gap-6">
                 {assignment.contents[0].target_wpm && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="h-4 w-4" />
-                    <span>目標語速: {assignment.contents[0].target_wpm} WPM</span>
+                    <span>
+                      目標語速: {assignment.contents[0].target_wpm} WPM
+                    </span>
                   </div>
                 )}
                 {assignment.contents[0].target_accuracy && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Target className="h-4 w-4" />
-                    <span>目標準確率: {assignment.contents[0].target_accuracy}%</span>
+                    <span>
+                      目標準確率: {assignment.contents[0].target_accuracy}%
+                    </span>
                   </div>
                 )}
               </div>
@@ -435,12 +499,17 @@ export default function StudentAssignmentDetail() {
                   活動進度
                 </h3>
                 <span className="text-sm font-medium text-gray-600">
-                  {assignment.completed_count || 0} / {assignment.content_count || 0} 完成
+                  {assignment.completed_count || 0} /{" "}
+                  {assignment.content_count || 0} 完成
                 </span>
               </div>
-              <Progress value={assignment.progress_percentage || 0} className="h-2" />
+              <Progress
+                value={assignment.progress_percentage || 0}
+                className="h-2"
+              />
               <div className="space-y-2">
-                {assignment.content_progress && assignment.content_progress.length > 0 ? (
+                {assignment.content_progress &&
+                assignment.content_progress.length > 0 ? (
                   assignment.content_progress
                     .sort((a, b) => a.order_index - b.order_index)
                     .map(renderContentProgress)
@@ -462,8 +531,11 @@ export default function StudentAssignmentDetail() {
                   className="w-full sm:w-auto"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  {assignment.status === 'NOT_STARTED' ? '開始作業' :
-                   assignment.status === 'IN_PROGRESS' ? '繼續作業' : '重新提交'}
+                  {assignment.status === "NOT_STARTED"
+                    ? "開始作業"
+                    : assignment.status === "IN_PROGRESS"
+                      ? "繼續作業"
+                      : "重新提交"}
                 </Button>
               </div>
             )}
@@ -484,14 +556,15 @@ export default function StudentAssignmentDetail() {
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">分數</div>
                 <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-600">
-                  {assignment.score !== undefined ? assignment.score : '--'}
+                  {assignment.score !== undefined ? assignment.score : "--"}
                 </div>
               </div>
 
               {/* 詳實記錄 */}
               <div>
                 <div className="text-sm text-gray-600 mb-2">詳實記錄</div>
-                {assignment.content_progress && assignment.content_progress.length > 0 ? (
+                {assignment.content_progress &&
+                assignment.content_progress.length > 0 ? (
                   <div className="space-y-2 max-h-32 overflow-y-auto">
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {assignment.content_progress.map((progress: any) => {
@@ -499,14 +572,19 @@ export default function StudentAssignmentDetail() {
                       let questionNumber = 0;
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       return items.map((item: any, idx: number) => {
-                        const hasFeedback = item.teacher_feedback !== undefined && item.teacher_feedback !== null;
+                        const hasFeedback =
+                          item.teacher_feedback !== undefined &&
+                          item.teacher_feedback !== null;
                         if (!hasFeedback) return null;
                         questionNumber++;
 
                         return (
-                          <div key={`${progress.id}-${idx}`} className="flex items-start gap-2 text-sm">
+                          <div
+                            key={`${progress.id}-${idx}`}
+                            className="flex items-start gap-2 text-sm"
+                          >
                             <span className="flex-shrink-0">
-                              {item.teacher_passed ? '✅' : '❌'}
+                              {item.teacher_passed ? "✅" : "❌"}
                             </span>
                             <div className="flex-1">
                               <div className="text-xs text-gray-500 truncate">
@@ -531,14 +609,13 @@ export default function StudentAssignmentDetail() {
                 <div className="text-sm text-gray-600 mb-2">總評</div>
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    {assignment.feedback || '尚無總評'}
+                    {assignment.feedback || "尚無總評"}
                   </p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

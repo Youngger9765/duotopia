@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { toast } from "sonner";
 import {
   BookOpen,
   Trophy,
@@ -17,9 +17,9 @@ import {
   X,
   CheckCircle,
   User,
-  Loader2
-} from 'lucide-react';
-import { Assignment } from '@/types';
+  Loader2,
+} from "lucide-react";
+import { Assignment } from "@/types";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -29,19 +29,19 @@ export default function StudentDashboard() {
     completedAssignments: 0,
     averageScore: 0,
     totalPracticeTime: 0,
-    practiceDays: 0
+    practiceDays: 0,
   });
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
   const [showEmailSetup, setShowEmailSetup] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
+  const [newEmail, setNewEmail] = useState("");
   const [emailInitialized, setEmailInitialized] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
-  const [currentEmail, setCurrentEmail] = useState('');
+  const [currentEmail, setCurrentEmail] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     if (!user || !token) {
-      navigate('/student/login');
+      navigate("/student/login");
       return;
     }
     loadAssignments();
@@ -52,12 +52,12 @@ export default function StudentDashboard() {
   const loadAssignments = async () => {
     try {
       // Directly use fetch with student token
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       const response = await fetch(`${apiUrl}/api/students/assignments`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -67,59 +67,59 @@ export default function StudentDashboard() {
       const data = await response.json();
       setAssignments(data as Assignment[]);
     } catch (error) {
-      console.error('Failed to load assignments:', error);
-      toast.error('無法載入作業列表');
+      console.error("Failed to load assignments:", error);
+      toast.error("無法載入作業列表");
       // Use mock data as fallback
       setAssignments([
         {
           id: 1,
-          title: 'Unit 1: Greetings 問候語練習',
+          title: "Unit 1: Greetings 問候語練習",
           content_id: 1,
           content: {
-            type: 'reading_assessment',
-            title: 'Greetings'
+            type: "reading_assessment",
+            title: "Greetings",
           },
-          status: 'NOT_STARTED',
-          due_date: '2025-09-01',
-          created_at: new Date().toISOString()
+          status: "NOT_STARTED",
+          due_date: "2025-09-01",
+          created_at: new Date().toISOString(),
         },
         {
           id: 2,
-          title: 'Unit 2: Numbers 數字練習',
+          title: "Unit 2: Numbers 數字練習",
           content_id: 2,
           content: {
-            type: 'reading_assessment',
-            title: 'Numbers'
+            type: "reading_assessment",
+            title: "Numbers",
           },
-          status: 'NOT_STARTED',
-          due_date: '2025-09-05',
-          created_at: new Date().toISOString()
+          status: "NOT_STARTED",
+          due_date: "2025-09-05",
+          created_at: new Date().toISOString(),
         },
         {
           id: 3,
-          title: 'Daily Conversation 日常對話',
+          title: "Daily Conversation 日常對話",
           content_id: 3,
           content: {
-            type: 'speaking_scenario',
-            title: 'Daily Conversation'
+            type: "speaking_scenario",
+            title: "Daily Conversation",
           },
-          status: 'GRADED',
-          due_date: '2025-08-28',
+          status: "GRADED",
+          due_date: "2025-08-28",
           score: 85,
-          created_at: new Date().toISOString()
-        }
+          created_at: new Date().toISOString(),
+        },
       ]);
     }
   };
 
   const loadStats = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       const response = await fetch(`${apiUrl}/api/students/stats`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -131,29 +131,29 @@ export default function StudentDashboard() {
         completedAssignments: data.completedAssignments || 0,
         averageScore: data.averageScore || 0,
         totalPracticeTime: data.totalPracticeTime || 0,
-        practiceDays: data.practiceDays || 0
+        practiceDays: data.practiceDays || 0,
       });
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error("Failed to load stats:", error);
       // Fallback to zero if API fails
       setStats({
         completedAssignments: 0,
         averageScore: 0,
         totalPracticeTime: 0,
-        practiceDays: 0
+        practiceDays: 0,
       });
     }
   };
 
   const loadEmailStatus = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       // 使用 /me 端點來獲取當前學生資訊
       const response = await fetch(`${apiUrl}/api/students/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -175,7 +175,7 @@ export default function StudentDashboard() {
         }
       }
     } catch (error) {
-      console.error('Failed to load email status:', error);
+      console.error("Failed to load email status:", error);
     }
   };
 
@@ -184,7 +184,7 @@ export default function StudentDashboard() {
   };
 
   const handleViewAllAssignments = () => {
-    navigate('/student/assignments');
+    navigate("/student/assignments");
   };
 
   const handleEmailPromptClose = () => {
@@ -193,30 +193,30 @@ export default function StudentDashboard() {
   };
 
   const handleEmailUpdate = async () => {
-    if (!newEmail || !newEmail.includes('@')) {
-      toast.error('請輸入有效的 Email 地址');
+    if (!newEmail || !newEmail.includes("@")) {
+      toast.error("請輸入有效的 Email 地址");
       return;
     }
 
     setIsSendingEmail(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       // 使用正確的 update-email 端點
       const response = await fetch(`${apiUrl}/api/students/update-email`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: newEmail })
+        body: JSON.stringify({ email: newEmail }),
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.verification_sent) {
-          toast.success('驗證信已發送！請檢查您的信箱');
+          toast.success("驗證信已發送！請檢查您的信箱");
         } else {
-          toast.success('Email 已更新');
+          toast.success("Email 已更新");
         }
         setShowEmailPrompt(false);
         setShowEmailSetup(false);
@@ -227,8 +227,8 @@ export default function StudentDashboard() {
         toast.error(`設定失敗：${error}`);
       }
     } catch (error) {
-      console.error('Failed to update email:', error);
-      toast.error('設定失敗，請稍後再試');
+      console.error("Failed to update email:", error);
+      toast.error("設定失敗，請稍後再試");
     } finally {
       setIsSendingEmail(false);
     }
@@ -236,23 +236,34 @@ export default function StudentDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'GRADED':
-      case 'RETURNED': return 'bg-green-100 text-green-800';
-      case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800';
-      case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
-      case 'NOT_STARTED': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "GRADED":
+      case "RETURNED":
+        return "bg-green-100 text-green-800";
+      case "SUBMITTED":
+        return "bg-yellow-100 text-yellow-800";
+      case "IN_PROGRESS":
+        return "bg-blue-100 text-blue-800";
+      case "NOT_STARTED":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'NOT_STARTED': return '待完成';
-      case 'IN_PROGRESS': return '進行中';
-      case 'SUBMITTED': return '已提交';
-      case 'GRADED': return '已評分';
-      case 'RETURNED': return '已退回';
-      default: return status;
+      case "NOT_STARTED":
+        return "待完成";
+      case "IN_PROGRESS":
+        return "進行中";
+      case "SUBMITTED":
+        return "已提交";
+      case "GRADED":
+        return "已評分";
+      case "RETURNED":
+        return "已退回";
+      default:
+        return status;
     }
   };
 
@@ -262,23 +273,30 @@ export default function StudentDashboard() {
         {/* Welcome Message */}
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            你好，{user?.name || '同學'}！歡迎回到 Duotopia 🚀
+            你好，{user?.name || "同學"}！歡迎回到 Duotopia 🚀
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">繼續你的英語學習之旅吧</p>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+            繼續你的英語學習之旅吧
+          </p>
 
           {/* Email 狀態顯示 */}
           {currentEmail && (
             <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg border dark:border-gray-700">
                 <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <span className="text-gray-700 dark:text-gray-300 text-sm sm:text-base">{currentEmail}</span>
+                <span className="text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+                  {currentEmail}
+                </span>
                 {emailVerified ? (
                   <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-xs font-medium">已驗證</span>
                   </div>
                 ) : (
-                  <Badge variant="outline" className="text-xs text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600">
+                  <Badge
+                    variant="outline"
+                    className="text-xs text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600"
+                  >
                     待驗證
                   </Badge>
                 )}
@@ -286,7 +304,7 @@ export default function StudentDashboard() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => navigate('/student/profile')}
+                onClick={() => navigate("/student/profile")}
                 className="text-xs sm:text-sm flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 h-10 min-h-10 dark:text-gray-300"
               >
                 <User className="h-4 w-4" />
@@ -334,11 +352,16 @@ export default function StudentDashboard() {
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                       <div className="flex-1 text-xs sm:text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 p-2 sm:p-3 rounded">
-                        <p>📌 點擊「發送驗證信」後，會發送驗證信到你的 Email，點擊信中連結即可完成設定</p>
+                        <p>
+                          📌 點擊「發送驗證信」後，會發送驗證信到你的
+                          Email，點擊信中連結即可完成設定
+                        </p>
                       </div>
                       <Button
                         onClick={handleEmailUpdate}
-                        disabled={isSendingEmail || !newEmail || !newEmail.includes('@')}
+                        disabled={
+                          isSendingEmail || !newEmail || !newEmail.includes("@")
+                        }
                         className="bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 h-12 min-h-12 px-4 sm:px-6 w-full sm:w-auto whitespace-nowrap"
                       >
                         {isSendingEmail ? (
@@ -347,7 +370,7 @@ export default function StudentDashboard() {
                             發送中...
                           </>
                         ) : (
-                          '驗證我的 Email'
+                          "驗證我的 Email"
                         )}
                       </Button>
                     </div>
@@ -364,8 +387,12 @@ export default function StudentDashboard() {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">完成作業</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stats.completedAssignments}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">
+                    完成作業
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {stats.completedAssignments}
+                  </p>
                 </div>
                 <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
@@ -376,8 +403,12 @@ export default function StudentDashboard() {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">平均分數</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stats.averageScore}分</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">
+                    平均分數
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {stats.averageScore}分
+                  </p>
                 </div>
                 <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
               </div>
@@ -388,8 +419,12 @@ export default function StudentDashboard() {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">練習時間</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stats.totalPracticeTime}分</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">
+                    練習時間
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {stats.totalPracticeTime}分
+                  </p>
                 </div>
                 <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
@@ -400,8 +435,12 @@ export default function StudentDashboard() {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">練習天數</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stats.practiceDays}天</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">
+                    練習天數
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {stats.practiceDays}天
+                  </p>
                 </div>
                 <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
@@ -442,12 +481,18 @@ export default function StudentDashboard() {
                         {assignment.title}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={getStatusColor(assignment.status || '')}>
-                          {getStatusText(assignment.status || '')}
+                        <Badge
+                          className={getStatusColor(assignment.status || "")}
+                        >
+                          {getStatusText(assignment.status || "")}
                         </Badge>
                         {assignment.content && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            ({assignment.content.type === 'reading_assessment' ? '朗讀評測' : assignment.content.type})
+                            (
+                            {assignment.content.type === "reading_assessment"
+                              ? "朗讀評測"
+                              : assignment.content.type}
+                            )
                           </span>
                         )}
                       </div>
@@ -459,7 +504,10 @@ export default function StudentDashboard() {
                         <span className="flex items-center gap-1">
                           <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span className="truncate">
-                            截止日期：{new Date(assignment.due_date).toLocaleDateString('zh-TW')}
+                            截止日期：
+                            {new Date(assignment.due_date).toLocaleDateString(
+                              "zh-TW",
+                            )}
                           </span>
                         </span>
                       )}
@@ -480,7 +528,8 @@ export default function StudentDashboard() {
 
                   {/* Action Button - Full width on mobile */}
                   <div className="flex-shrink-0 sm:ml-4">
-                    {(assignment.status === 'NOT_STARTED' || assignment.status === 'IN_PROGRESS') && (
+                    {(assignment.status === "NOT_STARTED" ||
+                      assignment.status === "IN_PROGRESS") && (
                       <Button
                         onClick={() => handleStartAssignment(assignment.id)}
                         className="w-full sm:w-auto h-12 min-h-12"
@@ -490,7 +539,9 @@ export default function StudentDashboard() {
                       </Button>
                     )}
 
-                    {(assignment.status === 'SUBMITTED' || assignment.status === 'GRADED' || assignment.status === 'RETURNED') && (
+                    {(assignment.status === "SUBMITTED" ||
+                      assignment.status === "GRADED" ||
+                      assignment.status === "RETURNED") && (
                       <Button
                         variant="outline"
                         onClick={() => handleStartAssignment(assignment.id)}

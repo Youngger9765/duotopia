@@ -18,7 +18,7 @@ interface RetryOptions {
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<T> {
   const {
     maxRetries = 3,
@@ -55,11 +55,11 @@ export async function retryWithBackoff<T>(
       // 計算延遲時間（指數退避）
       const delay = Math.min(
         initialDelay * Math.pow(backoffMultiplier, attempt - 1),
-        maxDelay
+        maxDelay,
       );
 
       // 等待指定時間後重試
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
@@ -71,7 +71,7 @@ export async function retryWithBackoff<T>(
  */
 export async function retryAudioUpload<T>(
   uploadFn: () => Promise<T>,
-  onRetry?: (attempt: number, error: Error) => void
+  onRetry?: (attempt: number, error: Error) => void,
 ): Promise<T> {
   return retryWithBackoff(uploadFn, {
     maxRetries: 3,
@@ -87,20 +87,20 @@ export async function retryAudioUpload<T>(
     shouldRetry: (error) => {
       // 只有網路錯誤或暫時性錯誤才重試
       const retryableErrors = [
-        'NetworkError',
-        'TimeoutError',
-        'AbortError',
-        '500',
-        '502',
-        '503',
-        '504',
-        'ECONNRESET',
-        'ETIMEDOUT',
+        "NetworkError",
+        "TimeoutError",
+        "AbortError",
+        "500",
+        "502",
+        "503",
+        "504",
+        "ECONNRESET",
+        "ETIMEDOUT",
       ];
 
-      const errorMessage = error.message || '';
-      return retryableErrors.some(retryableError =>
-        errorMessage.includes(retryableError)
+      const errorMessage = error.message || "";
+      return retryableErrors.some((retryableError) =>
+        errorMessage.includes(retryableError),
       );
     },
   });
@@ -111,7 +111,7 @@ export async function retryAudioUpload<T>(
  */
 export async function retryAIAnalysis<T>(
   analysisFn: () => Promise<T>,
-  onRetry?: (attempt: number, error: Error) => void
+  onRetry?: (attempt: number, error: Error) => void,
 ): Promise<T> {
   return retryWithBackoff(analysisFn, {
     maxRetries: 3,
@@ -127,22 +127,22 @@ export async function retryAIAnalysis<T>(
     shouldRetry: (error) => {
       // AI 分析可能因為負載過高或暫時性問題失敗
       const retryableErrors = [
-        'NetworkError',
-        'TimeoutError',
-        '429', // Too Many Requests
-        '500',
-        '502',
-        '503',
-        '504',
-        'ECONNRESET',
-        'ETIMEDOUT',
-        'rate limit',
-        'quota exceeded',
+        "NetworkError",
+        "TimeoutError",
+        "429", // Too Many Requests
+        "500",
+        "502",
+        "503",
+        "504",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "rate limit",
+        "quota exceeded",
       ];
 
-      const errorMessage = error.message?.toLowerCase() || '';
-      return retryableErrors.some(retryableError =>
-        errorMessage.includes(retryableError.toLowerCase())
+      const errorMessage = error.message?.toLowerCase() || "";
+      return retryableErrors.some((retryableError) =>
+        errorMessage.includes(retryableError.toLowerCase()),
       );
     },
   });

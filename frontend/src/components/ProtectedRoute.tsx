@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router-dom';
-import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
+import { Navigate } from "react-router-dom";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

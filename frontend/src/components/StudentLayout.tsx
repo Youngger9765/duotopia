@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
+import { useState } from "react";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import {
   BookOpen,
   Home,
@@ -13,8 +13,8 @@ import {
   X,
   Calendar,
   BarChart3,
-  MessageSquare
-} from 'lucide-react';
+  MessageSquare,
+} from "lucide-react";
 
 export default function StudentLayout() {
   const navigate = useNavigate();
@@ -24,61 +24,61 @@ export default function StudentLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/student/login');
+    navigate("/student/login");
   };
 
   const navItems = [
     {
-      path: '/student/dashboard',
-      label: '首頁',
+      path: "/student/dashboard",
+      label: "首頁",
       icon: Home,
-      disabled: false
+      disabled: false,
     },
     {
-      path: '/student/assignments',
-      label: '我的作業',
+      path: "/student/assignments",
+      label: "我的作業",
       icon: BookOpen,
-      disabled: false
+      disabled: false,
     },
     {
-      path: '/student/progress',
-      label: '學習進度',
+      path: "/student/progress",
+      label: "學習進度",
       icon: BarChart3,
-      disabled: true
+      disabled: true,
     },
     {
-      path: '/student/achievements',
-      label: '成就',
+      path: "/student/achievements",
+      label: "成就",
       icon: Trophy,
-      disabled: true
+      disabled: true,
     },
     {
-      path: '/student/calendar',
-      label: '行事曆',
+      path: "/student/calendar",
+      label: "行事曆",
       icon: Calendar,
-      disabled: true
+      disabled: true,
     },
     {
-      path: '/student/messages',
-      label: '訊息',
+      path: "/student/messages",
+      label: "訊息",
       icon: MessageSquare,
-      disabled: true
-    }
+      disabled: true,
+    },
   ];
 
   const bottomNavItems = [
     {
-      path: '/student/profile',
-      label: '個人資料',
+      path: "/student/profile",
+      label: "個人資料",
       icon: User,
-      disabled: false
+      disabled: false,
     },
     {
-      path: '/student/settings',
-      label: '設定',
+      path: "/student/settings",
+      label: "設定",
       icon: Settings,
-      disabled: true
-    }
+      disabled: true,
+    },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -94,12 +94,14 @@ export default function StudentLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`
+      <aside
+        className={`
         fixed lg:static inset-y-0 left-0 z-50
-        transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 transition-transform duration-300 ease-in-out
         w-64 bg-white shadow-lg flex flex-col
-      `}>
+      `}
+      >
         {/* Logo Section */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
@@ -121,11 +123,13 @@ export default function StudentLayout() {
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0).toUpperCase() || 'S'}
+                {user?.name?.charAt(0).toUpperCase() || "S"}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-sm">{user?.name || '學生'}</p>
-                <p className="text-xs text-gray-600">{user?.classroom_name || '班級'}</p>
+                <p className="font-semibold text-sm">{user?.name || "學生"}</p>
+                <p className="text-xs text-gray-600">
+                  {user?.classroom_name || "班級"}
+                </p>
               </div>
             </div>
           </div>
@@ -146,7 +150,7 @@ export default function StudentLayout() {
                 >
                   <Icon className="h-5 w-5" />
                   <span>{item.label}</span>
-                  {item.path === '/student/messages' && (
+                  {item.path === "/student/messages" && (
                     <span className="ml-auto bg-gray-300 text-gray-600 text-xs px-2 py-0.5 rounded-full">
                       2
                     </span>
@@ -161,16 +165,17 @@ export default function StudentLayout() {
                 to={item.path}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  ${active
-                    ? 'bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  ${
+                    active
+                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon className="h-5 w-5" />
                 <span>{item.label}</span>
-                {item.path === '/student/messages' && (
+                {item.path === "/student/messages" && (
                   <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                     2
                   </span>
@@ -205,9 +210,10 @@ export default function StudentLayout() {
                 to={item.path}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  ${active
-                    ? 'bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  ${
+                    active
+                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
@@ -247,7 +253,8 @@ export default function StudentLayout() {
 
                 <div>
                   <h1 className="text-xl font-semibold text-gray-900">
-                    {navItems.find(item => isActive(item.path))?.label || '學生專區'}
+                    {navItems.find((item) => isActive(item.path))?.label ||
+                      "學生專區"}
                   </h1>
                   <p className="text-sm text-gray-600">
                     歡迎回來，{user?.name}！今天也要加油學習喔！

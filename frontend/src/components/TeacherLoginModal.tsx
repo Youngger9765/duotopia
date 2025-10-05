@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
-import SubscriptionProgressBanner from './SubscriptionProgressBanner';
-import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
+import SubscriptionProgressBanner from "./SubscriptionProgressBanner";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface SelectedPlan {
   id: string;
@@ -35,16 +41,16 @@ export default function TeacherLoginModal({
   isOpen,
   onClose,
   onLoginSuccess,
-  selectedPlan
+  selectedPlan,
 }: TeacherLoginModalProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -55,32 +61,40 @@ export default function TeacherLoginModal({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        is_demo: response.user.is_demo
+        is_demo: response.user.is_demo,
       });
 
       // If there was a selected plan, store it for auto-open after login
       if (selectedPlan) {
-        localStorage.setItem('selectedPlan', JSON.stringify({
-          id: selectedPlan.id,
-          name: selectedPlan.name,
-          price: selectedPlan.monthlyPrice
-        }));
+        localStorage.setItem(
+          "selectedPlan",
+          JSON.stringify({
+            id: selectedPlan.id,
+            name: selectedPlan.name,
+            price: selectedPlan.monthlyPrice,
+          }),
+        );
       }
 
-      toast.success('登入成功！');
+      toast.success("登入成功！");
       onLoginSuccess(response.user);
       onClose();
     } catch (err: unknown) {
-      const error = err as { response?: { status?: number; data?: { detail?: string } }; message?: string };
-      console.error('Login error:', err);
+      const error = err as {
+        response?: { status?: number; data?: { detail?: string } };
+        message?: string;
+      };
+      console.error("Login error:", err);
       if (error.response?.status === 401) {
-        setError('電子郵件或密碼錯誤，請檢查您的登入資訊');
+        setError("電子郵件或密碼錯誤，請檢查您的登入資訊");
       } else if (error.response?.status === 500) {
-        setError('伺服器錯誤，請稍後再試');
-      } else if (error.message?.includes('Network')) {
-        setError('網路連線錯誤，請檢查網路連線');
+        setError("伺服器錯誤，請稍後再試");
+      } else if (error.message?.includes("Network")) {
+        setError("網路連線錯誤，請檢查網路連線");
       } else {
-        setError(`登入失敗：${error.response?.data?.detail || error.message || '請稍後再試'}`);
+        setError(
+          `登入失敗：${error.response?.data?.detail || error.message || "請稍後再試"}`,
+        );
       }
     } finally {
       setIsLoading(false);
@@ -90,13 +104,15 @@ export default function TeacherLoginModal({
   const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
     setEmail(demoEmail);
     setPassword(demoPassword);
-    setError('');
+    setError("");
 
     // Auto-submit with demo credentials
     setTimeout(() => {
-      const form = document.getElementById('login-form') as HTMLFormElement;
+      const form = document.getElementById("login-form") as HTMLFormElement;
       if (form) {
-        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
       }
     }, 100);
   };
@@ -121,12 +137,16 @@ export default function TeacherLoginModal({
                 登入後即可訂閱 {selectedPlan.name} 方案
               </span>
             ) : (
-              '請輸入您的教師帳號資訊'
+              "請輸入您的教師帳號資訊"
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <form id="login-form" onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form
+          id="login-form"
+          onSubmit={handleSubmit}
+          className="space-y-4 mt-4"
+        >
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -168,30 +188,28 @@ export default function TeacherLoginModal({
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 登入中...
               </>
             ) : (
-              '登入'
+              "登入"
             )}
           </Button>
         </form>
 
         <div className="mt-4 pt-4 border-t">
-          <p className="text-sm text-gray-600 mb-3 text-center">試用帳號（密碼: demo123）</p>
+          <p className="text-sm text-gray-600 mb-3 text-center">
+            試用帳號（密碼: demo123）
+          </p>
           <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => handleDemoLogin('demo@duotopia.com', 'demo123')}
+              onClick={() => handleDemoLogin("demo@duotopia.com", "demo123")}
               disabled={isLoading}
             >
               Demo (有訂閱)
@@ -200,7 +218,7 @@ export default function TeacherLoginModal({
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => handleDemoLogin('expired@duotopia.com', 'demo123')}
+              onClick={() => handleDemoLogin("expired@duotopia.com", "demo123")}
               disabled={isLoading}
             >
               Expired (已過期)
@@ -216,7 +234,7 @@ export default function TeacherLoginModal({
               className="text-blue-600 hover:text-blue-700 ml-1"
               onClick={(e) => {
                 e.preventDefault();
-                window.location.href = '/teacher/register';
+                window.location.href = "/teacher/register";
               }}
             >
               立即註冊

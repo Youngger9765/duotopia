@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import TeacherLayout from '@/components/TeacherLayout';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import TeacherLayout from "@/components/TeacherLayout";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Edit2,
@@ -20,9 +20,9 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
-  Search
-} from 'lucide-react';
-import { Student, Assignment } from '@/types';
+  Search,
+} from "lucide-react";
+import { Student, Assignment } from "@/types";
 
 // Extended assignment interface for this specific page
 interface AssignmentDetail extends Assignment {
@@ -33,7 +33,12 @@ interface AssignmentDetail extends Assignment {
   content?: {
     title: string;
     type: string;
-    items?: Array<{text?: string; question?: string; answer?: string; options?: string[]}>;
+    items?: Array<{
+      text?: string;
+      question?: string;
+      answer?: string;
+      options?: string[];
+    }>;
     target_wpm?: number;
     target_accuracy?: number;
     time_limit_seconds?: number;
@@ -41,11 +46,18 @@ interface AssignmentDetail extends Assignment {
 }
 
 interface StudentProgress {
-  student_id: number;  // 🔥 改為 student_id (資料庫主鍵)
-  student_number: string;  // 🔥 student_number 是學號字串（如 "S002"）
+  student_id: number; // 🔥 改為 student_id (資料庫主鍵)
+  student_number: string; // 🔥 student_number 是學號字串（如 "S002"）
   student_name: string;
   // 對應後端 AssignmentStatus
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'RETURNED' | 'RESUBMITTED' | 'unassigned';
+  status:
+    | "NOT_STARTED"
+    | "IN_PROGRESS"
+    | "SUBMITTED"
+    | "GRADED"
+    | "RETURNED"
+    | "RESUBMITTED"
+    | "unassigned";
   submission_date?: string;
   score?: number;
   attempts?: number;
@@ -64,7 +76,10 @@ interface StudentProgress {
 }
 
 export default function TeacherAssignmentDetailPage() {
-  const { classroomId, assignmentId } = useParams<{ classroomId: string; assignmentId: string }>();
+  const { classroomId, assignmentId } = useParams<{
+    classroomId: string;
+    assignmentId: string;
+  }>();
   const navigate = useNavigate();
 
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
@@ -73,10 +88,9 @@ export default function TeacherAssignmentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editingData, setEditingData] = useState<Partial<AssignmentDetail>>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedContent, setExpandedContent] = useState(false);
-
 
   useEffect(() => {
     let isActive = true;
@@ -113,18 +127,35 @@ export default function TeacherAssignmentDetailPage() {
   const fetchAssignmentDetail = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<AssignmentDetail & {assigned_at?: string; assigned_date?: string; created_at?: string; students_progress?: Array<{student_number: number}>}>(`/api/teachers/assignments/${assignmentId}`);
+      const response = await apiClient.get<
+        AssignmentDetail & {
+          assigned_at?: string;
+          assigned_date?: string;
+          created_at?: string;
+          students_progress?: Array<{ student_number: number }>;
+        }
+      >(`/api/teachers/assignments/${assignmentId}`);
 
       // Handle different possible date field names
-      const assignedDate = response.assigned_at || response.assigned_date || response.created_at;
+      const assignedDate =
+        response.assigned_at || response.assigned_date || response.created_at;
 
       // Extract student IDs - only count actually assigned students, not all students
       let studentIds: number[] = [];
-      if (response.students_progress && Array.isArray(response.students_progress)) {
+      if (
+        response.students_progress &&
+        Array.isArray(response.students_progress)
+      ) {
         // Only include students who are actually assigned
         studentIds = response.students_progress
-          .filter((sp: {is_assigned?: boolean; student_number: number}) => sp.is_assigned === true)
-          .map((sp: {is_assigned?: boolean; student_number: number}) => sp.student_number)
+          .filter(
+            (sp: { is_assigned?: boolean; student_number: number }) =>
+              sp.is_assigned === true,
+          )
+          .map(
+            (sp: { is_assigned?: boolean; student_number: number }) =>
+              sp.student_number,
+          )
           .filter((id) => id !== null);
       }
 
@@ -135,38 +166,41 @@ export default function TeacherAssignmentDetailPage() {
         assigned_at: assignedDate,
         students: studentIds,
         student_count: studentIds.length,
-        instructions: (response as AssignmentDetail & {description?: string}).description || response.instructions, // API returns 'description'
+        instructions:
+          (response as AssignmentDetail & { description?: string })
+            .description || response.instructions, // API returns 'description'
       };
-
 
       setAssignment(assignmentData);
       setEditingData({
         title: response.title,
-        instructions: (response as AssignmentDetail & {description?: string}).description || response.instructions,
-        due_date: response.due_date ? response.due_date.split('T')[0] : ''
+        instructions:
+          (response as AssignmentDetail & { description?: string })
+            .description || response.instructions,
+        due_date: response.due_date ? response.due_date.split("T")[0] : "",
       });
     } catch (error) {
-      console.error('Failed to fetch assignment detail:', error);
-      toast.error('無法載入作業詳情');
+      console.error("Failed to fetch assignment detail:", error);
+      toast.error("無法載入作業詳情");
       // Set mock data for development
       const mockAssignment: AssignmentDetail = {
         id: Number(assignmentId),
-        title: '作業標題',
-        instructions: '作業說明',
-        content_type: 'READING_ASSESSMENT',
+        title: "作業標題",
+        instructions: "作業說明",
+        content_type: "READING_ASSESSMENT",
         content_id: 1,
-        due_date: '2025-09-30',
+        due_date: "2025-09-30",
         assigned_at: new Date().toISOString(),
         classroom_id: Number(classroomId),
         students: [1, 2], // Mock 2 assigned students
         student_count: 2,
-        completion_rate: 0
+        completion_rate: 0,
       };
       setAssignment(mockAssignment);
       setEditingData({
         title: mockAssignment.title,
         instructions: mockAssignment.instructions,
-        due_date: mockAssignment.due_date
+        due_date: mockAssignment.due_date,
       });
     } finally {
       setLoading(false);
@@ -175,11 +209,13 @@ export default function TeacherAssignmentDetailPage() {
 
   const fetchStudents = async () => {
     try {
-      const response = await apiClient.get(`/api/teachers/classrooms/${classroomId}/students`);
+      const response = await apiClient.get(
+        `/api/teachers/classrooms/${classroomId}/students`,
+      );
       const studentList = Array.isArray(response) ? response : [];
       setStudents(studentList);
     } catch (error) {
-      console.error('Failed to fetch students:', error);
+      console.error("Failed to fetch students:", error);
     }
   };
 
@@ -197,14 +233,18 @@ export default function TeacherAssignmentDetailPage() {
       // Try to get progress data from API
       let response;
       try {
-        response = await apiClient.get(`/api/teachers/assignments/${assignmentId}/progress`);
+        response = await apiClient.get(
+          `/api/teachers/assignments/${assignmentId}/progress`,
+        );
       } catch {
         // If API doesn't exist, create empty response
         response = [];
       }
 
       // Handle both array and object responses
-      const progressArray = Array.isArray(response) ? response : (response as {data?: unknown[]}).data || [];
+      const progressArray = Array.isArray(response)
+        ? response
+        : (response as { data?: unknown[] }).data || [];
 
       // Progress loaded successfully
 
@@ -214,7 +254,7 @@ export default function TeacherAssignmentDetailPage() {
         const progressMap = new Map();
 
         interface ProgressItem {
-          student_id?: number;     // 🔥 加入 student_id 欄位 (資料庫主鍵)
+          student_id?: number; // 🔥 加入 student_id 欄位 (資料庫主鍵)
           student_number?: number;
           id?: number;
           student_name?: string;
@@ -223,36 +263,35 @@ export default function TeacherAssignmentDetailPage() {
           submission_date?: string;
           submitted_at?: string;
           score?: number;
-          grading?: {score?: number};
+          grading?: { score?: number };
           feedback?: string;
           attempts?: number;
           last_activity?: string;
           updated_at?: string;
-          timestamps?: StudentProgress['timestamps'];
-          is_assigned?: boolean;  // 🔥 加入 is_assigned 欄位
+          timestamps?: StudentProgress["timestamps"];
+          is_assigned?: boolean; // 🔥 加入 is_assigned 欄位
         }
 
         progressArray.forEach((item: ProgressItem) => {
           // 🔥 重要：item.student_id 是 student 的資料庫 ID (整數)
           // item.student_number 是學號 (字串，如 "S002")
-          const studentId = item.student_id;  // 🔥 修復：使用 student_id 而非 id
-          const studentNumber = item.student_number || '';  // 學號是字串
+          const studentId = item.student_id; // 🔥 修復：使用 student_id 而非 id
+          const studentNumber = item.student_number || ""; // 學號是字串
 
           // 🔥 修復：使用 API 回傳的真實 is_assigned 值
           const isAssigned = item.is_assigned === true;
 
-
           progressMap.set(studentId, {
-            student_id: studentId,  // 🔥 資料庫 ID
-            student_number: studentNumber,  // 🔥 學號字串
-            student_name: item.student_name || item.name || '未知學生',
-            status: item.status || (isAssigned ? 'NOT_STARTED' : 'unassigned'),
+            student_id: studentId, // 🔥 資料庫 ID
+            student_number: studentNumber, // 🔥 學號字串
+            student_name: item.student_name || item.name || "未知學生",
+            status: item.status || (isAssigned ? "NOT_STARTED" : "unassigned"),
             submission_date: item.submission_date || item.submitted_at,
             score: item.score,
             attempts: item.attempts || 0,
             last_activity: item.last_activity || item.updated_at,
-            timestamps: item.timestamps,  // 🔥 加入 timestamps
-            is_assigned: isAssigned  // 🔥 使用真實值而不是強制設為 true
+            timestamps: item.timestamps, // 🔥 加入 timestamps
+            is_assigned: isAssigned, // 🔥 使用真實值而不是強制設為 true
           });
         });
 
@@ -260,22 +299,22 @@ export default function TeacherAssignmentDetailPage() {
 
         // Check if students are loaded - only show data we have from API
         if (students && students.length > 0) {
-          const allProgress = students.map(student => {
+          const allProgress = students.map((student) => {
             if (progressMap.has(student.id)) {
               const progress = progressMap.get(student.id);
-              return progress!;  // 🔥 確保不是 undefined
+              return progress!; // 🔥 確保不是 undefined
             } else {
               // If no progress data for this student, they are unassigned
               return {
-                student_id: student.id,  // 🔥 資料庫 ID
-                student_number: student.student_number || '',  // 🔥 學號字串
+                student_id: student.id, // 🔥 資料庫 ID
+                student_number: student.student_number || "", // 🔥 學號字串
                 student_name: student.name,
-                status: 'unassigned' as const,
+                status: "unassigned" as const,
                 submission_date: undefined,
                 score: undefined,
                 attempts: 0,
                 last_activity: undefined,
-                is_assigned: false
+                is_assigned: false,
               };
             }
           });
@@ -291,7 +330,7 @@ export default function TeacherAssignmentDetailPage() {
         setStudentProgress([]);
       }
     } catch (error) {
-      console.error('Failed to fetch student progress:', error);
+      console.error("Failed to fetch student progress:", error);
       // API failed - show empty, don't create fake data
       setStudentProgress([]);
     } finally {
@@ -299,10 +338,9 @@ export default function TeacherAssignmentDetailPage() {
     }
   };
 
-
   const handleSave = async () => {
     if (!editingData.title) {
-      toast.error('請輸入作業標題');
+      toast.error("請輸入作業標題");
       return;
     }
 
@@ -310,12 +348,17 @@ export default function TeacherAssignmentDetailPage() {
       // Use PATCH for partial update
       const updateData = {
         title: editingData.title,
-        instructions: editingData.instructions || '',
-        due_date: editingData.due_date ? `${editingData.due_date}T00:00:00` : undefined
+        instructions: editingData.instructions || "",
+        due_date: editingData.due_date
+          ? `${editingData.due_date}T00:00:00`
+          : undefined,
       };
 
-      await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, updateData);
-      toast.success('作業資訊已更新');
+      await apiClient.patch(
+        `/api/teachers/assignments/${assignmentId}`,
+        updateData,
+      );
+      toast.success("作業資訊已更新");
       setIsEditing(false);
 
       // Update local state immediately
@@ -324,15 +367,15 @@ export default function TeacherAssignmentDetailPage() {
           ...assignment,
           title: updateData.title,
           instructions: updateData.instructions,
-          due_date: updateData.due_date
+          due_date: updateData.due_date,
         });
       }
 
       // Refresh from server
       fetchAssignmentDetail();
     } catch (error) {
-      console.error('Failed to update assignment:', error);
-      toast.error('更新失敗，請稍後再試');
+      console.error("Failed to update assignment:", error);
+      toast.error("更新失敗，請稍後再試");
     }
   };
 
@@ -341,7 +384,7 @@ export default function TeacherAssignmentDetailPage() {
     setEditingData({
       title: assignment?.title,
       instructions: assignment?.instructions,
-      due_date: assignment?.due_date ? assignment.due_date.split('T')[0] : ''
+      due_date: assignment?.due_date ? assignment.due_date.split("T")[0] : "",
     });
   };
 
@@ -349,13 +392,13 @@ export default function TeacherAssignmentDetailPage() {
     try {
       // Get current assigned students from studentProgress
       const currentAssignedIds = studentProgress
-        .filter(p => p.is_assigned === true)
-        .map(p => p.student_id);
+        .filter((p) => p.is_assigned === true)
+        .map((p) => p.student_id);
       const updatedStudentIds = [...currentAssignedIds, studentId];
 
       // Update assignment with new student list
       await apiClient.patch(`/api/teachers/assignments/${assignmentId}`, {
-        student_ids: updatedStudentIds  // 🔥 修復：後端期望 student_ids 而非 students
+        student_ids: updatedStudentIds, // 🔥 修復：後端期望 student_ids 而非 students
       });
 
       // Update local state
@@ -363,55 +406,72 @@ export default function TeacherAssignmentDetailPage() {
         setAssignment({
           ...assignment,
           students: updatedStudentIds,
-          student_count: updatedStudentIds.length
+          student_count: updatedStudentIds.length,
         });
       }
 
       // Update student progress
-      setStudentProgress(prev => prev.map(p =>
-        p.student_id === studentId  // 🔥 使用 student_id 比較，不是 student_number
-          ? { ...p, status: 'NOT_STARTED' as const, is_assigned: true }
-          : p
-      ));
+      setStudentProgress((prev) =>
+        prev.map((p) =>
+          p.student_id === studentId // 🔥 使用 student_id 比較，不是 student_number
+            ? { ...p, status: "NOT_STARTED" as const, is_assigned: true }
+            : p,
+        ),
+      );
 
       // Refresh progress data to ensure sync
       await fetchStudentProgress();
 
-      toast.success('已成功指派給學生');
+      toast.success("已成功指派給學生");
     } catch (error) {
-      console.error('Failed to assign student:', error);
-      toast.error('指派失敗，請稍後再試');
+      console.error("Failed to assign student:", error);
+      toast.error("指派失敗，請稍後再試");
     }
   };
 
-  const handleUnassignStudent = async (studentId: number, studentName: string, status: string) => {
+  const handleUnassignStudent = async (
+    studentId: number,
+    studentName: string,
+    status: string,
+  ) => {
     // 🔥 重要：studentId 現在是資料庫的整數 ID，不是學號字串
     try {
       // Check if student has started
-      if (status === 'in_progress') {
+      if (status === "in_progress") {
         const confirmed = window.confirm(
           `學生「${studentName}」已開始作業，確定要取消指派嗎？\n\n` +
-          '注意：學生的進度將會被保留，但無法繼續作業。'
+            "注意：學生的進度將會被保留，但無法繼續作業。",
         );
         if (!confirmed) return;
-      } else if (status === 'submitted' || status === 'completed' || status === 'graded') {
+      } else if (
+        status === "submitted" ||
+        status === "completed" ||
+        status === "graded"
+      ) {
         toast.error(`學生「${studentName}」已完成作業，無法取消指派`);
         return;
       }
 
       // Call unassign API
-      const response = await apiClient.post(`/api/teachers/assignments/${assignmentId}/unassign`, {
-        student_ids: [studentId],
-        force: status === 'in_progress'
-      });
+      const response = await apiClient.post(
+        `/api/teachers/assignments/${assignmentId}/unassign`,
+        {
+          student_ids: [studentId],
+          force: status === "in_progress",
+        },
+      );
 
       interface UnassignResponse {
-        protected?: Array<{reason: string}>;
+        protected?: Array<{ reason: string }>;
       }
 
-      if (response && typeof response === 'object' && 'protected' in response) {
+      if (response && typeof response === "object" && "protected" in response) {
         const typedResponse = response as UnassignResponse;
-        if (typedResponse.protected && Array.isArray(typedResponse.protected) && typedResponse.protected.length > 0) {
+        if (
+          typedResponse.protected &&
+          Array.isArray(typedResponse.protected) &&
+          typedResponse.protected.length > 0
+        ) {
           toast.warning(typedResponse.protected[0].reason);
           return;
         }
@@ -419,70 +479,79 @@ export default function TeacherAssignmentDetailPage() {
 
       // Update local state - get current assigned students from studentProgress
       const currentAssignedIds = studentProgress
-        .filter(p => p.is_assigned === true)
-        .map(p => p.student_id);
-      const updatedStudentIds = currentAssignedIds.filter((id: number) => id !== studentId);
+        .filter((p) => p.is_assigned === true)
+        .map((p) => p.student_id);
+      const updatedStudentIds = currentAssignedIds.filter(
+        (id: number) => id !== studentId,
+      );
 
       if (assignment) {
         setAssignment({
           ...assignment,
           students: updatedStudentIds,
-          student_count: updatedStudentIds.length
+          student_count: updatedStudentIds.length,
         });
       }
 
       // Update student progress
-      setStudentProgress(prev => prev.map(p =>
-        p.student_id === studentId  // 🔥 使用 student_id 比較，不是 student_number
-          ? { ...p, status: 'unassigned' as const, is_assigned: false }
-          : p
-      ));
+      setStudentProgress((prev) =>
+        prev.map((p) =>
+          p.student_id === studentId // 🔥 使用 student_id 比較，不是 student_number
+            ? { ...p, status: "unassigned" as const, is_assigned: false }
+            : p,
+        ),
+      );
 
       // Refresh progress data to ensure sync
       await fetchStudentProgress();
 
       toast.success(`已取消指派學生「${studentName}」`);
     } catch (error) {
-      console.error('Failed to unassign student:', error);
-      toast.error('取消指派失敗');
+      console.error("Failed to unassign student:", error);
+      toast.error("取消指派失敗");
     }
   };
 
-
   const getContentTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      'READING_ASSESSMENT': '朗讀評測',
-      'SPEAKING_PRACTICE': '口說練習',
-      'SPEAKING_SCENARIO': '情境對話',
-      'LISTENING_CLOZE': '聽力填空',
-      'SENTENCE_MAKING': '造句練習',
-      'SPEAKING_QUIZ': '口說測驗',
+      READING_ASSESSMENT: "朗讀評測",
+      SPEAKING_PRACTICE: "口說練習",
+      SPEAKING_SCENARIO: "情境對話",
+      LISTENING_CLOZE: "聽力填空",
+      SENTENCE_MAKING: "造句練習",
+      SPEAKING_QUIZ: "口說測驗",
     };
     return labels[type] || type;
   };
 
-
   // Calculate statistics (only for assigned students)
-  const assignedProgress = studentProgress.filter(p => p.status !== 'unassigned');
+  const assignedProgress = studentProgress.filter(
+    (p) => p.status !== "unassigned",
+  );
   const stats = {
     total: assignedProgress.length,
-    notStarted: assignedProgress.filter(p => p.status === 'NOT_STARTED').length,
-    inProgress: assignedProgress.filter(p => p.status === 'IN_PROGRESS').length,
-    submitted: assignedProgress.filter(p => p.status === 'SUBMITTED').length,
-    returned: assignedProgress.filter(p => p.status === 'RETURNED').length,
-    resubmitted: assignedProgress.filter(p => p.status === 'RESUBMITTED').length,
-    graded: assignedProgress.filter(p => p.status === 'GRADED').length,
-    unassigned: studentProgress.filter(p => p.status === 'unassigned').length
+    notStarted: assignedProgress.filter((p) => p.status === "NOT_STARTED")
+      .length,
+    inProgress: assignedProgress.filter((p) => p.status === "IN_PROGRESS")
+      .length,
+    submitted: assignedProgress.filter((p) => p.status === "SUBMITTED").length,
+    returned: assignedProgress.filter((p) => p.status === "RETURNED").length,
+    resubmitted: assignedProgress.filter((p) => p.status === "RESUBMITTED")
+      .length,
+    graded: assignedProgress.filter((p) => p.status === "GRADED").length,
+    unassigned: studentProgress.filter((p) => p.status === "unassigned").length,
   };
 
-  const completionRate = stats.total > 0
-    ? Math.round((stats.graded / stats.total) * 100)
-    : 0;
+  const completionRate =
+    stats.total > 0 ? Math.round((stats.graded / stats.total) * 100) : 0;
 
   // Filter students
-  const filteredProgress = studentProgress.filter(progress => {
-    const matchesSearch = progress.student_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || progress.status === statusFilter;
+  const filteredProgress = studentProgress.filter((progress) => {
+    const matchesSearch = progress.student_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || progress.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -506,7 +575,9 @@ export default function TeacherAssignmentDetailPage() {
           <p className="text-gray-500">找不到作業資料</p>
           <Button
             className="mt-4"
-            onClick={() => navigate(`/teacher/classroom/${classroomId}?tab=assignments`)}
+            onClick={() =>
+              navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
+            }
           >
             返回作業列表
           </Button>
@@ -524,7 +595,9 @@ export default function TeacherAssignmentDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate(`/teacher/classroom/${classroomId}?tab=assignments`)}
+              onClick={() =>
+                navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
+              }
               className="h-12 min-h-12 w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -533,13 +606,17 @@ export default function TeacherAssignmentDetailPage() {
             <div className="flex-1">
               {isEditing ? (
                 <Input
-                  value={editingData.title || ''}
-                  onChange={(e) => setEditingData({ ...editingData, title: e.target.value })}
+                  value={editingData.title || ""}
+                  onChange={(e) =>
+                    setEditingData({ ...editingData, title: e.target.value })
+                  }
                   className="text-xl sm:text-2xl font-bold h-12"
                   placeholder="作業標題"
                 />
               ) : (
-                <h1 className="text-2xl sm:text-3xl font-bold dark:text-gray-100">{assignment.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold dark:text-gray-100">
+                  {assignment.title}
+                </h1>
               )}
             </div>
           </div>
@@ -548,7 +625,11 @@ export default function TeacherAssignmentDetailPage() {
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             {/* 批改作業按鈕 */}
             <Button
-              onClick={() => navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`)}
+              onClick={() =>
+                navigate(
+                  `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                )
+              }
               className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 h-12 min-h-12 w-full sm:w-auto"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -556,17 +637,28 @@ export default function TeacherAssignmentDetailPage() {
             </Button>
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={handleCancel} className="h-12 min-h-12 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="h-12 min-h-12 w-full sm:w-auto"
+                >
                   <X className="h-4 w-4 mr-2" />
                   取消
                 </Button>
-                <Button onClick={handleSave} className="h-12 min-h-12 w-full sm:w-auto">
+                <Button
+                  onClick={handleSave}
+                  className="h-12 min-h-12 w-full sm:w-auto"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   儲存
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => setIsEditing(true)} className="h-12 min-h-12 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                className="h-12 min-h-12 w-full sm:w-auto"
+              >
                 <Edit2 className="h-4 w-4 mr-2" />
                 編輯
               </Button>
@@ -578,46 +670,75 @@ export default function TeacherAssignmentDetailPage() {
         <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">內容類型</label>
-              <Badge variant="outline" className="text-base dark:border-gray-600 dark:text-gray-200">
-                {assignment.content_type ? getContentTypeLabel(assignment.content_type) : '未設定'}
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
+                內容類型
+              </label>
+              <Badge
+                variant="outline"
+                className="text-base dark:border-gray-600 dark:text-gray-200"
+              >
+                {assignment.content_type
+                  ? getContentTypeLabel(assignment.content_type)
+                  : "未設定"}
               </Badge>
             </div>
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">指派日期</label>
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
+                指派日期
+              </label>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <span className="dark:text-gray-200">
                   {assignment.assigned_at || assignment.created_at
-                    ? new Date(assignment.assigned_at || assignment.created_at || '').toLocaleDateString('zh-TW')
-                    : '未設定'}
+                    ? new Date(
+                        assignment.assigned_at || assignment.created_at || "",
+                      ).toLocaleDateString("zh-TW")
+                    : "未設定"}
                 </span>
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">截止日期</label>
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
+                截止日期
+              </label>
               {isEditing ? (
                 <Input
                   type="date"
-                  value={editingData.due_date ? editingData.due_date.split('T')[0] : ''}
-                  onChange={(e) => setEditingData({ ...editingData, due_date: e.target.value })}
+                  value={
+                    editingData.due_date
+                      ? editingData.due_date.split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setEditingData({ ...editingData, due_date: e.target.value })
+                  }
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 />
               ) : (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <span className="dark:text-gray-200">{assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('zh-TW') : '未設定'}</span>
+                  <span className="dark:text-gray-200">
+                    {assignment.due_date
+                      ? new Date(assignment.due_date).toLocaleDateString(
+                          "zh-TW",
+                        )
+                      : "未設定"}
+                  </span>
                 </div>
               )}
             </div>
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">指派學生數</label>
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
+                指派學生數
+              </label>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <span className="dark:text-gray-200">
                   {(() => {
                     // Only use progress data - count students with is_assigned = true
-                    const assignedCount = studentProgress.filter(p => p.is_assigned === true).length;
+                    const assignedCount = studentProgress.filter(
+                      (p) => p.is_assigned === true,
+                    ).length;
 
                     // Progress stats updated
 
@@ -630,17 +751,26 @@ export default function TeacherAssignmentDetailPage() {
 
           {/* Instructions */}
           <div className="mt-6">
-            <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">作業說明</label>
+            <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
+              作業說明
+            </label>
             {isEditing ? (
               <Textarea
-                value={editingData.instructions || ''}
-                onChange={(e) => setEditingData({ ...editingData, instructions: e.target.value })}
+                value={editingData.instructions || ""}
+                onChange={(e) =>
+                  setEditingData({
+                    ...editingData,
+                    instructions: e.target.value,
+                  })
+                }
                 placeholder="輸入作業說明..."
                 rows={3}
                 className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             ) : (
-              <p className="text-gray-700 dark:text-gray-200">{assignment.instructions || '無說明'}</p>
+              <p className="text-gray-700 dark:text-gray-200">
+                {assignment.instructions || "無說明"}
+              </p>
             )}
           </div>
         </Card>
@@ -654,33 +784,56 @@ export default function TeacherAssignmentDetailPage() {
             >
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-semibold dark:text-gray-100">內容詳情</h3>
+                <h3 className="text-lg font-semibold dark:text-gray-100">
+                  內容詳情
+                </h3>
               </div>
-              {expandedContent ? <ChevronUp className="dark:text-gray-300" /> : <ChevronDown className="dark:text-gray-300" />}
+              {expandedContent ? (
+                <ChevronUp className="dark:text-gray-300" />
+              ) : (
+                <ChevronDown className="dark:text-gray-300" />
+              )}
             </div>
 
             {expandedContent && (
               <div className="mt-4 space-y-3">
                 <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">內容標題：</span>
-                  <span className="font-medium ml-2 dark:text-gray-100">{assignment.content.title}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    內容標題：
+                  </span>
+                  <span className="font-medium ml-2 dark:text-gray-100">
+                    {assignment.content.title}
+                  </span>
                 </div>
-                {assignment.content.items && assignment.content.items.length > 0 && (
-                  <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">項目數量：</span>
-                    <span className="font-medium ml-2 dark:text-gray-100">{assignment.content.items.length} 個項目</span>
-                  </div>
-                )}
+                {assignment.content.items &&
+                  assignment.content.items.length > 0 && (
+                    <div>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        項目數量：
+                      </span>
+                      <span className="font-medium ml-2 dark:text-gray-100">
+                        {assignment.content.items.length} 個項目
+                      </span>
+                    </div>
+                  )}
                 {assignment.content.target_wpm && (
                   <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">目標速度：</span>
-                    <span className="font-medium ml-2 dark:text-gray-100">{assignment.content.target_wpm} WPM</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      目標速度：
+                    </span>
+                    <span className="font-medium ml-2 dark:text-gray-100">
+                      {assignment.content.target_wpm} WPM
+                    </span>
                   </div>
                 )}
                 {assignment.content.target_accuracy && (
                   <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">目標準確度：</span>
-                    <span className="font-medium ml-2 dark:text-gray-100">{Math.round(assignment.content.target_accuracy * 100)}%</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      目標準確度：
+                    </span>
+                    <span className="font-medium ml-2 dark:text-gray-100">
+                      {Math.round(assignment.content.target_accuracy * 100)}%
+                    </span>
                   </div>
                 )}
               </div>
@@ -690,13 +843,19 @@ export default function TeacherAssignmentDetailPage() {
 
         {/* Progress Overview */}
         <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
-          <h3 className="text-base sm:text-lg font-semibold mb-4 dark:text-gray-100">完成進度</h3>
+          <h3 className="text-base sm:text-lg font-semibold mb-4 dark:text-gray-100">
+            完成進度
+          </h3>
 
           {/* Completion Rate */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300">整體完成率</span>
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{completionRate}%</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                整體完成率
+              </span>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {completionRate}%
+              </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
               <div
@@ -710,7 +869,10 @@ export default function TeacherAssignmentDetailPage() {
           <div className="relative overflow-x-auto pb-4">
             <div className="min-w-[800px] relative">
               {/* Progress Line */}
-              <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" style={{ zIndex: 0 }}>
+              <div
+                className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"
+                style={{ zIndex: 0 }}
+              >
                 <div
                   className="h-full bg-gradient-to-r from-gray-400 via-blue-500 to-green-500"
                   style={{ width: `${completionRate}%` }}
@@ -719,132 +881,178 @@ export default function TeacherAssignmentDetailPage() {
 
               {/* Status Cards - Horizontal Progress */}
               <div className="relative flex justify-between items-start">
-              {/* 已指派 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className="w-16 h-16 rounded-full bg-gray-100 border-4 border-white shadow-sm flex items-center justify-center relative z-10">
-                  <div className="text-xl font-bold text-gray-600">
-                    {stats.total}
+                {/* 已指派 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 border-4 border-white shadow-sm flex items-center justify-center relative z-10">
+                    <div className="text-xl font-bold text-gray-600">
+                      {stats.total}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    已指派
+                  </div>
+                  <div className="text-xs text-gray-400">{stats.total} 人</div>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+
+                {/* 未開始 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.notStarted > 0 ? "bg-gray-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.notStarted > 0 ? "text-gray-500" : "text-gray-300"}`}
+                    >
+                      {stats.notStarted}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    未開始
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">已指派</div>
-                <div className="text-xs text-gray-400">{stats.total} 人</div>
-              </div>
 
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
 
-              {/* 未開始 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.notStarted > 0 ? 'bg-gray-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.notStarted > 0 ? 'text-gray-500' : 'text-gray-300'}`}>
-                    {stats.notStarted}
+                {/* 進行中 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.inProgress > 0 ? "bg-blue-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.inProgress > 0 ? "text-blue-600" : "text-gray-300"}`}
+                    >
+                      {stats.inProgress}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    進行中
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">未開始</div>
-              </div>
 
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
 
-              {/* 進行中 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.inProgress > 0 ? 'bg-blue-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.inProgress > 0 ? 'text-blue-600' : 'text-gray-300'}`}>
-                    {stats.inProgress}
+                {/* 已提交 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
+                    >
+                      {stats.submitted}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    已提交
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">進行中</div>
-              </div>
 
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
 
-              {/* 已提交 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? 'bg-orange-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.submitted > 0 ? 'text-orange-600' : 'text-gray-300'}`}>
-                    {stats.submitted}
+                {/* 待訂正 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
+                    >
+                      {stats.returned}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    待訂正
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">已提交</div>
-              </div>
 
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
 
-              {/* 待訂正 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.returned > 0 ? 'bg-red-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.returned > 0 ? 'text-red-600' : 'text-gray-300'}`}>
-                    {stats.returned}
+                {/* 重新提交 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
+                    >
+                      {stats.resubmitted}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    重新提交
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">待訂正</div>
-              </div>
 
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center pt-6">
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
 
-              {/* 重新提交 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? 'bg-purple-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.resubmitted > 0 ? 'text-purple-600' : 'text-gray-300'}`}>
-                    {stats.resubmitted}
+                {/* 已完成 */}
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-16 h-16 rounded-full ${stats.graded > 0 ? "bg-green-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                  >
+                    <div
+                      className={`text-xl font-bold ${stats.graded > 0 ? "text-green-600" : "text-gray-300"}`}
+                    >
+                      {stats.graded}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-2 font-medium">
+                    已完成
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">重新提交</div>
-              </div>
-
-              {/* Arrow */}
-              <div className="flex-shrink-0 flex items-center pt-6">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
-
-              {/* 已完成 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-16 h-16 rounded-full ${stats.graded > 0 ? 'bg-green-100' : 'bg-gray-50'} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}>
-                  <div className={`text-xl font-bold ${stats.graded > 0 ? 'text-green-600' : 'text-gray-300'}`}>
-                    {stats.graded}
-                  </div>
-                </div>
-                <div className="text-xs text-gray-600 mt-2 font-medium">已完成</div>
               </div>
             </div>
           </div>
-        </div>
         </Card>
 
         {/* Student List */}
         <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="space-y-4 mb-4">
             <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-2 dark:text-gray-100">學生列表</h3>
+              <h3 className="text-base sm:text-lg font-semibold mb-2 dark:text-gray-100">
+                學生列表
+              </h3>
               {/* Legend */}
               <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-600" />
-                  <span className="text-gray-600 dark:text-gray-400">未達到</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    未達到
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="relative w-3 h-3">
                     <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-500" />
                     <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 animate-ping" />
                   </div>
-                  <span className="text-gray-600 dark:text-gray-400">當前狀態</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    當前狀態
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-gray-600 dark:text-gray-400">已完成</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    已完成
+                  </span>
                 </div>
               </div>
             </div>
@@ -882,19 +1090,60 @@ export default function TeacherAssignmentDetailPage() {
             {filteredProgress.length > 0 ? (
               filteredProgress.map((progress) => {
                 const isAssigned = progress.is_assigned === true;
-                const currentStatus = progress.status?.toUpperCase() || 'NOT_STARTED';
+                const currentStatus =
+                  progress.status?.toUpperCase() || "NOT_STARTED";
 
                 // Get status info for display
                 const getStatusInfo = () => {
-                  if (!isAssigned) return { label: '未指派', color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' };
+                  if (!isAssigned)
+                    return {
+                      label: "未指派",
+                      color:
+                        "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400",
+                    };
                   switch (currentStatus) {
-                    case 'NOT_STARTED': return { label: '未開始', color: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' };
-                    case 'IN_PROGRESS': return { label: '進行中', color: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' };
-                    case 'SUBMITTED': return { label: '已提交', color: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300' };
-                    case 'RETURNED': return { label: '待訂正', color: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' };
-                    case 'RESUBMITTED': return { label: '重新提交', color: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' };
-                    case 'GRADED': return { label: '已完成', color: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' };
-                    default: return { label: currentStatus, color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' };
+                    case "NOT_STARTED":
+                      return {
+                        label: "未開始",
+                        color:
+                          "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
+                      };
+                    case "IN_PROGRESS":
+                      return {
+                        label: "進行中",
+                        color:
+                          "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+                      };
+                    case "SUBMITTED":
+                      return {
+                        label: "已提交",
+                        color:
+                          "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300",
+                      };
+                    case "RETURNED":
+                      return {
+                        label: "待訂正",
+                        color:
+                          "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
+                      };
+                    case "RESUBMITTED":
+                      return {
+                        label: "重新提交",
+                        color:
+                          "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
+                      };
+                    case "GRADED":
+                      return {
+                        label: "已完成",
+                        color:
+                          "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+                      };
+                    default:
+                      return {
+                        label: currentStatus,
+                        color:
+                          "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400",
+                      };
                   }
                 };
 
@@ -903,23 +1152,33 @@ export default function TeacherAssignmentDetailPage() {
 
                 return (
                   <div
-                    key={progress.student_id || `student-${progress.student_name}`}
+                    key={
+                      progress.student_id || `student-${progress.student_name}`
+                    }
                     className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-3"
                   >
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
-                      <div className={`w-10 h-10 rounded-full ${isAssigned ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'} flex items-center justify-center flex-shrink-0`}>
-                        <span className={`text-sm font-medium ${isAssigned ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      <div
+                        className={`w-10 h-10 rounded-full ${isAssigned ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700"} flex items-center justify-center flex-shrink-0`}
+                      >
+                        <span
+                          className={`text-sm font-medium ${isAssigned ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
+                        >
                           {progress.student_name.charAt(0)}
                         </span>
                       </div>
 
                       {/* Name & Status */}
                       <div className="flex-1 min-w-0">
-                        <div className={`font-medium text-sm truncate ${!isAssigned ? 'text-gray-400 dark:text-gray-500' : 'dark:text-gray-100'}`}>
+                        <div
+                          className={`font-medium text-sm truncate ${!isAssigned ? "text-gray-400 dark:text-gray-500" : "dark:text-gray-100"}`}
+                        >
                           {progress.student_name}
                         </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}
+                        >
                           {statusInfo.label}
                         </span>
                       </div>
@@ -928,20 +1187,34 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex-shrink-0">
                         {isAssigned ? (
                           <>
-                            {(upperStatus === 'SUBMITTED' || upperStatus === 'RESUBMITTED' || upperStatus === 'GRADED' || upperStatus === 'RETURNED') && (
+                            {(upperStatus === "SUBMITTED" ||
+                              upperStatus === "RESUBMITTED" ||
+                              upperStatus === "GRADED" ||
+                              upperStatus === "RETURNED") && (
                               <Button
                                 variant="outline"
                                 className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                                onClick={() => navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`)}
+                                onClick={() =>
+                                  navigate(
+                                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                  )
+                                }
                               >
                                 批改
                               </Button>
                             )}
-                            {(upperStatus === 'NOT_STARTED' || upperStatus === 'IN_PROGRESS') && (
+                            {(upperStatus === "NOT_STARTED" ||
+                              upperStatus === "IN_PROGRESS") && (
                               <Button
                                 variant="outline"
                                 className="text-red-600 border-red-600 hover:bg-red-50 h-12 min-h-12 px-3 text-sm dark:border-red-500 dark:text-red-400 dark:hover:bg-red-900/20"
-                                onClick={() => handleUnassignStudent(progress.student_id, progress.student_name, progress.status)}
+                                onClick={() =>
+                                  handleUnassignStudent(
+                                    progress.student_id,
+                                    progress.student_name,
+                                    progress.status,
+                                  )
+                                }
                               >
                                 取消指派
                               </Button>
@@ -951,7 +1224,9 @@ export default function TeacherAssignmentDetailPage() {
                           <Button
                             variant="outline"
                             className="text-green-600 border-green-600 hover:bg-green-50 h-12 min-h-12 px-3 text-sm dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
-                            onClick={() => handleAssignStudent(progress.student_id)}
+                            onClick={() =>
+                              handleAssignStudent(progress.student_id)
+                            }
                           >
                             指派
                           </Button>
@@ -973,16 +1248,36 @@ export default function TeacherAssignmentDetailPage() {
             <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[150px]">學生姓名</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">已指派</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">未開始</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">進行中</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">已提交</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">待訂正</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">重新提交</th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">已完成</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">分數</th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[120px]">操作</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[150px]">
+                    學生姓名
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    已指派
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    未開始
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    進行中
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    已提交
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    待訂正
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    重新提交
+                  </th>
+                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    已完成
+                  </th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                    分數
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[120px]">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -990,18 +1285,22 @@ export default function TeacherAssignmentDetailPage() {
                   filteredProgress.map((progress) => {
                     // 簡化邏輯：直接使用 is_assigned 欄位
                     const isAssigned = progress.is_assigned === true;
-                    const currentStatus = progress.status?.toUpperCase() || 'NOT_STARTED';
+                    const currentStatus =
+                      progress.status?.toUpperCase() || "NOT_STARTED";
 
                     // Status indicator function
                     const getStatusIndicator = (statusName: string) => {
                       const timestamps = progress.timestamps;
 
                       // 🔥 重新設計：根據當前狀態和時間戳決定每個圓點狀態
-                      let isActive = false;  // 當前狀態
-                      let isPassed = false;   // 已經過的狀態
+                      let isActive = false; // 當前狀態
+                      let isPassed = false; // 已經過的狀態
 
                       // Debug for specific students
-                      if (progress.student_name === '蔡雅芳' || progress.student_name === '謝志偉') {
+                      if (
+                        progress.student_name === "蔡雅芳" ||
+                        progress.student_name === "謝志偉"
+                      ) {
                         // Debug: student status check
                         // currentStatus,
                         // timestamps,
@@ -1011,42 +1310,61 @@ export default function TeacherAssignmentDetailPage() {
 
                       // 根據 currentStatus 和時間戳判斷
                       switch (statusName) {
-                        case 'ASSIGNED':
+                        case "ASSIGNED":
                           // 已指派：只有已指派的學生才會顯示這個狀態
                           // Rendered assignment indicator
                           isPassed = isAssigned;
-                          isActive = isAssigned && currentStatus === 'NOT_STARTED';
+                          isActive =
+                            isAssigned && currentStatus === "NOT_STARTED";
                           break;
 
-                        case 'NOT_STARTED':
+                        case "NOT_STARTED":
                           // 未開始
-                          isActive = currentStatus === 'NOT_STARTED';
-                          isPassed = ['IN_PROGRESS', 'SUBMITTED', 'GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          isActive = currentStatus === "NOT_STARTED";
+                          isPassed = [
+                            "IN_PROGRESS",
+                            "SUBMITTED",
+                            "GRADED",
+                            "RETURNED",
+                            "RESUBMITTED",
+                          ].includes(currentStatus);
                           break;
 
-                        case 'IN_PROGRESS':
+                        case "IN_PROGRESS":
                           // 進行中
-                          isActive = currentStatus === 'IN_PROGRESS';
-                          isPassed = ['SUBMITTED', 'GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          isActive = currentStatus === "IN_PROGRESS";
+                          isPassed = [
+                            "SUBMITTED",
+                            "GRADED",
+                            "RETURNED",
+                            "RESUBMITTED",
+                          ].includes(currentStatus);
                           break;
 
-                        case 'SUBMITTED':
+                        case "SUBMITTED":
                           // 已提交
-                          isActive = currentStatus === 'SUBMITTED';
-                          isPassed = ['GRADED', 'RETURNED', 'RESUBMITTED'].includes(currentStatus);
+                          isActive = currentStatus === "SUBMITTED";
+                          isPassed = [
+                            "GRADED",
+                            "RETURNED",
+                            "RESUBMITTED",
+                          ].includes(currentStatus);
                           break;
 
-                        case 'RETURNED':
+                        case "RETURNED":
                           // 🔥 待訂正：根據當前狀態和時間戳判斷
-                          if (currentStatus === 'RETURNED') {
+                          if (currentStatus === "RETURNED") {
                             // 當前狀態就是 RETURNED
                             isActive = true;
                             isPassed = false;
-                          } else if (currentStatus === 'RESUBMITTED') {
+                          } else if (currentStatus === "RESUBMITTED") {
                             // 如果當前是 RESUBMITTED，表示已經過 RETURNED
                             isActive = false;
                             isPassed = true;
-                          } else if (currentStatus === 'GRADED' && timestamps?.returned_at) {
+                          } else if (
+                            currentStatus === "GRADED" &&
+                            timestamps?.returned_at
+                          ) {
                             // 如果已完成且有 returned_at，表示經過訂正流程
                             isActive = false;
                             isPassed = true;
@@ -1056,15 +1374,25 @@ export default function TeacherAssignmentDetailPage() {
                           }
                           break;
 
-                        case 'RESUBMITTED':
+                        case "RESUBMITTED":
                           // 🔥 重新提交：當前狀態是 RESUBMITTED
-                          if (currentStatus === 'RESUBMITTED') {
+                          if (currentStatus === "RESUBMITTED") {
                             isActive = true;
                             isPassed = false;
-                          } else if (timestamps?.resubmitted_at && timestamps?.returned_at) {
-                            const returnedTime = new Date(timestamps.returned_at).getTime();
-                            const resubmittedTime = new Date(timestamps.resubmitted_at).getTime();
-                            if (resubmittedTime > returnedTime && currentStatus === 'GRADED') {
+                          } else if (
+                            timestamps?.resubmitted_at &&
+                            timestamps?.returned_at
+                          ) {
+                            const returnedTime = new Date(
+                              timestamps.returned_at,
+                            ).getTime();
+                            const resubmittedTime = new Date(
+                              timestamps.resubmitted_at,
+                            ).getTime();
+                            if (
+                              resubmittedTime > returnedTime &&
+                              currentStatus === "GRADED"
+                            ) {
                               // 已經批改完成，RESUBMITTED 是過去式
                               isActive = false;
                               isPassed = true;
@@ -1078,9 +1406,9 @@ export default function TeacherAssignmentDetailPage() {
                           }
                           break;
 
-                        case 'GRADED':
+                        case "GRADED":
                           // 已完成
-                          isActive = currentStatus === 'GRADED';
+                          isActive = currentStatus === "GRADED";
                           isPassed = false;
                           break;
 
@@ -1091,21 +1419,27 @@ export default function TeacherAssignmentDetailPage() {
 
                       let actuallyPassed = isPassed;
 
-                      if (!isAssigned && statusName !== 'ASSIGNED') {
-                        return <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />;
+                      if (!isAssigned && statusName !== "ASSIGNED") {
+                        return (
+                          <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />
+                        );
                       }
 
-                      if (statusName === 'ASSIGNED') {
-                        return isAssigned ?
-                          <div className="w-3 h-3 rounded-full bg-green-500 mx-auto" /> :
-                          <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />;
+                      if (statusName === "ASSIGNED") {
+                        return isAssigned ? (
+                          <div className="w-3 h-3 rounded-full bg-green-500 mx-auto" />
+                        ) : (
+                          <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />
+                        );
                       }
 
                       if (isActive) {
                         // Current status - special handling for GRADED (completed)
-                        if (statusName === 'GRADED') {
+                        if (statusName === "GRADED") {
                           // Completed status - static green circle
-                          return <div className="w-3 h-3 rounded-full bg-green-500 mx-auto" />;
+                          return (
+                            <div className="w-3 h-3 rounded-full bg-green-500 mx-auto" />
+                          );
                         } else {
                           // Other current statuses - animated pulse
                           return (
@@ -1119,58 +1453,77 @@ export default function TeacherAssignmentDetailPage() {
 
                       if (actuallyPassed) {
                         // Actually passed through this status
-                        return <div className="w-3 h-3 rounded-full bg-green-400 mx-auto" />;
+                        return (
+                          <div className="w-3 h-3 rounded-full bg-green-400 mx-auto" />
+                        );
                       }
 
                       // Not reached yet or skipped
-                      return <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />;
+                      return (
+                        <div className="w-3 h-3 rounded-full bg-gray-200 mx-auto" />
+                      );
                     };
 
                     return (
                       <tr
-                        key={progress.student_id || `student-${progress.student_name}`}
-                        className={`border-t dark:border-gray-700 ${isAssigned ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800 opacity-60'}`}
+                        key={
+                          progress.student_id ||
+                          `student-${progress.student_name}`
+                        }
+                        className={`border-t dark:border-gray-700 ${isAssigned ? "hover:bg-gray-50 dark:hover:bg-gray-700" : "bg-gray-50 dark:bg-gray-800 opacity-60"}`}
                       >
                         <td className="px-4 py-3 min-w-[150px]">
                           <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full ${isAssigned ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'} flex items-center justify-center`}>
-                              <span className={`text-sm font-medium ${isAssigned ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                            <div
+                              className={`w-8 h-8 rounded-full ${isAssigned ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700"} flex items-center justify-center`}
+                            >
+                              <span
+                                className={`text-sm font-medium ${isAssigned ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
+                              >
                                 {progress.student_name.charAt(0)}
                               </span>
                             </div>
-                            <span className={`font-medium ${!isAssigned ? 'text-gray-400 dark:text-gray-500' : 'dark:text-gray-100'}`}>
+                            <span
+                              className={`font-medium ${!isAssigned ? "text-gray-400 dark:text-gray-500" : "dark:text-gray-100"}`}
+                            >
                               {progress.student_name}
                             </span>
                           </div>
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('ASSIGNED')}
+                          {getStatusIndicator("ASSIGNED")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('NOT_STARTED')}
+                          {getStatusIndicator("NOT_STARTED")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('IN_PROGRESS')}
+                          {getStatusIndicator("IN_PROGRESS")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('SUBMITTED')}
+                          {getStatusIndicator("SUBMITTED")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('RETURNED')}
+                          {getStatusIndicator("RETURNED")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('RESUBMITTED')}
+                          {getStatusIndicator("RESUBMITTED")}
                         </td>
                         <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator('GRADED')}
+                          {getStatusIndicator("GRADED")}
                         </td>
                         <td className="px-3 py-3 text-center w-20">
-                          {isAssigned && (currentStatus === 'GRADED' || currentStatus === 'RETURNED') ? (
-                            <span className={`font-bold ${progress.score && progress.score >= 80 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {isAssigned &&
+                          (currentStatus === "GRADED" ||
+                            currentStatus === "RETURNED") ? (
+                            <span
+                              className={`font-bold ${progress.score && progress.score >= 80 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                            >
                               {progress.score || 0}
                             </span>
                           ) : (
-                            <span className="text-gray-300 dark:text-gray-600">-</span>
+                            <span className="text-gray-300 dark:text-gray-600">
+                              -
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -1179,17 +1532,25 @@ export default function TeacherAssignmentDetailPage() {
                               <>
                                 {(() => {
                                   // 使用大寫的狀態值進行比較
-                                  const upperStatus = progress.status?.toUpperCase();
+                                  const upperStatus =
+                                    progress.status?.toUpperCase();
 
                                   // 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕
-                                  if (upperStatus === 'SUBMITTED' || upperStatus === 'RESUBMITTED' || upperStatus === 'GRADED' || upperStatus === 'RETURNED') {
+                                  if (
+                                    upperStatus === "SUBMITTED" ||
+                                    upperStatus === "RESUBMITTED" ||
+                                    upperStatus === "GRADED" ||
+                                    upperStatus === "RETURNED"
+                                  ) {
                                     return (
                                       <Button
                                         variant="outline"
                                         className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors h-12 min-h-12 dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
                                         onClick={() => {
                                           // 導向到批改頁面
-                                          navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`);
+                                          navigate(
+                                            `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                          );
                                         }}
                                       >
                                         批改
@@ -1198,12 +1559,21 @@ export default function TeacherAssignmentDetailPage() {
                                   }
 
                                   // 只有未開始或進行中的才能取消指派
-                                  if (upperStatus === 'NOT_STARTED' || upperStatus === 'IN_PROGRESS') {
+                                  if (
+                                    upperStatus === "NOT_STARTED" ||
+                                    upperStatus === "IN_PROGRESS"
+                                  ) {
                                     return (
                                       <Button
                                         variant="outline"
                                         className="text-red-600 border-red-600 hover:bg-red-50 transition-colors h-12 min-h-12 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-900/20"
-                                        onClick={() => handleUnassignStudent(progress.student_id, progress.student_name, progress.status)}
+                                        onClick={() =>
+                                          handleUnassignStudent(
+                                            progress.student_id,
+                                            progress.student_name,
+                                            progress.status,
+                                          )
+                                        }
                                       >
                                         取消指派
                                       </Button>
@@ -1218,7 +1588,9 @@ export default function TeacherAssignmentDetailPage() {
                               <Button
                                 variant="outline"
                                 className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 transition-colors cursor-pointer h-12 min-h-12 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
-                                onClick={() => handleAssignStudent(progress.student_id)}
+                                onClick={() =>
+                                  handleAssignStudent(progress.student_id)
+                                }
                               >
                                 指派
                               </Button>
@@ -1230,7 +1602,10 @@ export default function TeacherAssignmentDetailPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td
+                      colSpan={10}
+                      className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                    >
                       沒有符合條件的學生
                     </td>
                   </tr>

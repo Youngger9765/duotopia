@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { AlertTriangle, Eye, Edit, Trash2, Plus, Mail, Phone, Calendar, School } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import {
+  AlertTriangle,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Mail,
+  Phone,
+  Calendar,
+  School,
+} from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 export interface Student {
   id: number;
@@ -29,12 +39,12 @@ export interface Student {
 
 interface StudentDialogsProps {
   student: Student | null;
-  dialogType: 'view' | 'create' | 'edit' | 'delete' | null;
+  dialogType: "view" | "create" | "edit" | "delete" | null;
   onClose: () => void;
   onSave: (student: Student) => void;
   onDelete: (studentId: number) => void;
   onSwitchToEdit?: () => void;
-  classrooms?: Array<{ id: number; name: string; }>;
+  classrooms?: Array<{ id: number; name: string }>;
 }
 
 export function StudentDialogs({
@@ -44,42 +54,42 @@ export function StudentDialogs({
   onSave,
   onDelete,
   onSwitchToEdit,
-  classrooms = []
+  classrooms = [],
 }: StudentDialogsProps) {
   const [formData, setFormData] = useState<Partial<Student>>({
-    name: '',
-    email: '',
-    student_number: '',
-    birthdate: '',
-    phone: '',
+    name: "",
+    email: "",
+    student_number: "",
+    birthdate: "",
+    phone: "",
     // 如果只有一個班級（從班級頁面新增），自動設定為該班級
     classroom_id: classrooms.length === 1 ? classrooms[0].id : undefined,
-    status: 'active'
+    status: "active",
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (student && (dialogType === 'edit' || dialogType === 'view')) {
+    if (student && (dialogType === "edit" || dialogType === "view")) {
       setFormData({
-        name: student.name || '',
-        email: student.email || '',
-        student_number: student.student_number || '',
-        birthdate: student.birthdate || '',
-        phone: student.phone || '',
+        name: student.name || "",
+        email: student.email || "",
+        student_number: student.student_number || "",
+        birthdate: student.birthdate || "",
+        phone: student.phone || "",
         classroom_id: student.classroom_id,
-        status: student.status || 'active'
+        status: student.status || "active",
       });
-    } else if (dialogType === 'create') {
+    } else if (dialogType === "create") {
       setFormData({
-        name: '',
-        email: '',
-        student_number: '',
-        birthdate: '',
-        phone: '',
+        name: "",
+        email: "",
+        student_number: "",
+        birthdate: "",
+        phone: "",
         // 如果只有一個班級（從班級頁面新增），自動設定為該班級
         classroom_id: classrooms.length === 1 ? classrooms[0].id : undefined,
-        status: 'active'
+        status: "active",
       });
     }
   }, [student, dialogType, classrooms]);
@@ -88,16 +98,19 @@ export function StudentDialogs({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = '姓名為必填';
+      newErrors.name = "姓名為必填";
     }
 
     // Email 是選填，但如果有填寫則檢查格式
-    if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email 格式不正確';
+    if (
+      formData.email?.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+    ) {
+      newErrors.email = "Email 格式不正確";
     }
 
     if (!formData.birthdate) {
-      newErrors.birthdate = '生日為必填（用作預設密碼）';
+      newErrors.birthdate = "生日為必填（用作預設密碼）";
     }
 
     setErrors(newErrors);
@@ -109,39 +122,56 @@ export function StudentDialogs({
 
     setLoading(true);
     try {
-      if (dialogType === 'create') {
+      if (dialogType === "create") {
         // Create new student - ensure required fields are present
         const createData = {
-          name: formData.name || '',
-          email: formData.email || undefined,  // 如果沒有填寫，傳 undefined 而非空字串
-          birthdate: formData.birthdate || '',
+          name: formData.name || "",
+          email: formData.email || undefined, // 如果沒有填寫，傳 undefined 而非空字串
+          birthdate: formData.birthdate || "",
           student_number: formData.student_number,
           phone: formData.phone,
-          classroom_id: formData.classroom_id
+          classroom_id: formData.classroom_id,
         };
 
-        const response = await apiClient.createStudent(createData) as Record<string, unknown>;
+        const response = (await apiClient.createStudent(createData)) as Record<
+          string,
+          unknown
+        >;
 
         // Check for warning message about unassigned students
         if (response.warning) {
           toast.warning(
             <div>
               <p>學生「{formData.name}」已成功新增</p>
-              <p className="text-sm mt-1 text-orange-600">⚠️ {response.warning as string}</p>
-              {formData.birthdate ? <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{formData.birthdate.replace(/-/g, '')}</code></p> : null}
+              <p className="text-sm mt-1 text-orange-600">
+                ⚠️ {response.warning as string}
+              </p>
+              {formData.birthdate ? (
+                <p className="text-sm mt-1">
+                  預設密碼：
+                  <code className="bg-gray-100 px-1 rounded">
+                    {formData.birthdate.replace(/-/g, "")}
+                  </code>
+                </p>
+              ) : null}
             </div>,
-            { duration: 8000 }
+            { duration: 8000 },
           );
         } else {
           // 如果有生日，顯示預設密碼
           if (formData.birthdate) {
-            const defaultPassword = formData.birthdate.replace(/-/g, '');
+            const defaultPassword = formData.birthdate.replace(/-/g, "");
             toast.success(
               <div>
                 <p>學生「{formData.name}」已成功新增</p>
-                <p className="text-sm mt-1">預設密碼：<code className="bg-gray-100 px-1 rounded">{defaultPassword}</code></p>
+                <p className="text-sm mt-1">
+                  預設密碼：
+                  <code className="bg-gray-100 px-1 rounded">
+                    {defaultPassword}
+                  </code>
+                </p>
               </div>,
-              { duration: 5000 }
+              { duration: 5000 },
             );
           } else {
             toast.success(`學生「${formData.name}」已成功新增`);
@@ -156,23 +186,26 @@ export function StudentDialogs({
           birthdate: response.birthdate as string | undefined,
           password_changed: response.password_changed as boolean | undefined,
           classroom_id: response.classroom_id as number | undefined,
-          status: 'active'
+          status: "active",
         };
         onSave(newStudent);
-      } else if (dialogType === 'edit' && student) {
+      } else if (dialogType === "edit" && student) {
         // Update existing student
-        const response = await apiClient.updateStudent(student.id, formData) as Record<string, unknown>;
+        const response = (await apiClient.updateStudent(
+          student.id,
+          formData,
+        )) as Record<string, unknown>;
         toast.success(`學生「${student.name}」資料已更新`);
         onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
     } catch (error) {
-      console.error('Error saving student:', error);
+      console.error("Error saving student:", error);
 
       // Parse error message
-      let errorMessage = '儲存失敗，請稍後再試';
+      let errorMessage = "儲存失敗，請稍後再試";
 
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === "object" && "message" in error) {
         try {
           // Try to parse JSON error response
           const errorData = JSON.parse((error as Error).message);
@@ -186,25 +219,25 @@ export function StudentDialogs({
               const field = err.loc?.[1]; // Get field name from location
               const msg = err.msg;
 
-              if (field === 'classroom_id') {
+              if (field === "classroom_id") {
                 // classroom_id is optional, skip this error
                 return;
-              } else if (field === 'name') {
-                fieldErrors.name = '姓名為必填';
-              } else if (field === 'birthdate') {
-                fieldErrors.birthdate = '生日為必填（用作預設密碼）';
-              } else if (field === 'email') {
-                fieldErrors.email = err.msg || 'Email格式錯誤';
+              } else if (field === "name") {
+                fieldErrors.name = "姓名為必填";
+              } else if (field === "birthdate") {
+                fieldErrors.birthdate = "生日為必填（用作預設密碼）";
+              } else if (field === "email") {
+                fieldErrors.email = err.msg || "Email格式錯誤";
               } else {
-                errorMessage = msg || '資料驗證失敗';
+                errorMessage = msg || "資料驗證失敗";
               }
             });
 
             if (Object.keys(fieldErrors).length > 0) {
               setErrors(fieldErrors);
-              errorMessage = '請修正標示的欄位';
+              errorMessage = "請修正標示的欄位";
             }
-          } else if (typeof errorData.detail === 'string') {
+          } else if (typeof errorData.detail === "string") {
             errorMessage = errorData.detail;
           } else {
             errorMessage = errorData.detail || errorMessage;
@@ -216,23 +249,23 @@ export function StudentDialogs({
       }
 
       // Handle specific error cases
-      if (typeof errorMessage === 'string') {
-        if (errorMessage.includes('already registered')) {
-          errorMessage = 'Email已被使用，請使用其他Email';
+      if (typeof errorMessage === "string") {
+        if (errorMessage.includes("already registered")) {
+          errorMessage = "Email已被使用，請使用其他Email";
           setErrors({ email: errorMessage });
-        } else if (errorMessage.includes('Invalid birthdate format')) {
-          errorMessage = '生日格式錯誤，請使用YYYY-MM-DD格式';
+        } else if (errorMessage.includes("Invalid birthdate format")) {
+          errorMessage = "生日格式錯誤，請使用YYYY-MM-DD格式";
           setErrors({ birthdate: errorMessage });
-        } else if (errorMessage.includes('Field required')) {
-          errorMessage = '請填寫所有必填欄位';
+        } else if (errorMessage.includes("Field required")) {
+          errorMessage = "請填寫所有必填欄位";
         }
       }
 
       // Ensure errorMessage is a string before showing toast
-      if (typeof errorMessage === 'string') {
+      if (typeof errorMessage === "string") {
         toast.error(errorMessage);
       } else {
-        toast.error('儲存失敗，請稍後再試');
+        toast.error("儲存失敗，請稍後再試");
       }
     } finally {
       setLoading(false);
@@ -249,42 +282,61 @@ export function StudentDialogs({
       onDelete(student.id);
       onClose();
     } catch (error) {
-      console.error('Error deleting student:', error);
-      toast.error('刪除失敗，請稍後再試');
-      setErrors({ submit: '刪除失敗，請稍後再試' });
+      console.error("Error deleting student:", error);
+      toast.error("刪除失敗，請稍後再試");
+      setErrors({ submit: "刪除失敗，請稍後再試" });
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return '-';
+    if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
-      case 'active':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">活躍</span>;
-      case 'inactive':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">未活躍</span>;
-      case 'suspended':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">已停權</span>;
+      case "active":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            活躍
+          </span>
+        );
+      case "inactive":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            未活躍
+          </span>
+        );
+      case "suspended":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            已停權
+          </span>
+        );
       default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">未知</span>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            未知
+          </span>
+        );
     }
   };
 
   // View Dialog
-  if (dialogType === 'view' && student) {
+  if (dialogType === "view" && student) {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white max-w-2xl" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white max-w-2xl"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Eye className="h-5 w-5" />
@@ -304,7 +356,9 @@ export function StudentDialogs({
                 <h3 className="text-lg font-semibold">{student.name}</h3>
                 <p className="text-sm text-gray-500">ID: {student.id}</p>
                 {student.student_number && (
-                  <p className="text-sm text-gray-500">學號: {student.student_number}</p>
+                  <p className="text-sm text-gray-500">
+                    學號: {student.student_number}
+                  </p>
                 )}
               </div>
               <div>{getStatusBadge(student.status)}</div>
@@ -325,7 +379,9 @@ export function StudentDialogs({
                   <Phone className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">電話</p>
-                    <p className="text-sm font-medium">{student.phone || '-'}</p>
+                    <p className="text-sm font-medium">
+                      {student.phone || "-"}
+                    </p>
                   </div>
                 </div>
 
@@ -333,7 +389,9 @@ export function StudentDialogs({
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">生日</p>
-                    <p className="text-sm font-medium">{formatDate(student.birthdate)}</p>
+                    <p className="text-sm font-medium">
+                      {formatDate(student.birthdate)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -343,7 +401,9 @@ export function StudentDialogs({
                   <School className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">班級</p>
-                    <p className="text-sm font-medium">{student.classroom_name || '-'}</p>
+                    <p className="text-sm font-medium">
+                      {student.classroom_name || "-"}
+                    </p>
                   </div>
                 </div>
 
@@ -353,7 +413,9 @@ export function StudentDialogs({
                     {student.password_changed ? (
                       <span className="text-green-600">已更改</span>
                     ) : (
-                      <span className="text-yellow-600">預設密碼 ({student.birthdate?.replace(/-/g, '')})</span>
+                      <span className="text-yellow-600">
+                        預設密碼 ({student.birthdate?.replace(/-/g, "")})
+                      </span>
                     )}
                   </p>
                 </div>
@@ -361,7 +423,9 @@ export function StudentDialogs({
                 <div>
                   <p className="text-xs text-gray-500">最後登入</p>
                   <p className="text-sm font-medium">
-                    {student.last_login ? formatDate(student.last_login) : '從未登入'}
+                    {student.last_login
+                      ? formatDate(student.last_login)
+                      : "從未登入"}
                   </p>
                 </div>
               </div>
@@ -369,12 +433,16 @@ export function StudentDialogs({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>關閉</Button>
-            <Button onClick={() => {
-              if (onSwitchToEdit) {
-                onSwitchToEdit();
-              }
-            }}>
+            <Button variant="outline" onClick={onClose}>
+              關閉
+            </Button>
+            <Button
+              onClick={() => {
+                if (onSwitchToEdit) {
+                  onSwitchToEdit();
+                }
+              }}
+            >
               <Edit className="h-4 w-4 mr-2" />
               編輯
             </Button>
@@ -385,13 +453,16 @@ export function StudentDialogs({
   }
 
   // Create/Edit Dialog
-  if (dialogType === 'create' || dialogType === 'edit') {
+  if (dialogType === "create" || dialogType === "edit") {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white max-w-2xl" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white max-w-2xl"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              {dialogType === 'create' ? (
+              {dialogType === "create" ? (
                 <>
                   <Plus className="h-5 w-5" />
                   <span>新增學生</span>
@@ -404,9 +475,9 @@ export function StudentDialogs({
               )}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === 'create'
-                ? '填寫學生資料以新增學生。生日將作為預設密碼。'
-                : '更新學生資料'}
+              {dialogType === "create"
+                ? "填寫學生資料以新增學生。生日將作為預設密碼。"
+                : "更新學生資料"}
             </DialogDescription>
           </DialogHeader>
 
@@ -419,11 +490,15 @@ export function StudentDialogs({
                 <input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? 'border-red-500' : ''}`}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
                   placeholder="請輸入學生姓名"
                 />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-xs text-red-500 mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -433,7 +508,9 @@ export function StudentDialogs({
                 <input
                   id="student_id"
                   value={formData.student_number}
-                  onChange={(e) => setFormData({ ...formData, student_number: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, student_number: e.target.value })
+                  }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                   placeholder="請輸入學號（選填）"
                 />
@@ -449,11 +526,15 @@ export function StudentDialogs({
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.email ? 'border-red-500' : ''}`}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.email ? "border-red-500" : ""}`}
                   placeholder="student@example.com (選填)"
                 />
-                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -464,7 +545,9 @@ export function StudentDialogs({
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                   placeholder="0912345678"
                 />
@@ -475,20 +558,31 @@ export function StudentDialogs({
               <div>
                 <label htmlFor="birthdate" className="text-sm font-medium">
                   學生生日 <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 font-normal ml-1">(請填寫學生的真實生日)</span>
+                  <span className="text-xs text-gray-500 font-normal ml-1">
+                    (請填寫學生的真實生日)
+                  </span>
                 </label>
                 <input
                   id="birthdate"
                   type="date"
                   value={formData.birthdate}
-                  onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.birthdate ? 'border-red-500' : ''}`}
-                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) =>
+                    setFormData({ ...formData, birthdate: e.target.value })
+                  }
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.birthdate ? "border-red-500" : ""}`}
+                  max={new Date().toISOString().split("T")[0]}
                 />
-                {errors.birthdate && <p className="text-xs text-red-500 mt-1">{errors.birthdate}</p>}
+                {errors.birthdate && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.birthdate}
+                  </p>
+                )}
                 {formData.birthdate && (
                   <p className="text-xs text-amber-600 mt-1 font-medium">
-                    ⚠️ 學生登入密碼將設為: <code className="bg-amber-50 px-1 rounded">{formData.birthdate.replace(/-/g, '')}</code>
+                    ⚠️ 學生登入密碼將設為:{" "}
+                    <code className="bg-amber-50 px-1 rounded">
+                      {formData.birthdate.replace(/-/g, "")}
+                    </code>
                   </p>
                 )}
               </div>
@@ -499,8 +593,15 @@ export function StudentDialogs({
                 </label>
                 <select
                   id="classroom"
-                  value={formData.classroom_id || ''}
-                  onChange={(e) => setFormData({ ...formData, classroom_id: e.target.value ? Number(e.target.value) : undefined })}
+                  value={formData.classroom_id || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      classroom_id: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
                   <option value="">未分配班級</option>
@@ -513,7 +614,7 @@ export function StudentDialogs({
               </div>
             </div>
 
-            {dialogType === 'edit' && (
+            {dialogType === "edit" && (
               <div>
                 <label htmlFor="status" className="text-sm font-medium">
                   狀態
@@ -521,7 +622,9 @@ export function StudentDialogs({
                 <select
                   id="status"
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
                   <option value="active">活躍</option>
@@ -532,7 +635,9 @@ export function StudentDialogs({
             )}
 
             {errors.submit && (
-              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
+              <p className="text-sm text-red-500 bg-red-50 p-2 rounded">
+                {errors.submit}
+              </p>
             )}
           </div>
 
@@ -541,7 +646,11 @@ export function StudentDialogs({
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? '處理中...' : dialogType === 'create' ? '新增' : '儲存'}
+              {loading
+                ? "處理中..."
+                : dialogType === "create"
+                  ? "新增"
+                  : "儲存"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -550,10 +659,13 @@ export function StudentDialogs({
   }
 
   // Delete Confirmation Dialog
-  if (dialogType === 'delete' && student) {
+  if (dialogType === "delete" && student) {
     return (
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="bg-white" style={{ backgroundColor: 'white' }}>
+        <DialogContent
+          className="bg-white"
+          style={{ backgroundColor: "white" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -570,7 +682,9 @@ export function StudentDialogs({
               <p className="font-medium">{student.name}</p>
               <p className="text-sm text-gray-500">{student.email}</p>
               {student.classroom_name && (
-                <p className="text-sm text-gray-500">班級：{student.classroom_name}</p>
+                <p className="text-sm text-gray-500">
+                  班級：{student.classroom_name}
+                </p>
               )}
             </div>
 
@@ -589,7 +703,7 @@ export function StudentDialogs({
               disabled={loading}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {loading ? '刪除中...' : '確認刪除'}
+              {loading ? "刪除中..." : "確認刪除"}
             </Button>
           </DialogFooter>
         </DialogContent>
