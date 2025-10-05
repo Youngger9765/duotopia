@@ -211,14 +211,14 @@ export default function TeacherTemplatePrograms() {
   const getLevelBadge = (level?: string) => {
     if (!level) return null;
     const levelColors: Record<string, string> = {
-      'A1': 'bg-green-100 text-green-800',
-      'A2': 'bg-green-100 text-green-800',
-      'B1': 'bg-blue-100 text-blue-800',
-      'B2': 'bg-blue-100 text-blue-800',
-      'C1': 'bg-purple-100 text-purple-800',
-      'C2': 'bg-purple-100 text-purple-800',
+      'A1': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'A2': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'B1': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'B2': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'C1': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'C2': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
     };
-    const color = levelColors[level.toUpperCase()] || 'bg-gray-100 text-gray-800';
+    const color = levelColors[level.toUpperCase()] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>{level}</span>;
   };
 
@@ -238,19 +238,19 @@ export default function TeacherTemplatePrograms() {
         <div>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">課程範本庫</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">課程範本庫</h2>
           </div>
 
           {/* Stats Cards Skeleton */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white p-4 rounded-lg shadow-sm border animate-pulse">
+              <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <div className="h-3 w-20 bg-gray-200 rounded"></div>
-                    <div className="h-8 w-12 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    <div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   </div>
-                  <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                 </div>
               </div>
             ))}
@@ -270,50 +270,51 @@ export default function TeacherTemplatePrograms() {
     <TeacherLayout>
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">公版課程模板</h2>
-            <p className="text-gray-600 mt-1">建立可複製到任何班級的課程模板</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">公版課程模板</h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">建立可複製到任何班級的課程模板</p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2">
             {/* Refresh Button */}
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              重新載入
+            <Button onClick={fetchData} variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">重新載入</span>
             </Button>
             {/* Add New Template Button */}
-            <Button size="sm" onClick={handleCreateProgram}>
+            <Button size="sm" onClick={handleCreateProgram} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
-              建立公版課程
+              <span className="hidden sm:inline">建立公版課程</span>
+              <span className="sm:hidden">新增</span>
             </Button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">公版課程總數</p>
-                <p className="text-2xl font-bold">{programs.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">公版課程總數</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{programs.length}</p>
               </div>
-              <BookOpen className="h-8 w-8 text-blue-500" />
+              <BookOpen className="h-8 w-8 text-blue-500 dark:text-blue-400" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">可用班級數</p>
-                <p className="text-2xl font-bold">{classrooms.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">可用班級數</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{classrooms.length}</p>
               </div>
-              <Archive className="h-8 w-8 text-green-500" />
+              <Archive className="h-8 w-8 text-green-500 dark:text-green-400" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">本月新增</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm text-gray-600 dark:text-gray-400">本月新增</p>
+                <p className="text-2xl font-bold dark:text-gray-100">
                   {programs.filter(p => {
                     if (!p.created_at) return false;
                     const created = new Date(p.created_at);
@@ -322,110 +323,204 @@ export default function TeacherTemplatePrograms() {
                   }).length}
                 </p>
               </div>
-              <Plus className="h-8 w-8 text-purple-500" />
+              <Plus className="h-8 w-8 text-purple-500 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
         {/* Programs Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <Table>
-            <TableCaption>
-              共 {programs.length} 個公版課程模板
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px] text-left">ID</TableHead>
-                <TableHead className="text-left">課程名稱</TableHead>
-                <TableHead className="text-left">等級</TableHead>
-                <TableHead className="text-left">預計時數</TableHead>
-                <TableHead className="text-left">課程數</TableHead>
-                <TableHead className="text-left">標籤</TableHead>
-                <TableHead className="text-left">建立時間</TableHead>
-                <TableHead className="text-left">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {programs.map((program) => (
-                <TableRow key={program.id}>
-                  <TableCell className="font-medium">{program.id}</TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{program.name}</p>
-                      {program.description && (
-                        <p className="text-sm text-gray-500 max-w-xs truncate">{program.description}</p>
-                      )}
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {programs.map((program) => (
+              <div key={program.id} className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">ID: {program.id}</span>
+                      {getLevelBadge(program.level)}
                     </div>
-                  </TableCell>
-                  <TableCell>{getLevelBadge(program.level)}</TableCell>
-                  <TableCell>
-                    {program.estimated_hours ? `${program.estimated_hours} 小時` : '-'}
-                  </TableCell>
-                  <TableCell>{program.lesson_count || '-'}</TableCell>
-                  <TableCell>
-                    {program.tags && program.tags.length > 0 ? (
-                      <div className="flex gap-1 flex-wrap">
-                        {program.tags.slice(0, 3).map((tag, index) => (
-                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                    <p className="font-medium text-lg mt-1 dark:text-gray-100">{program.name}</p>
+                    {program.description && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{program.description}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">預計時數:</span>
+                    <span className="dark:text-gray-200">{program.estimated_hours ? `${program.estimated_hours} 小時` : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">課程數:</span>
+                    <span className="dark:text-gray-200">{program.lesson_count || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">建立時間:</span>
+                    <span className="dark:text-gray-200">{formatDate(program.created_at)}</span>
+                  </div>
+                  {program.tags && program.tags.length > 0 && (
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">標籤:</span>
+                      <div className="flex gap-1 flex-wrap mt-1">
+                        {program.tags.map((tag, index) => (
+                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                             {tag}
                           </span>
                         ))}
-                        {program.tags.length > 3 && (
-                          <span className="text-xs text-gray-500">+{program.tags.length - 3}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2 border-t dark:border-gray-700">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewProgram(program)}
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    查看
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyProgram(program)}
+                    className="flex-1 text-blue-600 dark:text-blue-400"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    複製
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/teacher/template-programs/${program.id}`)}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    編輯
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteProgram(program)}
+                    className="hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+              共 {programs.length} 個公版課程模板
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+            <Table>
+              <TableCaption className="dark:text-gray-400">
+                共 {programs.length} 個公版課程模板
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px] text-left">ID</TableHead>
+                  <TableHead className="text-left">課程名稱</TableHead>
+                  <TableHead className="text-left">等級</TableHead>
+                  <TableHead className="text-left">預計時數</TableHead>
+                  <TableHead className="text-left">課程數</TableHead>
+                  <TableHead className="text-left">標籤</TableHead>
+                  <TableHead className="text-left">建立時間</TableHead>
+                  <TableHead className="text-left">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {programs.map((program) => (
+                  <TableRow key={program.id}>
+                    <TableCell className="font-medium">{program.id}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium dark:text-gray-100">{program.name}</p>
+                        {program.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{program.description}</p>
                         )}
                       </div>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>{formatDate(program.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="查看"
-                        onClick={() => handleViewProgram(program)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="複製到班級"
-                        onClick={() => handleCopyProgram(program)}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="編輯課程內容"
-                        onClick={() => navigate(`/teacher/template-programs/${program.id}`)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                        title="刪除"
-                        onClick={() => handleDeleteProgram(program)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                    </TableCell>
+                    <TableCell>{getLevelBadge(program.level)}</TableCell>
+                    <TableCell className="dark:text-gray-200">
+                      {program.estimated_hours ? `${program.estimated_hours} 小時` : '-'}
+                    </TableCell>
+                    <TableCell className="dark:text-gray-200">{program.lesson_count || '-'}</TableCell>
+                    <TableCell>
+                      {program.tags && program.tags.length > 0 ? (
+                        <div className="flex gap-1 flex-wrap">
+                          {program.tags.slice(0, 3).map((tag, index) => (
+                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              {tag}
+                            </span>
+                          ))}
+                          {program.tags.length > 3 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">+{program.tags.length - 3}</span>
+                          )}
+                        </div>
+                      ) : <span className="dark:text-gray-400">-</span>}
+                    </TableCell>
+                    <TableCell className="dark:text-gray-200">{formatDate(program.created_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="查看"
+                          onClick={() => handleViewProgram(program)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="複製到班級"
+                          onClick={() => handleCopyProgram(program)}
+                          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="編輯課程內容"
+                          onClick={() => navigate(`/teacher/template-programs/${program.id}`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          title="刪除"
+                          onClick={() => handleDeleteProgram(program)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
 
         {/* Empty State */}
         {programs.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">尚未建立公版課程模板</p>
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+            <BookOpen className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">尚未建立公版課程模板</p>
             <Button className="mt-4" onClick={handleCreateProgram}>
               <Plus className="h-4 w-4 mr-2" />
               建立第一個公版課程
