@@ -129,18 +129,11 @@ repos:
         stages: [push]
         files: ^backend/.*\.py$
 
-  - repo: local
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        name: Prettier
-        entry: bash -c 'cd frontend && npx prettier --write'
-        language: system
+        stages: [push]
         files: frontend/src/.*\.(ts|tsx|js|jsx|css|json)$
-        stages: [push]
-
-      - id: eslint-fix
-        name: ESLint --fix
-        entry: bash -c 'cd frontend && npx eslint --fix'
-        language: system
-        files: frontend/src/.*\.(ts|tsx)$
-        stages: [push]
+        additional_dependencies:
+          - prettier@3.2.5
