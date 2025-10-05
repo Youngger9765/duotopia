@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import TeacherLayout from '@/components/TeacherLayout';
 import TapPayPayment from '@/components/payment/TapPayPayment';
+import { apiClient } from '@/lib/api';
 
 interface SubscriptionInfo {
   status: string;
@@ -59,39 +60,22 @@ export default function TeacherSubscription() {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL;
-
       // 獲取訂閱狀態
-      const subResponse = await fetch(`${apiUrl}/subscription/status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (subResponse.ok) {
-        const subData = await subResponse.json();
+      try {
+        const subData = await apiClient.get<SubscriptionInfo>('/subscription/status');
         console.log('Subscription data:', subData);
         setSubscription(subData);
-      } else {
-        console.error('Failed to fetch subscription:', subResponse.status);
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
       }
 
       // 獲取付款歷史
-      const txnResponse = await fetch(`${apiUrl}/api/payment/history`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (txnResponse.ok) {
-        const txnData = await txnResponse.json();
+      try {
+        const txnData = await apiClient.get<{ transactions: Transaction[] }>('/api/payment/history');
         console.log('Transaction data:', txnData);
         setTransactions(txnData.transactions || []);
-      } else {
-        console.error('Failed to fetch transactions:', txnResponse.status);
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
       }
 
     } catch (error) {

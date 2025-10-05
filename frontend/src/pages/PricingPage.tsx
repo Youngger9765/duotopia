@@ -3,11 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn } from 'lucide-react';
+import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn, TestTube, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TapPayPayment from '@/components/payment/TapPayPayment';
 import TeacherLoginModal from '@/components/TeacherLoginModal';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api';
 
 interface PricingPlan {
   id: string;
@@ -245,6 +246,35 @@ export default function PricingPage() {
     toast.success('已成功登出');
   };
 
+  const handleDemoLogin = async (email: string, password: string, accountType: string) => {
+    try {
+      await apiClient.teacherLogin({ email, password });
+
+      // Update user status
+      checkUserStatus();
+
+      toast.success(`使用 ${accountType} 帳號登入成功！`);
+
+      // Check subscription status after login
+      setTimeout(() => {
+        checkSubscriptionStatus();
+      }, 500);
+    } catch (error) {
+      toast.error('登入失敗，請檢查帳號密碼');
+      console.error('Demo login error:', error);
+    }
+  };
+
+  const handleResetTestAccounts = async () => {
+    try {
+      await apiClient.post('/subscription/reset-test-accounts');
+      toast.success('測試帳號已重置！Demo: 已訂閱, Expired: 已過期');
+    } catch (error) {
+      toast.error('重置失敗');
+      console.error('Reset error:', error);
+    }
+  };
+
   // Check if user came back from login with a selected plan
   useEffect(() => {
     const savedPlan = localStorage.getItem('selectedPlan');
@@ -324,14 +354,46 @@ export default function PricingPage() {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowLoginModal(true)}
-              >
-                <LogIn className="w-4 h-4 mr-2" />
-                教師登入
-              </Button>
+              <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  教師登入
+                </Button>
+
+                {/* 測試帳號區 */}
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+                  <TestTube className="w-4 h-4 text-gray-400" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDemoLogin('demo@duotopia.com', 'demo123', 'Demo')}
+                    className="text-xs"
+                  >
+                    Demo (有訂閱)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDemoLogin('expired@duotopia.com', 'demo123', 'Expired')}
+                    className="text-xs"
+                  >
+                    Expired (已過期)
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetTestAccounts}
+                    className="text-xs"
+                    title="重置測試帳號為預設狀態"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -52,6 +52,42 @@ async def get_subscription_status(
     )
 
 
+@router.post("/subscription/reset-test-accounts")
+async def reset_test_accounts(db: Session = Depends(get_db)):
+    """Reset demo and expired test accounts to default state"""
+    now = datetime.now(timezone.utc)
+
+    # 1. Reset Demo account (has subscription)
+    demo = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
+    if demo:
+        demo.subscription_end_date = now + timedelta(days=30)
+        demo.subscription_type = "Tutor Teachers"
+
+    # 2. Reset Expired account (subscription expired)
+    expired = db.query(Teacher).filter_by(email="expired@duotopia.com").first()
+    if expired:
+        expired.subscription_end_date = now - timedelta(days=1)
+        expired.subscription_type = None
+
+    db.commit()
+
+    return {
+        "message": "測試帳號已重置",
+        "accounts": {
+            "demo": {
+                "email": "demo@duotopia.com",
+                "status": "已訂閱",
+                "days_remaining": 30,
+            },
+            "expired": {
+                "email": "expired@duotopia.com",
+                "status": "已過期",
+                "days_remaining": 0,
+            },
+        },
+    }
+
+
 @router.post("/subscription/update")
 async def update_subscription_status(
     request: UpdateSubscriptionRequest, db: Session = Depends(get_db)
@@ -69,8 +105,8 @@ async def update_subscription_status(
         demo = Teacher(
             email="demo@duotopia.com",
             name="Demo Teacher",
-            password=pwd_context.hash("demo123"),
-            is_email_verified=True,
+            password_hash=pwd_context.hash("demo123"),
+            email_verified=True,
             created_at=datetime.now(timezone.utc),
         )
         db.add(demo)

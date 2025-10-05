@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Shield, Info } from 'lucide-react';
+import { Loader2, CreditCard, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import SubscriptionProgressBanner from '../SubscriptionProgressBanner';
 
@@ -284,58 +283,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
             )}
           </div>
         </div>
-
-        {/* Test Mode Info */}
-        <Alert className="bg-blue-50 border-blue-200">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-              <AlertDescription className="text-blue-800">
-                <strong>測試模式</strong><br />
-                測試卡號: 4242 4242 4242 4242<br />
-                有效期限: 任何未來日期 | CVV: 123
-              </AlertDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText('4242 4242 4242 4242');
-                  toast.success('已複製卡號');
-                }}
-                className="text-xs"
-              >
-                複製卡號
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText('12/28');
-                  toast.success('已複製期限');
-                }}
-                className="text-xs"
-              >
-                複製期限
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText('123');
-                  toast.success('已複製 CVV');
-                }}
-                className="text-xs"
-              >
-                複製 CVV
-              </Button>
-            </div>
-          </div>
-        </Alert>
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-2">
