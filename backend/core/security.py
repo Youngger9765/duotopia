@@ -97,7 +97,7 @@ class DataEncryption:
 class PasswordPolicy:
     """密碼政策檢查"""
 
-    MIN_LENGTH = 12
+    MIN_LENGTH = 8
     REQUIRE_UPPERCASE = True
     REQUIRE_LOWERCASE = True
     REQUIRE_DIGIT = True

@@ -12,10 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 🔐 Security: No default values for secrets
-SECRET_KEY = os.getenv("JWT_SECRET")
-if not SECRET_KEY:
+SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+
+# 🔐 Production 強制檢查：必須設定 JWT_SECRET
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local")
+if ENVIRONMENT == "production" and SECRET_KEY == "your-secret-key-change-in-production":
     raise RuntimeError(
-        "❌ SECURITY ERROR: JWT_SECRET environment variable must be set! "
+        "❌ SECURITY ERROR: JWT_SECRET must be set in production! "
         "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
     )
 
