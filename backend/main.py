@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 import os
 
@@ -35,9 +37,9 @@ app = FastAPI(
     description=f"Running on {settings.deployment_name}",
 )
 
-# Rate Limiting 設定 - Temporarily disabled due to middleware bug
-# redis_url = os.getenv("REDIS_URL", None)  # 如果有 Redis 就用，沒有就用記憶體
-# app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
+# 🔐 Rate Limiting - slowapi for auth endpoints
+app.state.limiter = None  # Will be set by individual routers
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS 設定
 environment = os.getenv("ENVIRONMENT", "development")

@@ -1,17 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import Teacher, Student
-from auth import verify_password, create_access_token, get_password_hash, verify_token
+from auth import (
+    verify_password,
+    create_access_token,
+    get_password_hash,
+    verify_token,
+    validate_password_strength,
+)
 from services.email_service import email_service
 from datetime import datetime, timedelta
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
+
+# 🔐 Rate Limiter - 防止暴力破解
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ============ Request/Response Models ============
@@ -46,19 +57,19 @@ class RegisterResponse(BaseModel):
 
 # ============ Teacher Authentication ============
 @router.post("/teacher/login", response_model=TokenResponse)
-async def teacher_login(request: TeacherLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")  # 每分鐘最多 5 次登入嘗試
+async def teacher_login(
+    request: Request, login_req: TeacherLoginRequest, db: Session = Depends(get_db)
+):
     """教師登入"""
-    teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
+    teacher = db.query(Teacher).filter(Teacher.email == login_req.email).first()
 
+    # 🔐 Security: 統一錯誤訊息，不洩漏帳號是否存在
     if not teacher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Email not found"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
 
-    if not verify_password(request.password, teacher.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
-        )
+    if not verify_password(login_req.password, teacher.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
 
     if not teacher.is_active:
         # 檢查是否是因為 email 未驗證
@@ -96,12 +107,20 @@ async def teacher_login(request: TeacherLoginRequest, db: Session = Depends(get_
 
 
 @router.post("/teacher/register", response_model=RegisterResponse)
+@limiter.limit("3/hour")  # 每小時最多 3 次註冊嘗試
 async def teacher_register(
-    request: TeacherRegisterRequest, db: Session = Depends(get_db)
+    request: Request,
+    register_req: TeacherRegisterRequest,
+    db: Session = Depends(get_db),
 ):
     """教師註冊"""
+    # 🔐 Security: 驗證密碼強度
+    is_valid, error_msg = validate_password_strength(register_req.password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
     # Check if email exists
-    existing = db.query(Teacher).filter(Teacher.email == request.email).first()
+    existing = db.query(Teacher).filter(Teacher.email == register_req.email).first()
     if existing:
         # 如果已經驗證，不允許重複註冊
         if existing.email_verified:
@@ -116,10 +135,10 @@ async def teacher_register(
 
     # Create new teacher (未啟用，需要 email 驗證)
     new_teacher = Teacher(
-        email=request.email,
-        password_hash=get_password_hash(request.password),
-        name=request.name,
-        phone=request.phone,
+        email=register_req.email,
+        password_hash=get_password_hash(register_req.password),
+        name=register_req.name,
+        phone=register_req.phone,
         is_active=False,  # 🔴 未啟用，需要 email 驗證
         is_demo=False,
         email_verified=False,  # 🔴 未驗證 email
@@ -215,20 +234,20 @@ async def resend_verification_email(request: dict, db: Session = Depends(get_db)
 
 # ============ Student Authentication ============
 @router.post("/student/login", response_model=TokenResponse)
-async def student_login(request: StudentLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")  # 每分鐘最多 5 次登入嘗試
+async def student_login(
+    request: Request, login_req: StudentLoginRequest, db: Session = Depends(get_db)
+):
     """學生登入"""
-    student = db.query(Student).filter(Student.id == request.id).first()
+    student = db.query(Student).filter(Student.id == login_req.id).first()
 
+    # 🔐 Security: 統一錯誤訊息，不洩漏帳號是否存在
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
 
     # 驗證密碼
-    if not verify_password(request.password, student.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
-        )
+    if not verify_password(login_req.password, student.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
 
     # 創建 JWT token
     access_token = create_access_token(
@@ -305,8 +324,9 @@ async def validate_token():
 
 
 @router.post("/teacher/forgot-password")
+@limiter.limit("3/hour")  # 每小時最多 3 次密碼重設請求
 async def forgot_password(
-    email: str = Body(..., embed=True), db: Session = Depends(get_db)
+    request: Request, email: str = Body(..., embed=True), db: Session = Depends(get_db)
 ):
     """教師忘記密碼 - 發送重設郵件"""
     # 查找教師
@@ -377,11 +397,10 @@ async def reset_password(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="重設連結已過期，請重新申請"
             )
 
-    # 驗證密碼強度
-    if len(new_password) < 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="密碼至少需要6個字元"
-        )
+    # 🔐 Security: 驗證密碼強度
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
 
     # 更新密碼
     teacher.password_hash = get_password_hash(new_password)

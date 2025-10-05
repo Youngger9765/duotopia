@@ -6,6 +6,9 @@ import { API_URL } from '../config/api';
 import { retryAIAnalysis } from '../utils/retryHelper';
 import { clearAllAuth } from './authUtils';
 
+// 🔐 Security: Only enable debug logs in development
+const DEBUG = import.meta.env.DEV;
+
 /**
  * Custom API Error class for better error handling
  */
@@ -117,11 +120,11 @@ class ApiClient {
       try {
         const { state } = JSON.parse(studentAuth);
         if (state?.token) {
-          console.log('🔑 [DEBUG] Using student token');
+          if (DEBUG) console.log('🔑 [DEBUG] Using student token');
           return state.token;
         }
       } catch (e) {
-        console.error('Failed to parse student auth:', e);
+        if (DEBUG) console.error('Failed to parse student auth:', e);
       }
     }
 
@@ -131,15 +134,15 @@ class ApiClient {
       try {
         const { state } = JSON.parse(teacherAuth);
         if (state?.token) {
-          console.log('🔑 [DEBUG] Using teacher token');
+          if (DEBUG) console.log('🔑 [DEBUG] Using teacher token');
           return state.token;
         }
       } catch (e) {
-        console.error('Failed to parse teacher auth:', e);
+        if (DEBUG) console.error('Failed to parse teacher auth:', e);
       }
     }
 
-    console.log('🔑 [DEBUG] No token found');
+    if (DEBUG) console.log('🔑 [DEBUG] No token found');
     return null;
   }
 
@@ -162,12 +165,14 @@ class ApiClient {
     }
 
     // 🔍 DEBUG: API請求詳情
-    console.log('🌐 [DEBUG] API 請求開始');
-    console.log('🌐 [DEBUG] URL:', url);
-    console.log('🌐 [DEBUG] Method:', options.method || 'GET');
-    console.log('🌐 [DEBUG] Headers:', headers);
-    console.log('🌐 [DEBUG] Token exists:', !!currentToken);
-    console.log('🌐 [DEBUG] Token preview:', currentToken ? `${currentToken.substring(0, 20)}...` : 'null');
+    if (DEBUG) {
+      console.log('🌐 [DEBUG] API 請求開始');
+      console.log('🌐 [DEBUG] URL:', url);
+      console.log('🌐 [DEBUG] Method:', options.method || 'GET');
+      console.log('🌐 [DEBUG] Headers:', headers);
+      console.log('🌐 [DEBUG] Token exists:', !!currentToken);
+      console.log('🌐 [DEBUG] Token preview:', currentToken ? `${currentToken.substring(0, 20)}...` : 'null');
+    }
 
     try {
       const response = await fetch(url, {
@@ -175,16 +180,20 @@ class ApiClient {
         headers,
       });
 
-      console.log('🌐 [DEBUG] Response status:', response.status);
-      console.log('🌐 [DEBUG] Response ok:', response.ok);
+      if (DEBUG) {
+        console.log('🌐 [DEBUG] Response status:', response.status);
+        console.log('🌐 [DEBUG] Response ok:', response.ok);
+      }
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        console.error('🌐 [ERROR] API請求失敗:', {
-          url,
-          status: response.status,
-          error
-        });
+        if (DEBUG) {
+          console.error('🌐 [ERROR] API請求失敗:', {
+            url,
+            status: response.status,
+            error
+          });
+        }
 
         // Extract detail message
         const detail = typeof error === 'object' && error !== null && 'detail' in error
@@ -196,7 +205,7 @@ class ApiClient {
       }
 
       const result = await response.json();
-      console.log('🌐 [DEBUG] API請求成功，回應數據:', result);
+      if (DEBUG) console.log('🌐 [DEBUG] API請求成功，回應數據:', result);
       return result;
     } catch (err) {
       // If it's already an ApiError, re-throw it
@@ -205,7 +214,7 @@ class ApiClient {
       }
 
       // Wrap network errors in ApiError
-      console.error('🌐 [ERROR] Network error:', err);
+      if (DEBUG) console.error('🌐 [ERROR] Network error:', err);
       throw new ApiError(
         0, // Network errors have no HTTP status
         err instanceof Error ? err.message : 'Network error occurred',
@@ -216,14 +225,14 @@ class ApiClient {
 
   // ============ Auth Methods ============
   async teacherLogin(data: LoginRequest): Promise<LoginResponse> {
-    console.log('🔑 [DEBUG] teacherLogin 方法被調用');
+    if (DEBUG) console.log('🔑 [DEBUG] teacherLogin 方法被調用');
 
     const response = await this.request<LoginResponse>('/api/auth/teacher/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
 
-    console.log('🔑 [DEBUG] 登入成功，返回 response');
+    if (DEBUG) console.log('🔑 [DEBUG] 登入成功，返回 response');
     // Note: Token storage is handled by teacherAuthStore in the calling component
 
     return response;
@@ -707,7 +716,7 @@ class ApiClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Upload error:', errorText);
+      if (DEBUG) console.error('Upload error:', errorText);
       throw new Error(`Upload failed: ${response.status} - ${errorText || response.statusText}`);
     }
 

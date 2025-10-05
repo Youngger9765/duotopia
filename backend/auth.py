@@ -11,8 +11,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+# 🔐 Security: No default values for secrets
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "❌ SECURITY ERROR: JWT_SECRET environment variable must be set! "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+    )
+
+ALGORITHM = "HS256"  # Hardcoded to prevent 'none' algorithm attack
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -28,6 +35,34 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         else hashed_password
     )
     return bcrypt.checkpw(password_bytes, hashed_bytes)
+
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """
+    驗證密碼強度
+    Returns: (is_valid, error_message)
+    """
+    if len(password) < 8:
+        return False, "密碼至少需要 8 個字元"
+
+    # 檢查是否包含大寫字母
+    if not any(c.isupper() for c in password):
+        return False, "密碼必須包含至少一個大寫字母"
+
+    # 檢查是否包含小寫字母
+    if not any(c.islower() for c in password):
+        return False, "密碼必須包含至少一個小寫字母"
+
+    # 檢查是否包含數字
+    if not any(c.isdigit() for c in password):
+        return False, "密碼必須包含至少一個數字"
+
+    # 檢查是否包含特殊字元
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    if not any(c in special_chars for c in password):
+        return False, "密碼必須包含至少一個特殊字元 (!@#$%^&* 等)"
+
+    return True, ""
 
 
 def get_password_hash(password: str) -> str:
