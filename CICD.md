@@ -18,10 +18,81 @@
 - [ ] 確認沒有硬編碼的 localhost URL
 - [ ] 確認沒有舊的 import 路徑
 
-### 2. 環境變數檢查
+### 2. 程式碼品質檢查
+- [ ] **Frontend**: Prettier 格式化 (`npx prettier --check frontend/src`)
+- [ ] **Frontend**: TypeScript 編譯 (`npm run typecheck`)
+- [ ] **Frontend**: ESLint 檢查 (`npm run lint:ci`)
+- [ ] **Backend**: Black 格式化 (`black --check backend/`)
+- [ ] **Backend**: Flake8 檢查 (`flake8 backend/`)
+- [ ] **Backend**: pytest 測試 (`pytest`)
+
+### 3. 環境變數檢查
 - [ ] Supabase URL 和 Key 已設定
 - [ ] JWT Secret 已設定
 - [ ] OpenAI API Key 已設定（如需要）
+
+## 🎨 程式碼格式化策略（AI 輔助開發）
+
+### 設計哲學
+**只擋會影響 Production 的錯誤，其他都是摩擦**
+
+### Pre-commit Hooks（Commit 階段）
+執行時間 < 10 秒，只檢查會導致 runtime 錯誤的項目：
+
+**✅ 必須通過**：
+- TypeScript 編譯檢查 (5-8s)
+- Python Import patterns (<1s) - 防止 UnboundLocalError
+- 安全檢查 (3s) - 防止密碼洩漏
+- 基本檔案檢查 (1s) - 防止 .db/.env 被 commit
+
+**❌ 移除項目**（移到手動執行）：
+- Black/Flake8/Autoflake - 純格式化
+- ESLint - 純格式化
+- Prettier - 純格式化
+- Frontend tests - 太慢
+- Alembic check - 改 models 才需要
+
+### CI/CD 檢查（Push 後執行）
+GitHub Actions 會執行完整的格式化與測試檢查：
+
+**Frontend (`deploy-frontend.yml`)**：
+1. Prettier 格式化檢查
+2. TypeScript 型別檢查
+3. ESLint 程式碼檢查
+4. Vite 建置測試
+5. API 測試框架
+
+**Backend (`deploy-backend.yml`)**：
+1. Black 格式化檢查
+2. Flake8 程式碼檢查
+3. pytest 單元測試
+4. Alembic migration 檢查
+
+### 手動格式化（需要時執行）
+```bash
+# Frontend 格式化
+npx prettier --write frontend/src
+
+# Backend 格式化
+cd backend && black . && autoflake --in-place --recursive .
+
+# 檢查格式（不修改）
+npx prettier --check frontend/src
+cd backend && black --check .
+```
+
+### 為什麼這樣設計？
+1. **本地 commit 快速** - AI 輔助開發需要快速迭代
+2. **CI/CD 嚴格把關** - 確保 push 到遠端的程式碼品質
+3. **手動格式化可選** - 只在需要時整理程式碼
+4. **避免格式化阻擋開發** - 格式問題不應該阻止進度
+
+### 格式化執行時機
+| 階段 | 檢查項目 | 執行時間 | 失敗是否阻擋 |
+|------|---------|---------|-------------|
+| **Commit** | TypeScript, Import, 安全 | < 10s | 🔴 是 |
+| **Push (CI/CD)** | 格式化 + 測試 + 建置 | ~2-3min | 🔴 是 |
+| **手動** | 格式化整理 | 依需求 | ⚠️ 否 |
 
 ## 🚀 標準部署流程
 
