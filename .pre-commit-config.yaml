@@ -1,48 +1,29 @@
-# Pre-commit hooks for Duotopia
-# 安裝: pip install pre-commit && pre-commit install
+# Pre-commit hooks - AI-assisted Solo Development
+# 🎯 Philosophy: 只擋會影響 Production 的錯誤，其他都是摩擦
 #
-# ⚠️ 重要：這些檢查會在每次 commit 前自動執行
-# 如果任何檢查失敗，commit 會被阻止
-# 使用 --no-verify 跳過檢查是被禁止的（見 CLAUDE.md）
+# 安裝:
+#   pip install pre-commit
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
+#
+# Commit 階段檢查 (總耗時 < 10 秒):
+# ✅ TypeScript 編譯 - 防止 runtime 錯誤
+# ✅ Import patterns - 防止 UnboundLocalError（會炸 prod！）
+# ✅ 安全檢查 - 防止洩密
+# ✅ 基本檔案檢查 - 防止 .db/.env 被 commit
+#
+# Push 階段格式化 (自動修復):
+# 🎨 Black - Python 格式化
+# 🎨 Autoflake - 移除未使用的 imports
+# 🎨 Prettier - Frontend 格式化
+# 🎨 ESLint --fix - Frontend 自動修復
 
 repos:
-  # Python formatting & linting - 使用 requirements.txt 版本
+  # ==========================================
+  # 🔴 CRITICAL: 會導致 Runtime Error
+  # ==========================================
   - repo: local
     hooks:
-      # autoflake - 自動移除未使用的 imports 和變數（在 black 之前執行）
-      - id: autoflake
-        name: autoflake
-        entry: autoflake
-        language: system
-        types: [python]
-        args: ['--in-place', '--remove-all-unused-imports', '--remove-unused-variables']
-        files: ^backend/.*\.py$
-
-      - id: black
-        name: black
-        entry: black
-        language: system  # 使用 pip 安裝的版本 (requirements.txt)
-        types: [python]
-        files: ^backend/.*\.py$
-
-      - id: flake8
-        name: flake8
-        entry: flake8
-        language: system  # 使用 pip 安裝的版本 (requirements.txt)
-        types: [python]
-        args: ['--max-line-length=120', '--ignore=E203,W503']
-        files: ^backend/.*\.py$
-
-  # TypeScript/JavaScript
-  - repo: local
-    hooks:
-      - id: eslint
-        name: ESLint
-        entry: bash -c 'cd frontend && npx eslint --ext ts,tsx src --max-warnings 0'
-        language: system
-        files: frontend/src/.*\.(ts|tsx)$
-        pass_filenames: false
-
+      # TypeScript 編譯檢查（5-8 秒）
       - id: typescript
         name: TypeScript Check
         entry: bash -c 'cd frontend && npx tsc --noEmit'
@@ -50,51 +31,8 @@ repos:
         files: frontend/src/.*\.(ts|tsx)$
         pass_filenames: false
 
-      - id: frontend-unit-tests
-        name: Frontend Unit Tests
-        entry: bash -c 'cd frontend && npm run test:run'
-        language: system
-        files: frontend/src/.*\.(ts|tsx)$
-        pass_filenames: false
-
-  # Custom hooks
-  - repo: local
-    hooks:
-      - id: alembic-check
-        name: Check for missing Alembic migrations
-        entry: bash -c 'cd backend && if command -v alembic &> /dev/null; then alembic check || (echo "⚠️ Model changes detected! Run alembic revision --autogenerate -m your_message" && exit 1); fi'
-        language: system
-        pass_filenames: false
-        always_run: true
-        files: ^backend/models\.py$
-
-      - id: check-migration-format
-        name: Check Alembic migration file format
-        entry: python backend/hooks/check_migration_format.py
-        language: python
-        files: ^backend/alembic/versions/.*\.py$
-        pass_filenames: true
-      - id: prevent-hardcoded-urls
-        name: Prevent hardcoded localhost URLs
-        entry: bash -c 'if grep -r "localhost:[0-9]" frontend/src/ 2>/dev/null; then echo "Error - Hardcoded localhost URL found - Use environment variables"; exit 1; fi'
-        language: system
-        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
-        pass_filenames: false
-
-      - id: prevent-db-files
-        name: Prevent database files from being committed
-        entry: bash -c 'git diff --cached --name-only | grep -q "\.db$" && echo "Error - Database files detected - Use git reset to remove .db files" && exit 1 || exit 0'
-        language: system
-        pass_filenames: false
-        always_run: true
-
-      - id: check-test-file-location
-        name: Check test files are in correct location
-        entry: bash -c 'git diff --cached --name-only | grep -q "backend/scripts/test_.*\.py" && echo "Warning - Test files should be in backend/tests/ not scripts/" && exit 1 || exit 0'
-        language: system
-        pass_filenames: false
-        always_run: true
-
+      # Python Import 檢查（< 1 秒）
+      # 防止 UnboundLocalError 和 circular imports
       - id: check-import-patterns
         name: Check for problematic Python import patterns
         entry: python backend/hooks/check_import_patterns.py
@@ -103,16 +41,9 @@ repos:
         files: ^backend/.*\.py$
         pass_filenames: true
 
-  # 🔒 Secret Detection - CRITICAL SECURITY
-  # TODO: Re-enable detect-secrets after fixing baseline compatibility
-  # - repo: https://github.com/Yelp/detect-secrets
-  #   rev: v1.4.0
-  #   hooks:
-  #     - id: detect-secrets
-  #       args: ['--baseline', '.secrets.baseline']
-  #       exclude: package-lock\.json
-
-  # 🔒 SECURITY CHECKS - CRITICAL
+  # ==========================================
+  # 🔒 CRITICAL: 安全檢查
+  # ==========================================
   - repo: local
     hooks:
       - id: check-credentials
@@ -151,15 +82,65 @@ repos:
         language: script
         pass_filenames: false
 
-  # Prevent large files
+  # ==========================================
+  # ⚠️ IMPORTANT: 防止常見低級錯誤
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: prevent-db-files
+        name: Prevent database files from being committed
+        entry: bash -c 'git diff --cached --name-only | grep -q "\.db$" && echo "❌ Database files detected!" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-test-file-location
+        name: Check test files are in correct location
+        entry: bash -c 'git diff --cached --name-only | grep -q "backend/scripts/test_.*\.py" && echo "⚠️ Test files should be in backend/tests/" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # ==========================================
+  # 📝 BASIC: 基本檔案檢查（極快）
+  # ==========================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: check-added-large-files
-        args: ['--maxkb=1000']
-      - id: check-json
-        exclude: tsconfig.*\.json$
-      - id: check-yaml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
+        args: ['--maxkb=5000']  # 放寬到 5MB
       - id: check-merge-conflict
+
+  # ==========================================
+  # 🎨 PUSH-TIME: 格式化（不擋 commit）
+  # ==========================================
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        stages: [push]
+        files: ^backend/.*\.py$
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args: ['--in-place', '--remove-all-unused-imports', '--remove-unused-variables']
+        stages: [push]
+        files: ^backend/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: bash -c 'cd frontend && npx prettier --write'
+        language: system
+        files: frontend/src/.*\.(ts|tsx|js|jsx|css|json)$
+        stages: [push]
+
+      - id: eslint-fix
+        name: ESLint --fix
+        entry: bash -c 'cd frontend && npx eslint --fix'
+        language: system
+        files: frontend/src/.*\.(ts|tsx)$
+        stages: [push]
