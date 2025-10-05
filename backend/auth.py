@@ -30,6 +30,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fals
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """驗證密碼"""
+    # 🔐 Handle None hash gracefully (return False)
+    # But raise error for None password (security: never accept None as valid password)
+    if plain_password is None:
+        raise TypeError("Password cannot be None")
+
+    if hashed_password is None:
+        return False
+
     # Ensure password is encoded properly and truncated if needed
     password_bytes = plain_password.encode("utf-8")[:72]
     hashed_bytes = (
