@@ -1,0 +1,15 @@
+version: 2
+
+paths-ignore:
+  - "backend/tests/**"
+  - "frontend/tests/**"
+  - "**/test_*.py"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/conftest.py"
+
+# Ignore test fixtures and mock data
+matches-ignore:
+  - name: Test passwords
+    match: Pass123!
