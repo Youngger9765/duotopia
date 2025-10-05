@@ -37,6 +37,12 @@ interface Transaction {
   subscription_type: string;
 }
 
+// 方案價格對照表
+const PLAN_PRICES: Record<string, number> = {
+  'Tutor Teachers': 230,
+  'School Teachers': 330,
+};
+
 export default function TeacherSubscription() {
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
@@ -457,7 +463,7 @@ export default function TeacherSubscription() {
           )}
 
           <TapPayPayment
-            amount={230}
+            amount={PLAN_PRICES[subscription?.plan || 'Tutor Teachers'] || 230}
             planName={subscription?.plan || 'Tutor Teachers'}
             onPaymentSuccess={handleRenewalSuccess}
             onPaymentError={handleRenewalError}

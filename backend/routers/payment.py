@@ -39,12 +39,29 @@ class PaymentResponse(BaseModel):
 
 @router.post("/payment/process", response_model=PaymentResponse)
 async def process_payment(
-    payment_request: PaymentRequest,
     request: Request,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """Process payment using TapPay"""
+    # 先取得原始請求體來debug
+    try:
+        body = await request.body()
+        import json
+
+        body_json = json.loads(body)
+        logger.info(f"收到付款請求 - Teacher: {current_teacher.email}")
+        logger.info(f"請求內容: {body_json}")
+
+        # 手動解析 PaymentRequest
+        payment_request = PaymentRequest(**body_json)
+        logger.info(
+            f"解析成功 - Plan: {payment_request.plan_name}, Amount: {payment_request.amount}"
+        )
+    except Exception as e:
+        logger.error(f"解析請求失敗: {str(e)}")
+        raise
+
     try:
         # Generate idempotency key to prevent duplicate charges
         idempotency_key = str(uuid.uuid4())
@@ -56,6 +73,9 @@ async def process_payment(
         client_host = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
         request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+
+        # Get current time (needed for exception handling)
+        now = datetime.now(timezone.utc)
 
         # Calculate subscription months based on plan
         if payment_request.plan_name == "Tutor Teachers":
@@ -76,9 +96,6 @@ async def process_payment(
                 detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
             )
 
-        # Calculate subscription dates
-        now = datetime.now(timezone.utc)
-
         # Get current subscription end date or start from now
         if (
             current_teacher.subscription_end_date
@@ -93,10 +110,8 @@ async def process_payment(
             new_end_date = now + timedelta(days=30 * months)
 
         # Process payment with TapPay
-        use_mock = (
-            os.getenv("VITE_ENVIRONMENT") == "development"
-            or os.getenv("USE_MOCK_PAYMENT", "false").lower() == "true"
-        )
+        use_mock = os.getenv("USE_MOCK_PAYMENT", "false").lower() == "true"
+        logger.info(f"USE_MOCK_PAYMENT={use_mock}")
 
         if use_mock:
             # Mock response for development
@@ -245,55 +260,71 @@ async def process_payment(
 
     except HTTPException as he:
         # Log failed transaction attempt
-        failed_transaction = TeacherSubscriptionTransaction(
-            teacher_id=current_teacher.id,
-            teacher_email=current_teacher.email,
-            transaction_type=TransactionType.RECHARGE,
-            subscription_type=payment_request.plan_name,
-            amount=payment_request.amount,
-            currency="TWD",
-            status="FAILED",
-            months=months,
-            new_end_date=now,  # Default value
-            idempotency_key=idempotency_key,
-            ip_address=client_host,
-            user_agent=user_agent,
-            request_id=request_id,
-            payment_provider="tappay",
-            payment_method="credit_card",
-            failure_reason=str(he.detail),
-            error_code=str(he.status_code),
-            processed_at=now,
+        try:
+            failed_transaction = TeacherSubscriptionTransaction(
+                teacher_id=current_teacher.id,
+                teacher_email=current_teacher.email,
+                transaction_type=TransactionType.RECHARGE,
+                subscription_type=payment_request.plan_name,
+                amount=payment_request.amount,
+                currency="TWD",
+                status="FAILED",
+                months=months,
+                new_end_date=now,  # Default value
+                idempotency_key=str(uuid.uuid4()),  # New key to avoid duplicate
+                ip_address=client_host,
+                user_agent=user_agent,
+                request_id=request_id,
+                payment_provider="tappay",
+                payment_method="credit_card",
+                failure_reason=str(he.detail),
+                error_code=str(he.status_code),
+                processed_at=now,
+            )
+            db.add(failed_transaction)
+            db.commit()
+        except Exception as log_error:
+            logger.error(f"Failed to log failed transaction: {log_error}")
+            db.rollback()
+
+        # Return error response instead of raising exception
+        return PaymentResponse(
+            success=False, transaction_id=None, message=str(he.detail)
         )
-        db.add(failed_transaction)
-        db.commit()
-        raise
     except Exception as e:
-        logger.error(f"Payment processing error: {str(e)}")
-        # Log failed transaction
-        failed_transaction = TeacherSubscriptionTransaction(
-            teacher_id=current_teacher.id,
-            teacher_email=current_teacher.email,
-            transaction_type=TransactionType.RECHARGE,
-            subscription_type=payment_request.plan_name,
-            amount=payment_request.amount,
-            currency="TWD",
-            status="FAILED",
-            months=months,
-            new_end_date=now,  # Default value
-            idempotency_key=idempotency_key,
-            ip_address=client_host,
-            user_agent=user_agent,
-            request_id=request_id,
-            payment_provider="tappay",
-            payment_method="credit_card",
-            failure_reason=str(e),
-            error_code="INTERNAL_ERROR",
-            processed_at=now,
+        logger.error(f"Payment processing error: {str(e)}", exc_info=True)
+        # Try to log failed transaction
+        try:
+            failed_transaction = TeacherSubscriptionTransaction(
+                teacher_id=current_teacher.id,
+                teacher_email=current_teacher.email,
+                transaction_type=TransactionType.RECHARGE,
+                subscription_type=payment_request.plan_name,
+                amount=payment_request.amount,
+                currency="TWD",
+                status="FAILED",
+                months=months,
+                new_end_date=now,  # Default value
+                idempotency_key=str(uuid.uuid4()),  # New key to avoid duplicate
+                ip_address=client_host,
+                user_agent=user_agent,
+                request_id=request_id,
+                payment_provider="tappay",
+                payment_method="credit_card",
+                failure_reason=str(e),
+                error_code="INTERNAL_ERROR",
+                processed_at=now,
+            )
+            db.add(failed_transaction)
+            db.commit()
+        except Exception as log_error:
+            logger.error(f"Failed to log transaction: {log_error}")
+            db.rollback()
+
+        # Return error response instead of raising exception
+        return PaymentResponse(
+            success=False, transaction_id=None, message=f"系統錯誤：{str(e)}"
         )
-        db.add(failed_transaction)
-        db.commit()
-        raise HTTPException(status_code=500, detail="Payment processing failed")
 
 
 @router.post("/payment/webhook")

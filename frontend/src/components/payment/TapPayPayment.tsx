@@ -32,17 +32,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
   useEffect(() => {
     initializeTapPay();
-
-    // Add keyboard shortcut for quick fill (Ctrl/Cmd + T)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
-        e.preventDefault();
-        fillTestCardData();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const initializeTapPay = () => {
@@ -51,7 +40,24 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     const APP_KEY = import.meta.env.VITE_TAPPAY_APP_KEY;
     const SERVER_TYPE = import.meta.env.VITE_TAPPAY_SERVER_TYPE || 'sandbox';
 
-    if (window.TPDirect) {
+    if (!window.TPDirect) {
+      console.error('TapPay SDK not loaded');
+      toast.error('付款系統載入失敗，請重新整理頁面');
+      return;
+    }
+
+    // 延遲初始化，確保 DOM 已渲染
+    setTimeout(() => {
+      // 檢查元素是否存在
+      const cardNumberEl = document.querySelector('#card-number');
+      const expiryEl = document.querySelector('#card-expiration-date');
+      const ccvEl = document.querySelector('#card-ccv');
+
+      if (!cardNumberEl || !expiryEl || !ccvEl) {
+        console.error('Payment form elements not found');
+        return;
+      }
+
       // Initialize SDK
       window.TPDirect.setupSDK(
         APP_ID,
@@ -60,43 +66,23 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       );
 
       // Setup card fields
-      window.TPDirect.card.setup({
-        fields: {
-          number: {
-            element: '#card-number',
-            placeholder: '**** **** **** ****'
-          },
-          expirationDate: {
-            element: '#card-expiration-date',
-            placeholder: 'MM/YY'
-          },
-          ccv: {
-            element: '#card-ccv',
-            placeholder: 'CVV'
-          }
+      const fields = {
+        number: {
+          element: '#card-number',
+          placeholder: '**** **** **** ****'
         },
-        styles: `
-          input {
-            font-size: 16px;
-            color: #333;
-            border: none;
-            padding: 0;
-            background: transparent;
-            width: 100%;
-            outline: none;
-          }
-          input::placeholder {
-            color: #9CA3AF;
-          }
-          .has-error input {
-            color: #EF4444;
-          }
-        `,
-        isMaskCreditCardNumber: true,
-        maskCreditCardNumberRange: {
-          beginIndex: 6,
-          endIndex: 11
+        expirationDate: {
+          element: '#card-expiration-date',
+          placeholder: 'MM / YY'
+        },
+        ccv: {
+          element: '#card-ccv',
+          placeholder: 'CVV'
         }
+      };
+
+      window.TPDirect.card.setup({
+        fields: fields
       });
 
       // Listen for card field updates
@@ -124,35 +110,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       });
 
       setIsInitialized(true);
-    } else {
-      console.error('TapPay SDK not loaded');
-      toast.error('付款系統載入失敗，請重新整理頁面');
-    }
-  };
-
-  const fillTestCardData = () => {
-    // Auto-fill test card data
-    const cardNumberInput = document.querySelector('#card-number input') as HTMLInputElement;
-    const expiryInput = document.querySelector('#card-expiration-date input') as HTMLInputElement;
-    const cvvInput = document.querySelector('#card-ccv input') as HTMLInputElement;
-
-    if (cardNumberInput) {
-      cardNumberInput.value = '4242 4242 4242 4242';
-      cardNumberInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    if (expiryInput) {
-      expiryInput.value = '12/28';
-      expiryInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    if (cvvInput) {
-      cvvInput.value = '123';
-      cvvInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    // Trigger TapPay validation
-    setTimeout(() => {
-      setCanSubmit(true);
-      toast.success('已自動填入測試卡號 (快捷鍵: Ctrl/Cmd + T)');
     }, 100);
   };
 
@@ -166,31 +123,33 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
     // Get Prime Token from TapPay
     window.TPDirect.card.getPrime(async (result) => {
+      console.log('TapPay getPrime 完整結果:', JSON.stringify(result, null, 2));
+      console.log('所有欄位:', Object.keys(result));
+
       if (result.status !== 0) {
+        console.error('TapPay getPrime 失敗，status:', result.status, 'msg:', result.msg);
         onPaymentError(result.msg || '無法取得付款憑證');
         toast.error(result.msg || '付款失敗');
         setIsProcessing(false);
         return;
       }
 
+      // Get prime from card object
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prime = (result as any).card?.prime || result.prime;
+
+      if (!prime) {
+        console.error('Prime token 不存在！完整結果:', result);
+        onPaymentError('無法取得付款憑證 (prime token 為空)');
+        toast.error('無法取得付款憑證');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('Prime token 取得成功:', prime.substring(0, 20) + '...');
+
       try {
-        // TODO: Replace with real API when backend is ready
-        // For now, simulate successful payment in development
-        if (import.meta.env.VITE_ENVIRONMENT === 'development') {
-          console.log('Mock payment processing with prime:', result.prime);
-          console.log('Payment details:', { amount, planName });
-
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          // Simulate successful payment
-          const mockTransactionId = `MOCK_${Date.now()}`;
-          onPaymentSuccess(mockTransactionId);
-          toast.success('付款成功！（測試模式）');
-          return;
-        }
-
-        // Real API call (for production)
+        // Real TapPay payment processing
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment/process`, {
           method: 'POST',
           headers: {
@@ -198,7 +157,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({
-            prime: result.prime,
+            prime: prime,
             amount: amount,
             plan_name: planName,
             details: {
@@ -206,9 +165,9 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               item_price: amount
             },
             cardholder: {
-              name: 'User', // Will be filled from backend
-              email: 'user@example.com', // Will be filled from backend
-              phone_number: '+886912345678' // Will be filled from backend
+              name: 'User',
+              email: 'user@example.com',
+              phone_number: '+886912345678'
             }
           })
         });
@@ -225,7 +184,22 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           onPaymentSuccess(data.transaction_id);
           toast.success('付款成功！');
         } else {
-          throw new Error(data.message || '付款處理失敗');
+          // Handle FastAPI validation errors (422)
+          let errorMsg = data.message || '付款處理失敗';
+
+          if (data.detail && Array.isArray(data.detail)) {
+            // FastAPI validation error format
+            console.error('完整驗證錯誤:', JSON.stringify(data.detail, null, 2));
+            const validationErrors = data.detail.map((err: {loc?: string[]; msg: string}) => {
+              const field = err.loc ? err.loc.join('.') : 'unknown';
+              return `${field}: ${err.msg}`;
+            }).join(', ');
+            errorMsg = `驗證錯誤: ${validationErrors}`;
+          } else if (data.detail) {
+            errorMsg = data.detail;
+          }
+
+          throw new Error(errorMsg);
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : '付款處理發生錯誤';
@@ -272,6 +246,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className={`tappay-field border rounded-lg px-4 py-3 bg-white ${
                 cardErrors.number ? 'border-red-500' : 'border-gray-300'
               } focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500`}
+              style={{ height: '48px' }}
             />
             {cardErrors.number && (
               <p className="text-red-500 text-xs mt-1">{cardErrors.number}</p>
@@ -288,6 +263,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className={`tappay-field border rounded-lg px-4 py-3 bg-white ${
                 cardErrors.expiry ? 'border-red-500' : 'border-gray-300'
               } focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500`}
+              style={{ height: '48px' }}
             />
             {cardErrors.expiry && (
               <p className="text-red-500 text-xs mt-1">{cardErrors.expiry}</p>
@@ -301,6 +277,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className={`tappay-field border rounded-lg px-4 py-3 bg-white ${
                 cardErrors.ccv ? 'border-red-500' : 'border-gray-300'
               } focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500`}
+              style={{ height: '48px' }}
             />
             {cardErrors.ccv && (
               <p className="text-red-500 text-xs mt-1">{cardErrors.ccv}</p>
@@ -308,9 +285,9 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           </div>
         </div>
 
-        {/* Test Mode Alert with Quick Fill */}
+        {/* Test Mode Info */}
         <Alert className="bg-blue-50 border-blue-200">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-2">
               <Info className="h-4 w-4 text-blue-600 mt-0.5" />
               <AlertDescription className="text-blue-800">
@@ -319,15 +296,44 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
                 有效期限: 任何未來日期 | CVV: 123
               </AlertDescription>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={fillTestCardData}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-0"
-            >
-              快速填入
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText('4242 4242 4242 4242');
+                  toast.success('已複製卡號');
+                }}
+                className="text-xs"
+              >
+                複製卡號
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText('12/28');
+                  toast.success('已複製期限');
+                }}
+                className="text-xs"
+              >
+                複製期限
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText('123');
+                  toast.success('已複製 CVV');
+                }}
+                className="text-xs"
+              >
+                複製 CVV
+              </Button>
+            </div>
           </div>
         </Alert>
 

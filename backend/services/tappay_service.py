@@ -88,6 +88,13 @@ class TapPayService:
             }
 
         try:
+            print("🔥 TapPay Service Config:")
+            print(f"  - Environment: {self.environment}")
+            print(f"  - API URL: {self.api_url}")
+            print(f"  - Merchant ID: {self.merchant_id}")
+            print(f"  - Partner Key: {self.partner_key[:20]}...")
+            print(f"  - Order: {order_number}")
+
             logger.info(f"Processing payment for order: {order_number}")
 
             headers = {
@@ -95,12 +102,20 @@ class TapPayService:
                 "x-api-key": self.partner_key,
             }
 
+            print(f"🔥 Sending to TapPay: {self.api_url}")
+            print(f"  - Amount: {payload['amount']}")
+            print(f"  - Merchant: {payload['merchant_id']}")
+
             response = requests.post(
                 self.api_url, json=payload, headers=headers, timeout=30
             )
 
             response.raise_for_status()
             result = response.json()
+
+            print(
+                f"🔥 TapPay Response: status={result.get('status')}, msg={result.get('msg')}"
+            )
 
             # Log response for debugging (注意不要記錄敏感資料)
             logger.info(
