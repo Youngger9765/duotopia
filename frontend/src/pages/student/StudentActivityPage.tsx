@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
-import { toast } from 'sonner';
-import ReadingAssessmentTemplate from '@/components/activities/ReadingAssessmentTemplate';
-import ListeningClozeTemplate from '@/components/activities/ListeningClozeTemplate';
-import GroupedQuestionsTemplate from '@/components/activities/GroupedQuestionsTemplate';
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { toast } from "sonner";
+import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessmentTemplate";
+import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
+import GroupedQuestionsTemplate from "@/components/activities/GroupedQuestionsTemplate";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,10 +17,10 @@ import {
   Circle,
   Clock,
   Loader2,
-  BookOpen
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { retryAudioUpload } from '@/utils/retryHelper';
+  BookOpen,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { retryAudioUpload } from "@/utils/retryHelper";
 
 // Activity type from API
 interface Activity {
@@ -69,7 +69,7 @@ interface Activity {
 interface ActivityResponse {
   assignment_id: number;
   title: string;
-  status?: string;  // 加入作業狀態
+  status?: string; // 加入作業狀態
   total_activities: number;
   activities: Activity[];
 }
@@ -84,7 +84,7 @@ interface Answer {
   answers?: string[]; // For grouped questions answers
   startTime: Date;
   endTime?: Date;
-  status: 'not_started' | 'in_progress' | 'completed';
+  status: "not_started" | "in_progress" | "completed";
 }
 
 export default function StudentActivityPage() {
@@ -94,9 +94,9 @@ export default function StudentActivityPage() {
 
   // State management
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [assignmentTitle, setAssignmentTitle] = useState('');
-  const [assignmentStatus, setAssignmentStatus] = useState<string>('');  // 作業狀態
-  const [isReadOnly, setIsReadOnly] = useState(false);  // 唯讀模式
+  const [assignmentTitle, setAssignmentTitle] = useState("");
+  const [assignmentStatus, setAssignmentStatus] = useState<string>(""); // 作業狀態
+  const [isReadOnly, setIsReadOnly] = useState(false); // 唯讀模式
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [currentSubQuestionIndex, setCurrentSubQuestionIndex] = useState(0); // For activities with multiple items
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
@@ -107,7 +107,9 @@ export default function StudentActivityPage() {
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null,
+  );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
 
@@ -121,36 +123,42 @@ export default function StudentActivityPage() {
   const loadActivities = async () => {
     try {
       setLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/activities`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(
+        `${apiUrl}/api/students/assignments/${assignmentId}/activities`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to load activities: ${response.status}`);
       }
 
       const data: ActivityResponse = await response.json();
-      console.log('Loaded activities from API:', data.activities);
+      console.log("Loaded activities from API:", data.activities);
 
       // Log AI assessment data from items
       data.activities.forEach((activity, idx) => {
         if (activity.items && activity.items.length > 0) {
-          console.log(`Activity ${idx} items with AI assessment:`,
+          console.log(
+            `Activity ${idx} items with AI assessment:`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             activity.items.map((item: any) => ({
               id: item.id,
               text: item.text?.substring(0, 20),
               has_ai: !!item.ai_assessment,
-              scores: item.ai_assessment ? {
-                accuracy: item.ai_assessment.accuracy_score,
-                fluency: item.ai_assessment.fluency_score,
-                pronunciation: item.ai_assessment.pronunciation_score
-              } : null
-            }))
+              scores: item.ai_assessment
+                ? {
+                    accuracy: item.ai_assessment.accuracy_score,
+                    fluency: item.ai_assessment.fluency_score,
+                    pronunciation: item.ai_assessment.pronunciation_score,
+                  }
+                : null,
+            })),
           );
 
           // Debug teacher feedback
@@ -160,18 +168,23 @@ export default function StudentActivityPage() {
             text: item.text?.substring(0, 30),
             teacher_feedback: item.teacher_feedback,
             teacher_passed: item.teacher_passed,
-            teacher_review_score: item.teacher_review_score
+            teacher_review_score: item.teacher_review_score,
           }));
 
-          console.log(`[DEBUG] Activity ${idx} teacher feedback:`, teacherFeedbackData);
+          console.log(
+            `[DEBUG] Activity ${idx} teacher feedback:`,
+            teacherFeedbackData,
+          );
 
           // 詳細顯示每個 item 的評語
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           teacherFeedbackData.forEach((item: any, i: number) => {
             if (item.teacher_feedback) {
-              console.log(`  ✅ Item ${i+1} (ID: ${item.id}) 有評語: "${item.teacher_feedback}"`);
+              console.log(
+                `  ✅ Item ${i + 1} (ID: ${item.id}) 有評語: "${item.teacher_feedback}"`,
+              );
             } else {
-              console.log(`  ❌ Item ${i+1} (ID: ${item.id}) 沒有評語`);
+              console.log(`  ❌ Item ${i + 1} (ID: ${item.id}) 沒有評語`);
             }
           });
         }
@@ -184,38 +197,42 @@ export default function StudentActivityPage() {
       if (data.status) {
         setAssignmentStatus(data.status);
         // 如果作業已提交或已評分，設為唯讀模式
-        const readOnlyStatuses = ['SUBMITTED', 'GRADED'];
+        const readOnlyStatuses = ["SUBMITTED", "GRADED"];
         setIsReadOnly(readOnlyStatuses.includes(data.status));
 
         if (readOnlyStatuses.includes(data.status)) {
-          console.log('🔒 Assignment is in read-only mode:', data.status);
+          console.log("🔒 Assignment is in read-only mode:", data.status);
         }
       }
 
       // Initialize answers for all activities
       const initialAnswers = new Map<number, Answer>();
-      data.activities.forEach(activity => {
+      data.activities.forEach((activity) => {
         // For reading_assessment with single item, extract audioUrl directly
         let audioUrl: string | undefined = undefined;
-        if (activity.type === 'reading_assessment' && activity.items?.[0]) {
+        if (activity.type === "reading_assessment" && activity.items?.[0]) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          audioUrl = (activity.items[0] as any).recording_url || '';
+          audioUrl = (activity.items[0] as any).recording_url || "";
         }
 
         initialAnswers.set(activity.id, {
           progressId: activity.id,
-          status: activity.status === 'NOT_STARTED' ? 'not_started' :
-                  activity.status === 'IN_PROGRESS' ? 'in_progress' : 'completed',
+          status:
+            activity.status === "NOT_STARTED"
+              ? "not_started"
+              : activity.status === "IN_PROGRESS"
+                ? "in_progress"
+                : "completed",
           startTime: new Date(),
           audioUrl: audioUrl, // Only for reading_assessment single recording
           answers: activity.answers || [], // Text answers for grouped questions
-          userAnswers: [] // For listening cloze
+          userAnswers: [], // For listening cloze
         });
       });
       setAnswers(initialAnswers);
     } catch (error) {
-      console.error('Failed to load activities:', error);
-      toast.error('無法載入題目，請稍後再試');
+      console.error("Failed to load activities:", error);
+      toast.error("無法載入題目，請稍後再試");
       navigate(`/student/assignment/${assignmentId}`);
     } finally {
       setLoading(false);
@@ -226,7 +243,7 @@ export default function StudentActivityPage() {
   const startRecording = async (isReRecord: boolean = false) => {
     // 唯讀模式下不允許錄音
     if (isReadOnly) {
-      toast.warning('檢視模式下無法錄音');
+      toast.warning("檢視模式下無法錄音");
       return;
     }
 
@@ -239,22 +256,24 @@ export default function StudentActivityPage() {
 
       // Clear previous recording and AI scores for grouped questions
       if (currentActivity.items && currentActivity.items.length > 0) {
-        setActivities(prevActivities => {
+        setActivities((prevActivities) => {
           const newActivities = [...prevActivities];
-          const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
+          const activityIndex = newActivities.findIndex(
+            (a) => a.id === currentActivity.id,
+          );
           if (activityIndex !== -1 && newActivities[activityIndex].items) {
             // Clear the recording_url for the current item
             const newItems = [...newActivities[activityIndex].items!];
             if (newItems[currentSubQuestionIndex]) {
               newItems[currentSubQuestionIndex] = {
                 ...newItems[currentSubQuestionIndex],
-                recording_url: '' // Clear current recording
+                recording_url: "", // Clear current recording
               };
             }
             newActivities[activityIndex] = {
               ...newActivities[activityIndex],
               items: newItems,
-              ai_scores: undefined // Clear AI scores
+              ai_scores: undefined, // Clear AI scores
             };
           }
           return newActivities;
@@ -272,21 +291,21 @@ export default function StudentActivityPage() {
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        const audioBlob = new Blob(chunks, { type: "audio/webm" });
         const currentActivity = activities[currentActivityIndex];
 
         // Create local audio URL for playback
         const localAudioUrl = URL.createObjectURL(audioBlob);
 
         // Update local state immediately for playback
-        setAnswers(prev => {
+        setAnswers((prev) => {
           const newAnswers = new Map(prev);
           const answer = newAnswers.get(currentActivity.id) || {
             progressId: currentActivity.id,
-            status: 'not_started',
+            status: "not_started",
             startTime: new Date(),
             recordings: [],
-            answers: []
+            answers: [],
           };
 
           // For grouped questions, update item's recording_url locally
@@ -298,7 +317,7 @@ export default function StudentActivityPage() {
             (answer as Answer).audioUrl = localAudioUrl;
           }
 
-          answer.status = 'in_progress';  // Keep as in_progress until uploaded
+          answer.status = "in_progress"; // Keep as in_progress until uploaded
           (answer as Answer).endTime = new Date();
 
           newAnswers.set(currentActivity.id, answer);
@@ -308,20 +327,22 @@ export default function StudentActivityPage() {
         // Update activity's item recording_url for display
         if (currentActivity.items && currentActivity.items.length > 0) {
           // Update activities state to trigger re-render
-          setActivities(prevActivities => {
+          setActivities((prevActivities) => {
             const newActivities = [...prevActivities];
-            const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
+            const activityIndex = newActivities.findIndex(
+              (a) => a.id === currentActivity.id,
+            );
             if (activityIndex !== -1 && newActivities[activityIndex].items) {
               const newItems = [...newActivities[activityIndex].items!];
               if (newItems[currentSubQuestionIndex]) {
                 newItems[currentSubQuestionIndex] = {
                   ...newItems[currentSubQuestionIndex],
-                  recording_url: localAudioUrl
+                  recording_url: localAudioUrl,
                 };
               }
               newActivities[activityIndex] = {
                 ...newActivities[activityIndex],
-                items: newItems
+                items: newItems,
               };
             }
             return newActivities;
@@ -333,61 +354,73 @@ export default function StudentActivityPage() {
         isReRecording.current = false; // Reset flag
 
         if (!skipUpload) {
-        try {
-          // 獲取當前 item 的 ID
-          const currentItem = currentActivity.items?.[currentSubQuestionIndex];
-          if (!currentItem?.id) {
-            throw new Error('Content item ID not found');
-          }
-
-          const formData = new FormData();
-          formData.append('assignment_id', assignmentId || '');
-          formData.append('content_item_id', currentItem.id.toString());  // 使用 ContentItem 的 ID！
-          formData.append('audio_file', audioBlob, 'recording.webm');
-
-          const apiUrl = import.meta.env.VITE_API_URL || '';
-          console.log('Uploading recording to:', `${apiUrl}/api/students/upload-recording`);
-
-          const result = await retryAudioUpload(
-            async () => {
-              const uploadResponse = await fetch(`${apiUrl}/api/students/upload-recording`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                },
-                body: formData
-              });
-
-              if (!uploadResponse.ok) {
-                const error = new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-                if (uploadResponse.status >= 500) {
-                  // Server errors are retryable
-                  throw error;
-                }
-                // Client errors (4xx) should not be retried
-                throw Object.assign(error, { noRetry: true });
-              }
-
-              return await uploadResponse.json();
-            },
-            (attempt, error) => {
-              console.log(`上傳失敗，正在重試... (第 ${attempt}/3 次)`, error);
-              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+          try {
+            // 獲取當前 item 的 ID
+            const currentItem =
+              currentActivity.items?.[currentSubQuestionIndex];
+            if (!currentItem?.id) {
+              throw new Error("Content item ID not found");
             }
-          );
 
-          const { audio_url, message, progress_id } = result;
-          console.log('Recording uploaded successfully:', {
-            url: audio_url,
-            message: message,
-            progress_id: progress_id
-          });
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId || "");
+            formData.append("content_item_id", currentItem.id.toString()); // 使用 ContentItem 的 ID！
+            formData.append("audio_file", audioBlob, "recording.webm");
+
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            console.log(
+              "Uploading recording to:",
+              `${apiUrl}/api/students/upload-recording`,
+            );
+
+            const result = await retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  const error = new Error(
+                    `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
+                  );
+                  if (uploadResponse.status >= 500) {
+                    // Server errors are retryable
+                    throw error;
+                  }
+                  // Client errors (4xx) should not be retried
+                  throw Object.assign(error, { noRetry: true });
+                }
+
+                return await uploadResponse.json();
+              },
+              (attempt, error) => {
+                console.log(
+                  `上傳失敗，正在重試... (第 ${attempt}/3 次)`,
+                  error,
+                );
+                toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              },
+            );
+
+            const { audio_url, message, progress_id } = result;
+            console.log("Recording uploaded successfully:", {
+              url: audio_url,
+              message: message,
+              progress_id: progress_id,
+            });
 
             // 錄音成功上傳到雲端
-            toast.success('錄音已上傳到雲端');
+            toast.success("錄音已上傳到雲端");
 
             // Update with the GCS URL and progress_id
-            setAnswers(prev => {
+            setAnswers((prev) => {
               const newAnswers = new Map(prev);
               const answer = newAnswers.get(currentActivity.id);
               if (answer) {
@@ -409,7 +442,7 @@ export default function StudentActivityPage() {
                     answer.progressId = progress_id;
                   }
                 }
-                answer.status = 'completed';
+                answer.status = "completed";
               }
               newAnswers.set(currentActivity.id, answer!);
               return newAnswers;
@@ -417,20 +450,25 @@ export default function StudentActivityPage() {
 
             // Also update activities state with GCS URL
             if (currentActivity.items && currentActivity.items.length > 0) {
-              setActivities(prevActivities => {
+              setActivities((prevActivities) => {
                 const newActivities = [...prevActivities];
-                const activityIndex = newActivities.findIndex(a => a.id === currentActivity.id);
-                if (activityIndex !== -1 && newActivities[activityIndex].items) {
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === currentActivity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
                   const newItems = [...newActivities[activityIndex].items!];
                   if (newItems[currentSubQuestionIndex]) {
                     newItems[currentSubQuestionIndex] = {
                       ...newItems[currentSubQuestionIndex],
-                      recording_url: audio_url
+                      recording_url: audio_url,
                     };
                   }
                   newActivities[activityIndex] = {
                     ...newActivities[activityIndex],
-                    items: newItems
+                    items: newItems,
                   };
                 }
                 return newActivities;
@@ -439,17 +477,20 @@ export default function StudentActivityPage() {
 
             // Save to server with the URL - autoSave will handle the updated recordings array
             await autoSave();
-        } catch (error) {
-          console.error('Failed to upload recording:', error);
+          } catch (error) {
+            console.error("Failed to upload recording:", error);
 
-          // 處理錯誤
-          if (error instanceof TypeError && error.message === 'Failed to fetch') {
-            console.error('Network error - cannot upload recording');
-            toast.error('網絡連接失敗，無法上傳錄音');
-          } else {
-            toast.error('錄音上傳失敗，請稍後再試');
+            // 處理錯誤
+            if (
+              error instanceof TypeError &&
+              error.message === "Failed to fetch"
+            ) {
+              console.error("Network error - cannot upload recording");
+              toast.error("網絡連接失敗，無法上傳錄音");
+            } else {
+              toast.error("錄音上傳失敗，請稍後再試");
+            }
           }
-        }
         } // End of if (!skipUpload)
       }; // End of recorder.onstop
 
@@ -462,7 +503,7 @@ export default function StudentActivityPage() {
       // Start recording timer with 45 second limit
       let hasReachedLimit = false;
       recordingInterval.current = setInterval(() => {
-        setRecordingTime(prev => {
+        setRecordingTime((prev) => {
           const newTime = prev + 1;
           // Auto stop at 45 seconds
           if (newTime >= 45 && !hasReachedLimit) {
@@ -474,11 +515,11 @@ export default function StudentActivityPage() {
             }
             // Stop recording after state update
             setTimeout(() => {
-              if (mediaRecorder && mediaRecorder.state === 'recording') {
+              if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
                 setMediaRecorder(null);
                 setIsRecording(false);
-                toast.info('錄音已達 45 秒上限，自動停止');
+                toast.info("錄音已達 45 秒上限，自動停止");
               }
             }, 0);
             return 45; // Keep time at 45
@@ -486,10 +527,9 @@ export default function StudentActivityPage() {
           return newTime;
         });
       }, 1000);
-
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      toast.error('無法啟動錄音，請檢查麥克風權限');
+      console.error("Failed to start recording:", error);
+      toast.error("無法啟動錄音，請檢查麥克風權限");
     }
   };
 
@@ -508,13 +548,13 @@ export default function StudentActivityPage() {
 
   const reRecord = () => {
     const currentActivity = activities[currentActivityIndex];
-    setAnswers(prev => {
+    setAnswers((prev) => {
       const newAnswers = new Map(prev);
       const answer = newAnswers.get(currentActivity.id);
       if (answer) {
         answer.audioBlob = undefined;
         answer.audioUrl = undefined;
-        answer.status = 'in_progress';
+        answer.status = "in_progress";
       }
       newAnswers.set(currentActivity.id, answer!);
       return newAnswers;
@@ -526,7 +566,7 @@ export default function StudentActivityPage() {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   // Navigation - handles both activities and sub-questions
@@ -582,7 +622,10 @@ export default function StudentActivityPage() {
     }
   };
 
-  const handleActivitySelect = async (index: number, subQuestionIndex: number = 0) => {
+  const handleActivitySelect = async (
+    index: number,
+    subQuestionIndex: number = 0,
+  ) => {
     await autoSave();
     setCurrentActivityIndex(index);
     setCurrentSubQuestionIndex(subQuestionIndex); // Set to specific sub-question
@@ -600,7 +643,7 @@ export default function StudentActivityPage() {
 
       if (!answer || !currentActivity.id) return;
 
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
 
       // Prepare save data based on activity type
       const saveData: Record<string, unknown> = {
@@ -619,18 +662,21 @@ export default function StudentActivityPage() {
         saveData.audio_url = audioUrl || answer.audioUrl;
       }
 
-      await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/activities/${currentActivity.id}/save`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      await fetch(
+        `${apiUrl}/api/students/assignments/${assignmentId}/activities/${currentActivity.id}/save`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(saveData),
         },
-        body: JSON.stringify(saveData)
-      });
+      );
 
-      console.log('Auto-saved activity progress');
+      console.log("Auto-saved activity progress");
     } catch (error) {
-      console.error('Failed to auto-save:', error);
+      console.error("Failed to auto-save:", error);
     } finally {
       setSaving(false);
     }
@@ -638,8 +684,8 @@ export default function StudentActivityPage() {
 
   // Final submission
   const handleSubmit = async (e?: React.MouseEvent) => {
-    console.log('🔥 [DEBUG] handleSubmit called in StudentActivityPage!');
-    console.log('🔥 [DEBUG] Event:', e);
+    console.log("🔥 [DEBUG] handleSubmit called in StudentActivityPage!");
+    console.log("🔥 [DEBUG] Event:", e);
 
     // 防止預設行為和事件冒泡
     if (e) {
@@ -648,51 +694,59 @@ export default function StudentActivityPage() {
     }
 
     const unanswered = Array.from(answers.values()).filter(
-      a => a.status === 'not_started'
+      (a) => a.status === "not_started",
     );
 
     if (unanswered.length > 0) {
       const confirm = window.confirm(
-        `還有 ${unanswered.length} 題未作答，確定要提交嗎？`
+        `還有 ${unanswered.length} 題未作答，確定要提交嗎？`,
       );
       if (!confirm) {
-        console.log('🔥 [DEBUG] User cancelled submission');
+        console.log("🔥 [DEBUG] User cancelled submission");
         return;
       }
     }
 
     try {
-      console.log('🔥 [DEBUG] Starting submission...');
+      console.log("🔥 [DEBUG] Starting submission...");
       setSubmitting(true);
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      console.log('🔥 [DEBUG] Calling API:', `${apiUrl}/api/students/assignments/${assignmentId}/submit`);
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      console.log(
+        "🔥 [DEBUG] Calling API:",
+        `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+      );
 
-      const response = await fetch(`${apiUrl}/api/students/assignments/${assignmentId}/submit`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(
+        `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-      console.log('🔥 [DEBUG] API Response status:', response.status);
+      console.log("🔥 [DEBUG] API Response status:", response.status);
 
       if (!response.ok) {
-        throw new Error('Failed to submit assignment');
+        throw new Error("Failed to submit assignment");
       }
 
-      toast.success('作業提交成功！');
-      console.log('🔥 [DEBUG] Submission successful, redirecting to detail page...');
+      toast.success("作業提交成功！");
+      console.log(
+        "🔥 [DEBUG] Submission successful, redirecting to detail page...",
+      );
 
       // 使用 window.location.href 確保完全重新載入並跳轉到正確的 detail 頁面
       setTimeout(() => {
         const detailUrl = `/student/assignment/${assignmentId}/detail`;
-        console.log('🔥 [DEBUG] Redirecting to:', detailUrl);
+        console.log("🔥 [DEBUG] Redirecting to:", detailUrl);
         window.location.href = detailUrl;
       }, 500);
     } catch (error) {
-      console.error('🔥 [DEBUG] Failed to submit:', error);
-      toast.error('提交失敗，請稍後再試');
+      console.error("🔥 [DEBUG] Failed to submit:", error);
+      toast.error("提交失敗，請稍後再試");
     } finally {
       setSubmitting(false);
     }
@@ -700,11 +754,11 @@ export default function StudentActivityPage() {
 
   // Get status display
   const getStatusIcon = (activity: Activity, answer?: Answer) => {
-    const status = answer?.status || 'not_started';
+    const status = answer?.status || "not_started";
 
-    if (status === 'completed' || activity.status === 'SUBMITTED') {
+    if (status === "completed" || activity.status === "SUBMITTED") {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
-    } else if (status === 'in_progress' || activity.status === 'IN_PROGRESS') {
+    } else if (status === "in_progress" || activity.status === "IN_PROGRESS") {
       return <Clock className="h-4 w-4 text-yellow-500" />;
     } else {
       return <Circle className="h-4 w-4" />;
@@ -714,17 +768,17 @@ export default function StudentActivityPage() {
   // Get activity type badge
   const getActivityTypeBadge = (type: string) => {
     switch (type) {
-      case 'reading_assessment':
+      case "reading_assessment":
         return <Badge variant="outline">朗讀錄音</Badge>;
-      case 'listening_cloze':
+      case "listening_cloze":
         return <Badge variant="outline">聽力填空</Badge>;
-      case 'speaking_practice':
+      case "speaking_practice":
         return <Badge variant="outline">口說練習</Badge>;
-      case 'speaking_scenario':
+      case "speaking_scenario":
         return <Badge variant="outline">情境對話</Badge>;
-      case 'sentence_making':
+      case "sentence_making":
         return <Badge variant="outline">造句練習</Badge>;
-      case 'speaking_quiz':
+      case "speaking_quiz":
         return <Badge variant="outline">口說測驗</Badge>;
       default:
         return <Badge variant="outline">學習活動</Badge>;
@@ -752,17 +806,18 @@ export default function StudentActivityPage() {
             // 🔥 傳遞完整的詳細分析資料
             word_details: item.ai_assessment.word_details || [],
             detailed_words: item.ai_assessment.detailed_words || [],
-            reference_text: item.ai_assessment.reference_text || '',
-            recognized_text: item.ai_assessment.recognized_text || '',
-            analysis_summary: item.ai_assessment.analysis_summary || {}
+            reference_text: item.ai_assessment.reference_text || "",
+            recognized_text: item.ai_assessment.recognized_text || "",
+            analysis_summary: item.ai_assessment.analysis_summary || {},
           };
         }
       });
 
       // Use the extracted AI assessments if available, otherwise fallback to activity.ai_scores
-      const assessmentResults = Object.keys(aiAssessments).length > 0
-        ? { items: aiAssessments }
-        : activity.ai_scores;
+      const assessmentResults =
+        Object.keys(aiAssessments).length > 0
+          ? { items: aiAssessments }
+          : activity.ai_scores;
 
       return (
         <GroupedQuestionsTemplate
@@ -775,20 +830,22 @@ export default function StudentActivityPage() {
           onStopRecording={stopRecording}
           onUpdateItemRecording={(index, url) => {
             // Update the item's recording_url when recording is done
-            setActivities(prevActivities => {
+            setActivities((prevActivities) => {
               const newActivities = [...prevActivities];
-              const activityIndex = newActivities.findIndex(a => a.id === activity.id);
+              const activityIndex = newActivities.findIndex(
+                (a) => a.id === activity.id,
+              );
               if (activityIndex !== -1 && newActivities[activityIndex].items) {
                 const newItems = [...newActivities[activityIndex].items!];
                 if (newItems[index]) {
                   newItems[index] = {
                     ...newItems[index],
-                    recording_url: url
+                    recording_url: url,
                   };
                 }
                 newActivities[activityIndex] = {
                   ...newActivities[activityIndex],
-                  items: newItems
+                  items: newItems,
                 };
               }
               return newActivities;
@@ -804,7 +861,7 @@ export default function StudentActivityPage() {
     }
 
     switch (activity.type) {
-      case 'reading_assessment':
+      case "reading_assessment":
         return (
           <ReadingAssessmentTemplate
             content={activity.content}
@@ -822,35 +879,35 @@ export default function StudentActivityPage() {
           />
         );
 
-      case 'listening_cloze':
+      case "listening_cloze":
         return (
           <ListeningClozeTemplate
             content={activity.content}
-            audioUrl={activity.audio_url || ''}
+            audioUrl={activity.audio_url || ""}
             blanks={activity.blanks || []}
             userAnswers={answer?.userAnswers || []}
             onAnswerChange={(index, value) => {
-              setAnswers(prev => {
+              setAnswers((prev) => {
                 const newAnswers = new Map(prev);
                 const ans = newAnswers.get(activity.id) || {
                   progressId: activity.id,
-                  status: 'not_started',
+                  status: "not_started",
                   startTime: new Date(),
-                  userAnswers: []
+                  userAnswers: [],
                 };
                 if (!ans.userAnswers) ans.userAnswers = [];
                 ans.userAnswers[index] = value;
-                ans.status = 'in_progress';
+                ans.status = "in_progress";
                 newAnswers.set(activity.id, ans);
                 return newAnswers;
               });
             }}
-            showAnswers={activity.status === 'SUBMITTED'}
+            showAnswers={activity.status === "SUBMITTED"}
           />
         );
 
-      case 'speaking_practice':
-      case 'speaking_scenario':
+      case "speaking_practice":
+      case "speaking_scenario":
         // 這些活動類型目前已禁用
         return (
           <div className="text-center p-8 text-gray-500">
@@ -890,8 +947,12 @@ export default function StudentActivityPage() {
             {/* Inner spinning circle */}
             <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
           </div>
-          <p className="mt-6 text-lg font-medium text-gray-700">載入作業中...</p>
-          <p className="mt-2 text-sm text-gray-500">請稍候，正在準備您的學習內容</p>
+          <p className="mt-6 text-lg font-medium text-gray-700">
+            載入作業中...
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            請稍候，正在準備您的學習內容
+          </p>
         </div>
       </div>
     );
@@ -903,7 +964,11 @@ export default function StudentActivityPage() {
         <div className="text-center">
           <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">此作業尚無題目</p>
-          <Button onClick={() => navigate(`/student/assignment/${assignmentId}/detail`)}>
+          <Button
+            onClick={() =>
+              navigate(`/student/assignment/${assignmentId}/detail`)
+            }
+          >
             返回作業詳情
           </Button>
         </div>
@@ -922,8 +987,11 @@ export default function StudentActivityPage() {
           <div className="max-w-6xl mx-auto flex items-center gap-2">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
             <span className="text-xs sm:text-sm text-blue-700 truncate">
-              {assignmentStatus === 'SUBMITTED' ? '作業已提交，目前為檢視模式' :
-               assignmentStatus === 'GRADED' ? '作業已評分，目前為檢視模式' : '檢視模式'}
+              {assignmentStatus === "SUBMITTED"
+                ? "作業已提交，目前為檢視模式"
+                : assignmentStatus === "GRADED"
+                  ? "作業已評分，目前為檢視模式"
+                  : "檢視模式"}
             </span>
           </div>
         </div>
@@ -938,7 +1006,9 @@ export default function StudentActivityPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/student/assignment/${assignmentId}/detail`)}
+                onClick={() =>
+                  navigate(`/student/assignment/${assignmentId}/detail`)
+                }
                 className="flex-shrink-0 px-2 sm:px-3"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -946,7 +1016,9 @@ export default function StudentActivityPage() {
                 <span className="sm:hidden">返回</span>
               </Button>
               <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
-              <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">{assignmentTitle}</h1>
+              <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
+                {assignmentTitle}
+              </h1>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 justify-end">
@@ -992,28 +1064,46 @@ export default function StudentActivityPage() {
               // If activity has items, show them as sub-questions
               if (activity.items && activity.items.length > 0) {
                 return (
-                  <div key={activity.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
+                  >
                     {/* Content title - Compact for mobile */}
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap max-w-[80px] sm:max-w-none truncate sm:truncate-none">{activity.title}</span>
-                      <Badge variant="outline" className="text-xs px-1 py-0 h-4 sm:h-5 min-w-[30px] text-center">{activity.items.length}題</Badge>
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap max-w-[80px] sm:max-w-none truncate sm:truncate-none">
+                        {activity.title}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-xs px-1 py-0 h-4 sm:h-5 min-w-[30px] text-center"
+                      >
+                        {activity.items.length}題
+                      </Badge>
                     </div>
 
                     {/* Question buttons - Smaller on mobile */}
                     <div className="flex gap-0.5 sm:gap-1">
                       {activity.items.map((item, itemIndex) => {
-                        const isActiveItem = isActiveActivity && currentSubQuestionIndex === itemIndex;
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const isCompleted = (item as any).recording_url || activity.answers?.[itemIndex];
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const teacherFeedback = (item as any).teacher_feedback;
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const teacherPassed = (item as any).teacher_passed;
+                        const isActiveItem =
+                          isActiveActivity &&
+                          currentSubQuestionIndex === itemIndex;
+                         
+                        const isCompleted =
+                          ("recording_url" in item && item.recording_url) ||
+                          activity.answers?.[itemIndex];
+                        const teacherFeedback =
+                          "teacher_feedback" in item ? item.teacher_feedback : undefined;
+                        const teacherPassed =
+                          "teacher_passed" in item ? item.teacher_passed : undefined;
 
                         // 判斷狀態
-                        const hasTeacherGraded = teacherFeedback !== undefined && teacherFeedback !== null;
-                        const isTeacherPassed = hasTeacherGraded && teacherPassed === true;
-                        const needsCorrection = hasTeacherGraded && teacherPassed === false;
+                        const hasTeacherGraded =
+                          teacherFeedback !== undefined &&
+                          teacherFeedback !== null;
+                        const isTeacherPassed =
+                          hasTeacherGraded && teacherPassed === true;
+                        const needsCorrection =
+                          hasTeacherGraded && teacherPassed === false;
 
                         return (
                           <button
@@ -1031,14 +1121,14 @@ export default function StudentActivityPage() {
                               "min-w-[24px] sm:min-w-[32px]", // Ensure minimum width
                               // 老師批改的顏色優先級最高
                               needsCorrection
-                                ? "bg-red-100 text-red-800 border-red-400"  // 老師批改未通過 - 紅色
+                                ? "bg-red-100 text-red-800 border-red-400" // 老師批改未通過 - 紅色
                                 : isTeacherPassed
-                                ? "bg-green-100 text-green-800 border-green-400"  // 老師批改通過 - 綠色
-                                : isCompleted
-                                ? "bg-yellow-100 text-yellow-800 border-yellow-400"  // 學生已完成但未批改 - 黃色
-                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",  // 未作答 - 白色
+                                  ? "bg-green-100 text-green-800 border-green-400" // 老師批改通過 - 綠色
+                                  : isCompleted
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-400" // 學生已完成但未批改 - 黃色
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400", // 未作答 - 白色
                               // 當前選中的題目用粗邊框
-                              isActiveItem && "border-2 border-blue-600"
+                              isActiveItem && "border-2 border-blue-600",
                             )}
                             title={needsCorrection ? "需要訂正" : ""}
                           >
@@ -1060,7 +1150,7 @@ export default function StudentActivityPage() {
               return (
                 <Button
                   key={activity.id}
-                  variant={isActiveActivity ? 'default' : 'outline'}
+                  variant={isActiveActivity ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleActivitySelect(activityIndex)}
                   className="flex-shrink-0 h-8"
@@ -1098,7 +1188,9 @@ export default function StudentActivityPage() {
                   variant="outline"
                   size="sm"
                   onClick={handlePreviousActivity}
-                  disabled={currentActivityIndex === 0 && currentSubQuestionIndex === 0}
+                  disabled={
+                    currentActivityIndex === 0 && currentSubQuestionIndex === 0
+                  }
                   className="flex-1 sm:flex-none min-w-0"
                 >
                   <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -1108,9 +1200,11 @@ export default function StudentActivityPage() {
 
                 {(() => {
                   // Check if it's the last activity
-                  const isLastActivity = currentActivityIndex === activities.length - 1;
+                  const isLastActivity =
+                    currentActivityIndex === activities.length - 1;
                   const isLastSubQuestion = currentActivity.items
-                    ? currentSubQuestionIndex === currentActivity.items.length - 1
+                    ? currentSubQuestionIndex ===
+                      currentActivity.items.length - 1
                     : true;
 
                   if (isLastActivity && isLastSubQuestion) {
@@ -1122,8 +1216,12 @@ export default function StudentActivityPage() {
                         disabled={submitting}
                         className="flex-1 sm:flex-none min-w-0"
                       >
-                        <span className="hidden sm:inline">{submitting ? '提交中...' : '提交作業'}</span>
-                        <span className="sm:hidden">{submitting ? '提交中' : '提交'}</span>
+                        <span className="hidden sm:inline">
+                          {submitting ? "提交中..." : "提交作業"}
+                        </span>
+                        <span className="sm:hidden">
+                          {submitting ? "提交中" : "提交"}
+                        </span>
                         <Send className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                       </Button>
                     );
@@ -1149,7 +1247,6 @@ export default function StudentActivityPage() {
           <CardContent className="p-2 sm:p-3">
             {/* Render activity-specific content */}
             {renderActivityContent(currentActivity)}
-
           </CardContent>
         </Card>
 
@@ -1159,19 +1256,31 @@ export default function StudentActivityPage() {
             <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
                 <div className="text-xl sm:text-2xl font-bold text-green-600">
-                  {Array.from(answers.values()).filter(a => a.status === 'completed').length}
+                  {
+                    Array.from(answers.values()).filter(
+                      (a) => a.status === "completed",
+                    ).length
+                  }
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600">已完成</p>
               </div>
               <div>
                 <div className="text-xl sm:text-2xl font-bold text-yellow-600">
-                  {Array.from(answers.values()).filter(a => a.status === 'in_progress').length}
+                  {
+                    Array.from(answers.values()).filter(
+                      (a) => a.status === "in_progress",
+                    ).length
+                  }
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600">進行中</p>
               </div>
               <div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-400">
-                  {Array.from(answers.values()).filter(a => a.status === 'not_started').length}
+                  {
+                    Array.from(answers.values()).filter(
+                      (a) => a.status === "not_started",
+                    ).length
+                  }
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600">未開始</p>
               </div>

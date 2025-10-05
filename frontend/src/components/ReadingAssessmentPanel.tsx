@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Mic,
   Volume2,
@@ -19,11 +19,11 @@ import {
   X,
   Play,
   Square,
-  RefreshCw
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { apiClient } from '@/lib/api';
-import { retryAudioUpload } from '@/utils/retryHelper';
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
+import { retryAudioUpload } from "@/utils/retryHelper";
 
 interface ContentRow {
   id: string | number;
@@ -32,7 +32,7 @@ interface ContentRow {
   audioUrl?: string;
   audio_url?: string;
   translation?: string;
-  selectedLanguage?: 'chinese' | 'english';  // 最後選擇的語言
+  selectedLanguage?: "chinese" | "english"; // 最後選擇的語言
   audioSettings?: {
     accent: string;
     gender: string;
@@ -44,26 +44,47 @@ interface TTSModalProps {
   open: boolean;
   onClose: () => void;
   row: ContentRow;
-  onConfirm: (audioUrl: string, settings: { accent?: string; gender?: string; speed?: string; source?: string; audioBlob?: Blob | null }) => void;
+  onConfirm: (
+    audioUrl: string,
+    settings: {
+      accent?: string;
+      gender?: string;
+      speed?: string;
+      source?: string;
+      audioBlob?: Blob | null;
+    },
+  ) => void;
   contentId?: number;
   itemIndex?: number;
   isCreating?: boolean; // 是否為新增模式
 }
 
-const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreating = false }: TTSModalProps) => {
+const TTSModal = ({
+  open,
+  onClose,
+  row,
+  onConfirm,
+  contentId,
+  itemIndex,
+  isCreating = false,
+}: TTSModalProps) => {
   const [text, setText] = useState(row.text);
-  const [accent, setAccent] = useState(row.audioSettings?.accent || 'American English');
-  const [gender, setGender] = useState(row.audioSettings?.gender || 'Male');
-  const [speed, setSpeed] = useState(row.audioSettings?.speed || 'Normal x1');
-  const [audioUrl, setAudioUrl] = useState<string>('');
+  const [accent, setAccent] = useState(
+    row.audioSettings?.accent || "American English",
+  );
+  const [gender, setGender] = useState(row.audioSettings?.gender || "Male");
+  const [speed, setSpeed] = useState(row.audioSettings?.speed || "Normal x1");
+  const [audioUrl, setAudioUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedAudio, setRecordedAudio] = useState<string>('');
+  const [recordedAudio, setRecordedAudio] = useState<string>("");
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showAudioAnimation, setShowAudioAnimation] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<'tts' | 'recording' | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('generate');
+  const [selectedSource, setSelectedSource] = useState<
+    "tts" | "recording" | null
+  >(null);
+  const [activeTab, setActiveTab] = useState<string>("generate");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -71,9 +92,14 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
   const audioBlobRef = useRef<Blob | null>(null);
   const recordingDurationRef = useRef<number>(0);
 
-  const accents = ['American English', 'British English', 'Indian English', 'Australian English'];
-  const genders = ['Male', 'Female'];
-  const speeds = ['Slow x0.75', 'Normal x1', 'Fast x1.5'];
+  const accents = [
+    "American English",
+    "British English",
+    "Indian English",
+    "Australian English",
+  ];
+  const genders = ["Male", "Female"];
+  const speeds = ["Slow x0.75", "Normal x1", "Fast x1.5"];
 
   // 當 modal 打開或 row.text 改變時，更新 text state
   useEffect(() => {
@@ -86,26 +112,28 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     setIsGenerating(true);
     try {
       // 根據選擇的口音和性別選擇適當的語音
-      let voice = 'en-US-JennyNeural'; // 預設美國女聲
+      let voice = "en-US-JennyNeural"; // 預設美國女聲
 
-      if (accent === 'American English') {
-        voice = gender === 'Male' ? 'en-US-ChristopherNeural' : 'en-US-JennyNeural';
-      } else if (accent === 'British English') {
-        voice = gender === 'Male' ? 'en-GB-RyanNeural' : 'en-GB-SoniaNeural';
-      } else if (accent === 'Australian English') {
-        voice = gender === 'Male' ? 'en-AU-WilliamNeural' : 'en-AU-NatashaNeural';
+      if (accent === "American English") {
+        voice =
+          gender === "Male" ? "en-US-ChristopherNeural" : "en-US-JennyNeural";
+      } else if (accent === "British English") {
+        voice = gender === "Male" ? "en-GB-RyanNeural" : "en-GB-SoniaNeural";
+      } else if (accent === "Australian English") {
+        voice =
+          gender === "Male" ? "en-AU-WilliamNeural" : "en-AU-NatashaNeural";
       }
 
       // 轉換速度設定
-      let rate = '+0%';
-      if (speed === 'Slow x0.75') rate = '-25%';
-      else if (speed === 'Fast x1.5') rate = '+50%';
+      let rate = "+0%";
+      if (speed === "Slow x0.75") rate = "-25%";
+      else if (speed === "Fast x1.5") rate = "+50%";
 
-      const result = await apiClient.generateTTS(text, voice, rate, '+0%');
+      const result = await apiClient.generateTTS(text, voice, rate, "+0%");
 
       if (result?.audio_url) {
         // 如果是相對路徑，加上 API base URL
-        const fullUrl = result.audio_url.startsWith('http')
+        const fullUrl = result.audio_url.startsWith("http")
           ? result.audio_url
           : `${import.meta.env.VITE_API_URL}${result.audio_url}`;
         setAudioUrl(fullUrl);
@@ -121,11 +149,11 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           // 如果自動播放失敗（瀏覽器限制），仍顯示成功訊息
         });
 
-        toast.success('音檔生成成功！點擊播放按鈕試聽');
+        toast.success("音檔生成成功！點擊播放按鈕試聽");
       }
     } catch (err) {
-      console.error('TTS generation failed:', err);
-      toast.error('生成失敗，請重試');
+      console.error("TTS generation failed:", err);
+      toast.error("生成失敗，請重試");
     } finally {
       setIsGenerating(false);
     }
@@ -141,13 +169,13 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // 檢查支援的 MIME 類型 - 優先使用 opus 編碼
-      let mimeType = 'audio/webm';
+      let mimeType = "audio/webm";
       const possibleTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/ogg',
-        'audio/mp4'
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+        "audio/mp4",
       ];
 
       for (const type of possibleTypes) {
@@ -157,10 +185,10 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         }
       }
 
-      console.log('Using MIME type:', mimeType);
+      console.log("Using MIME type:", mimeType);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 128000  // 設定位元率
+        audioBitsPerSecond: 128000, // 設定位元率
       });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -168,12 +196,12 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
 
       // 設定計時器
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => {
+        setRecordingDuration((prev) => {
           const newDuration = prev + 1;
           // 30秒自動停止
           if (newDuration >= 30) {
             handleStopRecording();
-            toast.info('已達到最長錄音時間 30 秒');
+            toast.info("已達到最長錄音時間 30 秒");
           }
           return newDuration;
         });
@@ -193,23 +221,26 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         }
 
         // 使用基本的 MIME type，去掉 codec 信息
-        const basicMimeType = mimeType.split(';')[0];
-        const audioBlob = new Blob(audioChunksRef.current, { type: basicMimeType });
+        const basicMimeType = mimeType.split(";")[0];
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: basicMimeType,
+        });
 
         // 使用 ref 來獲取當前的錄音時長
-        const currentDuration = recordingDurationRef.current || recordingDuration;
+        const currentDuration =
+          recordingDurationRef.current || recordingDuration;
 
         // 檢查檔案大小 (2MB 限制)
         if (audioBlob.size > 2 * 1024 * 1024) {
-          toast.error('錄音檔案太大，請縮短錄音時間');
-          stream.getTracks().forEach(track => track.stop());
+          toast.error("錄音檔案太大，請縮短錄音時間");
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
         // 確保有錄音資料
         if (audioBlob.size === 0) {
-          toast.error('錄音失敗，請檢查麥克風權限');
-          stream.getTracks().forEach(track => track.stop());
+          toast.error("錄音失敗，請檢查麥克風權限");
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
@@ -220,17 +251,17 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
         // 創建本地 URL 供預覽播放
         const localUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio(localUrl);
-        toast.success('錄音完成！可以試聽或重新錄製');
+        toast.success("錄音完成！可以試聽或重新錄製");
 
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       // 使用 timeslice 參數，每100ms收集一次數據
       mediaRecorder.start(100);
       setIsRecording(true);
-      toast.success('開始錄音');
+      toast.success("開始錄音");
     } catch {
-      toast.error('無法啟動錄音，請檢查麥克風權限');
+      toast.error("無法啟動錄音，請檢查麥克風權限");
     }
   };
 
@@ -254,118 +285,138 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
     // 如果兩種音源都有，需要用戶選擇
     if (audioUrl && recordedAudio) {
       if (!selectedSource) {
-        toast.warning('請選擇要使用的音源（TTS 或錄音）');
+        toast.warning("請選擇要使用的音源（TTS 或錄音）");
         return;
       }
 
       // 新增模式：不上傳，只傳遞本地 URL
       if (isCreating) {
-        const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
+        const finalUrl = selectedSource === "tts" ? audioUrl : recordedAudio;
         onConfirm(finalUrl, {
           accent,
           gender,
           speed,
           source: selectedSource,
-          audioBlob: selectedSource === 'recording' ? audioBlobRef.current : null
+          audioBlob:
+            selectedSource === "recording" ? audioBlobRef.current : null,
         });
         onClose();
         return;
       }
 
       // 編輯模式：如果選擇錄音且還沒上傳（URL 是 blob:// 開頭），現在上傳
-      if (selectedSource === 'recording' && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
+      if (
+        selectedSource === "recording" &&
+        recordedAudio.startsWith("blob:") &&
+        audioBlobRef.current
+      ) {
         setIsUploading(true);
         try {
           const result = await retryAudioUpload(
-            () => apiClient.uploadAudio(
-              audioBlobRef.current!,
-              recordingDurationRef.current || 1,
-              Number(contentId),
-              Number(itemIndex)
-            ),
+            () =>
+              apiClient.uploadAudio(
+                audioBlobRef.current!,
+                recordingDurationRef.current || 1,
+                Number(contentId),
+                Number(itemIndex),
+              ),
             (attempt, error) => {
               toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
               console.error(`Upload attempt ${attempt} failed:`, error);
-            }
+            },
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onConfirm(result.audio_url, {
+              accent,
+              gender,
+              speed,
+              source: "recording",
+            });
             onClose();
           } else {
-            throw new Error('No audio URL returned');
+            throw new Error("No audio URL returned");
           }
         } catch (err) {
-          console.error('Upload failed after retries:', err);
-          toast.error('上傳失敗，請檢查網路連線後重試');
+          console.error("Upload failed after retries:", err);
+          toast.error("上傳失敗，請檢查網路連線後重試");
         } finally {
           setIsUploading(false);
         }
         return;
       }
 
-      const finalUrl = selectedSource === 'tts' ? audioUrl : recordedAudio;
+      const finalUrl = selectedSource === "tts" ? audioUrl : recordedAudio;
       onConfirm(finalUrl, { accent, gender, speed, source: selectedSource });
     } else {
       // 只有一種音源
       const finalAudioUrl = recordedAudio || audioUrl;
       if (!finalAudioUrl) {
-        toast.error('請先生成或錄製音檔');
+        toast.error("請先生成或錄製音檔");
         return;
       }
 
       // 新增模式：不上傳，只傳遞本地 URL
       if (isCreating) {
-        const source = recordedAudio ? 'recording' : 'tts';
+        const source = recordedAudio ? "recording" : "tts";
         onConfirm(finalAudioUrl, {
           accent,
           gender,
           speed,
           source,
-          audioBlob: source === 'recording' ? audioBlobRef.current : null
+          audioBlob: source === "recording" ? audioBlobRef.current : null,
         });
         onClose();
         return;
       }
 
       // 編輯模式：如果是錄音且還沒上傳，現在上傳
-      if (recordedAudio && recordedAudio.startsWith('blob:') && audioBlobRef.current) {
+      if (
+        recordedAudio &&
+        recordedAudio.startsWith("blob:") &&
+        audioBlobRef.current
+      ) {
         setIsUploading(true);
         try {
           const result = await retryAudioUpload(
-            () => apiClient.uploadAudio(
-              audioBlobRef.current!,
-              recordingDurationRef.current || 1,
-              Number(contentId),
-              Number(itemIndex)
-            ),
+            () =>
+              apiClient.uploadAudio(
+                audioBlobRef.current!,
+                recordingDurationRef.current || 1,
+                Number(contentId),
+                Number(itemIndex),
+              ),
             (attempt, error) => {
               toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
               console.error(`Upload attempt ${attempt} failed:`, error);
-            }
+            },
           );
 
           if (result && result.audio_url) {
-            onConfirm(result.audio_url, { accent, gender, speed, source: 'recording' });
+            onConfirm(result.audio_url, {
+              accent,
+              gender,
+              speed,
+              source: "recording",
+            });
             onClose();
           } else {
-            throw new Error('No audio URL returned');
+            throw new Error("No audio URL returned");
           }
         } catch (err) {
-          console.error('Upload failed after retries:', err);
-          toast.error('上傳失敗，請檢查網路連線後重試');
+          console.error("Upload failed after retries:", err);
+          toast.error("上傳失敗，請檢查網路連線後重試");
         } finally {
           setIsUploading(false);
         }
         return;
       }
 
-      const source = recordedAudio ? 'recording' : 'tts';
+      const source = recordedAudio ? "recording" : "tts";
       onConfirm(finalAudioUrl, { accent, gender, speed, source });
     }
     onClose();
   };
-
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -374,11 +425,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           <DialogTitle>音檔設定</DialogTitle>
         </DialogHeader>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
             <TabsTrigger
               value="generate"
@@ -386,9 +433,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             >
               <Volume2 className="h-4 w-4 mr-1" />
               Generate
-              {audioUrl && (
-                <span className="ml-1 text-xs">✓</span>
-              )}
+              {audioUrl && <span className="ml-1 text-xs">✓</span>}
             </TabsTrigger>
             <TabsTrigger
               value="record"
@@ -396,9 +441,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             >
               <Mic className="h-4 w-4 mr-1" />
               Record
-              {recordedAudio && (
-                <span className="ml-1 text-xs">✓</span>
-              )}
+              {recordedAudio && <span className="ml-1 text-xs">✓</span>}
             </TabsTrigger>
           </TabsList>
 
@@ -421,8 +464,10 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                 onChange={(e) => setAccent(e.target.value)}
                 className="w-full mt-1 px-3 py-2 border rounded-md"
               >
-                {accents.map(a => (
-                  <option key={a} value={a}>{a}</option>
+                {accents.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
                 ))}
               </select>
             </div>
@@ -435,8 +480,10 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                   onChange={(e) => setGender(e.target.value)}
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
-                  {genders.map(g => (
-                    <option key={g} value={g}>{g}</option>
+                  {genders.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -448,8 +495,10 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                   onChange={(e) => setSpeed(e.target.value)}
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
-                  {speeds.map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {speeds.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -462,7 +511,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                 className="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-400 dark:hover:bg-yellow-500 text-black"
                 title="使用免費的 Microsoft Edge TTS 生成語音"
               >
-                {isGenerating ? 'Generating...' : 'Generate'}
+                {isGenerating ? "Generating..." : "Generate"}
               </Button>
               {audioUrl && (
                 <Button
@@ -471,46 +520,59 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                   size="icon"
                   className={`
                     border-2 transition-all duration-300
-                    ${showAudioAnimation
-                      ? 'border-green-500 bg-green-50 animate-bounce scale-110'
-                      : 'border-gray-300 hover:border-green-500 hover:bg-green-50'
+                    ${
+                      showAudioAnimation
+                        ? "border-green-500 bg-green-50 animate-bounce scale-110"
+                        : "border-gray-300 hover:border-green-500 hover:bg-green-50"
                     }
                   `}
                   title="播放生成的音檔"
                 >
-                  <Play className={`h-4 w-4 ${showAudioAnimation ? 'text-green-600' : 'text-gray-600'}`} />
+                  <Play
+                    className={`h-4 w-4 ${showAudioAnimation ? "text-green-600" : "text-gray-600"}`}
+                  />
                 </Button>
               )}
             </div>
 
             {/* 音檔生成成功提示與管理 */}
             {audioUrl && (
-              <div className={`mt-3 p-3 border rounded-lg transition-all duration-300 ${
-                showAudioAnimation
-                  ? 'bg-green-50 border-green-200 animate-pulse'
-                  : 'bg-gray-50 border-gray-200'
-              }`}>
+              <div
+                className={`mt-3 p-3 border rounded-lg transition-all duration-300 ${
+                  showAudioAnimation
+                    ? "bg-green-50 border-green-200 animate-pulse"
+                    : "bg-gray-50 border-gray-200"
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-700">
                     {showAudioAnimation && (
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        <div
+                          className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                          style={{ animationDelay: "0.4s" }}
+                        ></div>
                       </div>
                     )}
                     <Volume2 className="h-4 w-4 text-gray-600" />
                     <span className="text-sm font-medium">
-                      {showAudioAnimation ? '音檔已生成！點擊播放按鈕試聽' : 'TTS 音檔已準備'}
+                      {showAudioAnimation
+                        ? "音檔已生成！點擊播放按鈕試聽"
+                        : "TTS 音檔已準備"}
                     </span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setAudioUrl('');
+                      setAudioUrl("");
                       setSelectedSource(null);
-                      toast.info('已刪除 TTS 音檔');
+                      toast.info("已刪除 TTS 音檔");
                     }}
                     className="text-red-600 hover:bg-red-50"
                   >
@@ -528,10 +590,14 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           <TabsContent value="record" className="space-y-4">
             <div className="flex flex-col items-center justify-center py-8">
               <div className="mb-4">
-                <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
-                  isRecording ? 'bg-red-100 animate-pulse' : 'bg-gray-100'
-                }`}>
-                  <Mic className={`h-12 w-12 ${isRecording ? 'text-red-600' : 'text-gray-600'}`} />
+                <div
+                  className={`w-24 h-24 rounded-full flex items-center justify-center ${
+                    isRecording ? "bg-red-100 animate-pulse" : "bg-gray-100"
+                  }`}
+                >
+                  <Mic
+                    className={`h-12 w-12 ${isRecording ? "text-red-600" : "text-gray-600"}`}
+                  />
                 </div>
               </div>
 
@@ -539,8 +605,11 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               {isRecording && (
                 <div className="mb-4 text-center">
                   <div className="text-2xl font-bold text-red-600">
-                    {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
-                    {(recordingDuration % 60).toString().padStart(2, '0')} / 00:30
+                    {Math.floor(recordingDuration / 60)
+                      .toString()
+                      .padStart(2, "0")}
+                    :{(recordingDuration % 60).toString().padStart(2, "0")} /
+                    00:30
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
                     最長錄音時間 30 秒
@@ -565,7 +634,11 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
               )}
 
               {isRecording && (
-                <Button onClick={handleStopRecording} variant="destructive" size="lg">
+                <Button
+                  onClick={handleStopRecording}
+                  variant="destructive"
+                  size="lg"
+                >
                   <Square className="h-5 w-5 mr-2" />
                   停止錄音
                 </Button>
@@ -582,14 +655,14 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                           size="icon"
                           onClick={() => {
                             if (!recordedAudio) {
-                              toast.error('沒有錄音可播放');
+                              toast.error("沒有錄音可播放");
                               return;
                             }
 
                             const audio = new Audio(recordedAudio);
-                            audio.play().catch(err => {
-                              console.error('Play failed:', err);
-                              toast.error('無法播放錄音');
+                            audio.play().catch((err) => {
+                              console.error("Play failed:", err);
+                              toast.error("無法播放錄音");
                             });
                           }}
                         >
@@ -606,12 +679,12 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setRecordedAudio('');
+                          setRecordedAudio("");
                           setSelectedSource(null);
                           audioBlobRef.current = null;
                           setRecordingDuration(0);
                           recordingDurationRef.current = 0;
-                          toast.info('已刪除錄音檔案');
+                          toast.info("已刪除錄音檔案");
                         }}
                         className="text-red-600 hover:bg-red-50"
                       >
@@ -639,31 +712,37 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setSelectedSource('tts')}
+                onClick={() => setSelectedSource("tts")}
                 className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedSource === 'tts'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 bg-white hover:border-gray-400'
+                  selectedSource === "tts"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-300 bg-white hover:border-gray-400"
                 }`}
               >
-                <Volume2 className={`h-5 w-5 mx-auto mb-1 ${
-                  selectedSource === 'tts' ? 'text-blue-600' : 'text-gray-600'
-                }`} />
+                <Volume2
+                  className={`h-5 w-5 mx-auto mb-1 ${
+                    selectedSource === "tts" ? "text-blue-600" : "text-gray-600"
+                  }`}
+                />
                 <div className="text-sm font-medium">TTS 語音</div>
                 <div className="text-xs text-gray-500">AI 生成</div>
               </button>
 
               <button
-                onClick={() => setSelectedSource('recording')}
+                onClick={() => setSelectedSource("recording")}
                 className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedSource === 'recording'
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-gray-300 bg-white hover:border-gray-400'
+                  selectedSource === "recording"
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-300 bg-white hover:border-gray-400"
                 }`}
               >
-                <Mic className={`h-5 w-5 mx-auto mb-1 ${
-                  selectedSource === 'recording' ? 'text-red-600' : 'text-gray-600'
-                }`} />
+                <Mic
+                  className={`h-5 w-5 mx-auto mb-1 ${
+                    selectedSource === "recording"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}
+                />
                 <div className="text-sm font-medium">錄音檔案</div>
                 <div className="text-xs text-gray-500">教師錄製</div>
               </button>
@@ -675,9 +754,7 @@ const TTSModal = ({ open, onClose, row, onConfirm, contentId, itemIndex, isCreat
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={handleConfirm}>
-            Confirm
-          </Button>
+          <Button onClick={handleConfirm}>Confirm</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -704,24 +781,42 @@ export default function ReadingAssessmentPanel({
   onSave,
   lessonId,
   onCancel,
-  isCreating = false
+  isCreating = false,
 }: ReadingAssessmentPanelProps) {
-  const [title, setTitle] = useState('朗讀評測內容');
+  const [title, setTitle] = useState("朗讀評測內容");
   const [rows, setRows] = useState<ContentRow[]>([
-    { id: '1', text: '', definition: '', translation: '', selectedLanguage: 'chinese' },
-    { id: '2', text: '', definition: '', translation: '', selectedLanguage: 'chinese' },
-    { id: '3', text: '', definition: '', translation: '', selectedLanguage: 'chinese' }
+    {
+      id: "1",
+      text: "",
+      definition: "",
+      translation: "",
+      selectedLanguage: "chinese",
+    },
+    {
+      id: "2",
+      text: "",
+      definition: "",
+      translation: "",
+      selectedLanguage: "chinese",
+    },
+    {
+      id: "3",
+      text: "",
+      definition: "",
+      translation: "",
+      selectedLanguage: "chinese",
+    },
   ]);
-  const [level, setLevel] = useState('A1');
+  const [level, setLevel] = useState("A1");
   const [tags, setTags] = useState<string[]>([]);
-  const [isPublic, setIsPublic] = useState(false);  // 獨立的 isPublic 狀態
-  const [tagInput, setTagInput] = useState('');
+  const [isPublic, setIsPublic] = useState(false); // 獨立的 isPublic 狀態
+  const [tagInput, setTagInput] = useState("");
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const levels = ['PreA', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const levels = ["PreA", "A1", "A2", "B1", "B2", "C1", "C2"];
 
   // Load existing content data from database
   useEffect(() => {
@@ -735,35 +830,52 @@ export default function ReadingAssessmentPanel({
 
     setIsLoading(true);
     try {
-      const data = await apiClient.getContentDetail(content.id) as {
+      const data = (await apiClient.getContentDetail(content.id)) as {
         title?: string;
-        items?: Array<{ text?: string; translation?: string; definition?: string; audio_url?: string }>;
+        items?: Array<{
+          text?: string;
+          translation?: string;
+          definition?: string;
+          audio_url?: string;
+        }>;
         level?: string;
         tags?: string[];
         is_public?: boolean;
         audio_urls?: string[];
       };
-      setTitle(data.title || '');
+      setTitle(data.title || "");
 
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map((item: { text?: string; translation?: string; definition?: string; english_definition?: string; audio_url?: string; selectedLanguage?: 'chinese' | 'english' }, index: number) => ({
-          id: (index + 1).toString(),
-          text: item.text || '',
-          definition: item.definition || '',  // 中文翻譯
-          translation: item.english_definition || '',  // 英文釋義
-          audioUrl: item.audio_url || '',
-          selectedLanguage: item.selectedLanguage || 'chinese'  // 使用保存的語言選擇，預設中文
-        }));
+        const convertedRows = data.items.map(
+          (
+            item: {
+              text?: string;
+              translation?: string;
+              definition?: string;
+              english_definition?: string;
+              audio_url?: string;
+              selectedLanguage?: "chinese" | "english";
+            },
+            index: number,
+          ) => ({
+            id: (index + 1).toString(),
+            text: item.text || "",
+            definition: item.definition || "", // 中文翻譯
+            translation: item.english_definition || "", // 英文釋義
+            audioUrl: item.audio_url || "",
+            selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
+          }),
+        );
         setRows(convertedRows);
       }
 
-      setLevel(data.level || 'A1');
+      setLevel(data.level || "A1");
       setTags(data.tags || []);
       setIsPublic(data.is_public || false);
     } catch (error) {
-      console.error('Failed to load content:', error);
-      toast.error('載入內容失敗');
+      console.error("Failed to load content:", error);
+      toast.error("載入內容失敗");
     } finally {
       setIsLoading(false);
     }
@@ -773,12 +885,12 @@ export default function ReadingAssessmentPanel({
   useEffect(() => {
     if (!onUpdateContent) return;
 
-    const items = rows.map(row => ({
+    const items = rows.map((row) => ({
       text: row.text,
-      definition: row.definition,  // 中文翻譯
+      definition: row.definition, // 中文翻譯
       translation: row.translation, // 英文釋義
       audio_url: row.audioUrl,
-      selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
+      selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
     }));
 
     onUpdateContent({
@@ -787,7 +899,7 @@ export default function ReadingAssessmentPanel({
       items,
       level,
       tags,
-      is_public: isPublic
+      is_public: isPublic,
     });
   }, [rows, title, level, tags, isPublic]);
 
@@ -813,24 +925,24 @@ export default function ReadingAssessmentPanel({
 
   const handleAddRow = () => {
     if (rows.length >= 15) {
-      toast.error('最多只能新增 15 列');
+      toast.error("最多只能新增 15 列");
       return;
     }
     // 找出最大的 ID 數字，然後加 1
-    const maxId = Math.max(...rows.map(r => parseInt(String(r.id)) || 0));
+    const maxId = Math.max(...rows.map((r) => parseInt(String(r.id)) || 0));
     const newRow: ContentRow = {
       id: (maxId + 1).toString(),
-      text: '',
-      definition: '',
-      translation: '',
-      selectedLanguage: 'chinese'
+      text: "",
+      definition: "",
+      translation: "",
+      selectedLanguage: "chinese",
     };
     setRows([...rows, newRow]);
   };
 
   const handleDeleteRow = (index: number) => {
     if (rows.length <= 3) {
-      toast.error('至少需要保留 3 列');
+      toast.error("至少需要保留 3 列");
       return;
     }
     const newRows = rows.filter((_, i) => i !== index);
@@ -839,22 +951,26 @@ export default function ReadingAssessmentPanel({
 
   const handleCopyRow = (index: number) => {
     if (rows.length >= 15) {
-      toast.error('最多只能新增 15 列');
+      toast.error("最多只能新增 15 列");
       return;
     }
     const rowToCopy = rows[index];
     // 找出最大的 ID 數字，然後加 1
-    const maxId = Math.max(...rows.map(r => parseInt(String(r.id)) || 0));
+    const maxId = Math.max(...rows.map((r) => parseInt(String(r.id)) || 0));
     const newRow: ContentRow = {
       ...rowToCopy,
-      id: (maxId + 1).toString()
+      id: (maxId + 1).toString(),
     };
     const newRows = [...rows];
     newRows.splice(index + 1, 0, newRow);
     setRows(newRows);
   };
 
-  const handleUpdateRow = (index: number, field: keyof ContentRow, value: string | 'chinese' | 'english') => {
+  const handleUpdateRow = (
+    index: number,
+    field: keyof ContentRow,
+    value: string | "chinese" | "english",
+  ) => {
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], [field]: value };
     setRows(newRows);
@@ -862,35 +978,35 @@ export default function ReadingAssessmentPanel({
 
   const handleRemoveAudio = async (index: number) => {
     const newRows = [...rows];
-    newRows[index] = { ...newRows[index], audioUrl: '' };
+    newRows[index] = { ...newRows[index], audioUrl: "" };
     setRows(newRows);
 
     // 如果是編輯模式，立即更新到後端
     if (!isCreating && editingContent?.id) {
       try {
-        const items = newRows.map(row => ({
+        const items = newRows.map((row) => ({
           text: row.text,
           definition: row.definition,
           translation: row.translation,
-          audio_url: row.audioUrl || '',
-          selectedLanguage: row.selectedLanguage
+          audio_url: row.audioUrl || "",
+          selectedLanguage: row.selectedLanguage,
         }));
 
         await apiClient.updateContent(editingContent.id, {
           title: title || editingContent.title,
-          items
+          items,
         });
 
-        toast.success('已移除音檔');
+        toast.success("已移除音檔");
       } catch (error) {
-        console.error('Failed to remove audio:', error);
-        toast.error('移除音檔失敗');
+        console.error("Failed to remove audio:", error);
+        toast.error("移除音檔失敗");
         // 恢復原始狀態
         const originalRows = [...rows];
         setRows(originalRows);
       }
     } else {
-      toast.info('已移除音檔');
+      toast.info("已移除音檔");
     }
   };
 
@@ -899,9 +1015,18 @@ export default function ReadingAssessmentPanel({
     setTtsModalOpen(true);
   };
 
-  const handleTTSConfirm = async (audioUrl: string, settings: { accent?: string; gender?: string; speed?: string; source?: string; audioBlob?: Blob | null }) => {
+  const handleTTSConfirm = async (
+    audioUrl: string,
+    settings: {
+      accent?: string;
+      gender?: string;
+      speed?: string;
+      source?: string;
+      audioBlob?: Blob | null;
+    },
+  ) => {
     if (selectedRow) {
-      const index = rows.findIndex(r => r.id === selectedRow.id);
+      const index = rows.findIndex((r) => r.id === selectedRow.id);
       if (index !== -1) {
         const newRows = [...rows];
         // 一個 item 只能有一種音檔來源（TTS 或錄音）
@@ -909,20 +1034,20 @@ export default function ReadingAssessmentPanel({
           ...newRows[index],
           audioUrl, // 新的音檔會覆蓋舊的
           audioSettings: {
-            accent: settings.accent || 'American English',
-            gender: settings.gender || 'Male',
-            speed: settings.speed || 'Normal x1'
-          }
+            accent: settings.accent || "American English",
+            gender: settings.gender || "Male",
+            speed: settings.speed || "Normal x1",
+          },
         };
         setRows(newRows);
 
         // 立即更新 content 並儲存到後端
-        const items = newRows.map(row => ({
+        const items = newRows.map((row) => ({
           text: row.text,
-          definition: row.definition,  // 中文翻譯
+          definition: row.definition, // 中文翻譯
           translation: row.translation, // 英文釋義
-          audio_url: row.audioUrl || '',
-          selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
+          audio_url: row.audioUrl || "",
+          selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態
@@ -934,10 +1059,13 @@ export default function ReadingAssessmentPanel({
               title,
               items,
               level,
-              tags
+              tags,
             });
           }
-          console.log('Audio URL saved locally (will upload on final save):', audioUrl);
+          console.log(
+            "Audio URL saved locally (will upload on final save):",
+            audioUrl,
+          );
         } else {
           // 編輯模式：直接呼叫 API 更新
           try {
@@ -945,23 +1073,35 @@ export default function ReadingAssessmentPanel({
               title: title || editingContent?.title,
               items,
               level,
-              tags
+              tags,
             };
 
-            console.log('Updating content with new audio:', audioUrl);
+            console.log("Updating content with new audio:", audioUrl);
             await apiClient.updateContent(editingContent?.id ?? 0, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
-            const response = await apiClient.getContentDetail(editingContent?.id ?? 0);
+            const response = await apiClient.getContentDetail(
+              editingContent?.id ?? 0,
+            );
             if (response && response.items) {
-              const updatedRows = response.items.map((item: { text?: string; translation?: string; definition?: string; audio_url?: string }, index: number) => ({
-                id: String(index + 1),
-                text: item.text || '',
-                definition: item.translation || '',
-                audioUrl: item.audio_url || ''
-              }));
+              const updatedRows = response.items.map(
+                (
+                  item: {
+                    text?: string;
+                    translation?: string;
+                    definition?: string;
+                    audio_url?: string;
+                  },
+                  index: number,
+                ) => ({
+                  id: String(index + 1),
+                  text: item.text || "",
+                  definition: item.translation || "",
+                  audioUrl: item.audio_url || "",
+                }),
+              );
               setRows(updatedRows);
-              console.log('Updated rows with new audio URLs:', updatedRows);
+              console.log("Updated rows with new audio URLs:", updatedRows);
             }
 
             // 更新本地狀態
@@ -971,12 +1111,12 @@ export default function ReadingAssessmentPanel({
                 title,
                 items,
                 level,
-                tags
+                tags,
               });
             }
           } catch (error) {
-            console.error('Failed to update content:', error);
-            toast.error('更新失敗，但音檔已生成');
+            console.error("Failed to update content:", error);
+            toast.error("更新失敗，但音檔已生成");
           }
         }
 
@@ -991,11 +1131,11 @@ export default function ReadingAssessmentPanel({
     try {
       // 收集需要生成 TTS 的文字
       const textsToGenerate = rows
-        .filter(row => row.text && !row.audioUrl)
-        .map(row => row.text);
+        .filter((row) => row.text && !row.audioUrl)
+        .map((row) => row.text);
 
       if (textsToGenerate.length === 0) {
-        toast.info('所有項目都已有音檔');
+        toast.info("所有項目都已有音檔");
         return;
       }
 
@@ -1004,21 +1144,28 @@ export default function ReadingAssessmentPanel({
       // 批次生成 TTS
       const result = await apiClient.batchGenerateTTS(
         textsToGenerate,
-        'en-US-JennyNeural', // 預設使用美國女聲
-        '+0%',
-        '+0%'
+        "en-US-JennyNeural", // 預設使用美國女聲
+        "+0%",
+        "+0%",
       );
 
-      if (result && typeof result === 'object' && 'audio_urls' in result && Array.isArray(result.audio_urls)) {
+      if (
+        result &&
+        typeof result === "object" &&
+        "audio_urls" in result &&
+        Array.isArray(result.audio_urls)
+      ) {
         // 更新 rows 的 audioUrl
         const newRows = [...rows];
         let audioIndex = 0;
 
         for (let i = 0; i < newRows.length; i++) {
           if (newRows[i].text && !newRows[i].audioUrl) {
-            const audioUrl = (result as { audio_urls: string[] }).audio_urls[audioIndex];
+            const audioUrl = (result as { audio_urls: string[] }).audio_urls[
+              audioIndex
+            ];
             // 如果是相對路徑，加上 API base URL
-            newRows[i].audioUrl = audioUrl.startsWith('http')
+            newRows[i].audioUrl = audioUrl.startsWith("http")
               ? audioUrl
               : `${import.meta.env.VITE_API_URL}${audioUrl}`;
             audioIndex++;
@@ -1028,12 +1175,12 @@ export default function ReadingAssessmentPanel({
         setRows(newRows);
 
         // 立即更新 content 並儲存到後端（不要用 onSave 避免關閉 panel）
-        const items = newRows.map(row => ({
+        const items = newRows.map((row) => ({
           text: row.text,
-          definition: row.definition,  // 中文翻譯
+          definition: row.definition, // 中文翻譯
           translation: row.translation, // 英文釋義
-          audio_url: row.audioUrl || '',
-          selectedLanguage: row.selectedLanguage // 記錄最後選擇的語言
+          audio_url: row.audioUrl || "",
+          selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態，不呼叫 API
@@ -1045,11 +1192,13 @@ export default function ReadingAssessmentPanel({
               title,
               items,
               level,
-              tags
+              tags,
             });
           }
 
-          toast.success(`成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`);
+          toast.success(
+            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+          );
         } else {
           // 編輯模式：直接呼叫 API 更新
           try {
@@ -1057,7 +1206,7 @@ export default function ReadingAssessmentPanel({
               title: title || editingContent?.title,
               items,
               level,
-              tags
+              tags,
             };
 
             await apiClient.updateContent(editingContent?.id ?? 0, updateData);
@@ -1069,45 +1218,48 @@ export default function ReadingAssessmentPanel({
                 title,
                 items,
                 level,
-                tags
+                tags,
               });
             }
 
             toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
           } catch (error) {
-            console.error('Failed to save TTS:', error);
-            toast.error('儲存失敗，但音檔已生成');
+            console.error("Failed to save TTS:", error);
+            toast.error("儲存失敗，但音檔已生成");
           }
         }
       }
     } catch (error) {
-      console.error('Batch TTS generation failed:', error);
-      toast.error('批次生成失敗，請重試');
+      console.error("Batch TTS generation failed:", error);
+      toast.error("批次生成失敗，請重試");
     }
   };
 
   const handleGenerateSingleDefinition = async (index: number) => {
     const newRows = [...rows];
-    const currentLang = newRows[index].selectedLanguage || 'chinese';
+    const currentLang = newRows[index].selectedLanguage || "chinese";
     return handleGenerateSingleDefinitionWithLang(index, currentLang);
   };
 
-  const handleGenerateSingleDefinitionWithLang = async (index: number, targetLang: 'chinese' | 'english') => {
+  const handleGenerateSingleDefinitionWithLang = async (
+    index: number,
+    targetLang: "chinese" | "english",
+  ) => {
     const newRows = [...rows];
     if (!newRows[index].text) {
-      toast.error('請先輸入文本');
+      toast.error("請先輸入文本");
       return;
     }
 
     toast.info(`生成翻譯中...`);
     try {
-      const response = await apiClient.translateText(
+      const response = (await apiClient.translateText(
         newRows[index].text,
-        targetLang === 'chinese' ? 'zh-TW' : 'en'
-      ) as { translation: string };
+        targetLang === "chinese" ? "zh-TW" : "en",
+      )) as { translation: string };
 
       // 根據目標語言寫入對應欄位，但不清空另一個欄位
-      if (targetLang === 'chinese') {
+      if (targetLang === "chinese") {
         newRows[index].definition = response.translation;
       } else {
         newRows[index].translation = response.translation;
@@ -1116,10 +1268,12 @@ export default function ReadingAssessmentPanel({
       newRows[index].selectedLanguage = targetLang;
 
       setRows(newRows);
-      toast.success(`${targetLang === 'chinese' ? '中文翻譯' : '英文釋義'}生成完成`);
+      toast.success(
+        `${targetLang === "chinese" ? "中文翻譯" : "英文釋義"}生成完成`,
+      );
     } catch (error) {
-      console.error('Translation error:', error);
-      toast.error('翻譯失敗，請稍後再試');
+      console.error("Translation error:", error);
+      toast.error("翻譯失敗，請稍後再試");
     }
   };
 
@@ -1134,7 +1288,7 @@ export default function ReadingAssessmentPanel({
     });
 
     if (itemsToTranslate.length === 0) {
-      toast.info('沒有需要翻譯的項目');
+      toast.info("沒有需要翻譯的項目");
       return;
     }
 
@@ -1143,58 +1297,72 @@ export default function ReadingAssessmentPanel({
 
     try {
       // 收集需要中文翻譯的項目
-      const needsChinese = itemsToTranslate.filter(item => !newRows[item.index].definition);
+      const needsChinese = itemsToTranslate.filter(
+        (item) => !newRows[item.index].definition,
+      );
       // 收集需要英文翻譯的項目
-      const needsEnglish = itemsToTranslate.filter(item => !newRows[item.index].translation);
+      const needsEnglish = itemsToTranslate.filter(
+        (item) => !newRows[item.index].translation,
+      );
 
       // 批次處理中文翻譯
       if (needsChinese.length > 0) {
-        const chineseTexts = needsChinese.map(item => item.text);
-        const chineseResponse = await apiClient.batchTranslate(chineseTexts, 'zh-TW');
-        const chineseTranslations = (chineseResponse as { translations?: string[] }).translations || [];
+        const chineseTexts = needsChinese.map((item) => item.text);
+        const chineseResponse = await apiClient.batchTranslate(
+          chineseTexts,
+          "zh-TW",
+        );
+        const chineseTranslations =
+          (chineseResponse as { translations?: string[] }).translations || [];
 
         needsChinese.forEach((item, idx) => {
-          newRows[item.index].definition = chineseTranslations[idx] || item.text;
+          newRows[item.index].definition =
+            chineseTranslations[idx] || item.text;
           // 不清空英文欄位，保留兩種語言
         });
       }
 
       // 批次處理英文釋義
       if (needsEnglish.length > 0) {
-        const englishTexts = needsEnglish.map(item => item.text);
-        const englishResponse = await apiClient.batchTranslate(englishTexts, 'en');
-        const englishTranslations = (englishResponse as { translations?: string[] }).translations || [];
+        const englishTexts = needsEnglish.map((item) => item.text);
+        const englishResponse = await apiClient.batchTranslate(
+          englishTexts,
+          "en",
+        );
+        const englishTranslations =
+          (englishResponse as { translations?: string[] }).translations || [];
 
         needsEnglish.forEach((item, idx) => {
-          newRows[item.index].translation = englishTranslations[idx] || item.text;
+          newRows[item.index].translation =
+            englishTranslations[idx] || item.text;
           // 不清空中文欄位，保留兩種語言
         });
       }
 
       // 批次翻譯時預設使用中文
-      itemsToTranslate.forEach(item => {
+      itemsToTranslate.forEach((item) => {
         if (!newRows[item.index].selectedLanguage) {
-          newRows[item.index].selectedLanguage = 'chinese';
+          newRows[item.index].selectedLanguage = "chinese";
         }
       });
 
       setRows(newRows);
       toast.success(`批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目`);
     } catch (error) {
-      console.error('Batch translation error:', error);
-      toast.error('批次翻譯失敗，請稍後再試');
+      console.error("Batch translation error:", error);
+      toast.error("批次翻譯失敗，請稍後再試");
     }
   };
 
   const handleAddTag = () => {
     if (tagInput && !tags.includes(tagInput)) {
       setTags([...tags, tagInput]);
-      setTagInput('');
+      setTagInput("");
     }
   };
 
   const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter(t => t !== tag));
+    setTags(tags.filter((t) => t !== tag));
   };
 
   if (isLoading) {
@@ -1230,26 +1398,26 @@ export default function ReadingAssessmentPanel({
 
         {/* Batch Actions - RWD adjusted */}
         <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleBatchGenerateTTS}
-          className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
-          title="使用免費的 Microsoft Edge TTS 生成語音"
-        >
-          <Volume2 className="h-4 w-4 mr-1" />
-          批次生成TTS
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleBatchGenerateDefinitions()}
-          className="bg-green-100 hover:bg-green-200 border-green-300"
-          title="批次生成翻譯（根據各行語言設定）"
-        >
-          <Globe className="h-4 w-4 mr-1" />
-          批次生成翻譯
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBatchGenerateTTS}
+            className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
+            title="使用免費的 Microsoft Edge TTS 生成語音"
+          >
+            <Volume2 className="h-4 w-4 mr-1" />
+            批次生成TTS
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleBatchGenerateDefinitions()}
+            className="bg-green-100 hover:bg-green-200 border-green-300"
+            title="批次生成翻譯（根據各行語言設定）"
+          >
+            <Globe className="h-4 w-4 mr-1" />
+            批次生成翻譯
+          </Button>
         </div>
       </div>
 
@@ -1276,7 +1444,9 @@ export default function ReadingAssessmentPanel({
                 <input
                   type="text"
                   value={row.text}
-                  onChange={(e) => handleUpdateRow(index, 'text', e.target.value)}
+                  onChange={(e) =>
+                    handleUpdateRow(index, "text", e.target.value)
+                  }
                   className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
                   placeholder="輸入文本"
                   maxLength={200}
@@ -1287,21 +1457,21 @@ export default function ReadingAssessmentPanel({
                     <button
                       onClick={() => {
                         if (!row.audioUrl) {
-                          toast.error('沒有音檔可播放');
+                          toast.error("沒有音檔可播放");
                           return;
                         }
 
-                        console.log('Playing audio:', row.audioUrl);
+                        console.log("Playing audio:", row.audioUrl);
                         const audio = new Audio(row.audioUrl);
 
                         audio.onerror = (e) => {
-                          console.error('Audio playback error:', e);
-                          toast.error('音檔播放失敗，請檢查音檔格式');
+                          console.error("Audio playback error:", e);
+                          toast.error("音檔播放失敗，請檢查音檔格式");
                         };
 
-                        audio.play().catch(error => {
-                          console.error('Play failed:', error);
-                          toast.error('無法播放音檔');
+                        audio.play().catch((error) => {
+                          console.error("Play failed:", error);
+                          toast.error("無法播放音檔");
                         });
                       }}
                       className="p-1 rounded text-green-600 hover:bg-green-100"
@@ -1314,9 +1484,11 @@ export default function ReadingAssessmentPanel({
                   <button
                     onClick={() => handleOpenTTSModal(row)}
                     className={`p-1 rounded ${
-                      row.audioUrl ? 'text-blue-600 hover:bg-blue-100' : 'text-gray-600 bg-yellow-100 hover:bg-yellow-200'
+                      row.audioUrl
+                        ? "text-blue-600 hover:bg-blue-100"
+                        : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
                     }`}
-                    title={row.audioUrl ? '重新錄製/生成' : '開啟 TTS/錄音'}
+                    title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
                   >
                     <Mic className="h-4 w-4" />
                   </button>
@@ -1337,25 +1509,47 @@ export default function ReadingAssessmentPanel({
                 {/* 翻譯欄位 */}
                 <div className="relative">
                   <textarea
-                    value={(row.selectedLanguage || 'chinese') === 'chinese' ? (row.definition || '') : (row.translation || '')}
-                    onChange={(e) => handleUpdateRow(index, (row.selectedLanguage || 'chinese') === 'chinese' ? 'definition' : 'translation', e.target.value)}
+                    value={
+                      (row.selectedLanguage || "chinese") === "chinese"
+                        ? row.definition || ""
+                        : row.translation || ""
+                    }
+                    onChange={(e) =>
+                      handleUpdateRow(
+                        index,
+                        (row.selectedLanguage || "chinese") === "chinese"
+                          ? "definition"
+                          : "translation",
+                        e.target.value,
+                      )
+                    }
                     className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
-                    placeholder={(row.selectedLanguage || 'chinese') === 'chinese' ? '中文翻譯' : '英文釋義'}
+                    placeholder={
+                      (row.selectedLanguage || "chinese") === "chinese"
+                        ? "中文翻譯"
+                        : "英文釋義"
+                    }
                     rows={1}
                   />
                   {/* 右側對齊的選單和按鈕 */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <select
-                      value={row.selectedLanguage || 'chinese'}
+                      value={row.selectedLanguage || "chinese"}
                       onChange={async (e) => {
-                        const newLang = e.target.value as 'chinese' | 'english';
-                        handleUpdateRow(index, 'selectedLanguage', newLang);
+                        const newLang = e.target.value as "chinese" | "english";
+                        handleUpdateRow(index, "selectedLanguage", newLang);
                         // 只有在目標欄位為空時才自動翻譯，避免覆蓋用戶手動輸入的內容
                         if (row.text) {
-                          const targetFieldEmpty = newLang === 'chinese' ? !row.definition : !row.translation;
+                          const targetFieldEmpty =
+                            newLang === "chinese"
+                              ? !row.definition
+                              : !row.translation;
                           if (targetFieldEmpty) {
                             setTimeout(() => {
-                              handleGenerateSingleDefinitionWithLang(index, newLang);
+                              handleGenerateSingleDefinitionWithLang(
+                                index,
+                                newLang,
+                              );
                             }, 100);
                           }
                         }
@@ -1368,10 +1562,14 @@ export default function ReadingAssessmentPanel({
                     <button
                       onClick={() => handleGenerateSingleDefinition(index)}
                       className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                      title={`生成${(row.selectedLanguage || 'chinese') === 'chinese' ? '中文翻譯' : '英文釋義'}`}
+                      title={`生成${(row.selectedLanguage || "chinese") === "chinese" ? "中文翻譯" : "英文釋義"}`}
                     >
                       <Globe className="h-4 w-4" />
-                      <span className="text-xs">{(row.selectedLanguage || 'chinese') === 'chinese' ? '中' : 'EN'}</span>
+                      <span className="text-xs">
+                        {(row.selectedLanguage || "chinese") === "chinese"
+                          ? "中"
+                          : "EN"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1392,7 +1590,9 @@ export default function ReadingAssessmentPanel({
                 title="刪除"
                 disabled={rows.length <= 3}
               >
-                <Trash2 className={`h-4 w-4 ${rows.length <= 3 ? 'text-gray-300' : 'text-gray-600'}`} />
+                <Trash2
+                  className={`h-4 w-4 ${rows.length <= 3 ? "text-gray-300" : "text-gray-600"}`}
+                />
               </button>
             </div>
           </div>
@@ -1419,8 +1619,10 @@ export default function ReadingAssessmentPanel({
               onChange={(e) => setLevel(e.target.value)}
               className="px-3 py-1 border rounded-md"
             >
-              {levels.map(l => (
-                <option key={l} value={l}>{l}</option>
+              {levels.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
               ))}
             </select>
           </div>
@@ -1432,7 +1634,7 @@ export default function ReadingAssessmentPanel({
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   handleAddTag();
                 }
@@ -1450,14 +1652,17 @@ export default function ReadingAssessmentPanel({
               onChange={(e) => setIsPublic(e.target.checked)}
               className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <label htmlFor="isPublicEdit" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            <label
+              htmlFor="isPublicEdit"
+              className="text-sm font-medium text-gray-700 whitespace-nowrap"
+            >
               公開內容
             </label>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {tags.map(tag => (
+          {tags.map((tag) => (
             <span
               key={tag}
               className="px-3 py-1 bg-gray-100 rounded-full text-sm flex items-center gap-1"
@@ -1482,7 +1687,7 @@ export default function ReadingAssessmentPanel({
           row={selectedRow}
           onConfirm={handleTTSConfirm}
           contentId={editingContent?.id}
-          itemIndex={rows.findIndex(r => r.id === selectedRow.id)}
+          itemIndex={rows.findIndex((r) => r.id === selectedRow.id)}
           isCreating={isCreating}
         />
       )}
@@ -1490,25 +1695,22 @@ export default function ReadingAssessmentPanel({
       {/* 底部按鈕（新增模式時顯示） */}
       {isCreating && (
         <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-          <Button
-            variant="outline"
-            onClick={onCancel}
-          >
+          <Button variant="outline" onClick={onCancel}>
             取消
           </Button>
           <Button
             onClick={async () => {
               // 檢查必填欄位
               if (!title) {
-                toast.error('請輸入標題');
+                toast.error("請輸入標題");
                 return;
               }
 
               // 過濾掉空白的項目，只保留有文字的
-              const validRows = rows.filter(r => r.text && r.text.trim());
+              const validRows = rows.filter((r) => r.text && r.text.trim());
 
               if (validRows.length === 0) {
-                toast.error('請至少填寫一個項目的文字');
+                toast.error("請至少填寫一個項目的文字");
                 return;
               }
 
@@ -1520,7 +1722,7 @@ export default function ReadingAssessmentPanel({
               }));*/
 
               // Prepare content data for callback
-            /*const contentData = {
+              /*const contentData = {
                 title,
                 items,
                 level,
@@ -1534,45 +1736,45 @@ export default function ReadingAssessmentPanel({
               // 準備要儲存的資料
               const saveData = {
                 title: title,
-                items: validRows.map(row => ({
+                items: validRows.map((row) => ({
                   text: row.text.trim(),
-                  definition: row.definition || '',  // 中文翻譯
-                  english_definition: row.translation || '',  // 英文釋義
-                  translation: row.definition || '',  // 主要翻譯欄位（保持向後兼容）
-                  selectedLanguage: row.selectedLanguage || 'chinese',  // 記錄選擇的語言
-                  audio_url: row.audioUrl || row.audio_url || ''
+                  definition: row.definition || "", // 中文翻譯
+                  english_definition: row.translation || "", // 英文釋義
+                  translation: row.definition || "", // 主要翻譯欄位（保持向後兼容）
+                  selectedLanguage: row.selectedLanguage || "chinese", // 記錄選擇的語言
+                  audio_url: row.audioUrl || row.audio_url || "",
                 })),
                 target_wpm: 60,
                 target_accuracy: 0.8,
-                time_limit_seconds: 180
+                time_limit_seconds: 180,
               };
 
-              console.log('Saving data:', saveData);
+              console.log("Saving data:", saveData);
 
               // 如果是創建模式，需要呼叫 API 創建內容
               if (isCreating && lessonId) {
                 try {
                   await apiClient.createContent(lessonId, {
-                    type: 'reading_assessment',
-                    ...saveData
+                    type: "reading_assessment",
+                    ...saveData,
                   });
-                  toast.success('內容已成功創建');
+                  toast.success("內容已成功創建");
                   // 呼叫 onSave 關閉對話框
                   if (onSave) {
                     await (onSave as () => void | Promise<void>)();
                   }
                 } catch (error) {
-                  console.error('Failed to create content:', error);
-                  toast.error('創建內容失敗');
+                  console.error("Failed to create content:", error);
+                  toast.error("創建內容失敗");
                 }
               } else if (onSave) {
                 // 編輯模式，呼叫 onSave
                 try {
                   await (onSave as () => void | Promise<void>)();
-                  toast.success('儲存成功');
+                  toast.success("儲存成功");
                 } catch (error) {
-                  console.error('Save error:', error);
-                  toast.error('儲存失敗');
+                  console.error("Save error:", error);
+                  toast.error("儲存失敗");
                 }
               }
             }}

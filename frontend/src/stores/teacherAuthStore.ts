@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface TeacherUser {
   id: number;
@@ -48,12 +48,12 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
       },
     }),
     {
-      name: 'teacher-auth-storage',
+      name: "teacher-auth-storage",
       partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );

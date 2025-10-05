@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import TeacherLayout from '@/components/TeacherLayout';
-import { Users, UserCheck, BookOpen, Settings } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import TeacherLayout from "@/components/TeacherLayout";
+import { Users, UserCheck, BookOpen, Settings } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardData {
   teacher: {
@@ -35,7 +35,9 @@ interface DashboardData {
 }
 
 export default function TeacherDashboard() {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -46,13 +48,13 @@ export default function TeacherDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getTeacherDashboard() as DashboardData;
+      const data = (await apiClient.getTeacherDashboard()) as DashboardData;
       setDashboardData(data);
     } catch (err) {
-      console.error('Dashboard fetch error:', err);
+      console.error("Dashboard fetch error:", err);
       // 如果是 401 錯誤，轉到登入頁
-      if (err instanceof Error && err.message.includes('401')) {
-        navigate('/teacher/login');
+      if (err instanceof Error && err.message.includes("401")) {
+        navigate("/teacher/login");
       }
     } finally {
       setLoading(false);
@@ -90,43 +92,56 @@ export default function TeacherDashboard() {
         </h2>
 
         {/* Subscription Status Card - Always Show */}
-        <Card className={`mb-6 ${
-          dashboardData.subscription_status === 'subscribed'
-            ? 'bg-gradient-to-r from-green-50 to-blue-50 border-green-200'
-            : 'bg-gradient-to-r from-red-50 to-gray-50 border-red-200'
-        }`}>
+        <Card
+          className={`mb-6 ${
+            dashboardData.subscription_status === "subscribed"
+              ? "bg-gradient-to-r from-green-50 to-blue-50 border-green-200"
+              : "bg-gradient-to-r from-red-50 to-gray-50 border-red-200"
+          }`}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {dashboardData.subscription_status === 'subscribed' ? '✅ 訂閱狀態：已訂閱' : '⚠️ 訂閱狀態：未訂閱'}
+                  {dashboardData.subscription_status === "subscribed"
+                    ? "✅ 訂閱狀態：已訂閱"
+                    : "⚠️ 訂閱狀態：未訂閱"}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {dashboardData.subscription_status === 'subscribed'
+                  {dashboardData.subscription_status === "subscribed"
                     ? `您的訂閱將在 ${dashboardData.days_remaining || 0} 天後到期`
-                    : '您目前沒有有效訂閱，部分功能將受限'}
+                    : "您目前沒有有效訂閱，部分功能將受限"}
                 </p>
                 {dashboardData.subscription_end_date && (
                   <p className="text-xs text-gray-500 mt-2">
-                    到期日: {new Date(dashboardData.subscription_end_date).toLocaleDateString('zh-TW')}
+                    到期日:{" "}
+                    {new Date(
+                      dashboardData.subscription_end_date,
+                    ).toLocaleDateString("zh-TW")}
                   </p>
                 )}
               </div>
               <div className="text-center">
-                <div className={`text-3xl font-bold ${
-                  dashboardData.subscription_status === 'subscribed' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {(dashboardData.days_remaining ?? 0) > 0 ? dashboardData.days_remaining : 0}
+                <div
+                  className={`text-3xl font-bold ${
+                    dashboardData.subscription_status === "subscribed"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {(dashboardData.days_remaining ?? 0) > 0
+                    ? dashboardData.days_remaining
+                    : 0}
                 </div>
                 <div className="text-sm text-gray-600">剩餘天數</div>
               </div>
             </div>
 
             {/* Demo Mode Button - Only show for demo@duotopia.com */}
-            {dashboardData.teacher.email === 'demo@duotopia.com' && (
+            {dashboardData.teacher.email === "demo@duotopia.com" && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
-                  onClick={() => navigate('/test-sub')}
+                  onClick={() => navigate("/test-sub")}
                   className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white"
                 >
                   <Settings className="mr-2 h-4 w-4" />
@@ -148,7 +163,9 @@ export default function TeacherDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.classroom_count}</div>
+              <div className="text-2xl font-bold">
+                {dashboardData.classroom_count}
+              </div>
             </CardContent>
           </Card>
 
@@ -158,7 +175,9 @@ export default function TeacherDashboard() {
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.student_count}</div>
+              <div className="text-2xl font-bold">
+                {dashboardData.student_count}
+              </div>
             </CardContent>
           </Card>
 
@@ -168,7 +187,9 @@ export default function TeacherDashboard() {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.program_count}</div>
+              <div className="text-2xl font-bold">
+                {dashboardData.program_count}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -182,13 +203,20 @@ export default function TeacherDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {dashboardData.classrooms.map((classroom) => (
-                  <div key={classroom.id} className="flex items-center justify-between p-3 border rounded">
+                  <div
+                    key={classroom.id}
+                    className="flex items-center justify-between p-3 border rounded"
+                  >
                     <div>
                       <h4 className="font-medium">{classroom.name}</h4>
-                      <p className="text-sm text-gray-500">{classroom.description}</p>
+                      <p className="text-sm text-gray-500">
+                        {classroom.description}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{classroom.student_count} 位學生</p>
+                      <p className="text-sm font-medium">
+                        {classroom.student_count} 位學生
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -203,7 +231,10 @@ export default function TeacherDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {dashboardData.recent_students.map((student) => (
-                  <div key={student.id} className="flex items-center space-x-3 p-3 border rounded">
+                  <div
+                    key={student.id}
+                    className="flex items-center space-x-3 p-3 border rounded"
+                  >
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
                         {student.name.charAt(0)}
@@ -211,7 +242,9 @@ export default function TeacherDashboard() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">{student.name}</p>
-                      <p className="text-xs text-gray-500">{student.classroom_name}</p>
+                      <p className="text-xs text-gray-500">
+                        {student.classroom_name}
+                      </p>
                     </div>
                   </div>
                 ))}

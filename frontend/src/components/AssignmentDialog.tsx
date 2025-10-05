@@ -1,22 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { format } from "date-fns";
+import { zhTW } from "date-fns/locale";
 import {
   Users,
   ChevronRight,
@@ -33,11 +37,11 @@ import {
   Calendar as CalendarIconAlt,
   Clock,
   MessageSquare,
-  Loader2
-} from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+  Loader2,
+} from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Student {
   id: number;
@@ -80,13 +84,13 @@ interface AssignmentDialogProps {
 
 // Content type labels in Chinese
 const contentTypeLabels: Record<string, string> = {
-  reading_assessment: '朗讀評測',
-  READING_ASSESSMENT: '朗讀評測',
-  speaking_practice: '口說練習',
-  speaking_scenario: '情境對話',
-  listening_cloze: '聽力填空',
-  sentence_making: '造句練習',
-  speaking_quiz: '口說測驗',
+  reading_assessment: "朗讀評測",
+  READING_ASSESSMENT: "朗讀評測",
+  speaking_practice: "口說練習",
+  speaking_scenario: "情境對話",
+  listening_cloze: "聽力填空",
+  sentence_making: "造句練習",
+  speaking_quiz: "口說測驗",
 };
 
 export function AssignmentDialog({
@@ -94,20 +98,28 @@ export function AssignmentDialog({
   onClose,
   classroomId,
   students,
-  onSuccess
+  onSuccess,
 }: AssignmentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
-  const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>({});
+  const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>(
+    {},
+  );
   const [currentStep, setCurrentStep] = useState(1);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(new Set());
-  const [expandedLessons, setExpandedLessons] = useState<Set<number>>(new Set());
-  const [selectedContents, setSelectedContents] = useState<Set<number>>(new Set());
+  const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(
+    new Set(),
+  );
+  const [expandedLessons, setExpandedLessons] = useState<Set<number>>(
+    new Set(),
+  );
+  const [selectedContents, setSelectedContents] = useState<Set<number>>(
+    new Set(),
+  );
 
   const [formData, setFormData] = useState({
-    title: '',
-    instructions: '',
+    title: "",
+    instructions: "",
     student_ids: [] as number[],
     assign_to_all: true,
     due_date: undefined as Date | undefined,
@@ -119,9 +131,9 @@ export function AssignmentDialog({
       // Reset form when dialog opens
       setSelectedContents(new Set());
       setFormData({
-        title: '',
-        instructions: '',
-        student_ids: students.map(s => s.id), // 預設全選所有學生
+        title: "",
+        instructions: "",
+        student_ids: students.map((s) => s.id), // 預設全選所有學生
         assign_to_all: true,
         due_date: undefined,
       });
@@ -136,8 +148,8 @@ export function AssignmentDialog({
       const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
       setPrograms(response);
     } catch (error) {
-      console.error('Failed to load programs:', error);
-      toast.error('無法載入課程資料');
+      console.error("Failed to load programs:", error);
+      toast.error("無法載入課程資料");
       setPrograms([]);
     } finally {
       setLoadingPrograms(false);
@@ -146,34 +158,36 @@ export function AssignmentDialog({
 
   const loadProgramLessons = async (programId: number) => {
     // Check if lessons already loaded
-    const program = programs.find(p => p.id === programId);
+    const program = programs.find((p) => p.id === programId);
     if (program?.lessons && program.lessons.length > 0) {
       return; // Already loaded
     }
 
     try {
-      setLoadingLessons(prev => ({ ...prev, [programId]: true }));
-      const detail = await apiClient.get<Program>(`/api/teachers/programs/${programId}`);
+      setLoadingLessons((prev) => ({ ...prev, [programId]: true }));
+      const detail = await apiClient.get<Program>(
+        `/api/teachers/programs/${programId}`,
+      );
 
       // Update the program with lessons (but without contents)
-      setPrograms(prev => prev.map(p =>
-        p.id === programId
-          ? { ...p, lessons: detail.lessons || [] }
-          : p
-      ));
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === programId ? { ...p, lessons: detail.lessons || [] } : p,
+        ),
+      );
     } catch (error) {
       console.error(`Failed to load lessons for program ${programId}:`, error);
-      toast.error('無法載入課程單元');
+      toast.error("無法載入課程單元");
     } finally {
-      setLoadingLessons(prev => ({ ...prev, [programId]: false }));
+      setLoadingLessons((prev) => ({ ...prev, [programId]: false }));
     }
   };
 
   const loadLessonContents = async (lessonId: number) => {
     // Find the lesson and check if contents already loaded
     let foundLesson: Lesson | undefined;
-    programs.forEach(program => {
-      const lesson = program.lessons?.find(l => l.id === lessonId);
+    programs.forEach((program) => {
+      const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {
         foundLesson = lesson;
       }
@@ -184,30 +198,32 @@ export function AssignmentDialog({
     }
 
     try {
-      setLoadingLessons(prev => ({ ...prev, [lessonId]: true }));
-      const contents = await apiClient.get<Content[]>(`/api/teachers/lessons/${lessonId}/contents`);
+      setLoadingLessons((prev) => ({ ...prev, [lessonId]: true }));
+      const contents = await apiClient.get<Content[]>(
+        `/api/teachers/lessons/${lessonId}/contents`,
+      );
 
       // Update the lesson with contents
-      setPrograms(prev => prev.map(program => ({
-        ...program,
-        lessons: program.lessons?.map(lesson =>
-          lesson.id === lessonId
-            ? { ...lesson, contents }
-            : lesson
-        )
-      })));
+      setPrograms((prev) =>
+        prev.map((program) => ({
+          ...program,
+          lessons: program.lessons?.map((lesson) =>
+            lesson.id === lessonId ? { ...lesson, contents } : lesson,
+          ),
+        })),
+      );
     } catch (error) {
       console.error(`Failed to load contents for lesson ${lessonId}:`, error);
-      toast.error('無法載入課程內容');
+      toast.error("無法載入課程內容");
     } finally {
-      setLoadingLessons(prev => ({ ...prev, [lessonId]: false }));
+      setLoadingLessons((prev) => ({ ...prev, [lessonId]: false }));
     }
   };
 
   const toggleProgram = async (programId: number) => {
     const isExpanding = !expandedPrograms.has(programId);
 
-    setExpandedPrograms(prev => {
+    setExpandedPrograms((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(programId)) {
         newSet.delete(programId);
@@ -226,7 +242,7 @@ export function AssignmentDialog({
   const toggleLesson = async (lessonId: number) => {
     const isExpanding = !expandedLessons.has(lessonId);
 
-    setExpandedLessons(prev => {
+    setExpandedLessons((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(lessonId)) {
         newSet.delete(lessonId);
@@ -243,7 +259,7 @@ export function AssignmentDialog({
   };
 
   const toggleContent = (contentId: number) => {
-    setSelectedContents(prev => {
+    setSelectedContents((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(contentId)) {
         newSet.delete(contentId);
@@ -257,54 +273,56 @@ export function AssignmentDialog({
   const toggleAllInLesson = (lesson: Lesson) => {
     if (!lesson.contents) return;
 
-    const lessonContentIds = lesson.contents.map(c => c.id);
-    const allSelected = lessonContentIds.every(id => selectedContents.has(id));
+    const lessonContentIds = lesson.contents.map((c) => c.id);
+    const allSelected = lessonContentIds.every((id) =>
+      selectedContents.has(id),
+    );
 
-    setSelectedContents(prev => {
+    setSelectedContents((prev) => {
       const newSet = new Set(prev);
       if (allSelected) {
-        lessonContentIds.forEach(id => newSet.delete(id));
+        lessonContentIds.forEach((id) => newSet.delete(id));
       } else {
-        lessonContentIds.forEach(id => newSet.add(id));
+        lessonContentIds.forEach((id) => newSet.add(id));
       }
       return newSet;
     });
   };
 
   const toggleStudent = (studentId: number) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newIds = prev.student_ids.includes(studentId)
-        ? prev.student_ids.filter(id => id !== studentId)
+        ? prev.student_ids.filter((id) => id !== studentId)
         : [...prev.student_ids, studentId];
 
       return {
         ...prev,
         student_ids: newIds,
-        assign_to_all: newIds.length === students.length
+        assign_to_all: newIds.length === students.length,
       };
     });
   };
 
   const toggleAllStudents = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       assign_to_all: !prev.assign_to_all,
-      student_ids: !prev.assign_to_all ? students.map(s => s.id) : []
+      student_ids: !prev.assign_to_all ? students.map((s) => s.id) : [],
     }));
   };
 
   const handleSubmit = async () => {
     // Validation
     if (selectedContents.size === 0) {
-      toast.error('請至少選擇一個課程內容');
+      toast.error("請至少選擇一個課程內容");
       return;
     }
     if (!formData.title.trim()) {
-      toast.error('請輸入作業標題');
+      toast.error("請輸入作業標題");
       return;
     }
     if (formData.student_ids.length === 0) {
-      toast.error('請至少選擇一位學生');
+      toast.error("請至少選擇一位學生");
       return;
     }
 
@@ -313,21 +331,28 @@ export function AssignmentDialog({
       // Create one assignment with multiple contents (新架構)
       const payload = {
         title: formData.title,
-        description: formData.instructions || undefined,  // 欄位名稱改為 description
+        description: formData.instructions || undefined, // 欄位名稱改為 description
         classroom_id: classroomId,
-        content_ids: Array.from(selectedContents),  // 多個內容 ID
+        content_ids: Array.from(selectedContents), // 多個內容 ID
         student_ids: formData.assign_to_all ? [] : formData.student_ids,
-        due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
+        due_date: formData.due_date
+          ? formData.due_date.toISOString()
+          : undefined,
       };
 
-      const result = await apiClient.post<{ student_count: number }>('/api/teachers/assignments/create', payload);
+      const result = await apiClient.post<{ student_count: number }>(
+        "/api/teachers/assignments/create",
+        payload,
+      );
 
-      toast.success(`成功創建作業，已指派給 ${result.student_count || 0} 位學生`);
+      toast.success(
+        `成功創建作業，已指派給 ${result.student_count || 0} 位學生`,
+      );
       onSuccess?.();
       handleClose();
     } catch (error) {
-      console.error('Failed to create assignment:', error);
-      toast.error('創建作業失敗');
+      console.error("Failed to create assignment:", error);
+      toast.error("創建作業失敗");
     } finally {
       setLoading(false);
     }
@@ -335,8 +360,8 @@ export function AssignmentDialog({
 
   const handleClose = () => {
     setFormData({
-      title: '',
-      instructions: '',
+      title: "",
+      instructions: "",
       student_ids: [],
       assign_to_all: true,
       due_date: undefined,
@@ -350,17 +375,22 @@ export function AssignmentDialog({
 
   // Get selected content details for summary
   const getSelectedContentsSummary = () => {
-    const summary: { program: string; lesson: string; content: string; type: string }[] = [];
+    const summary: {
+      program: string;
+      lesson: string;
+      content: string;
+      type: string;
+    }[] = [];
 
-    programs.forEach(program => {
-      program.lessons?.forEach(lesson => {
-        lesson.contents?.forEach(content => {
+    programs.forEach((program) => {
+      program.lessons?.forEach((lesson) => {
+        lesson.contents?.forEach((content) => {
           if (selectedContents.has(content.id)) {
             summary.push({
               program: program.name,
               lesson: lesson.name,
               content: content.title,
-              type: content.type
+              type: content.type,
             });
           }
         });
@@ -384,9 +414,9 @@ export function AssignmentDialog({
   };
 
   const steps = [
-    { number: 1, title: '選擇內容', icon: BookOpen },
-    { number: 2, title: '選擇學生', icon: Users },
-    { number: 3, title: '作業詳情', icon: FileText },
+    { number: 1, title: "選擇內容", icon: BookOpen },
+    { number: 2, title: "選擇學生", icon: Users },
+    { number: 3, title: "作業詳情", icon: FileText },
   ];
 
   return (
@@ -395,7 +425,9 @@ export function AssignmentDialog({
         {/* Compact Header with Clear Steps */}
         <div className="px-6 py-3 border-b bg-gray-50">
           <div className="flex items-center">
-            <DialogTitle className="text-lg font-semibold">指派新作業</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">
+              指派新作業
+            </DialogTitle>
 
             {/* Centered Step Indicator with Icons */}
             <div className="flex-1 flex items-center justify-center">
@@ -408,12 +440,16 @@ export function AssignmentDialog({
                   return (
                     <React.Fragment key={s.number}>
                       <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all",
-                          isActive && "bg-blue-600 text-white shadow-sm",
-                          isCompleted && "bg-green-500 text-white",
-                          !isActive && !isCompleted && "bg-gray-200 text-gray-500"
-                        )}>
+                        <div
+                          className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all",
+                            isActive && "bg-blue-600 text-white shadow-sm",
+                            isCompleted && "bg-green-500 text-white",
+                            !isActive &&
+                              !isCompleted &&
+                              "bg-gray-200 text-gray-500",
+                          )}
+                        >
                           {isCompleted ? (
                             <CheckCircle2 className="h-4 w-4" />
                           ) : (
@@ -421,18 +457,22 @@ export function AssignmentDialog({
                           )}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Icon className={cn(
-                            "h-4 w-4",
-                            isActive && "text-blue-600",
-                            isCompleted && "text-green-600",
-                            !isActive && !isCompleted && "text-gray-400"
-                          )} />
-                          <span className={cn(
-                            "text-sm",
-                            isActive && "text-gray-900 font-semibold",
-                            isCompleted && "text-green-700 font-medium",
-                            !isActive && !isCompleted && "text-gray-500"
-                          )}>
+                          <Icon
+                            className={cn(
+                              "h-4 w-4",
+                              isActive && "text-blue-600",
+                              isCompleted && "text-green-600",
+                              !isActive && !isCompleted && "text-gray-400",
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "text-sm",
+                              isActive && "text-gray-900 font-semibold",
+                              isCompleted && "text-green-700 font-medium",
+                              !isActive && !isCompleted && "text-gray-500",
+                            )}
+                          >
                             {s.title}
                           </span>
                         </div>
@@ -458,7 +498,10 @@ export function AssignmentDialog({
                   選擇要指派的課程內容（可多選）
                 </p>
                 {selectedContents.size > 0 && (
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-50 text-blue-700"
+                  >
                     已選擇 {selectedContents.size} 個
                   </Badge>
                 )}
@@ -475,129 +518,163 @@ export function AssignmentDialog({
                       {/* Inner spinning circle */}
                       <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
                     </div>
-                    <p className="mt-6 text-lg font-medium text-gray-700">載入課程內容中...</p>
-                    <p className="mt-2 text-sm text-gray-500">請稍候，正在準備可指派的課程</p>
+                    <p className="mt-6 text-lg font-medium text-gray-700">
+                      載入課程內容中...
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      請稍候，正在準備可指派的課程
+                    </p>
                   </div>
                 ) : programs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-96">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
                     <p className="text-gray-500">尚無可用的課程內容</p>
-                    <p className="text-sm text-gray-400 mt-2">請先建立課程計畫和內容</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      請先建立課程計畫和內容
+                    </p>
                   </div>
                 ) : (
-                <div className="space-y-2">
-                  {programs.map(program => (
-                    <Card key={program.id} className="overflow-hidden">
-                      <button
-                        onClick={() => toggleProgram(program.id)}
-                        className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          {loadingLessons[program.id] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : expandedPrograms.has(program.id) ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          <Package className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium">{program.name}</span>
-                          {program.level && (
-                            <Badge variant="outline" className="ml-2">
-                              {program.level}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">
-                            {program.lessons?.length || 0} 個單元
-                          </span>
-                          {loadingLessons[program.id] && (
-                            <span className="text-xs text-blue-600">載入中...</span>
-                          )}
-                        </div>
-                      </button>
+                  <div className="space-y-2">
+                    {programs.map((program) => (
+                      <Card key={program.id} className="overflow-hidden">
+                        <button
+                          onClick={() => toggleProgram(program.id)}
+                          className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {loadingLessons[program.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : expandedPrograms.has(program.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                            <Package className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium">{program.name}</span>
+                            {program.level && (
+                              <Badge variant="outline" className="ml-2">
+                                {program.level}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">
+                              {program.lessons?.length || 0} 個單元
+                            </span>
+                            {loadingLessons[program.id] && (
+                              <span className="text-xs text-blue-600">
+                                載入中...
+                              </span>
+                            )}
+                          </div>
+                        </button>
 
-                      {expandedPrograms.has(program.id) && program.lessons && (
-                        <div className="border-t bg-gray-50">
-                          {program.lessons.map(lesson => (
-                            <div key={lesson.id} className="ml-6">
-                              <button
-                                onClick={() => toggleLesson(lesson.id)}
-                                className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {loadingLessons[lesson.id] ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : expandedLessons.has(lesson.id) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                  <Layers className="h-4 w-4 text-green-600" />
-                                  <span className="text-sm">{lesson.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">
-                                    {lesson.contents?.length || 0} 個內容
-                                  </span>
-                                  {loadingLessons[lesson.id] && (
-                                    <span className="text-xs text-blue-600">載入中...</span>
-                                  )}
-                                  {lesson.contents && lesson.contents.length > 0 && !loadingLessons[lesson.id] && (
-                                    <span
-                                      className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleAllInLesson(lesson);
-                                      }}
-                                    >
-                                      {lesson.contents.every(c => selectedContents.has(c.id))
-                                        ? '取消全選'
-                                        : '全選'}
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-
-                              {expandedLessons.has(lesson.id) && lesson.contents && (
-                                <div className="ml-6 space-y-1 pb-2 bg-white">
-                                  {lesson.contents.map(content => (
-                                    <button
-                                      key={content.id}
-                                      onClick={() => toggleContent(content.id)}
-                                      className={cn(
-                                        "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
-                                        selectedContents.has(content.id) && "bg-blue-50 hover:bg-blue-100"
-                                      )}
-                                    >
-                                      {selectedContents.has(content.id) ? (
-                                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                        {expandedPrograms.has(program.id) &&
+                          program.lessons && (
+                            <div className="border-t bg-gray-50">
+                              {program.lessons.map((lesson) => (
+                                <div key={lesson.id} className="ml-6">
+                                  <button
+                                    onClick={() => toggleLesson(lesson.id)}
+                                    className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {loadingLessons[lesson.id] ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : expandedLessons.has(lesson.id) ? (
+                                        <ChevronDown className="h-4 w-4" />
                                       ) : (
-                                        <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        <ChevronRight className="h-4 w-4" />
                                       )}
-                                      <div className="flex-1">
-                                        <div className="text-sm font-medium">{content.title}</div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                          <Badge variant="outline" className="px-1 py-0">
-                                            {contentTypeLabels[content.type] || content.type}
-                                          </Badge>
-                                          {content.items_count && (
-                                            <span>{content.items_count} 題</span>
-                                          )}
-                                        </div>
+                                      <Layers className="h-4 w-4 text-green-600" />
+                                      <span className="text-sm">
+                                        {lesson.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500">
+                                        {lesson.contents?.length || 0} 個內容
+                                      </span>
+                                      {loadingLessons[lesson.id] && (
+                                        <span className="text-xs text-blue-600">
+                                          載入中...
+                                        </span>
+                                      )}
+                                      {lesson.contents &&
+                                        lesson.contents.length > 0 &&
+                                        !loadingLessons[lesson.id] && (
+                                          <span
+                                            className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleAllInLesson(lesson);
+                                            }}
+                                          >
+                                            {lesson.contents.every((c) =>
+                                              selectedContents.has(c.id),
+                                            )
+                                              ? "取消全選"
+                                              : "全選"}
+                                          </span>
+                                        )}
+                                    </div>
+                                  </button>
+
+                                  {expandedLessons.has(lesson.id) &&
+                                    lesson.contents && (
+                                      <div className="ml-6 space-y-1 pb-2 bg-white">
+                                        {lesson.contents.map((content) => (
+                                          <button
+                                            key={content.id}
+                                            onClick={() =>
+                                              toggleContent(content.id)
+                                            }
+                                            className={cn(
+                                              "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
+                                              selectedContents.has(
+                                                content.id,
+                                              ) &&
+                                                "bg-blue-50 hover:bg-blue-100",
+                                            )}
+                                          >
+                                            {selectedContents.has(
+                                              content.id,
+                                            ) ? (
+                                              <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                            ) : (
+                                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            )}
+                                            <div className="flex-1">
+                                              <div className="text-sm font-medium">
+                                                {content.title}
+                                              </div>
+                                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <Badge
+                                                  variant="outline"
+                                                  className="px-1 py-0"
+                                                >
+                                                  {contentTypeLabels[
+                                                    content.type
+                                                  ] || content.type}
+                                                </Badge>
+                                                {content.items_count && (
+                                                  <span>
+                                                    {content.items_count} 題
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </button>
+                                        ))}
                                       </div>
-                                    </button>
-                                  ))}
+                                    )}
                                 </div>
-                              )}
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
+                          )}
+                      </Card>
+                    ))}
+                  </div>
                 )}
               </ScrollArea>
 
@@ -605,13 +682,22 @@ export function AssignmentDialog({
               {selectedContents.size > 0 && (
                 <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex flex-wrap gap-1">
-                    {getSelectedContentsSummary().slice(0, 8).map((item, idx) => (
-                      <Badge key={idx} variant="secondary" className="bg-white text-xs py-0 h-5">
-                        {item.content}
-                      </Badge>
-                    ))}
+                    {getSelectedContentsSummary()
+                      .slice(0, 8)
+                      .map((item, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="bg-white text-xs py-0 h-5"
+                        >
+                          {item.content}
+                        </Badge>
+                      ))}
                     {selectedContents.size > 8 && (
-                      <Badge variant="secondary" className="bg-white text-xs py-0 h-5">
+                      <Badge
+                        variant="secondary"
+                        className="bg-white text-xs py-0 h-5"
+                      >
                         +{selectedContents.size - 8}
                       </Badge>
                     )}
@@ -625,9 +711,7 @@ export function AssignmentDialog({
           {currentStep === 2 && (
             <div className="h-full flex flex-col">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  選擇要接收作業的學生
-                </p>
+                <p className="text-sm text-gray-600">選擇要接收作業的學生</p>
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700">
                   {formData.student_ids.length}/{students.length} 已選
                 </Badge>
@@ -644,8 +728,12 @@ export function AssignmentDialog({
                     className="data-[state=checked]:bg-blue-600 h-5 w-5"
                   />
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-semibold text-blue-900">指派給全班所有學生</p>
-                    <p className="text-xs text-blue-700">共 {students.length} 位學生</p>
+                    <p className="text-sm font-semibold text-blue-900">
+                      指派給全班所有學生
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      共 {students.length} 位學生
+                    </p>
                   </div>
                   {formData.assign_to_all && (
                     <Badge className="bg-blue-600 text-white">全選</Badge>
@@ -657,7 +745,7 @@ export function AssignmentDialog({
               <div className="flex-1 border rounded-lg bg-gray-50 p-2 overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="grid grid-cols-3 gap-1.5 p-1">
-                    {students.map(student => (
+                    {students.map((student) => (
                       <button
                         key={student.id}
                         onClick={() => toggleStudent(student.id)}
@@ -665,7 +753,7 @@ export function AssignmentDialog({
                           "p-2 rounded-md border transition-all text-left relative",
                           formData.student_ids.includes(student.id)
                             ? "bg-blue-50 border-blue-300 shadow-sm"
-                            : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                            : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
                         )}
                       >
                         <div className="flex items-start gap-2">
@@ -674,8 +762,12 @@ export function AssignmentDialog({
                             className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs truncate">{student.name}</p>
-                            <p className="text-[10px] text-gray-500 truncate">{student.email}</p>
+                            <p className="font-medium text-xs truncate">
+                              {student.name}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {student.email}
+                            </p>
                           </div>
                         </div>
                         {formData.student_ids.includes(student.id) && (
@@ -686,7 +778,6 @@ export function AssignmentDialog({
                       </button>
                     ))}
                   </div>
-
                 </ScrollArea>
               </div>
 
@@ -695,11 +786,13 @@ export function AssignmentDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFormData(prev => ({
-                    ...prev,
-                    student_ids: students.map(s => s.id),
-                    assign_to_all: true
-                  }))}
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      student_ids: students.map((s) => s.id),
+                      assign_to_all: true,
+                    }))
+                  }
                   className="flex-1"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -708,11 +801,13 @@ export function AssignmentDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFormData(prev => ({
-                    ...prev,
-                    student_ids: [],
-                    assign_to_all: false
-                  }))}
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      student_ids: [],
+                      assign_to_all: false,
+                    }))
+                  }
                   className="flex-1"
                 >
                   <Circle className="h-4 w-4 mr-1" />
@@ -723,12 +818,14 @@ export function AssignmentDialog({
                   size="sm"
                   onClick={() => {
                     const currentIds = formData.student_ids;
-                    const allIds = students.map(s => s.id);
-                    const newIds = allIds.filter(id => !currentIds.includes(id));
-                    setFormData(prev => ({
+                    const allIds = students.map((s) => s.id);
+                    const newIds = allIds.filter(
+                      (id) => !currentIds.includes(id),
+                    );
+                    setFormData((prev) => ({
                       ...prev,
                       student_ids: newIds,
-                      assign_to_all: false
+                      assign_to_all: false,
                     }));
                   }}
                   className="flex-1"
@@ -744,39 +841,53 @@ export function AssignmentDialog({
           {currentStep === 3 && (
             <div className="h-full flex flex-col">
               <div className="mb-2">
-                <p className="text-sm text-gray-600">
-                  填寫作業標題和詳細資訊
-                </p>
+                <p className="text-sm text-gray-600">填寫作業標題和詳細資訊</p>
               </div>
 
               <ScrollArea className="flex-1">
                 <div className="space-y-4 pr-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="title" className="flex items-center gap-1 text-sm">
+                    <Label
+                      htmlFor="title"
+                      className="flex items-center gap-1 text-sm"
+                    >
                       <FileText className="h-3.5 w-3.5" />
                       作業標題 *
                     </Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="例：Unit 1-3 綜合練習"
-                  />
-                </div>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      placeholder="例：Unit 1-3 綜合練習"
+                    />
+                  </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="instructions" className="flex items-center gap-1 text-sm">
+                    <Label
+                      htmlFor="instructions"
+                      className="flex items-center gap-1 text-sm"
+                    >
                       <MessageSquare className="h-3.5 w-3.5" />
                       作業說明
                     </Label>
-                  <Textarea
-                    id="instructions"
-                    value={formData.instructions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, instructions: e.target.value }))}
-                    placeholder="請提供作業相關說明或要求..."
-                    rows={2}
-                  />
-                </div>
+                    <Textarea
+                      id="instructions"
+                      value={formData.instructions}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          instructions: e.target.value,
+                        }))
+                      }
+                      placeholder="請提供作業相關說明或要求..."
+                      rows={2}
+                    />
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
@@ -786,7 +897,7 @@ export function AssignmentDialog({
                       </Label>
                       <Input
                         type="date"
-                        defaultValue={new Date().toISOString().split('T')[0]}
+                        defaultValue={new Date().toISOString().split("T")[0]}
                         className="text-sm"
                       />
                     </div>
@@ -801,11 +912,11 @@ export function AssignmentDialog({
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal text-sm h-9",
-                              !formData.due_date && "text-muted-foreground"
+                              !formData.due_date && "text-muted-foreground",
                             )}
                           >
                             {formData.due_date ? (
-                              format(formData.due_date, 'yyyy/MM/dd')
+                              format(formData.due_date, "yyyy/MM/dd")
                             ) : (
                               <span>選擇日期</span>
                             )}
@@ -815,7 +926,12 @@ export function AssignmentDialog({
                           <Calendar
                             mode="single"
                             selected={formData.due_date}
-                            onSelect={(date) => setFormData(prev => ({ ...prev, due_date: date }))}
+                            onSelect={(date) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                due_date: date,
+                              }))
+                            }
                             initialFocus
                           />
                         </PopoverContent>
@@ -825,18 +941,24 @@ export function AssignmentDialog({
 
                   {/* Assignment Summary */}
                   <Card className="p-3 bg-blue-50 border-blue-200">
-                    <h4 className="text-xs font-medium mb-2 text-blue-900">作業摘要</h4>
+                    <h4 className="text-xs font-medium mb-2 text-blue-900">
+                      作業摘要
+                    </h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-3 w-3 text-blue-600" />
                         <span className="text-gray-700">課程內容：</span>
-                        <span className="font-medium text-blue-900">{selectedContents.size} 個</span>
+                        <span className="font-medium text-blue-900">
+                          {selectedContents.size} 個
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="h-3 w-3 text-blue-600" />
                         <span className="text-gray-700">指派對象：</span>
                         <span className="font-medium text-blue-900">
-                          {formData.assign_to_all ? '全班學生' : `${formData.student_ids.length} 位學生`}
+                          {formData.assign_to_all
+                            ? "全班學生"
+                            : `${formData.student_ids.length} 位學生`}
                         </span>
                       </div>
                       {formData.due_date && (
@@ -844,7 +966,9 @@ export function AssignmentDialog({
                           <Clock className="h-3 w-3 text-blue-600" />
                           <span className="text-gray-700">截止日期：</span>
                           <span className="font-medium text-blue-900">
-                            {format(formData.due_date, 'yyyy年MM月dd日', { locale: zhTW })}
+                            {format(formData.due_date, "yyyy年MM月dd日", {
+                              locale: zhTW,
+                            })}
                           </span>
                         </div>
                       )}
@@ -861,7 +985,11 @@ export function AssignmentDialog({
           <div className="flex items-center justify-between w-full">
             <Button
               variant="outline"
-              onClick={currentStep === 1 ? handleClose : () => setCurrentStep(currentStep - 1)}
+              onClick={
+                currentStep === 1
+                  ? handleClose
+                  : () => setCurrentStep(currentStep - 1)
+              }
               disabled={loading}
             >
               {currentStep === 1 ? (

@@ -1,18 +1,18 @@
-import axios from 'axios';
+import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   // Check for teacher token
-  const teacherAuth = localStorage.getItem('auth-storage');
+  const teacherAuth = localStorage.getItem("auth-storage");
   if (teacherAuth) {
     const { state } = JSON.parse(teacherAuth);
     if (state?.token) {
@@ -21,7 +21,7 @@ api.interceptors.request.use((config) => {
   }
 
   // Check for student token
-  const studentAuth = localStorage.getItem('student-auth-storage');
+  const studentAuth = localStorage.getItem("student-auth-storage");
   if (studentAuth) {
     const { state } = JSON.parse(studentAuth);
     if (state?.token) {
@@ -38,14 +38,14 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Unauthorized - clear auth and redirect to login
-      console.error('401 Unauthorized - Token issue detected');
+      console.error("401 Unauthorized - Token issue detected");
       // 暫時不要自動跳轉，讓我們可以看到實際錯誤
       // localStorage.removeItem('auth-storage');
       // localStorage.removeItem('student-auth-storage');
       // window.location.href = '/';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Users,
   GraduationCap,
@@ -12,9 +18,9 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
-  Filter
-} from 'lucide-react';
-import { apiClient } from '../lib/api';
+  Filter,
+} from "lucide-react";
+import { apiClient } from "../lib/api";
 
 interface TeacherProfile {
   id: number;
@@ -76,22 +82,28 @@ interface Program {
   level: string;
 }
 
-type SidebarView = 'dashboard' | 'classrooms' | 'students' | 'programs';
+type SidebarView = "dashboard" | "classrooms" | "students" | "programs";
 
 export default function TeacherDashboardWithSidebar() {
   const navigate = useNavigate();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Sidebar state
-  const [currentView, setCurrentView] = useState<SidebarView>('dashboard');
+  const [currentView, setCurrentView] = useState<SidebarView>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Data for different views
-  const [classroomsDetail, setClassroomsDetail] = useState<ClassroomDetail[]>([]);
+  const [classroomsDetail, setClassroomsDetail] = useState<ClassroomDetail[]>(
+    [],
+  );
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
+  const [selectedClassroom, setSelectedClassroom] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchDashboardData();
@@ -103,9 +115,9 @@ export default function TeacherDashboardWithSidebar() {
       const data = await apiClient.getTeacherDashboard();
       setDashboardData(data as DashboardData);
     } catch (err) {
-      console.error('Dashboard fetch error:', err);
-      setError('載入儀表板失敗，請重新登入');
-      if (err instanceof Error && err.message.includes('401')) {
+      console.error("Dashboard fetch error:", err);
+      setError("載入儀表板失敗，請重新登入");
+      if (err instanceof Error && err.message.includes("401")) {
         handleLogout();
       }
     } finally {
@@ -118,7 +130,7 @@ export default function TeacherDashboardWithSidebar() {
       const data = await apiClient.getTeacherClassrooms();
       setClassroomsDetail(data as ClassroomDetail[]);
     } catch (err) {
-      console.error('Fetch classrooms error:', err);
+      console.error("Fetch classrooms error:", err);
     }
   };
 
@@ -127,23 +139,23 @@ export default function TeacherDashboardWithSidebar() {
       const data = await apiClient.getTeacherPrograms();
       setPrograms(data as Program[]);
     } catch (err) {
-      console.error('Fetch programs error:', err);
+      console.error("Fetch programs error:", err);
     }
   };
 
   const handleViewChange = async (view: SidebarView) => {
     setCurrentView(view);
-    if (view === 'classrooms' && classroomsDetail.length === 0) {
+    if (view === "classrooms" && classroomsDetail.length === 0) {
       await fetchClassroomsDetail();
     }
-    if (view === 'programs' && programs.length === 0) {
+    if (view === "programs" && programs.length === 0) {
       await fetchPrograms();
     }
   };
 
   const handleLogout = () => {
     apiClient.logout();
-    navigate('/teacher/login');
+    navigate("/teacher/login");
   };
 
   if (loading) {
@@ -163,7 +175,10 @@ export default function TeacherDashboardWithSidebar() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-red-600 text-center mb-4">{error}</p>
-            <Button onClick={() => navigate('/teacher/login')} className="w-full">
+            <Button
+              onClick={() => navigate("/teacher/login")}
+              className="w-full"
+            >
               返回登入
             </Button>
           </CardContent>
@@ -176,25 +191,27 @@ export default function TeacherDashboardWithSidebar() {
 
   // Filter students by selected classroom
   const filteredStudents = selectedClassroom
-    ? classroomsDetail.find(c => c.id === selectedClassroom)?.students || []
-    : classroomsDetail.flatMap(c => c.students);
+    ? classroomsDetail.find((c) => c.id === selectedClassroom)?.students || []
+    : classroomsDetail.flatMap((c) => c.students);
 
   // Filter programs by selected classroom
   const filteredPrograms = selectedClassroom
-    ? programs.filter(p => p.classroom_id === selectedClassroom)
+    ? programs.filter((p) => p.classroom_id === selectedClassroom)
     : programs;
 
   const sidebarItems = [
-    { id: 'dashboard', label: '儀表板', icon: Home },
-    { id: 'classrooms', label: '我的班級', icon: GraduationCap },
-    { id: 'students', label: '所有學生', icon: Users },
-    { id: 'programs', label: '課程列表', icon: BookOpen },
+    { id: "dashboard", label: "儀表板", icon: Home },
+    { id: "classrooms", label: "我的班級", icon: GraduationCap },
+    { id: "students", label: "所有學生", icon: Users },
+    { id: "programs", label: "課程列表", icon: BookOpen },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
       {/* Sidebar */}
-      <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} flex flex-col`}>
+      <div
+        className={`bg-white shadow-lg transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"} flex flex-col`}
+      >
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between">
           {!sidebarCollapsed && (
@@ -208,7 +225,11 @@ export default function TeacherDashboardWithSidebar() {
             size="sm"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
-            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
@@ -220,12 +241,14 @@ export default function TeacherDashboardWithSidebar() {
               return (
                 <li key={item.id}>
                   <Button
-                    variant={currentView === item.id ? 'default' : 'ghost'}
-                    className={`w-full justify-start ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
+                    variant={currentView === item.id ? "default" : "ghost"}
+                    className={`w-full justify-start ${sidebarCollapsed ? "px-3" : "px-4"}`}
                     onClick={() => handleViewChange(item.id as SidebarView)}
                   >
                     <Icon className="h-4 w-4" />
-                    {!sidebarCollapsed && <span className="ml-2">{item.label}</span>}
+                    {!sidebarCollapsed && (
+                      <span className="ml-2">{item.label}</span>
+                    )}
                   </Button>
                 </li>
               );
@@ -237,8 +260,12 @@ export default function TeacherDashboardWithSidebar() {
         <div className="p-4 border-t">
           {!sidebarCollapsed && (
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-900">{dashboardData.teacher.name}</p>
-              <p className="text-xs text-gray-500">{dashboardData.teacher.email}</p>
+              <p className="text-sm font-medium text-gray-900">
+                {dashboardData.teacher.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {dashboardData.teacher.email}
+              </p>
               {dashboardData.teacher.is_demo && (
                 <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
                   Demo 帳號
@@ -249,7 +276,7 @@ export default function TeacherDashboardWithSidebar() {
           <Button
             variant="ghost"
             size="sm"
-            className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}
+            className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? "px-3" : "px-4"}`}
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
@@ -260,18 +287,18 @@ export default function TeacherDashboardWithSidebar() {
 
       {/* Main Content */}
       <div className="flex-1 p-6 overflow-auto">
-        {currentView === 'dashboard' && (
+        {currentView === "dashboard" && (
           <DashboardContent dashboardData={dashboardData} />
         )}
 
-        {currentView === 'classrooms' && (
+        {currentView === "classrooms" && (
           <ClassroomsContent
             classrooms={classroomsDetail}
             onRefresh={fetchClassroomsDetail}
           />
         )}
 
-        {currentView === 'students' && (
+        {currentView === "students" && (
           <StudentsContent
             students={filteredStudents}
             classrooms={classroomsDetail}
@@ -280,7 +307,7 @@ export default function TeacherDashboardWithSidebar() {
           />
         )}
 
-        {currentView === 'programs' && (
+        {currentView === "programs" && (
           <ProgramsContent
             programs={filteredPrograms}
             classrooms={classroomsDetail}
@@ -303,29 +330,37 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
       </h2>
 
       {/* Subscription Status Card */}
-      {dashboardData.subscription_status === 'trial' && dashboardData.days_remaining && (
-        <Card className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">🎉 30天免費試用期</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  您的免費試用將在 {dashboardData.days_remaining} 天後到期
-                </p>
-                {dashboardData.subscription_end_date && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    到期日: {new Date(dashboardData.subscription_end_date).toLocaleDateString('zh-TW')}
+      {dashboardData.subscription_status === "trial" &&
+        dashboardData.days_remaining && (
+          <Card className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    🎉 30天免費試用期
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    您的免費試用將在 {dashboardData.days_remaining} 天後到期
                   </p>
-                )}
+                  {dashboardData.subscription_end_date && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      到期日:{" "}
+                      {new Date(
+                        dashboardData.subscription_end_date,
+                      ).toLocaleDateString("zh-TW")}
+                    </p>
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {dashboardData.days_remaining}
+                  </div>
+                  <div className="text-sm text-gray-600">天</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">{dashboardData.days_remaining}</div>
-                <div className="text-sm text-gray-600">天</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -335,7 +370,9 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.classroom_count}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.classroom_count}
+            </div>
           </CardContent>
         </Card>
 
@@ -345,7 +382,9 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.student_count}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.student_count}
+            </div>
           </CardContent>
         </Card>
 
@@ -355,7 +394,9 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.program_count}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.program_count}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -369,13 +410,20 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
           <CardContent>
             <div className="space-y-4">
               {dashboardData.classrooms.map((classroom) => (
-                <div key={classroom.id} className="flex items-center justify-between p-3 border rounded">
+                <div
+                  key={classroom.id}
+                  className="flex items-center justify-between p-3 border rounded"
+                >
                   <div>
                     <h4 className="font-medium">{classroom.name}</h4>
-                    <p className="text-sm text-gray-500">{classroom.description}</p>
+                    <p className="text-sm text-gray-500">
+                      {classroom.description}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">{classroom.student_count} 位學生</p>
+                    <p className="text-sm font-medium">
+                      {classroom.student_count} 位學生
+                    </p>
                   </div>
                 </div>
               ))}
@@ -390,7 +438,10 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
           <CardContent>
             <div className="space-y-3">
               {dashboardData.recent_students.map((student) => (
-                <div key={student.id} className="flex items-center space-x-3 p-3 border rounded">
+                <div
+                  key={student.id}
+                  className="flex items-center space-x-3 p-3 border rounded"
+                >
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-blue-600">
                       {student.name.charAt(0)}
@@ -398,7 +449,9 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
                   </div>
                   <div>
                     <p className="font-medium text-sm">{student.name}</p>
-                    <p className="text-xs text-gray-500">{student.classroom_name}</p>
+                    <p className="text-xs text-gray-500">
+                      {student.classroom_name}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -413,7 +466,7 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
 // Classrooms Content Component
 function ClassroomsContent({
   classrooms,
-  onRefresh
+  onRefresh,
 }: {
   classrooms: ClassroomDetail[];
   onRefresh: () => void;
@@ -443,7 +496,10 @@ function ClassroomsContent({
                 <h4 className="font-medium text-sm">學生列表：</h4>
                 <div className="grid grid-cols-1 gap-2">
                   {classroom.students.map((student) => (
-                    <div key={student.id} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                    <div
+                      key={student.id}
+                      className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
+                    >
                       <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-xs font-medium text-blue-600">
                           {student.name.charAt(0)}
@@ -470,7 +526,7 @@ function StudentsContent({
   students,
   classrooms,
   selectedClassroom,
-  onClassroomFilter
+  onClassroomFilter,
 }: {
   students: StudentDetail[];
   classrooms: ClassroomDetail[];
@@ -484,8 +540,10 @@ function StudentsContent({
         <div className="flex items-center space-x-2">
           <Filter className="h-4 w-4 text-gray-500" />
           <select
-            value={selectedClassroom || ''}
-            onChange={(e) => onClassroomFilter(e.target.value ? Number(e.target.value) : null)}
+            value={selectedClassroom || ""}
+            onChange={(e) =>
+              onClassroomFilter(e.target.value ? Number(e.target.value) : null)
+            }
             className="px-3 py-2 border rounded-md text-sm"
           >
             <option value="">所有班級</option>
@@ -522,7 +580,7 @@ function StudentsContent({
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">
-            {selectedClassroom ? '此班級暫無學生' : '尚未建立學生'}
+            {selectedClassroom ? "此班級暫無學生" : "尚未建立學生"}
           </p>
         </div>
       )}
@@ -536,7 +594,7 @@ function ProgramsContent({
   classrooms,
   selectedClassroom,
   onClassroomFilter,
-  onRefresh
+  onRefresh,
 }: {
   programs: Program[];
   classrooms: ClassroomDetail[];
@@ -552,8 +610,12 @@ function ProgramsContent({
           <div className="flex items-center space-x-2">
             <Filter className="h-4 w-4 text-gray-500" />
             <select
-              value={selectedClassroom || ''}
-              onChange={(e) => onClassroomFilter(e.target.value ? Number(e.target.value) : null)}
+              value={selectedClassroom || ""}
+              onChange={(e) =>
+                onClassroomFilter(
+                  e.target.value ? Number(e.target.value) : null,
+                )
+              }
               className="px-3 py-2 border rounded-md text-sm"
             >
               <option value="">所有班級</option>
@@ -591,7 +653,9 @@ function ProgramsContent({
                 {program.estimated_hours && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">預計時數:</span>
-                    <span className="font-medium">{program.estimated_hours} 小時</span>
+                    <span className="font-medium">
+                      {program.estimated_hours} 小時
+                    </span>
                   </div>
                 )}
               </div>
@@ -604,7 +668,7 @@ function ProgramsContent({
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">
-            {selectedClassroom ? '此班級暫無課程' : '尚未建立課程'}
+            {selectedClassroom ? "此班級暫無課程" : "尚未建立課程"}
           </p>
         </div>
       )}

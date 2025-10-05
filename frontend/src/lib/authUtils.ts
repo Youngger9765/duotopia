@@ -1,5 +1,5 @@
-import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
-import { useStudentAuthStore } from '@/stores/studentAuthStore';
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
 
 /**
  * 統一的登出函數
@@ -11,18 +11,18 @@ export function clearAllAuth() {
 
   // 清除所有可能殘留的舊 localStorage keys
   const keysToRemove = [
-    'token',
-    'access_token',
-    'user',
-    'userInfo',
-    'role',
-    'username',
-    'userType',
-    'auth-storage',
-    'selectedPlan',
+    "token",
+    "access_token",
+    "user",
+    "userInfo",
+    "role",
+    "username",
+    "userType",
+    "auth-storage",
+    "selectedPlan",
   ];
 
-  keysToRemove.forEach(key => localStorage.removeItem(key));
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
 /**

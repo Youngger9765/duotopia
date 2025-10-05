@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { School } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { School } from "lucide-react";
 
 interface ClassroomAssignDialogProps {
   open: boolean;
@@ -23,9 +23,11 @@ export function ClassroomAssignDialog({
   onClose,
   onConfirm,
   classrooms,
-  studentCount
+  studentCount,
 }: ClassroomAssignDialogProps) {
-  const [selectedClassroomId, setSelectedClassroomId] = React.useState<number | null>(null);
+  const [selectedClassroomId, setSelectedClassroomId] = React.useState<
+    number | null
+  >(null);
 
   const handleConfirm = () => {
     if (selectedClassroomId) {
@@ -36,7 +38,10 @@ export function ClassroomAssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-white max-w-md" style={{ backgroundColor: 'white' }}>
+      <DialogContent
+        className="bg-white max-w-md"
+        style={{ backgroundColor: "white" }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <School className="h-5 w-5" />
@@ -48,13 +53,20 @@ export function ClassroomAssignDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <label htmlFor="classroom-select" className="text-sm font-medium mb-2 block">
+          <label
+            htmlFor="classroom-select"
+            className="text-sm font-medium mb-2 block"
+          >
             選擇班級
           </label>
           <select
             id="classroom-select"
-            value={selectedClassroomId || ''}
-            onChange={(e) => setSelectedClassroomId(e.target.value ? Number(e.target.value) : null)}
+            value={selectedClassroomId || ""}
+            onChange={(e) =>
+              setSelectedClassroomId(
+                e.target.value ? Number(e.target.value) : null,
+              )
+            }
             className="w-full px-3 py-2 border rounded-md"
           >
             <option value="">請選擇班級</option>
@@ -70,10 +82,7 @@ export function ClassroomAssignDialog({
           <Button variant="outline" onClick={onClose}>
             取消
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedClassroomId}
-          >
+          <Button onClick={handleConfirm} disabled={!selectedClassroomId}>
             確定分配
           </Button>
         </DialogFooter>

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
 // Mock fetch globally
-global.fetch = vi.fn()
+global.fetch = vi.fn();
 
 // Mock window.matchMedia for responsive components
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: any) => ({
     matches: false,
@@ -18,7 +18,7 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-})
+});
 
 // Mock localStorage with actual functionality for Zustand persist
 class LocalStorageMock implements Storage {
@@ -53,25 +53,25 @@ class LocalStorageMock implements Storage {
 
 const localStorageMock = new LocalStorageMock();
 
-Object.defineProperty(global, 'localStorage', {
+Object.defineProperty(global, "localStorage", {
   value: localStorageMock,
   writable: true,
-  configurable: true
-})
+  configurable: true,
+});
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
   writable: true,
-  configurable: true
-})
+  configurable: true,
+});
 
 // Mock sessionStorage
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(window, "sessionStorage", {
   value: new LocalStorageMock(),
   writable: true,
-})
+});
 
 // Mock environment variables - will use the actual VITE_API_URL from .env file during tests
-vi.mock('@/config/api', () => ({
-  API_BASE_URL: import.meta.env.VITE_API_URL
-}))
+vi.mock("@/config/api", () => ({
+  API_BASE_URL: import.meta.env.VITE_API_URL,
+}));

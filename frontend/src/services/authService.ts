@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 interface LoginCredentials {
   email: string;
@@ -22,24 +22,26 @@ interface LoginResponse {
 }
 
 export const authService = {
-  async studentLogin(credentials: StudentLoginCredentials): Promise<LoginResponse> {
-    const response = await api.post('/api/auth/student/login', credentials);
+  async studentLogin(
+    credentials: StudentLoginCredentials,
+  ): Promise<LoginResponse> {
+    const response = await api.post("/api/auth/student/login", credentials);
     return response.data;
   },
 
   async teacherLogin(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await api.post('/api/auth/teacher/login', credentials);
+    const response = await api.post("/api/auth/teacher/login", credentials);
     return response.data;
   },
 
   async validateToken(): Promise<unknown> {
-    const response = await api.get('/api/auth/validate');
+    const response = await api.get("/api/auth/validate");
     return response.data;
   },
 
   async logout(): Promise<void> {
     // Clear local storage
-    localStorage.removeItem('auth-storage');
-    localStorage.removeItem('student-auth-storage');
-  }
+    localStorage.removeItem("auth-storage");
+    localStorage.removeItem("student-auth-storage");
+  },
 };

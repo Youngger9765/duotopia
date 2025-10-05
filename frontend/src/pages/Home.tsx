@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import {
   GraduationCap,
   Users,
@@ -13,8 +13,8 @@ import {
   CheckCircle,
   ArrowRight,
   Play,
-  Star
-} from 'lucide-react'
+  Star,
+} from "lucide-react";
 
 export default function Home() {
   return (
@@ -31,7 +31,9 @@ export default function Home() {
               <div>
                 <div className="flex items-center space-x-2 mb-6">
                   <Sparkles className="h-6 w-6 text-yellow-400" />
-                  <span className="text-yellow-400 font-semibold">AI 驅動的英語學習革命</span>
+                  <span className="text-yellow-400 font-semibold">
+                    AI 驅動的英語學習革命
+                  </span>
                 </div>
                 <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                   Duotopia
@@ -40,12 +42,16 @@ export default function Home() {
                   </span>
                 </h1>
                 <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                  透過 AI 語音辨識與即時回饋，為 6-15 歲學生打造個人化的英語口說學習體驗。
+                  透過 AI 語音辨識與即時回饋，為 6-15
+                  歲學生打造個人化的英語口說學習體驗。
                   讓每個孩子都能自信開口說英語！
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link to="/teacher/register">
-                    <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl">
+                    <Button
+                      size="lg"
+                      className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
+                    >
                       <GraduationCap className="mr-2 h-5 w-5" />
                       免費試用
                     </Button>
@@ -61,8 +67,11 @@ export default function Home() {
                 </div>
                 <div className="mt-8 flex items-center space-x-6">
                   <div className="flex -space-x-2">
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full border-2 border-white"></div>
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full border-2 border-white"
+                      ></div>
                     ))}
                   </div>
                   <div className="text-sm">
@@ -139,7 +148,8 @@ export default function Home() {
                 為什麼選擇 Duotopia？
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                結合最新 AI 技術與教育心理學，打造最適合亞洲學生的英語口說訓練平台
+                結合最新 AI
+                技術與教育心理學，打造最適合亞洲學生的英語口說訓練平台
               </p>
             </div>
 
@@ -153,7 +163,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   採用先進的語音辨識技術，精準評估發音、語調、流暢度，提供即時回饋與改進建議
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -167,7 +180,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   六種活動類型涵蓋聽說讀寫，從朗讀到情境對話，全方位提升英語能力
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -181,7 +197,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   詳細的學習報告與進度追蹤，讓教師和家長清楚掌握孩子的學習狀況
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -195,7 +214,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   透過積分、徽章、排行榜等遊戲化元素，提高學習動機與參與度
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -209,7 +231,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   符合 COPPA 與 GDPR 規範，保護學生隱私，讓家長安心
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -223,7 +248,10 @@ export default function Home() {
                 <p className="text-gray-600 mb-4">
                   直覺的介面設計，教師 5 分鐘即可上手，學生無需額外訓練
                 </p>
-                <Link to="/teacher/register" className="text-blue-600 font-semibold flex items-center hover:text-blue-700">
+                <Link
+                  to="/teacher/register"
+                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
+                >
                   了解更多 <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </div>
@@ -270,7 +298,9 @@ export default function Home() {
                 <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <span className="text-3xl font-bold text-blue-600">3</span>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">AI 評測與進度追蹤</h3>
+                <h3 className="text-xl font-semibold mb-3">
+                  AI 評測與進度追蹤
+                </h3>
                 <p className="text-gray-600">
                   學生完成練習後，立即獲得 AI 回饋，教師可查看詳細學習報告
                 </p>
@@ -288,34 +318,41 @@ export default function Home() {
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 來自教育現場的真實回饋
               </h2>
-              <p className="text-xl text-gray-600">
-                看看其他教師和學生怎麼說
-              </p>
+              <p className="text-xl text-gray-600">看看其他教師和學生怎麼說</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <div className="flex items-center mb-4">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star
+                      key={i}
+                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                    />
                   ))}
                 </div>
                 <p className="text-gray-700 mb-6">
-                  "Duotopia 讓我的學生愛上英語口說！AI 即時回饋功能太棒了，學生可以立即知道自己的發音問題。"
+                  "Duotopia 讓我的學生愛上英語口說！AI
+                  即時回饋功能太棒了，學生可以立即知道自己的發音問題。"
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full mr-4"></div>
                   <div>
                     <div className="font-semibold">王老師</div>
-                    <div className="text-sm text-gray-600">台北市國小英語教師</div>
+                    <div className="text-sm text-gray-600">
+                      台北市國小英語教師
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <div className="flex items-center mb-4">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star
+                      key={i}
+                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                    />
                   ))}
                 </div>
                 <p className="text-gray-700 mb-6">
@@ -325,25 +362,33 @@ export default function Home() {
                   <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full mr-4"></div>
                   <div>
                     <div className="font-semibold">李老師</div>
-                    <div className="text-sm text-gray-600">新竹市國中英語教師</div>
+                    <div className="text-sm text-gray-600">
+                      新竹市國中英語教師
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <div className="flex items-center mb-4">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star
+                      key={i}
+                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                    />
                   ))}
                 </div>
                 <p className="text-gray-700 mb-6">
-                  "孩子每天都主動要練習英語，看到自己的進步很有成就感。感謝 Duotopia！"
+                  "孩子每天都主動要練習英語，看到自己的進步很有成就感。感謝
+                  Duotopia！"
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mr-4"></div>
                   <div>
                     <div className="font-semibold">陳家長</div>
-                    <div className="text-sm text-gray-600">國小五年級學生家長</div>
+                    <div className="text-sm text-gray-600">
+                      國小五年級學生家長
+                    </div>
                   </div>
                 </div>
               </div>
@@ -364,12 +409,19 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/teacher/register">
-                <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold">
+                <Button
+                  size="lg"
+                  className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold"
+                >
                   立即免費試用
                 </Button>
               </Link>
               <Link to="/student/login">
-                <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all"
+                >
                   學生登入
                 </Button>
               </Link>
@@ -403,12 +455,16 @@ export default function Home() {
                     <Button className="w-full">教師登入</Button>
                   </Link>
                   <Link to="/teacher/register" className="block">
-                    <Button variant="outline" className="w-full">註冊新帳號</Button>
+                    <Button variant="outline" className="w-full">
+                      註冊新帳號
+                    </Button>
                   </Link>
                 </div>
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-blue-700 font-medium">Demo 帳號</p>
-                  <p className="text-xs text-blue-600 mt-1">demo@duotopia.com / demo123</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    demo@duotopia.com / demo123
+                  </p>
                 </div>
               </div>
 
@@ -430,8 +486,12 @@ export default function Home() {
                   請使用教師提供的帳號密碼
                 </p>
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                  <p className="text-xs text-green-700 font-medium">Demo 密碼</p>
-                  <p className="text-xs text-green-600 mt-1">選擇學生後輸入: 20120101</p>
+                  <p className="text-xs text-green-700 font-medium">
+                    Demo 密碼
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    選擇學生後輸入: 20120101
+                  </p>
                 </div>
               </div>
             </div>
@@ -451,7 +511,10 @@ export default function Home() {
                 </p>
                 <div className="text-sm">
                   <p className="text-gray-400 mb-1">聯絡我們</p>
-                  <a href="mailto:myduotopia@gmail.com" className="text-blue-400 hover:text-blue-300">
+                  <a
+                    href="mailto:myduotopia@gmail.com"
+                    className="text-blue-400 hover:text-blue-300"
+                  >
                     myduotopia@gmail.com
                   </a>
                 </div>
@@ -459,23 +522,51 @@ export default function Home() {
               <div>
                 <h4 className="text-white font-semibold mb-4">產品</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white">功能介紹</a></li>
-                  <li><Link to="/pricing" className="hover:text-white">價格方案</Link></li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      功能介紹
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/pricing" className="hover:text-white">
+                      價格方案
+                    </Link>
+                  </li>
                 </ul>
               </div>
               <div>
                 <h4 className="text-white font-semibold mb-4">支援</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white">使用教學</a></li>
-                  <li><a href="#" className="hover:text-white">常見問題</a></li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      使用教學
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      常見問題
+                    </a>
+                  </li>
                 </ul>
               </div>
               <div>
                 <h4 className="text-white font-semibold mb-4">公司</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white">關於我們</a></li>
-                  <li><a href="#" className="hover:text-white">隱私政策</a></li>
-                  <li><Link to="/terms" className="hover:text-white">使用條款</Link></li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      關於我們
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      隱私政策
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/terms" className="hover:text-white">
+                      使用條款
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -486,5 +577,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

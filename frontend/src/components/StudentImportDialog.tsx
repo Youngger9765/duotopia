@@ -1,14 +1,26 @@
-import { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, X } from 'lucide-react';
-import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
-import { Classroom } from '@/types';
+import { useState, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Upload,
+  Download,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle2,
+  X,
+} from "lucide-react";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
+import { Classroom } from "@/types";
 
 interface StudentImportDialogProps {
   open: boolean;
@@ -25,12 +37,11 @@ interface ImportStudent {
   errors: string[];
 }
 
-
 export function StudentImportDialog({
   open,
   onClose,
   onSuccess,
-  classrooms
+  classrooms,
 }: StudentImportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -39,33 +50,37 @@ export function StudentImportDialog({
   const [successCount, setSuccessCount] = useState(0);
   const [failCount, setFailCount] = useState(0);
   const [missingClassrooms, setMissingClassrooms] = useState<string[]>([]);
-  const [duplicateAction, setDuplicateAction] = useState<'skip' | 'update' | 'add_suffix'>('skip');
+  const [duplicateAction, setDuplicateAction] = useState<
+    "skip" | "update" | "add_suffix"
+  >("skip");
 
   // 下載範本
   const downloadTemplate = () => {
     const template = [
-      ['學生姓名', '班級', '生日'],
-      ['王小明', 'A班', '2012-01-01'],
-      ['李小華', 'A班', '2012-02-15'],
-      ['張小美', 'B班', '2012-03-20'],
+      ["學生姓名", "班級", "生日"],
+      ["王小明", "A班", "2012-01-01"],
+      ["李小華", "A班", "2012-02-15"],
+      ["張小美", "B班", "2012-03-20"],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '學生名單');
+    XLSX.utils.book_append_sheet(wb, ws, "學生名單");
 
     // 設定欄寬
-    ws['!cols'] = [
+    ws["!cols"] = [
       { wch: 15 }, // 學生姓名
       { wch: 10 }, // 班級
       { wch: 12 }, // 生日
     ];
 
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, '學生批次匯入範本.xlsx');
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "學生批次匯入範本.xlsx");
 
-    toast.success('已下載範本檔案');
+    toast.success("已下載範本檔案");
   };
 
   // 解析檔案
@@ -73,54 +88,57 @@ export function StudentImportDialog({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const fileType = file.name.split('.').pop()?.toLowerCase();
+    const fileType = file.name.split(".").pop()?.toLowerCase();
 
-    if (fileType === 'csv') {
+    if (fileType === "csv") {
       Papa.parse(file, {
         complete: (results) => {
           processData(results.data as string[][]);
         },
-        encoding: 'UTF-8',
+        encoding: "UTF-8",
         skipEmptyLines: true,
       });
-    } else if (fileType === 'xlsx' || fileType === 'xls') {
+    } else if (fileType === "xlsx" || fileType === "xls") {
       const reader = new FileReader();
       reader.onload = (e) => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+          header: 1,
+        }) as string[][];
         processData(jsonData);
       };
       reader.readAsArrayBuffer(file);
     } else {
-      toast.error('請上傳 CSV 或 Excel 檔案');
+      toast.error("請上傳 CSV 或 Excel 檔案");
     }
   };
 
   // 處理資料
   const processData = (data: string[][]) => {
     if (data.length < 2) {
-      toast.error('檔案沒有資料');
+      toast.error("檔案沒有資料");
       return;
     }
 
     // 解析標題列（支援中文和英文）
-    const headers = data[0].map(h => h?.toLowerCase().trim() || '');
+    const headers = data[0].map((h) => h?.toLowerCase().trim() || "");
 
     // 尋找欄位索引
-    const nameIndex = headers.findIndex(h =>
-      h.includes('姓名') || h.includes('name') || h.includes('學生')
+    const nameIndex = headers.findIndex(
+      (h) => h.includes("姓名") || h.includes("name") || h.includes("學生"),
     );
-    const classIndex = headers.findIndex(h =>
-      h.includes('班級') || h.includes('class') || h.includes('classroom')
+    const classIndex = headers.findIndex(
+      (h) =>
+        h.includes("班級") || h.includes("class") || h.includes("classroom"),
     );
-    const birthIndex = headers.findIndex(h =>
-      h.includes('生日') || h.includes('birth') || h.includes('date')
+    const birthIndex = headers.findIndex(
+      (h) => h.includes("生日") || h.includes("birth") || h.includes("date"),
     );
 
     if (nameIndex === -1) {
-      toast.error('找不到「姓名」欄位');
+      toast.error("找不到「姓名」欄位");
       return;
     }
 
@@ -133,9 +151,11 @@ export function StudentImportDialog({
       const row = data[i];
       if (!row || row.length === 0) continue;
 
-      const name = String(row[nameIndex] || '').trim();
-      const className = classIndex !== -1 ? String(row[classIndex] || '').trim() : undefined;
-      const birthdate = birthIndex !== -1 ? String(row[birthIndex] || '').trim() : '';
+      const name = String(row[nameIndex] || "").trim();
+      const className =
+        classIndex !== -1 ? String(row[classIndex] || "").trim() : undefined;
+      const birthdate =
+        birthIndex !== -1 ? String(row[birthIndex] || "").trim() : "";
 
       if (!name) continue;
 
@@ -143,11 +163,11 @@ export function StudentImportDialog({
 
       // 驗證姓名
       if (name.length < 2) {
-        studentErrors.push('姓名太短');
+        studentErrors.push("姓名太短");
       }
 
       // 驗證生日格式
-      let formattedBirthdate = '';
+      let formattedBirthdate = "";
       if (birthdate) {
         // 移除空白
         const cleanDate = birthdate.trim();
@@ -161,32 +181,38 @@ export function StudentImportDialog({
         }
         // 2. 檢查 YYYY-MM-DD 格式 (2012-01-01)
         else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanDate)) {
-          const parts = cleanDate.split('-');
+          const parts = cleanDate.split("-");
           const year = parts[0];
-          const month = parts[1].padStart(2, '0');
-          const day = parts[2].padStart(2, '0');
+          const month = parts[1].padStart(2, "0");
+          const day = parts[2].padStart(2, "0");
           formattedBirthdate = `${year}-${month}-${day}`;
         }
         // 3. 檢查 YYYY/MM/DD 格式 (2012/01/01)
         else if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(cleanDate)) {
-          const parts = cleanDate.split('/');
+          const parts = cleanDate.split("/");
           const year = parts[0];
-          const month = parts[1].padStart(2, '0');
-          const day = parts[2].padStart(2, '0');
+          const month = parts[1].padStart(2, "0");
+          const day = parts[2].padStart(2, "0");
           formattedBirthdate = `${year}-${month}-${day}`;
         }
         // 4. 檢查是否為 Excel 序列號格式（數字）
         else {
           const numericDate = Number(cleanDate);
-          if (!isNaN(numericDate) && numericDate > 25569 && numericDate < 50000) {
+          if (
+            !isNaN(numericDate) &&
+            numericDate > 25569 &&
+            numericDate < 50000
+          ) {
             // Excel 日期序列號轉換（從 1900-01-01 開始）
             const excelDate = new Date((numericDate - 25569) * 86400 * 1000);
             const year = excelDate.getFullYear();
-            const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-            const day = String(excelDate.getDate()).padStart(2, '0');
+            const month = String(excelDate.getMonth() + 1).padStart(2, "0");
+            const day = String(excelDate.getDate()).padStart(2, "0");
             formattedBirthdate = `${year}-${month}-${day}`;
           } else {
-            studentErrors.push('生日格式錯誤（請使用 YYYYMMDD、YYYY-MM-DD 或 YYYY/MM/DD）');
+            studentErrors.push(
+              "生日格式錯誤（請使用 YYYYMMDD、YYYY-MM-DD 或 YYYY/MM/DD）",
+            );
           }
         }
 
@@ -195,15 +221,15 @@ export function StudentImportDialog({
           const date = new Date(formattedBirthdate);
           const year = parseInt(formattedBirthdate.slice(0, 4));
           if (isNaN(date.getTime()) || year < 2000 || year > 2020) {
-            studentErrors.push('生日日期不合理（應為 2000-2020 年）');
-            formattedBirthdate = '';
+            studentErrors.push("生日日期不合理（應為 2000-2020 年）");
+            formattedBirthdate = "";
           }
         }
       }
 
       // 驗證班級名稱
       if (className) {
-        const classExists = classrooms.some(c => c.name === className);
+        const classExists = classrooms.some((c) => c.name === className);
         if (!classExists) {
           uniqueNewClassrooms.add(className);
           studentErrors.push(`班級「${className}」不存在`);
@@ -212,7 +238,7 @@ export function StudentImportDialog({
 
       students.push({
         name,
-        birthdate: formattedBirthdate || '',
+        birthdate: formattedBirthdate || "",
         className,
         isValid: studentErrors.length === 0,
         errors: studentErrors,
@@ -220,7 +246,7 @@ export function StudentImportDialog({
     }
 
     if (students.length === 0) {
-      toast.error('沒有找到有效的學生資料');
+      toast.error("沒有找到有效的學生資料");
       return;
     }
 
@@ -233,10 +259,10 @@ export function StudentImportDialog({
 
   // 執行匯入
   const handleImport = async () => {
-    const validStudents = preview.filter(s => s.isValid);
+    const validStudents = preview.filter((s) => s.isValid);
 
     if (validStudents.length === 0) {
-      toast.error('沒有有效的學生資料可以匯入');
+      toast.error("沒有有效的學生資料可以匯入");
       return;
     }
 
@@ -244,14 +270,14 @@ export function StudentImportDialog({
 
     try {
       // Call backend API to batch import students with duplicate action
-      const response = await apiClient.batchImportStudents(
-        validStudents.map(student => ({
+      const response = (await apiClient.batchImportStudents(
+        validStudents.map((student) => ({
           name: student.name,
-          classroom_name: student.className || '',
-          birthdate: student.birthdate
+          classroom_name: student.className || "",
+          birthdate: student.birthdate,
         })),
-        duplicateAction
-      ) as {
+        duplicateAction,
+      )) as {
         success_count?: number;
         error_count?: number;
         errors?: Array<{ row: number; name: string; error: string }>;
@@ -265,9 +291,9 @@ export function StudentImportDialog({
 
       // Handle any errors from the API
       if (response.errors && response.errors.length > 0) {
-        const errorMessages = response.errors.map((err) =>
-          `第${err.row}行 - ${err.name}: ${err.error}`
-        ).join('\n');
+        const errorMessages = response.errors
+          .map((err) => `第${err.row}行 - ${err.name}: ${err.error}`)
+          .join("\n");
         toast.error(`部分學生匯入失敗:\n${errorMessages}`);
       }
 
@@ -277,8 +303,8 @@ export function StudentImportDialog({
         // 不自動關閉，讓用戶查看結果
       }
     } catch (error) {
-      console.error('Import failed:', error);
-      toast.error('匯入失敗');
+      console.error("Import failed:", error);
+      toast.error("匯入失敗");
     } finally {
       setImporting(false);
     }
@@ -292,7 +318,7 @@ export function StudentImportDialog({
     setFailCount(0);
     setMissingClassrooms([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
     onClose();
   };
@@ -328,8 +354,8 @@ export function StudentImportDialog({
                   type="radio"
                   name="duplicateAction"
                   value="skip"
-                  checked={duplicateAction === 'skip'}
-                  onChange={(e) => setDuplicateAction(e.target.value as 'skip')}
+                  checked={duplicateAction === "skip"}
+                  onChange={(e) => setDuplicateAction(e.target.value as "skip")}
                   className="text-blue-600"
                 />
                 <span>跳過重複（預設）- 保留現有學生，跳過重複的資料</span>
@@ -339,19 +365,25 @@ export function StudentImportDialog({
                   type="radio"
                   name="duplicateAction"
                   value="update"
-                  checked={duplicateAction === 'update'}
-                  onChange={(e) => setDuplicateAction(e.target.value as 'update')}
+                  checked={duplicateAction === "update"}
+                  onChange={(e) =>
+                    setDuplicateAction(e.target.value as "update")
+                  }
                   className="text-blue-600"
                 />
-                <span>更新資料 - 用新資料更新現有學生的生日（如密碼未改過也會更新）</span>
+                <span>
+                  更新資料 - 用新資料更新現有學生的生日（如密碼未改過也會更新）
+                </span>
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
                   name="duplicateAction"
                   value="add_suffix"
-                  checked={duplicateAction === 'add_suffix'}
-                  onChange={(e) => setDuplicateAction(e.target.value as 'add_suffix')}
+                  checked={duplicateAction === "add_suffix"}
+                  onChange={(e) =>
+                    setDuplicateAction(e.target.value as "add_suffix")
+                  }
                   className="text-blue-600"
                 />
                 <span>加上編號 - 在重複的姓名後加上編號（如：王小明-2）</span>
@@ -409,7 +441,9 @@ export function StudentImportDialog({
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
                 <div className="space-y-2">
-                  <p className="font-medium text-yellow-800">發現以下班級尚未建立：</p>
+                  <p className="font-medium text-yellow-800">
+                    發現以下班級尚未建立：
+                  </p>
                   <ul className="list-disc list-inside text-sm">
                     {missingClassrooms.map((name, index) => (
                       <li key={index}>{name}</li>
@@ -421,7 +455,7 @@ export function StudentImportDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open('/teacher/classrooms', '_blank')}
+                    onClick={() => window.open("/teacher/classrooms", "_blank")}
                     className="mt-2"
                   >
                     前往「我的班級」
@@ -437,7 +471,8 @@ export function StudentImportDialog({
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-medium">預覽資料</h3>
                 <div className="text-sm text-gray-600">
-                  有效: {preview.filter(s => s.isValid).length} / 總計: {preview.length}
+                  有效: {preview.filter((s) => s.isValid).length} / 總計:{" "}
+                  {preview.length}
                 </div>
               </div>
 
@@ -454,7 +489,10 @@ export function StudentImportDialog({
                   </thead>
                   <tbody>
                     {preview.map((student, index) => (
-                      <tr key={index} className={student.isValid ? '' : 'bg-red-50'}>
+                      <tr
+                        key={index}
+                        className={student.isValid ? "" : "bg-red-50"}
+                      >
                         <td className="px-4 py-2">
                           {student.isValid ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -463,10 +501,14 @@ export function StudentImportDialog({
                           )}
                         </td>
                         <td className="px-4 py-2">{student.name}</td>
-                        <td className="px-4 py-2">{student.className || '-'}</td>
-                        <td className="px-4 py-2">{student.birthdate || '-'}</td>
+                        <td className="px-4 py-2">
+                          {student.className || "-"}
+                        </td>
+                        <td className="px-4 py-2">
+                          {student.birthdate || "-"}
+                        </td>
                         <td className="px-4 py-2 text-red-600">
-                          {student.errors.join(', ')}
+                          {student.errors.join(", ")}
                         </td>
                       </tr>
                     ))}
@@ -479,7 +521,13 @@ export function StudentImportDialog({
           {/* 匯入結果 */}
           {(successCount > 0 || failCount > 0) && (
             <div className="space-y-3">
-              <Alert className={successCount > 0 ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+              <Alert
+                className={
+                  successCount > 0
+                    ? "border-green-200 bg-green-50"
+                    : "border-red-200 bg-red-50"
+                }
+              >
                 {successCount > 0 ? (
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                 ) : (
@@ -487,32 +535,34 @@ export function StudentImportDialog({
                 )}
                 <AlertDescription>
                   <div className="space-y-2">
-                    <p className="font-semibold text-lg">
-                      匯入完成
-                    </p>
+                    <p className="font-semibold text-lg">匯入完成</p>
                     <div className="flex gap-4">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <span>成功匯入: <strong>{successCount}</strong> 位學生</span>
+                        <span>
+                          成功匯入: <strong>{successCount}</strong> 位學生
+                        </span>
                       </div>
                       {failCount > 0 && (
                         <div className="flex items-center gap-2">
                           <X className="h-4 w-4 text-red-600" />
-                          <span>匯入失敗: <strong>{failCount}</strong> 位學生</span>
+                          <span>
+                            匯入失敗: <strong>{failCount}</strong> 位學生
+                          </span>
                         </div>
                       )}
                     </div>
-                    {duplicateAction === 'skip' && successCount > 0 && (
+                    {duplicateAction === "skip" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
                         已跳過重複的學生資料
                       </p>
                     )}
-                    {duplicateAction === 'update' && successCount > 0 && (
+                    {duplicateAction === "update" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
                         已更新重複學生的資料
                       </p>
                     )}
-                    {duplicateAction === 'add_suffix' && successCount > 0 && (
+                    {duplicateAction === "add_suffix" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
                         重複的學生已加上編號區分
                       </p>
@@ -547,19 +597,20 @@ export function StudentImportDialog({
             >
               取消
             </Button>
-            {(successCount > 0 || failCount > 0) ? (
-              <Button
-                onClick={handleClose}
-                variant="default"
-              >
+            {successCount > 0 || failCount > 0 ? (
+              <Button onClick={handleClose} variant="default">
                 完成
               </Button>
             ) : (
               <Button
                 onClick={handleImport}
-                disabled={preview.filter(s => s.isValid).length === 0 || importing}
+                disabled={
+                  preview.filter((s) => s.isValid).length === 0 || importing
+                }
               >
-                {importing ? '匯入中...' : `匯入 ${preview.filter(s => s.isValid).length} 位學生`}
+                {importing
+                  ? "匯入中..."
+                  : `匯入 ${preview.filter((s) => s.isValid).length} 位學生`}
               </Button>
             )}
           </div>

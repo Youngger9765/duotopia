@@ -1,26 +1,26 @@
-import { HTMLAttributes, forwardRef } from 'react';
-import { cn } from '../../lib/utils.js';
+import { HTMLAttributes, forwardRef } from "react";
+import { cn } from "../../lib/utils.js";
 
 const Alert = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement> & {
-    variant?: 'default' | 'destructive';
+    variant?: "default" | "destructive";
   }
->(({ className, variant = 'default', ...props }, ref) => (
+>(({ className, variant = "default", ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      'relative w-full rounded-lg border p-4',
+      "relative w-full rounded-lg border p-4",
       {
-        'border-gray-200 text-gray-900 bg-gray-50': variant === 'default',
-        'border-red-200 text-red-800 bg-red-50': variant === 'destructive',
+        "border-gray-200 text-gray-900 bg-gray-50": variant === "default",
+        "border-red-200 text-red-800 bg-red-50": variant === "destructive",
       },
-      className
+      className,
     )}
     {...props}
   />
 ));
-Alert.displayName = 'Alert';
+Alert.displayName = "Alert";
 
 const AlertDescription = forwardRef<
   HTMLParagraphElement,
@@ -28,10 +28,10 @@ const AlertDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('text-sm [&_p]:leading-relaxed', className)}
+    className={cn("text-sm [&_p]:leading-relaxed", className)}
     {...props}
   />
 ));
-AlertDescription.displayName = 'AlertDescription';
+AlertDescription.displayName = "AlertDescription";
 
 export { Alert, AlertDescription };

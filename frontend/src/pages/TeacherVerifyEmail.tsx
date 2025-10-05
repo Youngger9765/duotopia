@@ -1,15 +1,21 @@
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mail, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, CheckCircle, ArrowLeft } from "lucide-react";
 
 export function TeacherVerifyEmail() {
   const location = useLocation();
   const navigate = useNavigate();
   const { email, message } = location.state || {
-    email: '',
-    message: '註冊成功！請檢查您的 Email 信箱並點擊驗證連結。'
+    email: "",
+    message: "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。",
   };
 
   return (
@@ -26,9 +32,7 @@ export function TeacherVerifyEmail() {
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <CardTitle className="text-2xl">註冊成功！</CardTitle>
-            <CardDescription>
-              請驗證您的 Email 地址
-            </CardDescription>
+            <CardDescription>請驗證您的 Email 地址</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -40,12 +44,8 @@ export function TeacherVerifyEmail() {
             </Alert>
 
             <div className="text-center space-y-2">
-              <p className="text-gray-600">
-                我們已發送驗證郵件至：
-              </p>
-              <p className="font-semibold text-lg">
-                {email}
-              </p>
+              <p className="text-gray-600">我們已發送驗證郵件至：</p>
+              <p className="font-semibold text-lg">{email}</p>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
@@ -65,7 +65,11 @@ export function TeacherVerifyEmail() {
               </p>
 
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => navigate('/teacher/login')}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate("/teacher/login")}
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   返回登入
                 </Button>

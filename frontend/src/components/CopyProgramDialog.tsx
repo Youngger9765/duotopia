@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { BookOpen, Clock, Layers, Search, Copy, CheckCircle } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import {
+  BookOpen,
+  Clock,
+  Layers,
+  Search,
+  Copy,
+  CheckCircle,
+} from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
 
 export interface TeacherProgram {
   id: number;
@@ -34,19 +41,19 @@ export default function CopyProgramDialog({
   open,
   onClose,
   onSuccess,
-  classroomId
+  classroomId,
 }: CopyProgramDialogProps) {
   const [programs, setPrograms] = useState<TeacherProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(false);
   const [selectedPrograms, setSelectedPrograms] = useState<number[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (open) {
       fetchPrograms();
       setSelectedPrograms([]);
-      setSearchTerm('');
+      setSearchTerm("");
     }
   }, [open]);
 
@@ -54,22 +61,26 @@ export default function CopyProgramDialog({
     try {
       setLoading(true);
       // Get copyable programs (templates + other classroom programs)
-      const data = await apiClient.getCopyablePrograms(classroomId) as TeacherProgram[];
+      const data = (await apiClient.getCopyablePrograms(
+        classroomId,
+      )) as TeacherProgram[];
       // Filter out programs already in this classroom
-      const availablePrograms = data.filter(p => p.classroom_id !== classroomId);
+      const availablePrograms = data.filter(
+        (p) => p.classroom_id !== classroomId,
+      );
       setPrograms(availablePrograms);
     } catch (error) {
-      console.error('Failed to fetch programs:', error);
-      toast.error('載入課程失敗');
+      console.error("Failed to fetch programs:", error);
+      toast.error("載入課程失敗");
     } finally {
       setLoading(false);
     }
   };
 
   const handleToggleProgram = (programId: number) => {
-    setSelectedPrograms(prev => {
+    setSelectedPrograms((prev) => {
       if (prev.includes(programId)) {
-        return prev.filter(id => id !== programId);
+        return prev.filter((id) => id !== programId);
       } else {
         return [...prev, programId];
       }
@@ -86,38 +97,39 @@ export default function CopyProgramDialog({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Failed to copy programs:', error);
-      toast.error('複製失敗，請稍後再試');
+      console.error("Failed to copy programs:", error);
+      toast.error("複製失敗，請稍後再試");
     } finally {
       setCopying(false);
     }
   };
 
-  const filteredPrograms = programs.filter(program =>
-    program.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPrograms = programs.filter((program) =>
+    program.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getLevelBadgeClass = (level: string) => {
     const levelColors: Record<string, string> = {
-      'beginner': 'bg-green-100 text-green-800',
-      'intermediate': 'bg-blue-100 text-blue-800',
-      'advanced': 'bg-purple-100 text-purple-800',
-      'expert': 'bg-red-100 text-red-800',
+      beginner: "bg-green-100 text-green-800",
+      intermediate: "bg-blue-100 text-blue-800",
+      advanced: "bg-purple-100 text-purple-800",
+      expert: "bg-red-100 text-red-800",
     };
-    return levelColors[level.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return levelColors[level.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="bg-white max-w-3xl max-h-[80vh] flex flex-col" style={{ backgroundColor: 'white' }}>
+      <DialogContent
+        className="bg-white max-w-3xl max-h-[80vh] flex flex-col"
+        style={{ backgroundColor: "white" }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Copy className="h-5 w-5" />
             <span>從課程庫複製</span>
           </DialogTitle>
-          <DialogDescription>
-            選擇要複製到此班級的課程
-          </DialogDescription>
+          <DialogDescription>選擇要複製到此班級的課程</DialogDescription>
         </DialogHeader>
 
         {/* Search Bar */}
@@ -155,13 +167,19 @@ export default function CopyProgramDialog({
               <BookOpen className="h-12 w-12 text-gray-400 mb-3" />
               {programs.length === 0 ? (
                 <>
-                  <p className="text-gray-600 font-medium">目前沒有可複製的課程</p>
-                  <p className="text-sm text-gray-500 mt-1">請先到「所有課程」頁面建立課程</p>
+                  <p className="text-gray-600 font-medium">
+                    目前沒有可複製的課程
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    請先到「所有課程」頁面建立課程
+                  </p>
                 </>
               ) : (
                 <>
                   <p className="text-gray-600 font-medium">找不到符合的課程</p>
-                  <p className="text-sm text-gray-500 mt-1">請嘗試其他搜尋關鍵字</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    請嘗試其他搜尋關鍵字
+                  </p>
                 </>
               )}
             </div>
@@ -172,10 +190,10 @@ export default function CopyProgramDialog({
                   key={program.id}
                   className={`border rounded-lg p-4 transition-colors ${
                     program.already_in_classroom
-                      ? 'bg-gray-50 opacity-60'
+                      ? "bg-gray-50 opacity-60"
                       : selectedPrograms.includes(program.id)
-                        ? 'bg-blue-50 border-blue-300'
-                        : 'hover:bg-gray-50'
+                        ? "bg-blue-50 border-blue-300"
+                        : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex items-start space-x-3">
@@ -191,7 +209,9 @@ export default function CopyProgramDialog({
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
                         <h4 className="font-medium">{program.name}</h4>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeClass(program.level)}`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeClass(program.level)}`}
+                        >
                           {program.level}
                         </span>
                         {program.already_in_classroom && (
@@ -202,7 +222,9 @@ export default function CopyProgramDialog({
                         )}
                       </div>
                       {program.description && (
-                        <p className="text-sm text-gray-600 mt-1">{program.description}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {program.description}
+                        </p>
                       )}
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                         <div className="flex items-center space-x-1">

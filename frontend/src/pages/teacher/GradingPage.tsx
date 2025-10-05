@@ -41,8 +41,8 @@ interface StudentsResponse {
 interface SubmissionItem {
   question_text: string;
   question_translation?: string;
-  audio_url?: string;  // 學生的錄音
-  question_audio_url?: string;  // 題目的參考錄音
+  audio_url?: string; // 學生的錄音
+  question_audio_url?: string; // 題目的參考錄音
   student_answer?: string;
   transcript?: string;
   duration?: number;
@@ -107,7 +107,10 @@ interface StudentListItem {
 }
 
 export default function GradingPage() {
-  const { classroomId, assignmentId } = useParams<{ classroomId: string; assignmentId: string }>();
+  const { classroomId, assignmentId } = useParams<{
+    classroomId: string;
+    assignmentId: string;
+  }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const studentId = searchParams.get("studentId");
@@ -167,19 +170,21 @@ export default function GradingPage() {
   // 當提交資料載入後，同步更新學生列表狀態
   useEffect(() => {
     if (submission && studentId) {
-      setStudentList(prev => prev.map(student =>
-        student.student_id === parseInt(studentId)
-          ? { ...student, status: submission.status }
-          : student
-      ));
+      setStudentList((prev) =>
+        prev.map((student) =>
+          student.student_id === parseInt(studentId)
+            ? { ...student, status: submission.status }
+            : student,
+        ),
+      );
     }
   }, [submission?.status, studentId]);
 
   const loadAssignmentInfo = async () => {
     try {
-      const response = await apiClient.get(
+      const response = (await apiClient.get(
         `/api/teachers/assignments/${assignmentId}`,
-      ) as AssignmentInfo;
+      )) as AssignmentInfo;
       setAssignmentTitle(response.title || `作業 #${assignmentId}`);
     } catch (error) {
       console.error("Failed to load assignment info:", error);
@@ -189,9 +194,9 @@ export default function GradingPage() {
   const loadStudentList = async () => {
     try {
       // 載入此作業的所有學生
-      const response = await apiClient.get(
+      const response = (await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
-      ) as StudentsResponse;
+      )) as StudentsResponse;
 
       // 自定義排序邏輯：
       // 1. 進行中(IN_PROGRESS)、待訂正(RETURNED) 排最前面
@@ -199,13 +204,13 @@ export default function GradingPage() {
       // 3. 未指派(NOT_ASSIGNED) 最後
       // 其他狀態（已提交、已批改等）按原有順序
       const statusPriority: Record<string, number> = {
-        'IN_PROGRESS': 1,   // 進行中
-        'RETURNED': 1,      // 待訂正
-        'SUBMITTED': 2,     // 已提交
-        'RESUBMITTED': 2,   // 重新提交
-        'NOT_STARTED': 3,   // 未開始
-        'GRADED': 4,        // 已批改
-        'NOT_ASSIGNED': 99, // 未指派
+        IN_PROGRESS: 1, // 進行中
+        RETURNED: 1, // 待訂正
+        SUBMITTED: 2, // 已提交
+        RESUBMITTED: 2, // 重新提交
+        NOT_STARTED: 3, // 未開始
+        GRADED: 4, // 已批改
+        NOT_ASSIGNED: 99, // 未指派
       };
 
       const sortedStudents = (response.students || []).sort((a, b) => {
@@ -236,9 +241,9 @@ export default function GradingPage() {
   const loadSubmission = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(
+      const response = (await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/submissions/${studentId}`,
-      ) as StudentSubmission;
+      )) as StudentSubmission;
 
       setSubmission(response);
 
@@ -273,14 +278,19 @@ export default function GradingPage() {
       // 載入個別題目的評語和通過狀態
       const loadedFeedbacks: ItemFeedback = {};
       if (response.submissions) {
-        response.submissions.forEach((sub: {feedback?: string; passed?: boolean | null}, index: number) => {
-          if (sub.feedback || sub.passed !== null) {
-            loadedFeedbacks[index] = {
-              feedback: sub.feedback || "",
-              passed: sub.passed ?? null
-            };
-          }
-        });
+        response.submissions.forEach(
+          (
+            sub: { feedback?: string; passed?: boolean | null },
+            index: number,
+          ) => {
+            if (sub.feedback || sub.passed !== null) {
+              loadedFeedbacks[index] = {
+                feedback: sub.feedback || "",
+                passed: sub.passed ?? null,
+              };
+            }
+          },
+        );
       }
       setItemFeedbacks(loadedFeedbacks);
       setSelectedItemIndex(0); // 重置選中的題目
@@ -299,13 +309,18 @@ export default function GradingPage() {
     setAutoSaving(true);
     try {
       // 準備個別題目的評分資料
-      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
+      const itemResults: Array<{
+        item_index: number;
+        feedback: string;
+        passed: boolean | null;
+        score: number;
+      }> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
           feedback: fb.feedback || "",
           passed: fb.passed,
-          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80
+          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80,
         });
       });
 
@@ -313,9 +328,9 @@ export default function GradingPage() {
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: feedback || "",  // 傳送總評
-        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: false  // 自動儲存不更新狀態
+        feedback: feedback || "", // 傳送總評
+        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
+        update_status: false, // 自動儲存不更新狀態
       });
 
       // 自動儲存不顯示成功訊息，避免干擾
@@ -334,13 +349,18 @@ export default function GradingPage() {
       setSubmitting(true);
 
       // 準備個別題目的評分資料
-      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
+      const itemResults: Array<{
+        item_index: number;
+        feedback: string;
+        passed: boolean | null;
+        score: number;
+      }> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
           feedback: fb.feedback || "",
           passed: fb.passed,
-          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80
+          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80,
         });
       });
 
@@ -348,9 +368,9 @@ export default function GradingPage() {
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: feedback || "",  // 傳送總評
-        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: false  // 儲存評分但不更新狀態
+        feedback: feedback || "", // 傳送總評
+        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
+        update_status: false, // 儲存評分但不更新狀態
       });
 
       toast.success("評分已儲存");
@@ -369,13 +389,18 @@ export default function GradingPage() {
       setSubmitting(true);
 
       // 準備個別題目的評分資料
-      const itemResults: Array<{item_index: number; feedback: string; passed: boolean | null; score: number}> = [];
+      const itemResults: Array<{
+        item_index: number;
+        feedback: string;
+        passed: boolean | null;
+        score: number;
+      }> = [];
       Object.entries(itemFeedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
           feedback: fb.feedback || "",
           passed: fb.passed,
-          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80
+          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80,
         });
       });
 
@@ -383,9 +408,9 @@ export default function GradingPage() {
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: feedback || "",  // 傳送總評
-        item_results: itemResults,  // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: true  // 完成批改時更新狀態為 GRADED
+        feedback: feedback || "", // 傳送總評
+        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
+        update_status: true, // 完成批改時更新狀態為 GRADED
       });
 
       toast.success("批改完成！");
@@ -396,15 +421,21 @@ export default function GradingPage() {
       }
 
       // 更新學生列表中的狀態
-      setStudentList(prev => prev.map(student =>
-        student.student_id === parseInt(studentId!)
-          ? { ...student, status: "GRADED" }
-          : student
-      ));
+      setStudentList((prev) =>
+        prev.map((student) =>
+          student.student_id === parseInt(studentId!)
+            ? { ...student, status: "GRADED" }
+            : student,
+        ),
+      );
 
       // 切換到下一位已指派的學生
-      const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
-      const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId!));
+      const assignedStudents = studentList.filter(
+        (s) => s.status && s.status !== "NOT_ASSIGNED",
+      );
+      const currentAssignedIndex = assignedStudents.findIndex(
+        (s) => s.student_id === parseInt(studentId!),
+      );
 
       if (currentAssignedIndex < assignedStudents.length - 1) {
         await handleNextStudent();
@@ -424,23 +455,31 @@ export default function GradingPage() {
       setSubmitting(true);
 
       // 如果已經是批改中狀態，不需要做任何事
-      if (submission.status === "SUBMITTED" || submission.status === "RESUBMITTED") {
+      if (
+        submission.status === "SUBMITTED" ||
+        submission.status === "RESUBMITTED"
+      ) {
         toast.info("已經是批改中狀態");
         return;
       }
 
-      await apiClient.post(`/api/teachers/assignments/${assignmentId}/set-in-progress`, {
-        student_id: parseInt(studentId!),
-      });
+      await apiClient.post(
+        `/api/teachers/assignments/${assignmentId}/set-in-progress`,
+        {
+          student_id: parseInt(studentId!),
+        },
+      );
 
       toast.success("已設為批改中");
 
       // 更新學生列表中的狀態
-      setStudentList(prev => prev.map(student =>
-        student.student_id === parseInt(studentId!)
-          ? { ...student, status: "SUBMITTED" }
-          : student
-      ));
+      setStudentList((prev) =>
+        prev.map((student) =>
+          student.student_id === parseInt(studentId!)
+            ? { ...student, status: "SUBMITTED" }
+            : student,
+        ),
+      );
 
       // 重新載入提交資料
       await loadSubmission();
@@ -458,10 +497,13 @@ export default function GradingPage() {
     try {
       setSubmitting(true);
 
-      await apiClient.post(`/api/teachers/assignments/${assignmentId}/return-for-revision`, {
-        student_id: parseInt(studentId!),
-        message: "請依照評語修改後重新提交"
-      });
+      await apiClient.post(
+        `/api/teachers/assignments/${assignmentId}/return-for-revision`,
+        {
+          student_id: parseInt(studentId!),
+          message: "請依照評語修改後重新提交",
+        },
+      );
 
       toast.success("已要求學生訂正");
 
@@ -471,11 +513,13 @@ export default function GradingPage() {
       }
 
       // 更新學生列表中的狀態
-      setStudentList(prev => prev.map(student =>
-        student.student_id === parseInt(studentId!)
-          ? { ...student, status: "RETURNED" }
-          : student
-      ));
+      setStudentList((prev) =>
+        prev.map((student) =>
+          student.student_id === parseInt(studentId!)
+            ? { ...student, status: "RETURNED" }
+            : student,
+        ),
+      );
 
       // 重新載入提交資料
       await loadSubmission();
@@ -489,8 +533,12 @@ export default function GradingPage() {
 
   const handlePreviousStudent = async () => {
     // 只在已指派的學生之間切換
-    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
-    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+    const assignedStudents = studentList.filter(
+      (s) => s.status && s.status !== "NOT_ASSIGNED",
+    );
+    const currentAssignedIndex = assignedStudents.findIndex(
+      (s) => s.student_id === parseInt(studentId || "0"),
+    );
 
     if (currentAssignedIndex > 0) {
       // 切換前自動儲存
@@ -502,8 +550,12 @@ export default function GradingPage() {
 
   const handleNextStudent = async () => {
     // 只在已指派的學生之間切換
-    const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
-    const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+    const assignedStudents = studentList.filter(
+      (s) => s.status && s.status !== "NOT_ASSIGNED",
+    );
+    const currentAssignedIndex = assignedStudents.findIndex(
+      (s) => s.student_id === parseInt(studentId || "0"),
+    );
 
     if (currentAssignedIndex < assignedStudents.length - 1) {
       // 切換前自動儲存
@@ -546,7 +598,6 @@ export default function GradingPage() {
     { label: "70分", value: 70 },
     { label: "60分", value: 60 },
   ];
-
 
   // 移除自動同步，總評現在是獨立的欄位
   // 不再自動將個別評語同步到總評
@@ -603,7 +654,10 @@ export default function GradingPage() {
   // Get total questions count from either structure
   const getTotalQuestions = () => {
     if (submission?.content_groups && submission.content_groups.length > 0) {
-      return submission.content_groups.reduce((sum, group) => sum + group.submissions.length, 0);
+      return submission.content_groups.reduce(
+        (sum, group) => sum + group.submissions.length,
+        0,
+      );
     }
     return submission?.submissions?.length || 0;
   };
@@ -628,7 +682,15 @@ export default function GradingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate(`/teacher/classroom/${classroomId}/assignment/${assignmentId}`)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  navigate(
+                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}`,
+                  )
+                }
+              >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 返回
               </Button>
@@ -642,8 +704,12 @@ export default function GradingPage() {
             <div className="flex items-center gap-4">
               {(() => {
                 // 只計算已指派的學生
-                const assignedStudents = studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED");
-                const currentAssignedIndex = assignedStudents.findIndex(s => s.student_id === parseInt(studentId || "0"));
+                const assignedStudents = studentList.filter(
+                  (s) => s.status && s.status !== "NOT_ASSIGNED",
+                );
+                const currentAssignedIndex = assignedStudents.findIndex(
+                  (s) => s.student_id === parseInt(studentId || "0"),
+                );
                 const isCurrentStudentAssigned = currentAssignedIndex !== -1;
 
                 return (
@@ -651,15 +717,17 @@ export default function GradingPage() {
                     <span className="text-sm text-gray-500">
                       {isCurrentStudentAssigned
                         ? `${currentAssignedIndex + 1} / ${assignedStudents.length} 位已指派學生`
-                        : `未指派學生 (${assignedStudents.length} 位已指派)`
-                      }
+                        : `未指派學生 (${assignedStudents.length} 位已指派)`}
                     </span>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={handlePreviousStudent}
-                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === 0}
+                        disabled={
+                          !isCurrentStudentAssigned ||
+                          currentAssignedIndex === 0
+                        }
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -667,7 +735,10 @@ export default function GradingPage() {
                         variant="ghost"
                         size="icon"
                         onClick={handleNextStudent}
-                        disabled={!isCurrentStudentAssigned || currentAssignedIndex === assignedStudents.length - 1}
+                        disabled={
+                          !isCurrentStudentAssigned ||
+                          currentAssignedIndex === assignedStudents.length - 1
+                        }
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -691,13 +762,20 @@ export default function GradingPage() {
                   <span>學生</span>
                 </div>
                 <span className="text-xs text-gray-500">
-                  ({studentList.filter(s => s.status && s.status !== "NOT_ASSIGNED").length}/{studentList.length})
+                  (
+                  {
+                    studentList.filter(
+                      (s) => s.status && s.status !== "NOT_ASSIGNED",
+                    ).length
+                  }
+                  /{studentList.length})
                 </span>
               </h3>
               <div className="space-y-1">
                 {studentList.map((student) => {
                   // 判斷學生是否有被指派作業
-                  const isAssigned = student.status && student.status !== "NOT_ASSIGNED";
+                  const isAssigned =
+                    student.status && student.status !== "NOT_ASSIGNED";
 
                   // 取得狀態顯示文字（簡短版）
                   const getStatusLabel = (status: string) => {
@@ -708,7 +786,7 @@ export default function GradingPage() {
                       GRADED: "已批改",
                       RETURNED: "待訂正",
                       RESUBMITTED: "重交",
-                      NOT_ASSIGNED: "未指派"
+                      NOT_ASSIGNED: "未指派",
                     };
                     return statusLabelMap[status] || "";
                   };
@@ -722,28 +800,31 @@ export default function GradingPage() {
                         !isAssigned
                           ? "opacity-50 cursor-not-allowed bg-gray-50"
                           : student.student_id === parseInt(studentId!)
-                          ? "bg-blue-100 text-blue-700"
-                          : "hover:bg-gray-100"
+                            ? "bg-blue-100 text-blue-700"
+                            : "hover:bg-gray-100"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="truncate font-medium">{student.student_name}</span>
+                            <span className="truncate font-medium">
+                              {student.student_name}
+                            </span>
                             {/* 狀態 Label */}
                             <Badge
                               className={`text-xs px-1.5 py-0.5 ${
                                 student.status === "GRADED"
-                                  ? "bg-green-100 text-green-700 border-green-200" :
-                                student.status === "RETURNED"
-                                  ? "bg-orange-100 text-orange-700 border-orange-200" :
-                                student.status === "SUBMITTED" || student.status === "RESUBMITTED"
-                                  ? "bg-blue-100 text-blue-700 border-blue-200" :
-                                student.status === "IN_PROGRESS"
-                                  ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                                student.status === "NOT_ASSIGNED"
-                                  ? "bg-red-50 text-red-600 border-red-200" :
-                                "bg-gray-100 text-gray-600 border-gray-200"
+                                  ? "bg-green-100 text-green-700 border-green-200"
+                                  : student.status === "RETURNED"
+                                    ? "bg-orange-100 text-orange-700 border-orange-200"
+                                    : student.status === "SUBMITTED" ||
+                                        student.status === "RESUBMITTED"
+                                      ? "bg-blue-100 text-blue-700 border-blue-200"
+                                      : student.status === "IN_PROGRESS"
+                                        ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                                        : student.status === "NOT_ASSIGNED"
+                                          ? "bg-red-50 text-red-600 border-red-200"
+                                          : "bg-gray-100 text-gray-600 border-gray-200"
                               }`}
                             >
                               {getStatusLabel(student.status)}
@@ -757,7 +838,8 @@ export default function GradingPage() {
                         {student.status === "RETURNED" && (
                           <AlertCircle className="h-3 w-3 text-orange-600 flex-shrink-0" />
                         )}
-                        {(student.status === "SUBMITTED" || student.status === "RESUBMITTED") && (
+                        {(student.status === "SUBMITTED" ||
+                          student.status === "RESUBMITTED") && (
                           <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0" />
                         )}
                       </div>
@@ -844,17 +926,24 @@ export default function GradingPage() {
                                 disabled={!currentItem.question_audio_url}
                                 onClick={() => {
                                   if (currentItem.question_audio_url) {
-                                    const audio = new Audio(currentItem.question_audio_url);
-                                    audio.play().catch(err => {
-                                      console.error("Failed to play audio:", err);
+                                    const audio = new Audio(
+                                      currentItem.question_audio_url,
+                                    );
+                                    audio.play().catch((err) => {
+                                      console.error(
+                                        "Failed to play audio:",
+                                        err,
+                                      );
                                       toast.error("無法播放參考音檔");
                                     });
                                   }
                                 }}
-                                className={`ml-3 flex-shrink-0 ${!currentItem.question_audio_url ? 'opacity-50' : ''}`}
+                                className={`ml-3 flex-shrink-0 ${!currentItem.question_audio_url ? "opacity-50" : ""}`}
                               >
                                 <Volume2 className="h-3 w-3 mr-1" />
-                                {currentItem.question_audio_url ? '參考音檔' : '無參考音檔'}
+                                {currentItem.question_audio_url
+                                  ? "參考音檔"
+                                  : "無參考音檔"}
                               </Button>
                             </div>
                           </div>
@@ -906,7 +995,9 @@ export default function GradingPage() {
                               <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
                                 <Mic className="w-5 h-5 text-gray-500" />
                               </div>
-                              <span className="text-sm text-gray-500">學生未錄製音檔</span>
+                              <span className="text-sm text-gray-500">
+                                學生未錄製音檔
+                              </span>
                             </div>
                           )}
 
@@ -1021,7 +1112,6 @@ export default function GradingPage() {
                               disabled={submission?.status === "GRADED"}
                             />
 
-
                             {/* 快速評語 */}
                             <div className="mt-2 flex flex-wrap gap-1">
                               {[
@@ -1083,8 +1173,7 @@ export default function GradingPage() {
                                 </Button>
 
                                 <span className="text-xs text-gray-500">
-                                  {selectedItemIndex + 1} /{" "}
-                                  {totalQuestions}
+                                  {selectedItemIndex + 1} / {totalQuestions}
                                 </span>
 
                                 <Button
@@ -1105,8 +1194,7 @@ export default function GradingPage() {
                                     }
                                   }}
                                   disabled={
-                                    selectedItemIndex >=
-                                    totalQuestions - 1
+                                    selectedItemIndex >= totalQuestions - 1
                                   }
                                   className="text-xs"
                                 >
@@ -1282,11 +1370,13 @@ export default function GradingPage() {
                     </label>
                     <div className="p-3 bg-white dark:bg-gray-50 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
                       <pre className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-800 font-mono">
-{Array.from({ length: totalQuestions }).map((_, index) => {
-  const result = itemFeedbacks[index];
-  return `題目 ${index + 1} ${result?.passed === true ? '✅' : result?.passed === false ? '❌' : '⬜'}: ${result?.feedback || '(尚無評語)'}
+                        {Array.from({ length: totalQuestions })
+                          .map((_, index) => {
+                            const result = itemFeedbacks[index];
+                            return `題目 ${index + 1} ${result?.passed === true ? "✅" : result?.passed === false ? "❌" : "⬜"}: ${result?.feedback || "(尚無評語)"}
 `;
-}).join('') || '請先批改各題目...'}
+                          })
+                          .join("") || "請先批改各題目..."}
                       </pre>
                     </div>
                   </div>
@@ -1328,15 +1418,21 @@ export default function GradingPage() {
                     {/* 批改中 */}
                     <Button
                       onClick={handleSetInProgress}
-                      disabled={submitting || !submission ||
-                        (submission?.status === "SUBMITTED" || submission?.status === "RESUBMITTED")}
+                      disabled={
+                        submitting ||
+                        !submission ||
+                        submission?.status === "SUBMITTED" ||
+                        submission?.status === "RESUBMITTED"
+                      }
                       variant={
-                        submission?.status === "SUBMITTED" || submission?.status === "RESUBMITTED"
+                        submission?.status === "SUBMITTED" ||
+                        submission?.status === "RESUBMITTED"
                           ? "default"
                           : "outline"
                       }
                       className={`flex-1 ${
-                        submission?.status === "SUBMITTED" || submission?.status === "RESUBMITTED"
+                        submission?.status === "SUBMITTED" ||
+                        submission?.status === "RESUBMITTED"
                           ? "bg-blue-600 hover:bg-blue-700 text-white"
                           : "border-blue-600 text-blue-600 hover:bg-blue-50"
                       }`}
@@ -1349,7 +1445,11 @@ export default function GradingPage() {
                     <Button
                       onClick={handleRequestRevision}
                       disabled={submitting || !submission}
-                      variant={submission?.status === "RETURNED" ? "default" : "outline"}
+                      variant={
+                        submission?.status === "RETURNED"
+                          ? "default"
+                          : "outline"
+                      }
                       className={`flex-1 ${
                         submission?.status === "RETURNED"
                           ? "bg-orange-600 hover:bg-orange-700 text-white"
@@ -1364,7 +1464,9 @@ export default function GradingPage() {
                     <Button
                       onClick={handleCompleteGrading}
                       disabled={submitting || !submission}
-                      variant={submission?.status === "GRADED" ? "default" : "outline"}
+                      variant={
+                        submission?.status === "GRADED" ? "default" : "outline"
+                      }
                       className={`flex-1 ${
                         submission?.status === "GRADED"
                           ? "bg-green-600 hover:bg-green-700 text-white"

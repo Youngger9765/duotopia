@@ -1,92 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const DebugPage: React.FC = () => {
   const [results, setResults] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null,
+  );
   const [isRecording, setIsRecording] = useState(false);
 
   const addResult = (key: string, value: unknown) => {
-    setResults(prev => ({ ...prev, [key]: value }));
+    setResults((prev) => ({ ...prev, [key]: value }));
   };
 
   // 1. 測試健康檢查
   const testHealthCheck = async () => {
-    setLoading(prev => ({ ...prev, health: true }));
+    setLoading((prev) => ({ ...prev, health: true }));
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/health`);
       const data = await response.json();
-      addResult('health', { status: response.status, data });
+      addResult("health", { status: response.status, data });
     } catch (error) {
-      addResult('health', { error: error instanceof Error ? error.message : String(error) });
+      addResult("health", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    setLoading(prev => ({ ...prev, health: false }));
+    setLoading((prev) => ({ ...prev, health: false }));
   };
 
   // 2. 測試認證狀態
   const testAuth = async () => {
-    setLoading(prev => ({ ...prev, auth: true }));
+    setLoading((prev) => ({ ...prev, auth: true }));
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/students/me`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
-        addResult('auth', { status: 'authenticated', user: data, token: token?.substring(0, 20) + '...' });
+        addResult("auth", {
+          status: "authenticated",
+          user: data,
+          token: token?.substring(0, 20) + "...",
+        });
       } else {
         const errorText = await response.text();
-        addResult('auth', {
-          status: 'not authenticated',
+        addResult("auth", {
+          status: "not authenticated",
           error: errorText,
           token_exists: !!token,
-          token_preview: token?.substring(0, 20) + '...'
+          token_preview: token?.substring(0, 20) + "...",
         });
       }
     } catch (error) {
-      addResult('auth', {
-        status: 'error',
-        error: String(error)
+      addResult("auth", {
+        status: "error",
+        error: String(error),
       });
     }
-    setLoading(prev => ({ ...prev, auth: false }));
+    setLoading((prev) => ({ ...prev, auth: false }));
   };
 
   // 3. 測試 Azure 環境 (需要後端支援)
   const testAzureEnv = async () => {
-    setLoading(prev => ({ ...prev, azure: true }));
+    setLoading((prev) => ({ ...prev, azure: true }));
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/system-check`);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/debug/system-check`,
+      );
       const data = await response.json();
-      addResult('azure', { status: response.status, data });
+      addResult("azure", { status: response.status, data });
     } catch {
-      addResult('azure', { error: 'Debug endpoint not available' });
+      addResult("azure", { error: "Debug endpoint not available" });
     }
-    setLoading(prev => ({ ...prev, azure: false }));
+    setLoading((prev) => ({ ...prev, azure: false }));
   };
 
   // 4. 測試麥克風權限
   const testMicrophone = async () => {
-    setLoading(prev => ({ ...prev, mic: true }));
+    setLoading((prev) => ({ ...prev, mic: true }));
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioDevices = devices.filter(d => d.kind === 'audioinput');
+      const audioDevices = devices.filter((d) => d.kind === "audioinput");
 
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
 
-      addResult('mic', {
-        status: 'granted',
-        devices: audioDevices.map(d => ({ label: d.label, id: d.deviceId }))
+      addResult("mic", {
+        status: "granted",
+        devices: audioDevices.map((d) => ({ label: d.label, id: d.deviceId })),
       });
     } catch (error) {
-      addResult('mic', { status: 'denied', error: error instanceof Error ? error.message : String(error) });
+      addResult("mic", {
+        status: "denied",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    setLoading(prev => ({ ...prev, mic: false }));
+    setLoading((prev) => ({ ...prev, mic: false }));
   };
 
   // 5. 開始錄音
@@ -94,7 +110,9 @@ const DebugPage: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg'
+        mimeType: MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "audio/ogg",
       });
 
       const chunks: Blob[] = [];
@@ -106,19 +124,24 @@ const DebugPage: React.FC = () => {
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: recorder.mimeType });
         setAudioBlob(blob);
-        addResult('recording', {
+        addResult("recording", {
           size: blob.size,
           type: blob.type,
-          duration: chunks.length
+          duration: chunks.length,
         });
       };
 
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
-      addResult('recording', { status: 'started', mimeType: recorder.mimeType });
+      addResult("recording", {
+        status: "started",
+        mimeType: recorder.mimeType,
+      });
     } catch (error) {
-      addResult('recording', { error: error instanceof Error ? error.message : String(error) });
+      addResult("recording", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -126,7 +149,7 @@ const DebugPage: React.FC = () => {
   const stopRecording = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       setIsRecording(false);
     }
   };
@@ -134,106 +157,121 @@ const DebugPage: React.FC = () => {
   // 7. 測試音頻上傳 (只上傳，不評估)
   const testUpload = async () => {
     if (!audioBlob) {
-      addResult('upload', { error: 'No audio recorded' });
+      addResult("upload", { error: "No audio recorded" });
       return;
     }
 
-    setLoading(prev => ({ ...prev, upload: true }));
+    setLoading((prev) => ({ ...prev, upload: true }));
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'test.webm');
-      formData.append('duration_seconds', '5');
+      formData.append("file", audioBlob, "test.webm");
+      formData.append("duration_seconds", "5");
 
       // 使用無認證的測試端點
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-upload`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/debug/test-upload`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
-        addResult('upload', { status: 'success', data });
+        addResult("upload", { status: "success", data });
       } else {
         const errorText = await response.text();
-        addResult('upload', {
+        addResult("upload", {
           status: response.status,
           statusText: response.statusText,
-          error: errorText.substring(0, 500)
+          error: errorText.substring(0, 500),
         });
       }
     } catch (error) {
-      addResult('upload', { error: error instanceof Error ? error.message : String(error) });
+      addResult("upload", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    setLoading(prev => ({ ...prev, upload: false }));
+    setLoading((prev) => ({ ...prev, upload: false }));
   };
 
   // 8. 測試完整評估流程 (無認證版本)
   const testFullAssessment = async () => {
     if (!audioBlob) {
-      addResult('assessment', { error: 'No audio recorded' });
+      addResult("assessment", { error: "No audio recorded" });
       return;
     }
 
-    setLoading(prev => ({ ...prev, assessment: true }));
+    setLoading((prev) => ({ ...prev, assessment: true }));
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'test.webm');
-      formData.append('reference_text', 'Hello world');
+      formData.append("file", audioBlob, "test.webm");
+      formData.append("reference_text", "Hello world");
 
       // 使用無認證的 Azure Speech 測試端點
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-azure-speech`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/debug/test-azure-speech`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
-        addResult('assessment', { status: 'success', data });
+        addResult("assessment", { status: "success", data });
       } else {
         const errorText = await response.text();
-        addResult('assessment', {
+        addResult("assessment", {
           status: response.status,
-          error: errorText.substring(0, 500)
+          error: errorText.substring(0, 500),
         });
       }
     } catch (error) {
-      addResult('assessment', { error: error instanceof Error ? error.message : String(error) });
+      addResult("assessment", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    setLoading(prev => ({ ...prev, assessment: false }));
+    setLoading((prev) => ({ ...prev, assessment: false }));
   };
 
   // 9. 測試 GCS 上傳 (無認證版本)
   const testGCSUpload = async () => {
     if (!audioBlob) {
-      addResult('gcs', { error: 'No audio recorded' });
+      addResult("gcs", { error: "No audio recorded" });
       return;
     }
 
-    setLoading(prev => ({ ...prev, gcs: true }));
+    setLoading((prev) => ({ ...prev, gcs: true }));
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'test_audio.webm');
+      formData.append("file", audioBlob, "test_audio.webm");
 
       // 使用無認證的 GCS 測試端點
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/debug/test-gcs-simple`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/debug/test-gcs-simple`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
-        addResult('gcs', { status: 'success', data });
+        addResult("gcs", { status: "success", data });
       } else {
         const errorText = await response.text();
-        addResult('gcs', {
+        addResult("gcs", {
           status: response.status,
-          error: errorText.substring(0, 500)
+          error: errorText.substring(0, 500),
         });
       }
     } catch (error) {
-      addResult('gcs', { error: error instanceof Error ? error.message : String(error) });
+      addResult("gcs", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    setLoading(prev => ({ ...prev, gcs: false }));
+    setLoading((prev) => ({ ...prev, gcs: false }));
   };
 
   // 10. 清除結果
@@ -258,7 +296,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.health}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
-                {loading.health ? '測試中...' : '1. 測試健康檢查'}
+                {loading.health ? "測試中..." : "1. 測試健康檢查"}
               </button>
 
               <button
@@ -266,7 +304,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.auth}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
-                {loading.auth ? '測試中...' : '2. 測試認證狀態'}
+                {loading.auth ? "測試中..." : "2. 測試認證狀態"}
               </button>
 
               <button
@@ -274,7 +312,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.azure}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
-                {loading.azure ? '測試中...' : '3. 測試 Azure 環境'}
+                {loading.azure ? "測試中..." : "3. 測試 Azure 環境"}
               </button>
 
               <button
@@ -282,7 +320,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.mic}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
-                {loading.mic ? '測試中...' : '4. 測試麥克風權限'}
+                {loading.mic ? "測試中..." : "4. 測試麥克風權限"}
               </button>
 
               <div className="flex gap-2">
@@ -291,7 +329,7 @@ const DebugPage: React.FC = () => {
                   disabled={isRecording}
                   className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 dark:bg-green-400 dark:hover:bg-green-500 disabled:bg-gray-300"
                 >
-                  {isRecording ? '錄音中...' : '5. 開始錄音'}
+                  {isRecording ? "錄音中..." : "5. 開始錄音"}
                 </button>
 
                 <button
@@ -308,7 +346,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.upload || !audioBlob}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 disabled:bg-gray-300"
               >
-                {loading.upload ? '測試中...' : '7. 測試上傳 (無認證)'}
+                {loading.upload ? "測試中..." : "7. 測試上傳 (無認證)"}
               </button>
 
               <button
@@ -316,7 +354,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.assessment || !audioBlob}
                 className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 dark:bg-purple-400 dark:hover:bg-purple-500 disabled:bg-gray-300"
               >
-                {loading.assessment ? '測試中...' : '8. 測試完整評估'}
+                {loading.assessment ? "測試中..." : "8. 測試完整評估"}
               </button>
 
               <button
@@ -324,7 +362,7 @@ const DebugPage: React.FC = () => {
                 disabled={loading.gcs || !audioBlob}
                 className="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 dark:bg-indigo-400 dark:hover:bg-indigo-500 disabled:bg-gray-300"
               >
-                {loading.gcs ? '測試中...' : '9. 測試 GCS 上傳'}
+                {loading.gcs ? "測試中..." : "9. 測試 GCS 上傳"}
               </button>
 
               <button
@@ -343,20 +381,25 @@ const DebugPage: React.FC = () => {
               <div>
                 <strong>API URL:</strong>
                 <div className="text-xs text-gray-600 break-all">
-                  {import.meta.env.VITE_API_URL || 'Not set'}
+                  {import.meta.env.VITE_API_URL || "Not set"}
                 </div>
               </div>
               <div>
-                <strong>Token 存在:</strong> {localStorage.getItem('token') ? '✅' : '❌'}
+                <strong>Token 存在:</strong>{" "}
+                {localStorage.getItem("token") ? "✅" : "❌"}
               </div>
               <div>
-                <strong>瀏覽器:</strong> {navigator.userAgent.split(' ').pop()}
+                <strong>瀏覽器:</strong> {navigator.userAgent.split(" ").pop()}
               </div>
               <div>
-                <strong>WebM 支援:</strong> {MediaRecorder.isTypeSupported('audio/webm') ? '✅' : '❌'}
+                <strong>WebM 支援:</strong>{" "}
+                {MediaRecorder.isTypeSupported("audio/webm") ? "✅" : "❌"}
               </div>
               <div>
-                <strong>錄音 Blob:</strong> {audioBlob ? `${audioBlob.size} bytes, ${audioBlob.type}` : 'None'}
+                <strong>錄音 Blob:</strong>{" "}
+                {audioBlob
+                  ? `${audioBlob.size} bytes, ${audioBlob.type}`
+                  : "None"}
               </div>
             </div>
           </div>
@@ -368,7 +411,9 @@ const DebugPage: React.FC = () => {
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {Object.entries(results).map(([key, value]) => (
               <div key={key} className="border-b pb-2">
-                <h3 className="font-semibold text-blue-600">{key.toUpperCase()}</h3>
+                <h3 className="font-semibold text-blue-600">
+                  {key.toUpperCase()}
+                </h3>
                 <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
                   {JSON.stringify(value, null, 2)}
                 </pre>

@@ -1,31 +1,31 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 
 interface LoadingSpinnerProps {
   message?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   fullPage?: boolean;
 }
 
 export default function LoadingSpinner({
-  message = '載入中...',
-  size = 'md',
-  fullPage = false
+  message = "載入中...",
+  size = "md",
+  fullPage = false,
 }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-12 w-12',
-    lg: 'h-16 w-16'
+    sm: "h-8 w-8",
+    md: "h-12 w-12",
+    lg: "h-16 w-16",
   };
 
   const textSizeClasses = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg'
+    sm: "text-sm",
+    md: "text-base",
+    lg: "text-lg",
   };
 
   const containerClasses = fullPage
-    ? 'flex items-center justify-center min-h-[60vh]'
-    : 'flex items-center justify-center min-h-[400px]';
+    ? "flex items-center justify-center min-h-[60vh]"
+    : "flex items-center justify-center min-h-[400px]";
 
   return (
     <div className={containerClasses}>
@@ -37,7 +37,9 @@ export default function LoadingSpinner({
             strokeWidth={2.5}
           />
           {/* Pulsing background circle for better visibility */}
-          <div className={`absolute inset-0 ${sizeClasses[size]} bg-blue-100 rounded-full animate-pulse mx-auto opacity-30`} />
+          <div
+            className={`absolute inset-0 ${sizeClasses[size]} bg-blue-100 rounded-full animate-pulse mx-auto opacity-30`}
+          />
         </div>
 
         {/* Loading text with animation */}
@@ -46,9 +48,18 @@ export default function LoadingSpinner({
             {message}
           </p>
           <div className="flex justify-center space-x-1">
-            <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-            <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-            <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            <span
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></span>
+            <span
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            ></span>
+            <span
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            ></span>
           </div>
         </div>
       </div>

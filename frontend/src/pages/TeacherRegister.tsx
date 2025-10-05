@@ -1,38 +1,45 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, User, Lock, Mail, Phone } from 'lucide-react';
-import { apiClient } from '../lib/api';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, User, Lock, Mail, Phone } from "lucide-react";
+import { apiClient } from "../lib/api";
 
 export default function TeacherRegister() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    name: '',
-    phone: '',
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    phone: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
-      setError('密碼不一致');
+      setError("密碼不一致");
       return;
     }
 
     // Validate password strength
     if (formData.password.length < 6) {
-      setError('密碼至少需要 6 個字元');
+      setError("密碼至少需要 6 個字元");
       return;
     }
 
@@ -44,28 +51,30 @@ export default function TeacherRegister() {
         message?: string;
         email?: string;
       }
-      const response = await apiClient.teacherRegister({
+      const response = (await apiClient.teacherRegister({
         email: formData.email,
         password: formData.password,
         name: formData.name,
         phone: formData.phone || undefined,
-      }) as RegisterResponse;
+      })) as RegisterResponse;
 
       // 🔴 不要自動登入！顯示驗證提示
       if (response.verification_required) {
         // 導向到驗證提示頁面或顯示成功訊息
-        navigate('/teacher/verify-email-prompt', {
+        navigate("/teacher/verify-email-prompt", {
           state: {
             email: formData.email,
-            message: response.message || '註冊成功！請檢查您的 Email 信箱並點擊驗證連結。'
-          }
+            message:
+              response.message ||
+              "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。",
+          },
         });
       } else {
         // 舊的邏輯（不應該發生）
-        navigate('/teacher/dashboard');
+        navigate("/teacher/dashboard");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '註冊失敗，請稍後再試');
+      setError(err instanceof Error ? err.message : "註冊失敗，請稍後再試");
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +107,9 @@ export default function TeacherRegister() {
                     type="text"
                     placeholder="王老師"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -115,7 +126,9 @@ export default function TeacherRegister() {
                     type="email"
                     placeholder="teacher@example.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -132,7 +145,9 @@ export default function TeacherRegister() {
                     type="tel"
                     placeholder="0912-345-678"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     className="pl-10"
                     disabled={isLoading}
                   />
@@ -148,7 +163,9 @@ export default function TeacherRegister() {
                     type="password"
                     placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -166,7 +183,12 @@ export default function TeacherRegister() {
                     type="password"
                     placeholder="••••••••"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -180,18 +202,14 @@ export default function TeacherRegister() {
                 </Alert>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     註冊中...
                   </>
                 ) : (
-                  '註冊'
+                  "註冊"
                 )}
               </Button>
             </form>
@@ -200,12 +218,18 @@ export default function TeacherRegister() {
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-gray-600">
               已有帳號？
-              <Link to="/teacher/login" className="text-blue-600 hover:underline ml-1">
+              <Link
+                to="/teacher/login"
+                className="text-blue-600 hover:underline ml-1"
+              >
                 立即登入
               </Link>
             </div>
             <div className="text-sm text-center text-gray-600">
-              <Link to="/student/login" className="text-blue-600 hover:underline">
+              <Link
+                to="/student/login"
+                className="text-blue-600 hover:underline"
+              >
                 學生登入入口
               </Link>
             </div>

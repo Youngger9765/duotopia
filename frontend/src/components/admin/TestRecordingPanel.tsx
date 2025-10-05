@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
+import { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import {
   Mic,
   Square,
@@ -15,21 +15,21 @@ import {
   XCircle,
   AlertCircle,
   Brain,
-  Loader2
-} from 'lucide-react';
-import { retryAudioUpload, retryAIAnalysis } from '@/utils/retryHelper';
+  Loader2,
+} from "lucide-react";
+import { retryAudioUpload, retryAIAnalysis } from "@/utils/retryHelper";
 
 // Single test sentence
 const TEST_SENTENCE = {
-  text: 'The quick brown fox jumps over the lazy dog.',
-  chinese: '敏捷的棕色狐狸跳過懶惰的狗。'
+  text: "The quick brown fox jumps over the lazy dog.",
+  chinese: "敏捷的棕色狐狸跳過懶惰的狗。",
 };
 
 interface TestResult {
-  recordingStatus: 'success' | 'failed';
-  uploadStatus: 'success' | 'failed';
-  analysisStatus: 'success' | 'failed';
-  dbReadStatus: 'success' | 'failed';
+  recordingStatus: "success" | "failed";
+  uploadStatus: "success" | "failed";
+  analysisStatus: "success" | "failed";
+  dbReadStatus: "success" | "failed";
   scores?: {
     overall: number;
     accuracy: number;
@@ -64,13 +64,13 @@ export default function TestRecordingPanel() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const apiUrl = import.meta.env.VITE_API_URL || "";
 
   // 檢查是否已登入
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userType = localStorage.getItem('userType');
-    if (token && userType === 'teacher') {
+    const token = localStorage.getItem("token");
+    const userType = localStorage.getItem("userType");
+    if (token && userType === "teacher") {
       setIsLoggedIn(true);
     }
   }, []);
@@ -95,11 +95,11 @@ export default function TestRecordingPanel() {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
@@ -109,13 +109,15 @@ export default function TestRecordingPanel() {
 
       // Start timer
       timerRef.current = setInterval(() => {
-        setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        setRecordingTime(
+          Math.floor((Date.now() - startTimeRef.current) / 1000),
+        );
       }, 100);
 
-      toast.success('開始錄音');
+      toast.success("開始錄音");
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      toast.error('無法開始錄音，請檢查麥克風權限');
+      console.error("Failed to start recording:", error);
+      toast.error("無法開始錄音，請檢查麥克風權限");
     }
   };
 
@@ -126,7 +128,7 @@ export default function TestRecordingPanel() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      toast.success('錄音完成');
+      toast.success("錄音完成");
     }
   };
 
@@ -155,53 +157,55 @@ export default function TestRecordingPanel() {
     setAudioUrl(null);
     setTestResult(null);
     setRecordingTime(0);
-    toast.info('已重置錄音');
+    toast.info("已重置錄音");
   };
 
   const runCompleteAnalysis = async () => {
     if (!audioBlob) {
-      toast.error('請先錄音');
+      toast.error("請先錄音");
       return;
     }
 
     setIsAnalyzing(true);
     const testStartTime = Date.now();
     const result: TestResult = {
-      recordingStatus: 'failed',
-      uploadStatus: 'failed',
-      analysisStatus: 'failed',
-      dbReadStatus: 'failed',
+      recordingStatus: "failed",
+      uploadStatus: "failed",
+      analysisStatus: "failed",
+      dbReadStatus: "failed",
       errors: [],
-      duration: 0
+      duration: 0,
     };
 
     try {
       // Step 1: 驗證錄音
-      toast.info('步驟 1/4: 驗證錄音...');
+      toast.info("步驟 1/4: 驗證錄音...");
       if (audioBlob && audioBlob.size > 0) {
-        result.recordingStatus = 'success';
-        toast.success('✓ 錄音正常');
+        result.recordingStatus = "success";
+        toast.success("✓ 錄音正常");
       } else {
-        throw new Error('錄音檔案無效');
+        throw new Error("錄音檔案無效");
       }
 
       // Step 2: 上傳錄音
-      toast.info('步驟 2/4: 上傳錄音...');
+      toast.info("步驟 2/4: 上傳錄音...");
       let uploadAttempts = 0;
 
       await retryAudioUpload(
         async () => {
           uploadAttempts++;
 
-
           const formData = new FormData();
-          formData.append('audio_file', audioBlob, 'test.webm');
-          formData.append('test_mode', 'true');
+          formData.append("audio_file", audioBlob, "test.webm");
+          formData.append("test_mode", "true");
 
-          const response = await fetch(`${apiUrl}/api/admin/test-audio-upload`, {
-            method: 'POST',
-            body: formData
-          });
+          const response = await fetch(
+            `${apiUrl}/api/admin/test-audio-upload`,
+            {
+              method: "POST",
+              body: formData,
+            },
+          );
 
           if (!response.ok) {
             throw new Error(`Upload failed: ${response.status}`);
@@ -213,96 +217,174 @@ export default function TestRecordingPanel() {
           console.log(`上傳重試 ${attempt}/3:`, error.message);
           result.errors.push(`上傳重試 ${attempt}: ${error.message}`);
           toast.warning(`上傳失敗，重試中... (第 ${attempt}/3 次)`);
-        }
+        },
       );
 
-      result.uploadStatus = 'success';
+      result.uploadStatus = "success";
       result.uploadAttempts = uploadAttempts;
-      toast.success(`✓ 上傳正常${uploadAttempts > 1 ? ` (重試 ${uploadAttempts-1} 次)` : ''}`);
+      toast.success(
+        `✓ 上傳正常${uploadAttempts > 1 ? ` (重試 ${uploadAttempts - 1} 次)` : ""}`,
+      );
 
       // Step 3: AI 分析
-      toast.info('步驟 3/4: AI 語音分析...');
+      toast.info("步驟 3/4: AI 語音分析...");
       let analysisAttempts = 0;
 
       const analysisResult = await retryAIAnalysis(
         async () => {
           analysisAttempts++;
 
-
           const formData = new FormData();
-          formData.append('audio_file', audioBlob, 'test.webm');
-          formData.append('reference_text', TEST_SENTENCE.text);
-          formData.append('progress_id', '1'); // Test progress ID
+          formData.append("audio_file", audioBlob, "test.webm");
+          formData.append("reference_text", TEST_SENTENCE.text);
+          formData.append("progress_id", "1"); // Test progress ID
 
           // 使用 fetch 直接呼叫，避免 apiClient 的 JSON headers 覆蓋 FormData
           try {
-            const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || '';
+            const token = localStorage.getItem("token");
+            const apiUrl = import.meta.env.VITE_API_URL || "";
 
             const response = await fetch(`${apiUrl}/api/speech/assess`, {
-              method: 'POST',
-              headers: token ? {
-                'Authorization': `Bearer ${token}`
-              } : undefined,
-              body: formData
+              method: "POST",
+              headers: token
+                ? {
+                    Authorization: `Bearer ${token}`,
+                  }
+                : undefined,
+              body: formData,
             });
 
             if (!response.ok) {
               const errorText = await response.text();
-              console.error('AI 分析錯誤:', errorText);
+              console.error("AI 分析錯誤:", errorText);
 
               // 如果是認證問題，回退到 mock 資料
               if (response.status === 401 || response.status === 403) {
-                console.log('使用 mock 資料回應（無認證）');
+                console.log("使用 mock 資料回應（無認證）");
                 result.isMockData = true;
                 return {
                   overall_score: Math.floor(Math.random() * 30) + 70,
                   accuracy_score: Math.floor(Math.random() * 30) + 70,
                   fluency_score: Math.floor(Math.random() * 30) + 70,
                   pronunciation_score: Math.floor(Math.random() * 30) + 70,
-                  message: 'Mock AI 分析結果（測試模式）',
+                  message: "Mock AI 分析結果（測試模式）",
                   words: [
-                    { word: 'The', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'quick', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'brown', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'fox', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'jumps', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: Math.random() > 0.5 ? 'Mispronunciation' : null },
-                    { word: 'over', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'the', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'lazy', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                    { word: 'dog', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null }
-                  ]
+                    {
+                      word: "The",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "quick",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "brown",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "fox",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "jumps",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type:
+                        Math.random() > 0.5 ? "Mispronunciation" : null,
+                    },
+                    {
+                      word: "over",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "the",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "lazy",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                    {
+                      word: "dog",
+                      accuracy_score: Math.floor(Math.random() * 30) + 70,
+                      error_type: null,
+                    },
+                  ],
                 };
               }
 
-              throw new Error(`AI analysis failed: ${response.status} ${errorText}`);
+              throw new Error(
+                `AI analysis failed: ${response.status} ${errorText}`,
+              );
             }
 
             return await response.json();
           } catch (error: unknown) {
-            console.error('AI 分析失敗:', error);
+            console.error("AI 分析失敗:", error);
 
             // 網路錯誤時回退到 mock 資料
-            if (error instanceof Error && error.message.includes('fetch')) {
-              console.log('使用 mock 資料回應（網路錯誤）');
+            if (error instanceof Error && error.message.includes("fetch")) {
+              console.log("使用 mock 資料回應（網路錯誤）");
               result.isMockData = true;
               return {
                 overall_score: Math.floor(Math.random() * 30) + 70,
                 accuracy_score: Math.floor(Math.random() * 30) + 70,
                 fluency_score: Math.floor(Math.random() * 30) + 70,
                 pronunciation_score: Math.floor(Math.random() * 30) + 70,
-                message: 'Mock AI 分析結果（測試模式）',
+                message: "Mock AI 分析結果（測試模式）",
                 words: [
-                  { word: 'The', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'quick', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'brown', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'fox', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'jumps', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: Math.random() > 0.5 ? 'Mispronunciation' : null },
-                  { word: 'over', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'the', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'lazy', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null },
-                  { word: 'dog', accuracy_score: Math.floor(Math.random() * 30) + 70, error_type: null }
-                ]
+                  {
+                    word: "The",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "quick",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "brown",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "fox",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "jumps",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: Math.random() > 0.5 ? "Mispronunciation" : null,
+                  },
+                  {
+                    word: "over",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "the",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "lazy",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                  {
+                    word: "dog",
+                    accuracy_score: Math.floor(Math.random() * 30) + 70,
+                    error_type: null,
+                  },
+                ],
               };
             }
             throw error;
@@ -312,33 +394,41 @@ export default function TestRecordingPanel() {
           console.log(`分析重試 ${attempt}/3:`, error.message);
           result.errors.push(`分析重試 ${attempt}: ${error.message}`);
           toast.warning(`AI 分析失敗，重試中... (第 ${attempt}/3 次)`);
-        }
+        },
       );
 
-      result.analysisStatus = 'success';
+      result.analysisStatus = "success";
       result.analysisAttempts = analysisAttempts;
-      toast.success(`✓ 分析正常${analysisAttempts > 1 ? ` (重試 ${analysisAttempts-1} 次)` : ''}`);
+      toast.success(
+        `✓ 分析正常${analysisAttempts > 1 ? ` (重試 ${analysisAttempts - 1} 次)` : ""}`,
+      );
 
       // Step 4: 讀取結果（模擬從 DB 讀取）
-      toast.info('步驟 4/4: 讀取分析結果...');
+      toast.info("步驟 4/4: 讀取分析結果...");
       if (analysisResult) {
         result.scores = {
-          overall: analysisResult.overall_score || Math.floor(Math.random() * 30) + 70,
-          accuracy: analysisResult.accuracy_score || Math.floor(Math.random() * 30) + 70,
-          fluency: analysisResult.fluency_score || Math.floor(Math.random() * 30) + 70,
-          pronunciation: analysisResult.pronunciation_score || Math.floor(Math.random() * 30) + 70
+          overall:
+            analysisResult.overall_score || Math.floor(Math.random() * 30) + 70,
+          accuracy:
+            analysisResult.accuracy_score ||
+            Math.floor(Math.random() * 30) + 70,
+          fluency:
+            analysisResult.fluency_score || Math.floor(Math.random() * 30) + 70,
+          pronunciation:
+            analysisResult.pronunciation_score ||
+            Math.floor(Math.random() * 30) + 70,
         };
 
         // 儲存單字詳細資料
-        result.wordDetails = analysisResult.words || analysisResult.word_details || [];
+        result.wordDetails =
+          analysisResult.words || analysisResult.word_details || [];
 
-        result.dbReadStatus = 'success';
-        toast.success('✓ 讀取 DB 結果正常');
+        result.dbReadStatus = "success";
+        toast.success("✓ 讀取 DB 結果正常");
       }
-
     } catch (error) {
-      console.error('測試失敗:', error);
-      toast.error('測試失敗: ' + (error as Error).message);
+      console.error("測試失敗:", error);
+      toast.error("測試失敗: " + (error as Error).message);
       result.errors.push(`錯誤: ${(error as Error).message}`);
     } finally {
       result.duration = Math.round((Date.now() - testStartTime) / 1000);
@@ -348,63 +438,69 @@ export default function TestRecordingPanel() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
   };
 
   // 快速測試登入（僅供測試用）
   const quickTestLogin = async () => {
     try {
-      toast.info('正在使用 Demo Teacher 帳號登入...');
+      toast.info("正在使用 Demo Teacher 帳號登入...");
 
       // 使用 demo teacher 帳號登入
       const response = await fetch(`${apiUrl}/api/auth/teacher/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: 'demo@duotopia.com',
-          password: 'demo123'
-        })
+          email: "demo@duotopia.com",
+          password: "demo123",
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         // 儲存 teacher token
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('userType', 'teacher');
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("userType", "teacher");
 
         // 儲存教師資料
         const teacherAuthData = {
           state: {
             token: data.access_token,
-            teacher: data.teacher || { email: 'demo@duotopia.com', name: 'Demo Teacher' },
-            isAuthenticated: true
-          }
+            teacher: data.teacher || {
+              email: "demo@duotopia.com",
+              name: "Demo Teacher",
+            },
+            isAuthenticated: true,
+          },
         };
-        localStorage.setItem('teacher-auth-storage', JSON.stringify(teacherAuthData));
+        localStorage.setItem(
+          "teacher-auth-storage",
+          JSON.stringify(teacherAuthData),
+        );
         setIsLoggedIn(true);
-        toast.success('Demo Teacher 登入成功！現在可以進行真實 AI 分析');
+        toast.success("Demo Teacher 登入成功！現在可以進行真實 AI 分析");
       } else {
         const errorText = await response.text();
-        console.error('登入失敗:', errorText);
-        toast.error('登入失敗，請確認後端服務正常運行');
+        console.error("登入失敗:", errorText);
+        toast.error("登入失敗，請確認後端服務正常運行");
       }
     } catch (error) {
-      console.error('Quick login failed:', error);
-      toast.error('無法登入測試帳號');
+      console.error("Quick login failed:", error);
+      toast.error("無法登入測試帳號");
     }
   };
 
   // 登出功能
   const handleLogout = () => {
     // 清除所有登入資料
-    localStorage.removeItem('token');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('teacher-auth-storage');
-    localStorage.removeItem('student-auth-storage');
+    localStorage.removeItem("token");
+    localStorage.removeItem("userType");
+    localStorage.removeItem("teacher-auth-storage");
+    localStorage.removeItem("student-auth-storage");
 
     // 重設狀態
     setIsLoggedIn(false);
@@ -412,18 +508,24 @@ export default function TestRecordingPanel() {
     setAudioUrl(null);
     setAudioBlob(null);
 
-    toast.info('已登出，返回首頁...');
+    toast.info("已登出，返回首頁...");
 
     // 延遲跳轉到首頁
     setTimeout(() => {
-      window.location.href = '/';
+      window.location.href = "/";
     }, 1000);
   };
 
   return (
     <div className="space-y-6">
       {/* Quick Test Login */}
-      <Alert className={isLoggedIn ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}>
+      <Alert
+        className={
+          isLoggedIn
+            ? "border-green-200 bg-green-50"
+            : "border-blue-200 bg-blue-50"
+        }
+      >
         {isLoggedIn ? (
           <CheckCircle className="h-4 w-4 text-green-600" />
         ) : (
@@ -432,22 +534,20 @@ export default function TestRecordingPanel() {
         <AlertDescription className="flex items-center justify-between">
           <div className="flex-1">
             <div className="font-medium">
-              {isLoggedIn ? '已登入 Demo Teacher' : '快速登入 Demo Teacher 帳號'}
+              {isLoggedIn
+                ? "已登入 Demo Teacher"
+                : "快速登入 Demo Teacher 帳號"}
             </div>
             <div className="text-sm text-gray-600">
               {isLoggedIn
-                ? '已使用 demo@duotopia.com 登入，可以進行真實 AI 分析'
-                : '使用 demo@duotopia.com (密碼: demo123) 進行真實 AI 分析測試'}
+                ? "已使用 demo@duotopia.com 登入，可以進行真實 AI 分析"
+                : "使用 demo@duotopia.com (密碼: demo123) 進行真實 AI 分析測試"}
             </div>
           </div>
           <div className="flex gap-2 ml-4">
             {isLoggedIn ? (
               <>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled
-                >
+                <Button size="sm" variant="secondary" disabled>
                   <CheckCircle className="w-4 h-4 mr-1" />
                   已登入
                 </Button>
@@ -484,7 +584,9 @@ export default function TestRecordingPanel() {
             <div className="text-center p-6">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
               <h3 className="text-lg font-semibold mb-2">請先登入</h3>
-              <p className="text-gray-600 mb-4">需要先登入 Demo Teacher 帳號才能使用錄音測試功能</p>
+              <p className="text-gray-600 mb-4">
+                需要先登入 Demo Teacher 帳號才能使用錄音測試功能
+              </p>
               <Button
                 onClick={quickTestLogin}
                 variant="default"
@@ -507,8 +609,12 @@ export default function TestRecordingPanel() {
           {/* Display test sentence */}
           <div className="p-4 bg-blue-50 rounded-lg">
             <p className="text-sm font-medium text-gray-600 mb-2">請朗讀：</p>
-            <p className="text-xl font-semibold text-gray-800">{TEST_SENTENCE.text}</p>
-            <p className="text-sm text-gray-500 mt-2">{TEST_SENTENCE.chinese}</p>
+            <p className="text-xl font-semibold text-gray-800">
+              {TEST_SENTENCE.text}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {TEST_SENTENCE.chinese}
+            </p>
           </div>
 
           {/* Recording status */}
@@ -522,7 +628,9 @@ export default function TestRecordingPanel() {
           {audioUrl && !isRecording && (
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <span className="text-green-600">錄音完成 ({recordingTime}秒)</span>
+              <span className="text-green-600">
+                錄音完成 ({recordingTime}秒)
+              </span>
             </div>
           )}
 
@@ -557,8 +665,12 @@ export default function TestRecordingPanel() {
                   variant="outline"
                   disabled={!isLoggedIn}
                 >
-                  {isPlaying ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                  {isPlaying ? '暫停' : '播放'}
+                  {isPlaying ? (
+                    <Pause className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Play className="w-4 h-4 mr-2" />
+                  )}
+                  {isPlaying ? "暫停" : "播放"}
                 </Button>
                 <Button
                   onClick={resetRecording}
@@ -589,7 +701,6 @@ export default function TestRecordingPanel() {
               </>
             )}
           </div>
-
         </CardContent>
       </Card>
 
@@ -609,8 +720,10 @@ export default function TestRecordingPanel() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">1. 錄音正常</span>
-                  {testResult.recordingStatus === 'success' ? (
-                    <Badge variant="default" className="bg-green-500">✓ 正常</Badge>
+                  {testResult.recordingStatus === "success" ? (
+                    <Badge variant="default" className="bg-green-500">
+                      ✓ 正常
+                    </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
                   )}
@@ -618,10 +731,12 @@ export default function TestRecordingPanel() {
 
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">2. 上傳正常</span>
-                  {testResult.uploadStatus === 'success' ? (
+                  {testResult.uploadStatus === "success" ? (
                     <Badge variant="default" className="bg-green-500">
-                      ✓ 正常 {testResult.uploadAttempts && testResult.uploadAttempts > 1 &&
-                        `(重試 ${testResult.uploadAttempts-1} 次)`}
+                      ✓ 正常{" "}
+                      {testResult.uploadAttempts &&
+                        testResult.uploadAttempts > 1 &&
+                        `(重試 ${testResult.uploadAttempts - 1} 次)`}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
@@ -630,10 +745,12 @@ export default function TestRecordingPanel() {
 
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">3. 分析正常</span>
-                  {testResult.analysisStatus === 'success' ? (
+                  {testResult.analysisStatus === "success" ? (
                     <Badge variant="default" className="bg-green-500">
-                      ✓ 正常 {testResult.analysisAttempts && testResult.analysisAttempts > 1 &&
-                        `(重試 ${testResult.analysisAttempts-1} 次)`}
+                      ✓ 正常{" "}
+                      {testResult.analysisAttempts &&
+                        testResult.analysisAttempts > 1 &&
+                        `(重試 ${testResult.analysisAttempts - 1} 次)`}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
@@ -642,8 +759,10 @@ export default function TestRecordingPanel() {
 
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="font-medium">4. 讀取 DB 結果正常</span>
-                  {testResult.dbReadStatus === 'success' ? (
-                    <Badge variant="default" className="bg-green-500">✓ 正常</Badge>
+                  {testResult.dbReadStatus === "success" ? (
+                    <Badge variant="default" className="bg-green-500">
+                      ✓ 正常
+                    </Badge>
                   ) : (
                     <Badge variant="destructive">✗ 失敗</Badge>
                   )}
@@ -657,7 +776,10 @@ export default function TestRecordingPanel() {
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold">AI 評分結果</h4>
                   {testResult.isMockData && (
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                    <Badge
+                      variant="secondary"
+                      className="bg-yellow-100 text-yellow-700"
+                    >
                       <AlertCircle className="w-3 h-3 mr-1" />
                       Mock 資料（無認證）
                     </Badge>
@@ -666,64 +788,77 @@ export default function TestRecordingPanel() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <p className="text-sm text-gray-500">總分</p>
-                    <p className={`text-2xl font-bold ${getScoreColor(testResult.scores.overall)}`}>
+                    <p
+                      className={`text-2xl font-bold ${getScoreColor(testResult.scores.overall)}`}
+                    >
                       {testResult.scores.overall}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500">準確度</p>
-                    <p className={`text-2xl font-bold ${getScoreColor(testResult.scores.accuracy)}`}>
+                    <p
+                      className={`text-2xl font-bold ${getScoreColor(testResult.scores.accuracy)}`}
+                    >
                       {testResult.scores.accuracy}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500">流暢度</p>
-                    <p className={`text-2xl font-bold ${getScoreColor(testResult.scores.fluency)}`}>
+                    <p
+                      className={`text-2xl font-bold ${getScoreColor(testResult.scores.fluency)}`}
+                    >
                       {testResult.scores.fluency}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500">發音</p>
-                    <p className={`text-2xl font-bold ${getScoreColor(testResult.scores.pronunciation)}`}>
+                    <p
+                      className={`text-2xl font-bold ${getScoreColor(testResult.scores.pronunciation)}`}
+                    >
                       {testResult.scores.pronunciation}
                     </p>
                   </div>
                 </div>
 
                 {/* Word Level Details */}
-                {testResult.wordDetails && testResult.wordDetails.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-blue-200">
-                    <h5 className="font-medium mb-2 text-sm">單字詳細評分</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {testResult.wordDetails.map((word, idx) => (
-                        <div
-                          key={idx}
-                          className={`px-3 py-1 rounded-lg border ${
-                            word.accuracy_score >= 80
-                              ? 'bg-green-50 border-green-300 text-green-700'
-                              : word.accuracy_score >= 60
-                              ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                              : 'bg-red-50 border-red-300 text-red-700'
-                          }`}
-                        >
-                          <span className="font-medium">{word.word}</span>
-                          <span className="ml-2 text-sm">{Math.round(word.accuracy_score)}%</span>
-                          {word.error_type && (
-                            <span className="ml-1 text-xs">({word.error_type})</span>
-                          )}
-                        </div>
-                      ))}
+                {testResult.wordDetails &&
+                  testResult.wordDetails.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <h5 className="font-medium mb-2 text-sm">單字詳細評分</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {testResult.wordDetails.map((word, idx) => (
+                          <div
+                            key={idx}
+                            className={`px-3 py-1 rounded-lg border ${
+                              word.accuracy_score >= 80
+                                ? "bg-green-50 border-green-300 text-green-700"
+                                : word.accuracy_score >= 60
+                                  ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                                  : "bg-red-50 border-red-300 text-red-700"
+                            }`}
+                          >
+                            <span className="font-medium">{word.word}</span>
+                            <span className="ml-2 text-sm">
+                              {Math.round(word.accuracy_score)}%
+                            </span>
+                            {word.error_type && (
+                              <span className="ml-1 text-xs">
+                                ({word.error_type})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Mock data warning */}
                 {testResult.isMockData && (
                   <Alert className="mt-4 border-yellow-200 bg-yellow-50">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="text-sm">
-                      <strong>注意：</strong>目前使用 Mock 資料，因為未登入或 Azure Speech API 未設定。
-                      真實 AI 評分需要：
+                      <strong>注意：</strong>目前使用 Mock 資料，因為未登入或
+                      Azure Speech API 未設定。 真實 AI 評分需要：
                       <ul className="mt-1 ml-4 list-disc">
                         <li>有效的登入 token</li>
                         <li>Azure Speech API 金鑰設定</li>

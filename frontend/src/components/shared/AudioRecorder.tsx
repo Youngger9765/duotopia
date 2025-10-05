@@ -1,16 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import AudioPlayer from './AudioPlayer';
-import {
-  Mic,
-  MicOff,
-  Square,
-  RotateCcw,
-  AlertCircle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import AudioPlayer from "./AudioPlayer";
+import { Mic, MicOff, Square, RotateCcw, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AudioRecorderProps {
   // Core props
@@ -30,11 +24,11 @@ interface AudioRecorderProps {
   onReRecord?: () => void;
 
   // Status display
-  status?: 'idle' | 'recording' | 'completed' | 'error';
+  status?: "idle" | "recording" | "completed" | "error";
   errorMessage?: string;
 
   // UI customization
-  variant?: 'default' | 'compact' | 'minimal';
+  variant?: "default" | "compact" | "minimal";
   className?: string;
   showProgress?: boolean;
   showTimer?: boolean;
@@ -52,9 +46,9 @@ export default function AudioRecorder({
   disabled = false,
   existingAudioUrl,
   onReRecord,
-  status: externalStatus = 'idle',
+  status: externalStatus = "idle",
   errorMessage,
-  variant = 'default',
+  variant = "default",
   className,
   showProgress = true,
   showTimer = true,
@@ -63,8 +57,12 @@ export default function AudioRecorder({
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [localAudioUrl, setLocalAudioUrl] = useState<string | null>(existingAudioUrl || null);
-  const [status, setStatus] = useState<'idle' | 'recording' | 'completed' | 'error'>(externalStatus);
+  const [localAudioUrl, setLocalAudioUrl] = useState<string | null>(
+    existingAudioUrl || null,
+  );
+  const [status, setStatus] = useState<
+    "idle" | "recording" | "completed" | "error"
+  >(externalStatus);
 
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -88,7 +86,7 @@ export default function AudioRecorder({
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
   // Start recording
@@ -114,16 +112,16 @@ export default function AudioRecorder({
 
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
 
         setLocalAudioUrl(audioUrl);
-        setStatus('completed');
+        setStatus("completed");
         setIsRecording(false);
 
         // Clean up stream
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
 
@@ -146,7 +144,7 @@ export default function AudioRecorder({
       // Start recording
       mediaRecorder.start();
       setIsRecording(true);
-      setStatus('recording');
+      setStatus("recording");
       setRecordingTime(0);
 
       // Start timer
@@ -165,11 +163,18 @@ export default function AudioRecorder({
         onRecordingStart();
       }
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      setStatus('error');
+      console.error("Failed to start recording:", error);
+      setStatus("error");
       setIsRecording(false);
     }
-  }, [readOnly, disabled, onRecordingComplete, onRecordingStart, onRecordingStop, autoStop]);
+  }, [
+    readOnly,
+    disabled,
+    onRecordingComplete,
+    onRecordingStart,
+    onRecordingStop,
+    autoStop,
+  ]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -184,7 +189,7 @@ export default function AudioRecorder({
 
     // Clear existing recording
     setLocalAudioUrl(null);
-    setStatus('idle');
+    setStatus("idle");
     setRecordingTime(0);
 
     if (onReRecord) {
@@ -195,7 +200,6 @@ export default function AudioRecorder({
     startRecording();
   }, [readOnly, disabled, onReRecord, startRecording]);
 
-
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -203,9 +207,9 @@ export default function AudioRecorder({
         clearInterval(timerRef.current);
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      if (localAudioUrl && localAudioUrl.startsWith('blob:')) {
+      if (localAudioUrl && localAudioUrl.startsWith("blob:")) {
         URL.revokeObjectURL(localAudioUrl);
       }
     };
@@ -213,7 +217,7 @@ export default function AudioRecorder({
 
   // Render based on variant
   const renderRecordingControls = () => {
-    if (variant === 'minimal') {
+    if (variant === "minimal") {
       return (
         <div className="flex items-center gap-3">
           {!isRecording && !localAudioUrl && (
@@ -229,11 +233,7 @@ export default function AudioRecorder({
 
           {isRecording && (
             <>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={stopRecording}
-              >
+              <Button size="sm" variant="destructive" onClick={stopRecording}>
                 <Square className="w-4 h-4" />
               </Button>
               {showTimer && (
@@ -255,7 +255,7 @@ export default function AudioRecorder({
       );
     }
 
-    if (variant === 'compact') {
+    if (variant === "compact") {
       return (
         <div className="space-y-3">
           {!isRecording && !localAudioUrl && (
@@ -265,7 +265,7 @@ export default function AudioRecorder({
               disabled={readOnly || disabled}
             >
               <Mic className="w-4 h-4 mr-2" />
-              {readOnly ? '檢視模式' : '開始錄音'}
+              {readOnly ? "檢視模式" : "開始錄音"}
             </Button>
           )}
 
@@ -323,11 +323,11 @@ export default function AudioRecorder({
               className="px-8"
             >
               <Mic className="w-5 h-5 mr-2" />
-              {readOnly ? '檢視模式' : '開始錄音'}
+              {readOnly ? "檢視模式" : "開始錄音"}
             </Button>
             {description && (
               <p className="text-sm text-gray-600">
-                {readOnly ? '檢視模式中無法錄音' : description}
+                {readOnly ? "檢視模式中無法錄音" : description}
               </p>
             )}
           </div>
@@ -339,13 +339,11 @@ export default function AudioRecorder({
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                <span className="text-lg font-medium">{formatTime(recordingTime)}</span>
+                <span className="text-lg font-medium">
+                  {formatTime(recordingTime)}
+                </span>
               </div>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={stopRecording}
-              >
+              <Button size="lg" variant="outline" onClick={stopRecording}>
                 <Square className="w-5 h-5 mr-2" />
                 停止錄音
               </Button>
@@ -356,12 +354,20 @@ export default function AudioRecorder({
               <div className="w-full">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>建議錄音時長</span>
-                  <span>{Math.min(100, Math.round((recordingTime / suggestedDuration) * 100))}%</span>
+                  <span>
+                    {Math.min(
+                      100,
+                      Math.round((recordingTime / suggestedDuration) * 100),
+                    )}
+                    %
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div
                     className="h-full bg-red-500 transition-all duration-1000"
-                    style={{ width: `${Math.min(100, (recordingTime / suggestedDuration) * 100)}%` }}
+                    style={{
+                      width: `${Math.min(100, (recordingTime / suggestedDuration) * 100)}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -372,10 +378,7 @@ export default function AudioRecorder({
         {/* Recording completed */}
         {localAudioUrl && !isRecording && (
           <div className="space-y-4">
-            <AudioPlayer
-              audioUrl={localAudioUrl}
-              title="已錄製音檔"
-            />
+            <AudioPlayer audioUrl={localAudioUrl} title="已錄製音檔" />
             {!readOnly && (
               <div className="flex justify-center">
                 <Button
@@ -392,10 +395,12 @@ export default function AudioRecorder({
         )}
 
         {/* Error state */}
-        {status === 'error' && (
+        {status === "error" && (
           <div className="flex items-center gap-2 text-red-600 justify-center">
             <AlertCircle className="w-5 h-5" />
-            <span className="text-sm">{errorMessage || '錄音失敗，請檢查麥克風權限'}</span>
+            <span className="text-sm">
+              {errorMessage || "錄音失敗，請檢查麥克風權限"}
+            </span>
           </div>
         )}
       </div>
@@ -403,7 +408,7 @@ export default function AudioRecorder({
   };
 
   return (
-    <Card className={cn('p-6', className)}>
+    <Card className={cn("p-6", className)}>
       {title && (
         <div className="mb-4">
           <h3 className="font-medium flex items-center gap-2">

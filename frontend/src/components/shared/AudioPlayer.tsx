@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Play, Pause, RotateCcw, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AudioPlayerProps {
   audioUrl?: string;
@@ -11,21 +11,21 @@ interface AudioPlayerProps {
   onEnded?: () => void;
   autoPlay?: boolean;
   showTitle?: boolean;
-  variant?: 'default' | 'compact';
+  variant?: "default" | "compact";
   readOnly?: boolean;
 }
 
 export default function AudioPlayer({
   audioUrl,
-  title = '已錄製音檔',
+  title = "已錄製音檔",
   className,
   onPlay,
   onPause,
   onEnded,
   autoPlay = false,
   showTitle = true,
-  variant = 'default',
-  readOnly = false
+  variant = "default",
+  readOnly = false,
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -37,14 +37,17 @@ export default function AudioPlayer({
   // Format time helper
   const formatTime = useCallback((seconds: number, showPlaceholder = false) => {
     // For duration display (showPlaceholder=true), show --:-- if not loaded yet
-    if (showPlaceholder && (seconds === 0 || isNaN(seconds) || !isFinite(seconds))) {
-      return '--:--';
+    if (
+      showPlaceholder &&
+      (seconds === 0 || isNaN(seconds) || !isFinite(seconds))
+    ) {
+      return "--:--";
     }
     // For current time, always show a valid time
-    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
   // Update progress
@@ -86,7 +89,12 @@ export default function AudioPlayer({
     audio.src = audioUrl;
 
     const updateDuration = () => {
-      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
+      if (
+        audio.duration &&
+        !isNaN(audio.duration) &&
+        isFinite(audio.duration) &&
+        audio.duration > 0
+      ) {
         setDuration(audio.duration);
         setIsLoaded(true);
       }
@@ -137,35 +145,40 @@ export default function AudioPlayer({
     };
 
     // Add all event listeners
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('loadeddata', handleLoadedData);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('canplaythrough', handleCanPlayThrough);
-    audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("loadeddata", handleLoadedData);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("canplaythrough", handleCanPlayThrough);
+    audio.addEventListener("durationchange", handleDurationChange);
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
 
     // Try to force load metadata
     audio.load();
 
     // Check if duration is already available (cached audio)
-    if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
+    if (
+      audio.duration &&
+      !isNaN(audio.duration) &&
+      isFinite(audio.duration) &&
+      audio.duration > 0
+    ) {
       setDuration(audio.duration);
       setIsLoaded(true);
     }
 
     return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('loadeddata', handleLoadedData);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('canplaythrough', handleCanPlayThrough);
-      audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("loadeddata", handleLoadedData);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("canplaythrough", handleCanPlayThrough);
+      audio.removeEventListener("durationchange", handleDurationChange);
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
     };
   }, [audioUrl, onEnded, onPlay, onPause]);
 
@@ -176,8 +189,8 @@ export default function AudioPlayer({
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(err => {
-        console.error('Failed to play audio:', err);
+      audioRef.current.play().catch((err) => {
+        console.error("Failed to play audio:", err);
       });
     }
   }, [isPlaying, audioUrl]);
@@ -195,23 +208,26 @@ export default function AudioPlayer({
   }, [isPlaying]);
 
   // Progress bar click handler
-  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !isLoaded) return;
+  const handleProgressClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!audioRef.current || !isLoaded) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * duration;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentage = clickX / rect.width;
+      const newTime = percentage * duration;
 
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  }, [duration, isLoaded]);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    },
+    [duration, isLoaded],
+  );
 
   // Auto play
   useEffect(() => {
     if (autoPlay && audioUrl && audioRef.current && isLoaded) {
-      audioRef.current.play().catch(err => {
-        console.error('Auto play failed:', err);
+      audioRef.current.play().catch((err) => {
+        console.error("Auto play failed:", err);
       });
     }
   }, [autoPlay, audioUrl, isLoaded]);
@@ -222,9 +238,14 @@ export default function AudioPlayer({
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
-      <div className={cn("bg-green-50 rounded-lg p-3 flex items-center gap-3", className)}>
+      <div
+        className={cn(
+          "bg-green-50 rounded-lg p-3 flex items-center gap-3",
+          className,
+        )}
+      >
         <audio ref={audioRef} preload="metadata" />
 
         <button
@@ -274,7 +295,12 @@ export default function AudioPlayer({
   }
 
   return (
-    <div className={cn("bg-green-50 rounded-2xl p-4 border-2 border-green-100", className)}>
+    <div
+      className={cn(
+        "bg-green-50 rounded-2xl p-4 border-2 border-green-100",
+        className,
+      )}
+    >
       <audio ref={audioRef} preload="metadata" />
 
       <div className="flex items-center gap-4">
@@ -295,7 +321,9 @@ export default function AudioPlayer({
           {showTitle && (
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <span className="text-sm font-medium text-gray-800 whitespace-nowrap">{title}</span>
+              <span className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                {title}
+              </span>
             </div>
           )}
 

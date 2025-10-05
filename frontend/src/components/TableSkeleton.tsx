@@ -7,7 +7,7 @@ interface TableSkeletonProps {
 export default function TableSkeleton({
   rows = 5,
   columns = 6,
-  showHeader = true
+  showHeader = true,
 }: TableSkeletonProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border animate-pulse">
@@ -26,15 +26,12 @@ export default function TableSkeleton({
           <div key={rowIndex} className="px-6 py-4">
             <div className="flex space-x-4">
               {Array.from({ length: columns }).map((_, colIndex) => (
-                <div
-                  key={colIndex}
-                  className="flex-1"
-                >
+                <div key={colIndex} className="flex-1">
                   <div
                     className="h-4 bg-gray-200 rounded"
                     style={{
                       width: `${Math.random() * 40 + 60}%`,
-                      animationDelay: `${(rowIndex * columns + colIndex) * 50}ms`
+                      animationDelay: `${(rowIndex * columns + colIndex) * 50}ms`,
                     }}
                   ></div>
                 </div>

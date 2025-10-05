@@ -1,51 +1,61 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, User, Lock, Zap, Home } from 'lucide-react';
-import { apiClient } from '../lib/api';
-import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, User, Lock, Zap, Home } from "lucide-react";
+import { apiClient } from "../lib/api";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
-    console.log('🔑 [DEBUG] 教師登入開始');
-    console.log('🔑 [DEBUG] 登入資料:', { email: formData.email, password: '***' });
+    console.log("🔑 [DEBUG] 教師登入開始");
+    console.log("🔑 [DEBUG] 登入資料:", {
+      email: formData.email,
+      password: "***",
+    });
 
     try {
       const result = await apiClient.teacherLogin(formData);
-      console.log('🔑 [DEBUG] 登入成功，結果:', result);
+      console.log("🔑 [DEBUG] 登入成功，結果:", result);
 
       useTeacherAuthStore.getState().login(result.access_token, {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
-        is_demo: result.user.is_demo
+        is_demo: result.user.is_demo,
       });
 
-      console.log('🔑 [DEBUG] localStorage 檢查:', {
-        teacher_auth_storage: localStorage.getItem('teacher-auth-storage'),
-        keys: Object.keys(localStorage)
+      console.log("🔑 [DEBUG] localStorage 檢查:", {
+        teacher_auth_storage: localStorage.getItem("teacher-auth-storage"),
+        keys: Object.keys(localStorage),
       });
 
-      navigate('/teacher/dashboard');
+      navigate("/teacher/dashboard");
     } catch (err) {
-      console.error('🔑 [ERROR] 登入失敗:', err);
-      setError(err instanceof Error ? err.message : '登入失敗，請檢查帳號密碼');
+      console.error("🔑 [ERROR] 登入失敗:", err);
+      setError(err instanceof Error ? err.message : "登入失敗，請檢查帳號密碼");
     } finally {
       setIsLoading(false);
     }
@@ -53,33 +63,33 @@ export default function TeacherLogin() {
 
   const handleQuickLogin = async (email: string) => {
     setIsLoading(true);
-    setError('');
+    setError("");
 
-    console.log('🔑 [DEBUG] 快速登入開始');
-    console.log('🔑 [DEBUG] 快速登入資料:', { email, password: 'demo123' });
+    console.log("🔑 [DEBUG] 快速登入開始");
+    console.log("🔑 [DEBUG] 快速登入資料:", { email, password: "demo123" });
 
     try {
       const result = await apiClient.teacherLogin({
         email,
-        password: 'demo123',
+        password: "demo123",
       });
-      console.log('🔑 [DEBUG] 快速登入成功，結果:', result);
+      console.log("🔑 [DEBUG] 快速登入成功，結果:", result);
 
       useTeacherAuthStore.getState().login(result.access_token, {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
-        is_demo: result.user.is_demo
+        is_demo: result.user.is_demo,
       });
 
-      console.log('🔑 [DEBUG] localStorage 檢查:', {
-        teacher_auth_storage: localStorage.getItem('teacher-auth-storage'),
-        keys: Object.keys(localStorage)
+      console.log("🔑 [DEBUG] localStorage 檢查:", {
+        teacher_auth_storage: localStorage.getItem("teacher-auth-storage"),
+        keys: Object.keys(localStorage),
       });
 
-      navigate('/teacher/dashboard');
+      navigate("/teacher/dashboard");
     } catch (err) {
-      console.error('🔑 [ERROR] 快速登入失敗:', err);
+      console.error("🔑 [ERROR] 快速登入失敗:", err);
       setError(`${email} 帳號登入失敗`);
     } finally {
       setIsLoading(false);
@@ -91,7 +101,10 @@ export default function TeacherLogin() {
       {/* Home link */}
       <div className="absolute top-4 left-4">
         <Link to="/">
-          <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 h-12 min-h-12">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 h-12 min-h-12"
+          >
             <Home className="h-4 w-4" />
             <span>返回首頁</span>
           </Button>
@@ -107,9 +120,7 @@ export default function TeacherLogin() {
         <Card>
           <CardHeader>
             <CardTitle>教師登入</CardTitle>
-            <CardDescription>
-              使用您的 Email 帳號登入教師後台
-            </CardDescription>
+            <CardDescription>使用您的 Email 帳號登入教師後台</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -123,7 +134,9 @@ export default function TeacherLogin() {
                     type="email"
                     placeholder="teacher@example.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -140,7 +153,9 @@ export default function TeacherLogin() {
                     type="password"
                     placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className="pl-10"
                     required
                     disabled={isLoading}
@@ -165,7 +180,7 @@ export default function TeacherLogin() {
                     登入中...
                   </>
                 ) : (
-                  '登入'
+                  "登入"
                 )}
               </Button>
 
@@ -185,7 +200,9 @@ export default function TeacherLogin() {
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">測試帳號快速登入</span>
+                <span className="px-2 bg-white text-gray-500">
+                  測試帳號快速登入
+                </span>
               </div>
             </div>
 
@@ -194,7 +211,7 @@ export default function TeacherLogin() {
                 type="button"
                 variant="outline"
                 className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin('demo@duotopia.com')}
+                onClick={() => handleQuickLogin("demo@duotopia.com")}
                 disabled={isLoading}
               >
                 <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
@@ -208,13 +225,17 @@ export default function TeacherLogin() {
                 type="button"
                 variant="outline"
                 className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin('trial@duotopia.com')}
+                onClick={() => handleQuickLogin("trial@duotopia.com")}
                 disabled={isLoading}
               >
                 <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
                 <div className="flex-1 text-left">
-                  <div className="font-medium text-xs sm:text-sm truncate">試用教師（30天試用期）</div>
-                  <div className="text-xs text-gray-500">trial@duotopia.com</div>
+                  <div className="font-medium text-xs sm:text-sm truncate">
+                    試用教師（30天試用期）
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    trial@duotopia.com
+                  </div>
                 </div>
               </Button>
 
@@ -222,13 +243,15 @@ export default function TeacherLogin() {
                 type="button"
                 variant="outline"
                 className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin('expired@duotopia.com')}
+                onClick={() => handleQuickLogin("expired@duotopia.com")}
                 disabled={isLoading}
               >
                 <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
                 <div className="flex-1 text-left">
                   <div className="font-medium">過期教師（未訂閱）</div>
-                  <div className="text-xs text-gray-500">expired@duotopia.com</div>
+                  <div className="text-xs text-gray-500">
+                    expired@duotopia.com
+                  </div>
                 </div>
               </Button>
             </div>
@@ -237,12 +260,18 @@ export default function TeacherLogin() {
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-gray-600">
               還沒有帳號？
-              <Link to="/teacher/register" className="text-blue-600 hover:underline ml-1">
+              <Link
+                to="/teacher/register"
+                className="text-blue-600 hover:underline ml-1"
+              >
                 立即註冊
               </Link>
             </div>
             <div className="text-sm text-center text-gray-600">
-              <Link to="/student/login" className="text-blue-600 hover:underline">
+              <Link
+                to="/student/login"
+                className="text-blue-600 hover:underline"
+              >
                 學生登入入口
               </Link>
             </div>
