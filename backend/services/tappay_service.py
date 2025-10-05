@@ -21,8 +21,6 @@ class TapPayService:
             "partner_PHgswvYEk4QY6oy3n8X3CwiQCVQmv91ZcFoD5VrkGFXo8N7BFiLUxzeG",
         )
         self.merchant_id = os.getenv("TAPPAY_MERCHANT_ID", "GlobalTesting_CTBC")
-        self.app_id = os.getenv("TAPPAY_APP_ID", "164155")
-        self.app_key = os.getenv("TAPPAY_APP_KEY")
 
         # 根據環境選擇 API URL
         self.environment = os.getenv("TAPPAY_ENV", "sandbox")
