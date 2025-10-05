@@ -484,20 +484,20 @@ class ApiClient {
     });
   }
 
-  async updateLesson(programId: number, lessonId: number, data: {
+  async updateLesson(lessonId: number, data: {
     name?: string;
     description?: string;
     order_index?: number;
     estimated_minutes?: number;
   }) {
-    return this.request(`/api/teachers/programs/${programId}/lessons/${lessonId}`, {
+    return this.request(`/api/teachers/lessons/${lessonId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteLesson(programId: number, lessonId: number) {
-    return this.request(`/api/teachers/programs/${programId}/lessons/${lessonId}`, {
+  async deleteLesson(lessonId: number) {
+    return this.request(`/api/teachers/lessons/${lessonId}`, {
       method: 'DELETE',
     });
   }

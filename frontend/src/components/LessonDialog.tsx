@@ -100,7 +100,7 @@ export function LessonDialog({
         toast.success(`單元「${formData.name}」已新增`);
         onSave(newLesson as Lesson);
       } else if (dialogType === 'edit' && lesson?.id && programId) {
-        await apiClient.updateLesson(programId, lesson.id, {
+        await apiClient.updateLesson(lesson.id, {
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,

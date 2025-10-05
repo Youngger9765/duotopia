@@ -29,7 +29,7 @@ export default function StudentDashboard() {
     completedAssignments: 0,
     averageScore: 0,
     totalPracticeTime: 0,
-    streak: 0
+    practiceDays: 0
   });
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
   const [showEmailSetup, setShowEmailSetup] = useState(false);
@@ -113,13 +113,36 @@ export default function StudentDashboard() {
   };
 
   const loadStats = async () => {
-    // Mock data - replace with API call
-    setStats({
-      completedAssignments: 12,
-      averageScore: 82,
-      totalPracticeTime: 240,
-      streak: 5
-    });
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/students/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setStats({
+        completedAssignments: data.completedAssignments || 0,
+        averageScore: data.averageScore || 0,
+        totalPracticeTime: data.totalPracticeTime || 0,
+        practiceDays: data.practiceDays || 0
+      });
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+      // Fallback to zero if API fails
+      setStats({
+        completedAssignments: 0,
+        averageScore: 0,
+        totalPracticeTime: 0,
+        practiceDays: 0
+      });
+    }
   };
 
   const loadEmailStatus = async () => {
@@ -380,8 +403,8 @@ export default function StudentDashboard() {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">連續天數</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stats.streak}天</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">練習天數</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.practiceDays}天</p>
                 </div>
                 <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
@@ -468,49 +491,6 @@ export default function StudentDashboard() {
                   )}
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Learning Progress */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
-              學習進度
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">本週完成度</span>
-                  <span className="text-sm font-semibold">75%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">口說準確度</span>
-                  <span className="text-sm font-semibold">82%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '82%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">流暢度</span>
-                  <span className="text-sm font-semibold">78%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: '78%' }}></div>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
