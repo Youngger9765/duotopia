@@ -3,10 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-import secrets
 import logging
 import uuid
-import os
 
 from database import get_db
 from models import Teacher, TeacherSubscriptionTransaction, TransactionType
@@ -109,45 +107,19 @@ async def process_payment(
             previous_end_date = None
             new_end_date = now + timedelta(days=30 * months)
 
-        # Process payment with TapPay
-        use_mock = os.getenv("USE_MOCK_PAYMENT", "false").lower() == "true"
-        logger.info(f"USE_MOCK_PAYMENT={use_mock}")
+        # Process payment with TapPay (Sandbox or Production based on env)
+        logger.info(f"Processing payment for order: {order_number}")
+        tappay_service = TapPayService()
 
-        if use_mock:
-            # Mock response for development
-            logger.info("Using mock payment processing")
-            gateway_response = {
-                "status": 0,
-                "msg": "Success",
-                "rec_trade_id": f"MOCK_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "bank_transaction_id": f"BNK{secrets.token_hex(6).upper()}",
-                "auth_code": secrets.token_hex(3).upper(),
-                "bank_result_code": "00",
-                "bank_result_msg": "Success",
-                "card_info": {
-                    "bin_code": "424242",
-                    "last_four": "4242",
-                    "card_type": 1,
-                    "funding": 0,
-                    "issuer": "Test Bank",
-                },
-                "transaction_time_millis": int(now.timestamp() * 1000),
-            }
-        else:
-            # Real TapPay API call
-            logger.info(f"Processing real payment for order: {order_number}")
-            tappay_service = TapPayService()
-
-            gateway_response = tappay_service.process_payment(
-                prime=payment_request.prime,
-                amount=payment_request.amount,
-                details=payment_request.details
-                or {"item_name": payment_request.plan_name},
-                cardholder=payment_request.cardholder
-                or {"name": current_teacher.name, "email": current_teacher.email},
-                order_number=order_number,
-                remember=False,  # 暫不儲存卡片
-            )
+        gateway_response = tappay_service.process_payment(
+            prime=payment_request.prime,
+            amount=payment_request.amount,
+            details=payment_request.details or {"item_name": payment_request.plan_name},
+            cardholder=payment_request.cardholder
+            or {"name": current_teacher.name, "email": current_teacher.email},
+            order_number=order_number,
+            remember=False,
+        )
 
         # Check if payment was successful
         if gateway_response.get("status") != 0:
