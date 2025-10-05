@@ -52,15 +52,23 @@ jobs:
         npm config set registry https://registry.npmmirror.com
         npm ci --prefer-offline --no-audit
 
+    - name: Run Prettier formatting check
+      working-directory: ./frontend
+      run: |
+        echo "Checking code formatting with Prettier..."
+        npx prettier --check src || (echo "❌ Prettier formatting check failed. Run 'npx prettier --write frontend/src' locally to fix." && exit 1)
+
     - name: Run frontend type check
       working-directory: ./frontend
       run: |
         echo "Running TypeScript type check..."
         npx tsc --noEmit || echo "TypeScript check completed with warnings"
 
-    - name: Run frontend lint
+    - name: Run ESLint check
       working-directory: ./frontend
-      run: npm run lint:ci
+      run: |
+        echo "Running ESLint..."
+        npm run lint:ci
 
     - name: Run API Testing Framework
       working-directory: ./frontend
