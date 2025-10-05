@@ -31,12 +31,9 @@ export interface RegisterRequest {
 
 class ApiClient {
   private baseUrl: string;
-  private token: string | null = null;
 
   constructor() {
     this.baseUrl = API_URL;
-    // Token will be loaded dynamically
-    this.token = null;
   }
 
   private getToken(): string | null {
@@ -149,12 +146,7 @@ class ApiClient {
 
   logout() {
     clearAllAuth();
-    this.token = null;
     localStorage.removeItem('selectedPlan');
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.token;
   }
 
   // ============ Generic HTTP Methods ============
@@ -605,11 +597,16 @@ class ApiClient {
       formData.append('item_index', itemIndex.toString());
     }
 
+    const currentToken = this.getToken();
+    const headers: HeadersInit = {};
+
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+
     const response = await fetch(`${this.baseUrl}/api/teachers/upload/audio`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-      },
+      headers,
       body: formData,
     });
 
