@@ -16,9 +16,16 @@ describe('apiClient.createContent', () => {
     vi.clearAllMocks()
     // Reset localStorage
     localStorage.clear()
-    localStorage.setItem('access_token', 'test-token')
-    // Set token on apiClient
-    ;(apiClient as any).token = 'test-token'
+
+    // Set up proper auth storage structure (matches what apiClient.getToken() expects)
+    localStorage.setItem('teacher-auth-storage', JSON.stringify({
+      state: {
+        token: 'test-token',
+        user: { id: 1, name: 'Test Teacher', email: 'test@example.com' },
+        isAuthenticated: true
+      },
+      version: 0
+    }))
   })
 
   it('should create content with correct API call', async () => {
@@ -41,21 +48,20 @@ describe('apiClient.createContent', () => {
     })
 
     // Verify fetch was called correctly
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/teachers/lessons/1/contents'),
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-token'
-        }),
-        body: JSON.stringify({
-          type: 'reading_assessment',
-          title: '朗讀錄音練習',
-          items: []
-        })
+    const fetchCall = (global.fetch as any).mock.calls[0]
+    expect(fetchCall[0]).toContain('/api/teachers/lessons/1/contents')
+    expect(fetchCall[1]).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-token'
+      }),
+      body: JSON.stringify({
+        type: 'reading_assessment',
+        title: '朗讀錄音練習',
+        items: []
       })
-    )
+    })
 
     expect(result).toEqual(mockResponse)
   })

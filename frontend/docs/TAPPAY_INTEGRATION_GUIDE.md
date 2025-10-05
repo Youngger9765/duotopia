@@ -33,8 +33,8 @@ TapPay 是台灣的第三方金流服務商，提供信用卡、LINE Pay、Apple
 
 在 `index.html` 加入：
 ```html
-<script src="https://js.tappaysdk.com/sdk/tpdirect/v5.17.0" 
-        type="text/javascript" 
+<script src="https://js.tappaysdk.com/sdk/tpdirect/v5.17.0"
+        type="text/javascript"
         crossorigin="anonymous">
 </script>
 ```
@@ -184,7 +184,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       // 監聽表單狀態
       window.TPDirect.card.onUpdate((update) => {
         setCanSubmit(update.canGetPrime);
-        
+
         // 顯示錯誤訊息
         if (update.status.number === 2) {
           document.getElementById('card-number')?.classList.add('has-error');
@@ -258,20 +258,20 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           <label className="block text-sm font-medium mb-2">卡號</label>
           <div id="card-number" className="tappay-field"></div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">有效期限</label>
             <div id="card-expiration-date" className="tappay-field"></div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">安全碼</label>
             <div id="card-ccv" className="tappay-field"></div>
           </div>
         </div>
 
-        <Button 
+        <Button
           onClick={handleSubmit}
           disabled={!canSubmit || isProcessing}
           className="w-full"
@@ -325,17 +325,17 @@ class TapPayService:
         self.partner_key = os.getenv('TAPPAY_PARTNER_KEY')
         self.merchant_id = os.getenv('TAPPAY_MERCHANT_ID')
         self.is_sandbox = os.getenv('TAPPAY_SERVER_TYPE', 'sandbox') == 'sandbox'
-        
+
         self.base_url = (
-            'https://sandbox.tappaysdk.com' if self.is_sandbox 
+            'https://sandbox.tappaysdk.com' if self.is_sandbox
             else 'https://prod.tappaysdk.com'
         )
-        
+
     async def process_payment(self, payment_data: PaymentRequest) -> Dict[str, Any]:
         """處理付款"""
-        
+
         endpoint = f"{self.base_url}/tpc/payment/pay-by-prime"
-        
+
         payload = {
             "partner_key": self.partner_key,
             "merchant_id": self.merchant_id,
@@ -357,7 +357,7 @@ class TapPayService:
             },
             "three_domain_secure": False  # 設為 True 啟用 3D 驗證
         }
-        
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -365,9 +365,9 @@ class TapPayService:
                     json=payload,
                     headers={"Content-Type": "application/json"}
                 )
-                
+
                 result = response.json()
-                
+
                 if result.get("status") == 0:
                     # 付款成功
                     return {
@@ -385,7 +385,7 @@ class TapPayService:
                         "message": result.get("msg", "付款失敗"),
                         "status": result.get("status")
                     }
-                    
+
         except httpx.TimeoutException:
             logger.error("Payment timeout")
             return {
@@ -398,24 +398,24 @@ class TapPayService:
                 "success": False,
                 "message": "付款處理發生錯誤"
             }
-    
+
     async def refund_payment(
-        self, 
-        rec_trade_id: str, 
+        self,
+        rec_trade_id: str,
         amount: Optional[int] = None
     ) -> Dict[str, Any]:
         """退款"""
-        
+
         endpoint = f"{self.base_url}/tpc/transaction/refund"
-        
+
         payload = {
             "partner_key": self.partner_key,
             "rec_trade_id": rec_trade_id
         }
-        
+
         if amount:
             payload["amount"] = amount  # 部分退款
-            
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -423,34 +423,34 @@ class TapPayService:
                     json=payload,
                     headers={"Content-Type": "application/json"}
                 )
-                
+
                 result = response.json()
-                
+
                 return {
                     "success": result.get("status") == 0,
                     "refund_id": result.get("refund_id"),
                     "message": result.get("msg")
                 }
-                
+
         except Exception as e:
             logger.error(f"Refund error: {str(e)}")
             return {
                 "success": False,
                 "message": "退款處理發生錯誤"
             }
-    
+
     async def query_payment(self, rec_trade_id: str) -> Dict[str, Any]:
         """查詢付款狀態"""
-        
+
         endpoint = f"{self.base_url}/tpc/transaction/query"
-        
+
         payload = {
             "partner_key": self.partner_key,
             "filters": {
                 "rec_trade_id": rec_trade_id
             }
         }
-        
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -458,9 +458,9 @@ class TapPayService:
                     json=payload,
                     headers={"Content-Type": "application/json"}
                 )
-                
+
                 result = response.json()
-                
+
                 if result.get("status") == 0:
                     trades = result.get("trade_records", [])
                     if trades:
@@ -468,19 +468,19 @@ class TapPayService:
                             "success": True,
                             "trade_record": trades[0]
                         }
-                
+
                 return {
                     "success": False,
                     "message": "找不到交易記錄"
                 }
-                
+
         except Exception as e:
             logger.error(f"Query error: {str(e)}")
             return {
                 "success": False,
                 "message": "查詢發生錯誤"
             }
-    
+
     def _generate_order_number(self) -> str:
         """產生訂單編號"""
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -510,15 +510,15 @@ async def process_payment(
     db: Session = Depends(get_db)
 ):
     """處理付款"""
-    
+
     # 加入用戶資訊
     payment_data.cardholder_email = current_user.email
     payment_data.cardholder_name = current_user.name
-    
+
     # 使用 TapPay Service 處理付款
     tappay_service = TapPayService()
     result = await tappay_service.process_payment(payment_data)
-    
+
     if result["success"]:
         # 儲存付款記錄到資料庫
         payment = Payment(
@@ -529,20 +529,20 @@ async def process_payment(
             status="SUCCESS",
             payment_method="CREDIT_CARD"
         )
-        
+
         # 如果有記住卡片，儲存 token
         if result.get("card_secret"):
             payment.card_token = result["card_secret"]["card_token"]
             payment.card_key = result["card_secret"]["card_key"]
-            
+
         db.add(payment)
         db.commit()
-        
+
         # 更新用戶訂閱狀態
         current_user.subscription_status = "active"
         current_user.subscription_end_date = datetime.now() + timedelta(days=30)
         db.commit()
-        
+
         return {
             "success": True,
             "transaction_id": result["transaction_id"],
@@ -559,7 +559,7 @@ async def process_payment(
         )
         db.add(payment)
         db.commit()
-        
+
         raise HTTPException(
             status_code=400,
             detail=result.get("message", "付款失敗")
@@ -571,27 +571,27 @@ async def payment_notify(
     db: Session = Depends(get_db)
 ):
     """接收 TapPay Backend Notify"""
-    
+
     logger.info(f"Received payment notification: {notification}")
-    
+
     # 驗證並更新付款狀態
     rec_trade_id = notification.get("rec_trade_id")
     status = notification.get("status")
-    
+
     if rec_trade_id:
         payment = db.query(Payment).filter_by(
             transaction_id=rec_trade_id
         ).first()
-        
+
         if payment:
             if status == 0:
                 payment.status = "SUCCESS"
             else:
                 payment.status = "FAILED"
                 payment.error_message = notification.get("msg")
-            
+
             db.commit()
-    
+
     # 必須返回 200 OK，否則 TapPay 會重試
     return {"status": "ok"}
 
@@ -602,19 +602,19 @@ async def check_payment_status(
     db: Session = Depends(get_db)
 ):
     """查詢付款狀態"""
-    
+
     payment = db.query(Payment).filter_by(
         transaction_id=transaction_id,
         user_id=current_user.id
     ).first()
-    
+
     if not payment:
         raise HTTPException(status_code=404, detail="找不到付款記錄")
-    
+
     # 從 TapPay 查詢最新狀態
     tappay_service = TapPayService()
     result = await tappay_service.query_payment(transaction_id)
-    
+
     if result["success"]:
         trade_record = result["trade_record"]
         return {
@@ -639,25 +639,25 @@ async def refund_payment(
     db: Session = Depends(get_db)
 ):
     """申請退款"""
-    
+
     # 檢查權限（只有管理員可以退款）
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="無權限執行此操作")
-    
+
     payment = db.query(Payment).filter_by(
         transaction_id=transaction_id
     ).first()
-    
+
     if not payment:
         raise HTTPException(status_code=404, detail="找不到付款記錄")
-    
+
     if payment.status != "SUCCESS":
         raise HTTPException(status_code=400, detail="只能退款成功的交易")
-    
+
     # 執行退款
     tappay_service = TapPayService()
     result = await tappay_service.refund_payment(transaction_id, amount)
-    
+
     if result["success"]:
         # 更新付款記錄
         if amount and amount < payment.amount:
@@ -666,10 +666,10 @@ async def refund_payment(
         else:
             payment.status = "REFUNDED"
             payment.refunded_amount = payment.amount
-        
+
         payment.refund_id = result["refund_id"]
         db.commit()
-        
+
         return {
             "success": True,
             "refund_id": result["refund_id"],
@@ -763,7 +763,7 @@ async def test_process_payment_success():
             "success": True,
             "transaction_id": "TEST_TRANS_001"
         }
-        
+
         # 測試 API
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
@@ -775,7 +775,7 @@ async def test_process_payment_success():
                 },
                 headers={"Authorization": "Bearer test_token"}
             )
-            
+
         assert response.status_code == 200
         assert response.json()["success"] is True
 ```
@@ -792,7 +792,7 @@ async def test_process_payment_success():
 **A**: Prime Token 只有 90 秒有效期，必須在用戶提交表單時即時取得。
 
 ### Q2: Backend Notify 沒收到
-**A**: 
+**A**:
 - 確認 URL 可以從外部訪問
 - 確認返回 HTTP 200
 - 檢查防火牆設定

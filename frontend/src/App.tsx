@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import Home from './pages/Home'
 import TeacherLogin from './pages/TeacherLogin'
 import TeacherRegister from './pages/TeacherRegister'
@@ -56,16 +57,16 @@ function App() {
       <Route path="/teacher/dashboard-old" element={<TeacherDashboardWithSidebar />} />
 
       {/* New Teacher Routes with separate pages */}
-      <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-      <Route path="/teacher/classrooms" element={<TeacherClassrooms />} />
-      <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
-      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId" element={<TeacherAssignmentDetailPage />} />
-      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId/grading" element={<GradingPage />} />
+      <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+      <Route path="/teacher/classrooms" element={<ProtectedRoute><TeacherClassrooms /></ProtectedRoute>} />
+      <Route path="/teacher/classroom/:id" element={<ProtectedRoute><ClassroomDetail /></ProtectedRoute>} />
+      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId" element={<ProtectedRoute><TeacherAssignmentDetailPage /></ProtectedRoute>} />
+      <Route path="/teacher/classroom/:classroomId/assignment/:assignmentId/grading" element={<ProtectedRoute><GradingPage /></ProtectedRoute>} />
 
-      <Route path="/teacher/students" element={<TeacherStudents />} />
-      <Route path="/teacher/programs" element={<TeacherTemplatePrograms />} />
-      <Route path="/teacher/template-programs/:id" element={<ClassroomDetail isTemplateMode={true} />} />
-      <Route path="/teacher/subscription" element={<TeacherSubscription />} />
+      <Route path="/teacher/students" element={<ProtectedRoute><TeacherStudents /></ProtectedRoute>} />
+      <Route path="/teacher/programs" element={<ProtectedRoute><TeacherTemplatePrograms /></ProtectedRoute>} />
+      <Route path="/teacher/template-programs/:id" element={<ProtectedRoute><ClassroomDetail isTemplateMode={true} /></ProtectedRoute>} />
+      <Route path="/teacher/subscription" element={<ProtectedRoute><TeacherSubscription /></ProtectedRoute>} />
 
       {/* Student Routes */}
       <Route path="/student/login" element={<StudentLogin />} />

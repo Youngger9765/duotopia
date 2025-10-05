@@ -22,7 +22,8 @@
     "hooks:install": "chmod +x scripts/install-hooks.sh && ./scripts/install-hooks.sh",
     "cleanup:images": "gh workflow run cleanup-resources.yml --ref $(git branch --show-current) -f keep_images=2 -f keep_revisions=1",
     "deploy:status": "gh run list --workflow=deploy-staging-supabase.yml --limit=5",
-    "deploy:watch": "gh run watch $(gh run list --workflow=deploy-staging-supabase.yml --status=in_progress --limit=1 --json databaseId -q '.[0].databaseId')"
+    "deploy:watch": "gh run watch $(gh run list --workflow=deploy-staging-supabase.yml --status=in_progress --limit=1 --json databaseId -q '.[0].databaseId')",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

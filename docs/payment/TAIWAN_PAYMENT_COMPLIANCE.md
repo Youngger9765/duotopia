@@ -6,32 +6,32 @@
 
 ```sql
 -- 需要新增到 teacher_subscription_transactions 的欄位
-ALTER TABLE teacher_subscription_transactions ADD COLUMN 
+ALTER TABLE teacher_subscription_transactions ADD COLUMN
     -- 發票基本資訊
     invoice_type VARCHAR(3) DEFAULT 'B2C',  -- B2B/B2C
     invoice_number VARCHAR(10),              -- 發票號碼 (如: AB12345678)
     invoice_date DATE,                       -- 開立日期
     invoice_status VARCHAR(20) DEFAULT 'PENDING',  -- ISSUED/CANCELLED/ALLOWANCE
-    
+
     -- 買受人資訊
     buyer_tax_id VARCHAR(8),                 -- 統一編號 (8位數)
     buyer_name VARCHAR(100),                 -- 買受人名稱
     buyer_address VARCHAR(255),              -- 買受人地址
     buyer_email VARCHAR(255),                -- 買受人 email (電子發票用)
-    
+
     -- 載具資訊
     carrier_type VARCHAR(10),                -- 載具類型 (3J0002=手機條碼)
     carrier_id VARCHAR(64),                  -- 載具號碼
     donate_mark CHAR(1) DEFAULT '0',         -- 是否捐贈 (0/1)
     love_code VARCHAR(10),                   -- 愛心碼
-    
+
     -- 發票明細
     invoice_items JSON,                      -- 商品明細 JSON
     tax_type VARCHAR(10) DEFAULT 'TAXED',    -- 課稅別 (TAXED/ZERO/FREE)
     tax_rate DECIMAL(5,2) DEFAULT 5.00,      -- 稅率 (5%)
     tax_amount DECIMAL(10,2),                -- 稅額
     total_amount DECIMAL(10,2),              -- 總金額（含稅）
-    
+
     -- 電子發票平台
     einvoice_upload_status VARCHAR(20),      -- 上傳狀態
     einvoice_upload_time TIMESTAMP,          -- 上傳時間
@@ -48,21 +48,21 @@ def validate_taiwan_tax_id(tax_id: str) -> bool:
     """
     if not tax_id or len(tax_id) != 8:
         return False
-    
+
     if not tax_id.isdigit():
         return False
-    
+
     # 統一編號檢核邏輯
     weights = [1, 2, 1, 2, 1, 2, 4, 1]
     check_nums = []
-    
+
     for i, digit in enumerate(tax_id):
         product = int(digit) * weights[i]
         # 兩位數要分開加總
         check_nums.append(product // 10 + product % 10)
-    
+
     total = sum(check_nums)
-    
+
     # 可被10整除 或 第7位是7且總和+1可被10整除
     return total % 10 == 0 or (tax_id[6] == '7' and (total + 1) % 10 == 0)
 ```
@@ -75,11 +75,11 @@ class PaymentWithInvoiceFlow:
     """
     台灣法規要求：收到款項後48小時內開立發票
     """
-    
+
     def process_payment(self, payment_data):
         # 1. TapPay 處理付款
         tappay_result = self.process_tappay(payment_data)
-        
+
         # 2. 付款成功後立即開立發票
         if tappay_result.success:
             invoice_data = {
@@ -90,13 +90,13 @@ class PaymentWithInvoiceFlow:
                 'amount': payment_data['amount'],
                 'tax_amount': payment_data['amount'] * 0.05 / 1.05,  # 內含稅額
             }
-            
+
             # 3. 呼叫電子發票 API（綠界/藍新等）
             invoice_result = self.issue_einvoice(invoice_data)
-            
+
             # 4. 上傳到財政部（2025年起必須即時）
             self.upload_to_einvoice_platform(invoice_result)
-        
+
         return tappay_result, invoice_result
 ```
 

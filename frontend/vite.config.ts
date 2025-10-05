@@ -24,6 +24,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      'tests/e2e/**',  // Exclude Playwright E2E tests
+      '**/*.spec.ts'   // Exclude Playwright test files
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -31,7 +37,8 @@ export default defineConfig({
         'node_modules/',
         'src/test/',
         '**/*.d.ts',
-        'dist/'
+        'dist/',
+        'tests/e2e/'
       ],
       thresholds: {
         global: {

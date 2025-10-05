@@ -3,12 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn, TestTube, RotateCcw } from 'lucide-react';
+import { Check, Users, Star, CreditCard, Shield, User, LogOut, LogIn } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TapPayPayment from '@/components/payment/TapPayPayment';
 import TeacherLoginModal from '@/components/TeacherLoginModal';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api';
+import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
+import { useStudentAuthStore } from '@/stores/studentAuthStore';
 
 interface PricingPlan {
   id: string;
@@ -61,27 +62,11 @@ export default function PricingPage() {
   ];
 
   const handleSelectPlan = (plan: PricingPlan) => {
+    const teacherAuth = useTeacherAuthStore.getState();
+    const studentAuth = useStudentAuthStore.getState();
 
-    // Check teacher auth storage (Zustand store persisted in localStorage)
-    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
-    let isTeacherLoggedIn = false;
-
-    if (teacherAuthStr) {
-      try {
-        const teacherAuth = JSON.parse(teacherAuthStr);
-        isTeacherLoggedIn = teacherAuth?.state?.isAuthenticated === true;
-      } catch (e) {
-        console.error('[DEBUG] Error parsing teacher-auth-storage:', e);
-      }
-    }
-
-    // Also check legacy token storage
-    const legacyToken = localStorage.getItem('token');
-    const userRole = localStorage.getItem('role');
-
-
-    // User is not logged in if neither auth method exists
-    if (!isTeacherLoggedIn && !legacyToken) {
+    // User is not logged in
+    if (!teacherAuth.isAuthenticated) {
       // Store the plan and open login modal
       setPendingPlan(plan);
       setShowLoginModal(true);
@@ -90,19 +75,7 @@ export default function PricingPage() {
     }
 
     // Check if a student is logged in instead
-    const studentAuthStr = localStorage.getItem('student-auth-storage');
-    let isStudentLoggedIn = false;
-
-    if (studentAuthStr) {
-      try {
-        const studentAuth = JSON.parse(studentAuthStr);
-        isStudentLoggedIn = studentAuth?.state?.isAuthenticated === true;
-      } catch (e) {
-        console.error('[DEBUG] Error parsing student-auth-storage:', e);
-      }
-    }
-
-    if (isStudentLoggedIn || userRole === 'student') {
+    if (studentAuth.isAuthenticated) {
       toast.error('學生帳號無法訂閱教師方案，請使用教師帳號');
       return;
     }
@@ -138,78 +111,39 @@ export default function PricingPage() {
   }, []);
 
   const checkUserStatus = () => {
-    // Check teacher auth storage
-    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
-    let teacherInfo = null;
+    // Use stores instead of localStorage
+    const teacherAuth = useTeacherAuthStore.getState();
+    const studentAuth = useStudentAuthStore.getState();
 
-    if (teacherAuthStr) {
-      try {
-        const teacherAuth = JSON.parse(teacherAuthStr);
-        if (teacherAuth?.state?.isAuthenticated) {
-          teacherInfo = {
-            isLoggedIn: true,
-            name: teacherAuth.state.user?.name || teacherAuth.state.user?.email?.split('@')[0] || '教師',
-            email: teacherAuth.state.user?.email,
-            role: 'teacher'
-          };
-        }
-      } catch (e) {
-        console.error('[DEBUG] Error parsing teacher-auth-storage in checkUserStatus:', e);
-      }
-    }
-
-    // Check student auth storage
-    const studentAuthStr = localStorage.getItem('student-auth-storage');
-    let studentInfo = null;
-
-    if (studentAuthStr) {
-      try {
-        const studentAuth = JSON.parse(studentAuthStr);
-        if (studentAuth?.state?.isAuthenticated) {
-          studentInfo = {
-            isLoggedIn: true,
-            name: studentAuth.state.student?.name || `學生 ${studentAuth.state.student?.id}`,
-            email: studentAuth.state.student?.email,
-            role: 'student'
-          };
-        }
-      } catch (e) {
-        console.error('[DEBUG] Error parsing student-auth-storage in checkUserStatus:', e);
-      }
-    }
-
-    // Check legacy token
-    const legacyToken = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-    const role = localStorage.getItem('role');
-
-    if (legacyToken && !teacherInfo && !studentInfo) {
+    if (teacherAuth.isAuthenticated && teacherAuth.user) {
       setUserInfo({
         isLoggedIn: true,
-        name: username || '用戶',
-        role: role || 'teacher'
+        name: teacherAuth.user.name || teacherAuth.user.email?.split('@')[0] || '教師',
+        email: teacherAuth.user.email,
+        role: 'teacher'
+      });
+    } else if (studentAuth.isAuthenticated && studentAuth.user) {
+      setUserInfo({
+        isLoggedIn: true,
+        name: studentAuth.user.name || `學生 ${studentAuth.user.id}`,
+        email: studentAuth.user.email,
+        role: 'student'
       });
     } else {
-      setUserInfo(teacherInfo || studentInfo || { isLoggedIn: false });
+      setUserInfo({ isLoggedIn: false });
     }
   };
 
   const checkSubscriptionStatus = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const teacherAuthStr = localStorage.getItem('teacher-auth-storage');
-    if (!teacherAuthStr) return;
+    const teacherAuth = useTeacherAuthStore.getState();
+    if (!teacherAuth.isAuthenticated || !teacherAuth.token) return;
 
     try {
-      const teacherAuth = JSON.parse(teacherAuthStr);
-      if (!teacherAuth?.state?.isAuthenticated) return;
-
       // Check if user has active subscription
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/subscription/status`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${teacherAuth.token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -246,34 +180,6 @@ export default function PricingPage() {
     toast.success('已成功登出');
   };
 
-  const handleDemoLogin = async (email: string, password: string, accountType: string) => {
-    try {
-      await apiClient.teacherLogin({ email, password });
-
-      // Update user status
-      checkUserStatus();
-
-      toast.success(`使用 ${accountType} 帳號登入成功！`);
-
-      // Check subscription status after login
-      setTimeout(() => {
-        checkSubscriptionStatus();
-      }, 500);
-    } catch (error) {
-      toast.error('登入失敗，請檢查帳號密碼');
-      console.error('Demo login error:', error);
-    }
-  };
-
-  const handleResetTestAccounts = async () => {
-    try {
-      await apiClient.post('/subscription/reset-test-accounts');
-      toast.success('測試帳號已重置！Demo: 已訂閱, Expired: 已過期');
-    } catch (error) {
-      toast.error('重置失敗');
-      console.error('Reset error:', error);
-    }
-  };
 
   // Check if user came back from login with a selected plan
   useEffect(() => {
@@ -364,35 +270,6 @@ export default function PricingPage() {
                   教師登入
                 </Button>
 
-                {/* 測試帳號區 */}
-                <div className="flex items-center gap-2 ml-2 pl-2 border-l">
-                  <TestTube className="w-4 h-4 text-gray-400" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDemoLogin('demo@duotopia.com', 'demo123', 'Demo')}
-                    className="text-xs"
-                  >
-                    Demo (有訂閱)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDemoLogin('expired@duotopia.com', 'demo123', 'Expired')}
-                    className="text-xs"
-                  >
-                    Expired (已過期)
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetTestAccounts}
-                    className="text-xs"
-                    title="重置測試帳號為預設狀態"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                  </Button>
-                </div>
               </>
             )}
           </div>

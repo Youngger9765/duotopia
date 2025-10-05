@@ -23,11 +23,11 @@
 #### 實作範例：
 ```sql
 -- 加入唯一約束防止重複
-ALTER TABLE teacher_subscription_transactions 
+ALTER TABLE teacher_subscription_transactions
 ADD COLUMN idempotency_key VARCHAR(255);
 
-CREATE UNIQUE INDEX idx_idempotency_key 
-ON teacher_subscription_transactions(idempotency_key) 
+CREATE UNIQUE INDEX idx_idempotency_key
+ON teacher_subscription_transactions(idempotency_key)
 WHERE idempotency_key IS NOT NULL;
 ```
 
