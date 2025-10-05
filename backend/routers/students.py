@@ -792,6 +792,89 @@ async def get_current_student_info(
     }
 
 
+@router.get("/stats")
+async def get_student_stats(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get current student statistics for dashboard"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = current_user.get("sub")
+
+    # Calculate completed assignments (GRADED status)
+    completed_count = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.status == AssignmentStatus.GRADED,
+        )
+        .count()
+    )
+
+    # Calculate average score from graded assignments
+    graded_assignments = (
+        db.query(StudentAssignment.score)
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.status == AssignmentStatus.GRADED,
+            StudentAssignment.score.isnot(None),
+        )
+        .all()
+    )
+
+    average_score = 0
+    if graded_assignments:
+        total_scores = [
+            score[0] for score in graded_assignments if score[0] is not None
+        ]
+        if total_scores:
+            average_score = round(sum(total_scores) / len(total_scores))
+
+    # Calculate total practice time (sum of all submitted assignments' durations)
+    # For now, estimate based on number of submissions (10 min per assignment)
+    submitted_count = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.status.in_(
+                [
+                    AssignmentStatus.SUBMITTED,
+                    AssignmentStatus.GRADED,
+                    AssignmentStatus.RESUBMITTED,
+                ]
+            ),
+        )
+        .count()
+    )
+    total_practice_time = submitted_count * 10  # 10 minutes per assignment
+
+    # Calculate practice days (累積練習天數 - 有幾天有練習過)
+    # Count distinct dates where student submitted assignments
+    from sqlalchemy import func, cast, Date
+
+    practice_days_result = (
+        db.query(func.count(func.distinct(cast(StudentAssignment.submitted_at, Date))))
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.submitted_at.isnot(None),
+        )
+        .scalar()
+    )
+    practice_days = practice_days_result or 0
+
+    return {
+        "completedAssignments": completed_count,
+        "averageScore": average_score,
+        "totalPracticeTime": total_practice_time,
+        "practiceDays": practice_days,  # 累積練習天數
+    }
+
+
 @router.post("/{student_id}/email/request-verification")
 async def request_email_verification(
     student_id: int,
