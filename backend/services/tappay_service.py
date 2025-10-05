@@ -6,6 +6,8 @@ TapPay Payment Service
 import os
 import requests
 import logging
+import hmac
+import hashlib
 from typing import Dict
 from datetime import datetime
 
@@ -233,21 +235,50 @@ class TapPayService:
             logger.error(f"Capture error: {str(e)}")
             return {"status": -1, "msg": str(e)}
 
-    @staticmethod
-    def validate_webhook(request_body: bytes, signature: str) -> bool:
+    def validate_webhook(self, request_body: bytes, signature: str) -> bool:
         """
         驗證 TapPay Webhook 簽名
 
         Args:
-            request_body: 原始請求內容
+            request_body: 原始請求內容（bytes）
             signature: X-Tappay-Signature header
 
         Returns:
             是否為合法請求
         """
-        # TODO: 實作 webhook 簽名驗證
-        # 需要使用 HMAC-SHA256 驗證
-        return True
+        if not signature:
+            logger.warning("Missing webhook signature")
+            return False
+
+        if not self.partner_key:
+            logger.error("TAPPAY_PARTNER_KEY not configured")
+            return False
+
+        try:
+            # 🔐 使用 HMAC-SHA256 計算預期簽名
+            # TapPay webhook 簽名算法：HMAC-SHA256(partner_key, request_body)
+            expected_signature = hmac.new(
+                key=self.partner_key.encode("utf-8"),
+                msg=request_body
+                if isinstance(request_body, bytes)
+                else request_body.encode("utf-8"),
+                digestmod=hashlib.sha256,
+            ).hexdigest()
+
+            # 🔐 使用 constant-time 比較防止 timing attack
+            is_valid = hmac.compare_digest(expected_signature, signature)
+
+            if not is_valid:
+                logger.warning(
+                    f"Invalid webhook signature. Expected: {expected_signature[:8]}..., "
+                    f"Got: {signature[:8]}..."
+                )
+
+            return is_valid
+
+        except Exception as e:
+            logger.error(f"Webhook signature validation error: {str(e)}")
+            return False
 
     @staticmethod
     def parse_error_code(status: int, msg: str) -> str:
