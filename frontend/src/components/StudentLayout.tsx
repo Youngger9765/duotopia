@@ -31,32 +31,38 @@ export default function StudentLayout() {
     {
       path: '/student/dashboard',
       label: '首頁',
-      icon: Home
+      icon: Home,
+      disabled: false
     },
     {
       path: '/student/assignments',
       label: '我的作業',
-      icon: BookOpen
+      icon: BookOpen,
+      disabled: false
     },
     {
       path: '/student/progress',
       label: '學習進度',
-      icon: BarChart3
+      icon: BarChart3,
+      disabled: true
     },
     {
       path: '/student/achievements',
       label: '成就',
-      icon: Trophy
+      icon: Trophy,
+      disabled: true
     },
     {
       path: '/student/calendar',
       label: '行事曆',
-      icon: Calendar
+      icon: Calendar,
+      disabled: true
     },
     {
       path: '/student/messages',
       label: '訊息',
-      icon: MessageSquare
+      icon: MessageSquare,
+      disabled: true
     }
   ];
 
@@ -64,12 +70,14 @@ export default function StudentLayout() {
     {
       path: '/student/profile',
       label: '個人資料',
-      icon: User
+      icon: User,
+      disabled: false
     },
     {
       path: '/student/settings',
       label: '設定',
-      icon: Settings
+      icon: Settings,
+      disabled: true
     }
   ];
 
@@ -128,6 +136,24 @@ export default function StudentLayout() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
+            const disabled = item.disabled;
+
+            if (disabled) {
+              return (
+                <div
+                  key={item.path}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                  {item.path === '/student/messages' && (
+                    <span className="ml-auto bg-gray-300 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+                      2
+                    </span>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link
@@ -136,8 +162,8 @@ export default function StudentLayout() {
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                   ${active
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
@@ -155,10 +181,23 @@ export default function StudentLayout() {
         </nav>
 
         {/* Bottom Section */}
-        <div className="p-4 border-t space-y-1">
+        <div className="p-4 border-t dark:border-gray-700 space-y-1">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
+            const disabled = item.disabled;
+
+            if (disabled) {
+              return (
+                <div
+                  key={item.path}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </div>
+              );
+            }
 
             return (
               <Link
@@ -167,8 +206,8 @@ export default function StudentLayout() {
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                   ${active
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}

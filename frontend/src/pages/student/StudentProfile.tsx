@@ -149,10 +149,10 @@ export default function StudentProfile() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-8">
-        <div className="max-w-3xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="max-w-full mx-auto">
           <Card>
-            <CardContent className="p-8 text-center">
+            <CardContent className="p-6 sm:p-8 text-center dark:bg-gray-800">
               載入中...
             </CardContent>
           </Card>
@@ -163,10 +163,10 @@ export default function StudentProfile() {
 
   if (!studentInfo) {
     return (
-      <div className="p-4 lg:p-8">
-        <div className="max-w-3xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="max-w-full mx-auto">
           <Card>
-            <CardContent className="p-8 text-center">
+            <CardContent className="p-6 sm:p-8 text-center dark:bg-gray-800">
               無法載入個人資料
             </CardContent>
           </Card>
@@ -176,21 +176,20 @@ export default function StudentProfile() {
   }
 
   return (
-    <div className="p-4 lg:p-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="p-3 sm:p-4 lg:p-6">
+      <div className="max-w-full mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => navigate('/student/dashboard')}
-              className="gap-2"
+              className="gap-2 h-12 min-h-12 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <ArrowLeft className="h-4 w-4" />
-              返回
+              <span className="hidden sm:inline">返回</span>
             </Button>
-            <h1 className="text-2xl font-bold">個人資料</h1>
+            <h1 className="text-xl sm:text-2xl font-bold dark:text-gray-100">個人資料</h1>
           </div>
         </div>
 
