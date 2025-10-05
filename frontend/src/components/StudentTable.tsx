@@ -114,10 +114,10 @@ export default function StudentTable({
   if (students.length === 0) {
     return (
       <div className="text-center py-12">
-        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">{emptyMessage}</p>
+        <Users className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+        <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
         {emptyDescription && (
-          <p className="text-sm text-gray-400 mt-2">{emptyDescription}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">{emptyDescription}</p>
         )}
         {onAddStudent && (
           <Button className="mt-4" size="sm" onClick={onAddStudent}>
@@ -130,7 +130,138 @@ export default function StudentTable({
   }
 
   return (
-    <Table>
+    <>
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        <div className="p-4 space-y-4">
+          {students.map((student) => (
+            <div key={student.id} className="border dark:border-gray-700 rounded-lg p-4 space-y-3 bg-white dark:bg-gray-800">
+              {/* Header with selection */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3 flex-1">
+                  {onBulkAction && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleSelect(student.id)}
+                      className="p-0 h-8 w-8"
+                    >
+                      {selectedIds.has(student.id) ? (
+                        <CheckSquare className="h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {student.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium dark:text-gray-100">{student.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">ID: {student.id}</p>
+                  </div>
+                </div>
+                {getStatusBadge(student.status)}
+              </div>
+
+              {/* Info Grid */}
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Email: </span>
+                  <span className="dark:text-gray-200">{student.email || '-'}</span>
+                </div>
+                {student.phone && (
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">電話: </span>
+                    <span className="dark:text-gray-200">{student.phone}</span>
+                  </div>
+                )}
+                {showClassroom && (
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">班級: </span>
+                    {student.classroom_name ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                        {student.classroom_name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        未分配
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">密碼: </span>
+                  {student.password_changed ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                      已更改
+                    </span>
+                  ) : student.birthdate ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 font-mono">
+                      {student.birthdate?.replace(/-/g, '')}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 dark:text-gray-400">未設定</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">最後登入: </span>
+                  <span className="dark:text-gray-200">{student.last_login ? formatDate(student.last_login) : '從未登入'}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2 border-t dark:border-gray-700">
+                {onViewStudent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onViewStudent(student)}
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    查看
+                  </Button>
+                )}
+                {onEditStudent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditStudent(student)}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    編輯
+                  </Button>
+                )}
+                {onDeleteStudent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`確定要刪除學生「${student.name}」嗎？`)) {
+                        onDeleteStudent(student);
+                      }
+                    }}
+                    className="hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
+          共 {students.length} 位學生
+        </div>
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block">
+        <Table>
       <TableCaption>
         共 {students.length} 位學生
       </TableCaption>
@@ -317,6 +448,8 @@ export default function StudentTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+        </Table>
+      </div>
+    </>
   );
 }

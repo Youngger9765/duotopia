@@ -255,130 +255,144 @@ export default function TeacherStudents() {
     <TeacherLayout>
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold text-gray-900">所有學生</h2>
-          <div className="flex items-center space-x-4">
-            {selectedStudentIds.length > 0 && (
-              <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-md">
-                <span className="text-sm font-medium text-blue-700">
-                  已選擇 {selectedStudentIds.length} 位學生
-                </span>
+        <div className="mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">所有學生</h2>
+
+          {/* Bulk Actions Bar */}
+          {selectedStudentIds.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                已選擇 {selectedStudentIds.length} 位學生
+              </span>
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleBulkAction('assign', selectedStudentIds)}
+                  className="flex-1 sm:flex-none"
                 >
                   <School className="h-4 w-4 mr-2" />
-                  批量分配班級
+                  批量分配
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-red-600 hover:bg-red-50"
+                  className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex-1 sm:flex-none"
                   onClick={() => handleBulkAction('delete', selectedStudentIds)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   批量刪除
                 </Button>
               </div>
-            )}
-            {/* Search Input */}
-            <input
-              type="text"
-              placeholder="搜尋學生姓名或 Email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm w-64"
-            />
-            {/* Filter Dropdown */}
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <select
-                value={selectedClassroom === null ? '' : (selectedClassroom === 0 ? '0' : selectedClassroom.toString())}
-                onChange={(e) => {
-                  if (e.target.value === '') {
-                    setSelectedClassroom(null); // 所有班級
-                  } else if (e.target.value === '0') {
-                    setSelectedClassroom(0); // 未分配
-                  } else {
-                    setSelectedClassroom(Number(e.target.value));
-                  }
-                }}
-                className="px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="">所有班級</option>
-                <option value="0">未分配</option>
-                {classrooms.map((classroom) => (
-                  <option key={classroom.id} value={classroom.id}>
-                    {classroom.name}
-                  </option>
-                ))}
-              </select>
             </div>
+          )}
+
+          {/* Controls */}
+          <div className="flex flex-col lg:flex-row gap-3">
+            {/* Search & Filter Group */}
+            <div className="flex flex-col sm:flex-row gap-2 flex-1">
+              <input
+                type="text"
+                placeholder="搜尋學生姓名或 Email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm flex-1 sm:max-w-xs"
+              />
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <select
+                  value={selectedClassroom === null ? '' : (selectedClassroom === 0 ? '0' : selectedClassroom.toString())}
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      setSelectedClassroom(null);
+                    } else if (e.target.value === '0') {
+                      setSelectedClassroom(0);
+                    } else {
+                      setSelectedClassroom(Number(e.target.value));
+                    }
+                  }}
+                  className="px-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm flex-1 sm:flex-none"
+                >
+                  <option value="">所有班級</option>
+                  <option value="0">未分配</option>
+                  {classrooms.map((classroom) => (
+                    <option key={classroom.id} value={classroom.id}>
+                      {classroom.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Action Buttons */}
-            <Button onClick={fetchClassrooms} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              重新載入
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportStudents}>
-              <Download className="h-4 w-4 mr-2" />
-              匯出名單
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              批次匯入
-            </Button>
-            <Button size="sm" onClick={handleCreateStudent}>
-              <Plus className="h-4 w-4 mr-2" />
-              新增學生
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={fetchClassrooms} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">重新載入</span>
+                <span className="sm:hidden">載入</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportStudents} className="flex-1 sm:flex-none">
+                <Download className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">匯出名單</span>
+                <span className="sm:hidden">匯出</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)} className="flex-1 sm:flex-none">
+                <Upload className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">批次匯入</span>
+                <span className="sm:hidden">匯入</span>
+              </Button>
+              <Button size="sm" onClick={handleCreateStudent} className="flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 mr-2" />
+                新增學生
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">總學生數</p>
-                <p className="text-2xl font-bold">{filteredStudents.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">總學生數</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.length}</p>
               </div>
-              <Users className="h-8 w-8 text-blue-500" />
+              <Users className="h-8 w-8 text-blue-500 dark:text-blue-400" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">活躍學生</p>
-                <p className="text-2xl font-bold">{filteredStudents.filter(s => s.status === 'active').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">活躍學生</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'active').length}</p>
               </div>
-              <UserCheck className="h-8 w-8 text-green-500" />
+              <UserCheck className="h-8 w-8 text-green-500 dark:text-green-400" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">未活躍</p>
-                <p className="text-2xl font-bold">{filteredStudents.filter(s => s.status === 'inactive').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">未活躍</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'inactive').length}</p>
               </div>
-              <UserX className="h-8 w-8 text-yellow-500" />
+              <UserX className="h-8 w-8 text-yellow-500 dark:text-yellow-400" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">已停權</p>
-                <p className="text-2xl font-bold">{filteredStudents.filter(s => s.status === 'suspended').length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">已停權</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{filteredStudents.filter(s => s.status === 'suspended').length}</p>
               </div>
-              <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-red-600 font-bold">!</span>
+              <div className="h-8 w-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <span className="text-red-600 dark:text-red-400 font-bold">!</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Students Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
           <StudentTable
             students={filteredStudents}
             showClassroom={true}
