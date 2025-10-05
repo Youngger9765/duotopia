@@ -9,9 +9,9 @@ from fastapi import status
 class TestTeacherLogin:
     """Test teacher login functionality"""
 
-    def test_successful_login(self, client, demo_teacher):
+    def test_successful_login(self, test_client, demo_teacher):
         """Test successful teacher login with correct credentials"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login",
             json={"email": "test@duotopia.com", "password": "test123"},
         )
@@ -33,72 +33,75 @@ class TestTeacherLogin:
         assert data["user"]["is_demo"] is False
         assert data["user"]["id"] == demo_teacher.id
 
-    def test_login_with_wrong_password(self, client, demo_teacher):
+    def test_login_with_wrong_password(self, test_client, demo_teacher):
         """Test login fails with incorrect password"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login",
             json={"email": "test@duotopia.com", "password": "wrongpassword"},
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] == "Incorrect password"
+        assert response.json()["detail"] == "帳號或密碼錯誤"
 
-    def test_login_with_nonexistent_email(self, client):
+    def test_login_with_nonexistent_email(self, test_client):
         """Test login fails with non-existent email"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login",
             json={"email": "nonexistent@duotopia.com", "password": "test123"},
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "Email not found"
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json()["detail"] == "帳號或密碼錯誤"
 
-    def test_login_with_invalid_email_format(self, client):
+    def test_login_with_invalid_email_format(self, test_client):
         """Test login fails with invalid email format"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login",
             json={"email": "invalid-email", "password": "test123"},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_login_with_inactive_account(self, client, inactive_teacher):
-        """Test login fails with inactive account"""
-        response = client.post(
+    def test_login_with_inactive_account(self, test_client, inactive_teacher):
+        """Test login fails with inactive account (unverified email)"""
+        response = test_client.post(
             "/api/auth/teacher/login",
             json={"email": "inactive@duotopia.com", "password": "test123"},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.json()["detail"] == "Account is inactive"
+        # Should show email verification message
+        assert "verify your email" in response.json()["detail"].lower()
 
-    def test_login_with_missing_fields(self, client):
+    def test_login_with_missing_fields(self, test_client):
         """Test login fails with missing required fields"""
         # Missing password
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login", json={"email": "test@duotopia.com"}
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
         # Missing email
-        response = client.post("/api/auth/teacher/login", json={"password": "test123"})
+        response = test_client.post(
+            "/api/auth/teacher/login", json={"password": "test123"}
+        )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
         # Empty body
-        response = client.post("/api/auth/teacher/login", json={})
+        response = test_client.post("/api/auth/teacher/login", json={})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 class TestTeacherRegistration:
     """Test teacher registration functionality"""
 
-    def test_successful_registration(self, client, db):
+    def test_successful_registration(self, test_client, test_session):
         """Test successful teacher registration"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={
                 "email": "newteacher@duotopia.com",
-                "password": "newpass123",
+                "password": "NewPass123!",  # Strong password
                 "name": "New Teacher",
                 "phone": "0912345678",
             },
@@ -107,57 +110,60 @@ class TestTeacherRegistration:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
-        # Check response structure
-        assert "access_token" in data
-        assert "token_type" in data
-        assert "user" in data
+        # Check response structure (no auto-login, email verification required)
+        assert "message" in data
+        assert "email" in data
+        assert "verification_required" in data
+        assert data["verification_required"] is True
+        assert data["email"] == "newteacher@duotopia.com"
 
-        # Check user info
-        assert data["user"]["email"] == "newteacher@duotopia.com"
-        assert data["user"]["name"] == "New Teacher"
-        assert data["user"]["is_demo"] is False
-        # Verify teacher was created in database
+        # Verify teacher was created in database but not active
         from models import Teacher
 
         teacher = (
-            db.query(Teacher).filter(Teacher.email == "newteacher@duotopia.com").first()
+            test_session.query(Teacher)
+            .filter(Teacher.email == "newteacher@duotopia.com")
+            .first()
         )
         assert teacher is not None
         assert teacher.name == "New Teacher"
         assert teacher.phone == "0912345678"
+        assert teacher.is_active is False  # Not active until email verified
+        assert teacher.email_verified is False
 
-    def test_registration_with_existing_email(self, client, demo_teacher):
+    def test_registration_with_existing_email(self, test_client, demo_teacher):
         """Test registration fails with already registered email"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={
                 "email": "test@duotopia.com",  # Already exists
-                "password": "newpass123",
+                "password": "NewPass123!",  # Strong password
                 "name": "Another Teacher",
             },
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json()["detail"] == "Email already registered"
+        assert response.json()["detail"] == "Email already registered and verified"
 
-    def test_registration_without_phone(self, client, db):
+    def test_registration_without_phone(self, test_client, test_session):
         """Test registration succeeds without optional phone field"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={
                 "email": "nophone@duotopia.com",
-                "password": "pass123",
+                "password": "Pass123!",  # Strong password
                 "name": "No Phone Teacher",
             },
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["user"]["email"] == "nophone@duotopia.com"
+        assert data["email"] == "nophone@duotopia.com"
+        assert data["verification_required"] is True
 
-    def test_registration_with_invalid_email(self, client):
+    def test_registration_with_invalid_email(self, test_client):
         """Test registration fails with invalid email format"""
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={
                 "email": "not-an-email",
@@ -168,17 +174,17 @@ class TestTeacherRegistration:
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_registration_with_missing_fields(self, client):
+    def test_registration_with_missing_fields(self, test_client):
         """Test registration fails with missing required fields"""
         # Missing name
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={"email": "test@duotopia.com", "password": "pass123"},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
         # Missing password
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/register",
             json={"email": "test@duotopia.com", "name": "Test Teacher"},
         )
@@ -188,7 +194,7 @@ class TestTeacherRegistration:
 class TestDemoTeacher:
     """Test demo teacher specific functionality"""
 
-    def test_demo_teacher_login(self, client, db):
+    def test_demo_teacher_login(self, test_client, test_session):
         """Test demo teacher can login successfully"""
         # Create demo teacher
         from models import Teacher
@@ -196,17 +202,18 @@ class TestDemoTeacher:
 
         demo = Teacher(
             email="demo@duotopia.com",
-            password_hash=get_password_hash("demo123"),
+            password_hash=get_password_hash("Demo123!"),  # Strong password
             name="Demo Teacher",
             is_active=True,
             is_demo=True,
+            email_verified=True,  # Demo teacher is verified
         )
-        db.add(demo)
-        db.commit()
+        test_session.add(demo)
+        test_session.commit()
 
-        response = client.post(
+        response = test_client.post(
             "/api/auth/teacher/login",
-            json={"email": "demo@duotopia.com", "password": "demo123"},
+            json={"email": "demo@duotopia.com", "password": "Demo123!"},
         )
 
         assert response.status_code == status.HTTP_200_OK

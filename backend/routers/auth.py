@@ -14,15 +14,11 @@ from auth import (
 )
 from services.email_service import email_service
 from datetime import datetime, timedelta
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from core.limiter import limiter
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
-
-# 🔐 Rate Limiter - 防止暴力破解
-limiter = Limiter(key_func=get_remote_address)
 
 
 # ============ Request/Response Models ============

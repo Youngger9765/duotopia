@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -8,6 +8,7 @@ import os
 
 # Import configuration
 from core.config import settings
+from core.limiter import limiter
 
 # Import middleware
 # from middleware.rate_limiter import RateLimitMiddleware  # Temporarily disabled due to bug
@@ -38,7 +39,7 @@ app = FastAPI(
 )
 
 # 🔐 Rate Limiting - slowapi for auth endpoints
-app.state.limiter = None  # Will be set by individual routers
+app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS 設定
