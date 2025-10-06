@@ -55,77 +55,66 @@ jobs:
       - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: 🧹 Clean Backend Revisions
+      - name: 🧹 Clean All Service Revisions
         run: |
-          echo "🔍 Checking backend revisions..."
-
           # 設定保留數量
-          KEEP_COUNT=${{ github.event.inputs.keep_revisions || '1' }}
-          echo "📌 Will keep $KEEP_COUNT most recent revisions"
-
-          # 獲取所有 revisions，按時間排序
-          REVISIONS=$(gcloud run revisions list \
-            --service=duotopia-staging-backend \
-            --region=${{ env.REGION }} \
-            --format="value(name)" \
-            --sort-by="~creationTimestamp")
-
-          # 計算總數
-          TOTAL=$(echo "$REVISIONS" | wc -l)
-          echo "📊 Total revisions: $TOTAL"
-
-          if [ $TOTAL -gt $KEEP_COUNT ]; then
-            # 跳過最新的 N 個，刪除其餘的
-            TO_DELETE=$(echo "$REVISIONS" | tail -n +$((KEEP_COUNT + 1)))
-            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
-
-            echo "🗑️ Deleting $DELETE_COUNT old revisions..."
-
-            for REVISION in $TO_DELETE; do
-              echo "  Deleting: $REVISION"
-              gcloud run revisions delete $REVISION \
-                --region=${{ env.REGION }} \
-                --quiet || echo "  ⚠️ Failed to delete $REVISION"
-            done
-
-            echo "✅ Backend cleanup complete! Deleted $DELETE_COUNT revisions"
-          else
-            echo "✅ No cleanup needed. Only $TOTAL revisions exist."
-          fi
-
-      - name: 🧹 Clean Frontend Revisions
-        run: |
-          echo "🔍 Checking frontend revisions..."
-
           KEEP_COUNT=${{ github.event.inputs.keep_revisions || '3' }}
-          echo "📌 Will keep $KEEP_COUNT most recent revisions"
+          echo "📌 Will keep $KEEP_COUNT most recent revisions per service"
+          echo ""
 
-          REVISIONS=$(gcloud run revisions list \
-            --service=duotopia-staging-frontend \
-            --region=${{ env.REGION }} \
-            --format="value(name)" \
-            --sort-by="~creationTimestamp")
+          # 所有服務列表
+          services=(
+            "duotopia-production-backend"
+            "duotopia-production-frontend"
+            "duotopia-staging-backend"
+            "duotopia-staging-frontend"
+          )
 
-          TOTAL=$(echo "$REVISIONS" | wc -l)
-          echo "📊 Total revisions: $TOTAL"
+          total_deleted=0
 
-          if [ $TOTAL -gt $KEEP_COUNT ]; then
-            TO_DELETE=$(echo "$REVISIONS" | tail -n +$((KEEP_COUNT + 1)))
-            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+          for service in "${services[@]}"; do
+            echo "📦 Checking service: $service"
 
-            echo "🗑️ Deleting $DELETE_COUNT old revisions..."
+            # 獲取所有非活躍的 revisions
+            REVISIONS=$(gcloud run revisions list \
+              --service="$service" \
+              --region=${{ env.REGION }} \
+              --format="value(REVISION,ACTIVE)" \
+              --sort-by="~metadata.creationTimestamp" \
+              2>/dev/null | grep -v "True" | awk '{print $1}' || true)
 
-            for REVISION in $TO_DELETE; do
-              echo "  Deleting: $REVISION"
-              gcloud run revisions delete $REVISION \
-                --region=${{ env.REGION }} \
-                --quiet || echo "  ⚠️ Failed to delete $REVISION"
-            done
+            if [ -z "$REVISIONS" ]; then
+              echo "   ✓ No inactive revisions"
+              echo ""
+              continue
+            fi
 
-            echo "✅ Frontend cleanup complete! Deleted $DELETE_COUNT revisions"
-          else
-            echo "✅ No cleanup needed. Only $TOTAL revisions exist."
-          fi
+            TOTAL=$(echo "$REVISIONS" | wc -l | tr -d ' ')
+            echo "   📊 Inactive revisions: $TOTAL"
+
+            if [ $TOTAL -gt $KEEP_COUNT ]; then
+              TO_DELETE=$(echo "$REVISIONS" | tail -n +$((KEEP_COUNT + 1)) || true)
+              DELETE_COUNT=$(echo "$TO_DELETE" | wc -l | tr -d ' ')
+
+              echo "   🗑️ Deleting $DELETE_COUNT old revisions..."
+
+              for REVISION in $TO_DELETE; do
+                if [ -n "$REVISION" ]; then
+                  echo "      Deleting: $REVISION"
+                  gcloud run revisions delete "$REVISION" \
+                    --region=${{ env.REGION }} \
+                    --quiet || echo "      ⚠️ Failed to delete $REVISION"
+                  ((total_deleted++)) || true
+                fi
+              done
+            else
+              echo "   ✓ Within retention limit ($TOTAL revisions)"
+            fi
+
+            echo ""
+          done
+
+          echo "✅ Cleanup complete! Deleted $total_deleted revisions across all services"
 
   cleanup-container-images:
     name: 🐳 Clean Container Images
