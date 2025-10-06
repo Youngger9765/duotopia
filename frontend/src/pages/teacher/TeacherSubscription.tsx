@@ -124,10 +124,7 @@ export default function TeacherSubscription() {
 
   const handleUpgradeError = (error: string) => {
     // 🎉 檢查是否為免費優惠期間提醒
-    if (
-      error.includes("免費優惠期間") ||
-      error.includes("未來將會開放儲值")
-    ) {
+    if (error.includes("免費優惠期間") || error.includes("未來將會開放儲值")) {
       toast.info(error, {
         duration: 6000,
       });
@@ -152,10 +149,7 @@ export default function TeacherSubscription() {
 
   const handleRenewalError = (error: string) => {
     // 🎉 檢查是否為免費優惠期間提醒
-    if (
-      error.includes("免費優惠期間") ||
-      error.includes("未來將會開放儲值")
-    ) {
+    if (error.includes("免費優惠期間") || error.includes("未來將會開放儲值")) {
       toast.info(error, {
         duration: 6000,
       });
