@@ -121,7 +121,19 @@ export default function PricingPage() {
   };
 
   const handlePaymentError = (error: string) => {
-    toast.error(`付款失敗: ${error}`);
+    // 🎉 檢查是否為免費優惠期間提醒
+    if (
+      error.includes("免費優惠期間") ||
+      error.includes("未來將會開放儲值")
+    ) {
+      toast.info(error, {
+        duration: 6000,
+      });
+      // 關閉付款對話框
+      setShowPaymentDialog(false);
+    } else {
+      toast.error(`付款失敗: ${error}`);
+    }
   };
 
   // Check user login status and subscription

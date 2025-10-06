@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import logging
 import uuid
+import os
 
 from database import get_db
 from models import Teacher, TeacherSubscriptionTransaction, TransactionType
@@ -14,6 +15,10 @@ from services.tappay_service import TapPayService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# 🔐 環境配置：是否啟用付款功能
+ENABLE_PAYMENT = os.getenv("ENABLE_PAYMENT", "false").lower() == "true"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local")
 
 
 class PaymentRequest(BaseModel):
@@ -42,6 +47,17 @@ async def process_payment(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """Process payment using TapPay"""
+    # 🚫 檢查是否啟用付款功能
+    if not ENABLE_PAYMENT:
+        logger.info(
+            f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT}), 返回免費優惠期提醒"
+        )
+        return PaymentResponse(
+            success=False,
+            transaction_id=None,
+            message="目前仍在免費優惠期間，未來將會開放儲值功能。感謝您的支持！",
+        )
+
     # 先取得原始請求體來debug
     try:
         body = await request.body()

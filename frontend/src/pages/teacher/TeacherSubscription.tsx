@@ -123,7 +123,20 @@ export default function TeacherSubscription() {
   };
 
   const handleUpgradeError = (error: string) => {
-    toast.error(`升級失敗：${error}`);
+    // 🎉 檢查是否為免費優惠期間提醒
+    if (
+      error.includes("免費優惠期間") ||
+      error.includes("未來將會開放儲值")
+    ) {
+      toast.info(error, {
+        duration: 6000,
+      });
+      // 關閉對話框
+      setShowUpgradeDialog(false);
+      setSelectedUpgradePlan(null);
+    } else {
+      toast.error(`升級失敗：${error}`);
+    }
   };
 
   const handleRenewal = () => {
@@ -138,7 +151,19 @@ export default function TeacherSubscription() {
   };
 
   const handleRenewalError = (error: string) => {
-    toast.error(`續訂失敗：${error}`);
+    // 🎉 檢查是否為免費優惠期間提醒
+    if (
+      error.includes("免費優惠期間") ||
+      error.includes("未來將會開放儲值")
+    ) {
+      toast.info(error, {
+        duration: 6000,
+      });
+      // 關閉對話框
+      setShowRenewalDialog(false);
+    } else {
+      toast.error(`續訂失敗：${error}`);
+    }
   };
 
   const formatDate = (dateString: string) => {
