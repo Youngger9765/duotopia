@@ -1,6 +1,10 @@
 # 多階段建置
 FROM node:18-alpine AS builder
 
+# Cache buster for production deployments
+ARG BUILD_TIMESTAMP
+RUN echo "Build timestamp: $BUILD_TIMESTAMP"
+
 WORKDIR /app
 
 # 複製 package files

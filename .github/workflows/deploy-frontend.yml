@@ -151,14 +151,17 @@ jobs:
         # 使用 --build-arg 傳遞 API URL
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           DOCKERFILE="Dockerfile"
-          CACHE_FLAG="--no-cache"  # Force clean rebuild for production to fix RWD cache issue
+          CACHE_FLAG="--no-cache --pull"  # Force clean rebuild + pull base images
+          BUILD_TIMESTAMP="--build-arg BUILD_TIMESTAMP=$(date +%s)"  # Break cache
         else
           DOCKERFILE="Dockerfile.staging"
           CACHE_FLAG=""
+          BUILD_TIMESTAMP=""
         fi
 
         docker build -f $DOCKERFILE \
           $CACHE_FLAG \
+          $BUILD_TIMESTAMP \
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
           --build-arg VITE_TAPPAY_APP_ID=${{ secrets.VITE_TAPPAY_APP_ID }} \
           --build-arg VITE_TAPPAY_APP_KEY=${{ secrets.VITE_TAPPAY_APP_KEY }} \
