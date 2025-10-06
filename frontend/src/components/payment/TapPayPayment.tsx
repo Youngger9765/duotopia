@@ -194,6 +194,19 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           // Handle FastAPI validation errors (422)
           let errorMsg = data.message || "付款處理失敗";
 
+          // 🎉 檢查是否為免費優惠期間提醒
+          if (
+            errorMsg.includes("免費優惠期間") ||
+            errorMsg.includes("未來將會開放儲值")
+          ) {
+            // 顯示友善的提醒訊息
+            toast.info(errorMsg, {
+              duration: 5000,
+            });
+            onPaymentError(errorMsg);
+            return; // 不throw error
+          }
+
           if (data.detail && Array.isArray(data.detail)) {
             // FastAPI validation error format
             console.error(

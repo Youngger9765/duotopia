@@ -198,6 +198,15 @@ jobs:
         ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
         ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
 
+        # Payment 功能控制
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Production: 預設禁用付款功能（免費優惠期）
+          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}"
+        else
+          # Staging: 預設啟用付款功能（測試用）
+          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
+        fi
+
         # 設定 min-instances = 0 最大化節省成本
         MIN_INSTANCES=0  # Production 和 Staging 都設為 0 節省成本
 
