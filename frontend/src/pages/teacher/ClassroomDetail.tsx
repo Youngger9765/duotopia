@@ -219,10 +219,9 @@ export default function ClassroomDetail({
     try {
       setLoading(true);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = (await apiClient.getTemplateProgramDetail(
         Number(id),
-      )) as any;
+      )) as Program;
 
       if (response) {
         // Convert template program data to match programs structure
