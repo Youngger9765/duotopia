@@ -116,6 +116,13 @@ jobs:
       run: |
         gcloud auth configure-docker $REGION-docker.pkg.dev
 
+    - name: Clear Docker cache (production only)
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🧹 Clearing all Docker build cache to fix RWD issue..."
+        docker system prune -a -f --volumes
+        docker builder prune -a -f
+
     - name: Get backend URL
       id: backend_url
       run: |
