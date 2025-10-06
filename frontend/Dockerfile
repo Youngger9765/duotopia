@@ -34,6 +34,10 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Cache buster for production - ensure fresh files are copied
+ARG BUILD_TIMESTAMP
+RUN echo "Copying dist files built at: $BUILD_TIMESTAMP"
+
 # 複製建置結果
 COPY --from=builder /app/dist /usr/share/nginx/html
 
