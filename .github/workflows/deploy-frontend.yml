@@ -181,7 +181,8 @@ jobs:
           --min-instances $MIN_INSTANCES \
           --cpu-throttling \
           --concurrency 50 \
-          --no-cpu-boost
+          --no-cpu-boost \
+          --set-env-vars BACKEND_URL=${{ steps.backend_url.outputs.BACKEND_URL }}
 
     - name: 🧹 Cleanup Old Frontend Images
       run: |
