@@ -2,17 +2,16 @@
 測試 Payment API 在 ENABLE_PAYMENT=false 時的行為
 """
 import os
-import sys
 
-# 設定測試環境變數
+# 設定測試環境變數（必須在 import main 之前）
 os.environ["ENABLE_PAYMENT"] = "false"
 os.environ["ENVIRONMENT"] = "production"
 
-from fastapi.testclient import TestClient
-from main import app
-from models import Teacher
-from auth import get_password_hash
-from database import get_db, SessionLocal
+from fastapi.testclient import TestClient  # noqa: E402
+from main import app  # noqa: E402
+from models import Teacher  # noqa: E402
+from auth import get_password_hash  # noqa: E402
+from database import SessionLocal  # noqa: E402
 
 client = TestClient(app)
 
@@ -108,7 +107,7 @@ def test_payment_disabled():
         print()
 
         # 驗證是否符合預期
-        if data.get("success") == False and "免費優惠期間" in data.get("message", ""):
+        if data.get("success") is False and "免費優惠期間" in data.get("message", ""):
             print("   ✅ 測試通過！")
             print("   ✅ Payment API 正確返回免費優惠期提醒")
             print("   ✅ 未觸發實際付款流程")

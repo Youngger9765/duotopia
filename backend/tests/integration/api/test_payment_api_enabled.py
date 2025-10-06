@@ -3,15 +3,15 @@
 """
 import os
 
-# 設定測試環境變數 (Staging 環境，付款啟用)
+# 設定測試環境變數（必須在 import main 之前）
 os.environ["ENABLE_PAYMENT"] = "true"
 os.environ["ENVIRONMENT"] = "staging"
 
-from fastapi.testclient import TestClient
-from main import app
-from models import Teacher
-from auth import get_password_hash
-from database import SessionLocal
+from fastapi.testclient import TestClient  # noqa: E402
+from main import app  # noqa: E402
+from models import Teacher  # noqa: E402
+from auth import get_password_hash  # noqa: E402
+from database import SessionLocal  # noqa: E402
 
 client = TestClient(app)
 
@@ -112,7 +112,7 @@ def test_payment_enabled():
 
         # 當 ENABLE_PAYMENT=true 時，應該會嘗試呼叫 TapPay
         # 因為我們用的是無效的 prime token，應該會失敗（這是預期的）
-        if data.get("success") == False:
+        if data.get("success") is False:
             # 檢查是否為免費優惠期訊息
             if "免費優惠期間" in data.get("message", ""):
                 print("   ❌ 測試失敗！")
