@@ -25,6 +25,11 @@ interface TeacherProfile {
   is_active: boolean;
 }
 
+interface SystemConfig {
+  enablePayment: boolean;
+  environment: string;
+}
+
 interface TeacherLayoutProps {
   children: ReactNode;
 }
@@ -36,9 +41,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(
     null,
   );
+  const [config, setConfig] = useState<SystemConfig | null>(null);
 
   useEffect(() => {
     fetchTeacherProfile();
+    fetchConfig();
   }, []);
 
   const fetchTeacherProfile = async () => {
@@ -55,12 +62,21 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     }
   };
 
+  const fetchConfig = async () => {
+    try {
+      const data = await apiClient.getConfig();
+      setConfig(data);
+    } catch (err) {
+      console.error("Failed to fetch system config:", err);
+    }
+  };
+
   const handleLogout = () => {
     apiClient.logout();
     navigate("/teacher/login");
   };
 
-  const sidebarItems = [
+  const allSidebarItems = [
     {
       id: "dashboard",
       label: "儀表板",
@@ -92,6 +108,15 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       path: "/teacher/subscription",
     },
   ];
+
+  // 根據系統配置過濾選單項目
+  const sidebarItems = allSidebarItems.filter((item) => {
+    // 如果是訂閱選單，只在付款功能啟用時顯示
+    if (item.id === "subscription") {
+      return config?.enablePayment === true;
+    }
+    return true;
+  });
 
   const isActive = (path: string) => location.pathname === path;
 
