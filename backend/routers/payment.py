@@ -49,9 +49,7 @@ async def process_payment(
     """Process payment using TapPay"""
     # 🚫 檢查是否啟用付款功能
     if not ENABLE_PAYMENT:
-        logger.info(
-            f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT}), 返回免費優惠期提醒"
-        )
+        logger.info(f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT}), 返回免費優惠期提醒")
         return PaymentResponse(
             success=False,
             transaction_id=None,

@@ -112,15 +112,55 @@ repos:
       - id: check-merge-conflict
 
   # ==========================================
-  # 🎨 手動執行格式化（不擋 commit/push）
+  # 🎨 PRE-PUSH: 格式與 Lint 檢查（與 CI/CD 同步）
   # ==========================================
-  # 格式化工具已移到手動執行：
-  #
-  # 前端格式化:
-  #   npx prettier --write frontend/src
-  #
-  # 後端格式化:
-  #   cd backend && black . && autoflake --in-place --recursive .
-  #
-  # 或使用 pre-commit 手動執行:
-  #   pre-commit run --all-files black autoflake prettier
+  - repo: local
+    hooks:
+      # ===== Backend 檢查 =====
+      # Black 格式檢查（Python）
+      - id: black-check
+        name: Black formatting check
+        entry: bash -c 'cd backend && black --check . || exit 1'
+        language: system
+        types: [python]
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        stages: [push]
+
+      # Flake8 Linting（Python）
+      - id: flake8-check
+        name: Flake8 linting
+        entry: bash -c 'cd backend && flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv || exit 1'
+        language: system
+        types: [python]
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        stages: [push]
+
+      # ===== Frontend 檢查 =====
+      # Prettier 格式檢查（Frontend）
+      - id: prettier-check
+        name: Prettier formatting check
+        entry: bash -c 'cd frontend && npx prettier --check src || exit 1'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+        stages: [push]
+
+      # ESLint 檢查（Frontend）
+      - id: eslint-check
+        name: ESLint check
+        entry: bash -c 'cd frontend && npm run lint:ci || exit 1'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+        stages: [push]
+
+      # Build 測試（Frontend）
+      - id: frontend-build
+        name: Frontend build test
+        entry: bash -c 'cd frontend && npm run build || exit 1'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+        stages: [push]
