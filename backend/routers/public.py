@@ -10,6 +10,7 @@ from typing import List, Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from models import Teacher, Classroom, Student, ClassroomStudent
+import os
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -41,6 +42,13 @@ class TeacherResponse(BaseModel):
     id: int
     name: str
     email: str
+
+
+class ConfigResponse(BaseModel):
+    """系統配置與 feature flags"""
+
+    enablePayment: bool
+    environment: str
 
 
 @router.post("/validate-teacher", response_model=ValidateTeacherResponse)
@@ -143,3 +151,12 @@ def get_classroom_students(classroom_id: int, db: Session = Depends(get_db)):
         )
 
     return result
+
+
+@router.get("/config", response_model=ConfigResponse)
+def get_config():
+    """獲取系統配置與 feature flags（公開端點，不需認證）"""
+    enable_payment = os.getenv("ENABLE_PAYMENT", "false").lower() == "true"
+    environment = os.getenv("ENVIRONMENT", "development")
+
+    return ConfigResponse(enablePayment=enable_payment, environment=environment)

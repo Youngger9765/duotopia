@@ -303,6 +303,14 @@ class ApiClient {
     return userStr ? JSON.parse(userStr) : null;
   }
 
+  // ============ Public Config Methods ============
+  async getConfig() {
+    return this.request<{
+      enablePayment: boolean;
+      environment: string;
+    }>("/api/public/config");
+  }
+
   // ============ Teacher Methods ============
   async getTeacherProfile() {
     return this.request("/api/teachers/me");
