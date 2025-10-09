@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,8 +125,6 @@ export default function GradingPage() {
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
   const [assignmentTitle, setAssignmentTitle] = useState("");
 
-  // 自動儲存 debounce
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 載入作業資訊和學生列表
   useEffect(() => {
@@ -273,23 +271,13 @@ export default function GradingPage() {
     }
   };
 
-  // 自動儲存功能
-  const triggerAutoSave = useCallback(() => {
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    autoSaveTimerRef.current = setTimeout(async () => {
-      await performAutoSave();
-    }, 2000);
-  }, []);
-
   const performAutoSave = async (feedbacksToSave?: typeof itemFeedbacks) => {
     if (!submission || submitting) return;
 
     setSaveStatus("saving");
     try {
       const feedbacks = feedbacksToSave || itemFeedbacks;
+
       const itemResults: Array<{
         item_index: number;
         feedback: string;
@@ -1041,8 +1029,8 @@ export default function GradingPage() {
                                       ? "bg-green-600 hover:bg-green-700"
                                       : ""
                                   }`}
-                                  onClick={() => {
-                                    setItemFeedbacks({
+                                  onClick={async () => {
+                                    const newItemFeedbacks = {
                                       ...itemFeedbacks,
                                       [globalIndex]: {
                                         ...itemFeedbacks[globalIndex],
@@ -1051,8 +1039,10 @@ export default function GradingPage() {
                                             ?.feedback || "",
                                         passed: true,
                                       },
-                                    });
-                                    triggerAutoSave();
+                                    };
+                                    setItemFeedbacks(newItemFeedbacks);
+                                    // 按鈕動作立即儲存
+                                    await performAutoSave(newItemFeedbacks);
                                   }}
                                   disabled={submission?.status === "GRADED"}
                                 >
@@ -1070,8 +1060,8 @@ export default function GradingPage() {
                                       ? "bg-red-600 hover:bg-red-700"
                                       : ""
                                   }`}
-                                  onClick={() => {
-                                    setItemFeedbacks({
+                                  onClick={async () => {
+                                    const newItemFeedbacks = {
                                       ...itemFeedbacks,
                                       [globalIndex]: {
                                         ...itemFeedbacks[globalIndex],
@@ -1080,8 +1070,10 @@ export default function GradingPage() {
                                             ?.feedback || "",
                                         passed: false,
                                       },
-                                    });
-                                    triggerAutoSave();
+                                    };
+                                    setItemFeedbacks(newItemFeedbacks);
+                                    // 按鈕動作立即儲存
+                                    await performAutoSave(newItemFeedbacks);
                                   }}
                                   disabled={submission?.status === "GRADED"}
                                 >
@@ -1142,7 +1134,10 @@ export default function GradingPage() {
                                           null,
                                       },
                                     });
-                                    triggerAutoSave();
+                                  }}
+                                  onBlur={async () => {
+                                    // 離開輸入框時立即儲存
+                                    await performAutoSave();
                                   }}
                                   placeholder="評語..."
                                   className="min-h-[60px] resize-none text-xs bg-white dark:bg-white"
@@ -1310,13 +1305,11 @@ export default function GradingPage() {
                     <input
                       type="checkbox"
                       checked={score !== null}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setScore(80);
-                        } else {
-                          setScore(null);
-                        }
-                        triggerAutoSave();
+                      onChange={async (e) => {
+                        const newScore = e.target.checked ? 80 : null;
+                        setScore(newScore);
+                        // 分數變更立即儲存
+                        await performAutoSave();
                       }}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
@@ -1324,14 +1317,25 @@ export default function GradingPage() {
                   </div>
                   <div className="mt-2">
                     <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={score ?? ""}
+                      type="text"
+                      inputMode="numeric"
+                      value={score === null ? "" : score}
+                      onBlur={async () => {
+                        // 離開輸入框時立即儲存
+                        await performAutoSave();
+                      }}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setScore(value);
-                        triggerAutoSave();
+                        const value = e.target.value;
+                        if (value === "") {
+                          if (score !== null) {
+                            setScore(0);
+                          }
+                        } else if (/^\d+$/.test(value)) {
+                          const numValue = parseInt(value);
+                          if (numValue >= 0 && numValue <= 100) {
+                            setScore(numValue);
+                          }
+                        }
                       }}
                       disabled={score === null}
                       placeholder="輸入分數"
@@ -1356,7 +1360,10 @@ export default function GradingPage() {
                     value={feedback}
                     onChange={(e) => {
                       setFeedback(e.target.value);
-                      triggerAutoSave();
+                    }}
+                    onBlur={async () => {
+                      // 離開輸入框時立即儲存
+                      await performAutoSave();
                     }}
                     placeholder="給學生的總體鼓勵和建議..."
                     rows={4}

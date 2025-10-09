@@ -7,7 +7,7 @@ import { retryAIAnalysis } from "../utils/retryHelper";
 import { clearAllAuth } from "./authUtils";
 
 // 🔐 Security: Only enable debug logs in development
-const DEBUG = import.meta.env.DEV;
+const DEBUG = false; // 暫時關閉以便追蹤其他問題
 
 /**
  * Custom API Error class for better error handling
