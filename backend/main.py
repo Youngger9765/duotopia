@@ -30,6 +30,7 @@ from routers import (
     subscription,
     payment,
 )
+from routes import logs
 from api import debug
 
 app = FastAPI(
@@ -99,6 +100,7 @@ async def health_check():
 
 # Include routers
 app.include_router(public.router)  # 公開路由優先，不需要認證
+app.include_router(logs.router)  # 日誌路由（無需認證）
 app.include_router(auth.router)
 app.include_router(subscription.router)  # 訂閱路由
 app.include_router(payment.router, prefix="/api", tags=["payment"])  # 金流路由

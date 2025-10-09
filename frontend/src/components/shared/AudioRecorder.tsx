@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import AudioPlayer from "./AudioPlayer";
 import { Mic, MicOff, Square, RotateCcw, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logAudioError } from "@/utils/audioErrorLogger";
 
 interface AudioRecorderProps {
   // Core props
@@ -114,6 +115,31 @@ export default function AudioRecorder({
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
+
+        // 驗證錄音檔案
+        console.log("🎤 Recording completed:", {
+          size: audioBlob.size,
+          type: audioBlob.type,
+          duration: recordingTime,
+        });
+
+        // 檢查檔案大小（小於 1KB 可能有問題）
+        if (audioBlob.size < 1000) {
+          console.error("⚠️ Recording file too small:", audioBlob.size);
+
+          // 記錄到 BigQuery
+          logAudioError({
+            errorType: "recording_too_small",
+            audioUrl: audioUrl,
+            audioSize: audioBlob.size,
+            audioDuration: recordingTime,
+            contentType: audioBlob.type,
+          });
+
+          setStatus("error");
+          setIsRecording(false);
+          return;
+        }
 
         setLocalAudioUrl(audioUrl);
         setStatus("completed");
