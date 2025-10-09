@@ -247,7 +247,7 @@ export default function AudioRecorder({
           {localAudioUrl && !isRecording && (
             <AudioPlayer
               audioUrl={localAudioUrl}
-              variant="compact"
+              variant="minimal"
               showTitle={false}
             />
           )}
@@ -289,7 +289,7 @@ export default function AudioRecorder({
             <div className="space-y-2">
               <AudioPlayer
                 audioUrl={localAudioUrl}
-                variant="compact"
+                variant={readOnly ? "minimal" : "compact"}
                 className="mb-2"
               />
               {!readOnly && (
