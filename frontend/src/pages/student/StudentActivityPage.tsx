@@ -250,10 +250,10 @@ export default function StudentActivityPage() {
   // 🎯 跨瀏覽器格式偵測
   const getSupportedMimeType = () => {
     const types = [
-      'audio/webm;codecs=opus',  // Chrome/Firefox 首選
-      'audio/webm',              // Chrome/Firefox 備用
-      'audio/mp4',               // Safari/iOS 必須
-      'audio/ogg;codecs=opus',   // Firefox 備用
+      "audio/webm;codecs=opus", // Chrome/Firefox 首選
+      "audio/webm", // Chrome/Firefox 備用
+      "audio/mp4", // Safari/iOS 必須
+      "audio/ogg;codecs=opus", // Firefox 備用
     ];
 
     for (const type of types) {
@@ -263,8 +263,8 @@ export default function StudentActivityPage() {
       }
     }
 
-    console.warn('⚠️ No supported MIME type found, using default');
-    return '';  // 讓瀏覽器自動選擇
+    console.warn("⚠️ No supported MIME type found, using default");
+    return ""; // 讓瀏覽器自動選擇
   };
 
   const startRecording = async (isReRecord: boolean = false) => {
@@ -316,7 +316,9 @@ export default function StudentActivityPage() {
       const chunks: Blob[] = [];
 
       // 記錄實際使用的格式
-      console.log(`🎙️ MediaRecorder initialized with MIME type: ${recorder.mimeType}`);
+      console.log(
+        `🎙️ MediaRecorder initialized with MIME type: ${recorder.mimeType}`,
+      );
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -326,7 +328,9 @@ export default function StudentActivityPage() {
 
       recorder.onstop = async () => {
         // 使用 MediaRecorder 實際的 MIME type（支援跨瀏覽器）
-        const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const audioBlob = new Blob(chunks, {
+          type: recorder.mimeType || "audio/webm",
+        });
         const currentActivity = activities[currentActivityIndex];
 
         // 🎯 驗證錄音檔案
@@ -372,13 +376,16 @@ export default function StudentActivityPage() {
 
             testAudio.addEventListener("loadedmetadata", () => {
               clearTimeout(timeout);
-              console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
+              console.log(
+                "✅ Audio metadata loaded, duration:",
+                testAudio.duration,
+              );
 
               // 檢查 duration 是否有效（至少 1 秒）
               // 處理 Safari iOS 的 Infinity 和 NaN 問題
               if (
                 isNaN(testAudio.duration) ||
-                !isFinite(testAudio.duration) ||  // 排除 Infinity
+                !isFinite(testAudio.duration) || // 排除 Infinity
                 testAudio.duration < 1
               ) {
                 console.error("❌ Invalid audio duration:", testAudio.duration);
@@ -700,7 +707,6 @@ export default function StudentActivityPage() {
     startRecording();
   };
 
-
   // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -925,26 +931,31 @@ export default function StudentActivityPage() {
   };
 
   // 🔧 Memoize callback to prevent re-renders
-  const handleUpdateItemRecording = useCallback((activityId: number, index: number, url: string) => {
-    setActivities((prevActivities) => {
-      const newActivities = [...prevActivities];
-      const activityIndex = newActivities.findIndex((a) => a.id === activityId);
-      if (activityIndex !== -1 && newActivities[activityIndex].items) {
-        const newItems = [...newActivities[activityIndex].items!];
-        if (newItems[index]) {
-          newItems[index] = {
-            ...newItems[index],
-            recording_url: url,
+  const handleUpdateItemRecording = useCallback(
+    (activityId: number, index: number, url: string) => {
+      setActivities((prevActivities) => {
+        const newActivities = [...prevActivities];
+        const activityIndex = newActivities.findIndex(
+          (a) => a.id === activityId,
+        );
+        if (activityIndex !== -1 && newActivities[activityIndex].items) {
+          const newItems = [...newActivities[activityIndex].items!];
+          if (newItems[index]) {
+            newItems[index] = {
+              ...newItems[index],
+              recording_url: url,
+            };
+          }
+          newActivities[activityIndex] = {
+            ...newActivities[activityIndex],
+            items: newItems,
           };
         }
-        newActivities[activityIndex] = {
-          ...newActivities[activityIndex],
-          items: newItems,
-        };
-      }
-      return newActivities;
-    });
-  }, []);
+        return newActivities;
+      });
+    },
+    [],
+  );
 
   // Render activity content based on type
   const renderActivityContent = (activity: Activity) => {
@@ -989,7 +1000,9 @@ export default function StudentActivityPage() {
           recordingTime={recordingTime}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
-          onUpdateItemRecording={(index, url) => handleUpdateItemRecording(activity.id, index, url)}
+          onUpdateItemRecording={(index, url) =>
+            handleUpdateItemRecording(activity.id, index, url)
+          }
           formatTime={formatTime}
           progressId={activity.id}
           progressIds={answer?.progressIds}

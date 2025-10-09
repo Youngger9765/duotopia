@@ -100,10 +100,10 @@ export default function AudioRecorder({
   // 🎯 跨瀏覽器格式偵測
   const getSupportedMimeType = useCallback(() => {
     const types = [
-      'audio/webm;codecs=opus',  // Chrome/Firefox 首選
-      'audio/webm',              // Chrome/Firefox 備用
-      'audio/mp4',               // Safari/iOS 必須
-      'audio/ogg;codecs=opus',   // Firefox 備用
+      "audio/webm;codecs=opus", // Chrome/Firefox 首選
+      "audio/webm", // Chrome/Firefox 備用
+      "audio/mp4", // Safari/iOS 必須
+      "audio/ogg;codecs=opus", // Firefox 備用
     ];
 
     for (const type of types) {
@@ -113,8 +113,8 @@ export default function AudioRecorder({
       }
     }
 
-    console.warn('⚠️ No supported MIME type found, using default');
-    return '';  // 讓瀏覽器自動選擇
+    console.warn("⚠️ No supported MIME type found, using default");
+    return ""; // 讓瀏覽器自動選擇
   }, []);
 
   // Start recording
@@ -133,7 +133,9 @@ export default function AudioRecorder({
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
-      console.log(`🎙️ AudioRecorder initialized with: ${mediaRecorder.mimeType}`);
+      console.log(
+        `🎙️ AudioRecorder initialized with: ${mediaRecorder.mimeType}`,
+      );
 
       // Handle data available
       mediaRecorder.ondataavailable = (event) => {
@@ -144,7 +146,9 @@ export default function AudioRecorder({
 
       // Handle recording stop
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
+        const audioBlob = new Blob(chunksRef.current, {
+          type: mediaRecorder.mimeType || "audio/webm",
+        });
         const audioUrl = URL.createObjectURL(audioBlob);
 
         // 驗證錄音檔案
@@ -200,13 +204,16 @@ export default function AudioRecorder({
 
             testAudio.addEventListener("loadedmetadata", () => {
               clearTimeout(timeout);
-              console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
+              console.log(
+                "✅ Audio metadata loaded, duration:",
+                testAudio.duration,
+              );
 
               // 檢查 duration 是否有效（處理 Safari iOS Infinity 問題）
               if (
                 !testAudio.duration ||
                 isNaN(testAudio.duration) ||
-                !isFinite(testAudio.duration) ||  // 排除 Infinity
+                !isFinite(testAudio.duration) || // 排除 Infinity
                 testAudio.duration === 0
               ) {
                 console.error("❌ Invalid audio duration:", testAudio.duration);

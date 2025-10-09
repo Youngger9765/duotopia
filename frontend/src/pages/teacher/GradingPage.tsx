@@ -325,9 +325,7 @@ export default function GradingPage() {
     if (!submission) return;
 
     const newFeedbacks = { ...itemFeedbacks };
-    let hasRecordingCount = 0;
     let noRecordingCount = 0;
-    const noRecordingItems: string[] = [];
     let totalQuestions = 0;
 
     // 處理所有題組
@@ -347,7 +345,6 @@ export default function GradingPage() {
                 "你尚未上傳錄音，請補交作業",
             };
             noRecordingCount++;
-            noRecordingItems.push(`題目 ${globalIndex + 1}`);
           } else {
             // 有錄音 → 移除 passed 狀態（不打勾也不打叉）
             if (newFeedbacks[globalIndex]) {
@@ -357,7 +354,6 @@ export default function GradingPage() {
                 feedback: currentFeedback.feedback || "",
               };
             }
-            hasRecordingCount++;
           }
           globalIndex++;
         });
@@ -375,7 +371,6 @@ export default function GradingPage() {
               newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
           };
           noRecordingCount++;
-          noRecordingItems.push(`題目 ${index + 1}`);
         } else {
           // 有錄音 → 移除 passed 狀態
           if (newFeedbacks[index]) {
@@ -385,7 +380,6 @@ export default function GradingPage() {
               feedback: currentFeedback.feedback || "",
             };
           }
-          hasRecordingCount++;
         }
       });
     }
@@ -397,7 +391,9 @@ export default function GradingPage() {
 
     // 顯示結果
     if (noRecordingCount === 0) {
-      toast.success(`✅ 全部都有錄音 (${totalQuestions}題)`, { duration: 3000 });
+      toast.success(`✅ 全部都有錄音 (${totalQuestions}題)`, {
+        duration: 3000,
+      });
     } else {
       toast.warning(`⚠️ ${noRecordingCount}題缺少錄音`, {
         duration: 3000,
@@ -410,7 +406,6 @@ export default function GradingPage() {
     if (!submission) return;
 
     let appliedCount = 0;
-    let needReviewCount = 0;
 
     const newFeedbacks = { ...itemFeedbacks };
 
@@ -464,8 +459,6 @@ export default function GradingPage() {
               };
               appliedCount++;
             }
-          } else {
-            needReviewCount++;
           }
           globalIndex++;
         });
@@ -517,8 +510,6 @@ export default function GradingPage() {
             };
             appliedCount++;
           }
-        } else {
-          needReviewCount++;
         }
       });
     }
