@@ -2007,11 +2007,6 @@ async def grade_student_assignment(
 
     # 更新個別題目的評分和回饋
     if "item_results" in grade_data:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"💾 [DEBUG] 收到 item_results: {grade_data['item_results']}")
-        logger.info(f"💾 [DEBUG] item_results 數量: {len(grade_data['item_results'])}")
-
         # 獲取所有內容進度記錄
         progress_records = (
             db.query(StudentContentProgress)
@@ -2122,8 +2117,6 @@ async def grade_student_assignment(
                             )
                             item_progress.teacher_id = current_teacher.id
                             item_progress.review_status = "REVIEWED"
-
-                            logger.info(f"💾 [DEBUG] 已更新 item {current_item_index}: feedback='{item_data.get('feedback')}', passed={item_data.get('passed')}, score={item_data.get('score')}")
                     else:
                         items_feedback.append(
                             {"feedback": "", "passed": None, "score": None}

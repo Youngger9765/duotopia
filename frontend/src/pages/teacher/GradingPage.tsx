@@ -214,17 +214,6 @@ export default function GradingPage() {
 
       setSubmission(response);
 
-      // Debug: 檢查 API 回傳的資料
-      console.log("🔍 [DEBUG] loadSubmission response:", response);
-      if (response.content_groups && response.content_groups[0]) {
-        const firstItem = response.content_groups[0].submissions[0];
-        console.log("🔍 [DEBUG] 第一題資料:", firstItem);
-        console.log("🔍 [DEBUG] 第一題 feedback:", firstItem.feedback);
-        console.log("🔍 [DEBUG] 第一題 passed:", firstItem.passed);
-        console.log("🔍 [DEBUG] 第一題 feedback === undefined:", firstItem.feedback === undefined);
-        console.log("🔍 [DEBUG] 第一題 passed === undefined:", firstItem.passed === undefined);
-      }
-
       if (
         response.current_score !== undefined &&
         response.current_score !== null
@@ -323,10 +312,6 @@ export default function GradingPage() {
         item_results: itemResults,
         update_status: false,
       };
-
-      console.log("💾 [DEBUG] 準備儲存的資料:", payload);
-      console.log("💾 [DEBUG] itemFeedbacks 狀態:", itemFeedbacks);
-      console.log("💾 [DEBUG] item_results 數量:", itemResults.length);
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, payload);
 
