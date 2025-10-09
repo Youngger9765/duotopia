@@ -910,70 +910,6 @@ export default function GradingPage() {
       </div>
 
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* 頂部標題區 */}
-        <div className="mb-4 hidden lg:block">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">{assignmentTitle}</h1>
-            {submission && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">
-                    {submission.student_name}
-                  </span>
-                </div>
-                {getStatusBadge(submission.status)}
-              </div>
-            )}
-          </div>
-
-          {/* 操作按鈕 */}
-          <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3">
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <Button
-                size="sm"
-                onClick={handleCheckRecordings}
-                className="flex-1 md:flex-none flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Search className="h-4 w-4" />
-                檢查錄音
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApplyAISuggestions}
-                className="flex-1 md:flex-none flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                <Sparkles className="h-4 w-4" />
-                套用 AI 建議
-              </Button>
-            </div>
-          </div>
-
-          {/* 題組選擇器 */}
-          {submission?.content_groups &&
-            submission.content_groups.length > 1 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">
-                  題組:
-                </span>
-                <select
-                  value={selectedGroupIndex}
-                  onChange={(e) => {
-                    setSelectedGroupIndex(parseInt(e.target.value));
-                    setActiveTab("content"); // 選擇題組後自動切換到題組 tab
-                  }}
-                  className="border rounded-md px-3 py-1.5 text-sm"
-                >
-                  {submission.content_groups.map((group, index) => (
-                    <option key={group.content_id} value={index}>
-                      {group.content_title} ({group.submissions.length}題)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-        </div>
-
         <div className="grid grid-cols-12 gap-4">
           {/* 左側 - 學生列表 */}
           <div
@@ -1076,6 +1012,50 @@ export default function GradingPage() {
           >
             {submission ? (
               <div className="space-y-3">
+                {/* 桌機版操作按鈕 */}
+                <div className="hidden lg:flex items-center gap-2 mb-3">
+                  <Button
+                    size="sm"
+                    onClick={handleCheckRecordings}
+                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Search className="h-4 w-4" />
+                    檢查錄音
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleApplyAISuggestions}
+                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    套用 AI 建議
+                  </Button>
+                  {/* 題組選擇器 */}
+                  {submission.content_groups &&
+                    submission.content_groups.length > 1 && (
+                      <>
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          題組:
+                        </span>
+                        <select
+                          value={selectedGroupIndex}
+                          onChange={(e) => {
+                            setSelectedGroupIndex(parseInt(e.target.value));
+                            setActiveTab("content");
+                          }}
+                          className="border rounded-md px-3 py-1.5 text-sm"
+                        >
+                          {submission.content_groups.map((group, index) => (
+                            <option key={group.content_id} value={index}>
+                              {group.content_title} ({group.submissions.length}
+                              題)
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                </div>
+
                 {/* 手機版操作按鈕 */}
                 <div className="lg:hidden sticky top-28 z-10 -mx-4 sm:-mx-6 mb-3">
                   <Card className="p-3 rounded-none sm:rounded-lg shadow-md">
