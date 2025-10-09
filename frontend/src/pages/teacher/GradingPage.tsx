@@ -110,7 +110,7 @@ export default function GradingPage() {
 
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [loading, setLoading] = useState(true);
-  const [score, setScore] = useState(80);
+  const [score, setScore] = useState<number | null>(null);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [itemFeedbacks, setItemFeedbacks] = useState<ItemFeedback>({});
@@ -579,12 +579,6 @@ export default function GradingPage() {
     };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
-
-  const quickScoreButtons = [
-    { label: "滿分", value: 100 },
-    { label: "90分", value: 90 },
-    { label: "80分", value: 80 },
-  ];
 
   // 取得當前題組
   const getCurrentGroup = () => {
@@ -1206,85 +1200,63 @@ export default function GradingPage() {
                 )}
 
                 {/* 分數評定 */}
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium">分數</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-blue-600">
-                      {score} 分
-                    </span>
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
                     <input
-                      type="range"
-                      value={score}
+                      type="checkbox"
+                      checked={score !== null}
                       onChange={(e) => {
-                        setScore(Number(e.target.value));
+                        if (e.target.checked) {
+                          setScore(80);
+                        } else {
+                          setScore(null);
+                        }
                         triggerAutoSave();
                       }}
-                      min={0}
-                      max={100}
-                      step={1}
-                      className="w-32 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                      style={{
-                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${score}%, #e5e7eb ${score}%, #e5e7eb 100%)`,
-                      }}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
+                    <label className="text-sm font-medium">給分</label>
                   </div>
-                  <div className="flex gap-1">
-                    {quickScoreButtons.map((btn) => (
-                      <Button
-                        key={btn.value}
-                        variant={score === btn.value ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          setScore(btn.value);
-                          triggerAutoSave();
-                        }}
-                        className="text-xs px-1.5 py-0.5 h-6"
-                      >
-                        {btn.label}
-                      </Button>
-                    ))}
+                  <div className="mt-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={score ?? ""}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setScore(value);
+                        triggerAutoSave();
+                      }}
+                      disabled={score === null}
+                      placeholder="輸入分數"
+                      className={`w-full px-3 py-2 text-lg font-bold border-2 rounded focus:outline-none focus:ring-2 text-center ${
+                        score === null
+                          ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed"
+                          : "bg-white border-blue-500 text-blue-600 focus:ring-blue-500"
+                      }`}
+                    />
+                    <div className="text-xs text-gray-500 text-center mt-1">
+                      0-100 分
+                    </div>
                   </div>
                 </div>
 
                 {/* 總評語回饋 */}
-                <div className="space-y-3">
-                  <label className="text-xs font-medium mb-1 block">
+                <div>
+                  <label className="text-xs font-medium mb-2 block">
                     總評語回饋
                   </label>
-
-                  {/* 1. 詳實記錄（唯讀） */}
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">
-                      1. 詳實記錄
-                    </label>
-                    <div className="p-3 bg-white dark:bg-gray-50 rounded-lg border border-gray-300 max-h-32 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-800 font-mono">
-                        {Array.from({ length: totalQuestions })
-                          .map((_, index) => {
-                            const result = itemFeedbacks[index];
-                            return `題目 ${index + 1} ${result?.passed === true ? "✅" : result?.passed === false ? "❌" : "⬜"}: ${result?.feedback || "(尚無評語)"}
-`;
-                          })
-                          .join("") || "請先批改各題目..."}
-                      </pre>
-                    </div>
-                  </div>
-
-                  {/* 2. 總評（可編輯） */}
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">
-                      2. 總評
-                    </label>
-                    <Textarea
-                      value={feedback}
-                      onChange={(e) => {
-                        setFeedback(e.target.value);
-                        triggerAutoSave();
-                      }}
-                      placeholder="給學生的總體鼓勵和建議..."
-                      className="min-h-[60px] resize-none text-sm bg-white dark:bg-white"
-                    />
-                  </div>
+                  <Textarea
+                    value={feedback}
+                    onChange={(e) => {
+                      setFeedback(e.target.value);
+                      triggerAutoSave();
+                    }}
+                    placeholder="給學生的總體鼓勵和建議..."
+                    rows={4}
+                    className="resize-none text-sm bg-white dark:bg-white"
+                  />
                 </div>
 
                 {/* 操作按鈕 */}
