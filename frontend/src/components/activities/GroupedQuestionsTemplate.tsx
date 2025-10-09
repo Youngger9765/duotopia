@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
@@ -94,7 +94,7 @@ interface GroupedQuestionsTemplateProps {
   readOnly?: boolean; // 唯讀模式
 }
 
-export default function GroupedQuestionsTemplate({
+const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   items,
   // answers = [], // 目前未使用
   currentQuestionIndex = 0,
@@ -111,21 +111,6 @@ export default function GroupedQuestionsTemplate({
   readOnly = false, // 唯讀模式
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
-
-  // Debug: 顯示當前題目的評語資料
-  console.log("[GroupedQuestionsTemplate] 當前題目資料:", {
-    index: currentQuestionIndex,
-    totalItems: items.length,
-    currentQuestion: currentQuestion,
-    hasTeacherFeedback: !!currentQuestion?.teacher_feedback,
-    teacherFeedback: currentQuestion?.teacher_feedback,
-    teacherPassed: currentQuestion?.teacher_passed,
-    teacherPassedType: typeof currentQuestion?.teacher_passed,
-    teacherPassedIsNull: currentQuestion?.teacher_passed === null,
-    teacherPassedIsTrue: currentQuestion?.teacher_passed === true,
-    teacherPassedIsFalse: currentQuestion?.teacher_passed === false,
-    teacherScore: currentQuestion?.teacher_review_score,
-  });
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -834,4 +819,6 @@ export default function GroupedQuestionsTemplate({
       </div>
     </div>
   );
-}
+});
+
+export default GroupedQuestionsTemplate;

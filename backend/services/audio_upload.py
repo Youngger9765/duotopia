@@ -62,6 +62,8 @@ class AudioUploadService:
         duration_seconds: int = 30,
         content_id: int = None,
         item_index: int = None,
+        assignment_id: int = None,
+        student_id: int = None,
     ) -> str:
         """
         上傳音檔到 GCS
@@ -84,7 +86,27 @@ class AudioUploadService:
             # 讀取檔案內容
             content = await file.read()
 
-            # 檢查檔案大小
+            # 檢查檔案大小（至少 5KB，最多 2MB）
+            min_file_size = 5 * 1024  # 5KB
+            if len(content) < min_file_size:
+                # 記錄到 BigQuery
+                from services.bigquery_logger import get_bigquery_logger
+                logger = get_bigquery_logger()
+                await logger.log_audio_error({
+                    "error_type": "backend_validation_file_too_small",
+                    "error_message": f"File size {len(content)} bytes < minimum {min_file_size} bytes",
+                    "audio_url": file.filename or "unknown",
+                    "audio_size": len(content),
+                    "content_type": file.content_type,
+                    "assignment_id": assignment_id,
+                    "student_id": student_id,
+                })
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Recording file too small ({len(content)} bytes). Must be at least {min_file_size / 1024}KB for valid audio.",
+                )
+
             if len(content) > self.max_file_size:
                 raise HTTPException(
                     status_code=400,

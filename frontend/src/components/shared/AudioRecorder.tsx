@@ -6,6 +6,7 @@ import AudioPlayer from "./AudioPlayer";
 import { Mic, MicOff, Square, RotateCcw, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logAudioError } from "@/utils/audioErrorLogger";
+import { toast } from "sonner";
 
 interface AudioRecorderProps {
   // Core props
@@ -112,7 +113,7 @@ export default function AudioRecorder({
       };
 
       // Handle recording stop
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -127,6 +128,11 @@ export default function AudioRecorder({
         if (audioBlob.size < 1000) {
           console.error("⚠️ Recording file too small:", audioBlob.size);
 
+          // 顯示錯誤訊息給使用者
+          toast.error("錄音失敗", {
+            description: "錄音檔案異常，請重新錄音",
+          });
+
           // 記錄到 BigQuery
           logAudioError({
             errorType: "recording_too_small",
@@ -138,32 +144,153 @@ export default function AudioRecorder({
 
           setStatus("error");
           setIsRecording(false);
+
+          // Clean up
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
           return;
         }
 
-        setLocalAudioUrl(audioUrl);
-        setStatus("completed");
-        setIsRecording(false);
+        // 🎯 關鍵：驗證錄音是否可以播放
+        try {
+          const testAudio = new Audio(audioUrl);
 
-        // Clean up stream
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
+          // 等待 metadata 載入（最多等 5 秒）
+          const loadPromise = new Promise<boolean>((resolve) => {
+            const timeout = setTimeout(() => {
+              console.error("⏱️ Audio metadata load timeout");
+              resolve(false);
+            }, 5000);
 
-        // Clear timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
+            testAudio.addEventListener("loadedmetadata", () => {
+              clearTimeout(timeout);
+              console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
 
-        // Callback with recording
-        if (onRecordingComplete) {
-          onRecordingComplete(audioBlob, audioUrl);
-        }
+              // 檢查 duration 是否有效
+              if (
+                !testAudio.duration ||
+                isNaN(testAudio.duration) ||
+                testAudio.duration === 0
+              ) {
+                console.error("❌ Invalid audio duration:", testAudio.duration);
+                resolve(false);
+              } else {
+                resolve(true);
+              }
+            });
 
-        if (onRecordingStop) {
-          onRecordingStop();
+            testAudio.addEventListener("error", (e) => {
+              clearTimeout(timeout);
+              console.error("❌ Audio load error:", e);
+              resolve(false);
+            });
+
+            // 強制載入
+            testAudio.load();
+          });
+
+          const isValid = await loadPromise;
+
+          if (!isValid) {
+            console.error("⚠️ Recording validation failed");
+
+            // 顯示錯誤訊息給使用者
+            toast.error("錄音驗證失敗", {
+              description:
+                "錄音可能無法正常播放，請重新錄音。建議檢查麥克風設定或嘗試使用 Chrome 瀏覽器。",
+            });
+
+            // 記錄到 BigQuery
+            logAudioError({
+              errorType: "recording_validation_failed",
+              audioUrl: audioUrl,
+              audioSize: audioBlob.size,
+              audioDuration: 0,
+              contentType: audioBlob.type,
+            });
+
+            setStatus("error");
+            setIsRecording(false);
+
+            // Clean up
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach((track) => track.stop());
+              streamRef.current = null;
+            }
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            return;
+          }
+
+          // ✅ 驗證通過，設定錄音
+          console.log("✅ Recording validation passed");
+
+          // 顯示成功訊息
+          toast.success("錄音完成", {
+            description: "錄音已通過驗證，可以正常播放",
+          });
+
+          setLocalAudioUrl(audioUrl);
+          setStatus("completed");
+          setIsRecording(false);
+
+          // Clean up stream
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
+
+          // Clear timer
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+
+          // Callback with recording
+          if (onRecordingComplete) {
+            onRecordingComplete(audioBlob, audioUrl);
+          }
+
+          if (onRecordingStop) {
+            onRecordingStop();
+          }
+        } catch (error) {
+          console.error("❌ Recording validation error:", error);
+
+          // 顯示錯誤訊息給使用者
+          toast.error("錄音處理失敗", {
+            description: "無法驗證錄音，請重新錄音",
+          });
+
+          // 記錄到 BigQuery
+          logAudioError({
+            errorType: "recording_validation_error",
+            audioUrl: audioUrl,
+            audioSize: audioBlob.size,
+            errorMessage: String(error),
+            contentType: audioBlob.type,
+          });
+
+          setStatus("error");
+          setIsRecording(false);
+
+          // Clean up
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
         }
       };
 
@@ -190,6 +317,12 @@ export default function AudioRecorder({
       }
     } catch (error) {
       console.error("Failed to start recording:", error);
+
+      // 顯示錯誤訊息
+      toast.error("無法開始錄音", {
+        description: "請檢查麥克風權限，或嘗試重新整理頁面",
+      });
+
       setStatus("error");
       setIsRecording(false);
     }

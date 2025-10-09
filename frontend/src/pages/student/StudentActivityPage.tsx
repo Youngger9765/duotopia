@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -294,8 +294,106 @@ export default function StudentActivityPage() {
         const audioBlob = new Blob(chunks, { type: "audio/webm" });
         const currentActivity = activities[currentActivityIndex];
 
+        // 🎯 驗證錄音檔案
+        console.log("🎤 Recording completed:", {
+          size: audioBlob.size,
+          type: audioBlob.type,
+        });
+
+        // 檢查檔案大小（小於 1KB 可能有問題）
+        if (audioBlob.size < 1000) {
+          console.error("⚠️ Recording file too small:", audioBlob.size);
+
+          // 記錄到 BigQuery
+          const { logAudioError } = await import("@/utils/audioErrorLogger");
+          await logAudioError({
+            errorType: "recording_too_small",
+            audioUrl: "blob:local",
+            audioSize: audioBlob.size,
+            audioDuration: 0,
+            contentType: audioBlob.type,
+            assignmentId: parseInt(assignmentId || "0"),
+          });
+
+          toast.error("錄音失敗", {
+            description: "錄音檔案異常，請重新錄音",
+          });
+          return;
+        }
+
         // Create local audio URL for playback
         const localAudioUrl = URL.createObjectURL(audioBlob);
+
+        // 🎯 關鍵：驗證錄音是否可以播放
+        try {
+          const testAudio = new Audio(localAudioUrl);
+
+          // 等待 metadata 載入（最多等 5 秒）
+          const loadPromise = new Promise<boolean>((resolve) => {
+            const timeout = setTimeout(() => {
+              console.error("⏱️ Audio metadata load timeout");
+              resolve(false);
+            }, 5000);
+
+            testAudio.addEventListener("loadedmetadata", () => {
+              clearTimeout(timeout);
+              console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
+
+              // 檢查 duration 是否有效（至少 1 秒）
+              if (isNaN(testAudio.duration) || testAudio.duration < 1) {
+                console.error("❌ Invalid audio duration:", testAudio.duration);
+                resolve(false);
+              } else {
+                resolve(true);
+              }
+            });
+
+            testAudio.addEventListener("error", (e) => {
+              clearTimeout(timeout);
+              console.error("❌ Audio load error:", e);
+              resolve(false);
+            });
+
+            // 強制載入
+            testAudio.load();
+          });
+
+          const isValid = await loadPromise;
+
+          if (!isValid) {
+            console.error("⚠️ Recording validation failed");
+
+            // 記錄到 BigQuery
+            const { logAudioError } = await import("@/utils/audioErrorLogger");
+            await logAudioError({
+              errorType: "recording_validation_failed",
+              audioUrl: localAudioUrl,
+              audioSize: audioBlob.size,
+              audioDuration: 0,
+              contentType: audioBlob.type,
+              assignmentId: parseInt(assignmentId || "0"),
+              errorMessage: "Duration less than 1 second",
+            });
+
+            toast.error("錄音驗證失敗", {
+              description:
+                "錄音時長必須至少 1 秒。請重新錄音並確保說話時間足夠長。",
+            });
+            return;
+          }
+
+          // ✅ 驗證通過
+          console.log("✅ Recording validation passed");
+          toast.success("錄音完成", {
+            description: "錄音已通過驗證，可以正常播放",
+          });
+        } catch (error) {
+          console.error("❌ Recording validation error:", error);
+          toast.error("錄音處理失敗", {
+            description: "無法驗證錄音，請重新錄音",
+          });
+          return;
+        }
 
         // Update local state immediately for playback
         setAnswers((prev) => {
@@ -562,6 +660,7 @@ export default function StudentActivityPage() {
     startRecording();
   };
 
+
   // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -785,6 +884,28 @@ export default function StudentActivityPage() {
     }
   };
 
+  // 🔧 Memoize callback to prevent re-renders
+  const handleUpdateItemRecording = useCallback((activityId: number, index: number, url: string) => {
+    setActivities((prevActivities) => {
+      const newActivities = [...prevActivities];
+      const activityIndex = newActivities.findIndex((a) => a.id === activityId);
+      if (activityIndex !== -1 && newActivities[activityIndex].items) {
+        const newItems = [...newActivities[activityIndex].items!];
+        if (newItems[index]) {
+          newItems[index] = {
+            ...newItems[index],
+            recording_url: url,
+          };
+        }
+        newActivities[activityIndex] = {
+          ...newActivities[activityIndex],
+          items: newItems,
+        };
+      }
+      return newActivities;
+    });
+  }, []);
+
   // Render activity content based on type
   const renderActivityContent = (activity: Activity) => {
     const answer = answers.get(activity.id);
@@ -828,29 +949,7 @@ export default function StudentActivityPage() {
           recordingTime={recordingTime}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
-          onUpdateItemRecording={(index, url) => {
-            // Update the item's recording_url when recording is done
-            setActivities((prevActivities) => {
-              const newActivities = [...prevActivities];
-              const activityIndex = newActivities.findIndex(
-                (a) => a.id === activity.id,
-              );
-              if (activityIndex !== -1 && newActivities[activityIndex].items) {
-                const newItems = [...newActivities[activityIndex].items!];
-                if (newItems[index]) {
-                  newItems[index] = {
-                    ...newItems[index],
-                    recording_url: url,
-                  };
-                }
-                newActivities[activityIndex] = {
-                  ...newActivities[activityIndex],
-                  items: newItems,
-                };
-              }
-              return newActivities;
-            });
-          }}
+          onUpdateItemRecording={(index, url) => handleUpdateItemRecording(activity.id, index, url)}
           formatTime={formatTime}
           progressId={activity.id}
           progressIds={answer?.progressIds}

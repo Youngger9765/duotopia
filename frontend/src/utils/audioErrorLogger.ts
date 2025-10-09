@@ -67,7 +67,8 @@ export async function logAudioError(data: AudioErrorData): Promise<void> {
     console.log("📊 Logging audio error to BigQuery:", errorLog);
 
     // 發送到後端（靜默失敗，不影響使用者體驗）
-    const response = await fetch("/api/logs/audio-error", {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const response = await fetch(`${apiUrl}/api/logs/audio-error`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(errorLog),
