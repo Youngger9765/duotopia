@@ -1039,7 +1039,10 @@ async def upload_student_recording(
 
         # 上傳新錄音（不傳 content_id 和 item_index，讓它用 UUID）
         audio_url = await audio_service.upload_audio(
-            audio_file, duration_seconds=30  # 預設 30 秒
+            audio_file,
+            duration_seconds=30,  # 預設 30 秒
+            assignment_id=assignment_id,
+            student_id=student_id,
         )
 
         # 刪除舊錄音檔案（如果存在且不同）
