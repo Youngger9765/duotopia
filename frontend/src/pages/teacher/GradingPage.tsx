@@ -214,6 +214,17 @@ export default function GradingPage() {
 
       setSubmission(response);
 
+      // Debug: 檢查 API 回傳的資料
+      console.log("🔍 [DEBUG] loadSubmission response:", response);
+      if (response.content_groups && response.content_groups[0]) {
+        const firstItem = response.content_groups[0].submissions[0];
+        console.log("🔍 [DEBUG] 第一題資料:", firstItem);
+        console.log("🔍 [DEBUG] 第一題 feedback:", firstItem.feedback);
+        console.log("🔍 [DEBUG] 第一題 passed:", firstItem.passed);
+        console.log("🔍 [DEBUG] 第一題 feedback === undefined:", firstItem.feedback === undefined);
+        console.log("🔍 [DEBUG] 第一題 passed === undefined:", firstItem.passed === undefined);
+      }
+
       if (
         response.current_score !== undefined &&
         response.current_score !== null
@@ -241,7 +252,8 @@ export default function GradingPage() {
         let globalIndex = 0;
         response.content_groups.forEach((group) => {
           group.submissions.forEach((sub) => {
-            if (sub.feedback || sub.passed !== null) {
+            // 只要有 feedback 或 passed 欄位存在（不管是什麼值），都載入
+            if (sub.feedback !== undefined || sub.passed !== undefined) {
               loadedFeedbacks[globalIndex] = {
                 feedback: sub.feedback || "",
                 passed: sub.passed ?? null,
@@ -252,7 +264,8 @@ export default function GradingPage() {
         });
       } else if (response.submissions) {
         response.submissions.forEach((sub, index) => {
-          if (sub.feedback || sub.passed !== null) {
+          // 只要有 feedback 或 passed 欄位存在（不管是什麼值），都載入
+          if (sub.feedback !== undefined || sub.passed !== undefined) {
             loadedFeedbacks[index] = {
               feedback: sub.feedback || "",
               passed: sub.passed ?? null,
@@ -280,20 +293,21 @@ export default function GradingPage() {
     autoSaveTimerRef.current = setTimeout(async () => {
       await performAutoSave();
     }, 2000);
-  }, [submission, itemFeedbacks, score, feedback, studentId, assignmentId]);
+  }, []);
 
-  const performAutoSave = async () => {
+  const performAutoSave = async (feedbacksToSave?: typeof itemFeedbacks) => {
     if (!submission || submitting) return;
 
     setSaveStatus("saving");
     try {
+      const feedbacks = feedbacksToSave || itemFeedbacks;
       const itemResults: Array<{
         item_index: number;
         feedback: string;
         passed: boolean | null;
         score: number;
       }> = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
+      Object.entries(feedbacks).forEach(([index, fb]) => {
         itemResults.push({
           item_index: parseInt(index),
           feedback: fb.feedback || "",
@@ -302,13 +316,19 @@ export default function GradingPage() {
         });
       });
 
-      await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
+      const payload = {
         student_id: parseInt(studentId!),
-        score: score,
+        score: score ?? 0,
         feedback: feedback || "",
         item_results: itemResults,
         update_status: false,
-      });
+      };
+
+      console.log("💾 [DEBUG] 準備儲存的資料:", payload);
+      console.log("💾 [DEBUG] itemFeedbacks 狀態:", itemFeedbacks);
+      console.log("💾 [DEBUG] item_results 數量:", itemResults.length);
+
+      await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, payload);
 
       setSaveStatus("saved");
       setLastSavedTime(new Date());
@@ -323,111 +343,212 @@ export default function GradingPage() {
     }
   };
 
-  // 檢查錄音狀態（根據錄音有無 + AI 評分自動標記）
-  const handleCheckRecordings = () => {
+  // 檢查錄音狀態（根據錄音有無 + AI 評分自動標記）- 處理所有題目
+  const handleCheckRecordings = async () => {
     if (!submission) return;
-
-    const currentGroup = getCurrentGroup();
-    if (!currentGroup) return;
 
     const newFeedbacks = { ...itemFeedbacks };
     let passedCount = 0;
     let failedCount = 0;
     const failedItems: string[] = [];
+    let totalQuestions = 0;
 
-    currentGroup.submissions.forEach((item, localIndex) => {
-      const globalIndex = baseGlobalIndex + localIndex;
-      const hasRecording = !!item.audio_url;
-      const aiScore = item.ai_scores?.overall_score;
+    // 處理所有題組
+    if (submission.content_groups) {
+      let globalIndex = 0;
+      submission.content_groups.forEach((group) => {
+        group.submissions.forEach((item) => {
+          totalQuestions++;
+          const hasRecording = !!item.audio_url;
+          const aiScore = item.ai_scores?.overall_score;
 
-      // 優先級：沒錄音 > AI 評分低 > 通過
-      if (!hasRecording) {
-        // 情況 1: 沒錄音 → ✗
-        newFeedbacks[globalIndex] = {
-          passed: false,
-          feedback: newFeedbacks[globalIndex]?.feedback || "你尚未上傳錄音，請補交作業",
-        };
-        failedCount++;
-        failedItems.push(`題目 ${localIndex + 1} (無錄音)`);
-      } else if (aiScore !== undefined && aiScore < 75) {
-        // 情況 2: 有錄音但 AI 評分 < 75 → ✗
-        newFeedbacks[globalIndex] = {
-          passed: false,
-          feedback: newFeedbacks[globalIndex]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
-        };
-        failedCount++;
-        failedItems.push(`題目 ${localIndex + 1} (AI ${aiScore}分)`);
-      } else {
-        // 情況 3: 有錄音且 (沒有 AI 分數 或 AI >= 75) → ✓
-        newFeedbacks[globalIndex] = {
-          passed: true,
-          feedback: newFeedbacks[globalIndex]?.feedback || "做得很好！",
-        };
-        passedCount++;
-      }
-    });
+          // 優先級：沒錄音 > AI 評分低 > 通過
+          if (!hasRecording) {
+            // 情況 1: 沒錄音 → ✗
+            newFeedbacks[globalIndex] = {
+              passed: false,
+              feedback: newFeedbacks[globalIndex]?.feedback || "你尚未上傳錄音，請補交作業",
+            };
+            failedCount++;
+            failedItems.push(`題目 ${globalIndex + 1} (無錄音)`);
+          } else if (aiScore !== undefined && aiScore < 75) {
+            // 情況 2: 有錄音但 AI 評分 < 75 → ✗
+            newFeedbacks[globalIndex] = {
+              passed: false,
+              feedback: newFeedbacks[globalIndex]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
+            };
+            failedCount++;
+            failedItems.push(`題目 ${globalIndex + 1} (AI ${aiScore}分)`);
+          } else {
+            // 情況 3: 有錄音且 (沒有 AI 分數 或 AI >= 75) → ✓
+            newFeedbacks[globalIndex] = {
+              passed: true,
+              feedback: newFeedbacks[globalIndex]?.feedback || "做得很好！",
+            };
+            passedCount++;
+          }
+          globalIndex++;
+        });
+      });
+    } else if (submission.submissions) {
+      // 處理沒有分組的情況
+      submission.submissions.forEach((item, index) => {
+        totalQuestions++;
+        const hasRecording = !!item.audio_url;
+        const aiScore = item.ai_scores?.overall_score;
+
+        if (!hasRecording) {
+          newFeedbacks[index] = {
+            passed: false,
+            feedback: newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
+          };
+          failedCount++;
+          failedItems.push(`題目 ${index + 1} (無錄音)`);
+        } else if (aiScore !== undefined && aiScore < 75) {
+          newFeedbacks[index] = {
+            passed: false,
+            feedback: newFeedbacks[index]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
+          };
+          failedCount++;
+          failedItems.push(`題目 ${index + 1} (AI ${aiScore}分)`);
+        } else {
+          newFeedbacks[index] = {
+            passed: true,
+            feedback: newFeedbacks[index]?.feedback || "做得很好！",
+          };
+          passedCount++;
+        }
+      });
+    }
 
     setItemFeedbacks(newFeedbacks);
+
+    // 立即儲存 - 傳入最新的 feedbacks
+    await performAutoSave(newFeedbacks);
 
     // 顯示結果
     if (failedCount === 0) {
-      toast.success(
-        `✅ 全部通過！(${passedCount}/${currentGroup.submissions.length} 題)\n已自動標記評分。`,
-        { duration: 5000 },
-      );
+      toast.success(`✅ 全部通過 (${passedCount}題)`, { duration: 3000 });
     } else {
-      toast.warning(
-        `⚠️ ${failedCount} 題需訂正\n✓ 通過: ${passedCount} 題\n✗ 需訂正: ${failedCount} 題\n\n${failedItems.join('\n')}\n\n已自動標記評分。`,
-        { duration: 8000 },
+      toast.success(
+        `✓ 通過 ${passedCount}題 / ✗ 需訂正 ${failedCount}題`,
+        { duration: 3000 }
       );
     }
-
-    // 觸發自動儲存
-    triggerAutoSave();
   };
 
-  // 套用 AI 建議（門檻 75 分）
-  const handleApplyAISuggestions = () => {
+  // 套用 AI 建議（門檻 75 分）- 處理所有題目
+  const handleApplyAISuggestions = async () => {
     if (!submission) return;
-
-    const currentGroup = getCurrentGroup();
-    if (!currentGroup) return;
 
     let appliedCount = 0;
     let needReviewCount = 0;
-    const baseGlobalIndex = getGroupBaseIndex(selectedGroupIndex);
 
     const newFeedbacks = { ...itemFeedbacks };
 
-    currentGroup.submissions.forEach((item, localIndex) => {
-      const globalIndex = baseGlobalIndex + localIndex;
-      const aiScore = item.ai_scores?.overall_score;
+    // 處理所有題組
+    if (submission.content_groups) {
+      let globalIndex = 0;
+      submission.content_groups.forEach((group) => {
+        group.submissions.forEach((item) => {
+          const aiScores = item.ai_scores;
+          const aiScore = aiScores?.overall_score;
 
-      if (aiScore !== undefined) {
-        if (aiScore >= 75) {
-          newFeedbacks[globalIndex] = {
-            feedback: "表現不錯！",
-            passed: true,
-          };
-          appliedCount++;
+          if (aiScore !== undefined) {
+            if (aiScore >= 75) {
+              // 生成具體的通過評語
+              const strengths = [];
+              if (aiScores?.pronunciation_score && aiScores.pronunciation_score >= 80) {
+                strengths.push("發音清晰");
+              }
+              if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
+                strengths.push("流暢度佳");
+              }
+              if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
+                strengths.push("準確度高");
+              }
+              if (aiScores?.completeness_score && aiScores.completeness_score >= 80) {
+                strengths.push("完整度好");
+              }
+
+              let feedback = "";
+              if (strengths.length > 0) {
+                feedback = `表現優秀！${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
+              } else {
+                feedback = `表現不錯！整體達標。(AI 評分: ${Math.round(aiScore)})`;
+              }
+
+              newFeedbacks[globalIndex] = {
+                feedback,
+                passed: true,
+              };
+              appliedCount++;
+            } else {
+              newFeedbacks[globalIndex] = {
+                feedback: "請多練習發音和流暢度",
+                passed: false,
+              };
+              appliedCount++;
+            }
+          } else {
+            needReviewCount++;
+          }
+          globalIndex++;
+        });
+      });
+    } else if (submission.submissions) {
+      // 處理沒有分組的情況
+      submission.submissions.forEach((item, index) => {
+        const aiScores = item.ai_scores;
+        const aiScore = aiScores?.overall_score;
+
+        if (aiScore !== undefined) {
+          if (aiScore >= 75) {
+            const strengths = [];
+            if (aiScores?.pronunciation_score && aiScores.pronunciation_score >= 80) {
+              strengths.push("發音清晰");
+            }
+            if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
+              strengths.push("流暢度佳");
+            }
+            if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
+              strengths.push("準確度高");
+            }
+            if (aiScores?.completeness_score && aiScores.completeness_score >= 80) {
+              strengths.push("完整度好");
+            }
+
+            let feedback = "";
+            if (strengths.length > 0) {
+              feedback = `表現優秀！${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
+            } else {
+              feedback = `表現不錯！整體達標。(AI 評分: ${Math.round(aiScore)})`;
+            }
+
+            newFeedbacks[index] = {
+              feedback,
+              passed: true,
+            };
+            appliedCount++;
+          } else {
+            newFeedbacks[index] = {
+              feedback: "請多練習發音和流暢度",
+              passed: false,
+            };
+            appliedCount++;
+          }
         } else {
-          newFeedbacks[globalIndex] = {
-            feedback: "請多練習發音和流暢度",
-            passed: false,
-          };
-          appliedCount++;
+          needReviewCount++;
         }
-      } else {
-        needReviewCount++;
-      }
-    });
+      });
+    }
 
     setItemFeedbacks(newFeedbacks);
-    triggerAutoSave();
 
-    toast.success(
-      `已自動批改 ${appliedCount} 題${needReviewCount > 0 ? `，${needReviewCount} 題需要人工確認` : ""}`,
-    );
+    // 立即儲存 - 傳入最新的 feedbacks
+    await performAutoSave(newFeedbacks);
+
+    toast.success(`已批改 ${appliedCount} 題`, { duration: 3000 });
   };
 
   const handleCompleteGrading = async () => {
@@ -453,7 +574,7 @@ export default function GradingPage() {
 
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
-        score: score,
+        score: score ?? 0,
         feedback: feedback || "",
         item_results: itemResults,
         update_status: true,
@@ -861,53 +982,52 @@ export default function GradingPage() {
                   </div>
                 </Card>
 
-                {/* 操作按鈕 */}
+                {/* 操作按鈕與題組選擇器 */}
                 <Card className="p-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCheckRecordings}
-                      className="flex items-center gap-1"
-                    >
-                      <Search className="h-4 w-4" />
-                      檢查錄音
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleApplyAISuggestions}
-                      className="flex items-center gap-1"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      套用 AI 建議
-                    </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCheckRecordings}
+                        className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Search className="h-4 w-4" />
+                        檢查錄音
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleApplyAISuggestions}
+                        className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        套用 AI 建議
+                      </Button>
+                    </div>
+                    {submission.content_groups &&
+                      submission.content_groups.length > 1 && (
+                        <>
+                          <div className="border-l h-8"></div>
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-sm font-medium">題組:</span>
+                            <select
+                              value={selectedGroupIndex}
+                              onChange={(e) =>
+                                setSelectedGroupIndex(parseInt(e.target.value))
+                              }
+                              className="flex-1 border rounded-md px-3 py-1.5 text-sm"
+                            >
+                              {submission.content_groups.map((group, index) => (
+                                <option key={group.content_id} value={index}>
+                                  {group.content_title} ({group.submissions.length}
+                                  題)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
                   </div>
                 </Card>
-
-                {/* 題組選擇器 */}
-                {submission.content_groups &&
-                  submission.content_groups.length > 1 && (
-                    <Card className="p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">題組:</span>
-                        <select
-                          value={selectedGroupIndex}
-                          onChange={(e) =>
-                            setSelectedGroupIndex(parseInt(e.target.value))
-                          }
-                          className="flex-1 border rounded-md px-3 py-1.5 text-sm"
-                        >
-                          {submission.content_groups.map((group, index) => (
-                            <option key={group.content_id} value={index}>
-                              {group.content_title} ({group.submissions.length}
-                              題)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </Card>
-                  )}
 
                 {/* 題目 Table */}
                 {currentGroup && (
@@ -1004,7 +1124,7 @@ export default function GradingPage() {
                               </div>
 
                               {/* 學生錄音 */}
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                 {item.audio_url ? (
                                   <AudioRecorder
                                     variant="compact"
@@ -1023,7 +1143,7 @@ export default function GradingPage() {
                               </div>
 
                               {/* 評語 */}
-                              <div className="col-span-3">
+                              <div className="col-span-4">
                                 <Textarea
                                   value={itemFeedback?.feedback || ""}
                                   onChange={(e) => {
