@@ -2,7 +2,11 @@
  * 音檔錯誤記錄工具 - 記錄到後端 BigQuery
  */
 
-import { detectDevice, checkAudioSupport, getConnectionInfo } from "./deviceDetector";
+import {
+  detectDevice,
+  checkAudioSupport,
+  getConnectionInfo,
+} from "./deviceDetector";
 
 export interface AudioErrorData {
   errorType: string;

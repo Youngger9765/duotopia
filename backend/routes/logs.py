@@ -1,5 +1,5 @@
 """日誌記錄 API"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from services.bigquery_logger import get_bigquery_logger

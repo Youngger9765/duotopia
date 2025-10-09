@@ -3,6 +3,18 @@
  * 用於 BigQuery 錯誤日誌記錄
  */
 
+// NetworkInformation API 類型定義 (實驗性 API)
+interface NetworkInformation {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
 export interface DeviceInfo {
   platform: string;
   browser: string;
@@ -97,7 +109,7 @@ export function checkAudioSupport() {
  * 取得網路連線資訊（如果支援）
  */
 export function getConnectionInfo() {
-  const connection = (navigator as any).connection;
+  const connection = (navigator as NavigatorWithConnection).connection;
   if (connection) {
     return {
       effectiveType: connection.effectiveType, // '4g', '3g', etc.
