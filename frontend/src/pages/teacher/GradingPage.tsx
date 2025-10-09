@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,6 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Save,
   ArrowLeft,
   Volume2,
   CheckCircle,
@@ -21,6 +20,10 @@ import {
   Users,
   X,
   Mic,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Search,
 } from "lucide-react";
 import { Assignment } from "@/types";
 
@@ -41,8 +44,8 @@ interface StudentsResponse {
 interface SubmissionItem {
   question_text: string;
   question_translation?: string;
-  audio_url?: string; // 學生的錄音
-  question_audio_url?: string; // 題目的參考錄音
+  audio_url?: string;
+  question_audio_url?: string;
   student_answer?: string;
   transcript?: string;
   duration?: number;
@@ -79,24 +82,12 @@ interface StudentSubmission {
   }>;
   current_score?: number;
   current_feedback?: string;
-  ai_scores?: {
-    accuracy_score: number;
-    fluency_score: number;
-    pronunciation_score: number;
-    completeness_score: number;
-    overall_score: number;
-    word_details?: Array<{
-      word: string;
-      accuracy_score: number;
-      error_type?: string;
-    }>;
-  };
 }
 
 interface ItemFeedback {
   [key: number]: {
     feedback: string;
-    passed: boolean | null; // true=通過, false=未通過, null=未評
+    passed: boolean | null;
   };
 }
 
@@ -105,6 +96,8 @@ interface StudentListItem {
   student_name: string;
   status: string;
 }
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export default function GradingPage() {
   const { classroomId, assignmentId } = useParams<{
@@ -120,30 +113,20 @@ export default function GradingPage() {
   const [score, setScore] = useState(80);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [selectedItemIndex, setSelectedItemIndex] = useState(0);
   const [itemFeedbacks, setItemFeedbacks] = useState<ItemFeedback>({});
-  const [autoSaving, setAutoSaving] = useState(false);
+
+  // 新增狀態
+  const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
 
   // 學生列表相關
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
   const [assignmentTitle, setAssignmentTitle] = useState("");
 
-  // 計算題目索引映射
-  const getItemIndexMap = () => {
-    const map = new Map<string, number>();
-    if (!submission?.content_groups) return map;
-
-    let globalIndex = 0;
-    submission.content_groups.forEach((group) => {
-      group.submissions.forEach((_, localIndex) => {
-        map.set(`${group.content_id}-${localIndex}`, globalIndex);
-        globalIndex++;
-      });
-    });
-    return map;
-  };
-
-  const itemIndexMap = getItemIndexMap();
+  // 自動儲存 debounce
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 載入作業資訊和學生列表
   useEffect(() => {
@@ -157,9 +140,7 @@ export default function GradingPage() {
   useEffect(() => {
     if (assignmentId && studentId) {
       loadSubmission();
-      // 學生 ID 已設定，不需要額外處理索引
     } else if (assignmentId && studentList.length > 0 && !studentId) {
-      // 如果沒有指定 studentId，預設選擇第一個學生（API 只回傳被指派的學生）
       const firstStudent = studentList[0];
       if (firstStudent && firstStudent.student_id) {
         setSearchParams({ studentId: firstStudent.student_id.toString() });
@@ -193,48 +174,34 @@ export default function GradingPage() {
 
   const loadStudentList = async () => {
     try {
-      // 載入此作業的所有學生
       const response = (await apiClient.get(
         `/api/teachers/assignments/${assignmentId}/students`,
       )) as StudentsResponse;
 
-      // 自定義排序邏輯：
-      // 1. 進行中(IN_PROGRESS)、待訂正(RETURNED) 排最前面
-      // 2. 未開始(NOT_STARTED) 第二群
-      // 3. 未指派(NOT_ASSIGNED) 最後
-      // 其他狀態（已提交、已批改等）按原有順序
       const statusPriority: Record<string, number> = {
-        IN_PROGRESS: 1, // 進行中
-        RETURNED: 1, // 待訂正
-        SUBMITTED: 2, // 已提交
-        RESUBMITTED: 2, // 重新提交
-        NOT_STARTED: 3, // 未開始
-        GRADED: 4, // 已批改
-        NOT_ASSIGNED: 99, // 未指派
+        IN_PROGRESS: 1,
+        RETURNED: 1,
+        SUBMITTED: 2,
+        RESUBMITTED: 2,
+        NOT_STARTED: 3,
+        GRADED: 4,
+        NOT_ASSIGNED: 99,
       };
 
       const sortedStudents = (response.students || []).sort((a, b) => {
         const aPriority = statusPriority[a.status] || 50;
         const bPriority = statusPriority[b.status] || 50;
 
-        // 先按優先級排序
         if (aPriority !== bPriority) {
           return aPriority - bPriority;
         }
 
-        // 同優先級按 student_id 排序
         return a.student_id - b.student_id;
       });
 
       setStudentList(sortedStudents);
     } catch (error) {
       console.error("Failed to load student list:", error);
-      // 如果 API 還沒實作，使用模擬資料
-      setStudentList([
-        { student_id: 1, student_name: "王小明", status: "SUBMITTED" },
-        { student_id: 2, student_name: "李小華", status: "GRADED" },
-        { student_id: 3, student_name: "張大同", status: "SUBMITTED" },
-      ]);
     }
   };
 
@@ -247,27 +214,20 @@ export default function GradingPage() {
 
       setSubmission(response);
 
-      // 如果已經有分數，預填
       if (
         response.current_score !== undefined &&
         response.current_score !== null
       ) {
         setScore(response.current_score);
 
-        // 處理舊格式的 feedback（包含題目評語的合併格式）
-        // 新格式只包含總評
         const feedbackText = response.current_feedback || "";
 
-        // 檢查是否是舊格式（包含「題目 X」的評語）
         if (feedbackText.includes("題目 ") && feedbackText.includes("總評:")) {
-          // 舊格式：提取總評部分
           const totalFeedbackMatch = feedbackText.match(/總評:\s*([\s\S]*?)$/);
           setFeedback(totalFeedbackMatch ? totalFeedbackMatch[1].trim() : "");
         } else if (feedbackText.includes("題目 ")) {
-          // 舊格式但沒有總評：清空總評
           setFeedback("");
         } else {
-          // 新格式或純總評
           setFeedback(feedbackText);
         }
       } else {
@@ -277,23 +237,32 @@ export default function GradingPage() {
 
       // 載入個別題目的評語和通過狀態
       const loadedFeedbacks: ItemFeedback = {};
-      if (response.submissions) {
-        response.submissions.forEach(
-          (
-            sub: { feedback?: string; passed?: boolean | null },
-            index: number,
-          ) => {
+      if (response.content_groups) {
+        let globalIndex = 0;
+        response.content_groups.forEach((group) => {
+          group.submissions.forEach((sub) => {
             if (sub.feedback || sub.passed !== null) {
-              loadedFeedbacks[index] = {
+              loadedFeedbacks[globalIndex] = {
                 feedback: sub.feedback || "",
                 passed: sub.passed ?? null,
               };
             }
-          },
-        );
+            globalIndex++;
+          });
+        });
+      } else if (response.submissions) {
+        response.submissions.forEach((sub, index) => {
+          if (sub.feedback || sub.passed !== null) {
+            loadedFeedbacks[index] = {
+              feedback: sub.feedback || "",
+              passed: sub.passed ?? null,
+            };
+          }
+        });
       }
       setItemFeedbacks(loadedFeedbacks);
-      setSelectedItemIndex(0); // 重置選中的題目
+      setSelectedGroupIndex(0);
+      setExpandedRows(new Set());
     } catch (error) {
       console.error("Failed to load submission:", error);
       toast.error("無法載入學生作業");
@@ -302,13 +271,22 @@ export default function GradingPage() {
     }
   };
 
-  // 自動儲存功能（不顯示提示）
-  const handleAutoSave = async () => {
-    if (!submission || submitting || autoSaving) return;
+  // 自動儲存功能
+  const triggerAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
 
-    setAutoSaving(true);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      await performAutoSave();
+    }, 2000);
+  }, [submission, itemFeedbacks, score, feedback, studentId, assignmentId]);
+
+  const performAutoSave = async () => {
+    if (!submission || submitting) return;
+
+    setSaveStatus("saving");
     try {
-      // 準備個別題目的評分資料
       const itemResults: Array<{
         item_index: number;
         feedback: string;
@@ -324,62 +302,132 @@ export default function GradingPage() {
         });
       });
 
-      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: feedback || "", // 傳送總評
-        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: false, // 自動儲存不更新狀態
+        feedback: feedback || "",
+        item_results: itemResults,
+        update_status: false,
       });
 
-      // 自動儲存不顯示成功訊息，避免干擾
+      setSaveStatus("saved");
+      setLastSavedTime(new Date());
+
+      // 3 秒後清除「已儲存」狀態
+      setTimeout(() => {
+        setSaveStatus("idle");
+      }, 3000);
     } catch (error) {
       console.error("Auto-save failed:", error);
-      // 自動儲存失敗也不顯示錯誤，避免頻繁提示
-    } finally {
-      setAutoSaving(false);
+      setSaveStatus("error");
     }
   };
 
-  const handleSaveGrade = async () => {
+  // 檢查錄音狀態（根據錄音有無 + AI 評分自動標記）
+  const handleCheckRecordings = () => {
     if (!submission) return;
 
-    try {
-      setSubmitting(true);
+    const currentGroup = getCurrentGroup();
+    if (!currentGroup) return;
 
-      // 準備個別題目的評分資料
-      const itemResults: Array<{
-        item_index: number;
-        feedback: string;
-        passed: boolean | null;
-        score: number;
-      }> = [];
-      Object.entries(itemFeedbacks).forEach(([index, fb]) => {
-        itemResults.push({
-          item_index: parseInt(index),
-          feedback: fb.feedback || "",
-          passed: fb.passed,
-          score: fb.passed === true ? 100 : fb.passed === false ? 60 : 80,
-        });
-      });
+    const newFeedbacks = { ...itemFeedbacks };
+    let passedCount = 0;
+    let failedCount = 0;
+    const failedItems: string[] = [];
 
-      // 傳送總評（如果使用者只想要總評，就只有總評）
-      await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
-        student_id: parseInt(studentId!),
-        score: score,
-        feedback: feedback || "", // 傳送總評
-        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: false, // 儲存評分但不更新狀態
-      });
+    currentGroup.submissions.forEach((item, localIndex) => {
+      const globalIndex = baseGlobalIndex + localIndex;
+      const hasRecording = !!item.audio_url;
+      const aiScore = item.ai_scores?.overall_score;
 
-      toast.success("評分已儲存");
-    } catch (error) {
-      console.error("Failed to save grade:", error);
-      toast.error("儲存失敗，請稍後再試");
-    } finally {
-      setSubmitting(false);
+      // 優先級：沒錄音 > AI 評分低 > 通過
+      if (!hasRecording) {
+        // 情況 1: 沒錄音 → ✗
+        newFeedbacks[globalIndex] = {
+          passed: false,
+          feedback: newFeedbacks[globalIndex]?.feedback || "你尚未上傳錄音，請補交作業",
+        };
+        failedCount++;
+        failedItems.push(`題目 ${localIndex + 1} (無錄音)`);
+      } else if (aiScore !== undefined && aiScore < 75) {
+        // 情況 2: 有錄音但 AI 評分 < 75 → ✗
+        newFeedbacks[globalIndex] = {
+          passed: false,
+          feedback: newFeedbacks[globalIndex]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
+        };
+        failedCount++;
+        failedItems.push(`題目 ${localIndex + 1} (AI ${aiScore}分)`);
+      } else {
+        // 情況 3: 有錄音且 (沒有 AI 分數 或 AI >= 75) → ✓
+        newFeedbacks[globalIndex] = {
+          passed: true,
+          feedback: newFeedbacks[globalIndex]?.feedback || "做得很好！",
+        };
+        passedCount++;
+      }
+    });
+
+    setItemFeedbacks(newFeedbacks);
+
+    // 顯示結果
+    if (failedCount === 0) {
+      toast.success(
+        `✅ 全部通過！(${passedCount}/${currentGroup.submissions.length} 題)\n已自動標記評分。`,
+        { duration: 5000 },
+      );
+    } else {
+      toast.warning(
+        `⚠️ ${failedCount} 題需訂正\n✓ 通過: ${passedCount} 題\n✗ 需訂正: ${failedCount} 題\n\n${failedItems.join('\n')}\n\n已自動標記評分。`,
+        { duration: 8000 },
+      );
     }
+
+    // 觸發自動儲存
+    triggerAutoSave();
+  };
+
+  // 套用 AI 建議（門檻 75 分）
+  const handleApplyAISuggestions = () => {
+    if (!submission) return;
+
+    const currentGroup = getCurrentGroup();
+    if (!currentGroup) return;
+
+    let appliedCount = 0;
+    let needReviewCount = 0;
+    const baseGlobalIndex = getGroupBaseIndex(selectedGroupIndex);
+
+    const newFeedbacks = { ...itemFeedbacks };
+
+    currentGroup.submissions.forEach((item, localIndex) => {
+      const globalIndex = baseGlobalIndex + localIndex;
+      const aiScore = item.ai_scores?.overall_score;
+
+      if (aiScore !== undefined) {
+        if (aiScore >= 75) {
+          newFeedbacks[globalIndex] = {
+            feedback: "表現不錯！",
+            passed: true,
+          };
+          appliedCount++;
+        } else {
+          newFeedbacks[globalIndex] = {
+            feedback: "請多練習發音和流暢度",
+            passed: false,
+          };
+          appliedCount++;
+        }
+      } else {
+        needReviewCount++;
+      }
+    });
+
+    setItemFeedbacks(newFeedbacks);
+    triggerAutoSave();
+
+    toast.success(
+      `已自動批改 ${appliedCount} 題${needReviewCount > 0 ? `，${needReviewCount} 題需要人工確認` : ""}`,
+    );
   };
 
   const handleCompleteGrading = async () => {
@@ -388,7 +436,6 @@ export default function GradingPage() {
     try {
       setSubmitting(true);
 
-      // 準備個別題目的評分資料
       const itemResults: Array<{
         item_index: number;
         feedback: string;
@@ -404,23 +451,20 @@ export default function GradingPage() {
         });
       });
 
-      // 傳送總評（如果使用者只想要總評，就只有總評）
       await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, {
         student_id: parseInt(studentId!),
         score: score,
-        feedback: feedback || "", // 傳送總評
-        item_results: itemResults, // 個別題目評語在這裡（會存到 StudentItemProgress.teacher_feedback）
-        update_status: true, // 完成批改時更新狀態為 GRADED
+        feedback: feedback || "",
+        item_results: itemResults,
+        update_status: true,
       });
 
       toast.success("批改完成！");
 
-      // 更新本地狀態
       if (submission) {
         submission.status = "GRADED";
       }
 
-      // 更新學生列表中的狀態
       setStudentList((prev) =>
         prev.map((student) =>
           student.student_id === parseInt(studentId!)
@@ -429,7 +473,6 @@ export default function GradingPage() {
         ),
       );
 
-      // 切換到下一位已指派的學生
       const assignedStudents = studentList.filter(
         (s) => s.status && s.status !== "NOT_ASSIGNED",
       );
@@ -443,49 +486,6 @@ export default function GradingPage() {
     } catch (error) {
       console.error("Failed to complete grading:", error);
       toast.error("批改失敗，請稍後再試");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSetInProgress = async () => {
-    if (!submission) return;
-
-    try {
-      setSubmitting(true);
-
-      // 如果已經是批改中狀態，不需要做任何事
-      if (
-        submission.status === "SUBMITTED" ||
-        submission.status === "RESUBMITTED"
-      ) {
-        toast.info("已經是批改中狀態");
-        return;
-      }
-
-      await apiClient.post(
-        `/api/teachers/assignments/${assignmentId}/set-in-progress`,
-        {
-          student_id: parseInt(studentId!),
-        },
-      );
-
-      toast.success("已設為批改中");
-
-      // 更新學生列表中的狀態
-      setStudentList((prev) =>
-        prev.map((student) =>
-          student.student_id === parseInt(studentId!)
-            ? { ...student, status: "SUBMITTED" }
-            : student,
-        ),
-      );
-
-      // 重新載入提交資料
-      await loadSubmission();
-    } catch (error) {
-      console.error("Failed to set in progress:", error);
-      toast.error("設定批改中失敗，請稍後再試");
     } finally {
       setSubmitting(false);
     }
@@ -507,12 +507,10 @@ export default function GradingPage() {
 
       toast.success("已要求學生訂正");
 
-      // 更新本地狀態
       if (submission) {
         submission.status = "RETURNED";
       }
 
-      // 更新學生列表中的狀態
       setStudentList((prev) =>
         prev.map((student) =>
           student.student_id === parseInt(studentId!)
@@ -521,7 +519,6 @@ export default function GradingPage() {
         ),
       );
 
-      // 重新載入提交資料
       await loadSubmission();
     } catch (error) {
       console.error("Failed to request revision:", error);
@@ -532,7 +529,6 @@ export default function GradingPage() {
   };
 
   const handlePreviousStudent = async () => {
-    // 只在已指派的學生之間切換
     const assignedStudents = studentList.filter(
       (s) => s.status && s.status !== "NOT_ASSIGNED",
     );
@@ -541,15 +537,12 @@ export default function GradingPage() {
     );
 
     if (currentAssignedIndex > 0) {
-      // 切換前自動儲存
-      await handleAutoSave();
       const prevStudent = assignedStudents[currentAssignedIndex - 1];
       setSearchParams({ studentId: (prevStudent.student_id || 0).toString() });
     }
   };
 
   const handleNextStudent = async () => {
-    // 只在已指派的學生之間切換
     const assignedStudents = studentList.filter(
       (s) => s.status && s.status !== "NOT_ASSIGNED",
     );
@@ -558,16 +551,12 @@ export default function GradingPage() {
     );
 
     if (currentAssignedIndex < assignedStudents.length - 1) {
-      // 切換前自動儲存
-      await handleAutoSave();
       const nextStudent = assignedStudents[currentAssignedIndex + 1];
       setSearchParams({ studentId: (nextStudent.student_id || 0).toString() });
     }
   };
 
   const handleStudentSelect = async (student: StudentListItem) => {
-    // 切換前自動儲存
-    await handleAutoSave();
     setSearchParams({ studentId: (student.student_id || 0).toString() });
   };
 
@@ -595,63 +584,36 @@ export default function GradingPage() {
     { label: "滿分", value: 100 },
     { label: "90分", value: 90 },
     { label: "80分", value: 80 },
-    { label: "70分", value: 70 },
-    { label: "60分", value: 60 },
   ];
 
-  // 移除自動同步，總評現在是獨立的欄位
-  // 不再自動將個別評語同步到總評
-
-  // 鍵盤快捷鍵
-  useEffect(() => {
-    const handleKeyPress = async (e: KeyboardEvent) => {
-      // Cmd/Ctrl + Enter: 完成批改
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        handleCompleteGrading();
-      }
-      // 左右箭頭切換題目
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        if (selectedItemIndex > 0) {
-          // 切換前自動儲存
-          await handleAutoSave();
-          setSelectedItemIndex(selectedItemIndex - 1);
-        }
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        const totalQuestions = getTotalQuestions();
-        if (selectedItemIndex < totalQuestions - 1) {
-          // 切換前自動儲存
-          await handleAutoSave();
-          setSelectedItemIndex(selectedItemIndex + 1);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [selectedItemIndex, submission, handleAutoSave]);
-
-  // Get current item from either structure
-  const getCurrentItem = () => {
-    if (submission?.content_groups && submission.content_groups.length > 0) {
-      let currentIndex = 0;
-      for (const group of submission.content_groups) {
-        if (selectedItemIndex < currentIndex + group.submissions.length) {
-          return group.submissions[selectedItemIndex - currentIndex];
-        }
-        currentIndex += group.submissions.length;
-      }
-      return null;
-    }
-    return submission?.submissions?.[selectedItemIndex] || null;
+  // 取得當前題組
+  const getCurrentGroup = () => {
+    if (!submission?.content_groups) return null;
+    return submission.content_groups[selectedGroupIndex];
   };
 
-  const currentItem = getCurrentItem();
+  // 計算題組的起始 global index
+  const getGroupBaseIndex = (groupIndex: number) => {
+    if (!submission?.content_groups) return 0;
+    let baseIndex = 0;
+    for (let i = 0; i < groupIndex; i++) {
+      baseIndex += submission.content_groups[i].submissions.length;
+    }
+    return baseIndex;
+  };
 
-  // Get total questions count from either structure
+  // 切換行展開/收合
+  const toggleRowExpanded = (rowIndex: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(rowIndex)) {
+      newExpanded.delete(rowIndex);
+    } else {
+      newExpanded.add(rowIndex);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  // 計算總題數
   const getTotalQuestions = () => {
     if (submission?.content_groups && submission.content_groups.length > 0) {
       return submission.content_groups.reduce(
@@ -663,6 +625,8 @@ export default function GradingPage() {
   };
 
   const totalQuestions = getTotalQuestions();
+  const currentGroup = getCurrentGroup();
+  const baseGlobalIndex = getGroupBaseIndex(selectedGroupIndex);
 
   if (loading) {
     return (
@@ -698,12 +662,35 @@ export default function GradingPage() {
               <h1 className="text-xl font-semibold">
                 批改作業: {assignmentTitle}
               </h1>
+
+              {/* 儲存狀態指示器 */}
+              {saveStatus !== "idle" && (
+                <div className="ml-4">
+                  {saveStatus === "saving" && (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-500"></div>
+                      儲存中...
+                    </span>
+                  )}
+                  {saveStatus === "saved" && lastSavedTime && (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      已儲存 {lastSavedTime.toLocaleTimeString("zh-TW")}
+                    </span>
+                  )}
+                  {saveStatus === "error" && (
+                    <span className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      儲存失敗
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 學生切換導航 */}
             <div className="flex items-center gap-4">
               {(() => {
-                // 只計算已指派的學生
                 const assignedStudents = studentList.filter(
                   (s) => s.status && s.status !== "NOT_ASSIGNED",
                 );
@@ -773,11 +760,9 @@ export default function GradingPage() {
               </h3>
               <div className="space-y-1">
                 {studentList.map((student) => {
-                  // 判斷學生是否有被指派作業
                   const isAssigned =
                     student.status && student.status !== "NOT_ASSIGNED";
 
-                  // 取得狀態顯示文字（簡短版）
                   const getStatusLabel = (status: string) => {
                     const statusLabelMap: Record<string, string> = {
                       NOT_STARTED: "未開始",
@@ -810,7 +795,6 @@ export default function GradingPage() {
                             <span className="truncate font-medium">
                               {student.student_name}
                             </span>
-                            {/* 狀態 Label */}
                             <Badge
                               className={`text-xs px-1.5 py-0.5 ${
                                 student.status === "GRADED"
@@ -831,7 +815,6 @@ export default function GradingPage() {
                             </Badge>
                           </div>
                         </div>
-                        {/* 狀態圖標 */}
                         {student.status === "GRADED" && (
                           <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
                         )}
@@ -850,11 +833,11 @@ export default function GradingPage() {
             </Card>
           </div>
 
-          {/* 中間 - 學生作答內容 */}
+          {/* 中間 - 題組 Table */}
           <div className="col-span-6">
             {submission ? (
               <div className="space-y-3">
-                {/* 學生資訊卡片 - 更精簡 */}
+                {/* 學生資訊卡片 */}
                 <Card className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -884,342 +867,274 @@ export default function GradingPage() {
                   </div>
                 </Card>
 
-                {/* 題目內容 */}
+                {/* 操作按鈕 */}
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCheckRecordings}
+                      className="flex items-center gap-1"
+                    >
+                      <Search className="h-4 w-4" />
+                      檢查錄音
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleApplyAISuggestions}
+                      className="flex items-center gap-1"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      套用 AI 建議
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* 題組選擇器 */}
                 {submission.content_groups &&
-                submission.content_groups.length > 0 ? (
-                  <>
-                    {/* 題目詳情與評語整合卡片 */}
-                    {currentItem && (
-                      <Card className="p-5">
-                        <div className="space-y-4">
-                          {/* 標題區 */}
-                          <div className="border-b pb-2">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-sm font-semibold text-gray-700">
-                                題目 {selectedItemIndex + 1}
-                              </h5>
-                              {currentItem && currentItem.content_title && (
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                  {currentItem.content_title}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                  submission.content_groups.length > 1 && (
+                    <Card className="p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">題組:</span>
+                        <select
+                          value={selectedGroupIndex}
+                          onChange={(e) =>
+                            setSelectedGroupIndex(parseInt(e.target.value))
+                          }
+                          className="flex-1 border rounded-md px-3 py-1.5 text-sm"
+                        >
+                          {submission.content_groups.map((group, index) => (
+                            <option key={group.content_id} value={index}>
+                              {group.content_title} ({group.submissions.length}
+                              題)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </Card>
+                  )}
 
-                          {/* 題目內容 */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="font-medium text-xl text-gray-900 leading-relaxed">
-                                  {currentItem.question_text}
-                                </p>
-                                {currentItem.question_translation && (
-                                  <p className="text-sm text-gray-600 mt-2 italic">
-                                    {currentItem.question_translation}
-                                  </p>
-                                )}
-                              </div>
-                              {/* 題目參考音檔播放按鈕 - 始終顯示 */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!currentItem.question_audio_url}
-                                onClick={() => {
-                                  if (currentItem.question_audio_url) {
-                                    const audio = new Audio(
-                                      currentItem.question_audio_url,
-                                    );
-                                    audio.play().catch((err) => {
-                                      console.error(
-                                        "Failed to play audio:",
-                                        err,
-                                      );
-                                      toast.error("無法播放參考音檔");
-                                    });
-                                  }
-                                }}
-                                className={`ml-3 flex-shrink-0 ${!currentItem.question_audio_url ? "opacity-50" : ""}`}
-                              >
-                                <Volume2 className="h-3 w-3 mr-1" />
-                                {currentItem.question_audio_url
-                                  ? "參考音檔"
-                                  : "無參考音檔"}
-                              </Button>
-                            </div>
-                          </div>
+                {/* 題目 Table */}
+                {currentGroup && (
+                  <Card className="p-4">
+                    <div className="space-y-0 divide-y">
+                      {currentGroup.submissions.map((item, localIndex) => {
+                        const globalIndex = baseGlobalIndex + localIndex;
+                        const isExpanded = expandedRows.has(globalIndex);
+                        const itemFeedback = itemFeedbacks[globalIndex];
 
-                          {/* 學生答案 - 只在有資料時顯示 */}
-                          {currentItem.student_answer && (
-                            <div className="p-4 rounded-lg border bg-blue-50 border-blue-200">
-                              <p className="text-xs font-semibold mb-2 text-blue-700">
-                                學生答案
-                              </p>
-                              <p className="text-base text-gray-900 leading-relaxed">
-                                {currentItem.student_answer}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* 語音辨識結果 - 只在有資料時顯示 */}
-                          {currentItem.transcript && (
-                            <div className="p-4 rounded-lg border bg-green-50 border-green-200">
-                              <p className="text-xs font-semibold mb-2 text-green-700">
-                                語音辨識結果
-                              </p>
-                              <p className="text-base text-gray-900 leading-relaxed">
-                                {currentItem.transcript}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* 學生回答區塊分隔 */}
-                          <div className="border-t pt-4 mt-4">
-                            <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              學生回答
-                            </h5>
-                          </div>
-
-                          {/* 學生錄音播放器 */}
-                          {currentItem.audio_url ? (
-                            <AudioRecorder
-                              variant="compact"
-                              title=""
-                              existingAudioUrl={currentItem.audio_url}
-                              readOnly={true}
-                              disabled={false}
-                              className="border-0 p-0 shadow-none bg-white dark:bg-white"
-                            />
-                          ) : (
-                            <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                                <Mic className="w-5 h-5 text-gray-500" />
-                              </div>
-                              <span className="text-sm text-gray-500">
-                                學生未錄製音檔
-                              </span>
-                            </div>
-                          )}
-
-                          {/* AI 評分結果 - 使用共用元件 */}
-                          {currentItem.ai_scores && (
-                            <AIScoreDisplay
-                              scores={currentItem.ai_scores}
-                              hasRecording={!!currentItem.audio_url}
-                              title="AI 自動評分結果"
-                            />
-                          )}
-
-                          {/* 教師批改區塊分隔線 */}
-                          <div className="border-t-2 border-blue-200 pt-4 mt-6">
-                            <div className="bg-blue-50 -mx-5 px-5 py-2 mb-4">
-                              <h5 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                教師批改區
-                              </h5>
-                            </div>
-                            {/* 評語標題與通過按鈕 */}
-                            <div className="flex items-center justify-between mb-3">
-                              <label className="text-sm font-semibold">
-                                題目 {selectedItemIndex + 1} 教師評語
-                              </label>
-                              <div className="flex gap-2">
+                        return (
+                          <div key={globalIndex} className="py-4">
+                            {/* 主要行 */}
+                            <div className="grid grid-cols-12 gap-3 items-start">
+                              {/* 通過狀態 */}
+                              <div className="col-span-1 flex flex-col gap-1">
                                 <Button
                                   size="sm"
                                   variant={
-                                    itemFeedbacks[selectedItemIndex]?.passed ===
-                                    true
+                                    itemFeedback?.passed === true
                                       ? "default"
                                       : "outline"
                                   }
-                                  className={
-                                    itemFeedbacks[selectedItemIndex]?.passed ===
-                                    true
+                                  className={`w-full p-1 h-7 ${
+                                    itemFeedback?.passed === true
                                       ? "bg-green-600 hover:bg-green-700"
                                       : ""
-                                  }
+                                  }`}
                                   onClick={() => {
                                     setItemFeedbacks({
                                       ...itemFeedbacks,
-                                      [selectedItemIndex]: {
-                                        ...itemFeedbacks[selectedItemIndex],
+                                      [globalIndex]: {
+                                        ...itemFeedbacks[globalIndex],
                                         feedback:
-                                          itemFeedbacks[selectedItemIndex]
+                                          itemFeedbacks[globalIndex]
                                             ?.feedback || "",
                                         passed: true,
                                       },
                                     });
+                                    triggerAutoSave();
                                   }}
                                   disabled={submission?.status === "GRADED"}
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  通過
+                                  <CheckCircle className="h-3 w-3" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant={
-                                    itemFeedbacks[selectedItemIndex]?.passed ===
-                                    false
+                                    itemFeedback?.passed === false
                                       ? "default"
                                       : "outline"
                                   }
-                                  className={
-                                    itemFeedbacks[selectedItemIndex]?.passed ===
-                                    false
+                                  className={`w-full p-1 h-7 ${
+                                    itemFeedback?.passed === false
                                       ? "bg-red-600 hover:bg-red-700"
                                       : ""
-                                  }
+                                  }`}
                                   onClick={() => {
                                     setItemFeedbacks({
                                       ...itemFeedbacks,
-                                      [selectedItemIndex]: {
-                                        ...itemFeedbacks[selectedItemIndex],
+                                      [globalIndex]: {
+                                        ...itemFeedbacks[globalIndex],
                                         feedback:
-                                          itemFeedbacks[selectedItemIndex]
+                                          itemFeedbacks[globalIndex]
                                             ?.feedback || "",
                                         passed: false,
                                       },
                                     });
+                                    triggerAutoSave();
                                   }}
                                   disabled={submission?.status === "GRADED"}
                                 >
-                                  <X className="h-4 w-4 mr-1" />
-                                  未通過
+                                  <X className="h-3 w-3" />
                                 </Button>
                               </div>
-                            </div>
 
-                            {/* 評語輸入框 */}
-                            <Textarea
-                              value={
-                                itemFeedbacks[selectedItemIndex]?.feedback || ""
-                              }
-                              onChange={(e) => {
-                                setItemFeedbacks({
-                                  ...itemFeedbacks,
-                                  [selectedItemIndex]: {
-                                    ...itemFeedbacks[selectedItemIndex],
-                                    feedback: e.target.value,
-                                    passed:
-                                      itemFeedbacks[selectedItemIndex]
-                                        ?.passed ?? null,
-                                  },
-                                });
-                              }}
-                              placeholder="針對此題的評語..."
-                              className="min-h-[80px] resize-none bg-white dark:bg-white mt-3"
-                              readOnly={submission?.status === "GRADED"}
-                              disabled={submission?.status === "GRADED"}
-                            />
+                              {/* 題目 */}
+                              <div className="col-span-4">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-semibold text-gray-500 mt-1">
+                                    {localIndex + 1}.
+                                  </span>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">
+                                      {item.question_text}
+                                    </p>
+                                    {item.question_translation && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {item.question_translation}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
 
-                            {/* 快速評語 */}
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {[
-                                "很棒！",
-                                "請多練習",
-                                "發音清晰",
-                                "表現優秀！",
-                                "語調自然",
-                                "很有進步",
-                                "加油！",
-                              ].map((text) => (
-                                <Badge
-                                  key={text}
-                                  variant="secondary"
-                                  className="cursor-pointer hover:bg-gray-200 text-xs"
-                                  onClick={() => {
-                                    const current =
-                                      itemFeedbacks[selectedItemIndex]
-                                        ?.feedback || "";
+                              {/* 學生錄音 */}
+                              <div className="col-span-3">
+                                {item.audio_url ? (
+                                  <AudioRecorder
+                                    variant="compact"
+                                    title=""
+                                    existingAudioUrl={item.audio_url}
+                                    readOnly={true}
+                                    disabled={false}
+                                    className="border-0 p-0 shadow-none bg-white dark:bg-white"
+                                  />
+                                ) : (
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <Mic className="h-4 w-4" />
+                                    <span>未錄音</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 評語 */}
+                              <div className="col-span-3">
+                                <Textarea
+                                  value={itemFeedback?.feedback || ""}
+                                  onChange={(e) => {
                                     setItemFeedbacks({
                                       ...itemFeedbacks,
-                                      [selectedItemIndex]: {
-                                        feedback: current
-                                          ? `${current} ${text}`
-                                          : text,
+                                      [globalIndex]: {
+                                        ...itemFeedbacks[globalIndex],
+                                        feedback: e.target.value,
                                         passed:
-                                          itemFeedbacks[selectedItemIndex]
-                                            ?.passed ?? null,
+                                          itemFeedbacks[globalIndex]?.passed ??
+                                          null,
                                       },
                                     });
+                                    triggerAutoSave();
                                   }}
-                                >
-                                  {text}
-                                </Badge>
-                              ))}
-                            </div>
-
-                            {/* 題目導航按鈕 */}
-                            <div className="border-t pt-3 mt-3">
-                              <div className="flex justify-between items-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={async () => {
-                                    // 切換前自動儲存
-                                    await handleAutoSave();
-                                    // 計算上一題的索引
-                                    if (selectedItemIndex > 0) {
-                                      setSelectedItemIndex(
-                                        selectedItemIndex - 1,
-                                      );
-                                    }
-                                  }}
-                                  disabled={selectedItemIndex === 0}
-                                  className="text-xs"
-                                >
-                                  <ChevronLeft className="h-3 w-3 mr-1" />
-                                  上一題
-                                </Button>
-
-                                <span className="text-xs text-gray-500">
-                                  {selectedItemIndex + 1} / {totalQuestions}
-                                </span>
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={async () => {
-                                    // 切換前自動儲存
-                                    await handleAutoSave();
-                                    // 計算下一題的索引
-                                    const totalQuestions = getTotalQuestions();
-                                    if (
-                                      selectedItemIndex <
-                                      totalQuestions - 1
-                                    ) {
-                                      setSelectedItemIndex(
-                                        selectedItemIndex + 1,
-                                      );
-                                    }
-                                  }}
-                                  disabled={
-                                    selectedItemIndex >= totalQuestions - 1
-                                  }
-                                  className="text-xs"
-                                >
-                                  下一題
-                                  <ChevronRight className="h-3 w-3 ml-1" />
-                                </Button>
+                                  placeholder="評語..."
+                                  className="min-h-[60px] resize-none text-xs bg-white dark:bg-white"
+                                  readOnly={submission?.status === "GRADED"}
+                                  disabled={submission?.status === "GRADED"}
+                                />
                               </div>
 
-                              {/* 鍵盤快捷鍵提示 */}
-                              <div className="text-center mt-2">
-                                <span className="text-xs text-gray-400">
-                                  提示：使用 ← → 鍵快速切換題目
-                                </span>
+                              {/* 展開按鈕 */}
+                              <div className="col-span-1 flex justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleRowExpanded(globalIndex)}
+                                  className="p-1 h-7"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </div>
                             </div>
+
+                            {/* 展開的詳細資訊 */}
+                            {isExpanded && (
+                              <div className="mt-3 pl-8 space-y-3">
+                                {/* 參考音檔 */}
+                                {item.question_audio_url && (
+                                  <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                                      參考音檔
+                                    </label>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const audio = new Audio(
+                                          item.question_audio_url!,
+                                        );
+                                        audio.play().catch((err) => {
+                                          console.error(
+                                            "Failed to play audio:",
+                                            err,
+                                          );
+                                          toast.error("無法播放參考音檔");
+                                        });
+                                      }}
+                                    >
+                                      <Volume2 className="h-3 w-3 mr-1" />
+                                      播放參考音檔
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {/* 語音辨識結果 */}
+                                {item.transcript && (
+                                  <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                                      語音辨識結果
+                                    </label>
+                                    <div className="p-2 bg-green-50 border border-green-200 rounded text-xs">
+                                      {item.transcript}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* AI 評分 */}
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                                    AI 自動評分
+                                  </label>
+                                  {item.ai_scores ? (
+                                    <AIScoreDisplay
+                                      scores={item.ai_scores}
+                                      hasRecording={!!item.audio_url}
+                                      title=""
+                                    />
+                                  ) : (
+                                    <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-500 text-center">
+                                      尚無 AI 評分資料
+                                      {!item.audio_url && " (缺少錄音檔案)"}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </Card>
-                    )}
-                  </>
-                ) : (
-                  <Card className="p-6">
-                    <div className="text-center text-gray-500">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p>暫無作答內容</p>
+                        );
+                      })}
                     </div>
                   </Card>
                 )}
@@ -1229,100 +1144,68 @@ export default function GradingPage() {
             )}
           </div>
 
-          {/* 右側 - 批改評分 */}
+          {/* 右側 - 評分面板 */}
           <div className="col-span-4">
             <Card className="p-4 sticky top-24">
               <h4 className="font-medium text-sm mb-3">批改評分</h4>
 
               <div className="space-y-3">
-                {/* 題號選擇區 */}
+                {/* 逐題燈號（分題組） */}
                 {submission && submission.content_groups && (
-                  <div className="space-y-2">
-                    {submission.content_groups.map((group) => (
-                      <div
-                        key={group.content_id}
-                        className="bg-gray-50 rounded-lg p-2"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="flex-1">
-                            <div className="text-xs text-gray-600">
-                              {group.content_title}
-                            </div>
+                  <div className="pb-3 border-b space-y-3">
+                    <label className="text-xs font-medium block">
+                      逐題狀態 ({totalQuestions} 題)
+                    </label>
+                    {submission.content_groups.map((group, groupIndex) => {
+                      // Calculate base index for this group
+                      let groupBaseIndex = 0;
+                      for (let i = 0; i < groupIndex; i++) {
+                        groupBaseIndex += submission.content_groups![i].submissions.length;
+                      }
+
+                      return (
+                        <div key={group.content_id} className="space-y-1">
+                          <div className="text-xs text-gray-600 font-medium">
+                            {group.content_title} ({group.submissions.length} 題)
                           </div>
-                          <span className="text-xs text-gray-400">
-                            {group.submissions.length}題
-                          </span>
+                          <div className="grid grid-cols-10 gap-1">
+                            {group.submissions.map((item, localIndex) => {
+                              const globalIndex = groupBaseIndex + localIndex;
+                              const result = itemFeedbacks[globalIndex];
+                              const isPassed = result?.passed === true;
+                              const isFailed = result?.passed === false;
+                              const hasRecording = item.audio_url;
+
+                              return (
+                                <div
+                                  key={localIndex}
+                                  className={`
+                                    w-8 h-8 rounded-md flex items-center justify-center text-xs font-medium
+                                    transition-all cursor-default
+                                    ${
+                                      isPassed
+                                        ? "bg-green-500 text-white shadow-sm"
+                                        : isFailed
+                                          ? "bg-red-500 text-white shadow-sm"
+                                          : hasRecording
+                                            ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                                            : "bg-gray-100 text-gray-400 border border-dashed border-gray-300"
+                                    }
+                                  `}
+                                  title={`題目 ${localIndex + 1}: ${isPassed ? "通過" : isFailed ? "需訂正" : hasRecording ? "有錄音" : "無錄音"}`}
+                                >
+                                  {isPassed ? "✓" : isFailed ? "✗" : localIndex + 1}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-
-                        {/* 題號按鈕 */}
-                        <div className="flex gap-1">
-                          {group.submissions.map((_, index) => {
-                            const globalIndex =
-                              itemIndexMap.get(
-                                `${group.content_id}-${index}`,
-                              ) || 0;
-                            const itemStatus = itemFeedbacks[globalIndex];
-                            const isPassed = itemStatus?.passed;
-
-                            // 根據通過狀態決定按鈕樣式
-                            let buttonClass = "w-7 h-7 p-0 text-xs ";
-                            let buttonVariant: "default" | "outline" | "ghost" =
-                              "outline";
-
-                            if (selectedItemIndex === globalIndex) {
-                              // 當前選中的題目
-                              if (isPassed === true) {
-                                buttonClass +=
-                                  "bg-green-600 hover:bg-green-700 text-white border-green-600";
-                              } else if (isPassed === false) {
-                                buttonClass +=
-                                  "bg-red-600 hover:bg-red-700 text-white border-red-600";
-                              } else {
-                                buttonClass +=
-                                  "bg-blue-600 hover:bg-blue-700 text-white border-blue-600";
-                              }
-                              buttonVariant = "default";
-                            } else {
-                              // 非選中的題目
-                              if (isPassed === true) {
-                                buttonClass +=
-                                  "bg-green-500 hover:bg-green-600 text-white border-green-500";
-                                buttonVariant = "default";
-                              } else if (isPassed === false) {
-                                buttonClass +=
-                                  "bg-red-500 hover:bg-red-600 text-white border-red-500";
-                                buttonVariant = "default";
-                              } else {
-                                buttonClass += "bg-white hover:bg-gray-50";
-                              }
-                            }
-
-                            return (
-                              <Button
-                                key={index}
-                                variant={buttonVariant}
-                                size="sm"
-                                className={buttonClass}
-                                onClick={async () => {
-                                  // 切換前自動儲存
-                                  await handleAutoSave();
-                                  setSelectedItemIndex(globalIndex);
-                                }}
-                              >
-                                {index + 1}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* 分隔線 */}
-                <div className="border-t pt-3"></div>
-
-                {/* 分數評定 - 緊湊版 */}
+                {/* 分數評定 */}
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium">分數</label>
                   <div className="flex items-center gap-2">
@@ -1332,7 +1215,10 @@ export default function GradingPage() {
                     <input
                       type="range"
                       value={score}
-                      onChange={(e) => setScore(Number(e.target.value))}
+                      onChange={(e) => {
+                        setScore(Number(e.target.value));
+                        triggerAutoSave();
+                      }}
                       min={0}
                       max={100}
                       step={1}
@@ -1343,12 +1229,15 @@ export default function GradingPage() {
                     />
                   </div>
                   <div className="flex gap-1">
-                    {quickScoreButtons.slice(0, 3).map((btn) => (
+                    {quickScoreButtons.map((btn) => (
                       <Button
                         key={btn.value}
                         variant={score === btn.value ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setScore(btn.value)}
+                        onClick={() => {
+                          setScore(btn.value);
+                          triggerAutoSave();
+                        }}
                         className="text-xs px-1.5 py-0.5 h-6"
                       >
                         {btn.label}
@@ -1357,7 +1246,7 @@ export default function GradingPage() {
                   </div>
                 </div>
 
-                {/* 總評語回饋 - 分為兩個欄位 */}
+                {/* 總評語回饋 */}
                 <div className="space-y-3">
                   <label className="text-xs font-medium mb-1 block">
                     總評語回饋
@@ -1388,7 +1277,10 @@ export default function GradingPage() {
                     </label>
                     <Textarea
                       value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
+                      onChange={(e) => {
+                        setFeedback(e.target.value);
+                        triggerAutoSave();
+                      }}
                       placeholder="給學生的總體鼓勵和建議..."
                       className="min-h-[60px] resize-none text-sm bg-white dark:bg-white"
                     />
@@ -1397,50 +1289,13 @@ export default function GradingPage() {
 
                 {/* 操作按鈕 */}
                 <div className="space-y-4 pt-4 border-t">
-                  {/* 儲存按鈕 - 獨立一行 */}
-                  <Button
-                    onClick={handleSaveGrade}
-                    disabled={submitting || !submission}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    儲存評分
-                  </Button>
-
                   {/* 狀態流程提示 */}
                   <div className="text-center text-xs text-gray-500">
                     選擇批改狀態
                   </div>
 
-                  {/* 狀態選擇按鈕 - 三個並列狀態 */}
+                  {/* 狀態選擇按鈕 */}
                   <div className="flex gap-2">
-                    {/* 批改中 */}
-                    <Button
-                      onClick={handleSetInProgress}
-                      disabled={
-                        submitting ||
-                        !submission ||
-                        submission?.status === "SUBMITTED" ||
-                        submission?.status === "RESUBMITTED"
-                      }
-                      variant={
-                        submission?.status === "SUBMITTED" ||
-                        submission?.status === "RESUBMITTED"
-                          ? "default"
-                          : "outline"
-                      }
-                      className={`flex-1 ${
-                        submission?.status === "SUBMITTED" ||
-                        submission?.status === "RESUBMITTED"
-                          ? "bg-blue-600 hover:bg-blue-700 text-white"
-                          : "border-blue-600 text-blue-600 hover:bg-blue-50"
-                      }`}
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      批改中
-                    </Button>
-
                     {/* 要求訂正 */}
                     <Button
                       onClick={handleRequestRevision}
@@ -1474,7 +1329,7 @@ export default function GradingPage() {
                       }`}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      已完成
+                      完成批改
                     </Button>
                   </div>
                 </div>

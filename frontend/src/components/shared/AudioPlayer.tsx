@@ -11,7 +11,7 @@ interface AudioPlayerProps {
   onEnded?: () => void;
   autoPlay?: boolean;
   showTitle?: boolean;
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "minimal";
   readOnly?: boolean;
 }
 
@@ -237,6 +237,26 @@ export default function AudioPlayer({
   }
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Minimal variant - only play button
+  if (variant === "minimal") {
+    return (
+      <div className={cn("inline-flex", className)}>
+        <audio ref={audioRef} preload="metadata" />
+        <button
+          onClick={togglePlayback}
+          className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center hover:bg-green-700 transition-colors"
+          title={isPlaying ? "暫停播放" : "播放錄音"}
+        >
+          {isPlaying ? (
+            <Pause className="w-4 h-4 text-white" />
+          ) : (
+            <Play className="w-4 h-4 text-white ml-0.5" />
+          )}
+        </button>
+      </div>
+    );
+  }
 
   if (variant === "compact") {
     return (

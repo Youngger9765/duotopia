@@ -1076,11 +1076,12 @@ export default function TeacherAssignmentDetailPage() {
               >
                 <option value="all">全部狀態</option>
                 <option value="unassigned">未指派</option>
-                <option value="not_started">未開始</option>
-                <option value="in_progress">進行中</option>
-                <option value="submitted">已提交</option>
-                <option value="completed">已批改</option>
-                <option value="overdue">已逾期</option>
+                <option value="NOT_STARTED">未開始</option>
+                <option value="IN_PROGRESS">進行中</option>
+                <option value="SUBMITTED">已提交</option>
+                <option value="RETURNED">待訂正</option>
+                <option value="RESUBMITTED">重新提交</option>
+                <option value="GRADED">已完成</option>
               </select>
             </div>
           </div>
