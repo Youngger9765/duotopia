@@ -10,7 +10,6 @@ import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
 import AudioRecorder from "@/components/shared/AudioRecorder";
 import {
   User,
-  Clock,
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
@@ -120,11 +119,13 @@ export default function GradingPage() {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "students" | "content" | "grading"
+  >("content");
 
   // 學生列表相關
   const [studentList, setStudentList] = useState<StudentListItem[]>([]);
   const [assignmentTitle, setAssignmentTitle] = useState("");
-
 
   // 載入作業資訊和學生列表
   useEffect(() => {
@@ -301,7 +302,10 @@ export default function GradingPage() {
         update_status: false,
       };
 
-      await apiClient.post(`/api/teachers/assignments/${assignmentId}/grade`, payload);
+      await apiClient.post(
+        `/api/teachers/assignments/${assignmentId}/grade`,
+        payload,
+      );
 
       setSaveStatus("saved");
       setLastSavedTime(new Date());
@@ -340,7 +344,9 @@ export default function GradingPage() {
             // 情況 1: 沒錄音 → ✗
             newFeedbacks[globalIndex] = {
               passed: false,
-              feedback: newFeedbacks[globalIndex]?.feedback || "你尚未上傳錄音，請補交作業",
+              feedback:
+                newFeedbacks[globalIndex]?.feedback ||
+                "你尚未上傳錄音，請補交作業",
             };
             failedCount++;
             failedItems.push(`題目 ${globalIndex + 1} (無錄音)`);
@@ -348,7 +354,9 @@ export default function GradingPage() {
             // 情況 2: 有錄音但 AI 評分 < 75 → ✗
             newFeedbacks[globalIndex] = {
               passed: false,
-              feedback: newFeedbacks[globalIndex]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
+              feedback:
+                newFeedbacks[globalIndex]?.feedback ||
+                `你的 AI 評分 ${aiScore} 分，需要加強練習`,
             };
             failedCount++;
             failedItems.push(`題目 ${globalIndex + 1} (AI ${aiScore}分)`);
@@ -373,14 +381,17 @@ export default function GradingPage() {
         if (!hasRecording) {
           newFeedbacks[index] = {
             passed: false,
-            feedback: newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
+            feedback:
+              newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
           };
           failedCount++;
           failedItems.push(`題目 ${index + 1} (無錄音)`);
         } else if (aiScore !== undefined && aiScore < 75) {
           newFeedbacks[index] = {
             passed: false,
-            feedback: newFeedbacks[index]?.feedback || `你的 AI 評分 ${aiScore} 分，需要加強練習`,
+            feedback:
+              newFeedbacks[index]?.feedback ||
+              `你的 AI 評分 ${aiScore} 分，需要加強練習`,
           };
           failedCount++;
           failedItems.push(`題目 ${index + 1} (AI ${aiScore}分)`);
@@ -403,10 +414,9 @@ export default function GradingPage() {
     if (failedCount === 0) {
       toast.success(`✅ 全部通過 (${passedCount}題)`, { duration: 3000 });
     } else {
-      toast.success(
-        `✓ 通過 ${passedCount}題 / ✗ 需訂正 ${failedCount}題`,
-        { duration: 3000 }
-      );
+      toast.success(`✓ 通過 ${passedCount}題 / ✗ 需訂正 ${failedCount}題`, {
+        duration: 3000,
+      });
     }
   };
 
@@ -431,7 +441,10 @@ export default function GradingPage() {
             if (aiScore >= 75) {
               // 生成具體的通過評語
               const strengths = [];
-              if (aiScores?.pronunciation_score && aiScores.pronunciation_score >= 80) {
+              if (
+                aiScores?.pronunciation_score &&
+                aiScores.pronunciation_score >= 80
+              ) {
                 strengths.push("發音清晰");
               }
               if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
@@ -440,7 +453,10 @@ export default function GradingPage() {
               if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
                 strengths.push("準確度高");
               }
-              if (aiScores?.completeness_score && aiScores.completeness_score >= 80) {
+              if (
+                aiScores?.completeness_score &&
+                aiScores.completeness_score >= 80
+              ) {
                 strengths.push("完整度好");
               }
 
@@ -478,7 +494,10 @@ export default function GradingPage() {
         if (aiScore !== undefined) {
           if (aiScore >= 75) {
             const strengths = [];
-            if (aiScores?.pronunciation_score && aiScores.pronunciation_score >= 80) {
+            if (
+              aiScores?.pronunciation_score &&
+              aiScores.pronunciation_score >= 80
+            ) {
               strengths.push("發音清晰");
             }
             if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
@@ -487,7 +506,10 @@ export default function GradingPage() {
             if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
               strengths.push("準確度高");
             }
-            if (aiScores?.completeness_score && aiScores.completeness_score >= 80) {
+            if (
+              aiScores?.completeness_score &&
+              aiScores.completeness_score >= 80
+            ) {
               strengths.push("完整度好");
             }
 
@@ -652,6 +674,7 @@ export default function GradingPage() {
 
   const handleStudentSelect = async (student: StudentListItem) => {
     setSearchParams({ studentId: (student.student_id || 0).toString() });
+    setActiveTab("content"); // 選擇學生後自動切換到題組 tab
   };
 
   const getStatusBadge = (status: string) => {
@@ -731,9 +754,9 @@ export default function GradingPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-16 gap-2">
+            <div className="flex items-center gap-1 sm:gap-4 flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -742,18 +765,33 @@ export default function GradingPage() {
                     `/teacher/classroom/${classroomId}/assignment/${assignmentId}`,
                   )
                 }
+                className="flex-shrink-0"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                返回
+                <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">返回</span>
               </Button>
-              <div className="border-l h-8 mx-2"></div>
-              <h1 className="text-xl font-semibold">
-                批改作業: {assignmentTitle}
-              </h1>
+              <div className="border-l h-8 mx-1 hidden md:block"></div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg md:text-xl font-semibold truncate">
+                  <span className="hidden sm:inline">批改作業: </span>
+                  {assignmentTitle}
+                </h1>
+                {submission && (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <User className="h-3 w-3 text-gray-500" />
+                    <span className="text-xs sm:text-sm text-gray-600 font-medium">
+                      {submission.student_name}
+                    </span>
+                    <div className="hidden sm:block">
+                      {getStatusBadge(submission.status)}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* 儲存狀態指示器 */}
               {saveStatus !== "idle" && (
-                <div className="ml-4">
+                <div className="ml-2 sm:ml-4 hidden sm:block">
                   {saveStatus === "saving" && (
                     <span className="text-xs text-gray-500 flex items-center gap-1">
                       <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-500"></div>
@@ -777,7 +815,7 @@ export default function GradingPage() {
             </div>
 
             {/* 學生切換導航 */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 sm:gap-4 flex-shrink-0">
               {(() => {
                 const assignedStudents = studentList.filter(
                   (s) => s.status && s.status !== "NOT_ASSIGNED",
@@ -789,12 +827,17 @@ export default function GradingPage() {
 
                 return (
                   <>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">
                       {isCurrentStudentAssigned
                         ? `${currentAssignedIndex + 1} / ${assignedStudents.length} 位已指派學生`
                         : `未指派學生 (${assignedStudents.length} 位已指派)`}
                     </span>
-                    <div className="flex gap-1">
+                    <span className="text-xs text-gray-500 md:hidden">
+                      {isCurrentStudentAssigned
+                        ? `${currentAssignedIndex + 1} / ${assignedStudents.length}`
+                        : `-`}
+                    </span>
+                    <div className="flex gap-0 sm:gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -803,6 +846,7 @@ export default function GradingPage() {
                           !isCurrentStudentAssigned ||
                           currentAssignedIndex === 0
                         }
+                        className="h-8 w-8 sm:h-10 sm:w-10"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -814,6 +858,7 @@ export default function GradingPage() {
                           !isCurrentStudentAssigned ||
                           currentAssignedIndex === assignedStudents.length - 1
                         }
+                        className="h-8 w-8 sm:h-10 sm:w-10"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -826,10 +871,114 @@ export default function GradingPage() {
         </div>
       </div>
 
+      {/* Tab 導航 */}
+      <div className="bg-white border-b lg:hidden sticky top-16 z-10 shadow-sm">
+        <div className="max-w-full mx-auto px-4">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab("students")}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "students"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              學生
+            </button>
+            <button
+              onClick={() => setActiveTab("content")}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "content"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              題組
+            </button>
+            <button
+              onClick={() => setActiveTab("grading")}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "grading"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              總評
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* 頂部標題區 */}
+        <div className="mb-4 hidden lg:block">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">{assignmentTitle}</h1>
+            {submission && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">
+                    {submission.student_name}
+                  </span>
+                </div>
+                {getStatusBadge(submission.status)}
+              </div>
+            )}
+          </div>
+
+          {/* 操作按鈕 */}
+          <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                size="sm"
+                onClick={handleCheckRecordings}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Search className="h-4 w-4" />
+                檢查錄音
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApplyAISuggestions}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <Sparkles className="h-4 w-4" />
+                套用 AI 建議
+              </Button>
+            </div>
+          </div>
+
+          {/* 題組選擇器 */}
+          {submission?.content_groups &&
+            submission.content_groups.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">
+                  題組:
+                </span>
+                <select
+                  value={selectedGroupIndex}
+                  onChange={(e) => {
+                    setSelectedGroupIndex(parseInt(e.target.value));
+                    setActiveTab("content"); // 選擇題組後自動切換到題組 tab
+                  }}
+                  className="border rounded-md px-3 py-1.5 text-sm"
+                >
+                  {submission.content_groups.map((group, index) => (
+                    <option key={group.content_id} value={index}>
+                      {group.content_title} ({group.submissions.length}題)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+        </div>
+
         <div className="grid grid-cols-12 gap-4">
           {/* 左側 - 學生列表 */}
-          <div className="col-span-2">
+          <div
+            className={`col-span-12 lg:col-span-2 ${activeTab === "students" ? "block" : "hidden lg:block"}`}
+          >
             <Card className="p-3">
               <h3 className="text-sm font-medium mb-3 flex items-center justify-between text-gray-700">
                 <div className="flex items-center gap-1">
@@ -921,86 +1070,59 @@ export default function GradingPage() {
             </Card>
           </div>
 
-          {/* 中間 - 題組 Table */}
-          <div className="col-span-6">
+          {/* 中間 - 題組內容 */}
+          <div
+            className={`col-span-12 lg:col-span-6 ${activeTab === "content" ? "block" : "hidden lg:block"}`}
+          >
             {submission ? (
               <div className="space-y-3">
-                {/* 學生資訊卡片 */}
-                <Card className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-blue-600" />
+                {/* 手機版操作按鈕 */}
+                <div className="lg:hidden sticky top-28 z-10 -mx-4 sm:-mx-6 mb-3">
+                  <Card className="p-3 rounded-none sm:rounded-lg shadow-md">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleCheckRecordings}
+                          className="flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <Search className="h-4 w-4" />
+                          檢查錄音
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleApplyAISuggestions}
+                          className="flex-1 flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          套用 AI 建議
+                        </Button>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-sm">
-                          {submission.student_name}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          {submission.student_email}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(submission.status)}
-                      {submission.submitted_at && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          {new Date(submission.submitted_at).toLocaleDateString(
-                            "zh-TW",
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* 操作按鈕與題組選擇器 */}
-                <Card className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleCheckRecordings}
-                        className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Search className="h-4 w-4" />
-                        檢查錄音
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleApplyAISuggestions}
-                        className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        套用 AI 建議
-                      </Button>
-                    </div>
-                    {submission.content_groups &&
-                      submission.content_groups.length > 1 && (
-                        <>
-                          <div className="border-l h-8"></div>
-                          <div className="flex items-center gap-2 flex-1">
-                            <span className="text-sm font-medium">題組:</span>
+                      {submission.content_groups &&
+                        submission.content_groups.length > 1 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              題組:
+                            </span>
                             <select
                               value={selectedGroupIndex}
-                              onChange={(e) =>
-                                setSelectedGroupIndex(parseInt(e.target.value))
-                              }
-                              className="flex-1 border rounded-md px-3 py-1.5 text-sm"
+                              onChange={(e) => {
+                                setSelectedGroupIndex(parseInt(e.target.value));
+                              }}
+                              className="flex-1 border rounded-md px-3 py-1.5 text-sm bg-white"
                             >
                               {submission.content_groups.map((group, index) => (
                                 <option key={group.content_id} value={index}>
-                                  {group.content_title} ({group.submissions.length}
-                                  題)
+                                  {group.content_title} (
+                                  {group.submissions.length}題)
                                 </option>
                               ))}
                             </select>
                           </div>
-                        </>
-                      )}
-                  </div>
-                </Card>
+                        )}
+                    </div>
+                  </Card>
+                </div>
 
                 {/* 題目 Table */}
                 {currentGroup && (
@@ -1014,9 +1136,15 @@ export default function GradingPage() {
                         return (
                           <div key={globalIndex} className="py-4">
                             {/* 主要行 */}
-                            <div className="grid grid-cols-12 gap-3 items-start">
+                            <div
+                              className="md:grid md:grid-cols-12 flex flex-col gap-3 items-start cursor-pointer hover:bg-gray-50 rounded-lg p-2 -mx-2"
+                              onClick={() => toggleRowExpanded(globalIndex)}
+                            >
                               {/* 通過狀態 */}
-                              <div className="col-span-1 flex flex-col gap-1">
+                              <div
+                                className="md:col-span-1 flex flex-row md:flex-col gap-2 md:gap-1 w-full md:w-auto"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Button
                                   size="sm"
                                   variant={
@@ -1082,7 +1210,7 @@ export default function GradingPage() {
                               </div>
 
                               {/* 題目 */}
-                              <div className="col-span-4">
+                              <div className="md:col-span-4 w-full">
                                 <div className="flex items-start gap-2">
                                   <span className="text-xs font-semibold text-gray-500 mt-1">
                                     {localIndex + 1}.
@@ -1101,7 +1229,10 @@ export default function GradingPage() {
                               </div>
 
                               {/* 學生錄音 */}
-                              <div className="col-span-2">
+                              <div
+                                className="md:col-span-2 w-full flex justify-center md:justify-start"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {item.audio_url ? (
                                   <AudioRecorder
                                     variant="compact"
@@ -1120,7 +1251,10 @@ export default function GradingPage() {
                               </div>
 
                               {/* 評語 */}
-                              <div className="col-span-4">
+                              <div
+                                className="md:col-span-4 w-full"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Textarea
                                   value={itemFeedback?.feedback || ""}
                                   onChange={(e) => {
@@ -1147,17 +1281,20 @@ export default function GradingPage() {
                               </div>
 
                               {/* 展開按鈕 */}
-                              <div className="col-span-1 flex justify-center">
+                              <div className="md:col-span-1 w-full md:w-auto flex justify-center">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => toggleRowExpanded(globalIndex)}
-                                  className="p-1 h-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRowExpanded(globalIndex);
+                                  }}
+                                  className="p-2 h-10 md:h-7"
                                 >
                                   {isExpanded ? (
-                                    <ChevronUp className="h-4 w-4" />
+                                    <ChevronUp className="h-6 w-6 md:h-4 md:w-4" />
                                   ) : (
-                                    <ChevronDown className="h-4 w-4" />
+                                    <ChevronDown className="h-6 w-6 md:h-4 md:w-4" />
                                   )}
                                 </Button>
                               </div>
@@ -1238,10 +1375,24 @@ export default function GradingPage() {
             )}
           </div>
 
-          {/* 右側 - 評分面板 */}
-          <div className="col-span-4">
-            <Card className="p-4 sticky top-24">
-              <h4 className="font-medium text-sm mb-3">批改評分</h4>
+          {/* 右側 - 總評 */}
+          <div
+            className={`col-span-12 lg:col-span-4 ${activeTab === "grading" ? "block" : "hidden lg:block"}`}
+          >
+            <Card className="p-4 lg:sticky lg:top-24">
+              {/* 手機版學生資訊 */}
+              {submission && (
+                <div className="mb-4 pb-4 border-b lg:hidden">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">
+                      {submission.student_name}
+                    </span>
+                    {getStatusBadge(submission.status)}
+                  </div>
+                </div>
+              )}
+              <h4 className="font-medium text-sm mb-3">總評</h4>
 
               <div className="space-y-3">
                 {/* 逐題燈號（分題組） */}
@@ -1254,13 +1405,15 @@ export default function GradingPage() {
                       // Calculate base index for this group
                       let groupBaseIndex = 0;
                       for (let i = 0; i < groupIndex; i++) {
-                        groupBaseIndex += submission.content_groups![i].submissions.length;
+                        groupBaseIndex +=
+                          submission.content_groups![i].submissions.length;
                       }
 
                       return (
                         <div key={group.content_id} className="space-y-1">
                           <div className="text-xs text-gray-600 font-medium">
-                            {group.content_title} ({group.submissions.length} 題)
+                            {group.content_title} ({group.submissions.length}{" "}
+                            題)
                           </div>
                           <div className="grid grid-cols-10 gap-1">
                             {group.submissions.map((item, localIndex) => {
@@ -1288,7 +1441,11 @@ export default function GradingPage() {
                                   `}
                                   title={`題目 ${localIndex + 1}: ${isPassed ? "通過" : isFailed ? "需訂正" : hasRecording ? "有錄音" : "無錄音"}`}
                                 >
-                                  {isPassed ? "✓" : isFailed ? "✗" : localIndex + 1}
+                                  {isPassed
+                                    ? "✓"
+                                    : isFailed
+                                      ? "✗"
+                                      : localIndex + 1}
                                 </div>
                               );
                             })}

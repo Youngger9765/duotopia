@@ -2050,7 +2050,10 @@ async def grade_student_assignment(
 
                         # 更新 StudentItemProgress 表中的 teacher_feedback
                         # 只要有 feedback 或 passed 欄位，就需要儲存
-                        if item_data.get("feedback") or item_data.get("passed") is not None:
+                        if (
+                            item_data.get("feedback")
+                            or item_data.get("passed") is not None
+                        ):
                             # 查找對應的 StudentItemProgress 記錄
                             item_progress = (
                                 db.query(StudentItemProgress)
