@@ -91,6 +91,32 @@ export default function AudioRecorder({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
+  // TODO: 重構錄音邏輯 - 代碼重複問題
+  // 1. 抽出 useMediaRecorder hook 共用邏輯
+  // 2. AudioRecorder.tsx 和 StudentActivityPage.tsx 都使用這個 hook
+  // 3. 避免維護兩份相同的 MediaRecorder 邏輯
+  // See: StudentActivityPage.tsx 有相同的邏輯
+
+  // 🎯 跨瀏覽器格式偵測
+  const getSupportedMimeType = useCallback(() => {
+    const types = [
+      'audio/webm;codecs=opus',  // Chrome/Firefox 首選
+      'audio/webm',              // Chrome/Firefox 備用
+      'audio/mp4',               // Safari/iOS 必須
+      'audio/ogg;codecs=opus',   // Firefox 備用
+    ];
+
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log(`✅ AudioRecorder using MIME type: ${type}`);
+        return type;
+      }
+    }
+
+    console.warn('⚠️ No supported MIME type found, using default');
+    return '';  // 讓瀏覽器自動選擇
+  }, []);
+
   // Start recording
   const startRecording = useCallback(async () => {
     if (readOnly || disabled) return;
@@ -100,10 +126,14 @@ export default function AudioRecorder({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Create media recorder
-      const mediaRecorder = new MediaRecorder(stream);
+      // Create media recorder with auto-detected MIME type
+      const mimeType = getSupportedMimeType();
+      const options = mimeType ? { mimeType } : {};
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+
+      console.log(`🎙️ AudioRecorder initialized with: ${mediaRecorder.mimeType}`);
 
       // Handle data available
       mediaRecorder.ondataavailable = (event) => {
@@ -114,7 +144,7 @@ export default function AudioRecorder({
 
       // Handle recording stop
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
 
         // 驗證錄音檔案
@@ -172,10 +202,11 @@ export default function AudioRecorder({
               clearTimeout(timeout);
               console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
 
-              // 檢查 duration 是否有效
+              // 檢查 duration 是否有效（處理 Safari iOS Infinity 問題）
               if (
                 !testAudio.duration ||
                 isNaN(testAudio.duration) ||
+                !isFinite(testAudio.duration) ||  // 排除 Infinity
                 testAudio.duration === 0
               ) {
                 console.error("❌ Invalid audio duration:", testAudio.duration);
