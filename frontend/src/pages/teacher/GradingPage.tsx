@@ -320,14 +320,14 @@ export default function GradingPage() {
     }
   };
 
-  // 檢查錄音狀態（根據錄音有無 + AI 評分自動標記）- 處理所有題目
+  // 檢查錄音狀態（只標記無錄音的題目）- 處理所有題目
   const handleCheckRecordings = async () => {
     if (!submission) return;
 
     const newFeedbacks = { ...itemFeedbacks };
-    let passedCount = 0;
-    let failedCount = 0;
-    const failedItems: string[] = [];
+    let hasRecordingCount = 0;
+    let noRecordingCount = 0;
+    const noRecordingItems: string[] = [];
     let totalQuestions = 0;
 
     // 處理所有題組
@@ -337,36 +337,27 @@ export default function GradingPage() {
         group.submissions.forEach((item) => {
           totalQuestions++;
           const hasRecording = !!item.audio_url;
-          const aiScore = item.ai_scores?.overall_score;
 
-          // 優先級：沒錄音 > AI 評分低 > 通過
           if (!hasRecording) {
-            // 情況 1: 沒錄音 → ✗
+            // 沒錄音 → ✗
             newFeedbacks[globalIndex] = {
               passed: false,
               feedback:
                 newFeedbacks[globalIndex]?.feedback ||
                 "你尚未上傳錄音，請補交作業",
             };
-            failedCount++;
-            failedItems.push(`題目 ${globalIndex + 1} (無錄音)`);
-          } else if (aiScore !== undefined && aiScore < 75) {
-            // 情況 2: 有錄音但 AI 評分 < 75 → ✗
-            newFeedbacks[globalIndex] = {
-              passed: false,
-              feedback:
-                newFeedbacks[globalIndex]?.feedback ||
-                `你的 AI 評分 ${aiScore} 分，需要加強練習`,
-            };
-            failedCount++;
-            failedItems.push(`題目 ${globalIndex + 1} (AI ${aiScore}分)`);
+            noRecordingCount++;
+            noRecordingItems.push(`題目 ${globalIndex + 1}`);
           } else {
-            // 情況 3: 有錄音且 (沒有 AI 分數 或 AI >= 75) → ✓
-            newFeedbacks[globalIndex] = {
-              passed: true,
-              feedback: newFeedbacks[globalIndex]?.feedback || "做得很好！",
-            };
-            passedCount++;
+            // 有錄音 → 移除 passed 狀態（不打勾也不打叉）
+            if (newFeedbacks[globalIndex]) {
+              const currentFeedback = newFeedbacks[globalIndex];
+              newFeedbacks[globalIndex] = {
+                passed: null,
+                feedback: currentFeedback.feedback || "",
+              };
+            }
+            hasRecordingCount++;
           }
           globalIndex++;
         });
@@ -376,7 +367,6 @@ export default function GradingPage() {
       submission.submissions.forEach((item, index) => {
         totalQuestions++;
         const hasRecording = !!item.audio_url;
-        const aiScore = item.ai_scores?.overall_score;
 
         if (!hasRecording) {
           newFeedbacks[index] = {
@@ -384,23 +374,18 @@ export default function GradingPage() {
             feedback:
               newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
           };
-          failedCount++;
-          failedItems.push(`題目 ${index + 1} (無錄音)`);
-        } else if (aiScore !== undefined && aiScore < 75) {
-          newFeedbacks[index] = {
-            passed: false,
-            feedback:
-              newFeedbacks[index]?.feedback ||
-              `你的 AI 評分 ${aiScore} 分，需要加強練習`,
-          };
-          failedCount++;
-          failedItems.push(`題目 ${index + 1} (AI ${aiScore}分)`);
+          noRecordingCount++;
+          noRecordingItems.push(`題目 ${index + 1}`);
         } else {
-          newFeedbacks[index] = {
-            passed: true,
-            feedback: newFeedbacks[index]?.feedback || "做得很好！",
-          };
-          passedCount++;
+          // 有錄音 → 移除 passed 狀態
+          if (newFeedbacks[index]) {
+            const currentFeedback = newFeedbacks[index];
+            newFeedbacks[index] = {
+              passed: null,
+              feedback: currentFeedback.feedback || "",
+            };
+          }
+          hasRecordingCount++;
         }
       });
     }
@@ -411,10 +396,10 @@ export default function GradingPage() {
     await performAutoSave(newFeedbacks);
 
     // 顯示結果
-    if (failedCount === 0) {
-      toast.success(`✅ 全部通過 (${passedCount}題)`, { duration: 3000 });
+    if (noRecordingCount === 0) {
+      toast.success(`✅ 全部都有錄音 (${totalQuestions}題)`, { duration: 3000 });
     } else {
-      toast.success(`✓ 通過 ${passedCount}題 / ✗ 需訂正 ${failedCount}題`, {
+      toast.warning(`⚠️ ${noRecordingCount}題缺少錄音`, {
         duration: 3000,
       });
     }
