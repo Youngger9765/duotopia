@@ -240,6 +240,33 @@ export default function StudentActivityPage() {
   };
 
   // Recording controls
+  // TODO: 重構錄音邏輯 - 代碼重複問題
+  // 1. 抽出 useMediaRecorder hook 共用邏輯
+  // 2. AudioRecorder.tsx 使用這個 hook
+  // 3. StudentActivityPage.tsx 使用這個 hook
+  // 4. 避免 300+ 行重複代碼
+  // See: AudioRecorder.tsx 有相同的邏輯
+
+  // 🎯 跨瀏覽器格式偵測
+  const getSupportedMimeType = () => {
+    const types = [
+      'audio/webm;codecs=opus',  // Chrome/Firefox 首選
+      'audio/webm',              // Chrome/Firefox 備用
+      'audio/mp4',               // Safari/iOS 必須
+      'audio/ogg;codecs=opus',   // Firefox 備用
+    ];
+
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log(`✅ Using MIME type: ${type}`);
+        return type;
+      }
+    }
+
+    console.warn('⚠️ No supported MIME type found, using default');
+    return '';  // 讓瀏覽器自動選擇
+  };
+
   const startRecording = async (isReRecord: boolean = false) => {
     // 唯讀模式下不允許錄音
     if (isReadOnly) {
@@ -281,8 +308,15 @@ export default function StudentActivityPage() {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+
+      // 🎯 自動偵測支援的 MIME type
+      const mimeType = getSupportedMimeType();
+      const options = mimeType ? { mimeType } : {};
+      const recorder = new MediaRecorder(stream, options);
       const chunks: Blob[] = [];
+
+      // 記錄實際使用的格式
+      console.log(`🎙️ MediaRecorder initialized with MIME type: ${recorder.mimeType}`);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -291,7 +325,8 @@ export default function StudentActivityPage() {
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: "audio/webm" });
+        // 使用 MediaRecorder 實際的 MIME type（支援跨瀏覽器）
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
         const currentActivity = activities[currentActivityIndex];
 
         // 🎯 驗證錄音檔案
@@ -340,7 +375,12 @@ export default function StudentActivityPage() {
               console.log("✅ Audio metadata loaded, duration:", testAudio.duration);
 
               // 檢查 duration 是否有效（至少 1 秒）
-              if (isNaN(testAudio.duration) || testAudio.duration < 1) {
+              // 處理 Safari iOS 的 Infinity 和 NaN 問題
+              if (
+                isNaN(testAudio.duration) ||
+                !isFinite(testAudio.duration) ||  // 排除 Infinity
+                testAudio.duration < 1
+              ) {
                 console.error("❌ Invalid audio duration:", testAudio.duration);
                 resolve(false);
               } else {
