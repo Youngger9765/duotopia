@@ -16,7 +16,6 @@ import {
   Trash2,
   Plus,
   Globe,
-  X,
   Play,
   Square,
   RefreshCw,
@@ -807,16 +806,10 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
     },
   ]);
-  const [level, setLevel] = useState("A1");
-  const [tags, setTags] = useState<string[]>([]);
-  const [isPublic, setIsPublic] = useState(false); // 獨立的 isPublic 狀態
-  const [tagInput, setTagInput] = useState("");
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const levels = ["PreA", "A1", "A2", "B1", "B2", "C1", "C2"];
 
   // Load existing content data from database
   useEffect(() => {
@@ -869,10 +862,6 @@ export default function ReadingAssessmentPanel({
         );
         setRows(convertedRows);
       }
-
-      setLevel(data.level || "A1");
-      setTags(data.tags || []);
-      setIsPublic(data.is_public || false);
     } catch (error) {
       console.error("Failed to load content:", error);
       toast.error("載入內容失敗");
@@ -897,11 +886,8 @@ export default function ReadingAssessmentPanel({
       ...editingContent,
       title,
       items,
-      level,
-      tags,
-      is_public: isPublic,
     });
-  }, [rows, title, level, tags, isPublic]);
+  }, [rows, title]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -1058,8 +1044,6 @@ export default function ReadingAssessmentPanel({
               ...editingContent,
               title,
               items,
-              level,
-              tags,
             });
           }
           console.log(
@@ -1072,8 +1056,6 @@ export default function ReadingAssessmentPanel({
             const updateData = {
               title: title || editingContent?.title,
               items,
-              level,
-              tags,
             };
 
             console.log("Updating content with new audio:", audioUrl);
@@ -1110,8 +1092,6 @@ export default function ReadingAssessmentPanel({
                 ...editingContent,
                 title,
                 items,
-                level,
-                tags,
               });
             }
           } catch (error) {
@@ -1191,8 +1171,6 @@ export default function ReadingAssessmentPanel({
               ...editingContent,
               title,
               items,
-              level,
-              tags,
             });
           }
 
@@ -1205,8 +1183,6 @@ export default function ReadingAssessmentPanel({
             const updateData = {
               title: title || editingContent?.title,
               items,
-              level,
-              tags,
             };
 
             await apiClient.updateContent(editingContent?.id ?? 0, updateData);
@@ -1217,8 +1193,6 @@ export default function ReadingAssessmentPanel({
                 ...editingContent,
                 title,
                 items,
-                level,
-                tags,
               });
             }
 
@@ -1352,17 +1326,6 @@ export default function ReadingAssessmentPanel({
       console.error("Batch translation error:", error);
       toast.error("批次翻譯失敗，請稍後再試");
     }
-  };
-
-  const handleAddTag = () => {
-    if (tagInput && !tags.includes(tagInput)) {
-      setTags([...tags, tagInput]);
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
   };
 
   if (isLoading) {
@@ -1609,75 +1572,7 @@ export default function ReadingAssessmentPanel({
         </button>
       </div>
 
-      {/* Fixed Footer Section */}
-      <div className="flex-shrink-0 space-y-4 pt-3 border-t mt-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">LEVEL：</label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="px-3 py-1 border rounded-md"
-            >
-              {levels.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 flex-1">
-            <label className="text-sm font-medium">標籤：</label>
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-              className="px-3 py-1 border rounded-md flex-1"
-              placeholder="按 Enter 新增標籤"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isPublicEdit"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label
-              htmlFor="isPublicEdit"
-              className="text-sm font-medium text-gray-700 whitespace-nowrap"
-            >
-              公開內容
-            </label>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-3 py-1 bg-gray-100 rounded-full text-sm flex items-center gap-1"
-            >
-              {tag}
-              <button
-                onClick={() => handleRemoveTag(tag)}
-                className="ml-1 hover:text-red-600"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Fixed Footer Section - Removed LEVEL, Tags, and Public Content fields */}
 
       {/* TTS Modal */}
       {selectedRow && (
