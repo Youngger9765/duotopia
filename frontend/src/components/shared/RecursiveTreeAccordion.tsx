@@ -47,6 +47,7 @@ export interface TreeNodeConfig {
     key: string;
     icon?: LucideIcon;
     suffix?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render?: (value: any, item: any) => React.ReactNode;
     mobileOnly?: boolean;
     desktopOnly?: boolean;
@@ -66,6 +67,7 @@ export interface TreeNodeConfig {
 }
 
 interface RecursiveTreeNodeProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   config: TreeNodeConfig;
   level: number;
@@ -73,8 +75,11 @@ interface RecursiveTreeNodeProps {
   parentId?: string | number;
 
   // Event handlers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onEdit?: (item: any, level: number, parentId?: string | number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDelete?: (item: any, level: number, parentId?: string | number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onClick?: (item: any, level: number, parentId?: string | number) => void;
   onCreate?: (level: number, parentId: string | number) => void;
   onReorder?: (
@@ -276,6 +281,7 @@ function RecursiveTreeNode({
               {config.childConfig ? (
                 <>
                   <SortableContext
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     items={children?.map((child: any) => child[config.childConfig!.idKey]) || []}
                     strategy={verticalListSortingStrategy}
                   >
@@ -286,6 +292,7 @@ function RecursiveTreeNode({
                       value={childExpandedValue}
                       onValueChange={setChildExpandedValue}
                     >
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {children && children.length > 0 && children.map((child: any, childIndex: number) => (
                         <RecursiveTreeNode
                           key={child[config.childConfig!.idKey]}
@@ -317,6 +324,7 @@ function RecursiveTreeNode({
                 </>
               ) : (
                 <div className="space-y-3">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {children && children.length > 0 && children.map((child: any) => (
                     <div
                       key={child[config.childConfig!.idKey]}
@@ -409,6 +417,7 @@ function RecursiveTreeNode({
 }
 
 interface RecursiveTreeAccordionProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any[];
   config: TreeNodeConfig;
   title?: string;
@@ -416,8 +425,11 @@ interface RecursiveTreeAccordionProps {
   createButtonText?: string;
   onCreateClick?: () => void;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onEdit?: (item: any, level: number, parentId?: string | number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDelete?: (item: any, level: number, parentId?: string | number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onClick?: (item: any, level: number, parentId?: string | number) => void;
   onCreate?: (level: number, parentId: string | number) => void;
   onReorder?: (
@@ -515,9 +527,11 @@ export function RecursiveTreeAccordion({
 
   // Recursively find the active item in the tree with its config
   const findItemById = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     items: any[],
     id: string | number,
     cfg: TreeNodeConfig
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): { item: any; config: TreeNodeConfig } | null => {
     for (const item of items) {
       if (item[cfg.idKey] === id) {

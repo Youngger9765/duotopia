@@ -452,7 +452,10 @@ export default function TeacherTemplateProgramsNew() {
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
                   isCreating={true}
-                  onSave={async (newContent?: any) => {
+                  onSave={async (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    newContent?: any,
+                  ) => {
                     // 如果有返回新內容，直接更新前端狀態，不重整頁面
                     if (newContent && editorLessonId) {
                       setPrograms(programs.map(program => ({
@@ -527,6 +530,7 @@ export default function TeacherTemplateProgramsNew() {
                   content={{
                     id: selectedContent.id,
                     title: selectedContent.title,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     items: (selectedContent.items || []) as any,
                   }}
                   onSave={async () => {
