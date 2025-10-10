@@ -1657,26 +1657,13 @@ export default function ReadingAssessmentPanel({
 
               console.log("Saving data:", saveData);
 
-              // 如果是創建模式，需要呼叫 API 創建內容
-              if (isCreating && lessonId) {
+              // 判斷是編輯模式還是創建模式
+              const existingContentId = editingContent?.id || content?.id;
+
+              if (existingContentId) {
+                // 編輯模式：更新現有內容
                 try {
-                  await apiClient.createContent(lessonId, {
-                    type: "reading_assessment",
-                    ...saveData,
-                  });
-                  toast.success("內容已成功創建");
-                  // 呼叫 onSave 關閉對話框
-                  if (onSave) {
-                    await (onSave as () => void | Promise<void>)();
-                  }
-                } catch (error) {
-                  console.error("Failed to create content:", error);
-                  toast.error("創建內容失敗");
-                }
-              } else if (editingContent?.id) {
-                // 編輯模式，直接更新內容
-                try {
-                  await apiClient.updateContent(editingContent.id, saveData);
+                  await apiClient.updateContent(existingContentId, saveData);
                   toast.success("儲存成功");
                   if (onSave) {
                     await (onSave as () => void | Promise<void>)();
@@ -1685,16 +1672,33 @@ export default function ReadingAssessmentPanel({
                   console.error("Failed to update content:", error);
                   toast.error("儲存失敗");
                 }
-              } else if (lessonId) {
-                // 有 lessonId 但沒有 contentId，創建新內容
+              } else if (isCreating && lessonId) {
+                // 創建模式：新增內容
                 try {
-                  await apiClient.createContent(lessonId, {
+                  const newContent = await apiClient.createContent(lessonId, {
                     type: "reading_assessment",
                     ...saveData,
                   });
                   toast.success("內容已成功創建");
+                  // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
-                    await (onSave as () => void | Promise<void>)();
+                    await (onSave as (content?: any) => void | Promise<void>)(newContent);
+                  }
+                } catch (error) {
+                  console.error("Failed to create content:", error);
+                  toast.error("創建內容失敗");
+                }
+              } else if (lessonId) {
+                // 有 lessonId 但沒有 contentId，創建新內容
+                try {
+                  const newContent = await apiClient.createContent(lessonId, {
+                    type: "reading_assessment",
+                    ...saveData,
+                  });
+                  toast.success("內容已成功創建");
+                  // 呼叫 onSave，傳入新創建的內容
+                  if (onSave) {
+                    await (onSave as (content?: any) => void | Promise<void>)(newContent);
                   }
                 } catch (error) {
                   console.error("Failed to create content:", error);
