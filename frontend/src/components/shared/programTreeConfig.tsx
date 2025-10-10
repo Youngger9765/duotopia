@@ -82,9 +82,12 @@ export const programTreeConfig: TreeNodeConfig = {
           C1: "bg-red-100 text-red-800",
           C2: "bg-purple-100 text-purple-800",
         };
-        const color = levelColors[level?.toUpperCase()] || "bg-gray-100 text-gray-800";
+        const color =
+          levelColors[level?.toUpperCase()] || "bg-gray-100 text-gray-800";
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}
+          >
             {level || "A1"}
           </span>
         );

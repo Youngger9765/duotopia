@@ -132,7 +132,9 @@ export function ProgramDialog({
           name: formData.name,
           description: formData.description,
           level: formData.level,
-          classroom_id: isTemplate ? undefined : (formData.classroom_id || classroomId),
+          classroom_id: isTemplate
+            ? undefined
+            : formData.classroom_id || classroomId,
           estimated_hours: formData.estimated_hours,
           tags: formData.tags,
           is_template: isTemplate,
