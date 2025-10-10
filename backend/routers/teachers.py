@@ -272,7 +272,9 @@ async def get_teacher_programs(
         .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
         .options(
             selectinload(Program.classroom),
-            selectinload(Program.lessons).selectinload(Lesson.contents).selectinload(Content.content_items)
+            selectinload(Program.lessons)
+            .selectinload(Lesson.contents)
+            .selectinload(Content.content_items),
         )
     )
 
@@ -306,34 +308,42 @@ async def get_teacher_programs(
                             # 將 content_items 轉換成舊格式 items
                             items_data = []
                             if content.content_items:
-                                for item in sorted(content.content_items, key=lambda x: x.order_index):
-                                    items_data.append({
-                                        "id": item.id,
-                                        "text": item.text,
-                                        "translation": item.translation,
-                                        "audio_url": item.audio_url,
-                                        "order_index": item.order_index,
-                                    })
+                                for item in sorted(
+                                    content.content_items, key=lambda x: x.order_index
+                                ):
+                                    items_data.append(
+                                        {
+                                            "id": item.id,
+                                            "text": item.text,
+                                            "translation": item.translation,
+                                            "audio_url": item.audio_url,
+                                            "order_index": item.order_index,
+                                        }
+                                    )
 
-                            contents_data.append({
-                                "id": content.id,
-                                "title": content.title,
-                                "type": content.type,
-                                "items": items_data,
-                                "items_count": len(items_data),
-                                "order_index": content.order_index,
-                                "level": content.level,
-                                "tags": content.tags or [],
-                            })
+                            contents_data.append(
+                                {
+                                    "id": content.id,
+                                    "title": content.title,
+                                    "type": content.type,
+                                    "items": items_data,
+                                    "items_count": len(items_data),
+                                    "order_index": content.order_index,
+                                    "level": content.level,
+                                    "tags": content.tags or [],
+                                }
+                            )
 
-                lessons_data.append({
-                    "id": lesson.id,
-                    "name": lesson.name,
-                    "description": lesson.description,
-                    "estimated_minutes": lesson.estimated_minutes,
-                    "order_index": lesson.order_index,
-                    "contents": contents_data,
-                })
+                lessons_data.append(
+                    {
+                        "id": lesson.id,
+                        "name": lesson.name,
+                        "description": lesson.description,
+                        "estimated_minutes": lesson.estimated_minutes,
+                        "order_index": lesson.order_index,
+                        "contents": contents_data,
+                    }
+                )
 
         result.append(
             {
@@ -351,9 +361,7 @@ async def get_teacher_programs(
                 ),
                 "lesson_count": len(lessons_data),
                 "student_count": student_count,
-                "status": (
-                    "active" if program.is_active else "archived"
-                ),
+                "status": ("active" if program.is_active else "archived"),
                 "order_index": (
                     program.order_index if hasattr(program, "order_index") else 1
                 ),
@@ -1404,7 +1412,10 @@ async def create_program(
     if not program_data.is_template:
         # Verify classroom belongs to teacher (only for non-template programs)
         if not program_data.classroom_id:
-            raise HTTPException(status_code=400, detail="classroom_id is required for non-template programs")
+            raise HTTPException(
+                status_code=400,
+                detail="classroom_id is required for non-template programs",
+            )
 
         classroom = (
             db.query(Classroom)
@@ -1423,7 +1434,9 @@ async def create_program(
         # For template programs, get max order across all template programs
         max_order = (
             db.query(func.max(Program.order_index))
-            .filter(Program.is_template.is_(True), Program.teacher_id == current_teacher.id)
+            .filter(
+                Program.is_template.is_(True), Program.teacher_id == current_teacher.id
+            )
             .scalar()
             or 0
         )
@@ -2023,10 +2036,11 @@ async def create_content(
 
     # 如果沒有提供 order_index，自動設為最後一個位置
     if content_data.order_index is None:
-        max_order = db.query(func.max(Content.order_index)).filter(
-            Content.lesson_id == lesson_id,
-            Content.is_active.is_(True)
-        ).scalar()
+        max_order = (
+            db.query(func.max(Content.order_index))
+            .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
+            .scalar()
+        )
         order_index = (max_order or 0) + 1
     else:
         order_index = content_data.order_index

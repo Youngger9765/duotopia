@@ -83,7 +83,9 @@ async def get_template_programs(
             template.lessons = sorted(template.lessons, key=lambda x: x.order_index)
             for lesson in template.lessons:
                 if lesson.contents:
-                    lesson.contents = sorted(lesson.contents, key=lambda x: x.order_index)
+                    lesson.contents = sorted(
+                        lesson.contents, key=lambda x: x.order_index
+                    )
 
     # 如果提供了 classroom_id，檢查重複狀態
     if classroom_id:

@@ -1827,6 +1827,7 @@ export default function ReadingAssessmentPanel({
                   toast.success("內容已成功創建");
                   // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)(newContent);
                   }
                 } catch (error) {
@@ -1843,6 +1844,7 @@ export default function ReadingAssessmentPanel({
                   toast.success("內容已成功創建");
                   // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)(newContent);
                   }
                 } catch (error) {
