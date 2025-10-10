@@ -44,7 +44,6 @@ export function LessonDialog({
     name: "",
     description: "",
     order_index: 1,
-    estimated_minutes: 30,
     program_id: programId,
   });
   const [loading, setLoading] = useState(false);
@@ -56,7 +55,6 @@ export function LessonDialog({
         name: lesson.name,
         description: lesson.description || "",
         order_index: lesson.order_index || 1,
-        estimated_minutes: lesson.estimated_minutes || 30,
         program_id: lesson.program_id || programId,
       });
     } else if (dialogType === "create") {
@@ -64,7 +62,6 @@ export function LessonDialog({
         name: "",
         description: "",
         order_index: currentLessonCount + 1, // Auto-set to last position
-        estimated_minutes: 30,
         program_id: programId,
       });
     }
@@ -75,10 +72,6 @@ export function LessonDialog({
 
     if (!formData.name?.trim()) {
       newErrors.name = "單元名稱為必填";
-    }
-
-    if (!formData.estimated_minutes || formData.estimated_minutes < 1) {
-      newErrors.estimated_minutes = "預估時間必須大於 0";
     }
 
     setErrors(newErrors);
@@ -95,7 +88,6 @@ export function LessonDialog({
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,
-          estimated_minutes: formData.estimated_minutes,
         });
         toast.success(`單元「${formData.name}」已新增`);
         onSave(newLesson as Lesson);
@@ -104,7 +96,6 @@ export function LessonDialog({
           name: formData.name,
           description: formData.description,
           order_index: formData.order_index,
-          estimated_minutes: formData.estimated_minutes,
         });
         toast.success(`單元「${formData.name}」已更新`);
         onSave({ ...lesson, ...formData });
@@ -183,33 +174,6 @@ export function LessonDialog({
               />
             </div>
 
-            <div>
-              <div>
-                <label htmlFor="minutes" className="text-sm font-medium">
-                  預估時間（分鐘）<span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="minutes"
-                  type="number"
-                  value={formData.estimated_minutes}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      estimated_minutes: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.estimated_minutes ? "border-red-500" : ""}`}
-                  placeholder="30"
-                  min="1"
-                />
-                {errors.estimated_minutes && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.estimated_minutes}
-                  </p>
-                )}
-              </div>
-            </div>
-
             {dialogType === "create" && (
               <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
                 ℹ️ 單元將自動排在課程最後
@@ -265,11 +229,6 @@ export function LessonDialog({
               {lesson.description && (
                 <p className="text-sm text-gray-500 mt-1">
                   {lesson.description}
-                </p>
-              )}
-              {lesson.estimated_minutes && (
-                <p className="text-sm text-gray-500 mt-1">
-                  預估時間：{lesson.estimated_minutes} 分鐘
                 </p>
               )}
             </div>
