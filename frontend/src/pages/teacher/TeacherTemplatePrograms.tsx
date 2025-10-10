@@ -45,8 +45,8 @@ export default function TeacherTemplateProgramsNew() {
   const fetchTemplatePrograms = async () => {
     try {
       setLoading(true);
-      // 使用現有 API，只獲取 is_template=true 的課程
-      const response = await apiClient.getTemplatePrograms();
+      // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
+      const response = await apiClient.getTeacherPrograms(true);
       setPrograms(response as Program[]);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);
@@ -234,12 +234,14 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
+      console.log('[Programs Reorder] Calling API with:', orderData);
       await apiClient.reorderPrograms(orderData);
+      console.log('[Programs Reorder] API call succeeded');
 
       toast.success("排序成功");
       setIsReordering(false);
     } catch (err) {
-      console.error("Failed to reorder programs:", err);
+      console.error("[Programs Reorder] Failed to reorder programs:", err);
       toast.error("排序失敗");
       // Revert on error
       setPrograms(originalPrograms);
@@ -278,12 +280,14 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
+      console.log(`[Lessons Reorder] Program ${programId}, Calling API with:`, orderData);
       await apiClient.reorderLessons(programId, orderData);
+      console.log(`[Lessons Reorder] API call succeeded`);
 
       toast.success("排序成功");
       setIsReordering(false);
     } catch (err) {
-      console.error("Failed to reorder lessons:", err);
+      console.error(`[Lessons Reorder] Failed to reorder lessons:`, err);
       toast.error("排序失敗");
       // Revert on error
       setPrograms(originalPrograms);
@@ -341,12 +345,14 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
+      console.log(`[Contents Reorder] Lesson ${lessonId}, Calling API with:`, orderData);
       await apiClient.reorderContents(lessonId, orderData);
+      console.log(`[Contents Reorder] API call succeeded`);
 
       toast.success("排序成功");
       setIsReordering(false);
     } catch (err) {
-      console.error("Failed to reorder contents:", err);
+      console.error(`[Contents Reorder] Failed to reorder contents:`, err);
       toast.error("排序失敗");
       // Revert on error
       setPrograms(originalPrograms);

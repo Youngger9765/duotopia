@@ -319,7 +319,7 @@ function RecursiveTreeNode({
                 <div className="space-y-3">
                   {children && children.length > 0 && children.map((child: any) => (
                     <div
-                      key={child[config.childrenKey!]}
+                      key={child[config.childConfig!.idKey]}
                       className="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors"
                       onClick={() => onClick?.(child, level + 1, itemId)}
                     >
@@ -465,9 +465,20 @@ export function RecursiveTreeAccordion({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
+    console.log('[RecursiveTreeAccordion] Drag End:', {
+      activeId: active.id,
+      overId: over?.id,
+      hasOnReorder: !!onReorder
+    });
+
     if (over && active.id !== over.id && onReorder) {
       const activeData = active.data.current;
       const overData = over.data.current;
+
+      console.log('[RecursiveTreeAccordion] Active/Over Data:', {
+        active: activeData,
+        over: overData
+      });
 
       // Only reorder if they're at the same level and same parent
       if (
@@ -484,8 +495,18 @@ export function RecursiveTreeAccordion({
         const newIndex = overData.index;
 
         if (oldIndex !== undefined && newIndex !== undefined) {
+          console.log('[RecursiveTreeAccordion] Calling onReorder:', {
+            oldIndex,
+            newIndex,
+            level,
+            parentId
+          });
           onReorder(oldIndex, newIndex, level, parentId);
+        } else {
+          console.warn('[RecursiveTreeAccordion] Invalid indices:', { oldIndex, newIndex });
         }
+      } else {
+        console.warn('[RecursiveTreeAccordion] Reorder rejected - different level or parent');
       }
     }
 

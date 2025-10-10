@@ -324,8 +324,12 @@ class ApiClient {
     return this.request("/api/teachers/classrooms");
   }
 
-  async getTeacherPrograms() {
-    return this.request("/api/teachers/programs");
+  async getTeacherPrograms(isTemplate?: boolean, classroomId?: number) {
+    const params = new URLSearchParams();
+    if (isTemplate !== undefined) params.append("is_template", String(isTemplate));
+    if (classroomId !== undefined) params.append("classroom_id", String(classroomId));
+    const queryString = params.toString();
+    return this.request(`/api/teachers/programs${queryString ? `?${queryString}` : ""}`);
   }
 
   async getProgramDetail(programId: number) {
