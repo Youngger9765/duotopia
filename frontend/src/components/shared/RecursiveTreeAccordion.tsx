@@ -302,9 +302,9 @@ function RecursiveTreeNode({
                 {config.childConfig ? (
                   <>
                     <SortableContext
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       items={
                         children?.map(
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           (child: any) => child[config.childConfig!.idKey],
                         ) || []
                       }
@@ -317,9 +317,9 @@ function RecursiveTreeNode({
                         value={childExpandedValue}
                         onValueChange={setChildExpandedValue}
                       >
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         {children &&
                           children.length > 0 &&
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           children.map((child: any, childIndex: number) => (
                             <RecursiveTreeNode
                               key={child[config.childConfig!.idKey]}
@@ -356,9 +356,9 @@ function RecursiveTreeNode({
                   </>
                 ) : (
                   <div className="space-y-3">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {children &&
                       children.length > 0 &&
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       children.map((child: any) => (
                         <div
                           key={child[config.childConfig!.idKey]}
