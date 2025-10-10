@@ -90,8 +90,9 @@ export default function TeacherTemplateProgramsNew() {
   };
 
   const handleDeleteProgramConfirm = (programId: number) => {
+    // 只更新 UI - 實際刪除由 ProgramDialog 處理
     setPrograms(programs.filter((p) => p.id !== programId));
-    fetchTemplatePrograms();
+    toast.success("課程已刪除");
   };
 
   // Lesson handlers
