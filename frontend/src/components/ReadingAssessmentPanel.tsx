@@ -1409,16 +1409,69 @@ export default function ReadingAssessmentPanel({
       } catch (error) {
         console.error("Batch processing error:", error);
         toast.error("批次處理失敗");
+        return;
       }
     }
 
-    // 追加到現有項目（已清除空白）
-    setRows([...nonEmptyRows, ...newItems]);
+    // 合併新舊項目
+    const updatedRows = [...nonEmptyRows, ...newItems];
+
+    // 更新前端狀態
+    setRows(updatedRows);
+
+    // 🔥 重點：直接儲存到資料庫
+    try {
+      const saveData = {
+        title: title || "朗讀評測內容",
+        items: updatedRows.map((row) => ({
+          text: row.text.trim(),
+          definition: row.definition || "",
+          english_definition: row.translation || "",
+          translation: row.definition || "",
+          selectedLanguage: row.selectedLanguage || "chinese",
+          audio_url: row.audioUrl || row.audio_url || "",
+        })),
+        target_wpm: 60,
+        target_accuracy: 0.8,
+        time_limit_seconds: 180,
+      };
+
+      const existingContentId = editingContent?.id || content?.id;
+
+      if (existingContentId) {
+        // 編輯模式：更新現有內容
+        await apiClient.updateContent(existingContentId, saveData);
+        toast.success(
+          `已新增 ${lines.length} 個項目並儲存（共 ${updatedRows.length} 個）`,
+        );
+      } else if (isCreating && lessonId) {
+        // 創建模式：新增內容
+        const newContent = await apiClient.createContent(lessonId, {
+          type: "reading_assessment",
+          ...saveData,
+        });
+        toast.success(`已新增 ${lines.length} 個項目並創建內容`);
+        // 呼叫 onSave，傳入新創建的內容
+        if (onSave) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (onSave as (content?: any) => void | Promise<void>)(
+            newContent,
+          );
+        }
+      } else {
+        // 沒有 contentId 也沒有 lessonId，只更新前端
+        toast.success(
+          `已新增 ${lines.length} 個項目（共 ${updatedRows.length} 個）`,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save batch paste:", error);
+      toast.error("儲存失敗，請稍後再試");
+      return;
+    }
+
     setBatchPasteDialogOpen(false);
     setBatchPasteText("");
-    toast.success(
-      `已新增 ${lines.length} 個項目（共 ${nonEmptyRows.length + lines.length} 個）`,
-    );
   };
 
   if (isLoading) {
