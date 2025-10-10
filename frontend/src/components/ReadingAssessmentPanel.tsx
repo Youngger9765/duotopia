@@ -19,6 +19,7 @@ import {
   Play,
   Square,
   RefreshCw,
+  Clipboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -810,6 +811,8 @@ export default function ReadingAssessmentPanel({
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [batchPasteDialogOpen, setBatchPasteDialogOpen] = useState(false);
+  const [batchPasteText, setBatchPasteText] = useState("");
 
   // Load existing content data from database
   useEffect(() => {
@@ -1337,6 +1340,78 @@ export default function ReadingAssessmentPanel({
     }
   };
 
+  const handleBatchPaste = async (autoTTS: boolean, autoTranslate: boolean) => {
+    // 分割文字，每行一個項目
+    const lines = batchPasteText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+      toast.error("請輸入內容");
+      return;
+    }
+
+    toast.info(`正在處理 ${lines.length} 個項目...`);
+
+    // 清除空白 items
+    const nonEmptyRows = rows.filter(row => row.text && row.text.trim());
+
+    // 建立新 items
+    let newItems: ContentRow[] = lines.map((text, index) => ({
+      id: `batch-${Date.now()}-${index}`,
+      text,
+      definition: "",
+      translation: "",
+      selectedLanguage: "chinese",
+    }));
+
+    // 批次處理 TTS 和翻譯
+    if (autoTTS || autoTranslate) {
+      try {
+        if (autoTTS) {
+          const ttsResult = await apiClient.batchGenerateTTS(
+            lines,
+            "en-US-JennyNeural",
+            "+0%",
+            "+0%"
+          );
+          if (ttsResult && typeof ttsResult === "object" && "audio_urls" in ttsResult) {
+            const audioUrls = (ttsResult as { audio_urls: string[] }).audio_urls;
+            newItems = newItems.map((item, i) => ({
+              ...item,
+              audioUrl: audioUrls[i]?.startsWith("http")
+                ? audioUrls[i]
+                : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
+              audio_url: audioUrls[i]?.startsWith("http")
+                ? audioUrls[i]
+                : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
+            }));
+          }
+        }
+
+        if (autoTranslate) {
+          const translations = await apiClient.batchTranslate(lines, "chinese");
+          if (Array.isArray(translations)) {
+            newItems = newItems.map((item, i) => ({
+              ...item,
+              definition: translations[i] || "",
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Batch processing error:", error);
+        toast.error("批次處理失敗");
+      }
+    }
+
+    // 追加到現有項目（已清除空白）
+    setRows([...nonEmptyRows, ...newItems]);
+    setBatchPasteDialogOpen(false);
+    setBatchPasteText("");
+    toast.success(`已新增 ${lines.length} 個項目（共 ${nonEmptyRows.length + lines.length} 個）`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1370,6 +1445,16 @@ export default function ReadingAssessmentPanel({
 
         {/* Batch Actions - RWD adjusted */}
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBatchPasteDialogOpen(true)}
+            className="bg-blue-100 hover:bg-blue-200 border-blue-300"
+            title="批次貼上素材，每行一個項目"
+          >
+            <Clipboard className="h-4 w-4 mr-1" />
+            批次貼上
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1595,6 +1680,66 @@ export default function ReadingAssessmentPanel({
           isCreating={isCreating}
         />
       )}
+
+      {/* Batch Paste Dialog */}
+      <Dialog open={batchPasteDialogOpen} onOpenChange={setBatchPasteDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>批次貼上素材</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                請貼上內容（每行一個項目）：
+              </label>
+              <textarea
+                value={batchPasteText}
+                onChange={(e) => setBatchPasteText(e.target.value)}
+                placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
+                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+              />
+            </div>
+            {batchPasteText && (
+              <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                ✓ 偵測到 {batchPasteText.split('\n').filter(line => line.trim()).length} 個項目
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="autoTTS"
+                  className="rounded"
+                />
+                <span className="text-sm">自動生成 TTS</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="autoTranslate"
+                  className="rounded"
+                />
+                <span className="text-sm">自動翻譯為中文</span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setBatchPasteDialogOpen(false);
+              setBatchPasteText("");
+            }}>
+              取消
+            </Button>
+            <Button onClick={() => {
+              const autoTTS = (document.getElementById('autoTTS') as HTMLInputElement)?.checked || false;
+              const autoTranslate = (document.getElementById('autoTranslate') as HTMLInputElement)?.checked || false;
+              handleBatchPaste(autoTTS, autoTranslate);
+            }}>
+              確認貼上
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 底部按鈕 */}
       {(isCreating || editingContent?.id || onSave) && (
