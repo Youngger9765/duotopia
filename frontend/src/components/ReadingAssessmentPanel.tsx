@@ -1065,7 +1065,9 @@ export default function ReadingAssessmentPanel({
             await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
-            const response = await apiClient.getContentDetail(editingContent.id);
+            const response = await apiClient.getContentDetail(
+              editingContent.id,
+            );
             if (response && response.items) {
               const updatedRows = response.items.map(
                 (
@@ -1343,9 +1345,9 @@ export default function ReadingAssessmentPanel({
   const handleBatchPaste = async (autoTTS: boolean, autoTranslate: boolean) => {
     // 分割文字，每行一個項目
     const lines = batchPasteText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
       toast.error("請輸入內容");
@@ -1355,7 +1357,7 @@ export default function ReadingAssessmentPanel({
     toast.info(`正在處理 ${lines.length} 個項目...`);
 
     // 清除空白 items
-    const nonEmptyRows = rows.filter(row => row.text && row.text.trim());
+    const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
 
     // 建立新 items
     let newItems: ContentRow[] = lines.map((text, index) => ({
@@ -1374,10 +1376,15 @@ export default function ReadingAssessmentPanel({
             lines,
             "en-US-JennyNeural",
             "+0%",
-            "+0%"
+            "+0%",
           );
-          if (ttsResult && typeof ttsResult === "object" && "audio_urls" in ttsResult) {
-            const audioUrls = (ttsResult as { audio_urls: string[] }).audio_urls;
+          if (
+            ttsResult &&
+            typeof ttsResult === "object" &&
+            "audio_urls" in ttsResult
+          ) {
+            const audioUrls = (ttsResult as { audio_urls: string[] })
+              .audio_urls;
             newItems = newItems.map((item, i) => ({
               ...item,
               audioUrl: audioUrls[i]?.startsWith("http")
@@ -1409,7 +1416,9 @@ export default function ReadingAssessmentPanel({
     setRows([...nonEmptyRows, ...newItems]);
     setBatchPasteDialogOpen(false);
     setBatchPasteText("");
-    toast.success(`已新增 ${lines.length} 個項目（共 ${nonEmptyRows.length + lines.length} 個）`);
+    toast.success(
+      `已新增 ${lines.length} 個項目（共 ${nonEmptyRows.length + lines.length} 個）`,
+    );
   };
 
   if (isLoading) {
@@ -1682,7 +1691,10 @@ export default function ReadingAssessmentPanel({
       )}
 
       {/* Batch Paste Dialog */}
-      <Dialog open={batchPasteDialogOpen} onOpenChange={setBatchPasteDialogOpen}>
+      <Dialog
+        open={batchPasteDialogOpen}
+        onOpenChange={setBatchPasteDialogOpen}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>批次貼上素材</DialogTitle>
@@ -1701,40 +1713,46 @@ export default function ReadingAssessmentPanel({
             </div>
             {batchPasteText && (
               <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
-                ✓ 偵測到 {batchPasteText.split('\n').filter(line => line.trim()).length} 個項目
+                ✓ 偵測到{" "}
+                {
+                  batchPasteText.split("\n").filter((line) => line.trim())
+                    .length
+                }{" "}
+                個項目
               </div>
             )}
             <div className="space-y-2">
               <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="autoTTS"
-                  className="rounded"
-                />
+                <input type="checkbox" id="autoTTS" className="rounded" />
                 <span className="text-sm">自動生成 TTS</span>
               </label>
               <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="autoTranslate"
-                  className="rounded"
-                />
+                <input type="checkbox" id="autoTranslate" className="rounded" />
                 <span className="text-sm">自動翻譯為中文</span>
               </label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setBatchPasteDialogOpen(false);
-              setBatchPasteText("");
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBatchPasteDialogOpen(false);
+                setBatchPasteText("");
+              }}
+            >
               取消
             </Button>
-            <Button onClick={() => {
-              const autoTTS = (document.getElementById('autoTTS') as HTMLInputElement)?.checked || false;
-              const autoTranslate = (document.getElementById('autoTranslate') as HTMLInputElement)?.checked || false;
-              handleBatchPaste(autoTTS, autoTranslate);
-            }}>
+            <Button
+              onClick={() => {
+                const autoTTS =
+                  (document.getElementById("autoTTS") as HTMLInputElement)
+                    ?.checked || false;
+                const autoTranslate =
+                  (document.getElementById("autoTranslate") as HTMLInputElement)
+                    ?.checked || false;
+                handleBatchPaste(autoTTS, autoTranslate);
+              }}
+            >
               確認貼上
             </Button>
           </DialogFooter>
@@ -1828,7 +1846,9 @@ export default function ReadingAssessmentPanel({
                   // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)(newContent);
+                    await (onSave as (content?: any) => void | Promise<void>)(
+                      newContent,
+                    );
                   }
                 } catch (error) {
                   console.error("Failed to create content:", error);
@@ -1845,7 +1865,9 @@ export default function ReadingAssessmentPanel({
                   // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)(newContent);
+                    await (onSave as (content?: any) => void | Promise<void>)(
+                      newContent,
+                    );
                   }
                 } catch (error) {
                   console.error("Failed to create content:", error);

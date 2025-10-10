@@ -16,13 +16,19 @@ export default function TeacherTemplateProgramsNew() {
   const [isReordering, setIsReordering] = useState(false);
 
   // Program dialog states
-  const [programDialogType, setProgramDialogType] = useState<"create" | "edit" | "delete" | null>(null);
+  const [programDialogType, setProgramDialogType] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
 
   // Lesson dialog states
-  const [lessonDialogType, setLessonDialogType] = useState<"create" | "edit" | "delete" | null>(null);
+  const [lessonDialogType, setLessonDialogType] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(undefined);
+  const [lessonProgramId, setLessonProgramId] = useState<number | undefined>(
+    undefined,
+  );
 
   // Content dialog states
   const [showContentTypeDialog, setShowContentTypeDialog] = useState(false);
@@ -127,15 +133,17 @@ export default function TeacherTemplateProgramsNew() {
             };
           }
           return program;
-        })
+        }),
       );
       toast.success(`單元「${lesson.name}」已新增`);
     } else if (lessonDialogType === "edit") {
       setPrograms((prevPrograms) =>
         prevPrograms.map((program) => ({
           ...program,
-          lessons: program.lessons?.map((l) => (l.id === lesson.id ? lesson : l)) || [],
-        }))
+          lessons:
+            program.lessons?.map((l) => (l.id === lesson.id ? lesson : l)) ||
+            [],
+        })),
       );
       toast.success(`單元「${lesson.name}」已更新`);
     }
@@ -175,7 +183,13 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
-  const handleContentClick = (content: Content & { lessonName?: string; programName?: string; lesson_id?: number }) => {
+  const handleContentClick = (
+    content: Content & {
+      lessonName?: string;
+      programName?: string;
+      lesson_id?: number;
+    },
+  ) => {
     if (content.type === "reading_assessment") {
       setSelectedContent(content);
       setEditorLessonId(content.lesson_id || null);
@@ -184,7 +198,11 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
-  const handleDeleteContent = async (lessonId: number, contentId: number, contentTitle: string) => {
+  const handleDeleteContent = async (
+    lessonId: number,
+    contentId: number,
+    contentTitle: string,
+  ) => {
     if (!confirm(`確定要刪除內容「${contentTitle}」嗎？此操作無法復原。`)) {
       return;
     }
@@ -234,9 +252,9 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
-      console.log('[Programs Reorder] Calling API with:', orderData);
+      console.log("[Programs Reorder] Calling API with:", orderData);
       await apiClient.reorderPrograms(orderData);
-      console.log('[Programs Reorder] API call succeeded');
+      console.log("[Programs Reorder] API call succeeded");
 
       toast.success("排序成功");
       setIsReordering(false);
@@ -249,7 +267,11 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
-  const handleReorderLessons = async (programId: number, fromIndex: number, toIndex: number) => {
+  const handleReorderLessons = async (
+    programId: number,
+    fromIndex: number,
+    toIndex: number,
+  ) => {
     if (isReordering) {
       toast.warning("正在排序中，請稍候...");
       return;
@@ -269,8 +291,8 @@ export default function TeacherTemplateProgramsNew() {
 
     setPrograms((prevPrograms) =>
       prevPrograms.map((p) =>
-        p.id === programId ? { ...p, lessons: newLessons } : p
-      )
+        p.id === programId ? { ...p, lessons: newLessons } : p,
+      ),
     );
 
     try {
@@ -280,7 +302,10 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
-      console.log(`[Lessons Reorder] Program ${programId}, Calling API with:`, orderData);
+      console.log(
+        `[Lessons Reorder] Program ${programId}, Calling API with:`,
+        orderData,
+      );
       await apiClient.reorderLessons(programId, orderData);
       console.log(`[Lessons Reorder] API call succeeded`);
 
@@ -295,7 +320,11 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
-  const handleReorderContents = async (lessonId: number, fromIndex: number, toIndex: number) => {
+  const handleReorderContents = async (
+    lessonId: number,
+    fromIndex: number,
+    toIndex: number,
+  ) => {
     if (isReordering) {
       toast.warning("正在排序中，請稍候...");
       return;
@@ -330,12 +359,12 @@ export default function TeacherTemplateProgramsNew() {
           return {
             ...p,
             lessons: p.lessons?.map((l) =>
-              l.id === lessonId ? { ...l, contents: newContents } : l
+              l.id === lessonId ? { ...l, contents: newContents } : l,
             ),
           };
         }
         return p;
-      })
+      }),
     );
 
     try {
@@ -345,7 +374,10 @@ export default function TeacherTemplateProgramsNew() {
         order_index: index,
       }));
 
-      console.log(`[Contents Reorder] Lesson ${lessonId}, Calling API with:`, orderData);
+      console.log(
+        `[Contents Reorder] Lesson ${lessonId}, Calling API with:`,
+        orderData,
+      );
       await apiClient.reorderContents(lessonId, orderData);
       console.log(`[Contents Reorder] API call succeeded`);
 
@@ -376,55 +408,68 @@ export default function TeacherTemplateProgramsNew() {
   return (
     <TeacherLayout>
       <div className="relative h-full bg-gray-50">
-        <div className={`p-6 space-y-4 transition-all duration-300 ${
-          showReadingEditor && editorContentId !== null ? 'pr-[calc(50%+2rem)]' : ''
-        }`}>
-            <RecursiveTreeAccordion
-              data={programs}
-              config={programTreeConfig}
-              title="公版課程"
-              showCreateButton
-              createButtonText="新增課程"
-              onCreateClick={handleCreateProgram}
-              onEdit={(item, level, parentId) => {
-                if (level === 0) handleEditProgram(item.id);
-                else if (level === 1) handleEditLesson(parentId as number, item.id);
-              }}
-              onDelete={(item, level, parentId) => {
-                if (level === 0) handleDeleteProgram(item.id);
-                else if (level === 1) handleDeleteLesson(parentId as number, item.id);
-                else if (level === 2) handleDeleteContent(parentId as number, item.id, item.title);
-              }}
-              onClick={(item, level, parentId) => {
-                if (level === 2) {
-                  const program = programs.find((p) => p.lessons?.some((l) => l.id === parentId));
-                  const lesson = program?.lessons?.find((l) => l.id === parentId);
-                  handleContentClick({
-                    ...item,
-                    lesson_id: parentId as number,
-                    lessonName: lesson?.name,
-                    programName: program?.name,
-                  });
+        <div
+          className={`p-6 space-y-4 transition-all duration-300 ${
+            showReadingEditor && editorContentId !== null
+              ? "pr-[calc(50%+2rem)]"
+              : ""
+          }`}
+        >
+          <RecursiveTreeAccordion
+            data={programs}
+            config={programTreeConfig}
+            title="公版課程"
+            showCreateButton
+            createButtonText="新增課程"
+            onCreateClick={handleCreateProgram}
+            onEdit={(item, level, parentId) => {
+              if (level === 0) handleEditProgram(item.id);
+              else if (level === 1)
+                handleEditLesson(parentId as number, item.id);
+            }}
+            onDelete={(item, level, parentId) => {
+              if (level === 0) handleDeleteProgram(item.id);
+              else if (level === 1)
+                handleDeleteLesson(parentId as number, item.id);
+              else if (level === 2)
+                handleDeleteContent(parentId as number, item.id, item.title);
+            }}
+            onClick={(item, level, parentId) => {
+              if (level === 2) {
+                const program = programs.find((p) =>
+                  p.lessons?.some((l) => l.id === parentId),
+                );
+                const lesson = program?.lessons?.find((l) => l.id === parentId);
+                handleContentClick({
+                  ...item,
+                  lesson_id: parentId as number,
+                  lessonName: lesson?.name,
+                  programName: program?.name,
+                });
+              }
+            }}
+            onCreate={(level, parentId) => {
+              if (level === 1) {
+                // Creating lesson inside program
+                handleCreateLesson(parentId as number);
+              } else if (level === 2) {
+                // Creating content inside lesson - need to find program
+                const program = programs.find((p) =>
+                  p.lessons?.some((l) => l.id === parentId),
+                );
+                if (program) {
+                  handleCreateContent(program.id, parentId as number);
                 }
-              }}
-              onCreate={(level, parentId) => {
-                if (level === 1) {
-                  // Creating lesson inside program
-                  handleCreateLesson(parentId as number);
-                } else if (level === 2) {
-                  // Creating content inside lesson - need to find program
-                  const program = programs.find((p) => p.lessons?.some((l) => l.id === parentId));
-                  if (program) {
-                    handleCreateContent(program.id, parentId as number);
-                  }
-                }
-              }}
-              onReorder={(fromIndex, toIndex, level, parentId) => {
-                if (level === 0) handleReorderPrograms(fromIndex, toIndex);
-                else if (level === 1) handleReorderLessons(parentId as number, fromIndex, toIndex);
-                else if (level === 2) handleReorderContents(parentId as number, fromIndex, toIndex);
-              }}
-            />
+              }
+            }}
+            onReorder={(fromIndex, toIndex, level, parentId) => {
+              if (level === 0) handleReorderPrograms(fromIndex, toIndex);
+              else if (level === 1)
+                handleReorderLessons(parentId as number, fromIndex, toIndex);
+              else if (level === 2)
+                handleReorderContents(parentId as number, fromIndex, toIndex);
+            }}
+          />
         </div>
 
         {/* Reading Assessment Modal (新增模式) */}
@@ -443,8 +488,18 @@ export default function TeacherTemplateProgramsNew() {
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   aria-label="關閉"
                 >
-                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-5 h-5 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -458,18 +513,23 @@ export default function TeacherTemplateProgramsNew() {
                   ) => {
                     // 如果有返回新內容，直接更新前端狀態，不重整頁面
                     if (newContent && editorLessonId) {
-                      setPrograms(programs.map(program => ({
-                        ...program,
-                        lessons: program.lessons?.map(lesson => {
-                          if (lesson.id === editorLessonId) {
-                            return {
-                              ...lesson,
-                              contents: [...(lesson.contents || []), newContent]
-                            };
-                          }
-                          return lesson;
-                        })
-                      })));
+                      setPrograms(
+                        programs.map((program) => ({
+                          ...program,
+                          lessons: program.lessons?.map((lesson) => {
+                            if (lesson.id === editorLessonId) {
+                              return {
+                                ...lesson,
+                                contents: [
+                                  ...(lesson.contents || []),
+                                  newContent,
+                                ],
+                              };
+                            }
+                            return lesson;
+                          }),
+                        })),
+                      );
                     }
                     setShowReadingEditor(false);
                     setEditorLessonId(null);
@@ -490,64 +550,79 @@ export default function TeacherTemplateProgramsNew() {
         )}
 
         {/* Reading Assessment Panel (編輯模式 - 側邊欄) */}
-        {showReadingEditor && editorLessonId && editorContentId !== null && selectedContent && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
-              onClick={() => {
-                setShowReadingEditor(false);
-                setEditorLessonId(null);
-                setEditorContentId(null);
-                setSelectedContent(null);
-              }}
-            />
+        {showReadingEditor &&
+          editorLessonId &&
+          editorContentId !== null &&
+          selectedContent && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+                onClick={() => {
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                  setSelectedContent(null);
+                }}
+              />
 
-            {/* Panel */}
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                <h2 className="text-lg font-semibold text-gray-900">編輯內容</h2>
-                <button
-                  onClick={() => {
-                    setShowReadingEditor(false);
-                    setEditorLessonId(null);
-                    setEditorContentId(null);
-                    setSelectedContent(null);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="關閉"
-                >
-                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+              {/* Panel */}
+              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    編輯內容
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowReadingEditor(false);
+                      setEditorLessonId(null);
+                      setEditorContentId(null);
+                      setSelectedContent(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="關閉"
+                  >
+                    <svg
+                      className="w-5 h-5 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
-              <div className="p-6">
-                <ReadingAssessmentPanel
-                  lessonId={editorLessonId}
-                  contentId={editorContentId}
-                  content={{
-                    id: selectedContent.id,
-                    title: selectedContent.title,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    items: (selectedContent.items || []) as any,
-                  }}
-                  onSave={async () => {
-                    // 只顯示成功訊息，不重整 tree
-                    toast.success("內容已成功儲存");
-                  }}
-                  onCancel={() => {
-                    setShowReadingEditor(false);
-                    setEditorLessonId(null);
-                    setEditorContentId(null);
-                    setSelectedContent(null);
-                  }}
-                />
+                <div className="p-6">
+                  <ReadingAssessmentPanel
+                    lessonId={editorLessonId}
+                    contentId={editorContentId}
+                    content={{
+                      id: selectedContent.id,
+                      title: selectedContent.title,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      items: (selectedContent.items || []) as any,
+                    }}
+                    onSave={async () => {
+                      // 只顯示成功訊息，不重整 tree
+                      toast.success("內容已成功儲存");
+                    }}
+                    onCancel={() => {
+                      setShowReadingEditor(false);
+                      setEditorLessonId(null);
+                      setEditorContentId(null);
+                      setSelectedContent(null);
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
         {/* Dialogs */}
         <ProgramDialog
@@ -588,7 +663,7 @@ export default function TeacherTemplateProgramsNew() {
               setContentLessonInfo(null);
 
               // Handle different content types
-              if (selection.type === 'reading_assessment') {
+              if (selection.type === "reading_assessment") {
                 // Open modal for new content
                 setEditorLessonId(selection.lessonId);
                 setEditorContentId(null); // null = new content
