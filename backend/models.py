@@ -316,7 +316,10 @@ class Program(Base):
     teacher = relationship("Teacher", back_populates="programs")
     classroom = relationship("Classroom", back_populates="programs")
     lessons = relationship(
-        "Lesson", back_populates="program", cascade="all, delete-orphan"
+        "Lesson",
+        back_populates="program",
+        cascade="all, delete-orphan",
+        order_by="Lesson.order_index",
     )
 
     @property
@@ -353,7 +356,10 @@ class Lesson(Base):
     # Relationships
     program = relationship("Program", back_populates="lessons")
     contents = relationship(
-        "Content", back_populates="lesson", cascade="all, delete-orphan"
+        "Content",
+        back_populates="lesson",
+        cascade="all, delete-orphan",
+        order_by="Content.order_index",
     )
 
     def __repr__(self):

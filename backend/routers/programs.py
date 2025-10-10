@@ -66,15 +66,24 @@ async def get_template_programs(
     """取得所有公版課程模板（只看得到自己建立的），並標記重複狀態"""
     templates = (
         db.query(Program)
+        .options(joinedload(Program.lessons).joinedload(Lesson.contents))
         .filter(
             Program.is_template.is_(True),
             Program.teacher_id == current_teacher.id,
             Program.is_active.is_(True),
             Program.deleted_at.is_(None),
         )
-        .order_by(Program.created_at.desc())
+        .order_by(Program.order_index)
         .all()
     )
+
+    # 手動排序 lessons 和 contents
+    for template in templates:
+        if template.lessons:
+            template.lessons = sorted(template.lessons, key=lambda x: x.order_index)
+            for lesson in template.lessons:
+                if lesson.contents:
+                    lesson.contents = sorted(lesson.contents, key=lambda x: x.order_index)
 
     # 如果提供了 classroom_id，檢查重複狀態
     if classroom_id:
