@@ -16,7 +16,7 @@ from models import (
     ContentItem,
     ContentType,
     AssignmentContent,
-    StudentAssignment,
+    StudentContentProgress,
     ProgramLevel,
 )
 from auth import verify_token, get_password_hash
@@ -1743,12 +1743,16 @@ async def delete_program(
         ]
 
         if content_ids:
-            # 計算 assignment 數量
+            # 計算 assignment 數量（透過 StudentContentProgress）
             assignment_count = (
-                db.query(StudentAssignment)
-                .filter(StudentAssignment.content_id.in_(content_ids))
-                .count()
-            )
+                db.query(
+                    func.count(
+                        func.distinct(StudentContentProgress.student_assignment_id)
+                    )
+                )
+                .filter(StudentContentProgress.content_id.in_(content_ids))
+                .scalar()
+            ) or 0
 
     # 軟刪除 - 保留資料以供日後參考
     program.is_active = False
@@ -1889,14 +1893,16 @@ async def delete_lesson(
         c.id for c in db.query(Content.id).filter(Content.lesson_id == lesson_id).all()
     ]
 
-    # 使用 content IDs 來計算作業數量
+    # 使用 content IDs 來計算作業數量（透過 StudentContentProgress）
     assignment_count = 0
     if content_ids:
         assignment_count = (
-            db.query(StudentAssignment)
-            .filter(StudentAssignment.content_id.in_(content_ids))
-            .count()
-        )
+            db.query(
+                func.count(func.distinct(StudentContentProgress.student_assignment_id))
+            )
+            .filter(StudentContentProgress.content_id.in_(content_ids))
+            .scalar()
+        ) or 0
 
     # 軟刪除 lesson
     lesson.is_active = False
