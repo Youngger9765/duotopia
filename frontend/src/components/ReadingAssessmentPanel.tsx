@@ -1685,6 +1685,21 @@ export default function ReadingAssessmentPanel({
                   console.error("Failed to update content:", error);
                   toast.error("儲存失敗");
                 }
+              } else if (lessonId) {
+                // 有 lessonId 但沒有 contentId，創建新內容
+                try {
+                  await apiClient.createContent(lessonId, {
+                    type: "reading_assessment",
+                    ...saveData,
+                  });
+                  toast.success("內容已成功創建");
+                  if (onSave) {
+                    await (onSave as () => void | Promise<void>)();
+                  }
+                } catch (error) {
+                  console.error("Failed to create content:", error);
+                  toast.error("創建內容失敗");
+                }
               }
             }}
           >
