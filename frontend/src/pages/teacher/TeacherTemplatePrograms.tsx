@@ -608,8 +608,26 @@ export default function TeacherTemplateProgramsNew() {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       items: (selectedContent.items || []) as any,
                     }}
-                    onSave={async () => {
-                      // 只顯示成功訊息，不重整 tree
+                    onSave={async (
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      updatedContent?: any,
+                    ) => {
+                      // 直接更新前端 state，不重新載入整個 tree
+                      if (updatedContent && editorContentId) {
+                        setPrograms((prevPrograms) =>
+                          prevPrograms.map((program) => ({
+                            ...program,
+                            lessons: program.lessons?.map((lesson) => ({
+                              ...lesson,
+                              contents: lesson.contents?.map((content) =>
+                                content.id === editorContentId
+                                  ? { ...content, title: updatedContent.title }
+                                  : content,
+                              ),
+                            })),
+                          })),
+                        );
+                      }
                       toast.success("內容已成功儲存");
                     }}
                     onCancel={() => {
