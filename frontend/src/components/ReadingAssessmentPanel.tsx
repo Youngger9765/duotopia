@@ -1050,7 +1050,7 @@ export default function ReadingAssessmentPanel({
             "Audio URL saved locally (will upload on final save):",
             audioUrl,
           );
-        } else {
+        } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
           try {
             const updateData = {
@@ -1059,12 +1059,10 @@ export default function ReadingAssessmentPanel({
             };
 
             console.log("Updating content with new audio:", audioUrl);
-            await apiClient.updateContent(editingContent?.id ?? 0, updateData);
+            await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
-            const response = await apiClient.getContentDetail(
-              editingContent?.id ?? 0,
-            );
+            const response = await apiClient.getContentDetail(editingContent.id);
             if (response && response.items) {
               const updatedRows = response.items.map(
                 (
@@ -1098,6 +1096,12 @@ export default function ReadingAssessmentPanel({
             console.error("Failed to update content:", error);
             toast.error("更新失敗，但音檔已生成");
           }
+        } else {
+          // 沒有 content ID，音檔將在儲存時上傳
+          console.log(
+            "Audio URL saved locally (will upload on final save):",
+            audioUrl,
+          );
         }
 
         // 關閉 modal 但不要關閉 panel
@@ -1177,7 +1181,7 @@ export default function ReadingAssessmentPanel({
           toast.success(
             `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
           );
-        } else {
+        } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
           try {
             const updateData = {
@@ -1185,7 +1189,7 @@ export default function ReadingAssessmentPanel({
               items,
             };
 
-            await apiClient.updateContent(editingContent?.id ?? 0, updateData);
+            await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新本地狀態
             if (onUpdateContent) {
@@ -1201,6 +1205,11 @@ export default function ReadingAssessmentPanel({
             console.error("Failed to save TTS:", error);
             toast.error("儲存失敗，但音檔已生成");
           }
+        } else {
+          // 沒有 content ID，只是本地更新
+          toast.success(
+            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+          );
         }
       }
     } catch (error) {
@@ -1587,12 +1596,14 @@ export default function ReadingAssessmentPanel({
         />
       )}
 
-      {/* 底部按鈕（新增模式時顯示） */}
-      {isCreating && (
+      {/* 底部按鈕 */}
+      {(isCreating || editingContent?.id || onSave) && (
         <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-          <Button variant="outline" onClick={onCancel}>
-            取消
-          </Button>
+          {onCancel && (
+            <Button variant="outline" onClick={onCancel}>
+              取消
+            </Button>
+          )}
           <Button
             onClick={async () => {
               // 檢查必填欄位
@@ -1662,13 +1673,16 @@ export default function ReadingAssessmentPanel({
                   console.error("Failed to create content:", error);
                   toast.error("創建內容失敗");
                 }
-              } else if (onSave) {
-                // 編輯模式，呼叫 onSave
+              } else if (editingContent?.id) {
+                // 編輯模式，直接更新內容
                 try {
-                  await (onSave as () => void | Promise<void>)();
+                  await apiClient.updateContent(editingContent.id, saveData);
                   toast.success("儲存成功");
+                  if (onSave) {
+                    await (onSave as () => void | Promise<void>)();
+                  }
                 } catch (error) {
-                  console.error("Save error:", error);
+                  console.error("Failed to update content:", error);
                   toast.error("儲存失敗");
                 }
               }
