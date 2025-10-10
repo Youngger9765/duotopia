@@ -1487,21 +1487,19 @@ export default function ReadingAssessmentPanel({
     <div className="flex flex-col h-full max-h-[calc(100vh-200px)]">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 space-y-4 pb-4">
-        {/* Title Input - Only show in create mode */}
-        {isCreating && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              標題 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="請輸入內容標題"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        )}
+        {/* Title Input - Show in both create and edit mode */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">
+            標題 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="請輸入內容標題"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
         {/* Batch Actions - RWD adjusted */}
         <div className="flex flex-wrap gap-2">
@@ -1880,7 +1878,13 @@ export default function ReadingAssessmentPanel({
                   await apiClient.updateContent(existingContentId, saveData);
                   toast.success("儲存成功");
                   if (onSave) {
-                    await (onSave as () => void | Promise<void>)();
+                    // 傳回更新後的內容（包含新的 title）
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    await (onSave as (content?: any) => void | Promise<void>)({
+                      id: existingContentId,
+                      title: saveData.title,
+                      items: saveData.items,
+                    });
                   }
                 } catch (error) {
                   console.error("Failed to update content:", error);
