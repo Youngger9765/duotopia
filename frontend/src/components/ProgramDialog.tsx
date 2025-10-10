@@ -16,6 +16,7 @@ interface ProgramDialogProps {
   program: Program | null;
   dialogType: "create" | "edit" | "delete" | null;
   classroomId?: number;
+  isTemplate?: boolean;
   onClose: () => void;
   onSave: (program: Program) => void;
   onDelete?: (programId: number) => void;
@@ -29,12 +30,14 @@ interface ProgramFormData {
   level?: string;
   estimated_hours?: number;
   classroom_id?: number;
+  tags?: string[];
 }
 
 export function ProgramDialog({
   program,
   dialogType,
   classroomId,
+  isTemplate = false,
   onClose,
   onSave,
   onDelete,
@@ -45,9 +48,11 @@ export function ProgramDialog({
     level: "A1",
     estimated_hours: 20,
     classroom_id: classroomId,
+    tags: [],
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (program && (dialogType === "edit" || dialogType === "delete")) {
@@ -57,6 +62,7 @@ export function ProgramDialog({
         level: program.level || "A1",
         estimated_hours: program.estimated_hours || 20,
         classroom_id: program.classroom_id || classroomId,
+        tags: program.tags || [],
       });
     } else if (dialogType === "create") {
       setFormData({
@@ -65,9 +71,41 @@ export function ProgramDialog({
         level: "A1",
         estimated_hours: 20,
         classroom_id: classroomId,
+        tags: [],
       });
     }
   }, [program, dialogType, classroomId]);
+
+  const handleAddTag = () => {
+    if (!tagInput) return;
+
+    if ((formData.tags?.length || 0) >= 5) {
+      setErrors({ ...errors, tags: "最多只能新增 5 個標籤" });
+      return;
+    }
+
+    if (formData.tags?.includes(tagInput)) {
+      setErrors({ ...errors, tags: "此標籤已存在" });
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      tags: [...(formData.tags || []), tagInput],
+    });
+    setTagInput("");
+    setErrors({ ...errors, tags: "" });
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setFormData({
+      ...formData,
+      tags: formData.tags?.filter((t) => t !== tag) || [],
+    });
+    if (errors.tags) {
+      setErrors({ ...errors, tags: "" });
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -94,8 +132,10 @@ export function ProgramDialog({
           name: formData.name,
           description: formData.description,
           level: formData.level,
-          classroom_id: formData.classroom_id || classroomId!,
+          classroom_id: isTemplate ? undefined : (formData.classroom_id || classroomId),
           estimated_hours: formData.estimated_hours,
+          tags: formData.tags,
+          is_template: isTemplate,
         });
         // Ensure the new program has all required Program properties
         const completeProgram: Program = {
@@ -111,6 +151,7 @@ export function ProgramDialog({
           description: formData.description,
           level: formData.level,
           estimated_hours: formData.estimated_hours,
+          tags: formData.tags,
         });
         // Ensure the updated program has all required Program properties
         const updatedProgram: Program = {
@@ -247,6 +288,56 @@ export function ProgramDialog({
                   min="1"
                 />
               </div>
+            </div>
+
+            {/* Tags Input */}
+            <div>
+              <label htmlFor="tags" className="text-sm font-medium">
+                標籤 <span className="text-gray-500 text-xs">(最多 5 個)</span>
+              </label>
+              <input
+                id="tags"
+                type="text"
+                value={tagInput}
+                onChange={(e) => {
+                  setTagInput(e.target.value);
+                  if (errors.tags) {
+                    setErrors({ ...errors, tags: "" });
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.tags ? "border-red-500" : ""}`}
+                placeholder="按 Enter 新增標籤"
+                disabled={(formData.tags?.length || 0) >= 5}
+              />
+              {errors.tags && (
+                <p className="text-xs text-red-500 mt-1">{errors.tags}</p>
+              )}
+
+              {formData.tags && formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm border border-blue-200"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-2 text-blue-500 hover:text-blue-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {errors.submit && (
