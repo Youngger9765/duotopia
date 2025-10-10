@@ -1919,7 +1919,7 @@ class ContentCreate(BaseModel):
     items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
-    order_index: int = 0
+    order_index: Optional[int] = None  # None = 自動計算為最後一個位置
     level: Optional[str] = "A1"
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = False
@@ -2021,6 +2021,16 @@ async def create_content(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
+    # 如果沒有提供 order_index，自動設為最後一個位置
+    if content_data.order_index is None:
+        max_order = db.query(func.max(Content.order_index)).filter(
+            Content.lesson_id == lesson_id,
+            Content.is_active.is_(True)
+        ).scalar()
+        order_index = (max_order or 0) + 1
+    else:
+        order_index = content_data.order_index
+
     # 建立 Content（不再使用 items 欄位）
     content = Content(
         lesson_id=lesson_id,
@@ -2029,7 +2039,7 @@ async def create_content(
         # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
-        order_index=content_data.order_index,
+        order_index=order_index,
         level=content_data.level,
         tags=content_data.tags or [],
     )
@@ -2060,6 +2070,7 @@ async def create_content(
         "type": content.type.value,
         "title": content.title,
         "items": items_created,  # 返回建立的 items
+        "items_count": len(items_created),  # 前端顯示用
         "target_wpm": content.target_wpm,
         "target_accuracy": content.target_accuracy,
         "order_index": content.order_index,

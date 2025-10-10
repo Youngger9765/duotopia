@@ -452,9 +452,22 @@ export default function TeacherTemplateProgramsNew() {
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
                   isCreating={true}
-                  onSave={async () => {
-                    // 重新載入公版課程資料
-                    await fetchTemplatePrograms();
+                  onSave={async (newContent?: any) => {
+                    // 如果有返回新內容，直接更新前端狀態，不重整頁面
+                    if (newContent && editorLessonId) {
+                      setPrograms(programs.map(program => ({
+                        ...program,
+                        lessons: program.lessons?.map(lesson => {
+                          if (lesson.id === editorLessonId) {
+                            return {
+                              ...lesson,
+                              contents: [...(lesson.contents || []), newContent]
+                            };
+                          }
+                          return lesson;
+                        })
+                      })));
+                    }
                     setShowReadingEditor(false);
                     setEditorLessonId(null);
                     setEditorContentId(null);
@@ -525,8 +538,6 @@ export default function TeacherTemplateProgramsNew() {
                     setEditorLessonId(null);
                     setEditorContentId(null);
                     setSelectedContent(null);
-                    // 關閉時才重新載入最新資料
-                    fetchTemplatePrograms();
                   }}
                 />
               </div>
