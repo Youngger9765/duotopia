@@ -11,10 +11,10 @@ import TeacherDashboardWithSidebar from "./pages/TeacherDashboardWithSidebar";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherClassrooms from "./pages/teacher/TeacherClassrooms";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
-import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
 import ClassroomDetail from "./pages/teacher/ClassroomDetail";
 import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetailPage";
 import GradingPage from "./pages/teacher/GradingPage";
+import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -118,6 +118,14 @@ function App() {
         />
         <Route
           path="/teacher/programs"
+          element={
+            <ProtectedRoute>
+              <TeacherTemplatePrograms />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/template-programs"
           element={
             <ProtectedRoute>
               <TeacherTemplatePrograms />

@@ -261,17 +261,30 @@ async def get_teacher_classrooms(
 
 @router.get("/programs")
 async def get_teacher_programs(
+    is_template: Optional[bool] = None,
+    classroom_id: Optional[int] = None,
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有課程"""
-    programs = (
+    """取得教師的所有課程（支援過濾公版/班級課程）"""
+    query = (
         db.query(Program)
         .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
-        .options(selectinload(Program.classroom), selectinload(Program.lessons))
-        .order_by(Program.order_index)
-        .all()
+        .options(
+            selectinload(Program.classroom),
+            selectinload(Program.lessons).selectinload(Lesson.contents).selectinload(Content.content_items)
+        )
     )
+
+    # 過濾公版/班級課程
+    if is_template is not None:
+        query = query.filter(Program.is_template == is_template)
+
+    # 過濾特定班級
+    if classroom_id is not None:
+        query = query.filter(Program.classroom_id == classroom_id)
+
+    programs = query.order_by(Program.order_index).all()
 
     result = []
     for program in programs:
@@ -281,6 +294,46 @@ async def get_teacher_programs(
             .filter(ClassroomStudent.classroom_id == program.classroom_id)
             .count()
         )
+
+        # 處理 lessons 和 contents
+        lessons_data = []
+        for lesson in sorted(program.lessons, key=lambda x: x.order_index):
+            if lesson.is_active:
+                contents_data = []
+                if lesson.contents:
+                    for content in sorted(lesson.contents, key=lambda x: x.order_index):
+                        if content.is_active:
+                            # 將 content_items 轉換成舊格式 items
+                            items_data = []
+                            if content.content_items:
+                                for item in sorted(content.content_items, key=lambda x: x.order_index):
+                                    items_data.append({
+                                        "id": item.id,
+                                        "text": item.text,
+                                        "translation": item.translation,
+                                        "audio_url": item.audio_url,
+                                        "order_index": item.order_index,
+                                    })
+
+                            contents_data.append({
+                                "id": content.id,
+                                "title": content.title,
+                                "type": content.type,
+                                "items": items_data,
+                                "items_count": len(items_data),
+                                "order_index": content.order_index,
+                                "level": content.level,
+                                "tags": content.tags or [],
+                            })
+
+                lessons_data.append({
+                    "id": lesson.id,
+                    "name": lesson.name,
+                    "description": lesson.description,
+                    "estimated_minutes": lesson.estimated_minutes,
+                    "order_index": lesson.order_index,
+                    "contents": contents_data,
+                })
 
         result.append(
             {
@@ -292,19 +345,20 @@ async def get_teacher_programs(
                 "classroom_name": program.classroom.name if program.classroom else None,
                 "estimated_hours": program.estimated_hours,
                 "is_active": program.is_active,
+                "is_template": program.is_template,
                 "created_at": (
                     program.created_at.isoformat() if program.created_at else None
                 ),
-                "lesson_count": len(
-                    [lesson for lesson in program.lessons if lesson.is_active]
-                ),  # Count only active lessons
-                "student_count": student_count,  # Real student count
+                "lesson_count": len(lessons_data),
+                "student_count": student_count,
                 "status": (
                     "active" if program.is_active else "archived"
-                ),  # Real status based on is_active
+                ),
                 "order_index": (
                     program.order_index if hasattr(program, "order_index") else 1
                 ),
+                "tags": program.tags or [],
+                "lessons": lessons_data,
             }
         )
 
@@ -1326,8 +1380,10 @@ class ProgramCreate(BaseModel):
     name: str
     description: Optional[str] = None
     level: str = "A1"
-    classroom_id: int
+    classroom_id: Optional[int] = None
     estimated_hours: Optional[int] = None
+    is_template: Optional[bool] = False
+    tags: Optional[List[str]] = []
 
 
 class LessonCreate(BaseModel):
@@ -1344,26 +1400,41 @@ async def create_program(
     db: Session = Depends(get_db),
 ):
     """創建新課程"""
-    # Verify classroom belongs to teacher
-    classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == program_data.classroom_id,
-            Classroom.teacher_id == current_teacher.id,
+    # For template programs, classroom_id is optional
+    if not program_data.is_template:
+        # Verify classroom belongs to teacher (only for non-template programs)
+        if not program_data.classroom_id:
+            raise HTTPException(status_code=400, detail="classroom_id is required for non-template programs")
+
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == program_data.classroom_id,
+                Classroom.teacher_id == current_teacher.id,
+            )
+            .first()
         )
-        .first()
-    )
 
-    if not classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
+        if not classroom:
+            raise HTTPException(status_code=404, detail="Classroom not found")
 
-    # Get the max order_index for programs in this classroom
-    max_order = (
-        db.query(func.max(Program.order_index))
-        .filter(Program.classroom_id == program_data.classroom_id)
-        .scalar()
-        or 0
-    )
+    # Get the max order_index
+    if program_data.is_template:
+        # For template programs, get max order across all template programs
+        max_order = (
+            db.query(func.max(Program.order_index))
+            .filter(Program.is_template.is_(True), Program.teacher_id == current_teacher.id)
+            .scalar()
+            or 0
+        )
+    else:
+        # For classroom programs, get max order within the classroom
+        max_order = (
+            db.query(func.max(Program.order_index))
+            .filter(Program.classroom_id == program_data.classroom_id)
+            .scalar()
+            or 0
+        )
 
     program = Program(
         name=program_data.name,
@@ -1374,8 +1445,10 @@ async def create_program(
         classroom_id=program_data.classroom_id,
         teacher_id=current_teacher.id,
         estimated_hours=program_data.estimated_hours,
+        is_template=program_data.is_template or False,
         is_active=True,
         order_index=max_order + 1,
+        tags=program_data.tags or [],
     )
     db.add(program)
     db.commit()
@@ -1388,7 +1461,10 @@ async def create_program(
         "level": program.level.value,
         "classroom_id": program.classroom_id,
         "estimated_hours": program.estimated_hours,
+        "is_template": program.is_template,
         "order_index": program.order_index,
+        "tags": program.tags or [],
+        "lessons": [],  # New programs have no lessons yet
     }
 
 
@@ -1451,6 +1527,43 @@ async def reorder_lessons(
 
     db.commit()
     return {"message": "Lessons reordered successfully"}
+
+
+@router.put("/lessons/{lesson_id}/contents/reorder")
+async def reorder_contents(
+    lesson_id: int,
+    order_data: List[Dict[str, int]],  # [{"id": 1, "order_index": 1}, ...]
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """重新排序內容"""
+    # 驗證 lesson 屬於當前教師的 program
+    lesson = (
+        db.query(Lesson)
+        .join(Program)
+        .filter(Lesson.id == lesson_id, Program.teacher_id == current_teacher.id)
+        .first()
+    )
+
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # 優化：批次查詢內容，避免 N+1 問題
+    content_ids = [item["id"] for item in order_data]
+    contents_list = (
+        db.query(Content)
+        .filter(Content.id.in_(content_ids), Content.lesson_id == lesson_id)
+        .all()
+    )
+    contents_dict = {content.id: content for content in contents_list}
+
+    for item in order_data:
+        content = contents_dict.get(item["id"])
+        if content:
+            content.order_index = item["order_index"]
+
+    db.commit()
+    return {"message": "Contents reordered successfully"}
 
 
 @router.get("/programs/{program_id}")
@@ -1917,6 +2030,8 @@ async def create_content(
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
         order_index=content_data.order_index,
+        level=content_data.level,
+        tags=content_data.tags or [],
     )
     db.add(content)
     db.commit()

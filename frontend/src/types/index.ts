@@ -102,6 +102,8 @@ export interface Program {
   lessons?: Lesson[];
   classroom_name?: string;
   is_duplicate?: boolean;
+  tags?: string[];
+  is_template?: boolean;
 }
 
 // ============ Assignment Status Types ============

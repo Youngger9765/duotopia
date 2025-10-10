@@ -508,8 +508,10 @@ class ApiClient {
     name: string;
     description?: string;
     level?: string;
-    classroom_id: number;
+    classroom_id?: number;
     estimated_hours?: number;
+    is_template?: boolean;
+    tags?: string[];
   }) {
     return this.request("/api/teachers/programs", {
       method: "POST",
@@ -524,6 +526,7 @@ class ApiClient {
       description?: string;
       level?: string;
       estimated_hours?: number;
+      tags?: string[];
     },
   ) {
     return this.request(`/api/teachers/programs/${programId}`, {
@@ -550,6 +553,16 @@ class ApiClient {
     orderData: { id: number; order_index: number }[],
   ) {
     return this.request(`/api/teachers/programs/${programId}/lessons/reorder`, {
+      method: "PUT",
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  async reorderContents(
+    lessonId: number,
+    orderData: { id: number; order_index: number }[],
+  ) {
+    return this.request(`/api/teachers/lessons/${lessonId}/contents/reorder`, {
       method: "PUT",
       body: JSON.stringify(orderData),
     });
