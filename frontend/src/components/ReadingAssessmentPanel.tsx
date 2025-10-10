@@ -1454,9 +1454,7 @@ export default function ReadingAssessmentPanel({
         // 呼叫 onSave，傳入新創建的內容
         if (onSave) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (onSave as (content?: any) => void | Promise<void>)(
-            newContent,
-          );
+          await (onSave as (content?: any) => void | Promise<void>)(newContent);
         }
       } else {
         // 沒有 contentId 也沒有 lessonId，只更新前端
