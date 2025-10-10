@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import AudioPlayer from "./AudioPlayer";
 import { Mic, MicOff, Square, RotateCcw, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { logAudioError } from "@/utils/audioErrorLogger";
+import type { AudioErrorData } from "@/utils/audioErrorLogger";
 import { toast } from "sonner";
 
 interface AudioRecorderProps {
@@ -13,6 +13,7 @@ interface AudioRecorderProps {
   onRecordingComplete?: (blob: Blob, url: string) => void;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
+  onError?: (error: AudioErrorData) => void; // 錯誤回調
 
   // Display props
   title?: string;
@@ -41,6 +42,7 @@ export default function AudioRecorder({
   onRecordingComplete,
   onRecordingStart,
   onRecordingStop,
+  onError,
   title,
   description,
   suggestedDuration = 60,
@@ -167,14 +169,16 @@ export default function AudioRecorder({
             description: "錄音檔案異常，請重新錄音",
           });
 
-          // 記錄到 BigQuery
-          logAudioError({
-            errorType: "recording_too_small",
-            audioUrl: audioUrl,
-            audioSize: audioBlob.size,
-            audioDuration: recordingTime,
-            contentType: audioBlob.type,
-          });
+          // 通知父元件處理錯誤
+          if (onError) {
+            onError({
+              errorType: "recording_too_small",
+              audioUrl: audioUrl,
+              audioSize: audioBlob.size,
+              audioDuration: recordingTime,
+              contentType: audioBlob.type,
+            });
+          }
 
           setStatus("error");
           setIsRecording(false);
@@ -244,14 +248,16 @@ export default function AudioRecorder({
                 "錄音可能無法正常播放，請重新錄音。建議檢查麥克風設定或嘗試使用 Chrome 瀏覽器。",
             });
 
-            // 記錄到 BigQuery
-            logAudioError({
-              errorType: "recording_validation_failed",
-              audioUrl: audioUrl,
-              audioSize: audioBlob.size,
-              audioDuration: 0,
-              contentType: audioBlob.type,
-            });
+            // 通知父元件處理錯誤
+            if (onError) {
+              onError({
+                errorType: "recording_validation_failed",
+                audioUrl: audioUrl,
+                audioSize: audioBlob.size,
+                audioDuration: 0,
+                contentType: audioBlob.type,
+              });
+            }
 
             setStatus("error");
             setIsRecording(false);
@@ -308,14 +314,16 @@ export default function AudioRecorder({
             description: "無法驗證錄音，請重新錄音",
           });
 
-          // 記錄到 BigQuery
-          logAudioError({
-            errorType: "recording_validation_error",
-            audioUrl: audioUrl,
-            audioSize: audioBlob.size,
-            errorMessage: String(error),
-            contentType: audioBlob.type,
-          });
+          // 通知父元件處理錯誤
+          if (onError) {
+            onError({
+              errorType: "recording_validation_error",
+              audioUrl: audioUrl,
+              audioSize: audioBlob.size,
+              errorMessage: String(error),
+              contentType: audioBlob.type,
+            });
+          }
 
           setStatus("error");
           setIsRecording(false);
@@ -446,6 +454,7 @@ export default function AudioRecorder({
               audioUrl={localAudioUrl}
               variant="minimal"
               showTitle={false}
+              onError={onError}
             />
           )}
         </div>
@@ -488,6 +497,7 @@ export default function AudioRecorder({
                 audioUrl={localAudioUrl}
                 variant={readOnly ? "minimal" : "compact"}
                 className="mb-2"
+                onError={onError}
               />
               {!readOnly && (
                 <Button
@@ -575,7 +585,11 @@ export default function AudioRecorder({
         {/* Recording completed */}
         {localAudioUrl && !isRecording && (
           <div className="space-y-4">
-            <AudioPlayer audioUrl={localAudioUrl} title="已錄製音檔" />
+            <AudioPlayer
+              audioUrl={localAudioUrl}
+              title="已錄製音檔"
+              onError={onError}
+            />
             {!readOnly && (
               <div className="flex justify-center">
                 <Button

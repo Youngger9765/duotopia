@@ -21,6 +21,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { retryAudioUpload } from "@/utils/retryHelper";
+import {
+  setErrorLoggingContext,
+  clearErrorLoggingContext,
+} from "@/contexts/ErrorLoggingContext";
 
 // Activity type from API
 interface Activity {
@@ -112,6 +116,20 @@ export default function StudentActivityPage() {
   );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
+
+  // Set error logging context for audio error tracking
+  useEffect(() => {
+    if (assignmentId) {
+      setErrorLoggingContext({
+        assignmentId: parseInt(assignmentId),
+        // studentId will be set when student info is available
+      });
+    }
+
+    return () => {
+      clearErrorLoggingContext();
+    };
+  }, [assignmentId]);
 
   // Load activities from API
   useEffect(() => {

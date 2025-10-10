@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { logAudioError } from "@/utils/audioErrorLogger";
+import type { AudioErrorData } from "@/utils/audioErrorLogger";
 
 interface AudioPlayerProps {
   audioUrl?: string;
@@ -10,6 +10,7 @@ interface AudioPlayerProps {
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
+  onError?: (error: AudioErrorData) => void; // 錯誤回調
   autoPlay?: boolean;
   showTitle?: boolean;
   variant?: "default" | "compact" | "minimal";
@@ -23,6 +24,7 @@ export default function AudioPlayer({
   onPlay,
   onPause,
   onEnded,
+  onError,
   autoPlay = false,
   showTitle = true,
   variant = "default",
@@ -152,14 +154,16 @@ export default function AudioPlayer({
         url: audioUrl,
       });
 
-      // 記錄到 BigQuery
-      logAudioError({
-        errorType: "load_failed",
-        errorCode: audio.error?.code,
-        errorMessage: audio.error?.message,
-        audioUrl: audioUrl,
-        audioDuration: duration,
-      });
+      // 通知父元件處理錯誤
+      if (onError) {
+        onError({
+          errorType: "load_failed",
+          errorCode: audio.error?.code,
+          errorMessage: audio.error?.message,
+          audioUrl: audioUrl,
+          audioDuration: duration,
+        });
+      }
 
       setIsPlaying(false);
     };
@@ -167,12 +171,14 @@ export default function AudioPlayer({
     const handleStalled = () => {
       console.warn("⏸️ Audio loading stalled:", audioUrl);
 
-      // 記錄到 BigQuery
-      logAudioError({
-        errorType: "stalled",
-        audioUrl: audioUrl,
-        audioDuration: duration,
-      });
+      // 通知父元件處理錯誤
+      if (onError) {
+        onError({
+          errorType: "stalled",
+          audioUrl: audioUrl,
+          audioDuration: duration,
+        });
+      }
     };
 
     // Add all event listeners
@@ -222,14 +228,16 @@ export default function AudioPlayer({
     if (isLoaded && duration === 0 && audioUrl) {
       console.error("⚠️ Audio duration is 0:", audioUrl);
 
-      // 記錄到 BigQuery
-      logAudioError({
-        errorType: "duration_zero",
-        audioUrl: audioUrl,
-        audioDuration: 0,
-      });
+      // 通知父元件處理錯誤
+      if (onError) {
+        onError({
+          errorType: "duration_zero",
+          audioUrl: audioUrl,
+          audioDuration: 0,
+        });
+      }
     }
-  }, [isLoaded, duration, audioUrl]);
+  }, [isLoaded, duration, audioUrl, onError]);
 
   // Play/pause toggle
   const togglePlayback = useCallback(() => {

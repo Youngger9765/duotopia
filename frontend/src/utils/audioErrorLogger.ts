@@ -7,6 +7,7 @@ import {
   checkAudioSupport,
   getConnectionInfo,
 } from "./deviceDetector";
+import { getErrorLoggingContext } from "@/contexts/ErrorLoggingContext";
 
 export interface AudioErrorData {
   errorType: string;
@@ -33,6 +34,9 @@ export async function logAudioError(data: AudioErrorData): Promise<void> {
     const audioSupport = checkAudioSupport();
     const connectionInfo = getConnectionInfo();
 
+    // 從全域 context 取得 studentId 和 assignmentId
+    const context = getErrorLoggingContext();
+
     const errorLog = {
       timestamp: new Date().toISOString(),
 
@@ -57,9 +61,9 @@ export async function logAudioError(data: AudioErrorData): Promise<void> {
       screen_resolution: `${window.screen.width}x${window.screen.height}`,
       connection_type: connectionInfo?.effectiveType,
 
-      // 使用者資訊
-      student_id: data.studentId,
-      assignment_id: data.assignmentId,
+      // 使用者資訊（優先使用 data 傳入的，否則從 context 取得）
+      student_id: data.studentId ?? context.studentId,
+      assignment_id: data.assignmentId ?? context.assignmentId,
       page_url: window.location.href,
 
       // 診斷資訊
