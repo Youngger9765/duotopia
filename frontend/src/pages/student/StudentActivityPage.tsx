@@ -94,7 +94,7 @@ interface Answer {
 export default function StudentActivityPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
-  const { token } = useStudentAuthStore();
+  const { token, user } = useStudentAuthStore();
 
   // State management
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -122,14 +122,14 @@ export default function StudentActivityPage() {
     if (assignmentId) {
       setErrorLoggingContext({
         assignmentId: parseInt(assignmentId),
-        // studentId will be set when student info is available
+        studentId: user?.id, // 從 auth store 取得 studentId
       });
     }
 
     return () => {
       clearErrorLoggingContext();
     };
-  }, [assignmentId]);
+  }, [assignmentId, user]);
 
   // Load activities from API
   useEffect(() => {
