@@ -981,10 +981,10 @@ function SortableRowInner({
           onClick={() => handleRemoveRow(index)}
           className="p-1 rounded hover:bg-gray-200"
           title="刪除"
-          disabled={rowsLength <= 3}
+          disabled={rowsLength <= 1}
         >
           <Trash2
-            className={`h-4 w-4 ${rowsLength <= 3 ? "text-gray-300" : "text-gray-600"}`}
+            className={`h-4 w-4 ${rowsLength <= 1 ? "text-gray-300" : "text-gray-600"}`}
           />
         </button>
       </div>
@@ -1166,8 +1166,8 @@ export default function ReadingAssessmentPanel({
   };
 
   const handleDeleteRow = (index: number) => {
-    if (rows.length <= 3) {
-      toast.error("至少需要保留 3 列");
+    if (rows.length <= 1) {
+      toast.error("至少需要保留 1 列");
       return;
     }
     const newRows = rows.filter((_, i) => i !== index);

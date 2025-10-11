@@ -39,16 +39,7 @@ const lessonConfig: TreeNodeConfig = {
   canDelete: true,
   canDrag: true,
   canExpand: true,
-  displayFields: [
-    {
-      key: "estimated_minutes",
-      icon: Clock,
-      suffix: " 分鐘",
-      render: (value) => (
-        <span className="text-sm text-gray-500">{value || 30} 分鐘</span>
-      ),
-    },
-  ],
+  displayFields: [],
   childConfig: contentConfig,
   emptyMessage: "暫無單元",
 };

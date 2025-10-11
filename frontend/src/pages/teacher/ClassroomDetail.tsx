@@ -3,12 +3,6 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -26,20 +20,19 @@ import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
+import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
+import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import {
   ArrowLeft,
   Users,
   BookOpen,
   Plus,
   Edit,
-  Clock,
   FileText,
-  ListOrdered,
   X,
   Save,
   Mic,
   Trash2,
-  GripVertical,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -139,29 +132,11 @@ export default function ClassroomDetail({
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
 
-  // Drag states
-  const [draggedProgram, setDraggedProgram] = useState<number | null>(null);
-  const [draggedLesson, setDraggedLesson] = useState<{
-    programId: number;
-    lessonIndex: number;
-  } | null>(null);
-
-  // Accordion states - 追蹤展開的 programs
-  const [expandedPrograms, setExpandedPrograms] = useState<string>("");
-  const [expandedLessons, setExpandedLessons] = useState<string>("");
-
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
-  const [dropIndicatorProgram, setDropIndicatorProgram] = useState<
-    number | null
-  >(null);
-  const [dropIndicatorLesson, setDropIndicatorLesson] = useState<{
-    programId: number;
-    lessonIndex: number;
-  } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -617,8 +592,6 @@ export default function ClassroomDetail({
           return program;
         }),
       );
-      // 確保新增單元的 program 保持展開狀態
-      setExpandedPrograms(`program-${lessonProgramId}`);
       toast.success(`單元「${savedLesson.name}」已新增`);
     } else if (lessonDialogType === "edit") {
       // 編輯單元：更新對應的單元
@@ -781,28 +754,74 @@ export default function ClassroomDetail({
     }
   };
 
-  const openPanel = (content: {
-    type: string;
-    lessonId?: number;
-    programName?: string;
-    lessonName?: string;
-  }) => {
-    if (
-      content.type === "new_content" &&
-      content.lessonId &&
-      content.programName &&
-      content.lessonName
-    ) {
+  const handleReorderContents = async (
+    lessonId: number,
+    fromIndex: number,
+    toIndex: number,
+  ) => {
+    // Find the lesson
+    let targetLesson: Lesson | undefined;
+    let targetProgram: Program | undefined;
+
+    for (const program of programs) {
+      const lesson = program.lessons?.find((l) => l.id === lessonId);
+      if (lesson) {
+        targetLesson = lesson;
+        targetProgram = program;
+        break;
+      }
+    }
+
+    if (!targetLesson || !targetLesson.contents || !targetProgram) return;
+
+    const originalPrograms = [...programs];
+
+    // Immediate UI update
+    const newContents = [...targetLesson.contents];
+    const [movedItem] = newContents.splice(fromIndex, 1);
+    newContents.splice(toIndex, 0, movedItem);
+
+    setPrograms((prevPrograms) =>
+      prevPrograms.map((p) => {
+        if (p.id === targetProgram!.id) {
+          return {
+            ...p,
+            lessons: p.lessons?.map((l) =>
+              l.id === lessonId ? { ...l, contents: newContents } : l,
+            ),
+          };
+        }
+        return p;
+      }),
+    );
+
+    try {
+      // Prepare order data
+      const orderData = newContents.map((content, index) => ({
+        id: content.id,
+        order_index: index,
+      }));
+
+      await apiClient.reorderContents(lessonId, orderData);
+      toast.success("排序成功");
+    } catch (err) {
+      console.error("Failed to reorder contents:", err);
+      toast.error("排序失敗");
+      // Revert on error
+      setPrograms(originalPrograms);
+    }
+  };
+
+  const handleCreateContent = (programId: number, lessonId: number) => {
+    const program = programs.find((p) => p.id === programId);
+    const lesson = program?.lessons?.find((l) => l.id === lessonId);
+    if (lesson && program) {
       setContentLessonInfo({
-        programName: content.programName,
-        lessonName: content.lessonName,
-        lessonId: content.lessonId,
+        programName: program.name,
+        lessonName: lesson.name,
+        lessonId: lesson.id,
       });
       setShowContentTypeDialog(true);
-    } else {
-      // Handle other panel types if needed
-      setSelectedContent(content as Content);
-      setIsPanelOpen(true);
     }
   };
 
@@ -837,46 +856,12 @@ export default function ClassroomDetail({
         });
 
         toast.success("內容已創建成功");
-
-        // Find the program ID for this lesson and keep both program and lesson expanded
-        const programWithLesson = programs.find((p) =>
-          p.lessons?.some((l) => l.id === selection.lessonId),
-        );
-
-        if (programWithLesson) {
-          setExpandedPrograms(`program-${programWithLesson.id}`);
-          setExpandedLessons(
-            `lesson-${programWithLesson.id}-${selection.lessonId}`,
-          );
-        }
-
         await refreshPrograms();
       } catch (error) {
         console.error("Failed to create content:", error);
         toast.error("創建內容失敗，請稍後再試");
       }
     }
-  };
-
-  const getLevelBadge = (level?: string) => {
-    const levelColors: Record<string, string> = {
-      PREA: "bg-gray-100 text-gray-800",
-      A1: "bg-green-100 text-green-800",
-      A2: "bg-blue-100 text-blue-800",
-      B1: "bg-purple-100 text-purple-800",
-      B2: "bg-indigo-100 text-indigo-800",
-      C1: "bg-red-100 text-red-800",
-      C2: "bg-orange-100 text-orange-800",
-    };
-    const color =
-      levelColors[level?.toUpperCase() || "A1"] || "bg-gray-100 text-gray-800";
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}
-      >
-        {level || "A1"}
-      </span>
-    );
   };
 
   if (loading) {
@@ -1109,687 +1094,71 @@ export default function ClassroomDetail({
                   )}
                 </div>
 
-                {programs.length > 0 ? (
-                  <Accordion
-                    type="single"
-                    collapsible
-                    className="w-full"
-                    value={expandedPrograms}
-                    onValueChange={setExpandedPrograms}
-                  >
-                    {programs.map((program, programIndex) => (
-                      <div key={program.id} className="relative">
-                        {/* 插入指示器 - 顯示在項目上方 */}
-                        {dropIndicatorProgram === programIndex && (
-                          <div className="h-1 bg-blue-500 rounded-full mx-2 my-1 animate-pulse" />
-                        )}
-                        <AccordionItem
-                          value={`program-${program.id}`}
-                          className={`
-                          transition-opacity duration-200
-                          ${draggedProgram === programIndex ? "opacity-30" : ""}
-                        `}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (draggedProgram === null) return;
-
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            const y = e.clientY - rect.top;
-                            const height = rect.height;
-
-                            // 判斷是在上半部還是下半部
-                            if (y < height / 2) {
-                              // 在上半部，顯示在當前項目上方
-                              setDropIndicatorProgram(programIndex);
-                            } else {
-                              // 在下半部，顯示在下一個項目上方
-                              setDropIndicatorProgram(programIndex + 1);
-                            }
-                          }}
-                          onDragLeave={(e) => {
-                            e.preventDefault();
-                            // 只有當離開整個項目時才清除指示器
-                            if (
-                              !e.currentTarget.contains(e.relatedTarget as Node)
-                            ) {
-                              setDropIndicatorProgram(null);
-                            }
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (
-                              draggedProgram !== null &&
-                              dropIndicatorProgram !== null
-                            ) {
-                              let targetIndex = dropIndicatorProgram;
-                              // 如果拖曳的項目原本在目標位置之前，需要調整目標索引
-                              if (draggedProgram < targetIndex) {
-                                targetIndex--;
-                              }
-                              if (draggedProgram !== targetIndex) {
-                                handleReorderPrograms(
-                                  draggedProgram,
-                                  targetIndex,
-                                );
-                              }
-                            }
-                            setDraggedProgram(null);
-                            setDropIndicatorProgram(null);
-                          }}
-                        >
-                          <AccordionTrigger className="hover:no-underline group">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-2 sm:pr-4 gap-3">
-                              <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 flex-1">
-                                <div
-                                  className="hidden sm:block cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
-                                  title="拖曳以重新排序"
-                                  draggable
-                                  onDragStart={(e) => {
-                                    e.stopPropagation();
-                                    e.dataTransfer.effectAllowed = "move";
-                                    const preview =
-                                      document.createElement("div");
-                                    preview.style.position = "absolute";
-                                    preview.style.top = "-1000px";
-                                    preview.style.backgroundColor = "#3B82F6";
-                                    preview.style.color = "white";
-                                    preview.style.padding = "4px 8px";
-                                    preview.style.borderRadius = "4px";
-                                    preview.style.fontSize = "12px";
-                                    preview.textContent = `移動: ${program.name}`;
-                                    document.body.appendChild(preview);
-                                    e.dataTransfer.setDragImage(preview, 0, 0);
-                                    setTimeout(
-                                      () => document.body.removeChild(preview),
-                                      0,
-                                    );
-                                    setDraggedProgram(programIndex);
-                                  }}
-                                  onDragEnd={(e) => {
-                                    e.stopPropagation();
-                                    setDraggedProgram(null);
-                                    setDropIndicatorProgram(null);
-                                  }}
-                                >
-                                  <GripVertical className="h-5 w-5 text-gray-400" />
-                                </div>
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div className="text-left flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 truncate">
-                                      {program.name}
-                                    </h4>
-                                    <div
-                                      className="h-7 w-7 sm:h-6 sm:w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditProgram(program.id);
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4 sm:h-3 sm:w-3 dark:text-gray-400" />
-                                    </div>
-                                  </div>
-                                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
-                                    {program.description || "暫無描述"}
-                                  </p>
-                                  {/* Mobile: Show badges here */}
-                                  <div className="flex items-center gap-2 mt-2 sm:hidden">
-                                    {getLevelBadge(program.level)}
-                                    {program.estimated_hours && (
-                                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        <span>{program.estimated_hours}h</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Desktop: Show badges and delete button */}
-                              <div className="hidden sm:flex items-center space-x-4 flex-shrink-0">
-                                {getLevelBadge(program.level)}
-                                {program.estimated_hours && (
-                                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                    <Clock className="h-4 w-4 mr-1" />
-                                    <span>{program.estimated_hours} 小時</span>
-                                  </div>
-                                )}
-                                <div
-                                  className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteProgram(program.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
-                                </div>
-                              </div>
-                              {/* Mobile: Delete button at end */}
-                              <div className="sm:hidden absolute right-2 top-3">
-                                <div
-                                  className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteProgram(program.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
-                                </div>
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="pl-14 pr-4">
-                              <Accordion
-                                type="single"
-                                collapsible
-                                className="w-full"
-                                value={expandedLessons}
-                                onValueChange={setExpandedLessons}
-                              >
-                                {(program.lessons || []).map(
-                                  (lesson, lessonIndex) => (
-                                    <div key={lesson.id} className="relative">
-                                      {/* 插入指示器 - 顯示在單元上方 */}
-                                      {dropIndicatorLesson &&
-                                        dropIndicatorLesson.programId ===
-                                          program.id &&
-                                        dropIndicatorLesson.lessonIndex ===
-                                          lessonIndex && (
-                                          <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
-                                        )}
-                                      <AccordionItem
-                                        value={`lesson-${program.id}-${lesson.id}`}
-                                        className={`
-                                    border-l-2 border-gray-200 ml-2 transition-opacity duration-200
-                                    ${draggedLesson && draggedLesson.programId === program.id && draggedLesson.lessonIndex === lessonIndex ? "opacity-30" : ""}
-                                  `}
-                                        onDragOver={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          if (
-                                            !draggedLesson ||
-                                            draggedLesson.programId !==
-                                              program.id
-                                          )
-                                            return;
-
-                                          const rect =
-                                            e.currentTarget.getBoundingClientRect();
-                                          const y = e.clientY - rect.top;
-                                          const height = rect.height;
-
-                                          // 判斷是在上半部還是下半部
-                                          if (y < height / 2) {
-                                            setDropIndicatorLesson({
-                                              programId: program.id,
-                                              lessonIndex,
-                                            });
-                                          } else {
-                                            setDropIndicatorLesson({
-                                              programId: program.id,
-                                              lessonIndex: lessonIndex + 1,
-                                            });
-                                          }
-                                        }}
-                                        onDragLeave={(e) => {
-                                          e.preventDefault();
-                                          if (
-                                            !e.currentTarget.contains(
-                                              e.relatedTarget as Node,
-                                            )
-                                          ) {
-                                            setDropIndicatorLesson(null);
-                                          }
-                                        }}
-                                        onDrop={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          if (
-                                            draggedLesson &&
-                                            dropIndicatorLesson &&
-                                            draggedLesson.programId ===
-                                              program.id &&
-                                            dropIndicatorLesson.programId ===
-                                              program.id
-                                          ) {
-                                            let targetIndex =
-                                              dropIndicatorLesson.lessonIndex;
-                                            if (
-                                              draggedLesson.lessonIndex <
-                                              targetIndex
-                                            ) {
-                                              targetIndex--;
-                                            }
-                                            if (
-                                              draggedLesson.lessonIndex !==
-                                              targetIndex
-                                            ) {
-                                              handleReorderLessons(
-                                                program.id,
-                                                draggedLesson.lessonIndex,
-                                                targetIndex,
-                                              );
-                                            }
-                                          }
-                                          setDraggedLesson(null);
-                                          setDropIndicatorLesson(null);
-                                        }}
-                                      >
-                                        <AccordionTrigger className="hover:no-underline pl-4 group">
-                                          <div className="flex items-center justify-between w-full pr-4">
-                                            <div className="flex items-center space-x-3">
-                                              <div
-                                                className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
-                                                title="拖曳以重新排序"
-                                                draggable
-                                                onDragStart={(e) => {
-                                                  e.stopPropagation();
-                                                  e.dataTransfer.effectAllowed =
-                                                    "move";
-                                                  // 創建自定義拖曳預覽
-                                                  const preview =
-                                                    document.createElement(
-                                                      "div",
-                                                    );
-                                                  preview.style.position =
-                                                    "absolute";
-                                                  preview.style.top = "-1000px";
-                                                  preview.style.backgroundColor =
-                                                    "#3B82F6";
-                                                  preview.style.color = "white";
-                                                  preview.style.padding =
-                                                    "4px 8px";
-                                                  preview.style.borderRadius =
-                                                    "4px";
-                                                  preview.style.fontSize =
-                                                    "12px";
-                                                  preview.textContent = `移動: ${lesson.name}`;
-                                                  document.body.appendChild(
-                                                    preview,
-                                                  );
-                                                  e.dataTransfer.setDragImage(
-                                                    preview,
-                                                    0,
-                                                    0,
-                                                  );
-                                                  setTimeout(
-                                                    () =>
-                                                      document.body.removeChild(
-                                                        preview,
-                                                      ),
-                                                    0,
-                                                  );
-                                                  setDraggedLesson({
-                                                    programId: program.id,
-                                                    lessonIndex,
-                                                  });
-                                                }}
-                                                onDragEnd={(e) => {
-                                                  e.stopPropagation();
-                                                  setDraggedLesson(null);
-                                                  setDropIndicatorLesson(null);
-                                                }}
-                                              >
-                                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                              </div>
-                                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                                <ListOrdered className="h-4 w-4 text-green-600" />
-                                              </div>
-                                              <div className="text-left">
-                                                <div className="flex items-center space-x-2">
-                                                  <h5 className="font-medium">
-                                                    {lesson.name}
-                                                  </h5>
-                                                  <div
-                                                    className="h-5 w-5 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      handleEditLesson(
-                                                        program.id,
-                                                        lesson.id,
-                                                      );
-                                                    }}
-                                                  >
-                                                    <Edit className="h-3 w-3" />
-                                                  </div>
-                                                </div>
-                                                <p className="text-sm text-gray-500">
-                                                  {lesson.description ||
-                                                    "暫無描述"}
-                                                </p>
-                                              </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                              <span className="text-sm text-gray-500">
-                                                {lesson.estimated_minutes || 30}{" "}
-                                                分鐘
-                                              </span>
-                                              <div
-                                                className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleDeleteLesson(
-                                                    program.id,
-                                                    lesson.id,
-                                                  );
-                                                }}
-                                              >
-                                                <Trash2 className="h-3 w-3 text-red-500" />
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                          <div className="pl-16 pr-4 space-y-3">
-                                            {/* 實際 Content 資料 */}
-                                            {lesson.contents &&
-                                            lesson.contents.length > 0 ? (
-                                              lesson.contents.map(
-                                                (content, contentIndex) => (
-                                                  <div
-                                                    key={content.id}
-                                                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer transition-colors duration-200 group"
-                                                    draggable
-                                                    onDragStart={(e) => {
-                                                      e.dataTransfer.effectAllowed =
-                                                        "move";
-                                                      e.dataTransfer.setData(
-                                                        "contentId",
-                                                        content.id.toString(),
-                                                      );
-                                                      e.dataTransfer.setData(
-                                                        "lessonId",
-                                                        lesson.id.toString(),
-                                                      );
-                                                      e.dataTransfer.setData(
-                                                        "contentIndex",
-                                                        contentIndex.toString(),
-                                                      );
-                                                    }}
-                                                    onDragOver={(e) => {
-                                                      e.preventDefault();
-                                                      e.currentTarget.classList.add(
-                                                        "bg-blue-50",
-                                                      );
-                                                    }}
-                                                    onDragLeave={(e) => {
-                                                      e.currentTarget.classList.remove(
-                                                        "bg-blue-50",
-                                                      );
-                                                    }}
-                                                    onDrop={(e) => {
-                                                      e.preventDefault();
-                                                      e.currentTarget.classList.remove(
-                                                        "bg-blue-50",
-                                                      );
-                                                      e.dataTransfer.getData(
-                                                        "contentId",
-                                                      );
-                                                      const draggedLessonId =
-                                                        e.dataTransfer.getData(
-                                                          "lessonId",
-                                                        );
-                                                      const draggedIndex =
-                                                        parseInt(
-                                                          e.dataTransfer.getData(
-                                                            "contentIndex",
-                                                          ),
-                                                        );
-
-                                                      if (
-                                                        draggedLessonId ===
-                                                          lesson.id.toString() &&
-                                                        draggedIndex !==
-                                                          contentIndex
-                                                      ) {
-                                                        // 重新排序內容
-                                                        const newContents = [
-                                                          ...(lesson.contents ||
-                                                            []),
-                                                        ];
-                                                        const [draggedContent] =
-                                                          newContents.splice(
-                                                            draggedIndex,
-                                                            1,
-                                                          );
-                                                        newContents.splice(
-                                                          contentIndex,
-                                                          0,
-                                                          draggedContent,
-                                                        );
-
-                                                        // 更新每個內容的 order_index
-                                                        const contentsWithNewOrder =
-                                                          newContents.map(
-                                                            (
-                                                              content,
-                                                              index,
-                                                            ) => ({
-                                                              ...content,
-                                                              order_index:
-                                                                index,
-                                                            }),
-                                                          );
-
-                                                        // 更新本地狀態
-                                                        const updatedPrograms =
-                                                          programs.map((p) => {
-                                                            if (
-                                                              p.id ===
-                                                              program.id
-                                                            ) {
-                                                              return {
-                                                                ...p,
-                                                                lessons:
-                                                                  p.lessons?.map(
-                                                                    (l) => {
-                                                                      if (
-                                                                        l.id ===
-                                                                        lesson.id
-                                                                      ) {
-                                                                        return {
-                                                                          ...l,
-                                                                          contents:
-                                                                            contentsWithNewOrder,
-                                                                        };
-                                                                      }
-                                                                      return l;
-                                                                    },
-                                                                  ),
-                                                              };
-                                                            }
-                                                            return p;
-                                                          });
-                                                        setPrograms(
-                                                          updatedPrograms,
-                                                        );
-
-                                                        // 呼叫 API 更新順序
-                                                        const updateOrderPromises =
-                                                          contentsWithNewOrder.map(
-                                                            (content) =>
-                                                              apiClient.updateContent(
-                                                                content.id,
-                                                                {
-                                                                  order_index:
-                                                                    content.order_index,
-                                                                },
-                                                              ),
-                                                          );
-
-                                                        Promise.all(
-                                                          updateOrderPromises,
-                                                        )
-                                                          .then(() => {
-                                                            toast.success(
-                                                              "內容順序已更新",
-                                                            );
-                                                          })
-                                                          .catch((error) => {
-                                                            console.error(
-                                                              "Failed to update content order:",
-                                                              error,
-                                                            );
-                                                            toast.error(
-                                                              "更新順序失敗",
-                                                            );
-                                                            // 重新載入以恢復正確順序
-                                                            fetchPrograms();
-                                                          });
-                                                      }
-                                                    }}
-                                                    onClick={() =>
-                                                      handleContentClick({
-                                                        ...content,
-                                                        lesson_id: lesson.id,
-                                                        lessonName: lesson.name,
-                                                        programName:
-                                                          program.name,
-                                                      })
-                                                    }
-                                                  >
-                                                    <div className="flex items-center space-x-3">
-                                                      <div className="cursor-move opacity-50 hover:opacity-100 transition-opacity">
-                                                        <GripVertical className="h-4 w-4 text-gray-400" />
-                                                      </div>
-                                                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                                        <FileText className="h-4 w-4 text-purple-600" />
-                                                      </div>
-                                                      <div>
-                                                        <div className="flex items-center gap-2">
-                                                          <p className="font-medium text-sm">
-                                                            {content.title ||
-                                                              "未命名內容"}
-                                                          </p>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500">
-                                                          {content.items_count ||
-                                                            0}{" "}
-                                                          個項目
-                                                        </p>
-                                                      </div>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                      <span className="text-sm text-gray-500">
-                                                        {content.estimated_time ||
-                                                          "10 分鐘"}
-                                                      </span>
-                                                      <div
-                                                        className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          handleDeleteContent(
-                                                            lesson.id,
-                                                            content.id,
-                                                            content.title,
-                                                          );
-                                                        }}
-                                                      >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                ),
-                                              )
-                                            ) : (
-                                              <div className="p-4 text-center text-gray-500 text-sm">
-                                                尚無內容，請新增內容
-                                              </div>
-                                            )}
-
-                                            <div className="flex justify-end space-x-2 pt-2">
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleEditLesson(
-                                                    program.id,
-                                                    lesson.id,
-                                                  );
-                                                }}
-                                              >
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                編輯單元
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  // TODO: Implement add content functionality
-                                                  openPanel({
-                                                    type: "new_content",
-                                                    programName: program.name,
-                                                    lessonName: lesson.name,
-                                                    lessonId: lesson.id,
-                                                  });
-                                                }}
-                                              >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                新增內容
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </div>
-                                  ),
-                                )}
-                                {/* 最後位置的插入指示器（單元） */}
-                                {dropIndicatorLesson &&
-                                  dropIndicatorLesson.programId ===
-                                    program.id &&
-                                  dropIndicatorLesson.lessonIndex ===
-                                    (program.lessons?.length || 0) && (
-                                    <div className="h-0.5 bg-green-500 rounded-full mx-2 my-0.5 animate-pulse" />
-                                  )}
-
-                                {/* Add Lesson Button */}
-                                <div className="pl-6 pt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => handleAddLesson(program.id)}
-                                  >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    新增單元
-                                  </Button>
-                                </div>
-                              </Accordion>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </div>
-                    ))}
-                    {/* 最後位置的插入指示器 */}
-                    {dropIndicatorProgram === programs.length && (
-                      <div className="h-1 bg-blue-500 rounded-full mx-2 my-1 animate-pulse" />
-                    )}
-                  </Accordion>
-                ) : (
-                  <div className="text-center py-12">
-                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">尚未建立課程</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      為班級建立課程內容，開始教學
-                    </p>
-                    <Button
-                      className="mt-4"
-                      size="sm"
-                      onClick={() => setShowCopyDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      建立第一個課程
-                    </Button>
-                  </div>
-                )}
+                <RecursiveTreeAccordion
+                  data={programs}
+                  config={programTreeConfig}
+                  title=""
+                  showCreateButton={false}
+                  onEdit={(item, level, parentId) => {
+                    if (level === 0) handleEditProgram(item.id);
+                    else if (level === 1)
+                      handleEditLesson(parentId as number, item.id);
+                  }}
+                  onDelete={(item, level, parentId) => {
+                    if (level === 0) handleDeleteProgram(item.id);
+                    else if (level === 1)
+                      handleDeleteLesson(parentId as number, item.id);
+                    else if (level === 2)
+                      handleDeleteContent(
+                        parentId as number,
+                        item.id,
+                        item.title,
+                      );
+                  }}
+                  onClick={(item, level, parentId) => {
+                    if (level === 2) {
+                      const program = programs.find((p) =>
+                        p.lessons?.some((l) => l.id === parentId),
+                      );
+                      const lesson = program?.lessons?.find(
+                        (l) => l.id === parentId,
+                      );
+                      handleContentClick({
+                        ...item,
+                        lesson_id: parentId as number,
+                        lessonName: lesson?.name,
+                        programName: program?.name,
+                      });
+                    }
+                  }}
+                  onCreate={(level, parentId) => {
+                    if (level === 1) {
+                      handleAddLesson(parentId as number);
+                    } else if (level === 2) {
+                      const program = programs.find((p) =>
+                        p.lessons?.some((l) => l.id === parentId),
+                      );
+                      if (program) {
+                        handleCreateContent(program.id, parentId as number);
+                      }
+                    }
+                  }}
+                  onReorder={(fromIndex, toIndex, level, parentId) => {
+                    if (level === 0) handleReorderPrograms(fromIndex, toIndex);
+                    else if (level === 1)
+                      handleReorderLessons(
+                        parentId as number,
+                        fromIndex,
+                        toIndex,
+                      );
+                    else if (level === 2)
+                      handleReorderContents(
+                        parentId as number,
+                        fromIndex,
+                        toIndex,
+                      );
+                  }}
+                />
               </TabsContent>
 
               {/* Assignments Tab - only show for classroom mode */}
@@ -2212,6 +1581,7 @@ export default function ClassroomDetail({
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
                 {selectedContent.type === "reading_assessment" ? (
+                  /* ReadingAssessmentPanel has its own save button */
                   <ReadingAssessmentPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
@@ -2366,22 +1736,24 @@ export default function ClassroomDetail({
                 )}
               </div>
 
-              {/* Panel Footer */}
-              <div className="p-4 border-t bg-gray-50">
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={closePanel}
-                  >
-                    取消
-                  </Button>
-                  <Button className="flex-1" onClick={handleSaveContent}>
-                    <Save className="h-4 w-4 mr-2" />
-                    儲存變更
-                  </Button>
+              {/* Panel Footer - Only show for non-reading_assessment types */}
+              {selectedContent.type !== "reading_assessment" && (
+                <div className="p-4 border-t bg-gray-50">
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={closePanel}
+                    >
+                      取消
+                    </Button>
+                    <Button className="flex-1" onClick={handleSaveContent}>
+                      <Save className="h-4 w-4 mr-2" />
+                      儲存變更
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -2640,21 +2012,6 @@ export default function ClassroomDetail({
                   // ReadingAssessmentPanel handles save internally
                   // Just close the editor on successful save
                   setShowReadingEditor(false);
-
-                  // Keep the lesson expanded after saving
-                  if (editorLessonId) {
-                    const programWithLesson = programs.find((p) =>
-                      p.lessons?.some((l) => l.id === editorLessonId),
-                    );
-
-                    if (programWithLesson) {
-                      setExpandedPrograms(`program-${programWithLesson.id}`);
-                      setExpandedLessons(
-                        `lesson-${programWithLesson.id}-${editorLessonId}`,
-                      );
-                    }
-                  }
-
                   setEditorLessonId(null);
                   setEditorContentId(null);
                   await refreshPrograms();
