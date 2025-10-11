@@ -24,6 +24,24 @@ import {
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
 import { retryAudioUpload } from "@/utils/retryHelper";
+// dnd-kit imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ContentRow {
   id: string | number;
@@ -761,6 +779,219 @@ const TTSModal = ({
   );
 };
 
+// SortableRowInner component with complete functionality
+interface SortableRowInnerProps {
+  row: ContentRow;
+  index: number;
+  handleUpdateRow: (
+    index: number,
+    field: keyof ContentRow,
+    value: string,
+  ) => void;
+  handleRemoveRow: (index: number) => void;
+  handleDuplicateRow: (index: number) => void;
+  handleOpenTTSModal: (row: ContentRow) => void;
+  handleRemoveAudio: (index: number) => void;
+  handleGenerateSingleDefinition: (index: number) => Promise<void>;
+  handleGenerateSingleDefinitionWithLang: (
+    index: number,
+    lang: "chinese" | "english",
+  ) => Promise<void>;
+  rowsLength: number;
+}
+
+function SortableRowInner({
+  row,
+  index,
+  handleUpdateRow,
+  handleRemoveRow,
+  handleDuplicateRow,
+  handleOpenTTSModal,
+  handleRemoveAudio,
+  handleGenerateSingleDefinition,
+  handleGenerateSingleDefinitionWithLang,
+  rowsLength,
+}: SortableRowInnerProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-gray-50 rounded-lg"
+    >
+      <div className="flex items-center gap-1 w-full sm:w-auto">
+        {/* Drag handle - ONLY this triggers drag */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+          title="拖曳以重新排序"
+        >
+          <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
+        </div>
+        <span className="text-sm font-medium text-gray-600 w-6">
+          {index + 1}
+        </span>
+      </div>
+
+      <div className="flex-1 w-full space-y-2">
+        {/* Text input */}
+        <div className="relative">
+          <input
+            type="text"
+            value={row.text}
+            onChange={(e) => handleUpdateRow(index, "text", e.target.value)}
+            className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
+            placeholder="輸入文本"
+            maxLength={200}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+            {row.audioUrl && (
+              <button
+                onClick={() => {
+                  if (!row.audioUrl) {
+                    toast.error("沒有音檔可播放");
+                    return;
+                  }
+                  const audio = new Audio(row.audioUrl);
+                  audio.onerror = (e) => {
+                    console.error("Audio playback error:", e);
+                    toast.error("音檔播放失敗，請檢查音檔格式");
+                  };
+                  audio.play().catch((error) => {
+                    console.error("Play failed:", error);
+                    toast.error("無法播放音檔");
+                  });
+                }}
+                className="p-1 rounded text-green-600 hover:bg-green-100"
+                title="播放音檔"
+              >
+                <Play className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={() => handleOpenTTSModal(row)}
+              className={`p-1 rounded ${
+                row.audioUrl
+                  ? "text-blue-600 hover:bg-blue-100"
+                  : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
+              }`}
+              title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+            {row.audioUrl && (
+              <button
+                onClick={() => handleRemoveAudio(index)}
+                className="p-1 rounded text-red-600 hover:bg-red-100"
+                title="移除音檔"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Translation textarea */}
+        <div className="space-y-2">
+          <div className="relative">
+            <textarea
+              value={
+                (row.selectedLanguage || "chinese") === "chinese"
+                  ? row.definition || ""
+                  : row.translation || ""
+              }
+              onChange={(e) =>
+                handleUpdateRow(
+                  index,
+                  (row.selectedLanguage || "chinese") === "chinese"
+                    ? "definition"
+                    : "translation",
+                  e.target.value,
+                )
+              }
+              className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
+              placeholder={
+                (row.selectedLanguage || "chinese") === "chinese"
+                  ? "中文翻譯"
+                  : "English translation"
+              }
+              rows={2}
+              maxLength={500}
+            />
+            <div className="absolute right-2 top-2 flex items-center space-x-1">
+              <select
+                value={row.selectedLanguage || "chinese"}
+                onChange={(e) => {
+                  const newLang = e.target.value as "chinese" | "english";
+                  handleUpdateRow(index, "selectedLanguage", newLang);
+                  // Auto-generate when switching language
+                  if (row.text && row.text.trim()) {
+                    setTimeout(() => {
+                      handleGenerateSingleDefinitionWithLang(index, newLang);
+                    }, 100);
+                  }
+                }}
+                className="px-1 py-0.5 border rounded text-xs bg-white"
+              >
+                <option value="chinese">中文翻譯</option>
+                <option value="english">英文釋義</option>
+              </select>
+              <button
+                onClick={() => handleGenerateSingleDefinition(index)}
+                className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
+                title={`生成${(row.selectedLanguage || "chinese") === "chinese" ? "中文翻譯" : "英文釋義"}`}
+              >
+                <Globe className="h-4 w-4" />
+                <span className="text-xs">
+                  {(row.selectedLanguage || "chinese") === "chinese"
+                    ? "中"
+                    : "EN"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+        <button
+          onClick={() => handleDuplicateRow(index)}
+          className="p-1 rounded hover:bg-gray-200"
+          title="複製"
+        >
+          <Copy className="h-4 w-4 text-gray-600" />
+        </button>
+        <button
+          onClick={() => handleRemoveRow(index)}
+          className="p-1 rounded hover:bg-gray-200"
+          title="刪除"
+          disabled={rowsLength <= 3}
+        >
+          <Trash2
+            className={`h-4 w-4 ${rowsLength <= 3 ? "text-gray-300" : "text-gray-600"}`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface ReadingAssessmentPanelProps {
   content?: { id?: number; title?: string; items?: ContentRow[] };
   editingContent?: { id?: number; title?: string; items?: ContentRow[] };
@@ -780,7 +1011,6 @@ export default function ReadingAssessmentPanel({
   onUpdateContent,
   onSave,
   lessonId,
-  onCancel,
   isCreating = false,
 }: ReadingAssessmentPanelProps) {
   const [title, setTitle] = useState("朗讀評測內容");
@@ -809,10 +1039,23 @@ export default function ReadingAssessmentPanel({
   ]);
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [batchPasteDialogOpen, setBatchPasteDialogOpen] = useState(false);
   const [batchPasteText, setBatchPasteText] = useState("");
+  const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
+  const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
+
+  // dnd-kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   // Load existing content data from database
   useEffect(() => {
@@ -892,24 +1135,17 @@ export default function ReadingAssessmentPanel({
     });
   }, [rows, title]);
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
+  // dnd-kit drag end handler
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex === null) return;
-
-    const draggedRow = rows[draggedIndex];
-    const newRows = [...rows];
-    newRows.splice(draggedIndex, 1);
-    newRows.splice(dropIndex, 0, draggedRow);
-    setRows(newRows);
-    setDraggedIndex(null);
+    if (over && active.id !== over.id) {
+      setRows((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleAddRow = () => {
@@ -1536,195 +1772,53 @@ export default function ReadingAssessmentPanel({
         </div>
       </div>
 
-      {/* Scrollable Content Rows */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-        {rows.map((row, index) => (
-          <div
-            key={row.id}
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-gray-50 rounded-lg"
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, index)}
-          >
-            <div className="flex items-center gap-1 w-full sm:w-auto">
-              <GripVertical className="h-5 w-5 text-gray-400 cursor-move" />
-              <span className="text-sm font-medium text-gray-600 w-6">
-                {index + 1}
-              </span>
-            </div>
-
-            <div className="flex-1 w-full space-y-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={row.text}
-                  onChange={(e) =>
-                    handleUpdateRow(index, "text", e.target.value)
-                  }
-                  className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
-                  placeholder="輸入文本"
-                  maxLength={200}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
-                  {/* 如果有音檔，顯示播放按鈕 */}
-                  {row.audioUrl && (
-                    <button
-                      onClick={() => {
-                        if (!row.audioUrl) {
-                          toast.error("沒有音檔可播放");
-                          return;
-                        }
-
-                        console.log("Playing audio:", row.audioUrl);
-                        const audio = new Audio(row.audioUrl);
-
-                        audio.onerror = (e) => {
-                          console.error("Audio playback error:", e);
-                          toast.error("音檔播放失敗，請檢查音檔格式");
-                        };
-
-                        audio.play().catch((error) => {
-                          console.error("Play failed:", error);
-                          toast.error("無法播放音檔");
-                        });
-                      }}
-                      className="p-1 rounded text-green-600 hover:bg-green-100"
-                      title="播放音檔"
-                    >
-                      <Play className="h-4 w-4" />
-                    </button>
-                  )}
-                  {/* TTS/錄音按鈕 */}
-                  <button
-                    onClick={() => handleOpenTTSModal(row)}
-                    className={`p-1 rounded ${
-                      row.audioUrl
-                        ? "text-blue-600 hover:bg-blue-100"
-                        : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
-                    }`}
-                    title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
-                  >
-                    <Mic className="h-4 w-4" />
-                  </button>
-                  {/* 移除音檔按鈕 - 只在有音檔時顯示 */}
-                  {row.audioUrl && (
-                    <button
-                      onClick={() => handleRemoveAudio(index)}
-                      className="p-1 rounded text-red-600 hover:bg-red-100"
-                      title="移除音檔"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {/* 翻譯欄位 */}
-                <div className="relative">
-                  <textarea
-                    value={
-                      (row.selectedLanguage || "chinese") === "chinese"
-                        ? row.definition || ""
-                        : row.translation || ""
-                    }
-                    onChange={(e) =>
-                      handleUpdateRow(
-                        index,
-                        (row.selectedLanguage || "chinese") === "chinese"
-                          ? "definition"
-                          : "translation",
-                        e.target.value,
-                      )
-                    }
-                    className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
-                    placeholder={
-                      (row.selectedLanguage || "chinese") === "chinese"
-                        ? "中文翻譯"
-                        : "英文釋義"
-                    }
-                    rows={1}
-                  />
-                  {/* 右側對齊的選單和按鈕 */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <select
-                      value={row.selectedLanguage || "chinese"}
-                      onChange={async (e) => {
-                        const newLang = e.target.value as "chinese" | "english";
-                        handleUpdateRow(index, "selectedLanguage", newLang);
-                        // 只有在目標欄位為空時才自動翻譯，避免覆蓋用戶手動輸入的內容
-                        if (row.text) {
-                          const targetFieldEmpty =
-                            newLang === "chinese"
-                              ? !row.definition
-                              : !row.translation;
-                          if (targetFieldEmpty) {
-                            setTimeout(() => {
-                              handleGenerateSingleDefinitionWithLang(
-                                index,
-                                newLang,
-                              );
-                            }, 100);
-                          }
-                        }
-                      }}
-                      className="px-1 py-0.5 border rounded text-xs bg-white"
-                    >
-                      <option value="chinese">中文翻譯</option>
-                      <option value="english">英文釋義</option>
-                    </select>
-                    <button
-                      onClick={() => handleGenerateSingleDefinition(index)}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                      title={`生成${(row.selectedLanguage || "chinese") === "chinese" ? "中文翻譯" : "英文釋義"}`}
-                    >
-                      <Globe className="h-4 w-4" />
-                      <span className="text-xs">
-                        {(row.selectedLanguage || "chinese") === "chinese"
-                          ? "中"
-                          : "EN"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => handleCopyRow(index)}
-                className="p-1 rounded hover:bg-gray-200"
-                title="複製"
-              >
-                <Copy className="h-4 w-4 text-gray-600" />
-              </button>
-              <button
-                onClick={() => handleDeleteRow(index)}
-                className="p-1 rounded hover:bg-gray-200"
-                title="刪除"
-                disabled={rows.length <= 3}
-              >
-                <Trash2
-                  className={`h-4 w-4 ${rows.length <= 3 ? "text-gray-300" : "text-gray-600"}`}
-                />
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {/* Add Row Button */}
-        <button
-          onClick={handleAddRow}
-          className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-          disabled={rows.length >= 15}
+      {/* Scrollable Content Rows with dnd-kit */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={rows.map((row) => row.id)}
+          strategy={verticalListSortingStrategy}
         >
-          <Plus className="h-5 w-5" />
-          新增項目
-        </button>
-      </div>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            {rows.map((row, index) => {
+              // useSortable must be called inside the component that's in SortableContext
+              // so we'll use a nested component
+              return (
+                <SortableRowInner
+                  key={row.id}
+                  row={row}
+                  index={index}
+                  handleUpdateRow={handleUpdateRow}
+                  handleRemoveRow={handleDeleteRow}
+                  handleDuplicateRow={handleCopyRow}
+                  handleOpenTTSModal={handleOpenTTSModal}
+                  handleRemoveAudio={handleRemoveAudio}
+                  handleGenerateSingleDefinition={
+                    handleGenerateSingleDefinition
+                  }
+                  handleGenerateSingleDefinitionWithLang={
+                    handleGenerateSingleDefinitionWithLang
+                  }
+                  rowsLength={rows.length}
+                />
+              );
+            })}
 
-      {/* Fixed Footer Section - Removed LEVEL, Tags, and Public Content fields */}
+            {/* Add Row Button */}
+            <button
+              onClick={handleAddRow}
+              className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+              disabled={rows.length >= 15}
+            >
+              <Plus className="h-5 w-5" />
+              新增項目
+            </button>
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* TTS Modal */}
       {selectedRow && (
@@ -1757,50 +1851,41 @@ export default function ReadingAssessmentPanel({
                 value={batchPasteText}
                 onChange={(e) => setBatchPasteText(e.target.value)}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
-                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
               />
             </div>
-            {batchPasteText && (
-              <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
-                ✓ 偵測到{" "}
-                {
-                  batchPasteText.split("\n").filter((line) => line.trim())
-                    .length
-                }{" "}
-                個項目
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" id="autoTTS" className="rounded" />
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={batchPasteAutoTTS}
+                  onChange={(e) => setBatchPasteAutoTTS(e.target.checked)}
+                  className="rounded"
+                />
                 <span className="text-sm">自動生成 TTS</span>
               </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" id="autoTranslate" className="rounded" />
-                <span className="text-sm">自動翻譯為中文</span>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={batchPasteAutoTranslate}
+                  onChange={(e) => setBatchPasteAutoTranslate(e.target.checked)}
+                  className="rounded"
+                />
+                <span className="text-sm">自動翻譯</span>
               </label>
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setBatchPasteDialogOpen(false);
-                setBatchPasteText("");
-              }}
+              onClick={() => setBatchPasteDialogOpen(false)}
             >
               取消
             </Button>
             <Button
-              onClick={() => {
-                const autoTTS =
-                  (document.getElementById("autoTTS") as HTMLInputElement)
-                    ?.checked || false;
-                const autoTranslate =
-                  (document.getElementById("autoTranslate") as HTMLInputElement)
-                    ?.checked || false;
-                handleBatchPaste(autoTTS, autoTranslate);
-              }}
+              onClick={() =>
+                handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
+              }
             >
               確認貼上
             </Button>
@@ -1808,58 +1893,37 @@ export default function ReadingAssessmentPanel({
         </DialogContent>
       </Dialog>
 
-      {/* 底部按鈕 */}
-      {(isCreating || editingContent?.id || onSave) && (
-        <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-          {onCancel && (
-            <Button variant="outline" onClick={onCancel}>
-              取消
-            </Button>
-          )}
+      {/* Save Button */}
+      {onSave && (
+        <div className="fixed bottom-6 right-6 z-50">
           <Button
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
             onClick={async () => {
-              // 檢查必填欄位
-              if (!title) {
+              // 過濾掉空白項目
+              const validRows = rows.filter(
+                (row) => row.text && row.text.trim(),
+              );
+
+              if (validRows.length === 0) {
+                toast.error("請至少新增一個內容項目");
+                return;
+              }
+
+              if (!title || title.trim() === "") {
                 toast.error("請輸入標題");
                 return;
               }
-
-              // 過濾掉空白的項目，只保留有文字的
-              const validRows = rows.filter((r) => r.text && r.text.trim());
-
-              if (validRows.length === 0) {
-                toast.error("請至少填寫一個項目的文字");
-                return;
-              }
-
-              // 收集有效的資料
-              /*const items = validRows.map(row => ({
-                text: row.text.trim(),
-                translation: row.definition.trim(),
-                audio_url: row.audioUrl || ''
-              }));*/
-
-              // Prepare content data for callback
-              /*const contentData = {
-                title,
-                items,
-                level,
-                tags,
-                target_wpm: 60,
-                target_accuracy: 0.8,
-                time_limit_seconds: 180,
-                is_public: isPublic
-              };*/
 
               // 準備要儲存的資料
               const saveData = {
                 title: title,
                 items: validRows.map((row) => ({
                   text: row.text.trim(),
-                  definition: row.definition || "", // 中文翻譯
-                  english_definition: row.translation || "", // 英文釋義
-                  translation: row.definition || "", // 主要翻譯欄位（保持向後兼容）
-                  selectedLanguage: row.selectedLanguage || "chinese", // 記錄選擇的語言
+                  definition: row.definition || "",
+                  english_definition: row.translation || "",
+                  translation: row.definition || "",
+                  selectedLanguage: row.selectedLanguage || "chinese",
                   audio_url: row.audioUrl || row.audio_url || "",
                 })),
                 target_wpm: 60,
@@ -1869,7 +1933,6 @@ export default function ReadingAssessmentPanel({
 
               console.log("Saving data:", saveData);
 
-              // 判斷是編輯模式還是創建模式
               const existingContentId = editingContent?.id || content?.id;
 
               if (existingContentId) {
@@ -1878,7 +1941,6 @@ export default function ReadingAssessmentPanel({
                   await apiClient.updateContent(existingContentId, saveData);
                   toast.success("儲存成功");
                   if (onSave) {
-                    // 傳回更新後的內容（包含新的 title）
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)({
                       id: existingContentId,
@@ -1898,26 +1960,6 @@ export default function ReadingAssessmentPanel({
                     ...saveData,
                   });
                   toast.success("內容已成功創建");
-                  // 呼叫 onSave，傳入新創建的內容
-                  if (onSave) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)(
-                      newContent,
-                    );
-                  }
-                } catch (error) {
-                  console.error("Failed to create content:", error);
-                  toast.error("創建內容失敗");
-                }
-              } else if (lessonId) {
-                // 有 lessonId 但沒有 contentId，創建新內容
-                try {
-                  const newContent = await apiClient.createContent(lessonId, {
-                    type: "reading_assessment",
-                    ...saveData,
-                  });
-                  toast.success("內容已成功創建");
-                  // 呼叫 onSave，傳入新創建的內容
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)(
