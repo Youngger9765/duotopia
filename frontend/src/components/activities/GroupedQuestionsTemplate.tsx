@@ -92,6 +92,7 @@ interface GroupedQuestionsTemplateProps {
   progressIds?: number[]; // 每個子問題的 progress_id 數組
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
   readOnly?: boolean; // 唯讀模式
+  externalIsAssessing?: boolean; // 外部控制的評估狀態（自動 AI 分析）
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -109,6 +110,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
   readOnly = false, // 唯讀模式
+  externalIsAssessing = false, // 外部評估狀態
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
 
@@ -157,6 +159,42 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { token } = useStudentAuthStore();
+
+  // Update assessmentResults when initialAssessmentResults changes
+  useEffect(() => {
+    if (
+      initialAssessmentResults &&
+      Object.keys(initialAssessmentResults).length > 0
+    ) {
+      // Check if it has items structure
+      if (
+        initialAssessmentResults.items &&
+        typeof initialAssessmentResults.items === "object"
+      ) {
+        const itemsResults: Record<number, AssessmentResult> = {};
+        const items = initialAssessmentResults.items as Record<string, unknown>;
+
+        Object.keys(items).forEach((key) => {
+          const index = parseInt(key);
+          if (!isNaN(index) && items[key]) {
+            itemsResults[index] = items[key] as AssessmentResult;
+          }
+        });
+
+        setAssessmentResults(itemsResults);
+      } else if (
+        !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
+      ) {
+        setAssessmentResults({
+          0: initialAssessmentResults as AssessmentResult,
+        });
+      } else {
+        setAssessmentResults(
+          initialAssessmentResults as Record<number, AssessmentResult>,
+        );
+      }
+    }
+  }, [initialAssessmentResults]);
 
   // 檢查題目是否已完成 - 目前未使用
   // const isQuestionCompleted = (index: number) => {
@@ -625,6 +663,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setIsPlaying(false);
                           setCurrentTime(0);
                           setDuration(0);
+                          // 清除評估結果
+                          setAssessmentResults((prev) => {
+                            const newResults = { ...prev };
+                            delete newResults[currentQuestionIndex];
+                            return newResults;
+                          });
                           if (
                             onUpdateItemRecording &&
                             currentQuestionIndex !== undefined
@@ -765,10 +809,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 <Button
                   size="sm"
                   onClick={handleAssessment}
-                  disabled={isAssessing}
+                  disabled={isAssessing || externalIsAssessing}
                   className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
                 >
-                  {isAssessing ? (
+                  {isAssessing || externalIsAssessing ? (
                     <>
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                       評估中
@@ -784,25 +828,72 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             ) : null}
             {assessmentResults[currentQuestionIndex] ? (
               <div className="relative">
-                <button
-                  onClick={() => {
-                    setAssessmentResults((prev) => {
-                      const newResults = { ...prev };
-                      delete newResults[currentQuestionIndex];
-                      return newResults;
-                    });
-                  }}
-                  className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                  title="清除評估結果"
+                {/* 評估結果 - 在分析時會被模糊 */}
+                <div
+                  className={`transition-all duration-300 ${isAssessing || externalIsAssessing ? "blur-sm opacity-30" : ""}`}
                 >
-                  <X className="w-4 h-4" />
-                </button>
-                <AIScoreDisplay
-                  key={`assessment-${currentQuestionIndex}`}
-                  scores={assessmentResults[currentQuestionIndex]}
-                  hasRecording={true}
-                  title=""
-                />
+                  <button
+                    onClick={() => {
+                      setAssessmentResults((prev) => {
+                        const newResults = { ...prev };
+                        delete newResults[currentQuestionIndex];
+                        return newResults;
+                      });
+                    }}
+                    className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
+                    title="清除評估結果"
+                    disabled={isAssessing || externalIsAssessing}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <AIScoreDisplay
+                    key={`assessment-${currentQuestionIndex}`}
+                    scores={assessmentResults[currentQuestionIndex]}
+                    hasRecording={true}
+                    title=""
+                  />
+                </div>
+
+                {/* 思考動畫覆蓋層 - 在分析時顯示在最上層 */}
+                {(isAssessing || externalIsAssessing) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-20 rounded-lg">
+                    <div className="text-center text-purple-500">
+                      <div className="relative w-16 h-16 mx-auto mb-4">
+                        {/* 外圈脈動動畫 */}
+                        <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-75"></div>
+                        {/* 中圈脈動動畫 */}
+                        <div className="absolute inset-2 rounded-full bg-purple-200 animate-pulse"></div>
+                        {/* 大腦圖示 - 旋轉動畫 */}
+                        <Brain
+                          className="w-16 h-16 absolute inset-0 animate-spin"
+                          style={{ animationDuration: "3s" }}
+                        />
+                      </div>
+                      <p className="text-base font-medium text-purple-600 animate-pulse">
+                        AI 正在分析中...
+                      </p>
+                      <p className="text-xs text-purple-400 mt-1">請稍候片刻</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : isAssessing || externalIsAssessing ? (
+              <div className="text-center text-purple-500 py-8">
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  {/* 外圈脈動動畫 */}
+                  <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-75"></div>
+                  {/* 中圈脈動動畫 */}
+                  <div className="absolute inset-2 rounded-full bg-purple-200 animate-pulse"></div>
+                  {/* 大腦圖示 - 旋轉動畫 */}
+                  <Brain
+                    className="w-16 h-16 absolute inset-0 animate-spin"
+                    style={{ animationDuration: "3s" }}
+                  />
+                </div>
+                <p className="text-base font-medium text-purple-600 animate-pulse">
+                  AI 正在分析中...
+                </p>
+                <p className="text-xs text-purple-400 mt-1">請稍候片刻</p>
               </div>
             ) : (
               <div className="text-center text-gray-400 py-8">
