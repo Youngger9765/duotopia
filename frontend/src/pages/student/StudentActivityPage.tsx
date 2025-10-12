@@ -67,6 +67,26 @@ interface Activity {
       accuracy_score: number;
       error_type: string;
     }>;
+    // For grouped_questions with multiple items
+    items?: Record<
+      number,
+      {
+        accuracy_score?: number;
+        fluency_score?: number;
+        completeness_score?: number;
+        pronunciation_score?: number;
+        prosody_score?: number;
+        word_details?: Array<{
+          word: string;
+          accuracy_score: number;
+          error_type: string;
+        }>;
+        detailed_words?: unknown[];
+        reference_text?: string;
+        recognized_text?: string;
+        analysis_summary?: unknown;
+      }
+    >;
   };
 }
 
@@ -116,6 +136,8 @@ export default function StudentActivityPage() {
   );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
+  const [isAutoAssessing, setIsAutoAssessing] = useState(false); // Auto AI assessment loading state
+  const autoPlayAudioRef = useRef<HTMLAudioElement | null>(null); // For auto-playing recorded audio
 
   // Set error logging context for audio error tracking
   useEffect(() => {
@@ -640,6 +662,112 @@ export default function StudentActivityPage() {
 
             // Save to server with the URL - autoSave will handle the updated recordings array
             await autoSave();
+
+            // 🎯 自動觸發 AI 評估 (新功能)
+            const referenceText = currentItem.text;
+            if (progress_id && referenceText && audio_url) {
+              console.log("🤖 自動開始 AI 評估...", {
+                progress_id,
+                referenceText,
+                audio_url,
+              });
+
+              try {
+                // 開始播放剛錄好的錄音
+                if (autoPlayAudioRef.current) {
+                  autoPlayAudioRef.current.pause();
+                  autoPlayAudioRef.current = null;
+                }
+
+                const playbackAudio = new Audio(audio_url);
+                autoPlayAudioRef.current = playbackAudio;
+
+                playbackAudio.play().catch((err) => {
+                  console.warn("無法自動播放錄音:", err);
+                });
+
+                // 設置評估中狀態（顯示動畫）
+                setIsAutoAssessing(true);
+                const startTime = Date.now();
+
+                // Convert audio URL to blob for assessment
+                const audioResponse = await fetch(audio_url);
+                const audioBlob = await audioResponse.blob();
+
+                // Create form data for AI assessment
+                const assessFormData = new FormData();
+                assessFormData.append(
+                  "audio_file",
+                  audioBlob,
+                  "recording.webm",
+                );
+                assessFormData.append("reference_text", referenceText);
+                assessFormData.append("progress_id", progress_id.toString());
+
+                toast.info("AI 正在分析您的發音...");
+
+                const assessResponse = await fetch(
+                  `${apiUrl}/api/speech/assess`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: assessFormData,
+                  },
+                );
+
+                if (!assessResponse.ok) {
+                  throw new Error(`AI 評估失敗: ${assessResponse.status}`);
+                }
+
+                const assessResult = await assessResponse.json();
+                console.log("✅ AI 評估完成:", assessResult);
+
+                // 確保至少顯示 2 秒動畫
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, 2000 - elapsedTime);
+
+                await new Promise((resolve) =>
+                  setTimeout(resolve, remainingTime),
+                );
+
+                toast.success("AI 發音評估完成！");
+
+                // Update activities with AI assessment result
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === currentActivity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    // Store AI result in the specific item's ai_assessment
+                    const newItems = [...newActivities[activityIndex].items!];
+                    if (newItems[currentSubQuestionIndex]) {
+                      newItems[currentSubQuestionIndex] = {
+                        ...newItems[currentSubQuestionIndex],
+                        ai_assessment: assessResult,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+
+                // 結束評估狀態
+                setIsAutoAssessing(false);
+              } catch (assessError) {
+                console.error("AI 評估失敗:", assessError);
+                toast.error("AI 評估失敗，但錄音已保存");
+                setIsAutoAssessing(false);
+              }
+            }
           } catch (error) {
             console.error("Failed to upload recording:", error);
 
@@ -1026,6 +1154,7 @@ export default function StudentActivityPage() {
           progressIds={answer?.progressIds}
           initialAssessmentResults={assessmentResults}
           readOnly={isReadOnly}
+          externalIsAssessing={isAutoAssessing}
         />
       );
     }
