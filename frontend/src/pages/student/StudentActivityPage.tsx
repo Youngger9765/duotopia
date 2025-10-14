@@ -20,7 +20,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { retryAudioUpload } from "@/utils/retryHelper";
 import {
   setErrorLoggingContext,
   clearErrorLoggingContext,
@@ -136,8 +135,6 @@ export default function StudentActivityPage() {
   );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
-  const [isAutoAssessing, setIsAutoAssessing] = useState(false); // Auto AI assessment loading state
-  const autoPlayAudioRef = useRef<HTMLAudioElement | null>(null); // For auto-playing recorded audio
 
   // Set error logging context for audio error tracking
   useEffect(() => {
@@ -534,255 +531,9 @@ export default function StudentActivityPage() {
           });
         }
 
-        // Upload to GCS (skip if this is for re-recording)
-        const skipUpload = isReRecording.current;
+        // 📝 錄音完成，等待學生手動上傳
+        console.log("✅ 錄音完成，可以播放或上傳");
         isReRecording.current = false; // Reset flag
-
-        if (!skipUpload) {
-          try {
-            // 獲取當前 item 的 ID
-            const currentItem =
-              currentActivity.items?.[currentSubQuestionIndex];
-            if (!currentItem?.id) {
-              throw new Error("Content item ID not found");
-            }
-
-            const formData = new FormData();
-            formData.append("assignment_id", assignmentId || "");
-            formData.append("content_item_id", currentItem.id.toString()); // 使用 ContentItem 的 ID！
-            formData.append("audio_file", audioBlob, "recording.webm");
-
-            const apiUrl = import.meta.env.VITE_API_URL || "";
-            console.log(
-              "Uploading recording to:",
-              `${apiUrl}/api/students/upload-recording`,
-            );
-
-            const result = await retryAudioUpload(
-              async () => {
-                const uploadResponse = await fetch(
-                  `${apiUrl}/api/students/upload-recording`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: formData,
-                  },
-                );
-
-                if (!uploadResponse.ok) {
-                  const error = new Error(
-                    `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
-                  );
-                  if (uploadResponse.status >= 500) {
-                    // Server errors are retryable
-                    throw error;
-                  }
-                  // Client errors (4xx) should not be retried
-                  throw Object.assign(error, { noRetry: true });
-                }
-
-                return await uploadResponse.json();
-              },
-              (attempt, error) => {
-                console.log(
-                  `上傳失敗，正在重試... (第 ${attempt}/3 次)`,
-                  error,
-                );
-                toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
-              },
-            );
-
-            const { audio_url, message, progress_id } = result;
-            console.log("Recording uploaded successfully:", {
-              url: audio_url,
-              message: message,
-              progress_id: progress_id,
-            });
-
-            // 錄音成功上傳到雲端
-            toast.success("錄音已上傳到雲端");
-
-            // Update with the GCS URL and progress_id
-            setAnswers((prev) => {
-              const newAnswers = new Map(prev);
-              const answer = newAnswers.get(currentActivity.id);
-              if (answer) {
-                if (currentActivity.items && currentActivity.items.length > 0) {
-                  if (!answer.progressIds) answer.progressIds = [];
-
-                  // Ensure progressIds array is long enough
-                  while (answer.progressIds.length <= currentSubQuestionIndex) {
-                    answer.progressIds.push(0);
-                  }
-
-                  // 🔥 關鍵修復：存儲 progress_id 到對應的子問題索引
-                  if (progress_id) {
-                    answer.progressIds[currentSubQuestionIndex] = progress_id;
-                  }
-                } else {
-                  answer.audioUrl = audio_url;
-                  if (progress_id) {
-                    answer.progressId = progress_id;
-                  }
-                }
-                answer.status = "completed";
-              }
-              newAnswers.set(currentActivity.id, answer!);
-              return newAnswers;
-            });
-
-            // Also update activities state with GCS URL
-            if (currentActivity.items && currentActivity.items.length > 0) {
-              setActivities((prevActivities) => {
-                const newActivities = [...prevActivities];
-                const activityIndex = newActivities.findIndex(
-                  (a) => a.id === currentActivity.id,
-                );
-                if (
-                  activityIndex !== -1 &&
-                  newActivities[activityIndex].items
-                ) {
-                  const newItems = [...newActivities[activityIndex].items!];
-                  if (newItems[currentSubQuestionIndex]) {
-                    newItems[currentSubQuestionIndex] = {
-                      ...newItems[currentSubQuestionIndex],
-                      recording_url: audio_url,
-                    };
-                  }
-                  newActivities[activityIndex] = {
-                    ...newActivities[activityIndex],
-                    items: newItems,
-                  };
-                }
-                return newActivities;
-              });
-            }
-
-            // Save to server with the URL - autoSave will handle the updated recordings array
-            await autoSave();
-
-            // 🎯 自動觸發 AI 評估 (新功能)
-            const referenceText = currentItem.text;
-            if (progress_id && referenceText && audio_url) {
-              console.log("🤖 自動開始 AI 評估...", {
-                progress_id,
-                referenceText,
-                audio_url,
-              });
-
-              try {
-                // 開始播放剛錄好的錄音
-                if (autoPlayAudioRef.current) {
-                  autoPlayAudioRef.current.pause();
-                  autoPlayAudioRef.current = null;
-                }
-
-                const playbackAudio = new Audio(audio_url);
-                autoPlayAudioRef.current = playbackAudio;
-
-                playbackAudio.play().catch((err) => {
-                  console.warn("無法自動播放錄音:", err);
-                });
-
-                // 設置評估中狀態（顯示動畫）
-                setIsAutoAssessing(true);
-                const startTime = Date.now();
-
-                // Convert audio URL to blob for assessment
-                const audioResponse = await fetch(audio_url);
-                const audioBlob = await audioResponse.blob();
-
-                // Create form data for AI assessment
-                const assessFormData = new FormData();
-                assessFormData.append(
-                  "audio_file",
-                  audioBlob,
-                  "recording.webm",
-                );
-                assessFormData.append("reference_text", referenceText);
-                assessFormData.append("progress_id", progress_id.toString());
-
-                toast.info("AI 正在分析您的發音...");
-
-                const assessResponse = await fetch(
-                  `${apiUrl}/api/speech/assess`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: assessFormData,
-                  },
-                );
-
-                if (!assessResponse.ok) {
-                  throw new Error(`AI 評估失敗: ${assessResponse.status}`);
-                }
-
-                const assessResult = await assessResponse.json();
-                console.log("✅ AI 評估完成:", assessResult);
-
-                // 確保至少顯示 2 秒動畫
-                const elapsedTime = Date.now() - startTime;
-                const remainingTime = Math.max(0, 2000 - elapsedTime);
-
-                await new Promise((resolve) =>
-                  setTimeout(resolve, remainingTime),
-                );
-
-                toast.success("AI 發音評估完成！");
-
-                // Update activities with AI assessment result
-                setActivities((prevActivities) => {
-                  const newActivities = [...prevActivities];
-                  const activityIndex = newActivities.findIndex(
-                    (a) => a.id === currentActivity.id,
-                  );
-                  if (
-                    activityIndex !== -1 &&
-                    newActivities[activityIndex].items
-                  ) {
-                    // Store AI result in the specific item's ai_assessment
-                    const newItems = [...newActivities[activityIndex].items!];
-                    if (newItems[currentSubQuestionIndex]) {
-                      newItems[currentSubQuestionIndex] = {
-                        ...newItems[currentSubQuestionIndex],
-                        ai_assessment: assessResult,
-                      };
-                    }
-                    newActivities[activityIndex] = {
-                      ...newActivities[activityIndex],
-                      items: newItems,
-                    };
-                  }
-                  return newActivities;
-                });
-
-                // 結束評估狀態
-                setIsAutoAssessing(false);
-              } catch (assessError) {
-                console.error("AI 評估失敗:", assessError);
-                toast.error("AI 評估失敗，但錄音已保存");
-                setIsAutoAssessing(false);
-              }
-            }
-          } catch (error) {
-            console.error("Failed to upload recording:", error);
-
-            // 處理錯誤
-            if (
-              error instanceof TypeError &&
-              error.message === "Failed to fetch"
-            ) {
-              console.error("Network error - cannot upload recording");
-              toast.error("網絡連接失敗，無法上傳錄音");
-            } else {
-              toast.error("錄音上傳失敗，請稍後再試");
-            }
-          }
-        } // End of if (!skipUpload)
       }; // End of recorder.onstop
 
       // Start recording
@@ -1154,7 +905,69 @@ export default function StudentActivityPage() {
           progressIds={answer?.progressIds}
           initialAssessmentResults={assessmentResults}
           readOnly={isReadOnly}
-          externalIsAssessing={isAutoAssessing}
+          assignmentId={assignmentId}
+          onUploadSuccess={(index, gcsUrl, progressId) => {
+            // 更新 activities state
+            setActivities((prevActivities) => {
+              const newActivities = [...prevActivities];
+              const activityIndex = newActivities.findIndex(
+                (a) => a.id === activity.id,
+              );
+              if (activityIndex !== -1 && newActivities[activityIndex].items) {
+                const newItems = [...newActivities[activityIndex].items!];
+                if (newItems[index]) {
+                  newItems[index] = {
+                    ...newItems[index],
+                    recording_url: gcsUrl,
+                  };
+                }
+                newActivities[activityIndex] = {
+                  ...newActivities[activityIndex],
+                  items: newItems,
+                };
+              }
+              return newActivities;
+            });
+
+            // 更新 answers state 的 progressIds
+            setAnswers((prev) => {
+              const newAnswers = new Map(prev);
+              const answer = newAnswers.get(activity.id);
+              if (answer) {
+                if (!answer.progressIds) answer.progressIds = [];
+                while (answer.progressIds.length <= index) {
+                  answer.progressIds.push(0);
+                }
+                answer.progressIds[index] = progressId;
+                answer.status = "completed";
+              }
+              newAnswers.set(activity.id, answer!);
+              return newAnswers;
+            });
+          }}
+          onAssessmentComplete={(index, assessmentResult) => {
+            // 更新 activities state，將 AI 評估結果存入對應 item
+            setActivities((prevActivities) => {
+              const newActivities = [...prevActivities];
+              const activityIndex = newActivities.findIndex(
+                (a) => a.id === activity.id,
+              );
+              if (activityIndex !== -1 && newActivities[activityIndex].items) {
+                const newItems = [...newActivities[activityIndex].items!];
+                if (newItems[index]) {
+                  newItems[index] = {
+                    ...newItems[index],
+                    ai_assessment: assessmentResult,
+                  };
+                }
+                newActivities[activityIndex] = {
+                  ...newActivities[activityIndex],
+                  items: newItems,
+                };
+              }
+              return newActivities;
+            });
+          }}
         />
       );
     }
@@ -1476,80 +1289,106 @@ export default function StudentActivityPage() {
       <div className="w-full px-2 sm:px-4 mt-3">
         <Card>
           <CardHeader className="py-2 sm:py-3">
-            {/* Mobile: Stack title and buttons vertically */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
-                <CardTitle className="text-base sm:text-lg leading-tight">
-                  第 {currentActivity.order} 題：{currentActivity.title}
-                </CardTitle>
-                {getActivityTypeBadge(currentActivity.type)}
-              </div>
-
-              {/* Navigation buttons - Mobile: horizontal layout */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousActivity}
-                  disabled={
-                    currentActivityIndex === 0 && currentSubQuestionIndex === 0
-                  }
-                  className="flex-1 sm:flex-none min-w-0"
-                >
-                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">上一題</span>
-                  <span className="sm:hidden">上一題</span>
-                </Button>
-
-                {(() => {
-                  // Check if it's the last activity
-                  const isLastActivity =
-                    currentActivityIndex === activities.length - 1;
-                  const isLastSubQuestion = currentActivity.items
-                    ? currentSubQuestionIndex ===
-                      currentActivity.items.length - 1
-                    : true;
-
-                  if (isLastActivity && isLastSubQuestion) {
-                    return (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="flex-1 sm:flex-none min-w-0"
-                      >
-                        <span className="hidden sm:inline">
-                          {submitting ? "提交中..." : "提交作業"}
-                        </span>
-                        <span className="sm:hidden">
-                          {submitting ? "提交中" : "提交"}
-                        </span>
-                        <Send className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-                      </Button>
-                    );
-                  }
-
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextActivity}
-                      className="flex-1 sm:flex-none min-w-0"
-                    >
-                      <span className="hidden sm:inline">下一題</span>
-                      <span className="sm:hidden">下一題</span>
-                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-                    </Button>
-                  );
-                })()}
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+              <CardTitle className="text-base sm:text-lg leading-tight">
+                第 {currentActivity.order} 題：{currentActivity.title}
+              </CardTitle>
+              {getActivityTypeBadge(currentActivity.type)}
             </div>
           </CardHeader>
 
           <CardContent className="p-2 sm:p-3">
             {/* Render activity-specific content */}
             {renderActivityContent(currentActivity)}
+
+            {/* Navigation buttons - Show only after assessment complete */}
+            {(() => {
+              // Check if current activity/sub-question is assessed
+              let isAssessed = false;
+
+              if (currentActivity.items && currentActivity.items.length > 0) {
+                // For grouped_questions: check if current sub-question has ai_assessment
+                const currentItem =
+                  currentActivity.items[currentSubQuestionIndex];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                isAssessed = !!(currentItem as any)?.ai_assessment;
+              } else if (currentActivity.type === "reading_assessment") {
+                // For reading_assessment: check if ai_scores exists
+                isAssessed = !!currentActivity.ai_scores;
+              } else if (currentActivity.type === "listening_cloze") {
+                // For listening_cloze: check if answers are provided
+                const answer = answers.get(currentActivity.id);
+                isAssessed = !!(
+                  answer?.userAnswers && answer.userAnswers.length > 0
+                );
+              }
+
+              if (!isAssessed) {
+                return null; // Don't show navigation buttons if not assessed
+              }
+
+              return (
+                <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 pt-4 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousActivity}
+                    disabled={
+                      currentActivityIndex === 0 &&
+                      currentSubQuestionIndex === 0
+                    }
+                    className="flex-1 sm:flex-none min-w-0"
+                  >
+                    <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">上一題</span>
+                    <span className="sm:hidden">上一題</span>
+                  </Button>
+
+                  {(() => {
+                    // Check if it's the last activity
+                    const isLastActivity =
+                      currentActivityIndex === activities.length - 1;
+                    const isLastSubQuestion = currentActivity.items
+                      ? currentSubQuestionIndex ===
+                        currentActivity.items.length - 1
+                      : true;
+
+                    if (isLastActivity && isLastSubQuestion) {
+                      return (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleSubmit}
+                          disabled={submitting}
+                          className="flex-1 sm:flex-none min-w-0"
+                        >
+                          <span className="hidden sm:inline">
+                            {submitting ? "提交中..." : "提交作業"}
+                          </span>
+                          <span className="sm:hidden">
+                            {submitting ? "提交中" : "提交"}
+                          </span>
+                          <Send className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                        </Button>
+                      );
+                    }
+
+                    return (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextActivity}
+                        className="flex-1 sm:flex-none min-w-0"
+                      >
+                        <span className="hidden sm:inline">下一題</span>
+                        <span className="sm:hidden">下一題</span>
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                      </Button>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
