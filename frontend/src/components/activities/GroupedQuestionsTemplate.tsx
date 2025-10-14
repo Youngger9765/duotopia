@@ -15,7 +15,7 @@ import {
   Languages,
   X,
 } from "lucide-react";
-import { retryAIAnalysis } from "@/utils/retryHelper";
+import { retryAIAnalysis, retryAudioUpload } from "@/utils/retryHelper";
 
 interface Question {
   text?: string;
@@ -92,7 +92,12 @@ interface GroupedQuestionsTemplateProps {
   progressIds?: number[]; // 每個子問題的 progress_id 數組
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
   readOnly?: boolean; // 唯讀模式
-  externalIsAssessing?: boolean; // 外部控制的評估狀態（自動 AI 分析）
+  assignmentId?: string; // 作業 ID，用於上傳錄音
+  onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
+  onAssessmentComplete?: (
+    index: number,
+    assessmentResult: AssessmentResult,
+  ) => void; // AI 評估完成回調
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -110,7 +115,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
   readOnly = false, // 唯讀模式
-  externalIsAssessing = false, // 外部評估狀態
+  assignmentId,
+  onUploadSuccess,
+  onAssessmentComplete,
 }: GroupedQuestionsTemplateProps) {
   const currentQuestion = items[currentQuestionIndex];
 
@@ -158,6 +165,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const uploadButtonRef = useRef<HTMLButtonElement | null>(null);
   const { token } = useStudentAuthStore();
 
   // Update assessmentResults when initialAssessmentResults changes
@@ -195,6 +203,25 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       }
     }
   }, [initialAssessmentResults]);
+
+  // 手機版：錄音完成後自動滾動到上傳按鈕
+  useEffect(() => {
+    const hasRecording = items[currentQuestionIndex]?.recording_url;
+    const hasNoAssessment = !assessmentResults[currentQuestionIndex];
+    const isMobile = window.innerWidth < 640; // Tailwind sm breakpoint
+
+    if (hasRecording && hasNoAssessment && !isAssessing && isMobile) {
+      // 延遲一點時間確保按鈕已渲染
+      setTimeout(() => {
+        if (uploadButtonRef.current) {
+          uploadButtonRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 300);
+    }
+  }, [items, currentQuestionIndex, assessmentResults, isAssessing]);
 
   // 檢查題目是否已完成 - 目前未使用
   // const isQuestionCompleted = (index: number) => {
@@ -344,43 +371,105 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const handleAssessment = async () => {
     const audioUrl = items[currentQuestionIndex]?.recording_url;
     const referenceText = currentQuestion?.text;
+    const contentItemId = items[currentQuestionIndex]?.id;
 
     if (!audioUrl || !referenceText) {
       toast.error("請先錄音並確保有參考文本");
       return;
     }
 
+    if (!assignmentId || !contentItemId) {
+      toast.error("缺少作業或題目資訊，無法上傳");
+      return;
+    }
+
     setIsAssessing(true);
     try {
-      // Convert blob URL to blob
-      const response = await fetch(audioUrl as string);
+      let gcsAudioUrl = audioUrl as string;
+      let currentProgressId =
+        progressIds && progressIds[currentQuestionIndex]
+          ? progressIds[currentQuestionIndex]
+          : null;
+
+      // 🔍 檢查是否需要上傳（如果是 blob URL）
+      if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
+        toast.info("正在上傳錄音...");
+
+        // Convert blob URL to blob
+        const response = await fetch(audioUrl as string);
+        const audioBlob = await response.blob();
+
+        // 上傳到 GCS
+        const formData = new FormData();
+        formData.append("assignment_id", assignmentId);
+        formData.append("content_item_id", contentItemId.toString());
+        formData.append("audio_file", audioBlob, "recording.webm");
+
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+        const uploadResult = await retryAudioUpload(
+          async () => {
+            const uploadResponse = await fetch(
+              `${apiUrl}/api/students/upload-recording`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+              },
+            );
+
+            if (!uploadResponse.ok) {
+              const error = new Error(
+                `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
+              );
+              if (uploadResponse.status >= 500) {
+                throw error;
+              }
+              throw Object.assign(error, { noRetry: true });
+            }
+
+            return await uploadResponse.json();
+          },
+          (attempt, error) => {
+            console.log(`上傳失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+          },
+        );
+
+        gcsAudioUrl = uploadResult.audio_url;
+        currentProgressId = uploadResult.progress_id;
+
+        // 通知父元件上傳成功
+        if (onUploadSuccess && currentProgressId) {
+          onUploadSuccess(currentQuestionIndex, gcsAudioUrl, currentProgressId);
+        }
+
+        toast.success("錄音已上傳到雲端");
+      }
+
+      // 🤖 開始 AI 分析
+      toast.info("AI 正在分析您的發音...");
+
+      // Convert GCS URL to blob for AI analysis
+      const response = await fetch(gcsAudioUrl);
       const audioBlob = await response.blob();
 
       // Create form data
       const formData = new FormData();
       formData.append("audio_file", audioBlob, "recording.webm");
       formData.append("reference_text", referenceText);
-      // 🔥 關鍵修復：使用對應子問題的 progress_id
-      const currentProgressId =
-        progressIds && progressIds[currentQuestionIndex]
-          ? progressIds[currentQuestionIndex]
-          : progressId || "1";
+
+      // 🔥 如果還沒有 progress_id，使用 fallback
+      if (!currentProgressId) {
+        currentProgressId = (progressId as number) || 1;
+      }
 
       console.log("🔍 AI評估使用 progress_id:", {
         currentQuestionIndex,
         progressIds,
         progressId,
         currentProgressId,
-      });
-
-      console.log("🚨 詳細 progress_id 除錯:", {
-        "progressIds 陣列": progressIds,
-        "progressIds 長度": progressIds?.length,
-        "progressIds 型別": typeof progressIds,
-        "progressId (fallback)": progressId,
-        currentQuestionIndex: currentQuestionIndex,
-        "計算出的 currentProgressId": currentProgressId,
-        是否為字串: typeof currentProgressId === "string" ? true : false,
       });
 
       formData.append("progress_id", String(currentProgressId));
@@ -471,6 +560,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         ...prev,
         [currentQuestionIndex]: result,
       }));
+
+      // Notify parent component about assessment completion
+      if (onAssessmentComplete) {
+        onAssessmentComplete(currentQuestionIndex, result);
+      }
 
       toast.success("AI 發音評估完成！");
     } catch (error) {
@@ -805,32 +899,52 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             {items[currentQuestionIndex]?.recording_url &&
             !assessmentResults[currentQuestionIndex] ? (
-              <div className="flex justify-end mb-3">
+              <div className="flex justify-center mb-4 py-6">
                 <Button
-                  size="sm"
+                  ref={uploadButtonRef}
+                  size="lg"
                   onClick={handleAssessment}
-                  disabled={isAssessing || externalIsAssessing}
-                  className="bg-purple-600 hover:bg-purple-700 text-white h-7 px-3 text-xs"
+                  disabled={isAssessing}
+                  className="relative bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all"
+                  style={{
+                    animation: isAssessing
+                      ? "none"
+                      : "pulse-scale 1.5s ease-in-out infinite",
+                  }}
                 >
-                  {isAssessing || externalIsAssessing ? (
+                  {isAssessing ? (
                     <>
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      評估中
+                      <Loader2 className="w-7 h-7 mr-3 animate-spin" />
+                      上傳並分析中
                     </>
                   ) : (
                     <>
-                      <Brain className="w-3 h-3 mr-1" />
-                      開始評估
+                      <Brain className="w-7 h-7 mr-3 animate-pulse" />
+                      上傳並分析
                     </>
                   )}
                 </Button>
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                    @keyframes pulse-scale {
+                      0%, 100% {
+                        transform: scale(1);
+                      }
+                      50% {
+                        transform: scale(1.08);
+                      }
+                    }
+                  `,
+                  }}
+                />
               </div>
             ) : null}
             {assessmentResults[currentQuestionIndex] ? (
               <div className="relative">
                 {/* 評估結果 - 在分析時會被模糊 */}
                 <div
-                  className={`transition-all duration-300 ${isAssessing || externalIsAssessing ? "blur-sm opacity-30" : ""}`}
+                  className={`transition-all duration-300 ${isAssessing ? "blur-sm opacity-30" : ""}`}
                 >
                   <button
                     onClick={() => {
@@ -842,7 +956,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     }}
                     className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
                     title="清除評估結果"
-                    disabled={isAssessing || externalIsAssessing}
+                    disabled={isAssessing}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -855,7 +969,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 </div>
 
                 {/* 思考動畫覆蓋層 - 在分析時顯示在最上層 */}
-                {(isAssessing || externalIsAssessing) && (
+                {isAssessing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-20 rounded-lg">
                     <div className="text-center text-purple-500">
                       <div className="relative w-16 h-16 mx-auto mb-4">
@@ -877,7 +991,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   </div>
                 )}
               </div>
-            ) : isAssessing || externalIsAssessing ? (
+            ) : isAssessing ? (
               <div className="text-center text-purple-500 py-8">
                 <div className="relative w-16 h-16 mx-auto mb-4">
                   {/* 外圈脈動動畫 */}
