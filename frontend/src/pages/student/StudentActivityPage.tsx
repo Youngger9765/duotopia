@@ -157,6 +157,11 @@ export default function StudentActivityPage() {
     }
   }, [assignmentId, token]);
 
+  // Scroll to top when switching questions
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentActivityIndex, currentSubQuestionIndex]);
+
   const loadActivities = async () => {
     try {
       setLoading(true);
@@ -1113,8 +1118,8 @@ export default function StudentActivityPage() {
       <div className="sticky top-0 bg-white border-b z-10">
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2">
           {/* Mobile header layout */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex flex-row items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1133,7 +1138,7 @@ export default function StudentActivityPage() {
               </h1>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 justify-end">
+            <div className="flex items-center gap-2 sm:gap-3 justify-end flex-shrink-0">
               {saving && (
                 <div className="flex items-center gap-1 sm:gap-2 text-xs text-gray-600">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -1182,12 +1187,12 @@ export default function StudentActivityPage() {
                   >
                     {/* Content title - Compact for mobile */}
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap max-w-[80px] sm:max-w-none truncate sm:truncate-none">
+                      <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
                         {activity.title}
                       </span>
                       <Badge
                         variant="outline"
-                        className="text-xs px-1 py-0 h-4 sm:h-5 min-w-[30px] text-center"
+                        className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
                       >
                         {activity.items.length}題
                       </Badge>
@@ -1232,9 +1237,9 @@ export default function StudentActivityPage() {
                               }
                             }}
                             className={cn(
-                              "relative w-6 h-6 sm:w-8 sm:h-8 rounded border transition-all",
-                              "flex items-center justify-center text-xs font-medium",
-                              "min-w-[24px] sm:min-w-[32px]", // Ensure minimum width
+                              "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                              "flex items-center justify-center text-sm sm:text-xs font-medium",
+                              "min-w-[32px] sm:min-w-[32px]", // Ensure minimum width
                               // 老師批改的顏色優先級最高
                               needsCorrection
                                 ? "bg-red-100 text-red-800 border-red-400" // 老師批改未通過 - 紅色
