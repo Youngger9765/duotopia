@@ -129,7 +129,6 @@ export default function StudentActivityPage() {
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [canStopRecording, setCanStopRecording] = useState(false); // 🎯 只有收集到資料後才能停止
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
     null,
@@ -369,8 +368,7 @@ export default function StudentActivityPage() {
         if (event.data.size > 0) {
           chunks.push(event.data);
           hasRecordedData.current = true; // 🎯 標記已收集到資料
-          setCanStopRecording(true); // 🎯 啟用停止按鈕
-          console.log("✅ Audio data collected, stop button enabled");
+          console.log("✅ Audio data collected");
         }
       };
 
@@ -545,7 +543,6 @@ export default function StudentActivityPage() {
       recorder.start(1000);
       setMediaRecorder(recorder);
       setIsRecording(true);
-      setCanStopRecording(false); // 🎯 一開始禁用停止按鈕
       setRecordingTime(0);
       recordingTimeRef.current = 0; // 🎯 同步重置 ref
       hasRecordedData.current = false; // 🎯 重置資料收集標記
@@ -587,17 +584,10 @@ export default function StudentActivityPage() {
   };
 
   const stopRecording = () => {
-    // 🎯 只有在真正收集到資料後才能停止
-    if (!canStopRecording) {
-      toast.warning("錄音尚未開始，請稍候...");
-      return;
-    }
-
     if (mediaRecorder && isRecording) {
       mediaRecorder.stop();
       setMediaRecorder(null);
       setIsRecording(false);
-      setCanStopRecording(false); // 重置狀態
 
       if (recordingInterval.current) {
         clearInterval(recordingInterval.current);
@@ -1066,7 +1056,6 @@ export default function StudentActivityPage() {
           // answers={activity.answers} // 目前未使用
           currentQuestionIndex={currentSubQuestionIndex}
           isRecording={isRecording}
-          canStopRecording={canStopRecording}
           recordingTime={recordingTime}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
@@ -1154,7 +1143,6 @@ export default function StudentActivityPage() {
             targetText={activity.target_text}
             audioUrl={answer?.audioUrl}
             isRecording={isRecording}
-            canStopRecording={canStopRecording}
             recordingTime={recordingTime}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
@@ -1211,7 +1199,6 @@ export default function StudentActivityPage() {
             targetText={activity.target_text || activity.content}
             audioUrl={answer?.audioUrl}
             isRecording={isRecording}
-            canStopRecording={canStopRecording}
             recordingTime={recordingTime}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
