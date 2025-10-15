@@ -369,6 +369,9 @@ export default function StudentActivityPage() {
       };
 
       recorder.onstop = async () => {
+        // 🕒 等待 WebM metadata 完成寫入（iOS Safari 需要時間）
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         // 使用 MediaRecorder 實際的 MIME type（支援跨瀏覽器）
         const audioBlob = new Blob(chunks, {
           type: recorder.mimeType || "audio/webm",
@@ -405,40 +408,55 @@ export default function StudentActivityPage() {
         // Create local audio URL for playback
         const localAudioUrl = URL.createObjectURL(audioBlob);
 
-        // 🎯 關鍵：驗證錄音是否可以播放
+        // 🎯 關鍵：驗證錄音是否可以播放（iOS Safari 需要重試）
         try {
           const testAudio = new Audio(localAudioUrl);
 
-          // 等待 metadata 載入（最多等 5 秒）
+          // 重試機制：iOS Safari 的 WebM duration 需要時間載入
           const loadPromise = new Promise<boolean>((resolve) => {
-            const timeout = setTimeout(() => {
-              console.error("⏱️ Audio metadata load timeout");
-              resolve(false);
-            }, 5000);
+            let retryCount = 0;
+            const maxRetries = 10; // 最多重試 10 次
+            const retryDelay = 300; // 每次間隔 300ms
 
-            testAudio.addEventListener("loadedmetadata", () => {
-              clearTimeout(timeout);
+            const checkDuration = () => {
+              retryCount++;
               console.log(
-                "✅ Audio metadata loaded, duration:",
+                `🔍 嘗試讀取 duration (第 ${retryCount}/${maxRetries} 次):`,
                 testAudio.duration,
               );
 
               // 檢查 duration 是否有效（至少 1 秒）
-              // 處理 Safari iOS 的 Infinity 和 NaN 問題
               if (
-                isNaN(testAudio.duration) ||
-                !isFinite(testAudio.duration) || // 排除 Infinity
-                testAudio.duration < 1
+                !isNaN(testAudio.duration) &&
+                isFinite(testAudio.duration) &&
+                testAudio.duration >= 1
               ) {
-                console.error("❌ Invalid audio duration:", testAudio.duration);
-                resolve(false);
-              } else {
+                console.log("✅ Audio duration 驗證成功:", testAudio.duration);
                 resolve(true);
+                return;
               }
+
+              // 如果還沒達到重試上限，繼續重試
+              if (retryCount < maxRetries) {
+                setTimeout(checkDuration, retryDelay);
+              } else {
+                console.error(
+                  "❌ Duration 驗證失敗，已重試",
+                  maxRetries,
+                  "次，最終 duration:",
+                  testAudio.duration,
+                );
+                resolve(false);
+              }
+            };
+
+            testAudio.addEventListener("loadedmetadata", () => {
+              console.log("📊 Metadata loaded, duration:", testAudio.duration);
+              // 開始重試檢查
+              checkDuration();
             });
 
             testAudio.addEventListener("error", (e) => {
-              clearTimeout(timeout);
               console.error("❌ Audio load error:", e);
               resolve(false);
             });
