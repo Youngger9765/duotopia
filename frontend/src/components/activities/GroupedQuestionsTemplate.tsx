@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Languages,
   X,
+  Upload,
 } from "lucide-react";
 import { retryAIAnalysis, retryAudioUpload } from "@/utils/retryHelper";
 
@@ -88,6 +89,7 @@ interface GroupedQuestionsTemplateProps {
   onStartRecording?: () => void;
   onStopRecording?: () => void;
   onUpdateItemRecording?: (index: number, recordingUrl: string) => void; // 更新單一 item 的錄音
+  onFileUpload?: (file: File) => void; // 🎯 檔案上傳回調
   formatTime?: (seconds: number) => string;
   progressId?: number | string;
   progressIds?: number[]; // 每個子問題的 progress_id 數組
@@ -111,6 +113,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onStartRecording,
   onStopRecording,
   onUpdateItemRecording,
+  onFileUpload,
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
   progressId,
@@ -808,8 +811,27 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       >
                         <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
+                      <button
+                        className="w-12 h-12 sm:w-16 sm:h-16 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+                        disabled={readOnly}
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept =
+                            "audio/mpeg,audio/mp4,audio/webm,audio/wav,audio/ogg,.mp3,.m4a,.mp4,.webm,.wav,.ogg";
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement)
+                              .files?.[0];
+                            if (file && onFileUpload) onFileUpload(file);
+                          };
+                          input.click();
+                        }}
+                        title={readOnly ? "檢視模式" : "上傳音檔"}
+                      >
+                        <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </button>
                       <span className="text-sm sm:text-base text-gray-600">
-                        {readOnly ? "檢視模式" : "開始錄音"}
+                        {readOnly ? "檢視模式" : "開始錄音或上傳"}
                       </span>
                     </>
                   )}

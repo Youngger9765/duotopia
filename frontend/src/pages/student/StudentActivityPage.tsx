@@ -626,6 +626,144 @@ export default function StudentActivityPage() {
     startRecording();
   };
 
+  // 🎯 檔案上傳處理
+  const handleFileUpload = async (file: File) => {
+    console.log("📁 File upload:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    // 1. 檔案大小驗證（10MB）
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("檔案過大", {
+        description: `檔案大小不能超過 10MB，目前 ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      });
+      return;
+    }
+
+    // 2. 檔案類型驗證
+    const ALLOWED_TYPES = [
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/webm",
+      "audio/wav",
+      "audio/ogg",
+    ];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error("不支援的檔案格式", {
+        description: "僅支援 MP3、MP4、M4A、WebM、WAV、OGG 格式",
+      });
+      return;
+    }
+
+    // 3. 讀取音檔 duration
+    try {
+      const audio = new Audio();
+      const tempUrl = URL.createObjectURL(file);
+
+      const duration = await new Promise<number>((resolve, reject) => {
+        audio.addEventListener("loadedmetadata", () => {
+          const dur = audio.duration;
+          if (isNaN(dur) || dur === Infinity) {
+            reject(new Error("無法讀取音檔長度"));
+          } else {
+            resolve(dur);
+          }
+        });
+        audio.addEventListener("error", () =>
+          reject(new Error("音檔格式錯誤")),
+        );
+        audio.src = tempUrl;
+      });
+
+      URL.revokeObjectURL(tempUrl);
+
+      // 驗證時長
+      if (duration < 1) {
+        toast.error("錄音時長過短", {
+          description: `時長 ${duration.toFixed(1)} 秒，必須至少 1 秒`,
+        });
+        return;
+      }
+
+      if (duration > 45) {
+        toast.error("錄音時長過長", {
+          description: `時長 ${duration.toFixed(1)} 秒，不能超過 45 秒`,
+        });
+        return;
+      }
+
+      // 4. 轉換成 Blob 和 URL（跟錄音一樣的格式）
+      const audioBlob = new Blob([file], { type: file.type });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const currentActivity = activities[currentActivityIndex];
+
+      // 5. 更新 state（跟錄音完成後一樣）
+      setAnswers((prev) => {
+        const newAnswers = new Map(prev);
+        const answer = newAnswers.get(currentActivity.id) || {
+          progressId: currentActivity.id,
+          status: "not_started",
+          startTime: new Date(),
+          recordings: [],
+          answers: [],
+        };
+
+        // For grouped questions, update item's recording_url locally
+        if (currentActivity.items && currentActivity.items.length > 0) {
+          // 會在下面更新 activities state
+        } else {
+          // For single questions, store directly
+          (answer as Answer).audioBlob = audioBlob;
+          (answer as Answer).audioUrl = audioUrl;
+        }
+
+        answer.status = "in_progress";
+        (answer as Answer).endTime = new Date();
+
+        newAnswers.set(currentActivity.id, answer);
+        return newAnswers;
+      });
+
+      // Update activity's item recording_url for grouped questions
+      if (currentActivity.items && currentActivity.items.length > 0) {
+        setActivities((prevActivities) => {
+          const newActivities = [...prevActivities];
+          const activityIndex = newActivities.findIndex(
+            (a) => a.id === currentActivity.id,
+          );
+          if (activityIndex !== -1 && newActivities[activityIndex].items) {
+            const newItems = [...newActivities[activityIndex].items!];
+            if (newItems[currentSubQuestionIndex]) {
+              newItems[currentSubQuestionIndex] = {
+                ...newItems[currentSubQuestionIndex],
+                recording_url: audioUrl,
+              };
+            }
+            newActivities[activityIndex] = {
+              ...newActivities[activityIndex],
+              items: newItems,
+            };
+          }
+          return newActivities;
+        });
+      }
+
+      toast.success("檔案上傳成功", {
+        description: `${file.name}（${duration.toFixed(1)} 秒）`,
+      });
+
+      console.log("✅ File uploaded successfully");
+    } catch (error) {
+      console.error("❌ File upload failed:", error);
+      toast.error("檔案驗證失敗", {
+        description: error instanceof Error ? error.message : "未知錯誤",
+      });
+    }
+  };
+
   // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -928,6 +1066,7 @@ export default function StudentActivityPage() {
           onUpdateItemRecording={(index, url) =>
             handleUpdateItemRecording(activity.id, index, url)
           }
+          onFileUpload={handleFileUpload}
           formatTime={formatTime}
           progressId={activity.id}
           progressIds={answer?.progressIds}
@@ -1013,6 +1152,7 @@ export default function StudentActivityPage() {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
             onReRecord={reRecord}
+            onFileUpload={handleFileUpload}
             formatTime={formatTime}
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
@@ -1069,6 +1209,7 @@ export default function StudentActivityPage() {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
             onReRecord={reRecord}
+            onFileUpload={handleFileUpload}
             formatTime={formatTime}
             progressId={activity.id}
             readOnly={isReadOnly}

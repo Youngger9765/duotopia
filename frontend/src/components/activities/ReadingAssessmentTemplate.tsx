@@ -2,7 +2,15 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
-import { Mic, MicOff, RotateCcw, CheckCircle, Brain, Star } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  RotateCcw,
+  CheckCircle,
+  Brain,
+  Star,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { retryAIAnalysis } from "@/utils/retryHelper";
 
@@ -25,6 +33,7 @@ interface ReadingAssessmentProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onReRecord: () => void;
+  onFileUpload?: (file: File) => void; // 🎯 檔案上傳回調
   formatTime: (seconds: number) => string;
   exampleAudioUrl?: string;
   progressId?: number;
@@ -41,6 +50,7 @@ export default function ReadingAssessmentTemplate({
   onStartRecording,
   onStopRecording,
   onReRecord,
+  onFileUpload,
   formatTime,
   exampleAudioUrl,
   progressId,
@@ -188,15 +198,36 @@ export default function ReadingAssessmentTemplate({
         </div>
 
         {/* Recording Button */}
-        <div className="flex justify-start">
+        <div className="flex gap-4 justify-start">
           {!isRecording && !audioUrl ? (
-            <button
-              onClick={onStartRecording}
-              className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100" : ""}`}
-              disabled={readOnly}
-            >
-              <Mic className="h-8 w-8" />
-            </button>
+            <>
+              <button
+                onClick={onStartRecording}
+                className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100" : ""}`}
+                disabled={readOnly}
+                title="開始錄音"
+              >
+                <Mic className="h-8 w-8" />
+              </button>
+              <button
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept =
+                    "audio/mpeg,audio/mp4,audio/webm,audio/wav,audio/ogg,.mp3,.m4a,.mp4,.webm,.wav,.ogg";
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file && onFileUpload) onFileUpload(file);
+                  };
+                  input.click();
+                }}
+                className={`bg-green-400 hover:bg-green-500 dark:bg-green-300 dark:hover:bg-green-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-green-400 hover:scale-100" : ""}`}
+                disabled={readOnly}
+                title="上傳音檔"
+              >
+                <Upload className="h-8 w-8" />
+              </button>
+            </>
           ) : isRecording ? (
             <button
               onClick={onStopRecording}
