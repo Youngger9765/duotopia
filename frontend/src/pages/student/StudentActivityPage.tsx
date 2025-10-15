@@ -369,6 +369,10 @@ export default function StudentActivityPage() {
       };
 
       recorder.onstop = async () => {
+        // 📊 儲存實際錄音時長（iOS Safari MP4 無法從 blob 讀取 duration）
+        const actualRecordingDuration = recordingTime;
+        console.log("🎙️ 實際錄音時長:", actualRecordingDuration, "秒");
+
         // 🕒 等待 WebM metadata 完成寫入（iOS Safari 需要時間）
         await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -408,99 +412,42 @@ export default function StudentActivityPage() {
         // Create local audio URL for playback
         const localAudioUrl = URL.createObjectURL(audioBlob);
 
-        // 🎯 關鍵：驗證錄音是否可以播放（iOS Safari 需要重試）
-        try {
-          const testAudio = new Audio(localAudioUrl);
+        // 🎯 驗證錄音時長（使用實際計時而非 blob metadata）
+        // iOS Safari 的 MP4 blob 無法立即讀取 duration metadata
+        if (actualRecordingDuration < 1) {
+          console.error(
+            "⚠️ Recording too short:",
+            actualRecordingDuration,
+            "seconds",
+          );
 
-          // 重試機制：iOS Safari 的 WebM duration 需要時間載入
-          const loadPromise = new Promise<boolean>((resolve) => {
-            let retryCount = 0;
-            const maxRetries = 10; // 最多重試 10 次
-            const retryDelay = 300; // 每次間隔 300ms
-
-            const checkDuration = () => {
-              retryCount++;
-              console.log(
-                `🔍 嘗試讀取 duration (第 ${retryCount}/${maxRetries} 次):`,
-                testAudio.duration,
-              );
-
-              // 檢查 duration 是否有效（至少 1 秒）
-              if (
-                !isNaN(testAudio.duration) &&
-                isFinite(testAudio.duration) &&
-                testAudio.duration >= 1
-              ) {
-                console.log("✅ Audio duration 驗證成功:", testAudio.duration);
-                resolve(true);
-                return;
-              }
-
-              // 如果還沒達到重試上限，繼續重試
-              if (retryCount < maxRetries) {
-                setTimeout(checkDuration, retryDelay);
-              } else {
-                console.error(
-                  "❌ Duration 驗證失敗，已重試",
-                  maxRetries,
-                  "次，最終 duration:",
-                  testAudio.duration,
-                );
-                resolve(false);
-              }
-            };
-
-            testAudio.addEventListener("loadedmetadata", () => {
-              console.log("📊 Metadata loaded, duration:", testAudio.duration);
-              // 開始重試檢查
-              checkDuration();
-            });
-
-            testAudio.addEventListener("error", (e) => {
-              console.error("❌ Audio load error:", e);
-              resolve(false);
-            });
-
-            // 強制載入
-            testAudio.load();
+          // 記錄到 BigQuery
+          const { logAudioError } = await import("@/utils/audioErrorLogger");
+          await logAudioError({
+            errorType: "recording_validation_failed",
+            audioUrl: localAudioUrl,
+            audioSize: audioBlob.size,
+            audioDuration: actualRecordingDuration,
+            contentType: audioBlob.type,
+            assignmentId: parseInt(assignmentId || "0"),
+            errorMessage: `Recording too short: ${actualRecordingDuration} seconds`,
           });
 
-          const isValid = await loadPromise;
-
-          if (!isValid) {
-            console.error("⚠️ Recording validation failed");
-
-            // 記錄到 BigQuery
-            const { logAudioError } = await import("@/utils/audioErrorLogger");
-            await logAudioError({
-              errorType: "recording_validation_failed",
-              audioUrl: localAudioUrl,
-              audioSize: audioBlob.size,
-              audioDuration: 0,
-              contentType: audioBlob.type,
-              assignmentId: parseInt(assignmentId || "0"),
-              errorMessage: "Duration less than 1 second",
-            });
-
-            toast.error("錄音驗證失敗", {
-              description:
-                "錄音時長必須至少 1 秒。請重新錄音並確保說話時間足夠長。",
-            });
-            return;
-          }
-
-          // ✅ 驗證通過
-          console.log("✅ Recording validation passed");
-          toast.success("錄音完成", {
-            description: "錄音已通過驗證，可以正常播放",
-          });
-        } catch (error) {
-          console.error("❌ Recording validation error:", error);
-          toast.error("錄音處理失敗", {
-            description: "無法驗證錄音，請重新錄音",
+          toast.error("錄音時長不足", {
+            description: `錄音時長必須至少 1 秒，目前只有 ${actualRecordingDuration} 秒。請重新錄音。`,
           });
           return;
         }
+
+        // ✅ 時長驗證通過
+        console.log(
+          "✅ Recording duration validation passed:",
+          actualRecordingDuration,
+          "seconds",
+        );
+        toast.success("錄音完成", {
+          description: `錄音時長 ${actualRecordingDuration} 秒，已通過驗證`,
+        });
 
         // Update local state immediately for playback
         setAnswers((prev) => {
