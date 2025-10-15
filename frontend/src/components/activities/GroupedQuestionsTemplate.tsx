@@ -83,6 +83,7 @@ interface GroupedQuestionsTemplateProps {
   // answers?: string[]; // 目前未使用
   currentQuestionIndex?: number;
   isRecording?: boolean;
+  canStopRecording?: boolean; // 🎯 是否可以停止錄音
   recordingTime?: number;
   onStartRecording?: () => void;
   onStopRecording?: () => void;
@@ -105,6 +106,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   // answers = [], // 目前未使用
   currentQuestionIndex = 0,
   isRecording = false,
+  canStopRecording = false, // 🎯 是否可以停止錄音
   recordingTime = 0,
   onStartRecording,
   onStopRecording,
@@ -823,10 +825,15 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     size="sm"
                     variant="outline"
                     onClick={onStopRecording}
-                    className="border-red-600 text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+                    disabled={!canStopRecording}
+                    className={`${
+                      canStopRecording
+                        ? "border-red-600 text-red-600 hover:bg-red-50"
+                        : "border-gray-300 text-gray-400 cursor-not-allowed"
+                    } h-7 px-2 text-xs`}
                   >
                     <Square className="w-3 h-3 mr-1" />
-                    停止
+                    {canStopRecording ? "停止" : "等待中..."}
                   </Button>
                 </>
               )}

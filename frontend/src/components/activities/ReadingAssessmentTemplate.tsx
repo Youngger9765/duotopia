@@ -20,6 +20,7 @@ interface ReadingAssessmentProps {
   targetText: string;
   audioUrl?: string | null;
   isRecording: boolean;
+  canStopRecording?: boolean; // 🎯 是否可以停止錄音
   recordingTime: number;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -35,6 +36,7 @@ export default function ReadingAssessmentTemplate({
   targetText,
   audioUrl,
   isRecording,
+  canStopRecording = false, // 🎯 是否可以停止錄音
   recordingTime,
   onStartRecording,
   onStopRecording,
@@ -198,7 +200,13 @@ export default function ReadingAssessmentTemplate({
           ) : isRecording ? (
             <button
               onClick={onStopRecording}
-              className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500 text-white rounded-full p-6 transition-all duration-200 animate-pulse shadow-lg"
+              disabled={!canStopRecording}
+              className={`${
+                canStopRecording
+                  ? "bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500 animate-pulse"
+                  : "bg-gray-400 cursor-not-allowed"
+              } text-white rounded-full p-6 transition-all duration-200 shadow-lg`}
+              title={canStopRecording ? "停止錄音" : "等待錄音開始..."}
             >
               <MicOff className="h-8 w-8" />
             </button>
