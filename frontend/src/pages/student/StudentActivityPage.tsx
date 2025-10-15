@@ -395,8 +395,9 @@ export default function StudentActivityPage() {
           chunksCount: chunks.length,
         });
 
-        // 🎯 檢查是否收集到錄音資料
-        if (!hasRecordedData.current || chunks.length === 0) {
+        // 🚨 緊急修復：只檢查 chunks，不依賴 hasRecordedData flag
+        // 因為某些瀏覽器/裝置的 ondataavailable 可能不觸發
+        if (chunks.length === 0 || audioBlob.size === 0) {
           console.error(
             "⚠️ No recording data collected - user may have stopped too quickly",
           );
@@ -538,9 +539,9 @@ export default function StudentActivityPage() {
       }; // End of recorder.onstop
 
       // Start recording
-      // 🎯 使用 timeslice=1000 確保每秒都會觸發 ondataavailable
-      // 避免用戶快速停止時 chunks 為空（導致 5 bytes 空檔案）
-      recorder.start(1000);
+      // 🎯 不使用 timeslice，讓瀏覽器決定最佳時機
+      // timeslice 在某些裝置上會導致 ondataavailable 完全不觸發
+      recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
       setRecordingTime(0);
