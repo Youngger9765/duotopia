@@ -129,12 +129,14 @@ export default function StudentActivityPage() {
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
+  const [canStopRecording, setCanStopRecording] = useState(false); // 🎯 只有收集到資料後才能停止
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
     null,
   );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const recordingTimeRef = useRef<number>(0); // 🎯 使用 ref 儲存實際錄音時長，避免 state closure 問題
+  const hasRecordedData = useRef<boolean>(false); // 🎯 追蹤是否已收集到錄音資料
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
 
   // Set error logging context for audio error tracking
@@ -366,6 +368,9 @@ export default function StudentActivityPage() {
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
+          hasRecordedData.current = true; // 🎯 標記已收集到資料
+          setCanStopRecording(true); // 🎯 啟用停止按鈕
+          console.log("✅ Audio data collected, stop button enabled");
         }
       };
 
@@ -388,7 +393,33 @@ export default function StudentActivityPage() {
         console.log("🎤 Recording completed:", {
           size: audioBlob.size,
           type: audioBlob.type,
+          hasData: hasRecordedData.current,
+          chunksCount: chunks.length,
         });
+
+        // 🎯 檢查是否收集到錄音資料
+        if (!hasRecordedData.current || chunks.length === 0) {
+          console.error(
+            "⚠️ No recording data collected - user may have stopped too quickly",
+          );
+
+          // 記錄到 BigQuery
+          const { logAudioError } = await import("@/utils/audioErrorLogger");
+          await logAudioError({
+            errorType: "recording_too_small",
+            audioUrl: "blob:local",
+            audioSize: audioBlob.size,
+            audioDuration: actualRecordingDuration,
+            contentType: audioBlob.type,
+            assignmentId: parseInt(assignmentId || "0"),
+            errorMessage: `No data collected in ${actualRecordingDuration}s - stopped too quickly`,
+          });
+
+          toast.error("錄音失敗", {
+            description: "錄音時間過短，請至少錄音 1 秒以上。",
+          });
+          return;
+        }
 
         // 檢查檔案大小（小於 1KB 可能有問題）
         if (audioBlob.size < 1000) {
@@ -509,11 +540,16 @@ export default function StudentActivityPage() {
       }; // End of recorder.onstop
 
       // Start recording
-      recorder.start();
+      // 🎯 使用 timeslice=1000 確保每秒都會觸發 ondataavailable
+      // 避免用戶快速停止時 chunks 為空（導致 5 bytes 空檔案）
+      recorder.start(1000);
       setMediaRecorder(recorder);
       setIsRecording(true);
+      setCanStopRecording(false); // 🎯 一開始禁用停止按鈕
       setRecordingTime(0);
       recordingTimeRef.current = 0; // 🎯 同步重置 ref
+      hasRecordedData.current = false; // 🎯 重置資料收集標記
+      console.log("🎙️ Recording started, waiting for audio data...");
 
       // Start recording timer with 45 second limit
       let hasReachedLimit = false;
@@ -551,10 +587,17 @@ export default function StudentActivityPage() {
   };
 
   const stopRecording = () => {
+    // 🎯 只有在真正收集到資料後才能停止
+    if (!canStopRecording) {
+      toast.warning("錄音尚未開始，請稍候...");
+      return;
+    }
+
     if (mediaRecorder && isRecording) {
       mediaRecorder.stop();
       setMediaRecorder(null);
       setIsRecording(false);
+      setCanStopRecording(false); // 重置狀態
 
       if (recordingInterval.current) {
         clearInterval(recordingInterval.current);
@@ -878,6 +921,7 @@ export default function StudentActivityPage() {
           // answers={activity.answers} // 目前未使用
           currentQuestionIndex={currentSubQuestionIndex}
           isRecording={isRecording}
+          canStopRecording={canStopRecording}
           recordingTime={recordingTime}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
@@ -964,6 +1008,7 @@ export default function StudentActivityPage() {
             targetText={activity.target_text}
             audioUrl={answer?.audioUrl}
             isRecording={isRecording}
+            canStopRecording={canStopRecording}
             recordingTime={recordingTime}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
@@ -1019,6 +1064,7 @@ export default function StudentActivityPage() {
             targetText={activity.target_text || activity.content}
             audioUrl={answer?.audioUrl}
             isRecording={isRecording}
+            canStopRecording={canStopRecording}
             recordingTime={recordingTime}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
