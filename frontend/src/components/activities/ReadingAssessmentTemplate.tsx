@@ -213,8 +213,7 @@ export default function ReadingAssessmentTemplate({
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
-                  input.accept =
-                    "audio/mpeg,audio/mp4,audio/webm,audio/wav,audio/ogg,.mp3,.m4a,.mp4,.webm,.wav,.ogg";
+                  input.accept = "audio/*,.mp3,.m4a,.mp4,.wav,.webm,.ogg,.aac";
                   input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (file && onFileUpload) onFileUpload(file);
