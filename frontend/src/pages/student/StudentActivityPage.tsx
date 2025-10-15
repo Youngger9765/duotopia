@@ -645,15 +645,22 @@ export default function StudentActivityPage() {
 
     // 2. 檔案類型驗證
     const ALLOWED_TYPES = [
-      "audio/mpeg",
-      "audio/mp4",
-      "audio/webm",
-      "audio/wav",
-      "audio/ogg",
+      "audio/mpeg", // MP3
+      "audio/mp3", // MP3 (alternative)
+      "audio/mp4", // MP4/M4A
+      "audio/x-m4a", // M4A (iOS)
+      "audio/m4a", // M4A (alternative)
+      "video/mp4", // MP4 (iOS 有時會用 video MIME)
+      "audio/webm", // WebM
+      "audio/wav", // WAV
+      "audio/wave", // WAV (alternative)
+      "audio/x-wav", // WAV (alternative)
+      "audio/ogg", // OGG
+      "audio/aac", // AAC (iOS)
     ];
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error("不支援的檔案格式", {
-        description: "僅支援 MP3、MP4、M4A、WebM、WAV、OGG 格式",
+        description: `檔案類型：${file.type}。僅支援 MP3、MP4、M4A、WebM、WAV、OGG 格式`,
       });
       return;
     }
