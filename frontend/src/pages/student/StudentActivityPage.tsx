@@ -134,6 +134,7 @@ export default function StudentActivityPage() {
     null,
   );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimeRef = useRef<number>(0); // 🎯 使用 ref 儲存實際錄音時長，避免 state closure 問題
   const isReRecording = useRef<boolean>(false); // Track if this is a re-recording
 
   // Set error logging context for audio error tracking
@@ -370,7 +371,8 @@ export default function StudentActivityPage() {
 
       recorder.onstop = async () => {
         // 📊 儲存實際錄音時長（iOS Safari MP4 無法從 blob 讀取 duration）
-        const actualRecordingDuration = recordingTime;
+        // 🎯 使用 ref 而非 state，避免 closure 導致讀取到舊的 0 值
+        const actualRecordingDuration = recordingTimeRef.current;
         console.log("🎙️ 實際錄音時長:", actualRecordingDuration, "秒");
 
         // 🕒 等待 WebM metadata 完成寫入（iOS Safari 需要時間）
@@ -511,33 +513,36 @@ export default function StudentActivityPage() {
       setMediaRecorder(recorder);
       setIsRecording(true);
       setRecordingTime(0);
+      recordingTimeRef.current = 0; // 🎯 同步重置 ref
 
       // Start recording timer with 45 second limit
       let hasReachedLimit = false;
       recordingInterval.current = setInterval(() => {
-        setRecordingTime((prev) => {
-          const newTime = prev + 1;
-          // Auto stop at 45 seconds
-          if (newTime >= 45 && !hasReachedLimit) {
-            hasReachedLimit = true;
-            // Clear interval first to prevent further updates
-            if (recordingInterval.current) {
-              clearInterval(recordingInterval.current);
-              recordingInterval.current = null;
-            }
-            // Stop recording after state update
-            setTimeout(() => {
-              if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-                setMediaRecorder(null);
-                setIsRecording(false);
-                toast.info("錄音已達 45 秒上限，自動停止");
-              }
-            }, 0);
-            return 45; // Keep time at 45
+        // 🎯 先更新 ref（確保最新值）
+        recordingTimeRef.current += 1;
+        const newTime = recordingTimeRef.current;
+
+        // 🎯 再更新 state（UI 顯示）
+        setRecordingTime(newTime);
+
+        // Auto stop at 45 seconds
+        if (newTime >= 45 && !hasReachedLimit) {
+          hasReachedLimit = true;
+          // Clear interval first to prevent further updates
+          if (recordingInterval.current) {
+            clearInterval(recordingInterval.current);
+            recordingInterval.current = null;
           }
-          return newTime;
-        });
+          // Stop recording after state update
+          setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+              mediaRecorder.stop();
+              setMediaRecorder(null);
+              setIsRecording(false);
+              toast.info("錄音已達 45 秒上限，自動停止");
+            }
+          }, 0);
+        }
       }, 1000);
     } catch (error) {
       console.error("Failed to start recording:", error);
@@ -555,6 +560,10 @@ export default function StudentActivityPage() {
         clearInterval(recordingInterval.current);
         recordingInterval.current = null;
       }
+
+      // 🎯 注意：不要在這裡重置 recordingTimeRef！
+      // 因為 recorder.onstop 還需要讀取這個值來驗證時長
+      // ref 會在下次 startRecording() 時重置
     }
   };
 
@@ -592,6 +601,7 @@ export default function StudentActivityPage() {
         // Move to next sub-question
         setCurrentSubQuestionIndex(currentSubQuestionIndex + 1);
         setRecordingTime(0);
+        recordingTimeRef.current = 0; // 🎯 同步重置 ref
         return;
       }
     }
@@ -601,6 +611,7 @@ export default function StudentActivityPage() {
       setCurrentActivityIndex(currentActivityIndex + 1);
       setCurrentSubQuestionIndex(0);
       setRecordingTime(0);
+      recordingTimeRef.current = 0; // 🎯 同步重置 ref
     }
   };
 
@@ -614,6 +625,7 @@ export default function StudentActivityPage() {
         // Move to previous sub-question
         setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
         setRecordingTime(0);
+        recordingTimeRef.current = 0; // 🎯 同步重置 ref
         return;
       }
     }
@@ -631,6 +643,7 @@ export default function StudentActivityPage() {
         setCurrentSubQuestionIndex(0);
       }
       setRecordingTime(0);
+      recordingTimeRef.current = 0; // 🎯 同步重置 ref
     }
   };
 
@@ -642,6 +655,7 @@ export default function StudentActivityPage() {
     setCurrentActivityIndex(index);
     setCurrentSubQuestionIndex(subQuestionIndex); // Set to specific sub-question
     setRecordingTime(0);
+    recordingTimeRef.current = 0; // 🎯 同步重置 ref
   };
 
   // Auto-save functionality
