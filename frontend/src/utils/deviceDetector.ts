@@ -47,7 +47,19 @@ export function detectDevice(userAgent: string): DeviceInfo {
   let browser = "Unknown";
   let browserVersion = "";
 
-  if (/Firefox\/(\d+)/.test(ua)) {
+  // 🍎 iOS 專用瀏覽器判斷（必須在 Safari 判斷之前）
+  if (/CriOS\/(\d+)/.test(ua)) {
+    browser = "Chrome";
+    browserVersion = RegExp.$1;
+  } else if (/FxiOS\/(\d+)/.test(ua)) {
+    browser = "Firefox";
+    browserVersion = RegExp.$1;
+  } else if (/EdgiOS\/(\d+)/.test(ua)) {
+    browser = "Edge";
+    browserVersion = RegExp.$1;
+  }
+  // 🖥️ 桌面版瀏覽器判斷
+  else if (/Firefox\/(\d+)/.test(ua)) {
     browser = "Firefox";
     browserVersion = RegExp.$1;
   } else if (/Edg\/(\d+)/.test(ua)) {
