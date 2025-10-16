@@ -601,21 +601,57 @@ export default function StudentActivityPage() {
     }
   };
 
-  const reRecord = () => {
-    const currentActivity = activities[currentActivityIndex];
-    setAnswers((prev) => {
-      const newAnswers = new Map(prev);
-      const answer = newAnswers.get(currentActivity.id);
-      if (answer) {
-        answer.audioBlob = undefined;
-        answer.audioUrl = undefined;
+  // 🎯 錄音完成處理（AudioRecorder 元件回調）
+  const handleRecordingComplete = useCallback(
+    (blob: Blob, url: string) => {
+      const currentActivity = activities[currentActivityIndex];
+
+      // 更新 answers state
+      setAnswers((prev) => {
+        const newAnswers = new Map(prev);
+        const answer = newAnswers.get(currentActivity.id) || {
+          progressId: currentActivity.id,
+          status: "not_started",
+          startTime: new Date(),
+          recordings: [],
+          answers: [],
+        };
+
+        (answer as Answer).audioBlob = blob;
+        (answer as Answer).audioUrl = url;
         answer.status = "in_progress";
+        (answer as Answer).endTime = new Date();
+
+        newAnswers.set(currentActivity.id, answer);
+        return newAnswers;
+      });
+
+      // 更新 activities state (for display)
+      if (currentActivity.items && currentActivity.items.length > 0) {
+        setActivities((prevActivities) => {
+          const newActivities = [...prevActivities];
+          const activityIndex = newActivities.findIndex(
+            (a) => a.id === currentActivity.id,
+          );
+          if (activityIndex !== -1 && newActivities[activityIndex].items) {
+            const newItems = [...newActivities[activityIndex].items!];
+            if (newItems[currentSubQuestionIndex]) {
+              newItems[currentSubQuestionIndex] = {
+                ...newItems[currentSubQuestionIndex],
+                recording_url: url,
+              };
+            }
+            newActivities[activityIndex] = {
+              ...newActivities[activityIndex],
+              items: newItems,
+            };
+          }
+          return newActivities;
+        });
       }
-      newAnswers.set(currentActivity.id, answer!);
-      return newAnswers;
-    });
-    startRecording();
-  };
+    },
+    [activities, currentActivityIndex, currentSubQuestionIndex],
+  );
 
   // 🎯 檔案上傳處理
   const handleFileUpload = async (file: File) => {
@@ -1142,14 +1178,8 @@ export default function StudentActivityPage() {
           <ReadingAssessmentTemplate
             content={activity.content}
             targetText={activity.target_text}
-            audioUrl={answer?.audioUrl}
-            isRecording={isRecording}
-            recordingTime={recordingTime}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onReRecord={reRecord}
-            onFileUpload={handleFileUpload}
-            formatTime={formatTime}
+            existingAudioUrl={answer?.audioUrl}
+            onRecordingComplete={handleRecordingComplete}
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
             readOnly={isReadOnly}
@@ -1198,14 +1228,8 @@ export default function StudentActivityPage() {
           <ReadingAssessmentTemplate
             content={activity.content}
             targetText={activity.target_text || activity.content}
-            audioUrl={answer?.audioUrl}
-            isRecording={isRecording}
-            recordingTime={recordingTime}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onReRecord={reRecord}
-            onFileUpload={handleFileUpload}
-            formatTime={formatTime}
+            existingAudioUrl={answer?.audioUrl}
+            onRecordingComplete={handleRecordingComplete}
             progressId={activity.id}
             readOnly={isReadOnly}
           />

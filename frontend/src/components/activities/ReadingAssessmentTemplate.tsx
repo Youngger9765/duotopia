@@ -2,17 +2,10 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
-import {
-  Mic,
-  MicOff,
-  RotateCcw,
-  CheckCircle,
-  Brain,
-  Star,
-  Upload,
-} from "lucide-react";
+import { Brain, Star, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { retryAIAnalysis } from "@/utils/retryHelper";
+import AudioRecorder from "@/components/shared/AudioRecorder";
 
 interface AssessmentResult {
   overallScore: number;
@@ -26,14 +19,8 @@ interface AssessmentResult {
 interface ReadingAssessmentProps {
   content: string;
   targetText: string;
-  audioUrl?: string | null;
-  isRecording: boolean;
-  recordingTime: number;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
-  onReRecord: () => void;
-  onFileUpload?: (file: File) => void; // 🎯 檔案上傳回調
-  formatTime: (seconds: number) => string;
+  existingAudioUrl?: string | null; // 現有的錄音（例如重刷頁面後）
+  onRecordingComplete?: (blob: Blob, url: string) => void; // 錄音完成回調
   exampleAudioUrl?: string;
   progressId?: number;
   readOnly?: boolean; // 唯讀模式
@@ -42,18 +29,15 @@ interface ReadingAssessmentProps {
 export default function ReadingAssessmentTemplate({
   content,
   targetText,
-  audioUrl,
-  isRecording,
-  recordingTime,
-  onStartRecording,
-  onStopRecording,
-  onReRecord,
-  onFileUpload,
-  formatTime,
+  existingAudioUrl,
+  onRecordingComplete,
   exampleAudioUrl,
   progressId,
   readOnly = false,
 }: ReadingAssessmentProps) {
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(
+    existingAudioUrl || undefined,
+  );
   const [, setIsPlayingExample] = useState(false);
   const [isAssessing, setIsAssessing] = useState(false);
   const [assessmentResult, setAssessmentResult] =
@@ -195,87 +179,24 @@ export default function ReadingAssessmentTemplate({
           <p className="text-lg text-gray-600">{content}</p>
         </div>
 
-        {/* Recording Button */}
-        <div className="flex gap-4 justify-start">
-          {!isRecording && !audioUrl ? (
-            <>
-              <button
-                onClick={onStartRecording}
-                className={`bg-blue-400 hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-blue-400 hover:scale-100" : ""}`}
-                disabled={readOnly}
-                title="開始錄音"
-              >
-                <Mic className="h-8 w-8" />
-              </button>
-              <button
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "audio/*,.mp3,.m4a,.mp4,.wav,.webm,.ogg,.aac";
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file && onFileUpload) onFileUpload(file);
-                  };
-                  input.click();
-                }}
-                className={`bg-green-400 hover:bg-green-500 dark:bg-green-300 dark:hover:bg-green-400 text-white rounded-full p-6 transition-all duration-200 hover:scale-105 shadow-lg ${readOnly ? "opacity-50 cursor-not-allowed hover:bg-green-400 hover:scale-100" : ""}`}
-                disabled={readOnly}
-                title="上傳音檔"
-              >
-                <Upload className="h-8 w-8" />
-              </button>
-            </>
-          ) : isRecording ? (
-            <button
-              onClick={onStopRecording}
-              className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500 animate-pulse text-white rounded-full p-6 transition-all duration-200 shadow-lg"
-              title="停止錄音"
-            >
-              <MicOff className="h-8 w-8" />
-            </button>
-          ) : null}
-        </div>
-
-        {/* Recording Timer */}
-        {isRecording && (
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-red-600 font-medium">
-              錄音中 {formatTime(recordingTime)}
-            </span>
-          </div>
-        )}
-
-        {/* Audio Player After Recording */}
-        {audioUrl && (
-          <div className="space-y-4">
-            <audio controls src={audioUrl} className="w-full h-10" />
-          </div>
-        )}
-
-        {/* Recording Status */}
-        {audioUrl && (
-          <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800 font-medium">已錄音</span>
-            </div>
-          </div>
-        )}
+        {/* 🎯 錄音元件 - 使用統一的 AudioRecorder */}
+        <AudioRecorder
+          existingAudioUrl={audioUrl}
+          onRecordingComplete={(blob, url) => {
+            setAudioUrl(url);
+            onRecordingComplete?.(blob, url);
+          }}
+          readOnly={readOnly}
+          autoStop={45}
+          variant="default"
+          showProgress={true}
+          showTimer={true}
+        />
 
         {/* Bottom Buttons */}
         <div className="flex space-x-4 pt-6">
           {audioUrl && !readOnly && (
             <>
-              <Button
-                variant="outline"
-                onClick={onReRecord}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                重新錄音
-              </Button>
-
               {!assessmentResult && (
                 <Button
                   onClick={handleAssessment}
