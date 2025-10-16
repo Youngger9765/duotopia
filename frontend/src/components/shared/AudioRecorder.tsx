@@ -131,10 +131,43 @@ export default function AudioRecorder({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // 使用策略選擇 MIME type
+      // 使用策略選擇 MIME type，並用 try/catch 確保創建成功
       const mimeType = selectSupportedMimeType(strategy);
-      const options = mimeType ? { mimeType } : {};
-      const mediaRecorder = new MediaRecorder(stream, options);
+      let mediaRecorder: MediaRecorder | null = null;
+
+      // 🍎 iOS 特殊處理：依序嘗試 MIME types
+      const mimeTypesToTry = [mimeType, ...strategy.fallbackMimeTypes].filter(
+        Boolean,
+      );
+
+      for (const tryMimeType of mimeTypesToTry) {
+        try {
+          const options = tryMimeType ? { mimeType: tryMimeType } : {};
+          mediaRecorder = new MediaRecorder(stream, options);
+          console.log(
+            `✅ MediaRecorder created with: ${mediaRecorder.mimeType}`,
+          );
+          break;
+        } catch (err) {
+          console.warn(
+            `❌ Failed to create MediaRecorder with ${tryMimeType}:`,
+            err,
+          );
+        }
+      }
+
+      // 如果所有 MIME types 都失敗，嘗試不指定 MIME type
+      if (!mediaRecorder) {
+        try {
+          mediaRecorder = new MediaRecorder(stream);
+          console.log(
+            `⚠️ MediaRecorder created with browser default: ${mediaRecorder.mimeType}`,
+          );
+        } catch (err) {
+          throw new Error("Failed to create MediaRecorder with any MIME type");
+        }
+      }
+
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -151,8 +184,9 @@ export default function AudioRecorder({
 
       // Handle recording stop
       mediaRecorder.onstop = async () => {
+        // ✅ 直接使用 mediaRecorder.mimeType（不要默認到 audio/webm）
         const audioBlob = new Blob(chunksRef.current, {
-          type: mediaRecorder.mimeType || "audio/webm",
+          type: mediaRecorder!.mimeType,
         });
         const audioUrl = URL.createObjectURL(audioBlob);
 

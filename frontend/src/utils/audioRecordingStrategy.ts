@@ -36,20 +36,20 @@ export function getRecordingStrategy(
 ): RecordingStrategy {
   const device = detectDevice(userAgent);
 
-  // 🍎 iOS Safari - 最問題多的平台
-  if (device.platform === "iOS" && device.browser === "Safari") {
+  // 🍎 iOS 全系列 - 所有 iOS 瀏覽器都用 WebKit
+  if (device.platform === "iOS") {
     return {
       preferredMimeType: "audio/mp4",
-      fallbackMimeTypes: [],
+      fallbackMimeTypes: ["video/mp4"], // video/mp4 可用於純音頻錄製
       useTimeslice: false, // ❌ timeslice 會導致 ondataavailable 不觸發
       useRequestData: true, // ✅ 必須主動要資料
       maxDuration: 45,
       minDuration: 1,
       durationValidation: "filesize-first", // metadata 不可靠，優先用檔案大小
       minFileSize: 10000, // 10KB
-      platformName: "iOS Safari",
+      platformName: `iOS ${device.browser}`,
       notes:
-        "isTypeSupported 不可信，強制使用 MP4，duration metadata 可能是 Infinity",
+        "isTypeSupported 不可信，使用 try/catch 測試，video/mp4 可作為 fallback",
     };
   }
 
@@ -118,20 +118,36 @@ export function getRecordingStrategy(
 
 /**
  * 選擇支援的 MIME type
+ *
+ * Safari (iOS & macOS) 特殊處理：
+ * - isTypeSupported() 不可靠，直接返回策略中的 MIME types
+ * - 優先 audio/mp4，fallback 到 video/mp4
+ * - 讓 AudioRecorder 用 try/catch 確保創建成功
  */
 export function selectSupportedMimeType(strategy: RecordingStrategy): string {
-  // 先試首選
-  if (MediaRecorder.isTypeSupported(strategy.preferredMimeType)) {
-    // 🍎 Safari 例外：即使回傳 true 也要檢查
-    const device = detectDevice(navigator.userAgent);
-    if (
-      device.browser === "Safari" &&
-      strategy.preferredMimeType !== "audio/mp4"
-    ) {
-      console.warn("⚠️ Safari detected but not using MP4, forcing MP4");
-      return "audio/mp4";
-    }
+  const device = detectDevice(navigator.userAgent);
 
+  // 🍎 Safari (iOS & macOS) 特殊處理：不依賴 isTypeSupported
+  if (
+    device.platform === "iOS" ||
+    (device.platform === "macOS" && device.browser === "Safari")
+  ) {
+    console.log(
+      `🍎 Safari detected, using ${strategy.preferredMimeType} (will try fallbacks if needed)`,
+    );
+    return strategy.preferredMimeType;
+  }
+
+  // 檢查 MediaRecorder.isTypeSupported 是否存在
+  if (!MediaRecorder.isTypeSupported) {
+    console.warn(
+      "⚠️ MediaRecorder.isTypeSupported not available, using preferred MIME type",
+    );
+    return strategy.preferredMimeType;
+  }
+
+  // 🖥️ 非 iOS 平台：使用 isTypeSupported 檢查
+  if (MediaRecorder.isTypeSupported(strategy.preferredMimeType)) {
     console.log(`✅ Using preferred MIME type: ${strategy.preferredMimeType}`);
     return strategy.preferredMimeType;
   }
@@ -144,9 +160,11 @@ export function selectSupportedMimeType(strategy: RecordingStrategy): string {
     }
   }
 
-  // 都不支援，讓瀏覽器自己選
-  console.warn("⚠️ No supported MIME type found, using browser default");
-  return "";
+  // 都不支援，返回首選（讓 AudioRecorder 用 try/catch 處理）
+  console.warn(
+    "⚠️ No MIME type reported as supported, will try preferred anyway",
+  );
+  return strategy.preferredMimeType;
 }
 
 /**

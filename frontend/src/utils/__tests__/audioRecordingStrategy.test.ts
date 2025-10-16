@@ -96,26 +96,22 @@ describe("audioRecordingStrategy", () => {
       expect(mimeType).toBe("audio/webm;codecs=opus");
     });
 
-    it("應該在 Safari 強制使用 MP4", () => {
-      // Mock Safari 環境
+    it("應該為 macOS Safari 使用 MP4", () => {
+      const userAgent =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
+
+      // 從 strategy 獲取配置（而不是手動構造）
+      const strategy = getRecordingStrategy(userAgent);
+
+      // macOS Safari 策略應該要求 MP4
+      expect(strategy.preferredMimeType).toBe("audio/mp4");
+
+      // selectSupportedMimeType 應該直接返回策略的首選項（不依賴 isTypeSupported）
+      // 需要 mock navigator.userAgent
       Object.defineProperty(navigator, "userAgent", {
-        value:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+        value: userAgent,
         writable: true,
       });
-
-      const strategy = {
-        preferredMimeType: "audio/webm", // Safari 會說支援，但其實不行
-        fallbackMimeTypes: [],
-        useTimeslice: false,
-        useRequestData: true,
-        maxDuration: 45,
-        minDuration: 1,
-        durationValidation: "filesize-first" as const,
-        minFileSize: 10000,
-        platformName: "macOS Safari",
-        notes: "Test",
-      };
 
       const mimeType = selectSupportedMimeType(strategy);
       expect(mimeType).toBe("audio/mp4");
