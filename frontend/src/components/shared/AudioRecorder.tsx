@@ -7,6 +7,12 @@ import { Mic, MicOff, Square, RotateCcw, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioErrorData } from "@/utils/audioErrorLogger";
 import { toast } from "sonner";
+import {
+  getRecordingStrategy,
+  selectSupportedMimeType,
+  validateDuration,
+  type RecordingStrategy,
+} from "@/utils/audioRecordingStrategy";
 
 interface AudioRecorderProps {
   // Core props
@@ -73,6 +79,7 @@ export default function AudioRecorder({
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const strategyRef = useRef<RecordingStrategy>(getRecordingStrategy());
 
   // Update status from external prop
   useEffect(() => {
@@ -93,30 +100,16 @@ export default function AudioRecorder({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
-  // TODO: 重構錄音邏輯 - 代碼重複問題
-  // 1. 抽出 useMediaRecorder hook 共用邏輯
-  // 2. AudioRecorder.tsx 和 StudentActivityPage.tsx 都使用這個 hook
-  // 3. 避免維護兩份相同的 MediaRecorder 邏輯
-  // See: StudentActivityPage.tsx 有相同的邏輯
-
-  // 🎯 跨瀏覽器格式偵測
-  const getSupportedMimeType = useCallback(() => {
-    const types = [
-      "audio/webm;codecs=opus", // Chrome/Firefox 首選
-      "audio/webm", // Chrome/Firefox 備用
-      "audio/mp4", // Safari/iOS 必須
-      "audio/ogg;codecs=opus", // Firefox 備用
-    ];
-
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        console.log(`✅ AudioRecorder using MIME type: ${type}`);
-        return type;
-      }
+  // Cleanup helper - 消除重複代碼
+  const cleanup = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-
-    console.warn("⚠️ No supported MIME type found, using default");
-    return ""; // 讓瀏覽器自動選擇
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
   }, []);
 
   // Start recording
@@ -124,12 +117,22 @@ export default function AudioRecorder({
     if (readOnly || disabled) return;
 
     try {
+      // 取得當前平台的錄音策略
+      const strategy = getRecordingStrategy();
+      strategyRef.current = strategy;
+
+      console.log(`Recording strategy for ${strategy.platformName}:`, {
+        mimeType: strategy.preferredMimeType,
+        useRequestData: strategy.useRequestData,
+        validation: strategy.durationValidation,
+      });
+
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Create media recorder with auto-detected MIME type
-      const mimeType = getSupportedMimeType();
+      // 使用策略選擇 MIME type
+      const mimeType = selectSupportedMimeType(strategy);
       const options = mimeType ? { mimeType } : {};
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -160,16 +163,19 @@ export default function AudioRecorder({
           duration: recordingTime,
         });
 
-        // 檢查檔案大小（小於 1KB 可能有問題）
-        if (audioBlob.size < 1000) {
-          console.error("⚠️ Recording file too small:", audioBlob.size);
+        // 使用策略的最小檔案大小檢查
+        const strategy = strategyRef.current;
+        if (audioBlob.size < strategy.minFileSize) {
+          console.error(
+            "Recording file too small:",
+            audioBlob.size,
+            `(min: ${strategy.minFileSize})`,
+          );
 
-          // 顯示錯誤訊息給使用者
           toast.error("錄音失敗", {
             description: "錄音檔案異常，請重新錄音",
           });
 
-          // 通知父元件處理錯誤
           if (onError) {
             onError({
               errorType: "recording_too_small",
@@ -182,121 +188,54 @@ export default function AudioRecorder({
 
           setStatus("error");
           setIsRecording(false);
-
-          // Clean up
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
-          }
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
+          cleanup();
           return;
         }
 
-        // 🎯 關鍵：驗證錄音是否可以播放
+        // 使用策略層的驗證函數
         try {
-          const testAudio = new Audio(audioUrl);
+          const validationResult = await validateDuration(
+            audioBlob,
+            audioUrl,
+            strategy,
+          );
 
-          // 等待 metadata 載入（最多等 5 秒）
-          const loadPromise = new Promise<boolean>((resolve) => {
-            const timeout = setTimeout(() => {
-              console.error("⏱️ Audio metadata load timeout");
-              resolve(false);
-            }, 5000);
+          if (!validationResult.valid) {
+            console.error("Recording validation failed");
 
-            testAudio.addEventListener("loadedmetadata", () => {
-              clearTimeout(timeout);
-              console.log(
-                "✅ Audio metadata loaded, duration:",
-                testAudio.duration,
-              );
-
-              // 檢查 duration 是否有效（處理 Safari iOS Infinity 問題）
-              if (
-                !testAudio.duration ||
-                isNaN(testAudio.duration) ||
-                !isFinite(testAudio.duration) || // 排除 Infinity
-                testAudio.duration === 0
-              ) {
-                console.error("❌ Invalid audio duration:", testAudio.duration);
-                resolve(false);
-              } else {
-                resolve(true);
-              }
-            });
-
-            testAudio.addEventListener("error", (e) => {
-              clearTimeout(timeout);
-              console.error("❌ Audio load error:", e);
-              resolve(false);
-            });
-
-            // 強制載入
-            testAudio.load();
-          });
-
-          const isValid = await loadPromise;
-
-          if (!isValid) {
-            console.error("⚠️ Recording validation failed");
-
-            // 顯示錯誤訊息給使用者
             toast.error("錄音驗證失敗", {
-              description:
-                "錄音可能無法正常播放，請重新錄音。建議檢查麥克風設定或嘗試使用 Chrome 瀏覽器。",
+              description: "錄音檔案異常，請重新錄音",
             });
 
-            // 通知父元件處理錯誤
             if (onError) {
               onError({
                 errorType: "recording_validation_failed",
                 audioUrl: audioUrl,
                 audioSize: audioBlob.size,
-                audioDuration: 0,
+                audioDuration: validationResult.duration,
                 contentType: audioBlob.type,
               });
             }
 
             setStatus("error");
             setIsRecording(false);
-
-            // Clean up
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach((track) => track.stop());
-              streamRef.current = null;
-            }
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
+            cleanup();
             return;
           }
 
-          // ✅ 驗證通過，設定錄音
-          console.log("✅ Recording validation passed");
+          // 驗證通過，設定錄音
+          console.log(
+            `Recording validation passed (${validationResult.method}): ${validationResult.duration.toFixed(1)}s`,
+          );
 
-          // 顯示成功訊息
           toast.success("錄音完成", {
-            description: "錄音已通過驗證，可以正常播放",
+            description: `錄音時長 ${validationResult.duration.toFixed(1)} 秒`,
           });
 
           setLocalAudioUrl(audioUrl);
           setStatus("completed");
           setIsRecording(false);
-
-          // Clean up stream
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
-          }
-
-          // Clear timer
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
+          cleanup();
 
           // Callback with recording
           if (onRecordingComplete) {
@@ -307,7 +246,7 @@ export default function AudioRecorder({
             onRecordingStop();
           }
         } catch (error) {
-          console.error("❌ Recording validation error:", error);
+          console.error("Recording validation error:", error);
 
           // 顯示錯誤訊息給使用者
           toast.error("錄音處理失敗", {
@@ -327,16 +266,7 @@ export default function AudioRecorder({
 
           setStatus("error");
           setIsRecording(false);
-
-          // Clean up
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
-          }
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
+          cleanup();
         }
       };
 
@@ -379,11 +309,17 @@ export default function AudioRecorder({
     onRecordingStart,
     onRecordingStop,
     autoStop,
+    cleanup,
+    recordingTime,
   ]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
+      // 主動要求資料（防止 ondataavailable 不觸發）
+      if (mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.requestData();
+      }
       mediaRecorderRef.current.stop();
     }
   }, [isRecording]);
