@@ -1634,7 +1634,9 @@ export default function ReadingAssessmentPanel({
         }
 
         if (autoTranslate) {
-          const translations = await apiClient.batchTranslate(lines, "chinese");
+          const result = await apiClient.batchTranslate(lines, "zh-TW");
+          const translations =
+            (result as { translations?: string[] }).translations || result;
           if (Array.isArray(translations)) {
             newItems = newItems.map((item, i) => ({
               ...item,
@@ -1682,16 +1684,12 @@ export default function ReadingAssessmentPanel({
         );
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
-        const newContent = await apiClient.createContent(lessonId, {
+        await apiClient.createContent(lessonId, {
           type: "reading_assessment",
           ...saveData,
         });
         toast.success(`已新增 ${lines.length} 個項目並創建內容`);
-        // 呼叫 onSave，傳入新創建的內容
-        if (onSave) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (onSave as (content?: any) => void | Promise<void>)(newContent);
-        }
+        // 🔥 不要呼叫 onSave 避免重新載入，直接顯示結果
       } else {
         // 沒有 contentId 也沒有 lessonId，只更新前端
         toast.success(
@@ -1838,47 +1836,62 @@ export default function ReadingAssessmentPanel({
         open={batchPasteDialogOpen}
         onOpenChange={setBatchPasteDialogOpen}
       >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>批次貼上素材</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              批次貼上素材
+            </DialogTitle>
+            <p className="text-sm text-gray-500 mt-2">
+              每行一個項目，支援自動生成 TTS 與翻譯
+            </p>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                請貼上內容（每行一個項目）：
+              <label className="text-base font-semibold text-gray-800 mb-3 block">
+                請貼上內容：
               </label>
               <textarea
                 value={batchPasteText}
                 onChange={(e) => setBatchPasteText(e.target.value)}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
-                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                className="w-full h-80 px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
               />
+              <div className="text-xs text-gray-500 mt-2">
+                {batchPasteText.split("\n").filter((line) => line.trim())
+                  .length || 0}{" "}
+                個項目
+              </div>
             </div>
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2">
+            <div className="flex gap-6 p-4 bg-gray-50 rounded-lg">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={batchPasteAutoTTS}
                   onChange={(e) => setBatchPasteAutoTTS(e.target.checked)}
-                  className="rounded"
+                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm">自動生成 TTS</span>
+                <span className="text-base font-medium text-gray-700">
+                  自動生成 TTS
+                </span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={batchPasteAutoTranslate}
                   onChange={(e) => setBatchPasteAutoTranslate(e.target.checked)}
-                  className="rounded"
+                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm">自動翻譯</span>
+                <span className="text-base font-medium text-gray-700">
+                  自動翻譯
+                </span>
               </label>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-6">
             <Button
               variant="outline"
               onClick={() => setBatchPasteDialogOpen(false)}
+              className="px-6 py-2 text-base"
             >
               取消
             </Button>
@@ -1886,6 +1899,7 @@ export default function ReadingAssessmentPanel({
               onClick={() =>
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
+              className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
               確認貼上
             </Button>
