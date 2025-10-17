@@ -78,7 +78,7 @@ class TranslationService:
         self, texts: List[str], target_lang: str = "zh-TW"
     ) -> List[str]:
         """
-        批次翻譯多個文本
+        批次翻譯多個文本（使用 JSON 格式確保穩定快速）
 
         Args:
             texts: 要翻譯的文本列表
@@ -90,31 +90,36 @@ class TranslationService:
         self._ensure_client()
 
         try:
-            # 將所有文本組合成一個請求以節省 API 呼叫
-            combined_text = "\n---\n".join(texts)
+            # 使用 JSON 格式以確保解析穩定性
+            import json
+
+            texts_json = json.dumps(texts, ensure_ascii=False)
 
             if target_lang == "zh-TW":
-                prompt = f"""請將以下英文句子翻譯成繁體中文。
-每個句子之間用 --- 分隔。
-請保持相同的格式，每個翻譯也用 --- 分隔。
-只回覆翻譯結果，不要加任何說明或編號。
+                prompt = f"""請將以下 JSON 陣列中的英文翻譯成繁體中文。
+直接返回 JSON 陣列格式，每個翻譯對應一個項目。
+只返回 JSON 陣列，不要任何其他文字或說明。
 
-{combined_text}"""
+輸入: {texts_json}
+
+要求: 返回格式必須是 ["翻譯1", "翻譯2", ...]"""
             elif target_lang == "en":
-                prompt = f"""Please provide simple English definitions for the following words or phrases.
-Each word/phrase is separated by ---.
-Keep the same format, separate each definition with ---.
+                prompt = f"""Please provide simple English definitions for the following JSON array of words/phrases.
+Return as a JSON array with each definition as one item.
 Keep definitions concise (1-2 sentences) and suitable for language learners.
-Only return the definitions without any explanation or numbering.
+Only return the JSON array, no other text.
 
-{combined_text}"""
+Input: {texts_json}
+
+Required: Return format must be ["definition1", "definition2", ...]"""
             else:
-                prompt = f"""Please translate the following sentences to {target_lang}.
-Each sentence is separated by ---.
-Keep the same format, separate each translation with ---.
-Only return the translations without any explanation or numbering.
+                prompt = f"""Please translate the following JSON array to {target_lang}.
+Return as a JSON array with each translation as one item.
+Only return the JSON array, no other text.
 
-{combined_text}"""
+Input: {texts_json}
+
+Required: Return format must be ["translation1", "translation2", ...]"""
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -122,19 +127,28 @@ Only return the translations without any explanation or numbering.
                     {
                         "role": "system",
                         "content": (
-                            "You are a professional translator. Maintain the exact "
-                            "format with --- separators."
+                            "You are a professional translator. Always return results "
+                            "as a valid JSON array with the exact same number of items as input. "
+                            "Return ONLY the JSON array, no markdown, no explanation."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=500,  # 批次翻譯需要更多 tokens
+                max_tokens=1000,  # 增加 tokens 以支援更多翻譯
             )
 
-            # 分割翻譯結果
-            translations = response.choices[0].message.content.strip().split("---")
-            translations = [t.strip() for t in translations if t.strip()]
+            # 解析 JSON 回應
+            import re
+
+            content = response.choices[0].message.content.strip()
+
+            # 移除可能的 markdown 代碼塊標記
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            translations = json.loads(content)
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
@@ -142,7 +156,7 @@ Only return the translations without any explanation or numbering.
                     f"Warning: Expected {len(texts)} translations, got {len(translations)}. "
                     f"Falling back to individual translation."
                 )
-                # Fallback: 逐句翻譯（確保成功）
+                # Fallback: 逐句翻譯
                 import asyncio
 
                 tasks = [self.translate_text(text, target_lang) for text in texts]
@@ -153,7 +167,7 @@ Only return the translations without any explanation or numbering.
             print(
                 f"Batch translation error: {e}. Falling back to individual translation."
             )
-            # Fallback: 逐句翻譯（確保成功）
+            # Fallback: 逐句翻譯
             import asyncio
 
             tasks = [self.translate_text(text, target_lang) for text in texts]
