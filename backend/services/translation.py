@@ -139,16 +139,26 @@ Only return the translations without any explanation or numbering.
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
                 print(
-                    f"Warning: Expected {len(texts)} translations, got {len(translations)}"
+                    f"Warning: Expected {len(texts)} translations, got {len(translations)}. "
+                    f"Falling back to individual translation."
                 )
-                # 如果數量不匹配，返回原文
-                return texts
+                # Fallback: 逐句翻譯（確保成功）
+                import asyncio
+
+                tasks = [self.translate_text(text, target_lang) for text in texts]
+                translations = await asyncio.gather(*tasks)
 
             return translations
         except Exception as e:
-            print(f"Batch translation error: {e}")
-            # 如果翻譯失敗，返回原文列表
-            return texts
+            print(
+                f"Batch translation error: {e}. Falling back to individual translation."
+            )
+            # Fallback: 逐句翻譯（確保成功）
+            import asyncio
+
+            tasks = [self.translate_text(text, target_lang) for text in texts]
+            translations = await asyncio.gather(*tasks)
+            return translations
 
 
 # 創建全局實例
