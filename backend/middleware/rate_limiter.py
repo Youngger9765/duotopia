@@ -128,9 +128,9 @@ class RateLimitMiddleware:
 
     # 不同端點的速率限制設定
     ENDPOINT_LIMITS = {
-        "/api/auth/": (5, 60),  # 登入：5 次/分鐘
-        "/api/auth/teacher/login": (5, 60),
-        "/api/auth/student/login": (5, 60),
+        "/api/auth/": (3, 60),  # 登入：3 次/分鐘 (DDoS 防護)
+        "/api/auth/teacher/login": (3, 60),
+        "/api/auth/student/login": (3, 60),
         "/api/programs/": (30, 60),  # 一般 API：30 次/分鐘
         "/api/teachers/": (30, 60),
         "/api/students/": (30, 60),

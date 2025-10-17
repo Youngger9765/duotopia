@@ -1,8 +1,7 @@
 """
-Text-to-Speech service using edge-tts (free Microsoft Edge TTS)
+Text-to-Speech service using Azure Speech Service (Official Microsoft TTS)
 """
 
-import edge_tts
 import asyncio
 import tempfile
 import os
@@ -10,11 +9,12 @@ from typing import Optional  # noqa: F401
 from google.cloud import storage
 import uuid
 from datetime import datetime  # noqa: F401
+import azure.cognitiveservices.speech as speechsdk
 
 
 class TTSService:
     def __init__(self):
-        # 可用的語音列表
+        # 可用的語音列表 (Azure Neural Voices)
         self.voices = {
             "en-US": {
                 "male": "en-US-ChristopherNeural",
@@ -24,6 +24,13 @@ class TTSService:
             "en-GB": {"male": "en-GB-RyanNeural", "female": "en-GB-SoniaNeural"},
             "en-AU": {"male": "en-AU-WilliamNeural", "female": "en-AU-NatashaNeural"},
         }
+
+        # Azure Speech 設定
+        self.azure_speech_key = os.getenv("AZURE_SPEECH_KEY")
+        self.azure_speech_region = os.getenv("AZURE_SPEECH_REGION", "eastasia")
+
+        if not self.azure_speech_key:
+            raise ValueError("AZURE_SPEECH_KEY environment variable is not set")
 
         # GCS 設定
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
@@ -35,6 +42,18 @@ class TTSService:
             self.storage_client = storage.Client()
         return self.storage_client
 
+    def _convert_rate_to_prosody(self, rate: str) -> str:
+        """
+        將 rate 字串轉換為 Azure SSML prosody rate
+        '+0%' -> '1.0', '+10%' -> '1.1', '-10%' -> '0.9'
+        """
+        try:
+            percent = int(rate.replace("%", "").replace("+", ""))
+            prosody_rate = 1.0 + (percent / 100.0)
+            return f"{prosody_rate:.2f}"
+        except (ValueError, AttributeError):
+            return "1.0"
+
     async def generate_tts(
         self,
         text: str,
@@ -43,7 +62,7 @@ class TTSService:
         volume: str = "+0%",
     ) -> str:
         """
-        生成 TTS 音檔並上傳到 GCS
+        生成 TTS 音檔並上傳到 GCS (使用 Azure Speech Service)
 
         Args:
             text: 要轉換的文字
@@ -55,8 +74,11 @@ class TTSService:
             音檔 GCS URL
         """
         try:
-            # 創建 TTS 通訊
-            communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume)
+            # 配置 Azure Speech
+            speech_config = speechsdk.SpeechConfig(
+                subscription=self.azure_speech_key, region=self.azure_speech_region
+            )
+            speech_config.speech_synthesis_voice_name = voice
 
             # 生成唯一檔名
             file_id = str(uuid.uuid4())
@@ -65,23 +87,35 @@ class TTSService:
 
             # 使用臨時檔案
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-                await communicate.save(tmp_file.name)
-
-                # 上傳到 GCS (必須成功)
-                client = self._get_storage_client()
-                bucket = client.bucket(self.bucket_name)
-                blob = bucket.blob(f"tts/{filename}")
-
-                blob.upload_from_filename(tmp_file.name)
-                blob.make_public()
-
-                # 清理臨時檔案
-                os.unlink(tmp_file.name)
-
-                # 返回公開 URL
-                return (
-                    f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                # 配置音檔輸出
+                audio_config = speechsdk.audio.AudioOutputConfig(filename=tmp_file.name)
+                synthesizer = speechsdk.SpeechSynthesizer(
+                    speech_config=speech_config, audio_config=audio_config
                 )
+
+                # 生成 TTS（同步操作，需在 executor 中執行）
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, synthesizer.speak_text, text)
+
+                # 檢查結果
+                if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+                    # 上傳到 GCS
+                    client = self._get_storage_client()
+                    bucket = client.bucket(self.bucket_name)
+                    blob = bucket.blob(f"tts/{filename}")
+
+                    blob.upload_from_filename(tmp_file.name)
+                    blob.make_public()
+
+                    # 清理臨時檔案
+                    os.unlink(tmp_file.name)
+
+                    # 返回公開 URL
+                    return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                else:
+                    # 清理臨時檔案
+                    os.unlink(tmp_file.name)
+                    raise Exception(f"Azure TTS failed: {result.reason}")
 
         except Exception as e:
             raise Exception(f"TTS generation failed: {str(e)}")
@@ -112,7 +146,7 @@ class TTSService:
 
     async def get_available_voices(self, language: str = "en") -> list[dict]:
         """
-        取得可用的語音列表
+        取得可用的語音列表 (Azure Speech)
 
         Args:
             language: 語言代碼 (e.g., 'en', 'zh')
@@ -120,19 +154,54 @@ class TTSService:
         Returns:
             語音列表
         """
-        voices = await edge_tts.list_voices()
+        # Azure Speech 語音列表（精選常用語音）
+        all_voices = [
+            {
+                "name": "en-US-JennyNeural",
+                "display_name": "Jenny (US Female)",
+                "gender": "Female",
+                "locale": "en-US",
+            },
+            {
+                "name": "en-US-ChristopherNeural",
+                "display_name": "Christopher (US Male)",
+                "gender": "Male",
+                "locale": "en-US",
+            },
+            {
+                "name": "en-US-AnaNeural",
+                "display_name": "Ana (US Child)",
+                "gender": "Female",
+                "locale": "en-US",
+            },
+            {
+                "name": "en-GB-SoniaNeural",
+                "display_name": "Sonia (UK Female)",
+                "gender": "Female",
+                "locale": "en-GB",
+            },
+            {
+                "name": "en-GB-RyanNeural",
+                "display_name": "Ryan (UK Male)",
+                "gender": "Male",
+                "locale": "en-GB",
+            },
+            {
+                "name": "en-AU-NatashaNeural",
+                "display_name": "Natasha (AU Female)",
+                "gender": "Female",
+                "locale": "en-AU",
+            },
+            {
+                "name": "en-AU-WilliamNeural",
+                "display_name": "William (AU Male)",
+                "gender": "Male",
+                "locale": "en-AU",
+            },
+        ]
 
         # 過濾指定語言的語音
-        filtered_voices = [
-            {
-                "name": v["Name"],
-                "display_name": v["ShortName"],
-                "gender": v["Gender"],
-                "locale": v["Locale"],
-            }
-            for v in voices
-            if v["Locale"].startswith(language)
-        ]
+        filtered_voices = [v for v in all_voices if v["locale"].startswith(language)]
 
         return filtered_voices
 
