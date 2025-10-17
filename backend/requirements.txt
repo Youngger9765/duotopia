@@ -24,10 +24,9 @@ pydantic[email]==2.5.0
 
 # External Services
 openai==1.57.4
-edge-tts==7.2.3
 google-cloud-storage==2.13.0
 google-cloud-bigquery==3.14.1
-azure-cognitiveservices-speech==1.45.0
+azure-cognitiveservices-speech==1.45.0  # Official Azure TTS (replaces edge-tts)
 
 # Audio Processing
 pydub==0.25.1

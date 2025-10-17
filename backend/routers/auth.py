@@ -53,7 +53,7 @@ class RegisterResponse(BaseModel):
 
 # ============ Teacher Authentication ============
 @router.post("/teacher/login", response_model=TokenResponse)
-@limiter.limit("5/minute")  # 每分鐘最多 5 次登入嘗試
+@limiter.limit("3/minute")  # 每分鐘最多 3 次登入嘗試 (DDoS 防護)
 async def teacher_login(
     request: Request, login_req: TeacherLoginRequest, db: Session = Depends(get_db)
 ):
@@ -230,7 +230,7 @@ async def resend_verification_email(request: dict, db: Session = Depends(get_db)
 
 # ============ Student Authentication ============
 @router.post("/student/login", response_model=TokenResponse)
-@limiter.limit("5/minute")  # 每分鐘最多 5 次登入嘗試
+@limiter.limit("3/minute")  # 每分鐘最多 3 次登入嘗試 (DDoS 防護)
 async def student_login(
     request: Request, login_req: StudentLoginRequest, db: Session = Depends(get_db)
 ):
