@@ -112,6 +112,33 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     }, 100);
   };
 
+  // 🔧 修復：正確取得 token
+  const getAuthToken = (): string | null => {
+    // 優先學生 token
+    const studentAuth = localStorage.getItem("student-auth-storage");
+    if (studentAuth) {
+      try {
+        const { state } = JSON.parse(studentAuth);
+        if (state?.token) return state.token;
+      } catch (e) {
+        console.error("Failed to parse student auth:", e);
+      }
+    }
+
+    // 檢查老師 token
+    const teacherAuth = localStorage.getItem("teacher-auth-storage");
+    if (teacherAuth) {
+      try {
+        const { state } = JSON.parse(teacherAuth);
+        if (state?.token) return state.token;
+      } catch (e) {
+        console.error("Failed to parse teacher auth:", e);
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) {
       toast.error("請檢查信用卡資訊是否完整");
@@ -153,6 +180,15 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       console.log("Prime token 取得成功:", prime.substring(0, 20) + "...");
 
       try {
+        // 🔧 修復：取得正確的 auth token
+        const authToken = getAuthToken();
+        if (!authToken) {
+          onPaymentError("請先登入");
+          toast.error("請先登入");
+          setIsProcessing(false);
+          return;
+        }
+
         // Real TapPay payment processing
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/payment/process`,
@@ -160,7 +196,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${authToken}`,
             },
             body: JSON.stringify({
               prime: prime,
