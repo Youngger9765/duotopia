@@ -33,8 +33,21 @@ async def get_current_teacher(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
     """取得當前登入的教師"""
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # 🔍 診斷 logging
+    logger.info("🔍 get_current_teacher called")
+    logger.info(f"🔍 Token received: {token[:30] if token else 'None'}...")
+
     payload = verify_token(token)
+    logger.info(f"🔍 Token verification result: {payload}")
+
     if not payload:
+        logger.error(
+            f"❌ Token verification failed! Token: {token[:30] if token else 'None'}..."
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
