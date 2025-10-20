@@ -137,8 +137,10 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {/* Demo Mode Button - Only show for demo@duotopia.com */}
-            {dashboardData.teacher.email === "demo@duotopia.com" && (
+            {/* Test Mode Button - Show for test accounts */}
+            {(dashboardData.teacher.email === "demo@duotopia.com" ||
+              dashboardData.teacher.email === "trial@duotopia.com" ||
+              dashboardData.teacher.email === "expired@duotopia.com") && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
                   onClick={() => navigate("/test-sub")}
