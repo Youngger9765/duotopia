@@ -566,6 +566,131 @@ class EmailService:
             logger.error(f"發送密碼重設郵件失敗 ({teacher.email}): {str(e)}")
             return False
 
+    def send_refund_notification(
+        self,
+        teacher_email: str,
+        teacher_name: str,
+        refund_amount: float,
+        original_amount: float,
+        refund_type: str,
+        subscription_type: str,
+        days_deducted: int,
+        new_end_date: datetime,
+    ) -> bool:
+        """
+        發送退款通知郵件
+
+        Args:
+            teacher_email: 教師 email
+            teacher_name: 教師姓名
+            refund_amount: 退款金額
+            original_amount: 原始交易金額
+            refund_type: 退款類型 (full/partial)
+            subscription_type: 訂閱方案
+            days_deducted: 扣除天數
+            new_end_date: 新到期日
+
+        Returns:
+            是否成功發送
+        """
+        try:
+            # 建立 HTML 郵件內容
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{
+                        background-color: #4F46E5; color: white;
+                        padding: 20px; text-align: center;
+                    }}
+                    .content {{ background-color: #f9fafb; padding: 30px; }}
+                    .info-box {{
+                        background-color: #fff; border: 1px solid #e5e7eb;
+                        border-radius: 8px; padding: 20px; margin: 20px 0;
+                    }}
+                    .amount {{
+                        font-size: 24px; font-weight: bold; color: #DC2626;
+                    }}
+                    .footer {{
+                        text-align: center; color: #6b7280;
+                        padding: 20px; font-size: 14px;
+                    }}
+                    .button {{
+                        background-color: #4F46E5; color: white;
+                        padding: 12px 24px; text-decoration: none;
+                        border-radius: 6px; display: inline-block;
+                        margin: 20px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Duotopia 退款通知</h1>
+                    </div>
+                    <div class="content">
+                        <p>親愛的 {teacher_name} 老師，您好：</p>
+
+                        <p>您的訂閱退款已完成處理，以下是退款詳情：</p>
+
+                        <div class="info-box">
+                            <h3>💰 退款資訊</h3>
+                            <p><strong>退款金額：</strong><span class="amount">NT$ {int(refund_amount)}</span></p>
+                            <p><strong>原始金額：</strong>NT$ {int(original_amount)}</p>
+                            <p><strong>退款類型：</strong>{'全額退款' if refund_type == 'full' else '部分退款'}</p>
+                            <p><strong>訂閱方案：</strong>{subscription_type}</p>
+                        </div>
+
+                        <div class="info-box">
+                            <h3>📅 訂閱調整</h3>
+                            <p><strong>扣除天數：</strong>{days_deducted} 天</p>
+                            <p><strong>新到期日：</strong>{new_end_date.strftime('%Y年%m月%d日')}</p>
+                        </div>
+
+                        <p>退款金額將在 7-14 個工作天內退回您的原付款方式。</p>
+
+                        <p>如有任何問題，請透過 LINE 客服聯繫我們。</p>
+
+                        <center>
+                            <a href="{self.frontend_url}/subscription" class="button">查看訂閱狀態</a>
+                        </center>
+                    </div>
+                    <div class="footer">
+                        <p>此郵件由系統自動發送，請勿直接回覆。</p>
+                        <p>&copy; 2025 Duotopia. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            # 建立郵件
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"Duotopia 退款通知 - NT$ {int(refund_amount)}"
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = teacher_email
+
+            # 加入 HTML 內容
+            html_part = MIMEText(html_content, "html", "utf-8")
+            msg.attach(html_part)
+
+            # 發送郵件
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"✅ Refund notification email sent to: {teacher_email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send refund notification email: {str(e)}")
+            return False
+
 
 # 全域 email 服務實例
 email_service = EmailService()
