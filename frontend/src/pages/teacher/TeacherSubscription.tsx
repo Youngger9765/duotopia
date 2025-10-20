@@ -414,7 +414,9 @@ export default function TeacherSubscription() {
                       <span className="text-sm">作業管理</span>
                     </li>
                   </ul>
-                  {subscription?.plan !== "Tutor Teachers" && (
+                  {/* 顯示按鈕條件：不是此方案，或是此方案但已過期 */}
+                  {(subscription?.plan !== "Tutor Teachers" ||
+                    !subscription?.is_active) && (
                     <Button
                       onClick={() =>
                         handleSelectUpgradePlan("Tutor Teachers", 230)
@@ -422,7 +424,9 @@ export default function TeacherSubscription() {
                       className="w-full"
                       variant="outline"
                     >
-                      選擇此方案
+                      {subscription?.plan === "Tutor Teachers"
+                        ? "續訂方案"
+                        : "選擇此方案"}
                     </Button>
                   )}
                 </CardContent>
@@ -464,14 +468,18 @@ export default function TeacherSubscription() {
                       <span className="text-sm">批次作業指派</span>
                     </li>
                   </ul>
-                  {subscription?.plan !== "School Teachers" && (
+                  {/* 顯示按鈕條件：不是此方案，或是此方案但已過期 */}
+                  {(subscription?.plan !== "School Teachers" ||
+                    !subscription?.is_active) && (
                     <Button
                       onClick={() =>
                         handleSelectUpgradePlan("School Teachers", 330)
                       }
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      選擇此方案
+                      {subscription?.plan === "School Teachers"
+                        ? "續訂方案"
+                        : "選擇此方案"}
                     </Button>
                   )}
                 </CardContent>
