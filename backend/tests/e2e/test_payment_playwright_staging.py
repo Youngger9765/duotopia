@@ -9,7 +9,9 @@ from playwright.sync_api import sync_playwright, Page
 
 # Staging URLs
 STAGING_BACKEND_URL = "https://duotopia-staging-backend-316409492201.asia-east1.run.app"
-STAGING_FRONTEND_URL = "https://duotopia-staging-frontend-316409492201.asia-east1.run.app"
+STAGING_FRONTEND_URL = (
+    "https://duotopia-staging-frontend-316409492201.asia-east1.run.app"
+)
 
 # Test 帳號
 DEMO_EMAIL = "payment_test@duotopia.com"

@@ -45,7 +45,11 @@ class TestCancelSubscription:
     """測試取消訂閱"""
 
     def test_cancel_active_subscription(
-        self, test_client: TestClient, test_session: Session, subscribed_teacher: Teacher, auth_token: str
+        self,
+        test_client: TestClient,
+        test_session: Session,
+        subscribed_teacher: Teacher,
+        auth_token: str,
     ):
         """測試取消有效訂閱"""
         # Given: 用戶有有效訂閱
@@ -76,7 +80,11 @@ class TestCancelSubscription:
         assert subscribed_teacher.subscription_cancelled_at is not None
 
     def test_cancel_already_cancelled_subscription(
-        self, test_client: TestClient, test_session: Session, subscribed_teacher: Teacher, auth_token: str
+        self,
+        test_client: TestClient,
+        test_session: Session,
+        subscribed_teacher: Teacher,
+        auth_token: str,
     ):
         """測試重複取消（應該允許）"""
         # Given: 已經取消過
@@ -141,7 +149,8 @@ class TestCancelSubscription:
             name="Expired Teacher",
             is_active=True,
             email_verified=True,
-            subscription_end_date=datetime.now(timezone.utc) - timedelta(days=1),  # 昨天過期
+            subscription_end_date=datetime.now(timezone.utc)
+            - timedelta(days=1),  # 昨天過期
         )
         test_session.add(teacher)
         test_session.commit()
@@ -170,7 +179,11 @@ class TestResumeSubscription:
     """測試恢復訂閱"""
 
     def test_resume_cancelled_subscription(
-        self, test_client: TestClient, test_session: Session, subscribed_teacher: Teacher, auth_token: str
+        self,
+        test_client: TestClient,
+        test_session: Session,
+        subscribed_teacher: Teacher,
+        auth_token: str,
     ):
         """測試恢復已取消的訂閱"""
         # Given: 訂閱已取消
@@ -273,7 +286,11 @@ class TestSubscriptionStatus:
         assert data["is_active"] is True
 
     def test_get_cancelled_subscription_status(
-        self, test_client: TestClient, test_session: Session, subscribed_teacher: Teacher, auth_token: str
+        self,
+        test_client: TestClient,
+        test_session: Session,
+        subscribed_teacher: Teacher,
+        auth_token: str,
     ):
         """測試查詢已取消訂閱狀態"""
         # Given: 訂閱已取消
@@ -337,7 +354,11 @@ class TestSubscriptionWorkflow:
     """測試完整訂閱流程"""
 
     def test_cancel_and_resume_workflow(
-        self, test_client: TestClient, test_session: Session, subscribed_teacher: Teacher, auth_token: str
+        self,
+        test_client: TestClient,
+        test_session: Session,
+        subscribed_teacher: Teacher,
+        auth_token: str,
     ):
         """測試取消後恢復的完整流程"""
         # Step 1: 查詢初始狀態

@@ -144,7 +144,11 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   };
 
   // 🔧 取得當前用戶資料（包含資料驗證）
-  const getCurrentUser = (): { email: string; name: string; phone?: string } => {
+  const getCurrentUser = (): {
+    email: string;
+    name: string;
+    phone?: string;
+  } => {
     // 優先檢查學生資料
     const studentAuth = localStorage.getItem("student-auth-storage");
     if (studentAuth) {
