@@ -246,6 +246,68 @@ npx playwright test --if-present
 
 **絕對不要讓用戶一直幫你抓錯！每個修復都要自己先測試過！**
 
+## 🔍 完成工作前的強制檢查清單 (Pre-Completion Checklist)
+
+### ⚠️ 每次回報「完成」前必須執行：
+
+```bash
+# 1. 檢查檔案位置
+git status --short
+# 確認：
+# - 所有測試檔案在正確目錄 (unit/integration/e2e)
+# - 沒有重複的測試檔案
+# - 沒有開發過程中的臨時檔案
+
+# 2. 清理不必要的檔案
+# 刪除所有 *_temp.py, *_old.py, *_backup.py, *_test*.py (開發過程檔案)
+# 只保留最終版本的測試檔案
+
+# 3. 執行完整測試
+npm run test:api:all  # 所有後端測試
+npm run build        # 前端建置
+
+# 4. 檢查 code formatting
+black --check backend/  # Python
+npm run lint           # TypeScript/JavaScript
+
+# 5. 檢查 git diff
+git diff --stat        # 確認改動合理
+git diff              # 檢視實際變更內容
+```
+
+### 📋 回報格式標準
+
+完成工作時必須包含：
+
+```markdown
+## ✅ 完成項目
+- [具體完成的功能/修復]
+
+## 📊 測試結果
+- Unit tests: X/X PASSED
+- Integration tests: X/X PASSED
+- E2E tests: X/X PASSED
+
+## 📝 修改的檔案
+1. `路徑/檔案名` - 做了什麼修改
+2. `路徑/檔案名` - 做了什麼修改
+
+## 🗑️ 已刪除的臨時檔案
+- `舊檔案名` - 為何刪除
+
+## ⏳ 待用戶確認
+- 等待 commit 指示（遵守 "不要主動 commit" 規則）
+```
+
+### 🚨 絕對不要：
+- ❌ 回報「完成」時還有臨時測試檔案沒清理
+- ❌ 回報「完成」時測試檔案位置不對
+- ❌ 回報「完成」時沒有執行完整測試
+- ❌ 回報「完成」時 git status 一團亂
+- ❌ 讓用戶問「檔案位置對嗎？」「臨時檔案刪了嗎？」
+
+**記住：用戶問這些問題 = 你沒做好基本檢查！**
+
 ## 🧪 測試檔案組織原則 (Test Organization Rules)
 
 ### ⚠️ 重要：測試檔案必須放在正確位置！

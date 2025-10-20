@@ -24,7 +24,22 @@ class BigQueryTransactionLogger:
         self.environment = os.getenv("ENVIRONMENT", "local")
 
         try:
-            self.client = bigquery.Client(project=self.project_id)
+            # 先嘗試使用 service account key（本地測試）
+            backend_dir = os.path.dirname(os.path.dirname(__file__))
+            key_path = os.path.join(backend_dir, "service-account-key.json")
+
+            if os.path.exists(key_path):
+                self.client = bigquery.Client.from_service_account_json(
+                    key_path, project=self.project_id
+                )
+                logger.info(
+                    f"BigQuery client initialized with service account from {key_path}"
+                )
+            else:
+                # Cloud Run 會自動使用 service account
+                self.client = bigquery.Client(project=self.project_id)
+                logger.info("BigQuery client initialized with default credentials")
+
             self.table_ref = f"{self.project_id}.{self.dataset_id}.{self.table_id}"
         except Exception as e:
             logger.error(f"Failed to initialize BigQuery client: {e}")
@@ -103,7 +118,9 @@ class BigQueryTransactionLogger:
                 "tappay_prime_token": tappay_prime_token[:20] + "..."
                 if tappay_prime_token
                 else None,
-                "tappay_response": json.dumps(tappay_response)
+                "tappay_response": json.dumps(
+                    self._sanitize_tappay_response(tappay_response)
+                )
                 if tappay_response
                 else None,
                 "tappay_rec_trade_id": tappay_rec_trade_id,
@@ -116,9 +133,13 @@ class BigQueryTransactionLogger:
                 if request_body
                 else None,
                 "response_status": response_status,
-                "response_body": json.dumps(response_body) if response_body else None,
+                "response_body": json.dumps(self._sanitize_response_body(response_body))
+                if response_body
+                else None,
                 # 前端資訊
-                "frontend_error": json.dumps(frontend_error)
+                "frontend_error": json.dumps(
+                    self._sanitize_frontend_error(frontend_error)
+                )
                 if frontend_error
                 else None,
                 "user_agent": user_agent,
@@ -179,11 +200,186 @@ class BigQueryTransactionLogger:
             # 只保留 prime token 的前 20 字元
             sanitized["prime"] = sanitized["prime"][:20] + "..."
 
-        if "cardholder" in sanitized:
-            # 保留 cardholder 但移除可能的敏感資訊
-            pass
+        # 遮蔽信用卡持卡人資訊中的敏感欄位
+        if "cardholder" in sanitized and isinstance(sanitized["cardholder"], dict):
+            cardholder = sanitized["cardholder"].copy()
+            # 遮蔽信用卡號（如果有）
+            if "card_number" in cardholder:
+                cardholder["card_number"] = "[REDACTED]"
+            if "ccv" in cardholder:
+                cardholder["ccv"] = "[REDACTED]"
+            if "expiry_date" in cardholder:
+                cardholder["expiry_date"] = "[REDACTED]"
+            sanitized["cardholder"] = cardholder
 
         return sanitized
+
+    def _sanitize_tappay_response(self, response: Optional[Dict]) -> Dict:
+        """遮蔽 TapPay response 中的敏感資訊"""
+        if not response:
+            return {}
+
+        sanitized = response.copy()
+
+        # TapPay response 可能包含的敏感欄位
+        sensitive_fields = [
+            "card_secret",
+            "card_token",
+            "card_key",
+            "bank_transaction_id",
+            "acquirer",
+        ]
+
+        for field in sensitive_fields:
+            if field in sanitized:
+                sanitized[field] = "[REDACTED]"
+
+        # 如果有 card_info，遮蔽卡號
+        if "card_info" in sanitized and isinstance(sanitized["card_info"], dict):
+            card_info = sanitized["card_info"].copy()
+            if "bin_code" in card_info:
+                card_info["bin_code"] = "[REDACTED]"
+            if "last_four" in card_info:
+                # 保留後四碼，這是安全的
+                pass
+            if "issuer" in card_info:
+                # 保留發卡機構，這是安全的
+                pass
+            sanitized["card_info"] = card_info
+
+        return sanitized
+
+    def _sanitize_response_body(self, response: Optional[Dict]) -> Dict:
+        """遮蔽 API response body 中的敏感資訊"""
+        if not response:
+            return {}
+
+        sanitized = response.copy()
+
+        # 移除可能的敏感欄位
+        sensitive_fields = [
+            "token",
+            "access_token",
+            "refresh_token",
+            "password",
+            "secret",
+            "api_key",
+        ]
+
+        for field in sensitive_fields:
+            if field in sanitized:
+                sanitized[field] = "[REDACTED]"
+
+        return sanitized
+
+    def _sanitize_frontend_error(self, frontend_error: Optional[Dict]) -> Dict:
+        """遮蔽前端錯誤資料中的敏感資訊"""
+        if not frontend_error:
+            return {}
+
+        import copy
+
+        sanitized = copy.deepcopy(frontend_error)  # M-2: 使用 deep copy
+
+        # 移除可能的敏感欄位
+        sensitive_fields = [
+            "token",
+            "access_token",
+            "refresh_token",
+            "id_token",
+            "authorization",
+            "bearer",
+            "api_key",
+            "apikey",
+            "api_secret",
+            "password",
+            "passwd",
+            "pwd",
+            "secret",
+            "client_secret",
+            "prime",
+            "card_number",
+            "cardnumber",
+            "credit_card",
+            "ccv",
+            "cvv",
+            "cvc",
+            "session",
+            "session_id",
+            "sessionid",
+            "csrf",
+            "csrf_token",
+            "private_key",
+            "privatekey",
+            "jwt",
+            "cookie",
+        ]
+
+        def _normalize_key(key: str) -> str:
+            """正規化 key 名稱，處理特殊字元"""
+            return key.lower().replace("-", "_").replace(".", "_").replace(":", "_")
+
+        def _is_sensitive_key(key: str) -> bool:
+            """檢查 key 是否為敏感欄位（支援 api.key, apiKey 等格式）"""
+            normalized = _normalize_key(key)
+            return any(sensitive in normalized for sensitive in sensitive_fields)
+
+        def _looks_like_token(s: str) -> bool:
+            """判斷字串是否像 token（降低門檻至 30，移除空格漏洞）"""
+            if not isinstance(s, str):
+                return False
+            # H-4: 降低門檻至 30 字元，且空格數量必須少於 2 個
+            if len(s) > 30 and s.count(" ") < 2:
+                return True
+            return False
+
+        # H-1, H-3: 遞迴檢查所有欄位，加入深度限制和循環引用保護
+        def sanitize_recursive(obj, depth=0, max_depth=100, seen=None):
+            if seen is None:
+                seen = set()
+
+            # H-1: 深度限制
+            if depth > max_depth:
+                return "[REDACTED: MAX_DEPTH_EXCEEDED]"
+
+            # H-3: 循環引用保護
+            obj_id = id(obj)
+            if obj_id in seen:
+                return "[REDACTED: CIRCULAR_REFERENCE]"
+
+            if isinstance(obj, (dict, list)):
+                seen.add(obj_id)
+
+            try:
+                if isinstance(obj, dict):
+                    result = {}
+                    for key, value in obj.items():
+                        # H-2: 改善 key 匹配邏輯
+                        if _is_sensitive_key(key):
+                            result[key] = "[REDACTED]"
+                        else:
+                            result[key] = sanitize_recursive(
+                                value, depth + 1, max_depth, seen
+                            )
+                    return result
+                elif isinstance(obj, list):
+                    return [
+                        sanitize_recursive(item, depth + 1, max_depth, seen)
+                        for item in obj
+                    ]
+                elif isinstance(obj, str):
+                    # H-4: 強化 token 偵測
+                    if _looks_like_token(obj):
+                        return obj[:20] + "...[REDACTED]"
+                    return obj
+                else:
+                    return obj
+            finally:
+                # 處理完後從 seen 移除
+                if isinstance(obj, (dict, list)):
+                    seen.discard(obj_id)
+
+        return sanitize_recursive(sanitized)
 
 
 # 全域實例
