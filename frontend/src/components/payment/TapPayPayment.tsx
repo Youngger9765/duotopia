@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CreditCard, Shield } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionProgressBanner from "../SubscriptionProgressBanner";
+import { analyticsService } from "@/services/analyticsService";
 
 interface TapPayPaymentProps {
   amount: number;
@@ -42,6 +43,9 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     if (!window.TPDirect) {
       console.error("TapPay SDK not loaded");
       toast.error("付款系統載入失敗，請重新整理頁面");
+
+      // 📊 記錄 TapPay SDK 載入失敗
+      analyticsService.logTapPayInitError("TapPay SDK not loaded");
       return;
     }
 
@@ -159,6 +163,14 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           "msg:",
           result.msg,
         );
+
+        // 📊 記錄 TapPay Prime 取得失敗
+        analyticsService.logTapPayPrimeError(
+          result.status,
+          result.msg || "無法取得付款憑證",
+          undefined, // cardStatus
+        );
+
         onPaymentError(result.msg || "無法取得付款憑證");
         toast.error(result.msg || "付款失敗");
         setIsProcessing(false);
@@ -227,6 +239,14 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           onPaymentSuccess(data.transaction_id);
           toast.success("付款成功！");
         } else {
+          // 📊 記錄付款 API 失敗
+          analyticsService.logPaymentApiError(
+            amount,
+            planName,
+            data.message || "付款處理失敗",
+            response.status,
+            data,
+          );
           // Handle FastAPI validation errors (422)
           let errorMsg = data.message || "付款處理失敗";
 

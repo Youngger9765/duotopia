@@ -11,6 +11,14 @@ from database import get_db
 from models import Teacher, TeacherSubscriptionTransaction, TransactionType
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
+from utils.bigquery_logger import (
+    log_payment_attempt,
+    log_payment_success,
+    log_payment_failure,
+    transaction_logger,
+)
+import time
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +46,25 @@ class PaymentResponse(BaseModel):
     transaction_id: Optional[str] = None
     message: str
     subscription_end_date: Optional[str] = None
+
+
+class FrontendErrorLog(BaseModel):
+    """前端錯誤記錄"""
+
+    timestamp: str
+    environment: str
+    error_stage: str
+    error_message: str
+    error_code: Optional[str] = None
+    stack_trace: Optional[str] = None
+    amount: Optional[int] = None
+    plan_name: Optional[str] = None
+    tappay_status: Optional[str] = None
+    tappay_message: Optional[str] = None
+    can_get_prime: Optional[bool] = None
+    user_agent: str
+    url: str
+    additional_context: Optional[Dict[str, Any]] = None
 
 
 @router.post("/payment/process", response_model=PaymentResponse)
@@ -74,6 +101,9 @@ async def process_payment(
         logger.error(f"解析請求失敗: {str(e)}")
         raise
 
+    # 📊 開始計時
+    start_time = time.time()
+
     try:
         # Generate idempotency key to prevent duplicate charges
         idempotency_key = str(uuid.uuid4())
@@ -85,6 +115,19 @@ async def process_payment(
         client_host = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
         request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+
+        # 📊 Log payment attempt to BigQuery
+        log_payment_attempt(
+            transaction_id=order_number,
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=payment_request.amount,
+            plan_name=payment_request.plan_name,
+            prime_token=payment_request.prime,
+            request_data=body_json,
+            user_agent=user_agent,
+            client_ip=client_host,
+        )
 
         # Get current time (needed for exception handling)
         now = datetime.now(timezone.utc)
@@ -140,6 +183,23 @@ async def process_payment(
             # Payment failed
             error_msg = TapPayService.parse_error_code(
                 gateway_response.get("status"), gateway_response.get("msg")
+            )
+
+            # 📊 Log payment failure to BigQuery
+            execution_time = int((time.time() - start_time) * 1000)
+            log_payment_failure(
+                transaction_id=order_number,
+                user_id=current_teacher.id,
+                user_email=current_teacher.email,
+                amount=payment_request.amount,
+                plan_name=payment_request.plan_name,
+                error_stage="tappay_api",
+                error_code=str(gateway_response.get("status")),
+                error_message=error_msg,
+                request_data=body_json,
+                response_status=400,
+                response_body=gateway_response,
+                execution_time_ms=execution_time,
             )
 
             # Log failed transaction
@@ -230,6 +290,19 @@ async def process_payment(
                 f"Payment processed successfully for teacher {current_teacher.email}: {external_transaction_id}"
             )
 
+            # 📊 Log payment success to BigQuery
+            execution_time = int((time.time() - start_time) * 1000)
+            log_payment_success(
+                transaction_id=external_transaction_id,
+                user_id=current_teacher.id,
+                user_email=current_teacher.email,
+                amount=payment_request.amount,
+                plan_name=payment_request.plan_name,
+                tappay_response=gateway_response,
+                tappay_rec_trade_id=external_transaction_id,
+                execution_time_ms=execution_time,
+            )
+
         except Exception as e:
             # Transaction record creation failed, but subscription is already updated (acceptable)
             logger.error(
@@ -245,6 +318,35 @@ async def process_payment(
         )
 
     except HTTPException as he:
+        # 📊 Log HTTP exception failure to BigQuery
+        execution_time = int((time.time() - start_time) * 1000)
+
+        # 判斷錯誤階段
+        error_stage = "unknown"
+        if he.status_code == 400:
+            if "prime" in str(he.detail).lower():
+                error_stage = "prime_token"
+            elif "plan" in str(he.detail).lower():
+                error_stage = "validation"
+            else:
+                error_stage = "tappay_api"
+        elif he.status_code == 401:
+            error_stage = "authentication"
+
+        log_payment_failure(
+            transaction_id=order_number if "order_number" in locals() else None,
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=payment_request.amount,
+            plan_name=payment_request.plan_name,
+            error_stage=error_stage,
+            error_code=str(he.status_code),
+            error_message=str(he.detail),
+            request_data=body_json,
+            response_status=he.status_code,
+            execution_time_ms=execution_time,
+        )
+
         # Log failed transaction attempt
         try:
             failed_transaction = TeacherSubscriptionTransaction(
@@ -279,6 +381,24 @@ async def process_payment(
         )
     except Exception as e:
         logger.error(f"Payment processing error: {str(e)}", exc_info=True)
+
+        # 📊 Log unexpected exception to BigQuery
+        execution_time = int((time.time() - start_time) * 1000)
+        log_payment_failure(
+            transaction_id=order_number if "order_number" in locals() else None,
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=payment_request.amount if payment_request else None,
+            plan_name=payment_request.plan_name if payment_request else None,
+            error_stage="database" if "database" in str(e).lower() else "unknown",
+            error_code="INTERNAL_ERROR",
+            error_message=str(e),
+            request_data=body_json if "body_json" in locals() else None,
+            response_status=500,
+            stack_trace=traceback.format_exc(),
+            execution_time_ms=execution_time,
+        )
+
         # Try to log failed transaction
         try:
             failed_transaction = TeacherSubscriptionTransaction(
@@ -413,3 +533,42 @@ async def get_payment_history(
             for t in transactions
         ]
     }
+
+
+@router.post("/payment/log-frontend-error")
+async def log_frontend_error(
+    error_data: FrontendErrorLog,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """接收前端錯誤並記錄到 BigQuery"""
+    try:
+        # 📊 記錄前端錯誤到 BigQuery
+        transaction_logger.log_transaction(
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=error_data.amount,
+            plan_name=error_data.plan_name,
+            status="failed",
+            error_stage=error_data.error_stage,
+            error_code=error_data.error_code,
+            error_message=error_data.error_message,
+            frontend_error={
+                "timestamp": error_data.timestamp,
+                "tappay_status": error_data.tappay_status,
+                "tappay_message": error_data.tappay_message,
+                "can_get_prime": error_data.can_get_prime,
+                "url": error_data.url,
+                "additional_context": error_data.additional_context,
+            },
+            user_agent=error_data.user_agent,
+            client_ip=request.client.host if request.client else None,
+            stack_trace=error_data.stack_trace,
+        )
+
+        return {"success": True, "message": "Error logged"}
+
+    except Exception as e:
+        logger.error(f"Failed to log frontend error: {e}")
+        return {"success": False, "message": str(e)}
