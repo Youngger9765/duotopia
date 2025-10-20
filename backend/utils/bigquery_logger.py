@@ -6,7 +6,7 @@ BigQuery Logger for Transaction Data Collection
 import os
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict
 from google.cloud import bigquery
 import logging
@@ -469,3 +469,98 @@ def log_payment_failure(
         stack_trace=stack_trace,
         execution_time_ms=execution_time_ms,
     )
+
+
+def log_refund_event(
+    teacher_id: int,
+    teacher_email: str,
+    original_transaction_id: str,
+    refund_transaction_id: Optional[str],
+    original_amount: float,
+    refund_amount: float,
+    refund_type: str,  # "full" or "partial"
+    subscription_type: str,  # "月方案" or "季方案"
+    days_deducted: int,
+    previous_end_date: str,  # ISO format
+    new_end_date: str,  # ISO format
+    refund_reason: Optional[str] = None,
+    gateway_response: Optional[Dict] = None,
+    **kwargs,
+) -> None:
+    """
+    記錄退款事件到 BigQuery
+
+    Args:
+        teacher_id: 教師 ID
+        teacher_email: 教師 email
+        original_transaction_id: 原始交易 ID (TapPay rec_trade_id)
+        refund_transaction_id: 退款交易 ID (TapPay refund rec_trade_id)
+        original_amount: 原始交易金額
+        refund_amount: 退款金額
+        refund_type: 退款類型 (full/partial)
+        subscription_type: 訂閱方案
+        days_deducted: 扣除的訂閱天數
+        previous_end_date: 退款前到期日
+        new_end_date: 退款後到期日
+        refund_reason: 退款原因
+        gateway_response: 金流商完整回應
+    """
+    try:
+        # 計算退款比例
+        refund_ratio = (
+            (refund_amount / original_amount * 100) if original_amount > 0 else 0
+        )
+
+        # 準備 BigQuery 資料
+        refund_data = {
+            # 基本資訊
+            "event_type": "refund",
+            "event_timestamp": datetime.now(timezone.utc).isoformat(),
+            # 用戶資訊
+            "teacher_id": teacher_id,
+            "teacher_email": teacher_email,
+            # 交易資訊
+            "original_transaction_id": original_transaction_id,
+            "refund_transaction_id": refund_transaction_id,
+            # 金額資訊
+            "original_amount": float(original_amount),
+            "refund_amount": float(refund_amount),
+            "refund_ratio": round(refund_ratio, 2),
+            "currency": "TWD",
+            # 退款類型
+            "refund_type": refund_type,
+            "refund_reason": refund_reason or "customer_service_refund",
+            # 訂閱影響
+            "subscription_type": subscription_type,
+            "days_deducted": days_deducted,
+            "previous_end_date": previous_end_date,
+            "new_end_date": new_end_date,
+            # 業務指標
+            "financial_impact": -float(refund_amount),  # 負數表示支出
+            "subscription_impact_days": -days_deducted,  # 負數表示減少
+            # 金流商資訊
+            "payment_provider": "tappay",
+            "gateway_response": gateway_response,
+            # 環境資訊
+            "environment": os.getenv("ENVIRONMENT", "unknown"),
+        }
+
+        # 記錄到 BigQuery
+        transaction_logger.log_transaction(
+            transaction_id=refund_transaction_id or original_transaction_id,
+            user_id=teacher_id,
+            user_email=teacher_email,
+            amount=int(refund_amount),
+            plan_name=subscription_type,
+            status="refund_completed",
+            event_data=refund_data,
+        )
+
+        logger.info(
+            f"✅ Refund event logged to BigQuery: teacher={teacher_id}, "
+            f"amount={refund_amount}, type={refund_type}, days_deducted={days_deducted}"
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Failed to log refund event to BigQuery: {str(e)}")
+        # 不拋出異常，避免影響退款處理主流程

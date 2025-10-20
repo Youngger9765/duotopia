@@ -11,10 +11,12 @@ from database import get_db
 from models import Teacher, TeacherSubscriptionTransaction, TransactionType
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
+from services.email_service import email_service
 from utils.bigquery_logger import (
     log_payment_attempt,
     log_payment_success,
     log_payment_failure,
+    log_refund_event,
     transaction_logger,
 )
 import time
@@ -480,36 +482,119 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
         if event == "refund" or data.get("is_refund"):
             logger.info(f"Processing refund for transaction: {rec_trade_id}")
 
-            # 更新交易狀態為已退款
+            # 檢查是否已處理過（避免重複處理）
+            if transaction.refund_status == "completed":
+                logger.warning(
+                    f"Refund already processed for transaction: {rec_trade_id}"
+                )
+                return {"status": "success", "message": "Refund already processed"}
+
+            # 記錄退款前狀態
+            previous_end_date = transaction.teacher.subscription_end_date
+            teacher = transaction.teacher
+
+            # 計算退款金額和類型
+            refund_amount = float(data.get("refund_amount", transaction.amount))
+            original_amount = float(transaction.amount)
+            is_full_refund = refund_amount >= original_amount
+            refund_type = "full" if is_full_refund else "partial"
+
+            # 計算扣除天數
+            if is_full_refund:
+                # 全額退款 - 扣除完整訂閱天數
+                days_to_deduct = 30 if transaction.subscription_type == "月方案" else 90
+            else:
+                # 部分退款 - 按比例調整
+                refund_ratio = refund_amount / original_amount
+                days_to_deduct = int(
+                    (30 if transaction.subscription_type == "月方案" else 90)
+                    * refund_ratio
+                )
+
+            # 更新原始交易狀態
             transaction.status = "REFUNDED"
             transaction.webhook_status = "PROCESSED"
             transaction.failure_reason = f"退款處理: {msg}"
+            transaction.refunded_amount = refund_amount
+            transaction.refund_status = "completed"
+            transaction.processed_at = datetime.now(timezone.utc)
 
-            # 🔧 計算並調整訂閱到期日
-            teacher = transaction.teacher
+            # 建立獨立退款交易記錄
+            refund_transaction = TeacherSubscriptionTransaction(
+                teacher_id=transaction.teacher_id,
+                teacher_email=transaction.teacher_email,
+                transaction_type=TransactionType.REFUND,
+                subscription_type=transaction.subscription_type,
+                amount=-refund_amount,  # 負數表示退款
+                currency="TWD",
+                status="SUCCESS",
+                months=transaction.months,
+                period_start=transaction.period_start,
+                period_end=transaction.period_end,
+                previous_end_date=previous_end_date,
+                new_end_date=teacher.subscription_end_date
+                - timedelta(days=days_to_deduct),
+                processed_at=datetime.now(timezone.utc),
+                payment_provider="tappay",
+                payment_method=transaction.payment_method,
+                external_transaction_id=data.get("refund_rec_trade_id"),
+                original_transaction_id=transaction.id,
+                gateway_response=data,
+                webhook_status="PROCESSED",
+            )
+
+            # 調整訂閱到期日
             if teacher.subscription_end_date:
-                # 計算退款比例（如果是部分退款）
-                refund_amount = data.get("refund_amount", transaction.amount)
-                if refund_amount >= transaction.amount:
-                    # 全額退款 - 回復訂閱天數
-                    days_to_deduct = (
-                        30 if transaction.subscription_type == "月方案" else 90
-                    )
-                    teacher.subscription_end_date -= timedelta(days=days_to_deduct)
-                    logger.info(
-                        f"Full refund: deducted {days_to_deduct} days from subscription"
-                    )
-                else:
-                    # 部分退款 - 按比例調整
-                    refund_ratio = refund_amount / transaction.amount
-                    days_to_deduct = int(
-                        (30 if transaction.subscription_type == "月方案" else 90)
-                        * refund_ratio
-                    )
-                    teacher.subscription_end_date -= timedelta(days=days_to_deduct)
-                    logger.info(
-                        f"Partial refund: deducted {days_to_deduct} days from subscription"
-                    )
+                teacher.subscription_end_date -= timedelta(days=days_to_deduct)
+                teacher.updated_at = datetime.now(timezone.utc)
+
+                logger.info(
+                    f"{refund_type.capitalize()} refund: deducted {days_to_deduct} days from subscription. "
+                    f"New end date: {teacher.subscription_end_date}"
+                )
+
+            # 儲存退款交易
+            db.add(refund_transaction)
+            db.flush()  # 確保取得 refund_transaction.id
+
+            # 📊 記錄到 BigQuery
+            try:
+                log_refund_event(
+                    teacher_id=teacher.id,
+                    teacher_email=teacher.email,
+                    original_transaction_id=rec_trade_id,
+                    refund_transaction_id=data.get("refund_rec_trade_id"),
+                    original_amount=original_amount,
+                    refund_amount=refund_amount,
+                    refund_type=refund_type,
+                    subscription_type=transaction.subscription_type or "unknown",
+                    days_deducted=days_to_deduct,
+                    previous_end_date=previous_end_date.isoformat()
+                    if previous_end_date
+                    else None,
+                    new_end_date=teacher.subscription_end_date.isoformat()
+                    if teacher.subscription_end_date
+                    else None,
+                    refund_reason=msg,
+                    gateway_response=data,
+                )
+            except Exception as e:
+                logger.error(f"Failed to log refund to BigQuery: {str(e)}")
+
+            # 📧 發送退款通知 Email
+            try:
+                email_service.send_refund_notification(
+                    teacher_email=teacher.email,
+                    teacher_name=teacher.name,
+                    refund_amount=refund_amount,
+                    original_amount=original_amount,
+                    refund_type=refund_type,
+                    subscription_type=transaction.subscription_type or "未知方案",
+                    days_deducted=days_to_deduct,
+                    new_end_date=teacher.subscription_end_date,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send refund notification email: {str(e)}")
 
         # 🔧 處理付款事件
         elif status == 0:
