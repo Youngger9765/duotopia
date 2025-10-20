@@ -97,6 +97,7 @@ async def teacher_login(
             "id": teacher.id,
             "email": teacher.email,
             "name": teacher.name,
+            "phone": teacher.phone,
             "is_demo": teacher.is_demo,
         },
     }

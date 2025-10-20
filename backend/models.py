@@ -108,6 +108,8 @@ class Teacher(Base):
     subscription_start_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱開始日
     subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
     subscription_renewed_at = Column(DateTime(timezone=True), nullable=True)  # 最後續訂時間
+    subscription_auto_renew = Column(Boolean, default=True)  # 是否自動續訂
+    subscription_cancelled_at = Column(DateTime(timezone=True), nullable=True)  # 取消續訂時間
     trial_start_date = Column(DateTime(timezone=True), nullable=True)  # 試用開始日
     trial_end_date = Column(DateTime(timezone=True), nullable=True)  # 試用結束日
     monthly_message_limit = Column(Integer, nullable=True)  # 每月訊息限制（與 DB 一致，但不使用）

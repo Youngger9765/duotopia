@@ -116,7 +116,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     }, 100);
   };
 
-  // 🔧 修復：正確取得 token
+  // 🔧 修復：正確取得 token 和用戶資料
   const getAuthToken = (): string | null => {
     // 優先學生 token
     const studentAuth = localStorage.getItem("student-auth-storage");
@@ -141,6 +141,59 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     }
 
     return null;
+  };
+
+  // 🔧 取得當前用戶資料（包含資料驗證）
+  const getCurrentUser = (): { email: string; name: string; phone?: string } => {
+    // 優先檢查學生資料
+    const studentAuth = localStorage.getItem("student-auth-storage");
+    if (studentAuth) {
+      try {
+        const { state } = JSON.parse(studentAuth);
+        if (state?.user) {
+          const email = state.user.email?.trim();
+          const name = state.user.name?.trim();
+
+          // 驗證 email 格式
+          if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return {
+              email,
+              name: name || "User",
+              phone: state.user.phone_number,
+            };
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse student auth:", e);
+      }
+    }
+
+    // 檢查老師資料
+    const teacherAuth = localStorage.getItem("teacher-auth-storage");
+    if (teacherAuth) {
+      try {
+        const { state } = JSON.parse(teacherAuth);
+        if (state?.user) {
+          const email = state.user.email?.trim();
+          const name = state.user.name?.trim();
+
+          // 驗證 email 格式
+          if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return {
+              email,
+              name: name || "User",
+              phone: state.user.phone_number,
+            };
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse teacher auth:", e);
+      }
+    }
+
+    // 預設值（不應該發生，因為前面已檢查 token）
+    console.warn("No valid user data found, using defaults");
+    return { email: "user@example.com", name: "User" };
   };
 
   const handleSubmit = async () => {
@@ -192,7 +245,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       console.log("Prime token 取得成功:", prime.substring(0, 20) + "...");
 
       try {
-        // 🔧 修復：取得正確的 auth token
+        // 🔧 修復：取得正確的 auth token 和用戶資料
         const authToken = getAuthToken();
         if (!authToken) {
           onPaymentError("請先登入");
@@ -200,6 +253,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           setIsProcessing(false);
           return;
         }
+
+        const currentUser = getCurrentUser();
 
         // Real TapPay payment processing
         const response = await fetch(
@@ -219,9 +274,9 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
                 item_price: amount,
               },
               cardholder: {
-                name: "User",
-                email: "user@example.com",
-                phone_number: "+886912345678",
+                name: currentUser.name,
+                email: currentUser.email,
+                phone_number: currentUser.phone || "+886912345678", // 優先使用用戶電話
               },
             }),
           },

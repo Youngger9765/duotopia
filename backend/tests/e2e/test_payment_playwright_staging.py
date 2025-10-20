@@ -8,12 +8,12 @@ import uuid
 from playwright.sync_api import sync_playwright, Page
 
 # Staging URLs
-STAGING_BACKEND_URL = "https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app"
-STAGING_FRONTEND_URL = "https://duotopia-staging-frontend-b2ovkkgl6a-de.a.run.app"
+STAGING_BACKEND_URL = "https://duotopia-staging-backend-316409492201.asia-east1.run.app"
+STAGING_FRONTEND_URL = "https://duotopia-staging-frontend-316409492201.asia-east1.run.app"
 
-# Demo 帳號
-DEMO_EMAIL = "demo@duotopia.com"
-DEMO_PASSWORD = "demo123"
+# Test 帳號
+DEMO_EMAIL = "payment_test@duotopia.com"
+DEMO_PASSWORD = "Test123456!"
 
 
 def login_demo_teacher(page: Page) -> str:

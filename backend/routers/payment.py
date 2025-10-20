@@ -457,9 +457,10 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
         rec_trade_id = data.get("rec_trade_id")
         status = data.get("status")
         msg = data.get("msg")
+        event = data.get("event", "payment")  # TapPay 事件類型：payment, refund, etc.
 
         logger.info(
-            f"Webhook received for transaction: {rec_trade_id}, status: {status}"
+            f"Webhook received - event: {event}, rec_trade_id: {rec_trade_id}, status: {status}"
         )
 
         # Find transaction in database
@@ -475,8 +476,34 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
             logger.error(f"Transaction not found: {rec_trade_id}")
             return {"status": "error", "message": "Transaction not found"}
 
-        # Update transaction status based on webhook
-        if status == 0:
+        # 🔧 處理退款事件
+        if event == "refund" or data.get("is_refund"):
+            logger.info(f"Processing refund for transaction: {rec_trade_id}")
+
+            # 更新交易狀態為已退款
+            transaction.status = "REFUNDED"
+            transaction.webhook_status = "PROCESSED"
+            transaction.failure_reason = f"退款處理: {msg}"
+
+            # 🔧 計算並調整訂閱到期日
+            teacher = transaction.teacher
+            if teacher.subscription_end_date:
+                # 計算退款比例（如果是部分退款）
+                refund_amount = data.get("refund_amount", transaction.amount)
+                if refund_amount >= transaction.amount:
+                    # 全額退款 - 回復訂閱天數
+                    days_to_deduct = 30 if transaction.subscription_type == "月方案" else 90
+                    teacher.subscription_end_date -= timedelta(days=days_to_deduct)
+                    logger.info(f"Full refund: deducted {days_to_deduct} days from subscription")
+                else:
+                    # 部分退款 - 按比例調整
+                    refund_ratio = refund_amount / transaction.amount
+                    days_to_deduct = int((30 if transaction.subscription_type == "月方案" else 90) * refund_ratio)
+                    teacher.subscription_end_date -= timedelta(days=days_to_deduct)
+                    logger.info(f"Partial refund: deducted {days_to_deduct} days from subscription")
+
+        # 🔧 處理付款事件
+        elif status == 0:
             # Payment successful
             transaction.status = "SUCCESS"
             transaction.webhook_status = "PROCESSED"
@@ -572,3 +599,140 @@ async def log_frontend_error(
     except Exception as e:
         logger.error(f"Failed to log frontend error: {e}")
         return {"success": False, "message": str(e)}
+
+
+@router.post("/subscription/cancel")
+async def cancel_subscription(
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    取消自動續訂
+    - 已付費的訂閱期限繼續有效
+    - 到期後不再自動扣款
+    - 可隨時重新訂閱
+    """
+    try:
+        # 檢查是否有有效訂閱
+        if not current_teacher.subscription_end_date:
+            raise HTTPException(status_code=400, detail="您目前沒有訂閱")
+
+        # 處理 timezone-aware 和 naive datetime 比較
+        now = datetime.now(timezone.utc)
+        end_date = current_teacher.subscription_end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        if end_date < now:
+            raise HTTPException(status_code=400, detail="您的訂閱已過期")
+
+        # 檢查是否已經取消
+        if not current_teacher.subscription_auto_renew:
+            return {
+                "success": True,
+                "message": "您已經取消過續訂",
+                "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+                "auto_renew": False,
+            }
+
+        # 取消自動續訂
+        current_teacher.subscription_auto_renew = False
+        current_teacher.subscription_cancelled_at = datetime.now(timezone.utc)
+        db.commit()
+
+        logger.info(
+            f"Teacher {current_teacher.id} cancelled auto-renew. "
+            f"Subscription valid until {current_teacher.subscription_end_date}"
+        )
+
+        return {
+            "success": True,
+            "message": f"已取消自動續訂，您的訂閱將於 {current_teacher.subscription_end_date.strftime('%Y/%m/%d')} 到期",
+            "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+            "auto_renew": False,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cancel subscription error: {str(e)}")
+        raise HTTPException(status_code=500, detail="取消訂閱失敗")
+
+
+@router.post("/subscription/resume")
+async def resume_subscription(
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    重新啟用自動續訂
+    - 恢復自動扣款
+    - 下次到期時會自動續訂
+    """
+    try:
+        # 檢查是否有訂閱
+        if not current_teacher.subscription_end_date:
+            raise HTTPException(status_code=400, detail="您目前沒有訂閱，請先購買方案")
+
+        # 檢查是否已啟用
+        if current_teacher.subscription_auto_renew:
+            return {
+                "success": True,
+                "message": "您的訂閱已設定為自動續訂",
+                "auto_renew": True,
+            }
+
+        # 重新啟用自動續訂
+        current_teacher.subscription_auto_renew = True
+        current_teacher.subscription_cancelled_at = None
+        db.commit()
+
+        logger.info(f"Teacher {current_teacher.id} resumed auto-renew")
+
+        return {
+            "success": True,
+            "message": "已啟用自動續訂，到期時將自動扣款",
+            "auto_renew": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resume subscription error: {str(e)}")
+        raise HTTPException(status_code=500, detail="啟用自動續訂失敗")
+
+
+@router.get("/subscription/status")
+async def get_subscription_status(
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    查詢訂閱狀態
+    - 到期日
+    - 是否自動續訂
+    - 取消時間
+    """
+    return {
+        "subscription_end_date": (
+            current_teacher.subscription_end_date.isoformat()
+            if current_teacher.subscription_end_date
+            else None
+        ),
+        "auto_renew": current_teacher.subscription_auto_renew,
+        "cancelled_at": (
+            current_teacher.subscription_cancelled_at.isoformat()
+            if current_teacher.subscription_cancelled_at
+            else None
+        ),
+        "is_active": (
+            (
+                current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
+                if current_teacher.subscription_end_date.tzinfo is None
+                else current_teacher.subscription_end_date
+            )
+            > datetime.now(timezone.utc)
+            if current_teacher.subscription_end_date
+            else False
+        ),
+    }
