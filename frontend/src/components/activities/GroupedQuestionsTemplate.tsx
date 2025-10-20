@@ -95,6 +95,8 @@ interface GroupedQuestionsTemplateProps {
   initialAssessmentResults?: Record<string, unknown>; // AI 評估結果
   readOnly?: boolean; // 唯讀模式
   assignmentId?: string; // 作業 ID，用於上傳錄音
+  isPreviewMode?: boolean; // 預覽模式（老師端預覽）
+  authToken?: string; // 認證 token（預覽模式用 teacher token）
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
   onAssessmentComplete?: (
     index: number,
@@ -119,6 +121,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   initialAssessmentResults,
   readOnly = false, // 唯讀模式
   assignmentId,
+  isPreviewMode = false, // 預覽模式
+  authToken, // 認證 token
   onUploadSuccess,
   onAssessmentComplete,
 }: GroupedQuestionsTemplateProps) {
@@ -169,7 +173,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadButtonRef = useRef<HTMLButtonElement | null>(null);
-  const { token } = useStudentAuthStore();
+
+  // 使用傳入的 token（預覽模式）或從 student store 取得（正常模式）
+  const { token: studentToken } = useStudentAuthStore();
+  const token = authToken || studentToken;
 
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
@@ -395,7 +402,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           : null;
 
       // 🔍 檢查是否需要上傳（如果是 blob URL）
-      if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
+      // 預覽模式跳過上傳到資料庫
+      if (typeof audioUrl === "string" && audioUrl.startsWith("blob:") && !isPreviewMode) {
         toast.info("正在上傳錄音...");
 
         // Convert blob URL to blob
@@ -454,8 +462,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       // 🤖 開始 AI 分析
       toast.info("AI 正在分析您的發音...");
 
-      // Convert GCS URL to blob for AI analysis
-      const response = await fetch(gcsAudioUrl);
+      // Convert audio URL to blob for AI analysis
+      const response = await fetch(isPreviewMode ? (audioUrl as string) : gcsAudioUrl);
       const audioBlob = await response.blob();
 
       // Create form data
@@ -463,58 +471,95 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       formData.append("audio_file", audioBlob, "recording.webm");
       formData.append("reference_text", referenceText);
 
-      // 🔥 如果還沒有 progress_id，使用 fallback
-      if (!currentProgressId) {
-        currentProgressId = (progressId as number) || 1;
-      }
-
-      console.log("🔍 AI評估使用 progress_id:", {
-        currentQuestionIndex,
-        progressIds,
-        progressId,
-        currentProgressId,
-      });
-
-      formData.append("progress_id", String(currentProgressId));
-      formData.append("item_index", String(currentQuestionIndex)); // 傳遞題目索引
-
       // Get authentication token from store
       if (!token) {
         toast.error("請重新登入");
         return;
       }
 
-      // Call API with retry mechanism
       const apiUrl = import.meta.env.VITE_API_URL || "";
-      const result = await retryAIAnalysis(
-        async () => {
-          const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
+      let result;
 
-          if (!assessResponse.ok) {
-            const error = new Error(
-              `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
+      // 預覽模式使用預覽 API，正常模式使用學生 API
+      if (isPreviewMode) {
+        // 預覽模式：使用老師的預覽 API，不需要 progress_id
+        result = await retryAIAnalysis(
+          async () => {
+            const assessResponse = await fetch(
+              `${apiUrl}/api/teachers/assignments/preview/assess-speech`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+              },
             );
-            if (assessResponse.status >= 500 || assessResponse.status === 429) {
-              // Server errors and rate limits are retryable
-              throw error;
-            }
-            // Client errors (4xx except 429) should not be retried
-            throw Object.assign(error, { noRetry: true });
-          }
 
-          return await assessResponse.json();
-        },
-        (attempt, error) => {
-          console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
-          toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
-        },
-      );
+            if (!assessResponse.ok) {
+              const error = new Error(
+                `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
+              );
+              if (assessResponse.status >= 500 || assessResponse.status === 429) {
+                throw error;
+              }
+              throw Object.assign(error, { noRetry: true });
+            }
+
+            const data = await assessResponse.json();
+            // 預覽 API 返回格式：{ success: true, preview_mode: true, assessment: {...} }
+            return data.assessment;
+          },
+          (attempt, error) => {
+            console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+          },
+        );
+      } else {
+        // 正常模式：使用學生 API，需要 progress_id
+        // 🔥 如果還沒有 progress_id，使用 fallback
+        if (!currentProgressId) {
+          currentProgressId = (progressId as number) || 1;
+        }
+
+        console.log("🔍 AI評估使用 progress_id:", {
+          currentQuestionIndex,
+          progressIds,
+          progressId,
+          currentProgressId,
+        });
+
+        formData.append("progress_id", String(currentProgressId));
+        formData.append("item_index", String(currentQuestionIndex));
+
+        result = await retryAIAnalysis(
+          async () => {
+            const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: formData,
+            });
+
+            if (!assessResponse.ok) {
+              const error = new Error(
+                `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
+              );
+              if (assessResponse.status >= 500 || assessResponse.status === 429) {
+                throw error;
+              }
+              throw Object.assign(error, { noRetry: true });
+            }
+
+            return await assessResponse.json();
+          },
+          (attempt, error) => {
+            console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+          },
+        );
+      }
 
       // 🔍 詳細記錄AI評估結果
       console.log("🎯 AI評估完整回應:", JSON.stringify(result, null, 2));
