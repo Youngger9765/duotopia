@@ -403,7 +403,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       // 🔍 檢查是否需要上傳（如果是 blob URL）
       // 預覽模式跳過上傳到資料庫
-      if (typeof audioUrl === "string" && audioUrl.startsWith("blob:") && !isPreviewMode) {
+      if (
+        typeof audioUrl === "string" &&
+        audioUrl.startsWith("blob:") &&
+        !isPreviewMode
+      ) {
         toast.info("正在上傳錄音...");
 
         // Convert blob URL to blob
@@ -463,7 +467,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       toast.info("AI 正在分析您的發音...");
 
       // Convert audio URL to blob for AI analysis
-      const response = await fetch(isPreviewMode ? (audioUrl as string) : gcsAudioUrl);
+      const response = await fetch(
+        isPreviewMode ? (audioUrl as string) : gcsAudioUrl,
+      );
       const audioBlob = await response.blob();
 
       // Create form data
@@ -500,7 +506,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
               const error = new Error(
                 `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
               );
-              if (assessResponse.status >= 500 || assessResponse.status === 429) {
+              if (
+                assessResponse.status >= 500 ||
+                assessResponse.status === 429
+              ) {
                 throw error;
               }
               throw Object.assign(error, { noRetry: true });
@@ -546,7 +555,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
               const error = new Error(
                 `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
               );
-              if (assessResponse.status >= 500 || assessResponse.status === 429) {
+              if (
+                assessResponse.status >= 500 ||
+                assessResponse.status === 429
+              ) {
                 throw error;
               }
               throw Object.assign(error, { noRetry: true });
