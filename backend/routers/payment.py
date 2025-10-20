@@ -492,15 +492,24 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
                 refund_amount = data.get("refund_amount", transaction.amount)
                 if refund_amount >= transaction.amount:
                     # 全額退款 - 回復訂閱天數
-                    days_to_deduct = 30 if transaction.subscription_type == "月方案" else 90
+                    days_to_deduct = (
+                        30 if transaction.subscription_type == "月方案" else 90
+                    )
                     teacher.subscription_end_date -= timedelta(days=days_to_deduct)
-                    logger.info(f"Full refund: deducted {days_to_deduct} days from subscription")
+                    logger.info(
+                        f"Full refund: deducted {days_to_deduct} days from subscription"
+                    )
                 else:
                     # 部分退款 - 按比例調整
                     refund_ratio = refund_amount / transaction.amount
-                    days_to_deduct = int((30 if transaction.subscription_type == "月方案" else 90) * refund_ratio)
+                    days_to_deduct = int(
+                        (30 if transaction.subscription_type == "月方案" else 90)
+                        * refund_ratio
+                    )
                     teacher.subscription_end_date -= timedelta(days=days_to_deduct)
-                    logger.info(f"Partial refund: deducted {days_to_deduct} days from subscription")
+                    logger.info(
+                        f"Partial refund: deducted {days_to_deduct} days from subscription"
+                    )
 
         # 🔧 處理付款事件
         elif status == 0:
