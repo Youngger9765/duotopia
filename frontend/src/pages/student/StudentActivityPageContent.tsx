@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Activity type from API
-interface Activity {
+export interface Activity {
   id: number;
   content_id: number;
   order: number;
@@ -130,12 +130,15 @@ export default function StudentActivityPageContent({
 
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
-  const isReadOnly = assignmentStatus === "SUBMITTED" || assignmentStatus === "GRADED";
+  const isReadOnly =
+    assignmentStatus === "SUBMITTED" || assignmentStatus === "GRADED";
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null,
+  );
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const recordingTimeRef = useRef<number>(0);
   const hasRecordedData = useRef<boolean>(false);
@@ -195,7 +198,9 @@ export default function StudentActivityPageContent({
 
   const startRecording = async (isReRecord: boolean = false) => {
     if (isReadOnly) {
-      toast.warning(isPreviewMode ? "預覽模式下無法錄音" : "檢視模式下無法錄音");
+      toast.warning(
+        isPreviewMode ? "預覽模式下無法錄音" : "檢視模式下無法錄音",
+      );
       return;
     }
 
@@ -503,7 +508,9 @@ export default function StudentActivityPageContent({
 
   const handleFileUpload = async (file: File) => {
     if (isReadOnly) {
-      toast.warning(isPreviewMode ? "預覽模式下無法上傳" : "檢視模式下無法上傳");
+      toast.warning(
+        isPreviewMode ? "預覽模式下無法上傳" : "檢視模式下無法上傳",
+      );
       return;
     }
 
@@ -959,11 +966,7 @@ export default function StudentActivityPageContent({
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-gray-600 mb-4">此作業尚無題目</p>
-          {onBack && (
-            <Button onClick={onBack}>
-              返回作業詳情
-            </Button>
-          )}
+          {onBack && <Button onClick={onBack}>返回作業詳情</Button>}
         </div>
       </div>
     );

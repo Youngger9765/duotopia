@@ -18,7 +18,6 @@ from models import (
     Assignment,
     AssignmentContent,
     StudentContentProgress,
-    StudentItemProgress,
     ProgramLevel,
 )
 from auth import verify_token, get_password_hash
@@ -2642,7 +2641,9 @@ async def get_assignment_preview(
                 "type": content.type.value if content.type else "reading_assessment",
                 "title": content.title,
                 "duration": content.time_limit_seconds or 60,
-                "points": 100 // len(assignment_contents) if len(assignment_contents) > 0 else 100,
+                "points": 100 // len(assignment_contents)
+                if len(assignment_contents) > 0
+                else 100,
                 "status": "NOT_STARTED",  # 預覽模式始終是未開始
                 "score": None,
                 "completed_at": None,
@@ -2691,7 +2692,7 @@ async def get_assignment_preview(
 async def preview_assess_speech(
     audio_file: UploadFile = File(...),
     reference_text: str = Form(...),
-    current_teacher: Teacher = Depends(get_current_teacher),
+    current_teacher: Teacher = Depends(get_current_teacher),  # noqa: F811
 ):
     """
     預覽模式專用：評估發音但不存入資料庫
@@ -2700,6 +2701,10 @@ async def preview_assess_speech(
     - 不更新資料庫
     - 供老師預覽示範用
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     # 使用與學生相同的 AI 評估邏輯（確保一致性）
     from routers.speech_assessment import convert_audio_to_wav, assess_pronunciation
 
@@ -2746,6 +2751,4 @@ async def preview_assess_speech(
         raise
     except Exception as e:
         logger.error(f"Preview assessment failed: {e}")
-        raise HTTPException(
-            status_code=503, detail="AI 評估失敗，請稍後再試"
-        )
+        raise HTTPException(status_code=503, detail="AI 評估失敗，請稍後再試")

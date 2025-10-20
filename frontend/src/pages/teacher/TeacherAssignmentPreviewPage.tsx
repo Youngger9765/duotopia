@@ -15,14 +15,16 @@ import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 // 導入學生元件
-import StudentActivityPageContent from "../student/StudentActivityPageContent";
+import StudentActivityPageContent, {
+  type Activity,
+} from "../student/StudentActivityPageContent";
 
 interface ActivityResponse {
   assignment_id: number;
   title: string;
   status?: string;
   total_activities: number;
-  activities: any[];
+  activities: Activity[];
 }
 
 export default function TeacherAssignmentPreviewPage() {
@@ -33,7 +35,9 @@ export default function TeacherAssignmentPreviewPage() {
   const navigate = useNavigate();
   const { token } = useTeacherAuthStore();
 
-  const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
+  const [activityData, setActivityData] = useState<ActivityResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function TeacherAssignmentPreviewPage() {
       setLoading(true);
 
       const response = await apiClient.get<ActivityResponse>(
-        `/api/teachers/assignments/${assignmentId}/preview`
+        `/api/teachers/assignments/${assignmentId}/preview`,
       );
 
       setActivityData(response);
@@ -72,7 +76,9 @@ export default function TeacherAssignmentPreviewPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">無法載入預覽資料</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            無法載入預覽資料
+          </p>
           <Button onClick={() => navigate(-1)}>返回</Button>
         </div>
       </div>
@@ -88,7 +94,9 @@ export default function TeacherAssignmentPreviewPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/teacher/classroom/${classroomId}?tab=assignments`)}
+              onClick={() =>
+                navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
+              }
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -121,7 +129,9 @@ export default function TeacherAssignmentPreviewPage() {
         assignmentId={parseInt(assignmentId!)}
         isPreviewMode={true}
         authToken={token || undefined}
-        onBack={() => navigate(`/teacher/classroom/${classroomId}?tab=assignments`)}
+        onBack={() =>
+          navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
+        }
       />
     </div>
   );

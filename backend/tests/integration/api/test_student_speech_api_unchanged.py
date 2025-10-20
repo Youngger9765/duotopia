@@ -7,20 +7,21 @@
 3. 學生錄音上傳和 AI 評估流程完整
 """
 
-import pytest
+import pytest  # noqa: F401
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from io import BytesIO
 
-def test_student_speech_assess_endpoint_exists(test_client: TestClient, db_session: Session):
+
+def test_student_speech_assess_endpoint_exists(
+    test_client: TestClient, db_session: Session
+):
     """測試學生 speech/assess 端點存在"""
     # 這個測試會因為缺少認證失敗，但證明端點存在
     response = test_client.post("/api/speech/assess")
 
     # 401 = endpoint exists but requires auth
     # 404 = endpoint doesn't exist
-    assert response.status_code in [401, 422], \
-        f"端點應該存在但要求認證，實際: {response.status_code}"
+    assert response.status_code in [401, 422], f"端點應該存在但要求認證，實際: {response.status_code}"
 
 
 def test_assess_pronunciation_function_available():
@@ -33,6 +34,7 @@ def test_assess_pronunciation_function_available():
 
     # 檢查函數簽名
     import inspect
+
     sig = inspect.signature(assess_pronunciation)
     params = list(sig.parameters.keys())
 
@@ -48,8 +50,10 @@ def test_teacher_preview_api_exists(test_client: TestClient):
     # 401 = requires teacher auth
     # 404 = endpoint doesn't exist
     # 422 = missing parameters
-    assert response.status_code in [401, 422], \
-        f"預覽端點應該存在但要求認證，實際: {response.status_code}"
+    assert response.status_code in [
+        401,
+        422,
+    ], f"預覽端點應該存在但要求認證，實際: {response.status_code}"
 
 
 def test_teacher_preview_uses_same_logic():
@@ -65,16 +69,14 @@ def test_teacher_preview_uses_same_logic():
     source = inspect.getsource(preview_func)
 
     # 應該使用 routers.speech_assessment 的函數
-    assert "from routers.speech_assessment import" in source, \
-        "應該導入 speech_assessment 模組"
-    assert "convert_audio_to_wav" in source, \
-        "應該使用 convert_audio_to_wav 函數"
-    assert "assess_pronunciation" in source, \
-        "應該使用 assess_pronunciation 函數"
+    assert (
+        "from routers.speech_assessment import" in source
+    ), "應該導入 speech_assessment 模組"
+    assert "convert_audio_to_wav" in source, "應該使用 convert_audio_to_wav 函數"
+    assert "assess_pronunciation" in source, "應該使用 assess_pronunciation 函數"
 
     # 不應該有錯誤的導入
-    assert "from services.azure_speech" not in source, \
-        "不應該導入不存在的 services.azure_speech"
+    assert "from services.azure_speech" not in source, "不應該導入不存在的 services.azure_speech"
 
 
 def test_student_api_parameters():
