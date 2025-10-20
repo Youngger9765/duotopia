@@ -13,6 +13,7 @@ import TeacherClassrooms from "./pages/teacher/TeacherClassrooms";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
 import ClassroomDetail from "./pages/teacher/ClassroomDetail";
 import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetailPage";
+import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPreviewPage";
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
@@ -96,6 +97,14 @@ function App() {
           element={
             <ProtectedRoute>
               <TeacherAssignmentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/classroom/:classroomId/assignment/:assignmentId/preview"
+          element={
+            <ProtectedRoute>
+              <TeacherAssignmentPreviewPage />
             </ProtectedRoute>
           }
         />

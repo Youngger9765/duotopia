@@ -1369,19 +1369,33 @@ export default function ClassroomDetail({
                                   </div>
                                 </div>
 
-                                {/* Action Button */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                  onClick={() => {
-                                    navigate(
-                                      `/teacher/classroom/${id}/assignment/${assignment.id}`,
-                                    );
-                                  }}
-                                >
-                                  查看詳情
-                                </Button>
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    onClick={() => {
+                                      navigate(
+                                        `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                      );
+                                    }}
+                                  >
+                                    查看詳情
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                    onClick={() => {
+                                      navigate(
+                                        `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
+                                      );
+                                    }}
+                                  >
+                                    預覽示範
+                                  </Button>
+                                </div>
                               </div>
                             );
                           })}
@@ -1507,18 +1521,32 @@ export default function ClassroomDetail({
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-blue-600 hover:text-blue-700 dark:text-blue-400 h-10 min-h-10"
-                                        onClick={() => {
-                                          navigate(
-                                            `/teacher/classroom/${id}/assignment/${assignment.id}`,
-                                          );
-                                        }}
-                                      >
-                                        查看詳情
-                                      </Button>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 h-10 min-h-10"
+                                          onClick={() => {
+                                            navigate(
+                                              `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                            );
+                                          }}
+                                        >
+                                          查看詳情
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-green-600 hover:text-green-700 dark:text-green-400 h-10 min-h-10"
+                                          onClick={() => {
+                                            navigate(
+                                              `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
+                                            );
+                                          }}
+                                        >
+                                          預覽示範
+                                        </Button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
