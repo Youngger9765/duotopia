@@ -19,10 +19,12 @@ from sqlalchemy import (
     Numeric,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import enum
+import uuid
 
 
 # ============ Enums ============
@@ -568,7 +570,10 @@ class StudentContentProgress(Base):
     content = relationship("Content")
 
     def __repr__(self):
-        return f"<Progress student_assignment={self.student_assignment_id} content={self.content_id}>"
+        return (
+            f"<Progress student_assignment={self.student_assignment_id} "
+            f"content={self.content_id}>"
+        )
 
 
 # AssignmentSubmission 已移除 - 新架構使用 StudentContentProgress 記錄提交內容
@@ -787,7 +792,21 @@ class TeacherSubscriptionTransaction(Base):
         Integer, ForeignKey("teacher_subscription_transactions.id"), nullable=True
     )  # 原始交易（退款時參照）
 
-    # 9. 其他
+    # 9. TapPay 電子發票欄位
+    rec_invoice_id = Column(String(30), nullable=True, index=True)  # TapPay 發票 ID
+    invoice_number = Column(String(10), nullable=True, index=True)  # 發票號碼
+    invoice_status = Column(
+        String(20), nullable=True, default="PENDING", index=True
+    )  # 發票狀態
+    invoice_issued_at = Column(DateTime(timezone=True), nullable=True)  # 發票開立時間
+    buyer_tax_id = Column(String(8), nullable=True)  # 統一編號
+    buyer_name = Column(String(100), nullable=True)  # 買受人名稱
+    buyer_email = Column(String(255), nullable=True)  # 買受人 email
+    carrier_type = Column(String(10), nullable=True)  # 載具類型
+    carrier_id = Column(String(64), nullable=True)  # 載具號碼
+    invoice_response = Column(JSON, nullable=True)  # 發票 API 完整回應
+
+    # 10. 其他
     webhook_status = Column(String(20), nullable=True)  # Webhook 通知狀態
     transaction_metadata = Column("metadata", JSON, nullable=True)  # 額外資料（向後相容）
     created_at = Column(
@@ -804,4 +823,48 @@ class TeacherSubscriptionTransaction(Base):
     teacher = relationship("Teacher", back_populates="subscription_transactions")
 
     def __repr__(self):
-        return f"<TeacherSubscriptionTransaction({self.teacher_id}, {self.transaction_type}, {self.months}個月)>"
+        return (
+            f"<TeacherSubscriptionTransaction({self.teacher_id}, "
+            f"{self.transaction_type}, {self.months}個月)>"
+        )
+
+
+class InvoiceStatusHistory(Base):
+    """發票狀態變更歷史 - 追蹤發票生命週期與 Notify 事件"""
+
+    __tablename__ = "invoice_status_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transaction_id = Column(
+        Integer,
+        ForeignKey("teacher_subscription_transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # 狀態轉換
+    from_status = Column(String(20), nullable=True)  # 原狀態
+    to_status = Column(String(20), nullable=False)  # 新狀態
+    action_type = Column(
+        String(20), nullable=False
+    )  # ISSUE/VOID/ALLOWANCE/REISSUE/NOTIFY
+    reason = Column(Text, nullable=True)  # 變更原因
+
+    # Notify 事件相關
+    is_notify = Column(Boolean, nullable=False, default=False)  # 是否為 Notify 觸發
+    notify_error_code = Column(String(20), nullable=True)  # Notify 錯誤代碼
+    notify_error_msg = Column(Text, nullable=True)  # Notify 錯誤訊息
+
+    # 完整 API 記錄
+    request_payload = Column(JSON, nullable=True)  # 請求資料
+    response_payload = Column(JSON, nullable=True)  # 回應資料
+
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    def __repr__(self):
+        return (
+            f"<InvoiceStatusHistory({self.transaction_id}, "
+            f"{self.from_status}->{self.to_status}, {self.action_type})>"
+        )
