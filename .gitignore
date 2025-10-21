@@ -97,3 +97,6 @@ test.db
 test-results/
 playwright-report/
 .husky/
+
+# Documentation files (payment related)
+docs/payment/
