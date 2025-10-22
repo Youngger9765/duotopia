@@ -105,6 +105,33 @@ jobs:
 
         echo "✅ Renewal reminder job 創建成功"
 
+    - name: Setup Test Notification Job (Staging Only)
+      if: github.event.inputs.environment == 'staging'
+      run: |
+        JOB_NAME="test-notification-staging"
+
+        echo "🗑️  刪除舊的 test notification job（如果存在）..."
+        gcloud scheduler jobs delete $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --quiet || echo "No existing job to delete"
+
+        echo "✨ 創建測試通知 job..."
+        gcloud scheduler jobs create http $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --schedule="0 9 * * *" \
+          --time-zone="Asia/Taipei" \
+          --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification" \
+          --http-method=POST \
+          --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
+          --attempt-deadline=300s \
+          --max-retry-attempts=3 \
+          --description="每天早上 9:00 (台北時間) 發送測試通知到 myduotopia@gmail.com - staging only"
+
+        echo "✅ Test notification job 創建成功"
+        echo ""
+        echo "📧 此 job 每天早上 9:00 會發送測試郵件到 myduotopia@gmail.com"
+        echo "💡 可以透過這個測試確認 Cloud Scheduler 是否正常運作"
+
     - name: List all Cloud Scheduler jobs
       run: |
         echo ""
@@ -113,18 +140,34 @@ jobs:
 
         echo ""
         echo "💰 成本估算："
-        echo "- Cloud Scheduler: 每個 job USD 0.10/月 (2 個 jobs = USD 0.20/月)"
-        echo "- 每月 1 號執行 1 次 + 每天執行 1 次 = 31 次/月"
+        if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+          echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
+          echo "  - Monthly Renewal (每月 1 次)"
+          echo "  - Renewal Reminder (每天 1 次)"
+          echo "  - Test Notification (每天 1 次 - staging only)"
+        else
+          echo "- Cloud Scheduler: 2 個 jobs × USD 0.10/月 = USD 0.20/月"
+          echo "  - Monthly Renewal (每月 1 次)"
+          echo "  - Renewal Reminder (每天 1 次)"
+        fi
         echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
 
-    - name: Test Monthly Renewal Job (Optional)
+    - name: Test Jobs (Staging Only)
       if: github.event.inputs.environment == 'staging'
       run: |
         echo ""
-        echo "🧪 可以手動測試 staging 的 cron job："
-        echo "gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
+        echo "🧪 測試指令："
         echo ""
-        echo "⚠️  注意：這會真的執行自動續訂邏輯！請確認測試環境資料可以被修改"
+        echo "1. 測試通知 job（安全，只發送 email）："
+        echo "   gcloud scheduler jobs run test-notification-staging --location=${{ env.REGION }}"
+        echo ""
+        echo "2. 測試 renewal reminder（安全，只發送 email）："
+        echo "   gcloud scheduler jobs run renewal-reminder-staging --location=${{ env.REGION }}"
+        echo ""
+        echo "3. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
+        echo "   gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
+        echo ""
+        echo "💡 建議：先執行 test-notification 確認 Cloud Scheduler 正常運作"
 
     - name: Summary
       run: |
@@ -143,5 +186,12 @@ jobs:
         echo "   排程: 每天凌晨 3:00 (台北時間)"
         echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder"
         echo ""
+        if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+          echo "📅 Job 3: test-notification-staging (僅 staging)"
+          echo "   排程: 每天早上 9:00 (台北時間)"
+          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification"
+          echo "   📧 會發送測試郵件到 myduotopia@gmail.com"
+          echo ""
+        fi
         echo "💡 下次需要更新時，請在 GitHub Actions 手動觸發此 workflow"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
