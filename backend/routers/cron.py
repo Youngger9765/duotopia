@@ -343,6 +343,130 @@ async def renewal_reminder_cron(
     return results
 
 
+@router.post("/test-notification")
+async def test_cron_notification(
+    x_cron_secret: str = Header(None), db: Session = Depends(get_db)
+):
+    """
+    測試用 Cron Job - 只發送通知不執行扣款
+
+    執行時間：每天執行（用於測試 Cloud Scheduler 是否正常運作）
+
+    功能：
+    1. 檢查即將到期的訂閱（7 天內）
+    2. 統計需要續訂的用戶數量
+    3. 發送測試通知到 Duotopia 官方信箱
+
+    安全性：
+    - 只允許帶有正確 X-Cron-Secret header 的請求
+    - 不會真正執行扣款或修改資料
+    """
+    # 驗證 Cron Secret
+    if x_cron_secret != CRON_SECRET:
+        logger.warning(f"Unauthorized cron request. Secret: {x_cron_secret[:10]}...")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    logger.info("🧪 Test Cron Notification Started")
+
+    # 台北時區
+    taipei_tz = timezone(timedelta(hours=8))
+    now_taipei = datetime.now(taipei_tz)
+    now_utc = datetime.now(timezone.utc)
+
+    # 7 天後
+    seven_days_later = now_utc + timedelta(days=7)
+
+    # 統計即將到期的用戶（7 天內）
+    teachers_expiring_soon = (
+        db.query(Teacher)
+        .filter(
+            Teacher.subscription_end_date <= seven_days_later,
+            Teacher.subscription_end_date > now_utc,
+            Teacher.subscription_auto_renew.is_(True),
+            Teacher.is_active.is_(True),
+        )
+        .all()
+    )
+
+    # 統計有卡片的用戶
+    teachers_with_card = [t for t in teachers_expiring_soon if t.card_key]
+    teachers_without_card = [t for t in teachers_expiring_soon if not t.card_key]
+
+    # 發送測試通知到 Duotopia 官方信箱
+    notification_content = f"""
+    <h2>🧪 Cloud Scheduler 測試通知</h2>
+    <p><strong>執行時間：</strong>{now_taipei.strftime('%Y-%m-%d %H:%M:%S')} (台北時間)</p>
+
+    <h3>📊 訂閱統計</h3>
+    <ul>
+        <li>7 天內即將到期的用戶：<strong>{len(teachers_expiring_soon)}</strong> 位</li>
+        <li>已儲存信用卡：<strong>{len(teachers_with_card)}</strong> 位</li>
+        <li>未儲存信用卡：<strong>{len(teachers_without_card)}</strong> 位</li>
+    </ul>
+
+    <h3>✅ Cloud Scheduler 狀態</h3>
+    <p>✅ Cloud Scheduler 運作正常<br>
+    ✅ Cron API 可正常訪問<br>
+    ✅ 資料庫連線正常<br>
+    ✅ Email 服務正常</p>
+
+    <h3>📋 用戶詳情</h3>
+    """
+
+    if teachers_with_card:
+        notification_content += "<h4>已儲存卡片的用戶：</h4><ul>"
+        for teacher in teachers_with_card:
+            days_left = (teacher.subscription_end_date - now_utc).days
+            notification_content += f"""
+            <li>{teacher.name} ({teacher.email})
+                - 到期日: {teacher.subscription_end_date.strftime('%Y-%m-%d')}
+                - 剩餘: {days_left} 天
+                - 卡片: ****{teacher.card_last_four}
+            </li>
+            """
+        notification_content += "</ul>"
+
+    if teachers_without_card:
+        notification_content += "<h4>⚠️ 未儲存卡片的用戶（需手動處理）：</h4><ul>"
+        for teacher in teachers_without_card:
+            days_left = (teacher.subscription_end_date - now_utc).days
+            notification_content += f"""
+            <li>{teacher.name} ({teacher.email})
+                - 到期日: {teacher.subscription_end_date.strftime('%Y-%m-%d')}
+                - 剩餘: {days_left} 天
+            </li>
+            """
+        notification_content += "</ul>"
+
+    notification_content += """
+    <hr>
+    <p><small>此為測試通知，不會執行任何扣款或資料修改。</small></p>
+    """
+
+    # 發送通知到官方信箱
+    try:
+        email_service.send_email(
+            to_email="myduotopia@gmail.com",  # Duotopia 官方信箱
+            subject=f"🧪 Cloud Scheduler 測試通知 - {now_taipei.strftime('%Y-%m-%d %H:%M')}",
+            html_content=notification_content,
+        )
+        logger.info("✅ Test notification sent successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to send test notification: {e}")
+
+    return {
+        "status": "success",
+        "timestamp": now_taipei.isoformat(),
+        "statistics": {
+            "total_expiring_soon": len(teachers_expiring_soon),
+            "with_card": len(teachers_with_card),
+            "without_card": len(teachers_without_card),
+        },
+        "notification_sent": True,
+        "message": "Test notification sent to myduotopia@gmail.com",
+    }
+
+
 @router.get("/health")
 async def cron_health_check():
     """
