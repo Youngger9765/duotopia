@@ -499,17 +499,18 @@ async def recording_error_report_cron(
         taipei_tz = timezone(timedelta(hours=8))
         now_taipei = datetime.now(taipei_tz)
 
-        # 查詢最近 24 小時的錯誤
+        # 查詢最近 24 小時的錯誤（使用正確的 audio_playback_errors table）
         query_24h = f"""
         SELECT
             COUNT(*) as error_count,
             error_type,
-            user_role,
-            COUNT(DISTINCT user_id) as affected_users,
-            ARRAY_AGG(DISTINCT error_message LIMIT 5) as sample_messages
-        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.recording_errors`
+            platform,
+            browser,
+            COUNT(DISTINCT student_id) as affected_students,
+            ANY_VALUE(error_message) as sample_message
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors`
         WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        GROUP BY error_type, user_role
+        GROUP BY error_type, platform, browser
         ORDER BY error_count DESC
         """
 
@@ -518,11 +519,12 @@ async def recording_error_report_cron(
         SELECT
             COUNT(*) as error_count,
             error_type,
-            user_role,
-            COUNT(DISTINCT user_id) as affected_users
-        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.recording_errors`
+            platform,
+            browser,
+            COUNT(DISTINCT student_id) as affected_students
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors`
         WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
-        GROUP BY error_type, user_role
+        GROUP BY error_type, platform, browser
         ORDER BY error_count DESC
         """
 
@@ -546,21 +548,24 @@ async def recording_error_report_cron(
                     error_data.append(
                         {
                             "type": row.error_type,
-                            "role": row.user_role,
+                            "platform": row.platform,
+                            "browser": row.browser,
                             "count": row.error_count,
-                            "affected_users": row.affected_users,
-                            "samples": row.sample_messages[:3],
+                            "affected_students": row.affected_students,
+                            "sample": row.sample_message
+                            if row.sample_message
+                            else "無錯誤訊息",
                         }
                     )
 
                 prompt = f"""
-你是 Duotopia 英語學習平台的技術顧問。以下是過去 24 小時的錄音錯誤統計資料：
+你是 Duotopia 英語學習平台的技術顧問。以下是過去 24 小時的錄音播放錯誤統計資料：
 
 {error_data}
 
 請用繁體中文生成一份簡潔的錯誤分析摘要（3-5 句話），包含：
-1. 主要問題類型
-2. 可能的原因
+1. 主要問題類型（錄音播放相關）
+2. 可能的原因（瀏覽器相容性、錄音時間、檔案大小等）
 3. 建議的處理優先順序
 
 請用專業但易懂的語言，不要使用 Markdown 格式。
@@ -680,8 +685,9 @@ async def recording_error_report_cron(
             for row in results_1h:
                 html_content += f"""
                         <div class="error-item">
-                            <strong>{row.error_type}</strong> ({row.user_role})<br>
-                            錯誤次數: {row.error_count} | 影響用戶: {row.affected_users} 位
+                            <strong>{row.error_type}</strong><br>
+                            平台: {row.platform} | 瀏覽器: {row.browser}<br>
+                            錯誤次數: {row.error_count} | 影響學生: {row.affected_students} 位
                         </div>
                 """
             html_content += """
@@ -703,18 +709,20 @@ async def recording_error_report_cron(
                         <table>
                             <tr>
                                 <th>錯誤類型</th>
-                                <th>用戶角色</th>
+                                <th>平台</th>
+                                <th>瀏覽器</th>
                                 <th>次數</th>
-                                <th>影響用戶</th>
+                                <th>影響學生</th>
                             </tr>
             """
             for row in results_24h[:10]:
                 html_content += f"""
                             <tr>
                                 <td>{row.error_type}</td>
-                                <td>{row.user_role}</td>
+                                <td>{row.platform}</td>
+                                <td>{row.browser}</td>
                                 <td>{row.error_count}</td>
-                                <td>{row.affected_users}</td>
+                                <td>{row.affected_students}</td>
                             </tr>
                 """
             html_content += """
