@@ -1,10 +1,10 @@
 """
-訂閱計算服務 - 統一每月 1 號扣款
+訂閱計算服務 - 統一每月 1 號扣款（按比例計費）
 
 規則：
 1. 所有用戶統一在每月 1 號續訂
-2. 首次訂閱收全額，直接用到下個月 1 號
-3. 如果剩餘天數 < 7 天，跳到下下個月 1 號
+2. 首次訂閱：一律按當月剩餘天數比例扣款，用到下個月 1 號
+3. 續訂：收全額，延長一個月
 """
 
 from datetime import datetime, timezone
@@ -21,15 +21,12 @@ class SubscriptionCalculator:
         "School Teachers": 330,
     }
 
-    # 月底優惠門檻（剩餘天數少於此數字，跳到下下個月）
-    GRACE_PERIOD_DAYS = 7
-
     @staticmethod
     def calculate_first_subscription(
         start_date: datetime, plan_name: str
     ) -> Tuple[datetime, int, dict]:
         """
-        計算首次訂閱的到期日和金額
+        計算首次訂閱的到期日和金額（一律按比例計費）
 
         Args:
             start_date: 訂閱開始日期
@@ -50,30 +47,15 @@ class SubscriptionCalculator:
         next_month_date_only = next_month_first.date()
         days_until_next_month = (next_month_date_only - start_date_only).days
 
-        # 如果剩餘天數太少（< 7 天），跳到下下個月
-        if days_until_next_month < SubscriptionCalculator.GRACE_PERIOD_DAYS:
-            # 跳過下個月，直接到下下個月 1 號
-            end_date = SubscriptionCalculator._get_next_month_first(next_month_first)
-            # 使用日期計算，確保一致性
-            actual_days = (end_date.date() - start_date_only).days
+        # 統一使用按比例計費：到下個月 1 號
+        end_date = next_month_first
+        actual_days = days_until_next_month
 
-            # 收全額（因為給了超過 30 天）
-            amount = full_price
-            grace_period_applied = True
-            bonus_days = actual_days - 30  # 超過 30 天的部分是贈送
+        # 取得當月實際天數（考慮閏年）
+        days_in_current_month = monthrange(start_date.year, start_date.month)[1]
 
-        else:
-            # 正常情況：到下個月 1 號
-            end_date = next_month_first
-            actual_days = days_until_next_month
-
-            # 取得當月實際天數（考慮閏年）
-            days_in_current_month = monthrange(start_date.year, start_date.month)[1]
-
-            # 按當月實際天數比例計算金額（四捨五入）
-            amount = round(full_price * (actual_days / days_in_current_month))
-            grace_period_applied = False
-            bonus_days = 0
+        # 按當月實際天數比例計算金額（四捨五入）
+        amount = round(full_price * (actual_days / days_in_current_month))
 
         details = {
             "start_date": start_date.isoformat(),
@@ -81,10 +63,8 @@ class SubscriptionCalculator:
             "actual_days": actual_days,
             "full_price": full_price,
             "amount": amount,
-            "bonus_days": bonus_days,
-            "grace_period_applied": grace_period_applied,
             "plan_name": plan_name,
-            "pricing_method": "grace_period" if grace_period_applied else "prorated",
+            "pricing_method": "prorated",  # 一律按比例計費
         }
 
         return end_date, amount, details
@@ -181,7 +161,7 @@ class SubscriptionCalculator:
 # ============ 使用範例 ============
 if __name__ == "__main__":
     print("=" * 70)
-    print("🧪 訂閱計算測試")
+    print("🧪 訂閱計算測試（一律按比例扣款）")
     print("=" * 70)
 
     # 測試情境
@@ -191,6 +171,7 @@ if __name__ == "__main__":
         ("10/15 訂閱", datetime(2025, 10, 15, 10, 0, 0, tzinfo=timezone.utc)),
         ("10/25 訂閱", datetime(2025, 10, 25, 10, 0, 0, tzinfo=timezone.utc)),
         ("10/28 訂閱", datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)),
+        ("10/31 訂閱", datetime(2025, 10, 31, 10, 0, 0, tzinfo=timezone.utc)),
     ]
 
     for name, start_date in test_cases:
@@ -203,8 +184,6 @@ if __name__ == "__main__":
         print(f"  到期日: {end_date.date()}")
         print(f"  應付金額: TWD {amount}")
         print(f"  實際天數: {details['actual_days']} 天")
-        print(f"  贈送天數: {details['bonus_days']} 天")
-        if details["grace_period_applied"]:
-            print("  ✨ 優惠：跳過下個月 1 號，直接到下下個月！")
+        print(f"  計費方式: 按比例計費 ({details['actual_days']}/31 月)")
 
     print("\n" + "=" * 70)
