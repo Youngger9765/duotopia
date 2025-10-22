@@ -22,6 +22,8 @@ class SubscriptionStatusResponse(BaseModel):
     end_date: Optional[str]
     days_remaining: int
     is_active: bool
+    auto_renew: bool  # 是否自動續訂
+    cancelled_at: Optional[str]  # 取消續訂時間
     created_at: str
 
 
@@ -46,6 +48,12 @@ async def get_subscription_status(
         else None,
         days_remaining=current_teacher.days_remaining,
         is_active=is_active,
+        auto_renew=current_teacher.subscription_auto_renew
+        if current_teacher.subscription_auto_renew is not None
+        else True,
+        cancelled_at=current_teacher.subscription_cancelled_at.isoformat()
+        if current_teacher.subscription_cancelled_at
+        else None,
         created_at=current_teacher.created_at.isoformat()
         if current_teacher.created_at
         else datetime.now(timezone.utc).isoformat(),
