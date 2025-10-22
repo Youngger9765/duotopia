@@ -198,6 +198,13 @@ jobs:
         ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
         ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
 
+        # Cron Job 配置
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}"
+        else
+          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}"
+        fi
+
         # Payment 功能控制
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           # Production: 預設禁用付款功能（免費優惠期）
