@@ -32,8 +32,10 @@ def get_test_engine():
 
 
 @pytest.fixture(scope="session")
-def test_engine():
+def test_engine(request):
     """Create a shared test database engine"""
+    # Skip for tests that don't need database
+    # This is checked at session level to avoid creating engine at all
     engine = get_test_engine()
     yield engine
     # 🧹 Cleanup: 刪除測試資料庫檔案
@@ -44,8 +46,13 @@ def test_engine():
 
 
 @pytest.fixture(scope="function", autouse=True)
-def ensure_tables(test_engine):
+def ensure_tables(test_engine, request):
     """🔧 Ensure tables exist before EVERY test (autouse)"""
+    # Skip database setup for tests marked with no_db
+    if "no_db" in request.keywords:
+        yield
+        return
+
     Base.metadata.create_all(bind=test_engine)
     yield
     # Cleanup happens in shared_test_session
