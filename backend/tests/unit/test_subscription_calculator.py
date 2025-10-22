@@ -1,7 +1,12 @@
 """
 訂閱計算器單元測試
 
-測試統一每月 1 號扣款的邏輯
+測試統一每月 1 號扣款的邏輯（按比例計費）
+
+規則：
+1. 首次訂閱：一律按當月剩餘天數比例扣款
+2. 續訂：收全額，延長到下個月 1 號
+3. 無特例，無優惠期
 
 注意：這是純粹的單元測試，不依賴資料庫
 """
@@ -30,7 +35,6 @@ class TestSubscriptionCalculator:
         )
         assert amount == 230  # 完整月價格
         assert details["actual_days"] == 31  # 10/1 到 11/1 = October 全月 31 天
-        assert details["bonus_days"] == 0
         assert details["pricing_method"] == "prorated"
 
     def test_subscription_mid_month_31_days(self):
@@ -83,53 +87,55 @@ class TestSubscriptionCalculator:
         assert amount == 119
         assert details["actual_days"] == 15
 
-    def test_subscription_end_of_month_grace_period(self):
-        """測試月底訂閱（少於 7 天，觸發優惠期）"""
+    def test_subscription_end_of_month_prorated(self):
+        """測試月底訂閱（按比例計費，無優惠期）"""
         start_date = datetime(2025, 10, 26, 10, 0, 0, tzinfo=timezone.utc)
         end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
             start_date, "Tutor Teachers"
         )
 
-        # 10/26 距離 11/1 只有 6 天 (10/26-10/31)，跳到 12/1
-        assert (
-            end_date.date()
-            == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-        )
-        assert amount == 230  # 收全額
-        assert details["actual_days"] == 36  # 10/26 到 12/1 = 36 days
-        assert details["bonus_days"] == 6  # 36 - 30 = 6 天贈送
-        assert details["grace_period_applied"] is True
-        assert details["pricing_method"] == "grace_period"
-
-    def test_subscription_grace_period_boundary(self):
-        """測試優惠期邊界（剛好 7 天）"""
-        # 10/25 距離 11/1 剛好 7 天，不觸發優惠期
-        start_date = datetime(2025, 10, 25, 10, 0, 0, tzinfo=timezone.utc)
-        end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
-            start_date, "Tutor Teachers"
-        )
-
-        # 應該到 11/1，不跳過
+        # 10/26 到 11/1 = 6 天，按比例計費
         assert (
             end_date.date()
             == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert details["grace_period_applied"] is False
+        # 230 × (6/31) = 44.5... → 45
+        assert amount == 45
+        assert details["actual_days"] == 6
+        assert details["pricing_method"] == "prorated"
 
-    def test_subscription_january_end(self):
-        """測試 1 月底訂閱（31天月份）"""
+    def test_subscription_last_day_of_month(self):
+        """測試月底最後一天訂閱（按比例計費）"""
+        start_date = datetime(2025, 10, 31, 10, 0, 0, tzinfo=timezone.utc)
+        end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
+            start_date, "Tutor Teachers"
+        )
+
+        # 10/31 到 11/1 = 1 天，按比例計費
+        assert (
+            end_date.date()
+            == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+        )
+        # 230 × (1/31) = 7.4... → 7
+        assert amount == 7
+        assert details["actual_days"] == 1
+        assert details["pricing_method"] == "prorated"
+
+    def test_subscription_january_end_prorated(self):
+        """測試 1 月底訂閱（按比例計費）"""
         start_date = datetime(2025, 1, 28, 10, 0, 0, tzinfo=timezone.utc)
         end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
             start_date, "Tutor Teachers"
         )
 
-        # 1/28 距離 2/1 只有 4 天 (1/28-1/31)，跳到 3/1
+        # 1/28 到 2/1 = 4 天，按比例計費
         assert (
-            end_date.date() == datetime(2025, 3, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+            end_date.date() == datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert amount == 230  # 收全額
-        assert details["actual_days"] == 32  # 1/28 到 3/1 = 32 days
-        assert details["grace_period_applied"] is True
+        # 230 × (4/31) = 29.7... → 30
+        assert amount == 30
+        assert details["actual_days"] == 4
+        assert details["pricing_method"] == "prorated"
 
     def test_school_teachers_plan(self):
         """測試 School Teachers 方案（330元）"""

@@ -135,52 +135,42 @@ async def process_payment(
         # Get current time (needed for exception handling)
         now = datetime.now(timezone.utc)
 
-        # Calculate subscription months based on plan
-        if payment_request.plan_name == "Tutor Teachers":
-            months = 1
-            expected_amount = 230
-        elif payment_request.plan_name == "School Teachers":
-            months = 1
-            expected_amount = 330
-        else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown plan: {payment_request.plan_name}"
-            )
-
-        # Verify amount matches plan price
-        if payment_request.amount != expected_amount:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
-            )
-
-        # 🔄 統一每月 1 號續訂邏輯
+        # 🔄 統一每月 1 號續訂邏輯（先計算正確金額）
         if (
             current_teacher.subscription_end_date
             and current_teacher.subscription_end_date > now
         ):
-            # 延長現有訂閱（續訂）
+            # 延長現有訂閱（續訂）- 收全額
             previous_end_date = current_teacher.subscription_end_date
-            new_end_date, _ = SubscriptionCalculator.calculate_renewal(
+            new_end_date, expected_amount = SubscriptionCalculator.calculate_renewal(
                 previous_end_date, payment_request.plan_name
             )
+            months = 1
             logger.info(
                 f"Renewal: extending subscription from {previous_end_date.date()} "
-                f"to {new_end_date.date()}"
+                f"to {new_end_date.date()} - Amount: TWD {expected_amount}"
             )
         else:
-            # 首次訂閱
+            # 首次訂閱（按比例計費）
             previous_end_date = None
             (
                 new_end_date,
-                _,
+                expected_amount,
                 details,
             ) = SubscriptionCalculator.calculate_first_subscription(
                 now, payment_request.plan_name
             )
+            months = 1
             logger.info(
                 f"First subscription: {now.date()} -> {new_end_date.date()} "
-                f"({details['actual_days']} days, bonus: {details['bonus_days']} days)"
+                f"({details['actual_days']} days, prorated amount: TWD {expected_amount})"
+            )
+
+        # Verify amount matches calculated price
+        if payment_request.amount != expected_amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
             )
 
         # Process payment with TapPay (Sandbox or Production based on env)
