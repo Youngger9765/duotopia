@@ -29,6 +29,46 @@ class EmailService:
         self.from_name = os.getenv("FROM_NAME", "Duotopia")
         self.frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
+    def send_email(self, to_email: str, subject: str, html_content: str) -> bool:
+        """
+        發送通用 HTML 郵件
+
+        Args:
+            to_email: 收件者 email
+            subject: 郵件主旨
+            html_content: HTML 格式的郵件內容
+
+        Returns:
+            bool: 是否發送成功
+        """
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = to_email
+
+            html_part = MIMEText(html_content, "html", "utf-8")
+            msg.attach(html_part)
+
+            # 如果 SMTP 未設定，只記錄日誌（開發模式）
+            if not self.smtp_user or not self.smtp_password:
+                logger.info(f"[開發模式] Email: {subject} -> {to_email}")
+                print(f"\n📧 [開發模式] Email 已發送到: {to_email}")
+                print(f"📝 主旨: {subject}")
+                return True
+
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            return False
+
     def generate_verification_token(self) -> str:
         """生成驗證 token"""
         return secrets.token_urlsafe(32)
