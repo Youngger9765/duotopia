@@ -156,6 +156,19 @@ class Teacher(Base):
     monthly_message_limit = Column(Integer, nullable=True)  # 每月訊息限制（與 DB 一致，但不使用）
     messages_used_this_month = Column(Integer, nullable=True)  # 本月已用訊息（與 DB 一致，但不使用）
 
+    # TapPay 信用卡 Token（用於自動續訂扣款）
+    card_key = Column(String(255), nullable=True)  # TapPay Card Key（永久有效）
+    card_token = Column(String(255), nullable=True)  # TapPay Card Token（90天有效，每次交易更新）
+    card_last_four = Column(String(4), nullable=True)  # 信用卡末四碼（顯示用）
+    card_bin_code = Column(String(6), nullable=True)  # 信用卡 BIN Code
+    card_type = Column(
+        Integer, nullable=True
+    )  # 卡別（1: VISA, 2: MasterCard, 3: JCB, 4: Union Pay, 5: AMEX）
+    card_funding = Column(Integer, nullable=True)  # 卡種（0: 信用卡, 1: 金融卡, 2: 預付卡）
+    card_issuer = Column(String(100), nullable=True)  # 發卡銀行
+    card_country = Column(String(2), nullable=True)  # 發卡國家代碼
+    card_saved_at = Column(DateTime(timezone=True), nullable=True)  # 卡片儲存時間
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

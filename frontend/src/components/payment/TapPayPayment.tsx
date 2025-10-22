@@ -9,9 +9,12 @@ import { analyticsService } from "@/services/analyticsService";
 interface TapPayPaymentProps {
   amount: number;
   planName: string;
-  onPaymentSuccess: (transactionId: string) => void;
-  onPaymentError: (error: string) => void;
+  onPaymentSuccess?: (transactionId: string) => void;
+  onPaymentError?: (error: string) => void;
   onCancel?: () => void;
+  onSuccess?: () => void; // 用於卡片更新成功
+  onClose?: () => void; // 用於關閉對話框
+  isCardUpdate?: boolean; // 是否為卡片更新模式
 }
 
 const TapPayPayment: React.FC<TapPayPaymentProps> = ({
@@ -20,6 +23,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   onPaymentSuccess,
   onPaymentError,
   onCancel,
+  onSuccess,
+  isCardUpdate = false,
 }) => {
   const [canSubmit, setCanSubmit] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -228,7 +233,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           undefined, // cardStatus
         );
 
-        onPaymentError(result.msg || "無法取得付款憑證");
+        if (onPaymentError) onPaymentError(result.msg || "無法取得付款憑證");
         toast.error(result.msg || "付款失敗");
         setIsProcessing(false);
         return;
@@ -240,7 +245,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
       if (!prime) {
         console.error("Prime token 不存在！完整結果:", result);
-        onPaymentError("無法取得付款憑證 (prime token 為空)");
+        if (onPaymentError)
+          onPaymentError("無法取得付款憑證 (prime token 為空)");
         toast.error("無法取得付款憑證");
         setIsProcessing(false);
         return;
@@ -252,7 +258,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
         // 🔧 修復：取得正確的 auth token 和用戶資料
         const authToken = getAuthToken();
         if (!authToken) {
-          onPaymentError("請先登入");
+          if (onPaymentError) onPaymentError("請先登入");
           toast.error("請先登入");
           setIsProcessing(false);
           return;
@@ -260,16 +266,21 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
         const currentUser = getCurrentUser();
 
-        // Real TapPay payment processing
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/payment/process`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify({
+        // 決定使用哪個 API endpoint
+        const apiEndpoint = isCardUpdate
+          ? `${import.meta.env.VITE_API_URL}/api/payment/update-card`
+          : `${import.meta.env.VITE_API_URL}/api/payment/process`;
+
+        const requestBody = isCardUpdate
+          ? {
+              prime: prime,
+              cardholder: {
+                name: currentUser.name,
+                email: currentUser.email,
+                phone_number: currentUser.phone || "+886912345678",
+              },
+            }
+          : {
               prime: prime,
               amount: amount,
               plan_name: planName,
@@ -280,11 +291,19 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               cardholder: {
                 name: currentUser.name,
                 email: currentUser.email,
-                phone_number: currentUser.phone || "+886912345678", // 優先使用用戶電話
+                phone_number: currentUser.phone || "+886912345678",
               },
-            }),
+            };
+
+        // Real TapPay payment processing or card update
+        const response = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
           },
-        );
+          body: JSON.stringify(requestBody),
+        });
 
         // Check if response is JSON
         const contentType = response.headers.get("content-type");
@@ -295,8 +314,15 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
         const data = await response.json();
 
         if (response.ok && data.success) {
-          onPaymentSuccess(data.transaction_id);
-          toast.success("付款成功！");
+          if (isCardUpdate) {
+            // 卡片更新成功
+            if (onSuccess) onSuccess();
+            toast.success("信用卡更新成功！");
+          } else {
+            // 付款成功
+            if (onPaymentSuccess) onPaymentSuccess(data.transaction_id);
+            toast.success("付款成功！");
+          }
         } else {
           // 📊 記錄付款 API 失敗
           analyticsService.logPaymentApiError(
@@ -318,7 +344,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
             toast.info(errorMsg, {
               duration: 5000,
             });
-            onPaymentError(errorMsg);
+            if (onPaymentError) onPaymentError(errorMsg);
             return; // 不throw error
           }
 
@@ -343,8 +369,12 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
         }
       } catch (error) {
         const errorMsg =
-          error instanceof Error ? error.message : "付款處理發生錯誤";
-        onPaymentError(errorMsg);
+          error instanceof Error
+            ? error.message
+            : isCardUpdate
+              ? "信用卡更新發生錯誤"
+              : "付款處理發生錯誤";
+        if (onPaymentError) onPaymentError(errorMsg);
         toast.error(errorMsg);
       } finally {
         setIsProcessing(false);

@@ -29,6 +29,7 @@ import {
 import { toast } from "sonner";
 import TeacherLayout from "@/components/TeacherLayout";
 import TapPayPayment from "@/components/payment/TapPayPayment";
+import { SubscriptionCardManagement } from "@/components/payment/SubscriptionCardManagement";
 import { apiClient } from "@/lib/api";
 
 interface SubscriptionInfo {
@@ -390,6 +391,11 @@ export default function TeacherSubscription() {
             )}
           </CardContent>
         </Card>
+
+        {/* 💳 信用卡管理 */}
+        <div className="mb-6">
+          <SubscriptionCardManagement />
+        </div>
 
         {/* 付款歷史 */}
         <Card>

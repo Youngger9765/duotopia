@@ -27,9 +27,22 @@ class TapPayService:
         # 根據環境選擇 API URL
         self.environment = os.getenv("TAPPAY_ENV", "sandbox")
         if self.environment == "production":
-            self.api_url = "https://prod.tappaysdk.com/tpc/payment/pay-by-prime"
+            self.pay_by_prime_url = (
+                "https://prod.tappaysdk.com/tpc/payment/pay-by-prime"
+            )
+            self.pay_by_token_url = (
+                "https://prod.tappaysdk.com/tpc/payment/pay-by-token"
+            )
         else:
-            self.api_url = "https://sandbox.tappaysdk.com/tpc/payment/pay-by-prime"
+            self.pay_by_prime_url = (
+                "https://sandbox.tappaysdk.com/tpc/payment/pay-by-prime"
+            )
+            self.pay_by_token_url = (
+                "https://sandbox.tappaysdk.com/tpc/payment/pay-by-token"
+            )
+
+        # 保持向後相容
+        self.api_url = self.pay_by_prime_url
 
         logger.info(f"TapPay Service initialized in {self.environment} mode")
 
@@ -132,6 +145,93 @@ class TapPayService:
             return {
                 "status": -1,
                 "msg": "Payment processing failed",
+                "error": "INTERNAL_ERROR",
+            }
+
+    def pay_by_token(
+        self,
+        card_key: str,
+        card_token: str,
+        amount: int,
+        details: str,
+        cardholder: Dict,
+        order_number: str = None,
+    ) -> Dict:
+        """
+        使用儲存的 Card Token 進行扣款（自動續訂）
+
+        Args:
+            card_key: TapPay Card Key（永久有效）
+            card_token: TapPay Card Token（90天有效）
+            amount: 金額 (TWD)
+            details: 商品詳情
+            cardholder: 持卡人資訊
+            order_number: 訂單編號
+
+        Returns:
+            TapPay API response（包含更新的 card_token）
+        """
+
+        if not order_number:
+            order_number = f"AUTO_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        payload = {
+            "partner_key": self.partner_key,
+            "merchant_id": self.merchant_id,
+            "card_key": card_key,
+            "card_token": card_token,
+            "amount": amount,
+            "currency": "TWD",
+            "details": details
+            if isinstance(details, str)
+            else details.get("item_name", "Duotopia Auto-Renewal"),
+            "order_number": order_number,
+            "cardholder": {
+                "phone_number": cardholder.get("phone", "+886912345678"),
+                "name": cardholder.get("name", ""),
+                "email": cardholder.get("email", ""),
+                "zip_code": cardholder.get("zip_code", ""),
+                "address": cardholder.get("address", ""),
+                "national_id": cardholder.get("national_id", ""),
+            },
+        }
+
+        try:
+            logger.info(f"Processing auto-renewal payment for order: {order_number}")
+            logger.info(f"  - Card Key: {card_key[:10]}...")
+            logger.info(f"  - Amount: TWD {amount}")
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": self.partner_key,
+            }
+
+            response = requests.post(
+                self.pay_by_token_url, json=payload, headers=headers, timeout=30
+            )
+
+            response.raise_for_status()
+            result = response.json()
+
+            logger.info(
+                f"TapPay pay-by-token response: status={result.get('status')}, "
+                f"rec_trade_id={result.get('rec_trade_id')}"
+            )
+
+            # ⚠️ 重要：成功交易會返回新的 card_token，需要更新
+            if result.get("status") == 0 and result.get("card_secret"):
+                logger.info("New card_token received, caller should update DB")
+
+            return result
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"TapPay pay-by-token API error: {str(e)}")
+            return {"status": -1, "msg": str(e), "error": "API_REQUEST_FAILED"}
+        except Exception as e:
+            logger.error(f"Unexpected error in pay-by-token: {str(e)}")
+            return {
+                "status": -1,
+                "msg": "Auto-renewal payment processing failed",
                 "error": "INTERNAL_ERROR",
             }
 

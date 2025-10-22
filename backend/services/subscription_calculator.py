@@ -7,7 +7,7 @@
 3. 如果剩餘天數 < 7 天，跳到下下個月 1 號
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Tuple
 from calendar import monthrange
 
@@ -84,7 +84,7 @@ class SubscriptionCalculator:
             "bonus_days": bonus_days,
             "grace_period_applied": grace_period_applied,
             "plan_name": plan_name,
-            "pricing_method": "grace_period" if grace_period_applied else "prorated"
+            "pricing_method": "grace_period" if grace_period_applied else "prorated",
         }
 
         return end_date, amount, details
@@ -205,6 +205,6 @@ if __name__ == "__main__":
         print(f"  實際天數: {details['actual_days']} 天")
         print(f"  贈送天數: {details['bonus_days']} 天")
         if details["grace_period_applied"]:
-            print(f"  ✨ 優惠：跳過下個月 1 號，直接到下下個月！")
+            print("  ✨ 優惠：跳過下個月 1 號，直接到下下個月！")
 
     print("\n" + "=" * 70)
