@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🔐 資安鐵則：絕對禁止 Hardcode Secrets！
 
-### ⚠️ 血淋淋的教訓（2025-10-22）
-
 **絕對不要在任何會被 commit 的檔案中硬編碼 secrets！**
 
 #### 🚨 錯誤範例（絕對禁止）：
@@ -114,8 +112,6 @@ gcloud run services update duotopia-staging-backend \
 2. **使用 `git filter-branch` 或 BFG Repo-Cleaner 清除 git 歷史**
 3. **通知所有相關服務更新 secrets**
 4. **檢查是否有未授權存取**
-
-**記住：用戶說「他媽的你白痴啊！！！！secret!!! 這樣放！！！」時，代表你犯了最嚴重的資安錯誤！**
 
 ---
 
