@@ -478,8 +478,9 @@ async def recording_error_report_cron(
     執行時間：每小時 (由 Cloud Scheduler 觸發)
 
     功能：
-    1. 查詢 BigQuery 過去 1 小時的錄音錯誤次數
-    2. 發送統計報告到官網信箱 (myduotopia@gmail.com)
+    1. 查詢 BigQuery 過去 24 小時和最近 1 小時的錄音錯誤
+    2. 使用 OpenAI 生成錯誤摘要
+    3. 發送統計報告到官網信箱 (myduotopia@gmail.com)
 
     安全性：只允許帶有正確 X-Cron-Secret header 的請求
     """
@@ -494,12 +495,26 @@ async def recording_error_report_cron(
         # 初始化 BigQuery client
         client = bigquery.Client(project=os.getenv("GCP_PROJECT_ID"))
 
-        # 計算時間範圍（過去 1 小時）
-        now_utc = datetime.now(timezone.utc)
-        one_hour_ago = now_utc - timedelta(hours=1)
+        # 台灣時區
+        taipei_tz = timezone(timedelta(hours=8))
+        now_taipei = datetime.now(taipei_tz)
 
-        # BigQuery 查詢：錄音錯誤統計
-        query = f"""
+        # 查詢最近 24 小時的錯誤
+        query_24h = f"""
+        SELECT
+            COUNT(*) as error_count,
+            error_type,
+            user_role,
+            COUNT(DISTINCT user_id) as affected_users,
+            ARRAY_AGG(DISTINCT error_message LIMIT 5) as sample_messages
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.recording_errors`
+        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+        GROUP BY error_type, user_role
+        ORDER BY error_count DESC
+        """
+
+        # 查詢最近 1 小時的錯誤
+        query_1h = f"""
         SELECT
             COUNT(*) as error_count,
             error_type,
@@ -511,61 +526,238 @@ async def recording_error_report_cron(
         ORDER BY error_count DESC
         """
 
-        query_job = client.query(query)
-        results = list(query_job.result())
+        results_24h = list(client.query(query_24h).result())
+        results_1h = list(client.query(query_1h).result())
 
-        # 計算總錯誤數
-        total_errors = sum(row.error_count for row in results)
+        total_errors_24h = sum(row.error_count for row in results_24h)
+        total_errors_1h = sum(row.error_count for row in results_1h)
+
+        # 使用 OpenAI 生成摘要（如果有錯誤）
+        ai_summary = ""
+        if total_errors_24h > 0:
+            try:
+                import openai
+
+                openai.api_key = os.getenv("OPENAI_API_KEY")
+
+                # 準備錯誤資料給 AI
+                error_data = []
+                for row in results_24h[:10]:  # 只取前 10 個最嚴重的錯誤
+                    error_data.append(
+                        {
+                            "type": row.error_type,
+                            "role": row.user_role,
+                            "count": row.error_count,
+                            "affected_users": row.affected_users,
+                            "samples": row.sample_messages[:3],
+                        }
+                    )
+
+                prompt = f"""
+你是 Duotopia 英語學習平台的技術顧問。以下是過去 24 小時的錄音錯誤統計資料：
+
+{error_data}
+
+請用繁體中文生成一份簡潔的錯誤分析摘要（3-5 句話），包含：
+1. 主要問題類型
+2. 可能的原因
+3. 建議的處理優先順序
+
+請用專業但易懂的語言，不要使用 Markdown 格式。
+"""
+
+                response = openai.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=300,
+                    temperature=0.7,
+                )
+
+                ai_summary = response.choices[0].message.content.strip()
+
+            except Exception as e:
+                logger.warning(f"Failed to generate AI summary: {str(e)}")
+                ai_summary = "（AI 摘要生成失敗）"
 
         # 構建郵件內容
-        time_start = one_hour_ago.strftime("%Y-%m-%d %H:%M")
-        time_end = now_utc.strftime("%Y-%m-%d %H:%M")
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 800px; margin: 0 auto; padding: 20px; }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white; padding: 20px; border-radius: 8px 8px 0 0;
+                }}
+                .content {{ background: #f9fafb; padding: 30px; }}
+                .summary-box {{
+                    background: #fff3cd; border-left: 4px solid #ffc107;
+                    padding: 15px; margin: 20px 0; border-radius: 4px;
+                }}
+                .stats-box {{
+                    background: white; border: 1px solid #e5e7eb;
+                    border-radius: 8px; padding: 20px; margin: 15px 0;
+                }}
+                .error-item {{
+                    background: #fee; border-left: 3px solid #dc3545;
+                    padding: 10px; margin: 10px 0; border-radius: 4px;
+                }}
+                .success {{ color: #10b981; font-weight: bold; }}
+                .warning {{ color: #f59e0b; font-weight: bold; }}
+                .error {{ color: #dc3545; font-weight: bold; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }}
+                th {{ background: #f3f4f6; font-weight: 600; }}
+                .footer {{ text-align: center; color: #6b7280; padding: 20px; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 錄音錯誤監控報告</h1>
+                    <p style="margin: 5px 0;">報告時間：{now_taipei.strftime('%Y年%m月%d日 %H:%M')} (台灣時間)</p>
+                </div>
+                <div class="content">
+        """
 
-        if total_errors == 0:
-            html_content = f"""
-            <h2>📊 錄音錯誤統計報告</h2>
-            <p><strong>時間範圍：</strong>{time_start} - {time_end} (UTC)</p>
-            <p style="color: green;"><strong>✅ 過去 1 小時沒有錄音錯誤</strong></p>
+        # AI 摘要區塊
+        if ai_summary and total_errors_24h > 0:
+            html_content += f"""
+                    <div class="summary-box">
+                        <h3>🤖 AI 分析摘要</h3>
+                        <p>{ai_summary}</p>
+                    </div>
+            """
+
+        # 統計概覽
+        html_content += f"""
+                    <div class="stats-box">
+                        <h3>📈 統計概覽</h3>
+                        <table>
+                            <tr>
+                                <th>時間範圍</th>
+                                <th>錯誤次數</th>
+                                <th>狀態</th>
+                            </tr>
+                            <tr>
+                                <td>最近 1 小時</td>
+                                <td class="{'error' if total_errors_1h > 0 else 'success'}">
+                                    {total_errors_1h}
+                                </td>
+                                <td>
+                                    {'⚠️ 需注意' if total_errors_1h > 10
+                                     else '✅ 正常' if total_errors_1h == 0
+                                     else '⚡ 有少量錯誤'}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>最近 24 小時</td>
+                                <td class="{'error' if total_errors_24h > 100
+                                           else 'warning' if total_errors_24h > 0
+                                           else 'success'}">
+                                    {total_errors_24h}
+                                </td>
+                                <td>
+                                    {'🚨 嚴重' if total_errors_24h > 100
+                                     else '⚠️ 需注意' if total_errors_24h > 50
+                                     else '✅ 正常' if total_errors_24h == 0
+                                     else '⚡ 輕微'}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+        """
+
+        # 最近 1 小時錯誤明細
+        if total_errors_1h > 0:
+            html_content += """
+                    <div class="stats-box">
+                        <h3>⏰ 最近 1 小時錯誤明細</h3>
+            """
+            for row in results_1h:
+                html_content += f"""
+                        <div class="error-item">
+                            <strong>{row.error_type}</strong> ({row.user_role})<br>
+                            錯誤次數: {row.error_count} | 影響用戶: {row.affected_users} 位
+                        </div>
+                """
+            html_content += """
+                    </div>
             """
         else:
-            error_details = "<ul>"
-            for row in results:
-                error_details += f"""
-                <li>
-                    <strong>{row.error_type}</strong> ({row.user_role}):
-                    {row.error_count} 次錯誤，影響 {row.affected_users} 位用戶
-                </li>
-                """
-            error_details += "</ul>"
-
-            html_content = f"""
-            <h2>⚠️ 錄音錯誤統計報告</h2>
-            <p><strong>時間範圍：</strong>{time_start} - {time_end} (UTC)</p>
-            <p style="color: red;"><strong>總錯誤次數：{total_errors}</strong></p>
-            <h3>錯誤明細：</h3>
-            {error_details}
-            <hr>
-            <p><small>此郵件由 Cloud Scheduler 每小時自動發送</small></p>
+            html_content += """
+                    <div class="stats-box">
+                        <h3>⏰ 最近 1 小時</h3>
+                        <p class="success">✅ 沒有錄音錯誤</p>
+                    </div>
             """
 
+        # 最近 24 小時錯誤明細
+        if total_errors_24h > 0:
+            html_content += """
+                    <div class="stats-box">
+                        <h3>📅 最近 24 小時錯誤明細（前 10 項）</h3>
+                        <table>
+                            <tr>
+                                <th>錯誤類型</th>
+                                <th>用戶角色</th>
+                                <th>次數</th>
+                                <th>影響用戶</th>
+                            </tr>
+            """
+            for row in results_24h[:10]:
+                html_content += f"""
+                            <tr>
+                                <td>{row.error_type}</td>
+                                <td>{row.user_role}</td>
+                                <td>{row.error_count}</td>
+                                <td>{row.affected_users}</td>
+                            </tr>
+                """
+            html_content += """
+                        </table>
+                    </div>
+            """
+
+        html_content += f"""
+                </div>
+                <div class="footer">
+                    <p>此郵件由 Cloud Scheduler 每小時自動發送<br>
+                    Duotopia 技術團隊 | {now_taipei.year}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
         # 發送郵件
+        subject_emoji = (
+            "🚨" if total_errors_1h > 10 else "⚠️" if total_errors_1h > 0 else "✅"
+        )
+        subject = (
+            f"{subject_emoji} 錄音錯誤報告 - "
+            f"{now_taipei.strftime('%m/%d %H:%M')} "
+            f"(1H: {total_errors_1h} | 24H: {total_errors_24h})"
+        )
         email_service.send_email(
             to_email="myduotopia@gmail.com",
-            subject=f"{'⚠️' if total_errors > 0 else '✅'} 錄音錯誤報告 - {now_utc.strftime('%Y-%m-%d %H:%M')}",
+            subject=subject,
             html_content=html_content,
         )
 
-        logger.info(f"Recording error report sent. Total errors: {total_errors}")
+        logger.info(
+            f"Recording error report sent. 1H: {total_errors_1h}, 24H: {total_errors_24h}"
+        )
 
         return {
             "status": "success",
-            "executed_at": now_utc.isoformat(),
-            "time_range": {
-                "start": one_hour_ago.isoformat(),
-                "end": now_utc.isoformat(),
-            },
-            "total_errors": total_errors,
-            "error_types": len(results),
+            "executed_at": now_taipei.isoformat(),
+            "errors_1h": total_errors_1h,
+            "errors_24h": total_errors_24h,
+            "ai_summary_generated": bool(ai_summary),
             "notification_sent": True,
         }
 
