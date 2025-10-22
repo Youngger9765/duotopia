@@ -37,6 +37,8 @@ interface SubscriptionInfo {
   end_date: string | null;
   days_remaining: number;
   is_active: boolean;
+  auto_renew: boolean;
+  cancelled_at: string | null;
 }
 
 interface Transaction {
@@ -64,6 +66,7 @@ export default function TeacherSubscription() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<{
     name: string;
     price: number;
@@ -157,6 +160,29 @@ export default function TeacherSubscription() {
       setShowRenewalDialog(false);
     } else {
       toast.error(`續訂失敗：${error}`);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      await apiClient.post("/api/teachers/subscription/cancel");
+      toast.success("已成功取消自動續訂");
+      setShowCancelDialog(false);
+      await fetchSubscriptionData();
+    } catch (error) {
+      const err = error as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail || "取消失敗");
+    }
+  };
+
+  const handleReactivateSubscription = async () => {
+    try {
+      await apiClient.post("/api/teachers/subscription/reactivate");
+      toast.success("已重新啟用自動續訂");
+      await fetchSubscriptionData();
+    } catch (error) {
+      const err = error as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail || "啟用失敗");
     }
   };
 
@@ -256,12 +282,22 @@ export default function TeacherSubscription() {
                       升級方案
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
+                    {subscription.auto_renew && (
+                      <Button
+                        onClick={() => setShowCancelDialog(true)}
+                        variant="outline"
+                        className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        取消續訂
+                      </Button>
+                    )}
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 text-blue-600 mt-1" />
                     <div>
@@ -283,7 +319,44 @@ export default function TeacherSubscription() {
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-start gap-3">
+                    <RefreshCw className="w-5 h-5 text-blue-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-600">自動續訂</p>
+                      {subscription.auto_renew ? (
+                        <p className="font-semibold text-green-600">已啟用</p>
+                      ) : (
+                        <div>
+                          <p className="font-semibold text-orange-600">
+                            已取消
+                          </p>
+                          <Button
+                            onClick={handleReactivateSubscription}
+                            size="sm"
+                            variant="link"
+                            className="h-auto p-0 text-blue-600"
+                          >
+                            重新啟用
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* 取消續訂警告提示 */}
+                {!subscription.auto_renew && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <p className="text-orange-800 text-sm">
+                      ⚠️ 您已取消自動續訂，訂閱將於{" "}
+                      {subscription.end_date
+                        ? formatDate(subscription.end_date)
+                        : "到期日"}{" "}
+                      到期後失效
+                    </p>
+                  </div>
+                )}
 
                 {subscription.days_remaining <= 7 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -541,6 +614,60 @@ export default function TeacherSubscription() {
             onPaymentError={handleRenewalError}
             onCancel={() => setShowRenewalDialog(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* 取消續訂確認對話框 */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>確認取消自動續訂？</DialogTitle>
+            <DialogDescription>
+              取消後您的訂閱將繼續有效至到期日，之後將不會自動續訂
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h4 className="font-semibold mb-2">取消後會發生什麼？</h4>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>
+                    訂閱繼續有效至{" "}
+                    {subscription?.end_date
+                      ? formatDate(subscription.end_date)
+                      : "到期日"}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <XCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                  <span>到期後將無法使用進階功能</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span>您可以隨時重新啟用自動續訂</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowCancelDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                返回
+              </Button>
+              <Button
+                onClick={handleCancelSubscription}
+                variant="destructive"
+                className="flex-1"
+              >
+                確認取消
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </TeacherLayout>

@@ -2752,3 +2752,103 @@ async def preview_assess_speech(
     except Exception as e:
         logger.error(f"Preview assessment failed: {e}")
         raise HTTPException(status_code=503, detail="AI 評估失敗，請稍後再試")
+
+
+# ============ 訂閱管理 ============
+@router.post("/subscription/cancel")
+async def cancel_subscription(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    取消自動續訂
+
+    - 訂閱繼續有效直到到期日
+    - 到期後不會自動續訂
+    - 可以隨時重新啟用自動續訂
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # 檢查是否有有效訂閱
+        if not current_teacher.subscription_end_date:
+            raise HTTPException(status_code=400, detail="您目前沒有有效的訂閱")
+
+        if not current_teacher.is_subscription_active:
+            raise HTTPException(status_code=400, detail="您的訂閱已過期")
+
+        # 檢查是否已經取消過
+        if not current_teacher.subscription_auto_renew:
+            raise HTTPException(status_code=400, detail="您已經取消過自動續訂")
+
+        # 更新自動續訂狀態
+        current_teacher.subscription_auto_renew = False
+        current_teacher.subscription_cancelled_at = datetime.now(timezone.utc)
+        current_teacher.updated_at = datetime.now(timezone.utc)
+
+        db.commit()
+
+        logger.info(
+            f"Teacher {current_teacher.email} cancelled auto-renewal. "
+            f"Subscription valid until {current_teacher.subscription_end_date}"
+        )
+
+        return {
+            "success": True,
+            "message": "已成功取消自動續訂",
+            "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+            "auto_renew": False,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to cancel subscription: {e}")
+        raise HTTPException(status_code=500, detail="取消訂閱失敗，請稍後再試")
+
+
+@router.post("/subscription/reactivate")
+async def reactivate_subscription(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    重新啟用自動續訂
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # 檢查是否有有效訂閱
+        if not current_teacher.subscription_end_date:
+            raise HTTPException(status_code=400, detail="您目前沒有有效的訂閱")
+
+        # 檢查是否已經啟用
+        if current_teacher.subscription_auto_renew:
+            raise HTTPException(status_code=400, detail="自動續訂已經是啟用狀態")
+
+        # 重新啟用自動續訂
+        current_teacher.subscription_auto_renew = True
+        current_teacher.subscription_cancelled_at = None
+        current_teacher.updated_at = datetime.now(timezone.utc)
+
+        db.commit()
+
+        logger.info(f"Teacher {current_teacher.email} reactivated auto-renewal")
+
+        return {
+            "success": True,
+            "message": "已重新啟用自動續訂",
+            "auto_renew": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to reactivate subscription: {e}")
+        raise HTTPException(status_code=500, detail="重新啟用失敗，請稍後再試")
