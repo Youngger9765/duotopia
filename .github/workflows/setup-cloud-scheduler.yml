@@ -59,9 +59,10 @@ jobs:
         echo "📋 現有的 Cloud Scheduler jobs："
         gcloud scheduler jobs list --location=${{ env.REGION }} || echo "沒有現有的 jobs"
 
-    - name: Setup Monthly Renewal Job
+    - name: Setup Monthly Renewal Job (Production Only)
+      if: github.event.inputs.environment == 'production'
       run: |
-        JOB_NAME="monthly-renewal-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        JOB_NAME="monthly-renewal-production"
 
         echo "🗑️  刪除舊的 job（如果存在）..."
         gcloud scheduler jobs delete $JOB_NAME \
@@ -78,13 +79,14 @@ jobs:
           --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
           --attempt-deadline=300s \
           --max-retry-attempts=3 \
-          --description="每月 1 號凌晨 2:00 (台北時間) 執行自動續訂 - ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+          --description="每月 1 號凌晨 2:00 (台北時間) 執行自動續訂 - production only"
 
-        echo "✅ Monthly renewal job 創建成功"
+        echo "✅ Monthly renewal job 創建成功（⚠️ 會真實扣款）"
 
-    - name: Setup Renewal Reminder Job
+    - name: Setup Renewal Reminder Job (Production Only)
+      if: github.event.inputs.environment == 'production'
       run: |
-        JOB_NAME="renewal-reminder-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        JOB_NAME="renewal-reminder-production"
 
         echo "🗑️  刪除舊的 job（如果存在）..."
         gcloud scheduler jobs delete $JOB_NAME \
@@ -101,9 +103,9 @@ jobs:
           --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
           --attempt-deadline=300s \
           --max-retry-attempts=3 \
-          --description="每天凌晨 3:00 (台北時間) 發送到期提醒 - ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+          --description="每天凌晨 3:00 (台北時間) 發送到期提醒 - production only"
 
-        echo "✅ Renewal reminder job 創建成功"
+        echo "✅ Renewal reminder job 創建成功（⚠️ 會發送真實提醒給用戶）"
 
     - name: Setup Recording Error Report Job (Production Only)
       if: github.event.inputs.environment == 'production'
@@ -169,18 +171,15 @@ jobs:
         echo ""
         echo "💰 成本估算："
         if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
-          echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
-          echo "  - Monthly Renewal (每月 1 次)"
-          echo "  - Renewal Reminder (每天 1 次)"
+          echo "- Cloud Scheduler: 1 個 job × USD 0.10/月 = USD 0.10/月"
           echo "  - Test Notification (每天 1 次 - staging only)"
+          echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
         else
           echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
-          echo "  - Monthly Renewal (每月 1 次)"
-          echo "  - Renewal Reminder (每天 1 次)"
+          echo "  - Monthly Renewal (每月 1 次 - production only)"
+          echo "  - Renewal Reminder (每天 1 次 - production only)"
           echo "  - Recording Error Report (每小時 1 次 = 24×30 = 720 次/月 - production only)"
-        fi
-        echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
-        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
           echo "- BigQuery 查詢成本: ~USD 0.02/月（每小時查詢兩次，每次 < 10 MB）"
           echo "- OpenAI API 成本: ~USD 0.01/月（gpt-4o-mini, 每次 300 tokens）"
         fi
@@ -191,23 +190,19 @@ jobs:
         echo "🧪 測試指令："
         echo ""
         if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
-          echo "1. 測試通知 job（安全，只發送 email）："
+          echo "1. 測試通知 job（安全，只發送測試 email）："
           echo "   gcloud scheduler jobs run test-notification-staging --location=${{ env.REGION }}"
           echo ""
-          echo "2. 測試 renewal reminder（安全，只發送 email）："
-          echo "   gcloud scheduler jobs run renewal-reminder-staging --location=${{ env.REGION }}"
-          echo ""
-          echo "3. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
-          echo "   gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
+          echo "💡 Staging 只有測試通知，不會影響真實用戶"
         else
           echo "1. 測試錄音錯誤報告（安全，只發送 email）："
           echo "   gcloud scheduler jobs run recording-error-report-production --location=${{ env.REGION }}"
           echo "   💡 會查詢 BigQuery 並使用 OpenAI 生成分析"
           echo ""
-          echo "2. 測試 renewal reminder（安全，只發送 email）："
+          echo "2. 測試 renewal reminder（⚠️ 會發送真實提醒給用戶）："
           echo "   gcloud scheduler jobs run renewal-reminder-production --location=${{ env.REGION }}"
           echo ""
-          echo "3. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
+          echo "3. 測試 monthly renewal（🚨 會真實執行扣款邏輯！）："
           echo "   gcloud scheduler jobs run monthly-renewal-production --location=${{ env.REGION }}"
         fi
 
@@ -217,32 +212,34 @@ jobs:
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "✅ Cloud Scheduler 設定完成"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "環境: ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        echo "環境: ${{ github.event.inputs.environment }}"
         echo "Region: ${{ env.REGION }}"
         echo ""
-        echo "📅 Job 1: monthly-renewal-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
-        echo "   排程: 每月 1 號凌晨 2:00 (台北時間)"
-        echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/monthly-renewal"
-        echo ""
-        echo "📅 Job 2: renewal-reminder-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
-        echo "   排程: 每天凌晨 3:00 (台北時間)"
-        echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder"
-        echo ""
-        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+        if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+          echo "📅 Job 1: test-notification-staging (僅 staging)"
+          echo "   排程: 每天早上 9:00 (台北時間)"
+          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification"
+          echo "   📧 發送測試郵件到 myduotopia@gmail.com"
+          echo ""
+          echo "💡 Staging 只有測試通知，不會影響真實用戶和扣款"
+        else
+          echo "📅 Job 1: monthly-renewal-production (僅 production)"
+          echo "   排程: 每月 1 號凌晨 2:00 (台北時間)"
+          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/monthly-renewal"
+          echo "   🚨 會真實執行扣款邏輯"
+          echo ""
+          echo "📅 Job 2: renewal-reminder-production (僅 production)"
+          echo "   排程: 每天凌晨 3:00 (台北時間)"
+          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder"
+          echo "   ⚠️ 會發送真實提醒給用戶"
+          echo ""
           echo "📅 Job 3: recording-error-report-production (僅 production)"
           echo "   排程: 每小時 (台北時間)"
           echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/recording-error-report"
           echo "   📊 查詢 BigQuery 錄音錯誤（24H + 1H）"
           echo "   🤖 使用 OpenAI 生成錯誤分析摘要"
           echo "   📧 發送報告到 myduotopia@gmail.com"
-          echo ""
         fi
-        if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
-          echo "📅 Job 3: test-notification-staging (僅 staging)"
-          echo "   排程: 每天早上 9:00 (台北時間)"
-          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification"
-          echo "   📧 會發送測試郵件到 myduotopia@gmail.com"
-          echo ""
-        fi
+        echo ""
         echo "💡 下次需要更新時，請在 GitHub Actions 手動觸發此 workflow"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
