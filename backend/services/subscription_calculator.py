@@ -21,6 +21,9 @@ class SubscriptionCalculator:
         "School Teachers": 330,
     }
 
+    # 預設方案價格（用於未知方案）
+    DEFAULT_PRICE = 230
+
     @staticmethod
     def calculate_first_subscription(
         start_date: datetime, plan_name: str
@@ -36,7 +39,9 @@ class SubscriptionCalculator:
             (到期日, 應付金額, 詳細資訊)
         """
         # 取得方案價格（完整月）
-        full_price = SubscriptionCalculator.PLAN_PRICES.get(plan_name, 230)
+        full_price = SubscriptionCalculator.PLAN_PRICES.get(
+            plan_name, SubscriptionCalculator.DEFAULT_PRICE
+        )
 
         # 計算下個月 1 號
         next_month_first = SubscriptionCalculator._get_next_month_first(start_date)
@@ -87,7 +92,9 @@ class SubscriptionCalculator:
         next_month_first = SubscriptionCalculator._get_next_month_first(
             current_end_date
         )
-        amount = SubscriptionCalculator.PLAN_PRICES.get(plan_name, 230)
+        amount = SubscriptionCalculator.PLAN_PRICES.get(
+            plan_name, SubscriptionCalculator.DEFAULT_PRICE
+        )
 
         return next_month_first, amount
 
@@ -179,11 +186,14 @@ if __name__ == "__main__":
             start_date, "Tutor Teachers"
         )
 
+        # 取得當月天數
+        days_in_month = monthrange(start_date.year, start_date.month)[1]
+
         print(f"\n{name}")
         print(f"  訂閱日期: {start_date.date()}")
         print(f"  到期日: {end_date.date()}")
         print(f"  應付金額: TWD {amount}")
         print(f"  實際天數: {details['actual_days']} 天")
-        print(f"  計費方式: 按比例計費 ({details['actual_days']}/31 月)")
+        print(f"  計費方式: 按比例計費 ({details['actual_days']}/{days_in_month} 月)")
 
     print("\n" + "=" * 70)
