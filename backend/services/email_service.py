@@ -691,6 +691,109 @@ class EmailService:
             logger.error(f"❌ Failed to send refund notification email: {str(e)}")
             return False
 
+    def send_renewal_success(
+        self,
+        teacher_email: str,
+        teacher_name: str,
+        new_end_date: datetime,
+        plan_name: str,
+    ) -> bool:
+        """
+        發送續訂成功通知
+
+        Args:
+            teacher_email: 老師 Email
+            teacher_name: 老師姓名
+            new_end_date: 新的到期日
+            plan_name: 方案名稱
+        """
+        try:
+            subject = "✅ Duotopia 訂閱已自動續訂"
+
+            html_content = f"""
+            <h2>訂閱續訂成功</h2>
+            <p>親愛的 {teacher_name} 老師，您好：</p>
+
+            <p>您的 Duotopia 訂閱已自動續訂成功！</p>
+
+            <div style="background-color: #f0f9ff; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                <p><strong>方案資訊</strong></p>
+                <p>訂閱方案：{plan_name}</p>
+                <p>新到期日：{new_end_date.strftime('%Y年%m月%d日')}</p>
+            </div>
+
+            <p>感謝您持續支持 Duotopia！</p>
+
+            <p>如有任何問題，請隨時聯繫我們。</p>
+
+            <hr style="margin: 30px 0;">
+            <p style="color: #666; font-size: 12px;">
+                此為系統自動發送的郵件，請勿直接回覆。<br>
+                Duotopia 英語學習平台
+            </p>
+            """
+
+            self.send_email(teacher_email, subject, html_content)
+            logger.info(f"✅ Renewal success email sent to {teacher_email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send renewal success email: {str(e)}")
+            return False
+
+    def send_renewal_reminder(
+        self,
+        teacher_email: str,
+        teacher_name: str,
+        end_date: datetime,
+        days_remaining: int,
+        plan_name: str,
+    ) -> bool:
+        """
+        發送續訂提醒
+
+        Args:
+            teacher_email: 老師 Email
+            teacher_name: 老師姓名
+            end_date: 到期日
+            days_remaining: 剩餘天數
+            plan_name: 方案名稱
+        """
+        try:
+            subject = f"⏰ Duotopia 訂閱將於 {days_remaining} 天後到期"
+
+            html_content = f"""
+            <h2>訂閱即將到期提醒</h2>
+            <p>親愛的 {teacher_name} 老師，您好：</p>
+
+            <p>您的 Duotopia 訂閱即將到期，請留意以下資訊：</p>
+
+            <div style="background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                <p><strong>訂閱資訊</strong></p>
+                <p>訂閱方案：{plan_name}</p>
+                <p>到期日：{end_date.strftime('%Y年%m月%d日')}</p>
+                <p>剩餘天數：<strong>{days_remaining} 天</strong></p>
+            </div>
+
+            <p>由於您已開啟自動續訂，系統將於到期日自動延長您的訂閱。</p>
+
+            <p>如需取消自動續訂，請至「訂閱管理」頁面進行設定。</p>
+
+            <hr style="margin: 30px 0;">
+            <p style="color: #666; font-size: 12px;">
+                此為系統自動發送的郵件，請勿直接回覆。<br>
+                Duotopia 英語學習平台
+            </p>
+            """
+
+            self.send_email(teacher_email, subject, html_content)
+            logger.info(f"✅ Renewal reminder email sent to {teacher_email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send renewal reminder email: {str(e)}")
+            return False
+
 
 # 全域 email 服務實例
 email_service = EmailService()

@@ -14,8 +14,8 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from datetime import datetime, timezone
-from services.subscription_calculator import SubscriptionCalculator
+from datetime import datetime, timezone  # noqa: E402
+from services.subscription_calculator import SubscriptionCalculator  # noqa: E402
 
 
 def test_subscription_on_first_day():
@@ -27,7 +27,7 @@ def test_subscription_on_first_day():
 
     assert end_date.date() == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 230
-    assert details['actual_days'] == 31
+    assert details["actual_days"] == 31
     print("✅ test_subscription_on_first_day")
 
 
@@ -40,7 +40,7 @@ def test_subscription_mid_month_31_days():
 
     assert end_date.date() == datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 126  # 230 × (17/31) = 126.45 → 126
-    assert details['actual_days'] == 17
+    assert details["actual_days"] == 17
     print("✅ test_subscription_mid_month_31_days")
 
 
@@ -53,7 +53,7 @@ def test_subscription_mid_month_28_days():
 
     assert end_date.date() == datetime(2025, 3, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 115  # 230 × (14/28) = 115
-    assert details['actual_days'] == 14
+    assert details["actual_days"] == 14
     print("✅ test_subscription_mid_month_28_days")
 
 
@@ -66,7 +66,7 @@ def test_subscription_leap_year_february():
 
     assert end_date.date() == datetime(2024, 3, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 119  # 230 × (15/29) = 118.97 → 119
-    assert details['actual_days'] == 15
+    assert details["actual_days"] == 15
     print("✅ test_subscription_leap_year_february")
 
 
@@ -79,9 +79,9 @@ def test_subscription_end_of_month_grace_period():
 
     assert end_date.date() == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 230
-    assert details['actual_days'] == 36
-    assert details['bonus_days'] == 6
-    assert details['grace_period_applied'] is True
+    assert details["actual_days"] == 36
+    assert details["bonus_days"] == 6
+    assert details["grace_period_applied"] is True
     print("✅ test_subscription_end_of_month_grace_period")
 
 
@@ -93,7 +93,7 @@ def test_subscription_grace_period_boundary():
     )
 
     assert end_date.date() == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert details['grace_period_applied'] is False
+    assert details["grace_period_applied"] is False
     print("✅ test_subscription_grace_period_boundary")
 
 
@@ -105,7 +105,7 @@ def test_school_teachers_plan():
     )
 
     assert amount == 181  # 330 × (17/31) = 180.6 → 181
-    assert details['full_price'] == 330
+    assert details["full_price"] == 330
     print("✅ test_school_teachers_plan")
 
 
@@ -116,7 +116,10 @@ def test_renewal_calculation():
         current_end_date, "Tutor Teachers"
     )
 
-    assert new_end_date.date() == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+    assert (
+        new_end_date.date()
+        == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+    )
     assert amount == 230
     print("✅ test_renewal_calculation")
 
@@ -128,7 +131,9 @@ def test_renewal_cross_year():
         current_end_date, "Tutor Teachers"
     )
 
-    assert new_end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+    assert (
+        new_end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
+    )
     assert amount == 230
     print("✅ test_renewal_cross_year")
 
@@ -142,7 +147,7 @@ def test_december_to_january():
 
     assert end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
     assert amount == 126  # 230 × (17/31) = 126
-    assert details['actual_days'] == 17
+    assert details["actual_days"] == 17
     print("✅ test_december_to_january")
 
 
@@ -150,8 +155,18 @@ def test_all_months_calculations():
     """測試所有月份的計算（確保沒有月份被遺漏）"""
     # 測試每個月的 15 號訂閱
     months_data = [
-        (1, 31), (2, 28), (3, 31), (4, 30), (5, 31), (6, 30),
-        (7, 31), (8, 31), (9, 30), (10, 31), (11, 30), (12, 31)
+        (1, 31),
+        (2, 28),
+        (3, 31),
+        (4, 30),
+        (5, 31),
+        (6, 30),
+        (7, 31),
+        (8, 31),
+        (9, 30),
+        (10, 31),
+        (11, 30),
+        (12, 31),
     ]
 
     for month, days_in_month in months_data:
@@ -162,8 +177,9 @@ def test_all_months_calculations():
 
         # 計算預期天數：從 15 號到下個月 1 號
         expected_days = days_in_month - 15 + 1
-        assert details['actual_days'] == expected_days, \
-            f"Month {month}: expected {expected_days} days, got {details['actual_days']}"
+        assert (
+            details["actual_days"] == expected_days
+        ), f"Month {month}: expected {expected_days} days, got {details['actual_days']}"
 
     print("✅ test_all_months_calculations")
 

@@ -12,6 +12,7 @@ from models import Teacher, TeacherSubscriptionTransaction, TransactionType
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
 from services.email_service import email_service
+from services.subscription_calculator import SubscriptionCalculator
 from utils.bigquery_logger import (
     log_payment_attempt,
     log_payment_success,
@@ -153,18 +154,34 @@ async def process_payment(
                 detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
             )
 
-        # Get current subscription end date or start from now
+        # 🔄 統一每月 1 號續訂邏輯
         if (
             current_teacher.subscription_end_date
             and current_teacher.subscription_end_date > now
         ):
-            # Extend existing subscription
+            # 延長現有訂閱（續訂）
             previous_end_date = current_teacher.subscription_end_date
-            new_end_date = previous_end_date + timedelta(days=30 * months)
+            new_end_date, _ = SubscriptionCalculator.calculate_renewal(
+                previous_end_date, payment_request.plan_name
+            )
+            logger.info(
+                f"Renewal: extending subscription from {previous_end_date.date()} "
+                f"to {new_end_date.date()}"
+            )
         else:
-            # New subscription
+            # 首次訂閱
             previous_end_date = None
-            new_end_date = now + timedelta(days=30 * months)
+            (
+                new_end_date,
+                _,
+                details,
+            ) = SubscriptionCalculator.calculate_first_subscription(
+                now, payment_request.plan_name
+            )
+            logger.info(
+                f"First subscription: {now.date()} -> {new_end_date.date()} "
+                f"({details['actual_days']} days, bonus: {details['bonus_days']} days)"
+            )
 
         # Process payment with TapPay (Sandbox or Production based on env)
         logger.info(f"Processing payment for order: {order_number}")
@@ -177,7 +194,7 @@ async def process_payment(
             cardholder=payment_request.cardholder
             or {"name": current_teacher.name, "email": current_teacher.email},
             order_number=order_number,
-            remember=False,
+            remember=True,  # ✅ 儲存信用卡資訊以供自動續訂使用
         )
 
         # Check if payment was successful
@@ -238,6 +255,27 @@ async def process_payment(
 
         # Get transaction ID from response
         external_transaction_id = gateway_response.get("rec_trade_id")
+
+        # 💳 儲存信用卡 Token（用於自動續訂）
+        # 根據 TapPay 文件，交易授權成功才會返回有效的 card_key 和 card_token
+        if gateway_response.get("card_secret"):
+            card_secret = gateway_response["card_secret"]
+            card_info = gateway_response.get("card_info", {})
+
+            current_teacher.card_key = card_secret.get("card_key")
+            current_teacher.card_token = card_secret.get("card_token")
+            current_teacher.card_last_four = card_info.get("last_four")
+            current_teacher.card_bin_code = card_info.get("bin_code")
+            current_teacher.card_type = card_info.get("type")
+            current_teacher.card_funding = card_info.get("funding")
+            current_teacher.card_issuer = card_info.get("issuer")
+            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_saved_at = now
+
+            logger.info(
+                f"Card saved for auto-renewal: {current_teacher.email} - "
+                f"****{current_teacher.card_last_four} ({current_teacher.card_issuer})"
+            )
 
         # ⚠️ CRITICAL FIX: Commit teacher's subscription update FIRST
         # This ensures subscription is activated even if transaction record creation fails
@@ -830,3 +868,178 @@ async def get_subscription_status(
             else False
         ),
     }
+
+
+# ==================== 💳 卡片管理 API ====================
+
+
+@router.get("/api/payment/saved-card")
+async def get_saved_card(
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    查詢用戶儲存的信用卡資訊（只返回顯示用資訊，不返回 token）
+    """
+    if not current_teacher.card_key:
+        return {"has_card": False, "card": None}
+
+    # 卡別名稱映射
+    card_type_names = {
+        1: "VISA",
+        2: "MasterCard",
+        3: "JCB",
+        4: "Union Pay",
+        5: "American Express",
+    }
+
+    return {
+        "has_card": True,
+        "card": {
+            "last_four": current_teacher.card_last_four,
+            "card_type": card_type_names.get(current_teacher.card_type, "Unknown"),
+            "card_type_code": current_teacher.card_type,
+            "issuer": current_teacher.card_issuer,
+            "saved_at": current_teacher.card_saved_at.isoformat()
+            if current_teacher.card_saved_at
+            else None,
+        },
+    }
+
+
+@router.delete("/api/payment/saved-card")
+async def delete_saved_card(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    刪除儲存的信用卡資訊
+
+    注意：刪除卡片後，自動續訂將無法執行
+    """
+    if not current_teacher.card_key:
+        raise HTTPException(status_code=404, detail="沒有儲存的信用卡")
+
+    # 記錄刪除前的卡片資訊（用於 log）
+    deleted_card_info = (
+        f"****{current_teacher.card_last_four} ({current_teacher.card_issuer})"
+    )
+
+    # 刪除所有卡片相關欄位
+    current_teacher.card_key = None
+    current_teacher.card_token = None
+    current_teacher.card_last_four = None
+    current_teacher.card_bin_code = None
+    current_teacher.card_type = None
+    current_teacher.card_funding = None
+    current_teacher.card_issuer = None
+    current_teacher.card_country = None
+    current_teacher.card_saved_at = None
+
+    db.commit()
+
+    logger.info(f"Card deleted for {current_teacher.email}: {deleted_card_info}")
+
+    return {"success": True, "message": "信用卡資訊已刪除"}
+
+
+class UpdateCardRequest(BaseModel):
+    """更新信用卡請求（需要進行 1 元授權驗證）"""
+
+    prime: str  # TapPay prime token
+    cardholder: Optional[Dict[str, Any]] = None
+
+
+@router.post("/api/payment/update-card")
+async def update_saved_card(
+    request: UpdateCardRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    更新儲存的信用卡（透過 1 元授權測試）
+
+    流程：
+    1. 使用新卡片進行 1 元授權（不請款）
+    2. 授權成功後儲存新的 card_key 和 card_token
+    3. 取消授權（不實際扣款）
+    """
+    tappay_service = TapPayService()
+
+    # 生成訂單編號
+    order_number = f"CARD_UPDATE_{current_teacher.id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+
+    try:
+        # 🔐 進行 1 元授權測試（暫不請款）
+        logger.info(f"Testing new card for {current_teacher.email}")
+
+        gateway_response = tappay_service.process_payment(
+            prime=request.prime,
+            amount=1,  # 1 元授權測試
+            details={"item_name": "Card Verification"},
+            cardholder=request.cardholder
+            or {"name": current_teacher.name, "email": current_teacher.email},
+            order_number=order_number,
+            remember=True,  # 記住卡片
+        )
+
+        # 檢查授權是否成功
+        if gateway_response.get("status") != 0:
+            error_msg = TapPayService.parse_error_code(
+                gateway_response.get("status"), gateway_response.get("msg")
+            )
+            logger.error(f"Card verification failed: {error_msg}")
+            raise HTTPException(status_code=400, detail=f"信用卡驗證失敗：{error_msg}")
+
+        # ✅ 授權成功，儲存新卡片資訊
+        if gateway_response.get("card_secret"):
+            card_secret = gateway_response["card_secret"]
+            card_info = gateway_response.get("card_info", {})
+
+            # 更新卡片資訊
+            current_teacher.card_key = card_secret.get("card_key")
+            current_teacher.card_token = card_secret.get("card_token")
+            current_teacher.card_last_four = card_info.get("last_four")
+            current_teacher.card_bin_code = card_info.get("bin_code")
+            current_teacher.card_type = card_info.get("type")
+            current_teacher.card_funding = card_info.get("funding")
+            current_teacher.card_issuer = card_info.get("issuer")
+            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_saved_at = datetime.now(timezone.utc)
+
+            db.commit()
+
+            logger.info(
+                f"Card updated for {current_teacher.email}: "
+                f"****{current_teacher.card_last_four} ({current_teacher.card_issuer})"
+            )
+
+            # 🔄 取消 1 元授權（不實際扣款）
+            rec_trade_id = gateway_response.get("rec_trade_id")
+            if rec_trade_id:
+                try:
+                    # 使用 refund API 取消授權
+                    refund_response = tappay_service.refund(rec_trade_id, amount=1)
+                    if refund_response.get("status") == 0:
+                        logger.info(f"1 元授權已取消: {rec_trade_id}")
+                    else:
+                        logger.warning(f"取消 1 元授權失敗，但卡片已更新: {rec_trade_id}")
+                except Exception as e:
+                    logger.error(f"取消 1 元授權時發生錯誤: {e}")
+
+            return {
+                "success": True,
+                "message": "信用卡已更新",
+                "card": {
+                    "last_four": current_teacher.card_last_four,
+                    "issuer": current_teacher.card_issuer,
+                    "card_type": current_teacher.card_type,
+                },
+            }
+        else:
+            raise HTTPException(status_code=500, detail="無法取得卡片資訊")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update card error: {e}")
+        raise HTTPException(status_code=500, detail=f"更新信用卡失敗：{str(e)}")
