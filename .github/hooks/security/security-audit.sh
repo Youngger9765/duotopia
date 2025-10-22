@@ -31,37 +31,45 @@ report_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
-# 1. Check for Supabase credentials
+# 1. Check for Supabase credentials (including .github/)
 echo -e "${BLUE}[1/8] Checking for Supabase credentials...${NC}"
 if grep -r "Duotopia2025\|oenkjognodqhvujaooax" \
     --include="*.py" \
     --include="*.ts" \
     --include="*.tsx" \
     --include="*.js" \
+    --include="*.sh" \
+    --include="*.yml" \
+    --include="*.yaml" \
     --include="Makefile" \
     . \
     --exclude-dir=node_modules \
     --exclude-dir=.git \
     2>/dev/null | \
-    grep -v ".env"; then
+    grep -v ".env" | \
+    grep -v "security-audit.sh"; then
     report_error "Supabase credentials found in code!"
 else
     report_success "No Supabase credentials in code"
 fi
 
-# 2. Check for OpenAI API keys
+# 2. Check for OpenAI API keys (including .github/)
 echo -e "${BLUE}[2/8] Checking for OpenAI API keys...${NC}"
 if grep -r "sk-proj-[a-zA-Z0-9_-]{48,}" \
     --include="*.py" \
     --include="*.ts" \
     --include="*.tsx" \
     --include="*.js" \
+    --include="*.sh" \
+    --include="*.yml" \
+    --include="*.yaml" \
     . \
     --exclude-dir=node_modules \
     --exclude-dir=.git \
     2>/dev/null | \
     grep -v ".env" | \
-    grep -v "example"; then
+    grep -v "example" | \
+    grep -v "security-audit.sh"; then
     report_error "OpenAI API key found in code!"
 else
     report_success "No OpenAI API keys in code"
@@ -85,19 +93,23 @@ else
     report_success "No private keys in repository"
 fi
 
-# 4. Check for AWS credentials
+# 4. Check for AWS credentials (including .github/)
 echo -e "${BLUE}[4/8] Checking for AWS credentials...${NC}"
 if grep -r "AKIA[0-9A-Z]{16}\|aws_secret_access_key" \
     --include="*.py" \
     --include="*.ts" \
     --include="*.tsx" \
     --include="*.js" \
+    --include="*.sh" \
+    --include="*.yml" \
+    --include="*.yaml" \
     --include="*.json" \
     . \
     --exclude-dir=node_modules \
     --exclude-dir=.git \
     2>/dev/null | \
-    grep -v "example"; then
+    grep -v "example" | \
+    grep -v "security-audit.sh"; then
     report_error "AWS credentials found!"
 else
     report_success "No AWS credentials in code"
