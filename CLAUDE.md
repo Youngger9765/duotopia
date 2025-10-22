@@ -8,110 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **絕對不要在任何會被 commit 的檔案中硬編碼 secrets！**
 
-#### 🚨 錯誤範例（絕對禁止）：
-```bash
-# ❌ 絕對禁止：在 shell script 中硬編碼 secret
-STAGING_CRON_SECRET="NICb1+SnYez3tJm00b70dRzas0E/VwMJQfeh1wqtlYM="
-PRODUCTION_CRON_SECRET="7gwU8zuaSzDQbEgZrOK9tNbkQj1+ByVNts9H32SPz5s="
-
-# ❌ 絕對禁止：在 GitHub Actions workflow 中硬編碼
-env:
-  CRON_SECRET: "VH7LjMqW7LwZEl5KqWF1YfbWXvuAHtWn2jZ8klLVSv8="
-
-# ❌ 絕對禁止：在任何 Python/TypeScript 檔案中硬編碼
-OPENAI_API_KEY = "sk-proj-xxxxx..."
-DATABASE_PASSWORD = "mypassword123"
-```
-
-#### ✅ 正確做法：
-
-**1. 本機開發環境 secrets：**
-```bash
-# ✅ 使用 .env 檔案（必須在 .gitignore 中）
-# .env.staging
-CRON_SECRET=FnkgWpuXOJxxuA/fTKsSgcxwR+8op9Sq3F4tG6j1+bg=
-OPENAI_API_KEY=sk-proj-xxxxx...
-
-# ✅ 確認 .gitignore 包含
-.env
-.env.local
-.env.staging
-.env.production
-```
-
-**2. GitHub Actions secrets：**
-```bash
-# ✅ 使用 gh secret set 上傳
-gh secret set STAGING_CRON_SECRET --body "FnkgWp..."
-gh secret set PRODUCTION_CRON_SECRET --body "VH7Lj..."
-
-# ✅ 在 workflow 中引用
-env:
-  CRON_SECRET: ${{ secrets.STAGING_CRON_SECRET }}
-```
-
-**3. Cloud Run 環境變數：**
-```bash
-# ✅ 使用 gcloud 命令設定
-gcloud run services update duotopia-staging-backend \
-  --update-env-vars CRON_SECRET="FnkgWp..." \
-  --region asia-east1
-
-# 或使用 Google Secret Manager（更安全）
-gcloud secrets create cron-secret --data-file=secret.txt
-```
-
-**4. 程式碼中讀取環境變數：**
-```python
-# ✅ Python: 從環境變數讀取
-import os
-CRON_SECRET = os.getenv("CRON_SECRET")
-if not CRON_SECRET:
-    raise ValueError("CRON_SECRET environment variable not set")
-```
-
-```typescript
-// ✅ TypeScript: 從環境變數讀取
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  throw new Error("VITE_OPENAI_API_KEY not set");
-}
-```
-
-### 🔴 檢查清單（每次處理 secrets 前必看）：
-
-- [ ] **絕對不要** 在 `.sh`, `.py`, `.ts`, `.yml` 等任何檔案中硬編碼 secrets
-- [ ] **絕對不要** 在 commit message 中包含 secrets
-- [ ] **必須使用** `.env` 檔案（本機開發）
-- [ ] **必須使用** GitHub Secrets（CI/CD）
-- [ ] **必須使用** Cloud Secret Manager 或環境變數（生產環境）
-- [ ] **必須確認** `.env` 檔案在 `.gitignore` 中
-- [ ] **洩漏後立即** 使用 `openssl rand -base64 32` 重新生成
-
-### 📋 Secret 管理標準流程：
-
-```bash
-# 1. 生成 secret
-openssl rand -base64 32
-
-# 2. 存到 .env 檔案（本機）
-echo "CRON_SECRET=$(openssl rand -base64 32)" >> .env.staging
-
-# 3. 上傳到 GitHub Secrets（CI/CD）
-gh secret set STAGING_CRON_SECRET --body "$(grep CRON_SECRET .env.staging | cut -d= -f2)"
-
-# 4. 設定到 Cloud Run（生產環境）
-gcloud run services update duotopia-staging-backend \
-  --update-env-vars CRON_SECRET="$(grep CRON_SECRET .env.staging | cut -d= -f2)" \
-  --region asia-east1
-```
-
-### ⚡ 如果不小心 commit 了 secrets：
-
-1. **立即重新生成所有洩漏的 secrets**
-2. **使用 `git filter-branch` 或 BFG Repo-Cleaner 清除 git 歷史**
-3. **通知所有相關服務更新 secrets**
-4. **檢查是否有未授權存取**
+### Secret 管理規則：
+- ❌ 不要在 `.sh`, `.py`, `.ts`, `.yml` 中硬編碼 secrets
+- ✅ 本機開發：使用 `.env` 檔案（gitignore）
+- ✅ CI/CD：使用 GitHub Secrets (`gh secret set`)
+- ✅ 生產環境：使用 Cloud Run 環境變數或 Secret Manager
+- ✅ 程式碼：從環境變數讀取 (`os.getenv()`, `import.meta.env`)
+- ⚠️ 洩漏後：立即重新生成並清除 git 歷史
 
 ---
 
