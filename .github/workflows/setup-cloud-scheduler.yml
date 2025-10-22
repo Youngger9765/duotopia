@@ -105,9 +105,10 @@ jobs:
 
         echo "✅ Renewal reminder job 創建成功"
 
-    - name: Setup Recording Error Report Job
+    - name: Setup Recording Error Report Job (Production Only)
+      if: github.event.inputs.environment == 'production'
       run: |
-        JOB_NAME="recording-error-report-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        JOB_NAME="recording-error-report-production"
 
         echo "🗑️  刪除舊的 recording error report job（如果存在）..."
         gcloud scheduler jobs delete $JOB_NAME \
@@ -124,12 +125,13 @@ jobs:
           --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
           --attempt-deadline=300s \
           --max-retry-attempts=2 \
-          --description="每小時檢查 BigQuery 錄音錯誤並發送報告到 myduotopia@gmail.com - ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+          --description="每小時檢查 BigQuery 錄音錯誤並發送報告到 myduotopia@gmail.com - production only"
 
         echo "✅ Recording error report job 創建成功"
         echo ""
-        echo "📊 此 job 每小時執行一次，統計過去 1 小時的錄音錯誤"
+        echo "📊 此 job 每小時執行一次，統計過去 24H 和 1H 的錄音錯誤"
         echo "📧 報告會發送到 myduotopia@gmail.com"
+        echo "🤖 包含 OpenAI AI 分析摘要"
 
     - name: Setup Test Notification Job (Staging Only)
       if: github.event.inputs.environment == 'staging'
@@ -167,39 +169,47 @@ jobs:
         echo ""
         echo "💰 成本估算："
         if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
-          echo "- Cloud Scheduler: 4 個 jobs × USD 0.10/月 = USD 0.40/月"
+          echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
           echo "  - Monthly Renewal (每月 1 次)"
           echo "  - Renewal Reminder (每天 1 次)"
-          echo "  - Recording Error Report (每小時 1 次 = 24×30 = 720 次/月)"
           echo "  - Test Notification (每天 1 次 - staging only)"
         else
           echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
           echo "  - Monthly Renewal (每月 1 次)"
           echo "  - Renewal Reminder (每天 1 次)"
-          echo "  - Recording Error Report (每小時 1 次 = 24×30 = 720 次/月)"
+          echo "  - Recording Error Report (每小時 1 次 = 24×30 = 720 次/月 - production only)"
         fi
         echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
-        echo "- BigQuery 查詢成本: ~USD 0.01/月（每次查詢 < 10 MB）"
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "- BigQuery 查詢成本: ~USD 0.02/月（每小時查詢兩次，每次 < 10 MB）"
+          echo "- OpenAI API 成本: ~USD 0.01/月（gpt-4o-mini, 每次 300 tokens）"
+        fi
 
-    - name: Test Jobs (Staging Only)
-      if: github.event.inputs.environment == 'staging'
+    - name: Test Jobs
       run: |
         echo ""
         echo "🧪 測試指令："
         echo ""
-        echo "1. 測試錄音錯誤報告（安全，只發送 email）："
-        echo "   gcloud scheduler jobs run recording-error-report-staging --location=${{ env.REGION }}"
-        echo ""
-        echo "2. 測試通知 job（安全，只發送 email）："
-        echo "   gcloud scheduler jobs run test-notification-staging --location=${{ env.REGION }}"
-        echo ""
-        echo "3. 測試 renewal reminder（安全，只發送 email）："
-        echo "   gcloud scheduler jobs run renewal-reminder-staging --location=${{ env.REGION }}"
-        echo ""
-        echo "4. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
-        echo "   gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
-        echo ""
-        echo "💡 建議：先執行 recording-error-report 確認 BigQuery 查詢正常"
+        if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+          echo "1. 測試通知 job（安全，只發送 email）："
+          echo "   gcloud scheduler jobs run test-notification-staging --location=${{ env.REGION }}"
+          echo ""
+          echo "2. 測試 renewal reminder（安全，只發送 email）："
+          echo "   gcloud scheduler jobs run renewal-reminder-staging --location=${{ env.REGION }}"
+          echo ""
+          echo "3. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
+          echo "   gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
+        else
+          echo "1. 測試錄音錯誤報告（安全，只發送 email）："
+          echo "   gcloud scheduler jobs run recording-error-report-production --location=${{ env.REGION }}"
+          echo "   💡 會查詢 BigQuery 並使用 OpenAI 生成分析"
+          echo ""
+          echo "2. 測試 renewal reminder（安全，只發送 email）："
+          echo "   gcloud scheduler jobs run renewal-reminder-production --location=${{ env.REGION }}"
+          echo ""
+          echo "3. 測試 monthly renewal（⚠️ 會真的執行扣款邏輯！）："
+          echo "   gcloud scheduler jobs run monthly-renewal-production --location=${{ env.REGION }}"
+        fi
 
     - name: Summary
       run: |
@@ -218,13 +228,17 @@ jobs:
         echo "   排程: 每天凌晨 3:00 (台北時間)"
         echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder"
         echo ""
-        echo "📅 Job 3: recording-error-report-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
-        echo "   排程: 每小時 (台北時間)"
-        echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/recording-error-report"
-        echo "   📊 查詢 BigQuery 錄音錯誤並發送報告"
-        echo ""
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "📅 Job 3: recording-error-report-production (僅 production)"
+          echo "   排程: 每小時 (台北時間)"
+          echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/recording-error-report"
+          echo "   📊 查詢 BigQuery 錄音錯誤（24H + 1H）"
+          echo "   🤖 使用 OpenAI 生成錯誤分析摘要"
+          echo "   📧 發送報告到 myduotopia@gmail.com"
+          echo ""
+        fi
         if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
-          echo "📅 Job 4: test-notification-staging (僅 staging)"
+          echo "📅 Job 3: test-notification-staging (僅 staging)"
           echo "   排程: 每天早上 9:00 (台北時間)"
           echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification"
           echo "   📧 會發送測試郵件到 myduotopia@gmail.com"
