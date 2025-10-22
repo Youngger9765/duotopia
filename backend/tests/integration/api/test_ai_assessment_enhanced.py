@@ -14,6 +14,7 @@ class TestAIAssessmentEnhanced:
 
     def test_ai_assessment_response_structure(self, db_session: Session):
         """測試 AI 評估回應的資料結構"""
+        # 每個測試使用獨立的 email 避免資料衝突
         # 模擬 Azure Speech API 回應
         mock_assessment_result = {
             "accuracy_score": 92.5,
@@ -52,26 +53,36 @@ class TestAIAssessmentEnhanced:
             },
         }
 
-        # 建立測試資料
+        # 建立測試資料（使用唯一 email）
         data = TestDataFactory.create_full_assignment_chain(
             db_session,
+            teacher_email="teacher_ai_response@test.com",
+            student_email="student_ai_response@test.com",
+            student_number="S_AI_RESP",
             content_items=[
                 {"text": "Hello, how are you today?", "translation": "你好嗎？"}
             ],
         )
 
-        # 儲存 AI 評估結果
-        progress = StudentItemProgress(
-            student_assignment_id=data["student_assignment"].id,
-            content_item_id=data["content"].content_items[0].id,
-            recording_url="test.webm",
-            ai_feedback=json.dumps(mock_assessment_result),
-            accuracy_score=mock_assessment_result["accuracy_score"],
-            fluency_score=mock_assessment_result["fluency_score"],
-            pronunciation_score=mock_assessment_result["pronunciation_score"],
-            status="ASSESSED",
+        # 更新已存在的 StudentItemProgress 記錄（Factory 已創建）
+        progress = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id
+                == data["content"].content_items[0].id,
+            )
+            .first()
         )
-        db_session.add(progress)
+
+        # 更新 AI 評估結果
+        progress.recording_url = "test.webm"
+        progress.ai_feedback = json.dumps(mock_assessment_result)
+        progress.accuracy_score = mock_assessment_result["accuracy_score"]
+        progress.fluency_score = mock_assessment_result["fluency_score"]
+        progress.pronunciation_score = mock_assessment_result["pronunciation_score"]
+        progress.status = "ASSESSED"
         db_session.commit()
 
         # 驗證資料結構
@@ -92,7 +103,12 @@ class TestAIAssessmentEnhanced:
 
     def test_detailed_phoneme_analysis(self, db_session: Session):
         """測試詳細的音素分析"""
-        data = TestDataFactory.create_full_assignment_chain(db_session)
+        data = TestDataFactory.create_full_assignment_chain(
+            db_session,
+            teacher_email="teacher_phoneme@test.com",
+            student_email="student_phoneme@test.com",
+            student_number="S_PHONEME",
+        )
 
         # 詳細的音素分析資料
         ai_feedback = {
@@ -122,13 +138,19 @@ class TestAIAssessmentEnhanced:
             ],
         }
 
-        progress = StudentItemProgress(
-            student_assignment_id=data["student_assignment"].id,
-            content_item_id=data["content"].content_items[0].id,
-            ai_feedback=json.dumps(ai_feedback),
-            status="ASSESSED",
+        # 更新已存在的記錄
+        progress = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id
+                == data["content"].content_items[0].id,
+            )
+            .first()
         )
-        db_session.add(progress)
+        progress.ai_feedback = json.dumps(ai_feedback)
+        progress.status = "ASSESSED"
         db_session.commit()
 
         # 驗證音素分析
@@ -152,7 +174,12 @@ class TestAIAssessmentEnhanced:
 
     def test_prosody_assessment(self, db_session: Session):
         """測試韻律評估功能"""
-        data = TestDataFactory.create_full_assignment_chain(db_session)
+        data = TestDataFactory.create_full_assignment_chain(
+            db_session,
+            teacher_email="teacher_prosody@test.com",
+            student_email="student_prosody@test.com",
+            student_number="S_PROSODY",
+        )
 
         # 包含韻律評估的資料
         ai_feedback = {
@@ -167,13 +194,19 @@ class TestAIAssessmentEnhanced:
             },
         }
 
-        progress = StudentItemProgress(
-            student_assignment_id=data["student_assignment"].id,
-            content_item_id=data["content"].content_items[0].id,
-            ai_feedback=json.dumps(ai_feedback),
-            status="ASSESSED",
+        # 更新已存在的記錄
+        progress = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id
+                == data["content"].content_items[0].id,
+            )
+            .first()
         )
-        db_session.add(progress)
+        progress.ai_feedback = json.dumps(ai_feedback)
+        progress.status = "ASSESSED"
         db_session.commit()
 
         # 驗證韻律評估
@@ -194,7 +227,12 @@ class TestAIAssessmentEnhanced:
 
     def test_analysis_summary_generation(self, db_session: Session):
         """測試分析摘要生成"""
-        data = TestDataFactory.create_full_assignment_chain(db_session)
+        data = TestDataFactory.create_full_assignment_chain(
+            db_session,
+            teacher_email="teacher_summary@test.com",
+            student_email="student_summary@test.com",
+            student_number="S_SUMMARY",
+        )
 
         # 包含分析摘要的資料
         ai_feedback = {
@@ -220,13 +258,19 @@ class TestAIAssessmentEnhanced:
             },
         }
 
-        progress = StudentItemProgress(
-            student_assignment_id=data["student_assignment"].id,
-            content_item_id=data["content"].content_items[0].id,
-            ai_feedback=json.dumps(ai_feedback),
-            status="ASSESSED",
+        # 更新已存在的記錄
+        progress = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id
+                == data["content"].content_items[0].id,
+            )
+            .first()
         )
-        db_session.add(progress)
+        progress.ai_feedback = json.dumps(ai_feedback)
+        progress.status = "ASSESSED"
         db_session.commit()
 
         # 驗證分析摘要
@@ -247,7 +291,12 @@ class TestAIAssessmentEnhanced:
 
     def test_backward_compatibility(self, db_session: Session):
         """測試向後相容性 - 舊版資料結構仍可使用"""
-        data = TestDataFactory.create_full_assignment_chain(db_session)
+        data = TestDataFactory.create_full_assignment_chain(
+            db_session,
+            teacher_email="teacher_compat@test.com",
+            student_email="student_compat@test.com",
+            student_number="S_COMPAT",
+        )
 
         # 舊版資料結構（只有 word_details）
         old_format = {
@@ -261,16 +310,22 @@ class TestAIAssessmentEnhanced:
             ],
         }
 
-        progress = StudentItemProgress(
-            student_assignment_id=data["student_assignment"].id,
-            content_item_id=data["content"].content_items[0].id,
-            ai_feedback=json.dumps(old_format),
-            accuracy_score=old_format["accuracy_score"],
-            fluency_score=old_format["fluency_score"],
-            pronunciation_score=old_format["pronunciation_score"],
-            status="ASSESSED",
+        # 更新已存在的記錄
+        progress = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id
+                == data["content"].content_items[0].id,
+            )
+            .first()
         )
-        db_session.add(progress)
+        progress.ai_feedback = json.dumps(old_format)
+        progress.accuracy_score = old_format["accuracy_score"]
+        progress.fluency_score = old_format["fluency_score"]
+        progress.pronunciation_score = old_format["pronunciation_score"]
+        progress.status = "ASSESSED"
         db_session.commit()
 
         # 驗證舊格式仍可讀取
@@ -289,6 +344,9 @@ class TestAIAssessmentEnhanced:
         """測試多個項目的獨立評估"""
         data = TestDataFactory.create_full_assignment_chain(
             db_session,
+            teacher_email="teacher_multi@test.com",
+            student_email="student_multi@test.com",
+            student_number="S_MULTI",
             content_items=[
                 {"text": "Item 1", "translation": "項目1"},
                 {"text": "Item 2", "translation": "項目2"},
@@ -297,29 +355,51 @@ class TestAIAssessmentEnhanced:
 
         items = data["content"].content_items
 
-        # 為每個項目創建不同的評估
-        for idx, item in enumerate(items):
-            ai_feedback = {
-                "accuracy_score": 80.0 + idx * 5,
-                "detailed_words": [
-                    {
-                        "word": f"Word{idx+1}",
-                        "accuracy_score": 75.0 + idx * 10,
-                        "phonemes": [
-                            {"phoneme": "w", "accuracy_score": 80.0 + idx * 5}
-                        ],
-                    }
-                ],
-            }
+        # 為第一個項目更新評估（Factory 已創建）
+        ai_feedback_1 = {
+            "accuracy_score": 80.0,
+            "detailed_words": [
+                {
+                    "word": "Word1",
+                    "accuracy_score": 75.0,
+                    "phonemes": [{"phoneme": "w", "accuracy_score": 80.0}],
+                }
+            ],
+        }
 
-            progress = StudentItemProgress(
-                student_assignment_id=data["student_assignment"].id,
-                content_item_id=item.id,
-                ai_feedback=json.dumps(ai_feedback),
-                accuracy_score=ai_feedback["accuracy_score"],
-                status="ASSESSED",
+        progress_1 = (
+            db_session.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id
+                == data["student_assignment"].id,
+                StudentItemProgress.content_item_id == items[0].id,
             )
-            db_session.add(progress)
+            .first()
+        )
+        progress_1.ai_feedback = json.dumps(ai_feedback_1)
+        progress_1.accuracy_score = ai_feedback_1["accuracy_score"]
+        progress_1.status = "ASSESSED"
+
+        # 為第二個項目創建新評估
+        ai_feedback_2 = {
+            "accuracy_score": 85.0,
+            "detailed_words": [
+                {
+                    "word": "Word2",
+                    "accuracy_score": 85.0,
+                    "phonemes": [{"phoneme": "w", "accuracy_score": 85.0}],
+                }
+            ],
+        }
+
+        progress_2 = StudentItemProgress(
+            student_assignment_id=data["student_assignment"].id,
+            content_item_id=items[1].id,
+            ai_feedback=json.dumps(ai_feedback_2),
+            accuracy_score=ai_feedback_2["accuracy_score"],
+            status="ASSESSED",
+        )
+        db_session.add(progress_2)
         db_session.commit()
 
         # 驗證每個項目的評估是獨立的
