@@ -16,6 +16,7 @@ from models import Teacher, TeacherSubscriptionTransaction, TransactionType
 from services.subscription_calculator import SubscriptionCalculator
 from services.email_service import email_service
 from services.tappay_service import TapPayService
+from google.cloud import bigquery
 
 router = APIRouter(prefix="/api/cron", tags=["cron"])
 logger = logging.getLogger(__name__)
@@ -465,6 +466,114 @@ async def test_cron_notification(
         "notification_sent": True,
         "message": "Test notification sent to myduotopia@gmail.com",
     }
+
+
+@router.post("/recording-error-report")
+async def recording_error_report_cron(
+    x_cron_secret: str = Header(None), db: Session = Depends(get_db)
+):
+    """
+    每小時檢查 BigQuery 錄音錯誤統計
+
+    執行時間：每小時 (由 Cloud Scheduler 觸發)
+
+    功能：
+    1. 查詢 BigQuery 過去 1 小時的錄音錯誤次數
+    2. 發送統計報告到官網信箱 (myduotopia@gmail.com)
+
+    安全性：只允許帶有正確 X-Cron-Secret header 的請求
+    """
+    # 驗證 Cron Secret
+    if x_cron_secret != CRON_SECRET:
+        logger.warning(
+            f"Unauthorized cron request. Secret: {x_cron_secret[:10] if x_cron_secret else 'None'}..."
+        )
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        # 初始化 BigQuery client
+        client = bigquery.Client(project=os.getenv("GCP_PROJECT_ID"))
+
+        # 計算時間範圍（過去 1 小時）
+        now_utc = datetime.now(timezone.utc)
+        one_hour_ago = now_utc - timedelta(hours=1)
+
+        # BigQuery 查詢：錄音錯誤統計
+        query = f"""
+        SELECT
+            COUNT(*) as error_count,
+            error_type,
+            user_role,
+            COUNT(DISTINCT user_id) as affected_users
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.recording_errors`
+        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
+        GROUP BY error_type, user_role
+        ORDER BY error_count DESC
+        """
+
+        query_job = client.query(query)
+        results = list(query_job.result())
+
+        # 計算總錯誤數
+        total_errors = sum(row.error_count for row in results)
+
+        # 構建郵件內容
+        time_start = one_hour_ago.strftime("%Y-%m-%d %H:%M")
+        time_end = now_utc.strftime("%Y-%m-%d %H:%M")
+
+        if total_errors == 0:
+            html_content = f"""
+            <h2>📊 錄音錯誤統計報告</h2>
+            <p><strong>時間範圍：</strong>{time_start} - {time_end} (UTC)</p>
+            <p style="color: green;"><strong>✅ 過去 1 小時沒有錄音錯誤</strong></p>
+            """
+        else:
+            error_details = "<ul>"
+            for row in results:
+                error_details += f"""
+                <li>
+                    <strong>{row.error_type}</strong> ({row.user_role}):
+                    {row.error_count} 次錯誤，影響 {row.affected_users} 位用戶
+                </li>
+                """
+            error_details += "</ul>"
+
+            html_content = f"""
+            <h2>⚠️ 錄音錯誤統計報告</h2>
+            <p><strong>時間範圍：</strong>{time_start} - {time_end} (UTC)</p>
+            <p style="color: red;"><strong>總錯誤次數：{total_errors}</strong></p>
+            <h3>錯誤明細：</h3>
+            {error_details}
+            <hr>
+            <p><small>此郵件由 Cloud Scheduler 每小時自動發送</small></p>
+            """
+
+        # 發送郵件
+        email_service.send_email(
+            to_email="myduotopia@gmail.com",
+            subject=f"{'⚠️' if total_errors > 0 else '✅'} 錄音錯誤報告 - {now_utc.strftime('%Y-%m-%d %H:%M')}",
+            html_content=html_content,
+        )
+
+        logger.info(f"Recording error report sent. Total errors: {total_errors}")
+
+        return {
+            "status": "success",
+            "executed_at": now_utc.isoformat(),
+            "time_range": {
+                "start": one_hour_ago.isoformat(),
+                "end": now_utc.isoformat(),
+            },
+            "total_errors": total_errors,
+            "error_types": len(results),
+            "notification_sent": True,
+        }
+
+    except Exception as e:
+        logger.error(f"Recording error report failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate report: {str(e)}"
+        )
 
 
 @router.get("/health")
