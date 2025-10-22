@@ -18,13 +18,52 @@ from sqlalchemy import (
     DECIMAL,
     Numeric,
     UniqueConstraint,
+    TypeDecorator,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import enum
 import uuid
+
+
+# ============ SQLite 兼容的 UUID 類型 ============
+class UUID(TypeDecorator):
+    """
+    跨資料庫的 UUID 類型
+    - PostgreSQL: 使用原生 UUID
+    - SQLite: 使用 CHAR(36) 儲存字串格式
+    """
+
+    impl = String
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PostgreSQL_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == "postgresql":
+            return value
+        else:
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == "postgresql":
+            return value
+        else:
+            if isinstance(value, str):
+                return uuid.UUID(value)
+            return value
 
 
 # ============ Enums ============
@@ -834,7 +873,7 @@ class InvoiceStatusHistory(Base):
 
     __tablename__ = "invoice_status_history"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
     transaction_id = Column(
         Integer,
         ForeignKey("teacher_subscription_transactions.id", ondelete="CASCADE"),
