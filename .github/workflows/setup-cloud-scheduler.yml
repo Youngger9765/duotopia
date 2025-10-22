@@ -1,0 +1,147 @@
+name: Setup Cloud Scheduler
+
+# ⚠️ 只在需要時手動觸發，不會自動執行
+# 使用時機：
+# 1. 第一次部署 Cloud Scheduler
+# 2. Cron 規則變更（時間、URL）
+# 3. 環境變數更新
+on:
+  workflow_dispatch:  # 只允許手動觸發
+    inputs:
+      environment:
+        description: '部署環境'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+
+jobs:
+  setup-scheduler:
+    name: 📅 Setup Cloud Scheduler
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+
+    - name: Set Environment Variables
+      id: env_vars
+      run: |
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "BACKEND_URL=${{ secrets.PRODUCTION_BACKEND_URL }}" >> $GITHUB_OUTPUT
+          echo "CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}" >> $GITHUB_OUTPUT
+          echo "ENV_SUFFIX=production" >> $GITHUB_OUTPUT
+        else
+          echo "BACKEND_URL=${{ secrets.STAGING_BACKEND_URL }}" >> $GITHUB_OUTPUT
+          echo "CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}" >> $GITHUB_OUTPUT
+          echo "ENV_SUFFIX=staging" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check existing Cloud Scheduler jobs
+      run: |
+        echo "📋 現有的 Cloud Scheduler jobs："
+        gcloud scheduler jobs list --location=${{ env.REGION }} || echo "沒有現有的 jobs"
+
+    - name: Setup Monthly Renewal Job
+      run: |
+        JOB_NAME="monthly-renewal-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+
+        echo "🗑️  刪除舊的 job（如果存在）..."
+        gcloud scheduler jobs delete $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --quiet || echo "No existing job to delete"
+
+        echo "✨ 創建新的 monthly renewal job..."
+        gcloud scheduler jobs create http $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --schedule="0 2 1 * *" \
+          --time-zone="Asia/Taipei" \
+          --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/monthly-renewal" \
+          --http-method=POST \
+          --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
+          --attempt-deadline=300s \
+          --max-retry-attempts=3 \
+          --description="每月 1 號凌晨 2:00 (台北時間) 執行自動續訂 - ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+
+        echo "✅ Monthly renewal job 創建成功"
+
+    - name: Setup Renewal Reminder Job
+      run: |
+        JOB_NAME="renewal-reminder-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+
+        echo "🗑️  刪除舊的 job（如果存在）..."
+        gcloud scheduler jobs delete $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --quiet || echo "No existing job to delete"
+
+        echo "✨ 創建新的 renewal reminder job..."
+        gcloud scheduler jobs create http $JOB_NAME \
+          --location=${{ env.REGION }} \
+          --schedule="0 3 * * *" \
+          --time-zone="Asia/Taipei" \
+          --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder" \
+          --http-method=POST \
+          --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
+          --attempt-deadline=300s \
+          --max-retry-attempts=3 \
+          --description="每天凌晨 3:00 (台北時間) 發送到期提醒 - ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+
+        echo "✅ Renewal reminder job 創建成功"
+
+    - name: List all Cloud Scheduler jobs
+      run: |
+        echo ""
+        echo "📅 所有 Cloud Scheduler jobs："
+        gcloud scheduler jobs list --location=${{ env.REGION }}
+
+        echo ""
+        echo "💰 成本估算："
+        echo "- Cloud Scheduler: 每個 job USD 0.10/月 (2 個 jobs = USD 0.20/月)"
+        echo "- 每月 1 號執行 1 次 + 每天執行 1 次 = 31 次/月"
+        echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
+
+    - name: Test Monthly Renewal Job (Optional)
+      if: github.event.inputs.environment == 'staging'
+      run: |
+        echo ""
+        echo "🧪 可以手動測試 staging 的 cron job："
+        echo "gcloud scheduler jobs run monthly-renewal-staging --location=${{ env.REGION }}"
+        echo ""
+        echo "⚠️  注意：這會真的執行自動續訂邏輯！請確認測試環境資料可以被修改"
+
+    - name: Summary
+      run: |
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ Cloud Scheduler 設定完成"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "環境: ${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        echo "Region: ${{ env.REGION }}"
+        echo ""
+        echo "📅 Job 1: monthly-renewal-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        echo "   排程: 每月 1 號凌晨 2:00 (台北時間)"
+        echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/monthly-renewal"
+        echo ""
+        echo "📅 Job 2: renewal-reminder-${{ steps.env_vars.outputs.ENV_SUFFIX }}"
+        echo "   排程: 每天凌晨 3:00 (台北時間)"
+        echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/renewal-reminder"
+        echo ""
+        echo "💡 下次需要更新時，請在 GitHub Actions 手動觸發此 workflow"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
