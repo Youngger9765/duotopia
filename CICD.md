@@ -583,6 +583,37 @@ with DatabaseInitializer() as db_init:  # __init__ 就連接資料庫！
 - 資料庫可能還在初始化或網路還沒連通
 - 任何啟動時的連線失敗都會導致容器無法啟動
 
+### Cloud Scheduler 權限問題
+**問題**：GitHub Actions 執行 `gcloud scheduler jobs create` 時出現 `PERMISSION_DENIED`
+
+**原因**：Service Account 缺少 `cloudscheduler.admin` 角色
+
+**解決方案**：
+```bash
+# 1. 為 GitHub Actions Service Account 添加權限
+gcloud projects add-iam-policy-binding duotopia-472708 \
+  --member="serviceAccount:github-actions@duotopia-472708.iam.gserviceaccount.com" \
+  --role="roles/cloudscheduler.admin"
+
+# 2. 等待 5-10 分鐘讓 IAM 變更傳播
+
+# 3. 重新觸發 Cloud Scheduler workflow
+gh workflow run setup-cloud-scheduler.yml -f environment=production
+```
+
+**所需的 Service Account 權限**：
+- `roles/run.admin` - 部署 Cloud Run
+- `roles/iam.serviceAccountUser` - 使用 Service Account
+- `roles/cloudscheduler.admin` - 管理 Cloud Scheduler ⚠️ **新增**
+- `roles/artifactregistry.writer` - 推送 Docker 映像
+- `roles/cloudbuild.builds.editor` - 執行 Cloud Build
+- `roles/storage.admin` - 管理 Cloud Storage
+
+**重要提醒**：
+- IAM 權限變更需要 5-10 分鐘才會生效
+- 如果立即重試會繼續失敗，需要等待傳播完成
+- 可以用 `gcloud projects get-iam-policy duotopia-472708` 驗證權限已加入
+
 ### 本地測試的重要性
 **絕對不要用假資料測試**：
 - ❌ `DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"`
