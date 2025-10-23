@@ -741,24 +741,38 @@ async def recording_error_report_cron(
         </html>
         """
 
-        # 發送郵件
-        subject_emoji = (
-            "🚨" if total_errors_1h > 10 else "⚠️" if total_errors_1h > 0 else "✅"
-        )
-        subject = (
-            f"{subject_emoji} 錄音錯誤報告 - "
-            f"{now_taipei.strftime('%m/%d %H:%M')} "
-            f"(1H: {total_errors_1h} | 24H: {total_errors_24h})"
-        )
-        email_service.send_email(
-            to_email="myduotopia@gmail.com",
-            subject=subject,
-            html_content=html_content,
-        )
+        # 判斷是否需要發送郵件
+        current_hour = now_taipei.hour
+        is_scheduled_report = current_hour in [0, 6, 12, 18]  # 固定報告時間
+        should_send_email = is_scheduled_report or total_errors_1h > 0
 
-        logger.info(
-            f"Recording error report sent. 1H: {total_errors_1h}, 24H: {total_errors_24h}"
-        )
+        notification_sent = False
+        if should_send_email:
+            # 發送郵件
+            subject_emoji = (
+                "🚨" if total_errors_1h > 10 else "⚠️" if total_errors_1h > 0 else "✅"
+            )
+            report_type = " [定期報告]" if is_scheduled_report else ""
+            subject = (
+                f"{subject_emoji} 錄音錯誤報告{report_type} - "
+                f"{now_taipei.strftime('%m/%d %H:%M')} "
+                f"(1H: {total_errors_1h} | 24H: {total_errors_24h})"
+            )
+            email_service.send_email(
+                to_email="myduotopia@gmail.com",
+                subject=subject,
+                html_content=html_content,
+            )
+            notification_sent = True
+
+            logger.info(
+                f"Recording error report sent. 1H: {total_errors_1h}, 24H: {total_errors_24h}, "
+                f"Scheduled: {is_scheduled_report}"
+            )
+        else:
+            logger.info(
+                f"No errors in past hour, skipping email. 1H: {total_errors_1h}, 24H: {total_errors_24h}"
+            )
 
         return {
             "status": "success",
@@ -766,7 +780,8 @@ async def recording_error_report_cron(
             "errors_1h": total_errors_1h,
             "errors_24h": total_errors_24h,
             "ai_summary_generated": bool(ai_summary),
-            "notification_sent": True,
+            "notification_sent": notification_sent,
+            "is_scheduled_report": is_scheduled_report,
         }
 
     except Exception as e:
