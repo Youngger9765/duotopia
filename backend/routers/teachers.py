@@ -2038,15 +2038,20 @@ async def create_content(
     db: Session = Depends(get_db),
 ):
     """建立新內容"""
-    # Verify the lesson belongs to the teacher
+    # Verify the lesson belongs to the teacher or is a template program
     lesson = (
         db.query(Lesson)
         .join(Program)
         .filter(
             Lesson.id == lesson_id,
-            Program.teacher_id == current_teacher.id,
             Lesson.is_active.is_(True),
             Program.is_active.is_(True),
+        )
+        .filter(
+            # Either: lesson belongs to teacher's program
+            # Or: lesson belongs to a template program (公版課程)
+            (Program.teacher_id == current_teacher.id)
+            | (Program.is_template.is_(True))
         )
         .first()
     )
@@ -2187,17 +2192,22 @@ async def update_content(
     db: Session = Depends(get_db),
 ):
     """更新內容"""
-    # Verify the content belongs to the teacher
+    # Verify the content belongs to the teacher or is a template program
     content = (
         db.query(Content)
         .join(Lesson)
         .join(Program)
         .filter(
             Content.id == content_id,
-            Program.teacher_id == current_teacher.id,
             Content.is_active.is_(True),
             Lesson.is_active.is_(True),
             Program.is_active.is_(True),
+        )
+        .filter(
+            # Either: content belongs to teacher's program
+            # Or: content belongs to a template program (公版課程)
+            (Program.teacher_id == current_teacher.id)
+            | (Program.is_template.is_(True))
         )
         .first()
     )
