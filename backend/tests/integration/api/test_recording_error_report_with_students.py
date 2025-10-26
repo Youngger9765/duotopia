@@ -8,43 +8,73 @@ import os
 
 @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="需要 GCP_PROJECT_ID 環境變數")
 def test_query_students_with_errors():
-    """測試查詢有錯誤的學生名單"""
+    """測試查詢有錯誤的學生名單（兩步驟：BigQuery + PostgreSQL）"""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from models import Student
+
+    # Step 1: 從 BigQuery 取得有錯誤的 student_ids
     client = bigquery.Client(project=os.getenv("GCP_PROJECT_ID"))
 
-    query = f"""
-    SELECT DISTINCT
-        e.student_id,
-        s.name as student_name,
-        s.email as student_email,
+    query_student_ids = f"""
+    SELECT
+        student_id,
         COUNT(*) as error_count,
-        STRING_AGG(DISTINCT e.error_type ORDER BY e.error_type LIMIT 5) as error_types
-    FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors` e
-    LEFT JOIN `{os.getenv("GCP_PROJECT_ID")}.duotopia.students` s
-        ON e.student_id = s.id
-    WHERE e.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        AND e.student_id IS NOT NULL
-    GROUP BY e.student_id, s.name, s.email
+        STRING_AGG(DISTINCT error_type ORDER BY error_type LIMIT 5) as error_types
+    FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors`
+    WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+        AND student_id IS NOT NULL
+    GROUP BY student_id
     ORDER BY error_count DESC
-    LIMIT 10
+    LIMIT 100
     """
 
-    results = list(client.query(query).result())
+    student_errors = list(client.query(query_student_ids).result())
 
-    print(f"\n找到 {len(results)} 位有錯誤的學生：")
-    for row in results:
+    # Step 2: 從 PostgreSQL 查詢學生資料
+    students_with_errors = []
+    if student_errors:
+        engine = create_engine(os.getenv("DATABASE_URL"))
+        SessionLocal = sessionmaker(bind=engine)
+        db_session = SessionLocal()
+
+        try:
+            student_ids = [row.student_id for row in student_errors]
+            students = (
+                db_session.query(Student).filter(Student.id.in_(student_ids)).all()
+            )
+
+            student_map = {s.id: s for s in students}
+
+            for error_row in student_errors:
+                student = student_map.get(error_row.student_id)
+                students_with_errors.append(
+                    {
+                        "student_id": error_row.student_id,
+                        "student_name": student.name if student else "（未找到）",
+                        "student_email": student.email if student else "（無 Email）",
+                        "error_count": error_row.error_count,
+                        "error_types": error_row.error_types,
+                    }
+                )
+        finally:
+            db_session.close()
+
+    print(f"\n找到 {len(students_with_errors)} 位有錯誤的學生：")
+    for student in students_with_errors[:10]:  # 只顯示前 10 位
         print(
-            f"  - {row.student_name or f'ID {row.student_id}'} ({row.student_email or 'no email'}): "
-            f"{row.error_count} 次錯誤"
+            f"  - {student['student_name']} (ID {student['student_id']}) ({student['student_email']}): "
+            f"{student['error_count']} 次錯誤"
         )
-        print(f"    錯誤類型: {row.error_types}")
+        print(f"    錯誤類型: {student['error_types']}")
 
     # 驗證查詢格式正確
-    if results:
-        assert hasattr(results[0], "student_id")
-        assert hasattr(results[0], "student_name")
-        assert hasattr(results[0], "student_email")
-        assert hasattr(results[0], "error_count")
-        assert hasattr(results[0], "error_types")
+    if students_with_errors:
+        assert "student_id" in students_with_errors[0]
+        assert "student_name" in students_with_errors[0]
+        assert "student_email" in students_with_errors[0]
+        assert "error_count" in students_with_errors[0]
+        assert "error_types" in students_with_errors[0]
 
 
 @pytest.mark.skipif(not os.getenv("CRON_SECRET"), reason="需要 CRON_SECRET 環境變數")

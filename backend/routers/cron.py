@@ -5,14 +5,14 @@ Cron Job API Endpoints
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import func, create_engine
 from datetime import datetime, timedelta, timezone
 import logging
 import os
 
 from database import get_db
-from models import Teacher, TeacherSubscriptionTransaction, TransactionType
+from models import Teacher, TeacherSubscriptionTransaction, TransactionType, Student
 from services.subscription_calculator import SubscriptionCalculator
 from services.email_service import email_service
 from services.tappay_service import TapPayService
@@ -535,24 +535,53 @@ async def recording_error_report_cron(
         total_errors_1h = sum(row.error_count for row in results_1h)
 
         # 🔥 新增：查詢有錯誤的學生名單（最近 24 小時）
-        query_students = f"""
-        SELECT DISTINCT
-            e.student_id,
-            s.name as student_name,
-            s.email as student_email,
+        # Step 1: 從 BigQuery 取得有錯誤的 student_ids
+        query_student_ids = f"""
+        SELECT
+            student_id,
             COUNT(*) as error_count,
-            STRING_AGG(DISTINCT e.error_type ORDER BY e.error_type LIMIT 5) as error_types
-        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors` e
-        LEFT JOIN `{os.getenv("GCP_PROJECT_ID")}.duotopia.students` s
-            ON e.student_id = s.id
-        WHERE e.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-            AND e.student_id IS NOT NULL
-        GROUP BY e.student_id, s.name, s.email
+            STRING_AGG(DISTINCT error_type ORDER BY error_type LIMIT 5) as error_types
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors`
+        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+            AND student_id IS NOT NULL
+        GROUP BY student_id
         ORDER BY error_count DESC
         LIMIT 100
         """
 
-        students_with_errors = list(client.query(query_students).result())
+        student_errors = list(client.query(query_student_ids).result())
+
+        # Step 2: 從 PostgreSQL 查詢學生資料
+        students_with_errors = []
+        if student_errors:
+            # 使用 DATABASE_URL 連接
+            engine = create_engine(os.getenv("DATABASE_URL"))
+            SessionLocal = sessionmaker(bind=engine)
+            db_session = SessionLocal()
+
+            try:
+                student_ids = [row.student_id for row in student_errors]
+                students = (
+                    db_session.query(Student).filter(Student.id.in_(student_ids)).all()
+                )
+
+                # 建立 student_id -> student 的 mapping
+                student_map = {s.id: s for s in students}
+
+                # 合併 BigQuery 錯誤資料和 PostgreSQL 學生資料
+                for error_row in student_errors:
+                    student = student_map.get(error_row.student_id)
+                    students_with_errors.append(
+                        {
+                            "student_id": error_row.student_id,
+                            "student_name": student.name if student else "（未找到）",
+                            "student_email": student.email if student else "（無 Email）",
+                            "error_count": error_row.error_count,
+                            "error_types": error_row.error_types,
+                        }
+                    )
+            finally:
+                db_session.close()
 
         # 使用 OpenAI 生成摘要（如果有錯誤）
         ai_summary = ""
@@ -765,20 +794,20 @@ async def recording_error_report_cron(
                             </tr>
             """
             for student in students_with_errors:
-                student_name = student.student_name or "（未設定）"
-                student_email = student.student_email or "（無 Email）"
+                student_name = student["student_name"] or "（未設定）"
+                student_email = student["student_email"] or "（無 Email）"
                 error_types_display = (
-                    student.error_types[:100] + "..."
-                    if len(student.error_types) > 100
-                    else student.error_types
+                    student["error_types"][:100] + "..."
+                    if len(student["error_types"]) > 100
+                    else student["error_types"]
                 )
 
                 html_content += f"""
                             <tr>
-                                <td>{student.student_id}</td>
+                                <td>{student['student_id']}</td>
                                 <td>{student_name}</td>
                                 <td>{student_email}</td>
-                                <td>{student.error_count}</td>
+                                <td>{student['error_count']}</td>
                                 <td style="font-size: 0.9em; color: #666;">{error_types_display}</td>
                             </tr>
                 """
