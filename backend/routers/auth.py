@@ -104,7 +104,7 @@ async def teacher_login(
 
 
 @router.post("/teacher/register", response_model=RegisterResponse)
-@limiter.limit("3/hour")  # 每小時最多 3 次註冊嘗試
+# 註冊不應有嚴格限制，由 middleware 統一管理即可
 async def teacher_register(
     request: Request,
     register_req: TeacherRegisterRequest,

@@ -534,6 +534,26 @@ async def recording_error_report_cron(
         total_errors_24h = sum(row.error_count for row in results_24h)
         total_errors_1h = sum(row.error_count for row in results_1h)
 
+        # 🔥 新增：查詢有錯誤的學生名單（最近 24 小時）
+        query_students = f"""
+        SELECT DISTINCT
+            e.student_id,
+            s.name as student_name,
+            s.email as student_email,
+            COUNT(*) as error_count,
+            STRING_AGG(DISTINCT e.error_type ORDER BY e.error_type LIMIT 5) as error_types
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.audio_playback_errors` e
+        LEFT JOIN `{os.getenv("GCP_PROJECT_ID")}.duotopia.students` s
+            ON e.student_id = s.id
+        WHERE e.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+            AND e.student_id IS NOT NULL
+        GROUP BY e.student_id, s.name, s.email
+        ORDER BY error_count DESC
+        LIMIT 100
+        """
+
+        students_with_errors = list(client.query(query_students).result())
+
         # 使用 OpenAI 生成摘要（如果有錯誤）
         ai_summary = ""
         if total_errors_24h > 0:
@@ -727,6 +747,46 @@ async def recording_error_report_cron(
                 """
             html_content += """
                         </table>
+                    </div>
+            """
+
+        # 🔥 新增：受影響學生名單
+        if students_with_errors:
+            html_content += f"""
+                    <div class="stats-box">
+                        <h3>👥 受影響學生名單（最近 24 小時，共 {len(students_with_errors)} 位）</h3>
+                        <table>
+                            <tr>
+                                <th>ID</th>
+                                <th>學生姓名</th>
+                                <th>Email</th>
+                                <th>錯誤次數</th>
+                                <th>錯誤類型</th>
+                            </tr>
+            """
+            for student in students_with_errors:
+                student_name = student.student_name or "（未設定）"
+                student_email = student.student_email or "（無 Email）"
+                error_types_display = (
+                    student.error_types[:100] + "..."
+                    if len(student.error_types) > 100
+                    else student.error_types
+                )
+
+                html_content += f"""
+                            <tr>
+                                <td>{student.student_id}</td>
+                                <td>{student_name}</td>
+                                <td>{student_email}</td>
+                                <td>{student.error_count}</td>
+                                <td style="font-size: 0.9em; color: #666;">{error_types_display}</td>
+                            </tr>
+                """
+            html_content += """
+                        </table>
+                        <p style="color: #6b7280; font-size: 0.9em; margin-top: 10px;">
+                            💡 提示：可以聯繫這些學生確認他們的使用環境，或主動排查技術問題
+                        </p>
                     </div>
             """
 

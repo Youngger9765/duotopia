@@ -57,10 +57,11 @@ elif environment == "staging":
 elif environment == "production":
     # 生產環境只允許生產域名
     allowed_origins = [
-        "https://duotopia-469413.web.app",
-        "https://duotopia.net",  # 自定義域名
-        "https://duotopia.co",  # 自定義域名
-        "https://duotopia-production-frontend-316409492201.asia-east1.run.app",  # Production Cloud Run frontend
+        "https://duotopia.co",  # 主要自定義域名
+        "https://duotopia.net",  # 備用自定義域名
+        "https://duotopia-production-frontend-b2ovkkgl6a-de.a.run.app",  # Production Cloud Run (短網址)
+        "https://duotopia-production-frontend-316409492201.asia-east1.run.app",  # Production Cloud Run (完整網址)
+        "https://duotopia-469413.web.app",  # Firebase hosting (備用)
     ]
 else:
     # 其他環境使用環境變數或預設值
