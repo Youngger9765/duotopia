@@ -25,6 +25,14 @@ export default function TeacherLogin() {
     password: "",
   });
 
+  // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
+  const searchParams = new URLSearchParams(window.location.search);
+  const isDemoMode = searchParams.get("is_demo") === "true";
+
+  // 檢查環境
+  const isProduction = import.meta.env.VITE_ENVIRONMENT === "production";
+  const showDemoBlocks = !isProduction || isDemoMode;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -194,67 +202,75 @@ export default function TeacherLogin() {
               </div>
             </form>
 
-            {/* Quick Login Buttons */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  測試帳號快速登入
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin("demo@duotopia.com")}
-                disabled={isLoading}
-              >
-                <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
-                <div className="flex-1 text-left">
-                  <div className="font-medium">Demo 教師（已充值300天）</div>
-                  <div className="text-xs text-gray-500">demo@duotopia.com</div>
-                </div>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin("trial@duotopia.com")}
-                disabled={isLoading}
-              >
-                <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-xs sm:text-sm truncate">
-                    試用教師（30天試用期）
+            {/* Quick Login Buttons - 只在非 production 或有 ?is_demo=true 時顯示 */}
+            {showDemoBlocks && (
+              <>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
                   </div>
-                  <div className="text-xs text-gray-500">
-                    trial@duotopia.com
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">
+                      測試帳號快速登入
+                    </span>
                   </div>
                 </div>
-              </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start h-14 min-h-14 py-3"
-                onClick={() => handleQuickLogin("expired@duotopia.com")}
-                disabled={isLoading}
-              >
-                <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
-                <div className="flex-1 text-left">
-                  <div className="font-medium">過期教師（未訂閱）</div>
-                  <div className="text-xs text-gray-500">
-                    expired@duotopia.com
-                  </div>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("demo@duotopia.com")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        Demo 教師（已充值300天）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        demo@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("trial@duotopia.com")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-xs sm:text-sm truncate">
+                        試用教師（30天試用期）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        trial@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("expired@duotopia.com")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">過期教師（未訂閱）</div>
+                      <div className="text-xs text-gray-500">
+                        expired@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
                 </div>
-              </Button>
-            </div>
+              </>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-2">
@@ -278,14 +294,19 @@ export default function TeacherLogin() {
           </CardFooter>
         </Card>
 
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
-          <div className="font-semibold mb-1">🔐 測試帳號密碼均為：demo123</div>
-          <div className="space-y-1">
-            <div>✅ demo@duotopia.com - 已充值300天</div>
-            <div>🎁 trial@duotopia.com - 30天試用期</div>
-            <div>❌ expired@duotopia.com - 未訂閱/已過期</div>
+        {/* 測試帳號說明 - 只在非 production 或有 ?is_demo=true 時顯示 */}
+        {showDemoBlocks && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
+            <div className="font-semibold mb-1">
+              🔐 測試帳號密碼均為：demo123
+            </div>
+            <div className="space-y-1">
+              <div>✅ demo@duotopia.com - 已充值300天</div>
+              <div>🎁 trial@duotopia.com - 30天試用期</div>
+              <div>❌ expired@duotopia.com - 未訂閱/已過期</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
