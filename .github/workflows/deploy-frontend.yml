@@ -148,7 +148,9 @@ jobs:
       working-directory: ./frontend
       run: |
         echo "VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }}" > .env
-        echo "Created .env with VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }}"
+        echo "VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }}" >> .env
+        echo "Created .env with:"
+        cat .env
 
     - name: Build and push frontend image
       working-directory: ./frontend
@@ -170,6 +172,7 @@ jobs:
           $CACHE_FLAG \
           $BUILD_TIMESTAMP \
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
+          --build-arg VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }} \
           --build-arg VITE_TAPPAY_APP_ID=${{ secrets.VITE_TAPPAY_APP_ID }} \
           --build-arg VITE_TAPPAY_APP_KEY=${{ secrets.VITE_TAPPAY_APP_KEY }} \
           --build-arg VITE_TAPPAY_SERVER_TYPE=${{ secrets.VITE_TAPPAY_SERVER_TYPE }} \
