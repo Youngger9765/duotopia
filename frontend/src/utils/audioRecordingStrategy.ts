@@ -39,17 +39,17 @@ export function getRecordingStrategy(
   // 🍎 iOS 全系列 - 所有 iOS 瀏覽器都用 WebKit
   if (device.platform === "iOS") {
     return {
-      preferredMimeType: "audio/mp4",
-      fallbackMimeTypes: ["video/mp4"], // video/mp4 可用於純音頻錄製
+      preferredMimeType: "audio/webm;codecs=opus", // iOS Safari 實際支援 WebM
+      fallbackMimeTypes: ["audio/webm", "audio/mp4", "video/mp4"],
       useTimeslice: false, // ❌ timeslice 會導致 ondataavailable 不觸發
       useRequestData: true, // ✅ 必須主動要資料
       maxDuration: 45,
       minDuration: 1,
-      durationValidation: "filesize-first", // metadata 不可靠，優先用檔案大小
+      durationValidation: "lenient", // WebM metadata 不可靠，使用寬鬆模式（只檢查檔案大小）
       minFileSize: 10000, // 10KB
       platformName: `iOS ${device.browser}`,
       notes:
-        "isTypeSupported 不可信，使用 try/catch 測試，video/mp4 可作為 fallback",
+        "iOS Safari 支援 WebM 錄音但 metadata 不準確，使用檔案大小判斷有效性",
     };
   }
 
