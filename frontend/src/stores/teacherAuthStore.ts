@@ -7,6 +7,7 @@ export interface TeacherUser {
   email: string;
   is_demo?: boolean;
   phone?: string;
+  role?: string;
 }
 
 interface TeacherAuthState {

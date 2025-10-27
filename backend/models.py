@@ -129,6 +129,7 @@ class Teacher(Base):
     avatar_url = Column(String(500))
     is_active = Column(Boolean, default=True)
     is_demo = Column(Boolean, default=False)  # 標記 demo 帳號
+    role = Column(String(20), default="teacher", nullable=False)  # 權限角色: teacher, admin
 
     # Email 驗證字段
     email_verified = Column(Boolean, default=False)  # email 是否已驗證

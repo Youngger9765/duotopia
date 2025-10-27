@@ -28,6 +28,7 @@ import EmailVerification from "./pages/EmailVerification";
 import StudentProfile from "./pages/student/StudentProfile";
 import DatabaseAdminPage from "./pages/admin/DatabaseAdminPage";
 import AdminMonitoringPage from "./pages/admin/AdminMonitoringPage";
+import { AdminTeacherManagement } from "./pages/AdminTeacherManagement";
 import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
 import PricingPage from "./pages/PricingPage";
@@ -166,6 +167,14 @@ function App() {
 
         {/* Admin Routes */}
         <Route path="/admin/database" element={<DatabaseAdminPage />} />
+        <Route
+          path="/admin/teacher-management"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminTeacherManagement />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Student Routes with Layout */}
         <Route path="/student" element={<StudentLayout />}>
