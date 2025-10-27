@@ -12,10 +12,10 @@ describe("audioRecordingStrategy", () => {
         "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1";
       const strategy = getRecordingStrategy(userAgent);
 
-      expect(strategy.preferredMimeType).toBe("audio/mp4");
+      expect(strategy.preferredMimeType).toBe("audio/webm;codecs=opus");
       expect(strategy.useTimeslice).toBe(false);
       expect(strategy.useRequestData).toBe(true);
-      expect(strategy.durationValidation).toBe("filesize-first");
+      expect(strategy.durationValidation).toBe("lenient");
       expect(strategy.minFileSize).toBe(10000);
       expect(strategy.platformName).toBe("iOS Safari");
     });
@@ -25,9 +25,9 @@ describe("audioRecordingStrategy", () => {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
       const strategy = getRecordingStrategy(userAgent);
 
-      expect(strategy.preferredMimeType).toBe("audio/mp4");
+      expect(strategy.preferredMimeType).toBe("audio/webm;codecs=opus");
       expect(strategy.useRequestData).toBe(true);
-      expect(strategy.durationValidation).toBe("filesize-first");
+      expect(strategy.durationValidation).toBe("lenient");
       expect(strategy.platformName).toBe("macOS Safari");
     });
 
@@ -96,15 +96,15 @@ describe("audioRecordingStrategy", () => {
       expect(mimeType).toBe("audio/webm;codecs=opus");
     });
 
-    it("應該為 macOS Safari 使用 MP4", () => {
+    it("應該為 macOS Safari 使用 WebM", () => {
       const userAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
 
       // 從 strategy 獲取配置（而不是手動構造）
       const strategy = getRecordingStrategy(userAgent);
 
-      // macOS Safari 策略應該要求 MP4
-      expect(strategy.preferredMimeType).toBe("audio/mp4");
+      // macOS Safari 策略應該要求 WebM（與 iOS 相同問題）
+      expect(strategy.preferredMimeType).toBe("audio/webm;codecs=opus");
 
       // selectSupportedMimeType 應該直接返回策略的首選項（不依賴 isTypeSupported）
       // 需要 mock navigator.userAgent
@@ -114,7 +114,7 @@ describe("audioRecordingStrategy", () => {
       });
 
       const mimeType = selectSupportedMimeType(strategy);
-      expect(mimeType).toBe("audio/mp4");
+      expect(mimeType).toBe("audio/webm;codecs=opus");
     });
   });
 
