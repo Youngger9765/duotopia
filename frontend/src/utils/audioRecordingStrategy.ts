@@ -53,20 +53,19 @@ export function getRecordingStrategy(
     };
   }
 
-  // 🍎 macOS Safari - 與 iOS 相同問題：MP4 產生 0 byte，改用 WebM
+  // 🍎 macOS Safari - 只支援 MP4 格式
   if (device.platform === "macOS" && device.browser === "Safari") {
     return {
-      preferredMimeType: "audio/webm;codecs=opus", // macOS Safari 實際支援 WebM
-      fallbackMimeTypes: ["audio/webm", "audio/mp4", "video/mp4"],
+      preferredMimeType: "audio/mp4", // macOS Safari 只支援 MP4
+      fallbackMimeTypes: ["video/mp4"],
       useTimeslice: false,
       useRequestData: true,
       maxDuration: 45,
       minDuration: 1,
-      durationValidation: "lenient", // WebM metadata 不可靠，使用寬鬆模式（只檢查檔案大小）
+      durationValidation: "lenient", // MP4 metadata 可靠但仍用寬鬆模式
       minFileSize: 10000, // 10KB
       platformName: "macOS Safari",
-      notes:
-        "macOS Safari 支援 WebM 錄音但 metadata 不準確，使用檔案大小判斷有效性",
+      notes: "macOS Safari 只支援 MP4 格式，metadata 準確",
     };
   }
 
