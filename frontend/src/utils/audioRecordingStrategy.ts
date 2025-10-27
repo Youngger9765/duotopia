@@ -72,17 +72,22 @@ export function getRecordingStrategy(
 
   // 🌐 Chrome/Edge (Desktop & Android)
   if (device.browser === "Chrome" || device.browser === "Edge") {
+    // 🍎 iOS Chrome/Edge 也使用 WebKit，有相同的 metadata 問題
+    const isIOS = device.platform === "iOS";
+
     return {
       preferredMimeType: "audio/webm;codecs=opus",
       fallbackMimeTypes: ["audio/webm", "audio/mp4"],
-      useTimeslice: false, // 不用也沒關係，更簡單
-      useRequestData: true, // 保險起見都用
+      useTimeslice: false,
+      useRequestData: true,
       maxDuration: 45,
       minDuration: 1,
-      durationValidation: "metadata-first", // metadata 可靠
-      minFileSize: 1000, // 1KB
+      durationValidation: isIOS ? "lenient" : "metadata-first", // iOS Chrome metadata 不可靠
+      minFileSize: isIOS ? 10000 : 1000, // iOS 要求較大檔案
       platformName: device.browser + (device.isMobile ? " Mobile" : " Desktop"),
-      notes: "WebM 支援良好，metadata 可靠",
+      notes: isIOS
+        ? "iOS Chrome 使用 WebKit，metadata 不可靠，使用檔案大小判斷"
+        : "WebM 支援良好，metadata 可靠",
     };
   }
 
