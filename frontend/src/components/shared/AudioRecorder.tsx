@@ -144,10 +144,25 @@ export default function AudioRecorder({
       for (const tryMimeType of mimeTypesToTry) {
         try {
           const options = tryMimeType ? { mimeType: tryMimeType } : {};
-          mediaRecorder = new MediaRecorder(stream, options);
+          const testRecorder = new MediaRecorder(stream, options);
+
+          // 🍎 iOS Safari 特殊檢查：驗證實際使用的 mimeType
+          // iOS Safari 會接受 audio/mp4 但實際用 audio/webm，導致錄音失敗
+          const actualMimeType = testRecorder.mimeType.toLowerCase();
+          const isWebM = actualMimeType.includes("webm");
+          const device = detectDevice(navigator.userAgent);
+
+          if (device.platform === "iOS" && isWebM) {
+            console.warn(
+              `❌ iOS Safari 忽略了設定的 ${tryMimeType}，實際使用 ${testRecorder.mimeType}（不支援）`,
+            );
+            continue; // 跳過這個不支援的格式
+          }
+
           console.log(
-            `✅ MediaRecorder created with: ${mediaRecorder.mimeType}`,
+            `✅ MediaRecorder created with: ${testRecorder.mimeType}`,
           );
+          mediaRecorder = testRecorder;
           break;
         } catch (err) {
           console.warn(
