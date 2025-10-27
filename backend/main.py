@@ -59,8 +59,10 @@ elif environment == "production":
     allowed_origins = [
         "https://duotopia.co",  # 主要自定義域名
         "https://duotopia.net",  # 備用自定義域名
-        "https://duotopia-production-frontend-b2ovkkgl6a-de.a.run.app",  # Production Cloud Run (短網址)
-        "https://duotopia-production-frontend-316409492201.asia-east1.run.app",  # Production Cloud Run (完整網址)
+        # Production Cloud Run (短網址)
+        "https://duotopia-production-frontend-b2ovkkgl6a-de.a.run.app",
+        # Production Cloud Run (完整網址)
+        "https://duotopia-production-frontend-316409492201.asia-east1.run.app",
         "https://duotopia-469413.web.app",  # Firebase hosting (備用)
     ]
 else:
@@ -94,11 +96,43 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """健康檢查端點 - 檢查服務和資料庫狀態"""
+    from sqlalchemy import text
+    from database import SessionLocal
+
+    db_status = "unknown"
+    db_latency = None
+
+    try:
+        # 測試資料庫連線
+        import time
+
+        start = time.time()
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        db_latency = round((time.time() - start) * 1000, 2)  # ms
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "healthy" else "degraded",
         "service": "duotopia-backend",
-        "database": settings.get_database_info(),
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "database": {
+            "status": db_status,
+            "latency_ms": db_latency,
+            "info": settings.get_database_info(),
+        },
     }
+
+
+# 新增 /api/health 作為別名（符合 API 慣例）
+@app.get("/api/health")
+async def api_health_check():
+    """API 健康檢查端點（/api/health 別名）"""
+    return await health_check()
 
 
 # Include routers

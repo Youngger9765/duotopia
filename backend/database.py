@@ -9,7 +9,18 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
 )
 
-engine = create_engine(DATABASE_URL)
+# 🔧 資料庫連線池優化 - 防止 SSL SYSCALL EOF 錯誤
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,  # 每次取得連線前先測試，防止使用斷線的連線
+    pool_recycle=3600,  # 1小時回收連線，避免長時間閒置被關閉
+    pool_size=5,  # 連線池大小
+    max_overflow=10,  # 最大溢出連線數
+    connect_args={
+        "connect_timeout": 10,  # 連線超時 10 秒
+        "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
+    },
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

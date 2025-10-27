@@ -54,15 +54,23 @@ class ConfigResponse(BaseModel):
 @router.post("/validate-teacher", response_model=ValidateTeacherResponse)
 def validate_teacher(request: ValidateTeacherRequest, db: Session = Depends(get_db)):
     """驗證教師 email 是否存在"""
-    teacher = (
-        db.query(Teacher)
-        .filter(func.lower(Teacher.email) == func.lower(request.email))
-        .first()
-    )
+    try:
+        teacher = (
+            db.query(Teacher)
+            .filter(func.lower(Teacher.email) == func.lower(request.email))
+            .first()
+        )
 
-    if teacher:
-        return ValidateTeacherResponse(valid=True, name=teacher.name, id=teacher.id)
-    return ValidateTeacherResponse(valid=False)
+        if teacher:
+            return ValidateTeacherResponse(valid=True, name=teacher.name, id=teacher.id)
+        return ValidateTeacherResponse(valid=False)
+    except Exception as e:
+        # 記錄錯誤但返回友善訊息（不洩漏資料庫細節）
+        print(f"❌ validate_teacher error: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail="Database temporarily unavailable. Please try again.",
+        )
 
 
 @router.get("/teachers", response_model=List[TeacherResponse])
