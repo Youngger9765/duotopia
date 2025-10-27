@@ -142,7 +142,7 @@ export default function StudentActivityPage() {
     } catch (error) {
       console.error("Failed to load activities:", error);
       toast.error("無法載入題目，請稍後再試");
-      navigate(`/student/assignment/${assignmentId}`);
+      navigate(`/student/assignment/${assignmentId}/detail`);
     } finally {
       setLoading(false);
     }
