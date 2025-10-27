@@ -21,7 +21,6 @@ import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentAssignmentList from "./pages/student/StudentAssignmentList";
 import StudentAssignmentDetail from "./pages/student/StudentAssignmentDetail";
-import AssignmentDetail from "./pages/student/AssignmentDetail";
 import StudentActivityPage from "./pages/student/StudentActivityPage";
 import StudentLayout from "./components/StudentLayout";
 import EmailVerification from "./pages/EmailVerification";
@@ -175,14 +174,9 @@ function App() {
             path="assignment/:id/detail"
             element={<StudentAssignmentDetail />}
           />
-          <Route path="assignment/:id" element={<AssignmentDetail />} />
           <Route
             path="assignment/:assignmentId/activity"
             element={<StudentActivityPage />}
-          />
-          <Route
-            path="assignment/:id/activity/:progressId"
-            element={<AssignmentDetail />}
           />
           <Route
             path="progress"
