@@ -13,6 +13,7 @@ import {
   validateDuration,
   type RecordingStrategy,
 } from "@/utils/audioRecordingStrategy";
+import { detectDevice } from "@/utils/deviceDetector";
 
 interface AudioRecorderProps {
   // Core props
@@ -156,8 +157,21 @@ export default function AudioRecorder({
         }
       }
 
-      // 如果所有 MIME types 都失敗，嘗試不指定 MIME type
+      // 如果所有 MIME types 都失敗
       if (!mediaRecorder) {
+        const device = detectDevice(navigator.userAgent);
+
+        // 🍎 iOS/macOS Safari: 不要 fallback 到瀏覽器預設（可能是不支援的 WebM）
+        if (
+          device.platform === "iOS" ||
+          (device.platform === "macOS" && device.browser === "Safari")
+        ) {
+          throw new Error(
+            `iOS/Safari does not support any of the configured audio formats. Tried: ${mimeTypesToTry.join(", ")}`,
+          );
+        }
+
+        // 其他瀏覽器：可以嘗試不指定 MIME type
         try {
           mediaRecorder = new MediaRecorder(stream);
           console.log(
