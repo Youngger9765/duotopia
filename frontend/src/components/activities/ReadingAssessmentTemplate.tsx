@@ -69,7 +69,13 @@ export default function ReadingAssessmentTemplate({
 
       // Create form data
       const formData = new FormData();
-      formData.append("audio_file", audioBlob, "recording.webm");
+      // 根據 blob 的 MIME type 決定檔案副檔名
+      const fileExtension = audioBlob.type.includes("mp4")
+        ? "recording.mp4"
+        : audioBlob.type.includes("webm")
+          ? "recording.webm"
+          : "recording.audio";
+      formData.append("audio_file", audioBlob, fileExtension);
       formData.append("reference_text", targetText);
       formData.append("progress_id", progressId.toString());
 

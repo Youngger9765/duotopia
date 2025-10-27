@@ -418,7 +418,13 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         const formData = new FormData();
         formData.append("assignment_id", assignmentId);
         formData.append("content_item_id", contentItemId.toString());
-        formData.append("audio_file", audioBlob, "recording.webm");
+        // 根據 blob 的 MIME type 決定檔案副檔名
+        const uploadFileExtension = audioBlob.type.includes("mp4")
+          ? "recording.mp4"
+          : audioBlob.type.includes("webm")
+            ? "recording.webm"
+            : "recording.audio";
+        formData.append("audio_file", audioBlob, uploadFileExtension);
 
         const apiUrl = import.meta.env.VITE_API_URL || "";
         const uploadResult = await retryAudioUpload(
@@ -474,7 +480,13 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       // Create form data
       const formData = new FormData();
-      formData.append("audio_file", audioBlob, "recording.webm");
+      // 根據 blob 的 MIME type 決定檔案副檔名
+      const fileExtension = audioBlob.type.includes("mp4")
+        ? "recording.mp4"
+        : audioBlob.type.includes("webm")
+          ? "recording.webm"
+          : "recording.audio";
+      formData.append("audio_file", audioBlob, fileExtension);
       formData.append("reference_text", referenceText);
 
       // Get authentication token from store
