@@ -318,11 +318,14 @@ export default function StudentActivityPageContent({
             description: "錄音檔案異常，請重新錄音",
           });
 
-          // 🔧 清理 stream
+          // 🔧 清理所有錄音狀態
           if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
           }
+          setMediaRecorder(null);
+          setIsRecording(false);
+          setRecordingTime(0);
           return;
         }
 
@@ -391,11 +394,14 @@ export default function StudentActivityPageContent({
             description: "無法驗證錄音，請重新錄音",
           });
 
-          // 🔧 清理 stream
+          // 🔧 清理所有錄音狀態
           if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
           }
+          setMediaRecorder(null);
+          setIsRecording(false);
+          setRecordingTime(0);
           return;
         }
 
@@ -451,11 +457,14 @@ export default function StudentActivityPageContent({
         console.log("✅ 錄音完成，可以播放或上傳");
         isReRecording.current = false;
 
-        // 🔧 錄音完成後清理 stream（避免佔用麥克風）
+        // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
+        setMediaRecorder(null);
+        setIsRecording(false);
+        setRecordingTime(0);
       };
 
       recorder.start();
