@@ -31,6 +31,14 @@ export default function StudentLogin() {
   const navigate = useNavigate();
   const { login } = useStudentAuthStore();
 
+  // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
+  const searchParams = new URLSearchParams(window.location.search);
+  const isDemoMode = searchParams.get("is_demo") === "true";
+
+  // 檢查環境
+  const isProduction = import.meta.env.VITE_ENVIRONMENT === "production";
+  const showDemoBlocks = !isProduction || isDemoMode;
+
   // Multi-step form state
   const [step, setStep] = useState(1);
   const [teacherEmail, setTeacherEmail] = useState("");
@@ -249,21 +257,23 @@ export default function StudentLogin() {
                 </Button>
               </div>
 
-              {/* Demo 教師快捷鍵 */}
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-gray-600 mb-3">快速測試：</p>
-                <Button
-                  variant="outline"
-                  className="w-full py-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200"
-                  onClick={() => {
-                    setTeacherEmail("demo@duotopia.com");
-                  }}
-                >
-                  <span className="text-purple-600 font-medium">
-                    🎯 使用 Demo 教師 (demo@duotopia.com)
-                  </span>
-                </Button>
-              </div>
+              {/* Demo 教師快捷鍵 - 只在非 production 或有 ?is_demo=true 時顯示 */}
+              {showDemoBlocks && (
+                <div className="mt-6 pt-6 border-t">
+                  <p className="text-sm text-gray-600 mb-3">快速測試：</p>
+                  <Button
+                    variant="outline"
+                    className="w-full py-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200"
+                    onClick={() => {
+                      setTeacherEmail("demo@duotopia.com");
+                    }}
+                  >
+                    <span className="text-purple-600 font-medium">
+                      🎯 使用 Demo 教師 (demo@duotopia.com)
+                    </span>
+                  </Button>
+                </div>
+              )}
 
               {teacherHistory.length > 0 && (
                 <div className="space-y-3 mt-6">
@@ -392,18 +402,21 @@ export default function StudentLogin() {
 
               {error && <p className="text-red-500 text-center">{error}</p>}
 
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800 font-medium mb-1">
-                  💡 測試提示
-                </p>
-                <p className="text-xs text-yellow-700">
-                  Demo 學生預設密碼：
-                  <span className="font-mono font-bold">20120101</span>
-                </p>
-                <p className="text-xs text-gray-600 mt-2">
-                  正式使用時，密碼為學生的生日 (格式：YYYYMMDD)
-                </p>
-              </div>
+              {/* 測試提示 - 只在非 production 或有 ?is_demo=true 時顯示 */}
+              {showDemoBlocks && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 font-medium mb-1">
+                    💡 測試提示
+                  </p>
+                  <p className="text-xs text-yellow-700">
+                    Demo 學生預設密碼：
+                    <span className="font-mono font-bold">20120101</span>
+                  </p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    正式使用時，密碼為學生的生日 (格式：YYYYMMDD)
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
