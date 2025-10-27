@@ -2725,6 +2725,8 @@ async def preview_assess_speech(
         "audio/webm;codecs=opus",
         "audio/mp3",
         "audio/mpeg",
+        "audio/mp4",  # macOS Safari 使用 MP4 格式
+        "video/mp4",  # 某些瀏覽器可能用 video/mp4
         "application/octet-stream",
     ]
 

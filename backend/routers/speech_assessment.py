@@ -40,6 +40,8 @@ ALLOWED_AUDIO_FORMATS = [
     "audio/webm;codecs=opus",
     "audio/mp3",
     "audio/mpeg",
+    "audio/mp4",  # macOS Safari 使用 MP4 格式
+    "video/mp4",  # 某些瀏覽器可能用 video/mp4
     "application/octet-stream",  # 瀏覽器上傳時的通用類型
 ]
 
@@ -95,6 +97,13 @@ def convert_audio_to_wav(audio_data: bytes, content_type: str) -> bytes:
         elif "mp3" in content_type or "mpeg" in content_type:
             # MP3 格式
             audio = AudioSegment.from_mp3(BytesIO(audio_data))
+        elif "mp4" in content_type:
+            # MP4 格式（macOS Safari）
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as temp_in:
+                temp_in.write(audio_data)
+                temp_in_path = temp_in.name
+            # 使用 pydub 轉換（需要 ffmpeg）
+            audio = AudioSegment.from_file(temp_in_path, format="mp4")
         elif "wav" in content_type:
             # 已經是 WAV，但可能需要轉換採樣率
             audio = AudioSegment.from_wav(BytesIO(audio_data))
