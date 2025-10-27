@@ -111,6 +111,13 @@ export default function AudioRecorder({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    // 🔧 清理 MediaRecorder（避免重用壞掉的 recorder）
+    if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      mediaRecorderRef.current = null;
+    }
   }, []);
 
   // Start recording
