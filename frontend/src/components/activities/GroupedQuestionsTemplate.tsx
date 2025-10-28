@@ -832,10 +832,14 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setDuration(0);
 
                           // 呼叫後端 DELETE API 清空 DB
-                          if (assignmentId && currentQuestionIndex !== undefined) {
+                          if (
+                            assignmentId &&
+                            currentQuestionIndex !== undefined
+                          ) {
                             try {
                               const apiUrl = import.meta.env.VITE_API_URL || "";
-                              const token = useStudentAuthStore.getState().token;
+                              const token =
+                                useStudentAuthStore.getState().token;
 
                               const response = await fetch(
                                 `${apiUrl}/api/speech/assessment/${assignmentId}/item/${currentQuestionIndex}`,
@@ -845,7 +849,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                                     Authorization: `Bearer ${token}`,
                                     "Content-Type": "application/json",
                                   },
-                                }
+                                },
                               );
 
                               if (!response.ok) {
@@ -862,7 +866,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
                           // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
-                            const { [currentQuestionIndex]: _, ...newResults } = prev;
+                            const {
+                              [currentQuestionIndex]: _unused,
+                              ...newResults
+                            } = prev;
                             return newResults;
                           });
 
@@ -875,8 +882,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           }
 
                           // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
-                          if (onAssessmentComplete && currentQuestionIndex !== undefined) {
-                            onAssessmentComplete(currentQuestionIndex, null as any);
+                          if (
+                            onAssessmentComplete &&
+                            currentQuestionIndex !== undefined
+                          ) {
+                            onAssessmentComplete(currentQuestionIndex, {});
                           }
                         }}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
@@ -1089,7 +1099,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                                 Authorization: `Bearer ${token}`,
                                 "Content-Type": "application/json",
                               },
-                            }
+                            },
                           );
 
                           if (!response.ok) {
@@ -1106,7 +1116,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
                       // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
-                        const { [currentQuestionIndex]: _, ...newResults } = prev;
+                        const {
+                          [currentQuestionIndex]: _unused,
+                          ...newResults
+                        } = prev;
                         return newResults;
                       });
 
@@ -1119,8 +1132,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       }
 
                       // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
-                      if (onAssessmentComplete && currentQuestionIndex !== undefined) {
-                        onAssessmentComplete(currentQuestionIndex, null as any);
+                      if (
+                        onAssessmentComplete &&
+                        currentQuestionIndex !== undefined
+                      ) {
+                        onAssessmentComplete(currentQuestionIndex, {});
                       }
                     }}
                     className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
