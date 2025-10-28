@@ -186,7 +186,7 @@ export default function AudioRecorder({
           console.log(
             `⚠️ MediaRecorder created with browser default: ${mediaRecorder.mimeType}`,
           );
-        } catch (err) {
+        } catch {
           throw new Error("Failed to create MediaRecorder with any MIME type");
         }
       }
