@@ -226,7 +226,7 @@ export default function StudentLayout() {
 
           <Button
             variant="ghost"
-            className="w-full justify-start text-gray-700 hover:bg-gray-100 px-4 py-3"
+            className="w-full justify-start text-gray-700 hover:bg-gray-100 px-4 py-3 mt-2"
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 mr-3" />

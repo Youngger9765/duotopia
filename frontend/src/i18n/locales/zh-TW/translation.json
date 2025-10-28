@@ -1,0 +1,214 @@
+{
+  "common": {
+    "save": "儲存",
+    "cancel": "取消",
+    "confirm": "確認",
+    "delete": "刪除",
+    "edit": "編輯",
+    "add": "新增",
+    "submit": "提交",
+    "loading": "載入中...",
+    "error": "錯誤",
+    "success": "成功",
+    "warning": "警告",
+    "info": "資訊",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "close": "關閉",
+    "search": "搜尋",
+    "filter": "篩選",
+    "reset": "重置",
+    "refresh": "重新整理",
+    "download": "下載",
+    "upload": "上傳",
+    "preview": "預覽",
+    "copy": "複製",
+    "paste": "貼上",
+    "cut": "剪下",
+    "yes": "是",
+    "no": "否"
+  },
+  "nav": {
+    "home": "首頁",
+    "dashboard": "儀表板",
+    "myAssignments": "我的作業",
+    "progress": "學習進度",
+    "achievements": "成就",
+    "calendar": "行事曆",
+    "messages": "訊息",
+    "profile": "個人資料",
+    "assignments": "作業",
+    "students": "學生",
+    "teachers": "老師",
+    "settings": "設定",
+    "logout": "登出",
+    "studentArea": "學生專區",
+    "welcomeBack": "歡迎回來，{{name}}！今天也要加油學習喔！",
+    "streakDays": "連續學習",
+    "weekProgress": "本週進度",
+    "days": "天"
+  },
+  "auth": {
+    "login": "登入",
+    "register": "註冊",
+    "logout": "登出",
+    "email": "電子郵件",
+    "password": "密碼",
+    "rememberMe": "記住我",
+    "forgotPassword": "忘記密碼？",
+    "noAccount": "還沒有帳號？",
+    "hasAccount": "已經有帳號？",
+    "signIn": "登入",
+    "signUp": "註冊"
+  },
+  "assignment": {
+    "title": "作業標題",
+    "description": "作業說明",
+    "dueDate": "截止日期",
+    "status": "狀態",
+    "notStarted": "未開始",
+    "inProgress": "進行中",
+    "completed": "已完成",
+    "submitted": "已提交",
+    "graded": "已評分",
+    "submit": "提交作業",
+    "confirmSubmit": "確定提交",
+    "incompleteWarning": "尚有題目未完成",
+    "incompleteMessage": "以下題目尚未完成錄音或 AI 評估，確定要提交作業嗎？",
+    "noRecording": "未錄音",
+    "noAnalysis": "未分析"
+  },
+  "activity": {
+    "recording": "錄音",
+    "playing": "播放中",
+    "analyzing": "分析中",
+    "uploadAndAnalyze": "上傳並分析",
+    "reRecord": "重新錄音",
+    "delete": "刪除錄音",
+    "deleteConfirm": "確定要刪除此錄音嗎？"
+  },
+  "home": {
+    "hero": {
+      "badge": "AI 驅動的英語學習革命",
+      "title": "Duotopia",
+      "subtitle": "多元智能英語學習平台",
+      "description": "透過 AI 語音辨識與即時回饋，為 6-15 歲學生打造個人化的英語口說學習體驗。讓每個孩子都能自信開口說英語！",
+      "freeTrial": "免費試用",
+      "watchVideo": "觀看介紹影片",
+      "trustedBy": "超過 {{count}}+ 教師信賴",
+      "studentsUsing": "{{count}}+ 學生正在使用"
+    },
+    "stats": {
+      "satisfaction": "學生滿意度",
+      "improvementTime": "平均進步時間",
+      "speakingImprovement": "口說能力提升",
+      "availability": "隨時隨地學習"
+    },
+    "features": {
+      "title": "為什麼選擇 Duotopia？",
+      "subtitle": "結合最新 AI 技術與教育心理學，打造最適合亞洲學生的英語口說訓練平台",
+      "learnMore": "了解更多",
+      "aiSpeech": {
+        "title": "AI 語音辨識",
+        "description": "採用先進的語音辨識技術，精準評估發音、語調、流暢度，提供即時回饋與改進建議"
+      },
+      "multiIntelligence": {
+        "title": "多元智能學習",
+        "description": "六種活動類型涵蓋聽說讀寫，從朗讀到情境對話，全方位提升英語能力"
+      },
+      "analytics": {
+        "title": "學習數據分析",
+        "description": "詳細的學習報告與進度追蹤，讓教師和家長清楚掌握孩子的學習狀況"
+      },
+      "gamification": {
+        "title": "遊戲化激勵",
+        "description": "透過積分、徽章、排行榜等遊戲化元素，提高學習動機與參與度"
+      },
+      "security": {
+        "title": "安全可靠",
+        "description": "符合 COPPA 與 GDPR 規範，保護學生隱私，讓家長安心"
+      },
+      "easyToUse": {
+        "title": "簡單易用",
+        "description": "直覺的介面設計，教師 5 分鐘即可上手，學生無需額外訓練"
+      }
+    },
+    "howItWorks": {
+      "title": "簡單三步驟，開始學習之旅",
+      "subtitle": "從註冊到看見成效，最快只需要一週",
+      "step1": {
+        "title": "教師註冊建立班級",
+        "description": "免費註冊帳號，建立班級並邀請學生加入，整個過程不到 5 分鐘"
+      },
+      "step2": {
+        "title": "派發作業與練習",
+        "description": "從豐富的教材庫選擇，或自建課程內容，一鍵派發給全班學生"
+      },
+      "step3": {
+        "title": "AI 評測與進度追蹤",
+        "description": "學生完成練習後，立即獲得 AI 回饋，教師可查看詳細學習報告"
+      }
+    },
+    "testimonials": {
+      "title": "來自教育現場的真實回饋",
+      "subtitle": "看看其他教師和學生怎麼說",
+      "teacher1": {
+        "quote": "Duotopia 讓我的學生愛上英語口說！AI 即時回饋功能太棒了，學生可以立即知道自己的發音問題。",
+        "name": "王老師",
+        "role": "台北市國小英語教師"
+      },
+      "teacher2": {
+        "quote": "班級管理功能很完善，可以清楚看到每個學生的學習進度。省下很多批改作業的時間！",
+        "name": "李老師",
+        "role": "新竹市國中英語教師"
+      },
+      "parent1": {
+        "quote": "孩子每天都主動要練習英語，看到自己的進步很有成就感。感謝 Duotopia！",
+        "name": "陳家長",
+        "role": "國小五年級學生家長"
+      }
+    },
+    "cta": {
+      "title": "準備好革新您的英語教學了嗎？",
+      "subtitle": "加入超過 {{count}} 位教師的行列，讓 AI 成為您的教學助手",
+      "startFreeTrial": "立即免費試用",
+      "studentLogin": "學生登入",
+      "benefits": "無需信用卡 • 永久免費方案 • 5 分鐘快速上手"
+    },
+    "loginOptions": {
+      "title": "快速登入通道",
+      "teacher": {
+        "title": "教師專區",
+        "description": "管理班級、建立課程、查看學習報告",
+        "login": "教師登入",
+        "register": "註冊新帳號",
+        "demoLabel": "Demo 帳號",
+        "demoCredentials": "demo@duotopia.com / demo123"
+      },
+      "student": {
+        "title": "學生專區",
+        "description": "完成作業、練習口說、查看學習進度",
+        "login": "學生登入",
+        "note": "請使用教師提供的帳號密碼",
+        "demoLabel": "Demo 密碼",
+        "demoPassword": "選擇學生後輸入: 20120101"
+      }
+    },
+    "footer": {
+      "description": "AI 驅動的多元智能英語學習平台，專為亞洲學生設計",
+      "contact": "聯絡我們",
+      "product": "產品",
+      "features": "功能介紹",
+      "pricing": "價格方案",
+      "support": "支援",
+      "tutorial": "使用教學",
+      "faq": "常見問題",
+      "company": "公司",
+      "about": "關於我們",
+      "privacy": "隱私政策",
+      "terms": "使用條款",
+      "copyright": "© 2025 Duotopia. All rights reserved."
+    }
+  }
+}
