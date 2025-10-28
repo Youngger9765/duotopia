@@ -21,6 +21,7 @@ from models import (
     StudentContentProgress,
     StudentAssignment,
     StudentItemProgress,
+    ContentItem,
 )
 
 # 設定 logger
@@ -657,3 +658,135 @@ async def get_assessment_by_id(
         reference_text=progress.content.text if progress.content else "",
         created_at=progress.completed_at,
     )
+
+
+@router.delete("/assessment/{assignment_id}/item/{item_index}")
+async def delete_item_recording_and_assessment(
+    assignment_id: int,
+    item_index: int,
+    db: Session = Depends(get_db),
+    current_student: Student = Depends(get_current_student),
+):
+    """
+    刪除學生作業的某個 item 的錄音和評估結果
+
+    清空 StudentItemProgress 中的：
+    - 錄音 URL (recording_url)
+    - 評估分數 (accuracy_score, fluency_score, pronunciation_score)
+    - AI 反饋 (ai_feedback, transcription)
+    - 評估時間 (ai_assessed_at)
+
+    Args:
+        assignment_id: StudentAssignment ID
+        item_index: Content item 的索引
+
+    Returns:
+        成功訊息
+    """
+    logger.info(
+        f"Student {current_student.id} deleting recording for assignment {assignment_id}, item {item_index}"
+    )
+
+    # 1. 查找 StudentAssignment（確認權限）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        logger.warning(
+            f"Assignment {assignment_id} not found or not owned by student {current_student.id}"
+        )
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found or you don't have permission to delete this recording",
+        )
+
+    # 2. 獲取作業的所有 content_items（按 order_index 排序）
+    # 首先獲取作業的 content_ids
+    progress_records = (
+        db.query(StudentContentProgress)
+        .filter(
+            StudentContentProgress.student_assignment_id == student_assignment.id
+        )
+        .order_by(StudentContentProgress.order_index)
+        .all()
+    )
+
+    if not progress_records:
+        logger.warning(
+            f"No content progress records found for assignment {assignment_id}"
+        )
+        return {"message": "No recording or assessment to delete", "deleted": False}
+
+    # 獲取所有 content_items
+    content_ids = [p.content_id for p in progress_records]
+    all_content_items = []
+    for content_id in content_ids:
+        items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content_id)
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+        all_content_items.extend(items)
+
+    # 檢查 item_index 是否有效
+    if item_index < 0 or item_index >= len(all_content_items):
+        logger.warning(
+            f"Invalid item_index {item_index} for assignment {assignment_id} (total items: {len(all_content_items)})"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid item index {item_index}",
+        )
+
+    # 獲取對應的 ContentItem
+    target_item = all_content_items[item_index]
+
+    # 3. 查找 StudentItemProgress
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == student_assignment.id,
+            StudentItemProgress.content_item_id == target_item.id,
+        )
+        .first()
+    )
+
+    if not progress:
+        # 如果沒有記錄，直接返回成功（冪等性）
+        logger.info(
+            f"No progress record found for assignment {assignment_id}, item {item_index} (content_item_id: {target_item.id}) - nothing to delete"
+        )
+        return {"message": "No recording or assessment to delete", "deleted": False}
+
+    # 4. 清空所有錄音和評估相關欄位
+    progress.recording_url = None
+    progress.answer_text = None
+    progress.transcription = None
+    progress.accuracy_score = None
+    progress.fluency_score = None
+    progress.pronunciation_score = None
+    progress.ai_feedback = None
+    progress.ai_assessed_at = None
+    progress.submitted_at = None
+
+    # 5. 重置狀態為未開始
+    progress.status = "NOT_STARTED"
+
+    db.commit()
+
+    logger.info(
+        f"Successfully cleared recording and assessment for assignment {assignment_id}, item {item_index}"
+    )
+
+    return {
+        "message": "Recording and assessment deleted successfully",
+        "deleted": True,
+        "progress_id": progress.id,
+    }

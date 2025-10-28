@@ -824,24 +824,60 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
                       {/* 清除錄音按鈕 */}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          // 停止播放
                           if (audioRef.current) audioRef.current.pause();
                           setIsPlaying(false);
                           setCurrentTime(0);
                           setDuration(0);
-                          // 清除評估結果
+
+                          // 呼叫後端 DELETE API 清空 DB
+                          if (assignmentId && currentQuestionIndex !== undefined) {
+                            try {
+                              const apiUrl = import.meta.env.VITE_API_URL || "";
+                              const token = useStudentAuthStore.getState().token;
+
+                              const response = await fetch(
+                                `${apiUrl}/api/speech/assessment/${assignmentId}/item/${currentQuestionIndex}`,
+                                {
+                                  method: "DELETE",
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    "Content-Type": "application/json",
+                                  },
+                                }
+                              );
+
+                              if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                              }
+
+                              toast.success("錄音和評估結果已刪除");
+                            } catch (error) {
+                              console.error("刪除 DB 記錄失敗:", error);
+                              toast.error("刪除失敗，請稍後再試");
+                              return; // 失敗時不繼續清除前端狀態
+                            }
+                          }
+
+                          // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
-                            const newResults = { ...prev };
-                            delete newResults[currentQuestionIndex];
+                            const { [currentQuestionIndex]: _, ...newResults } = prev;
                             return newResults;
                           });
+
+                          // 清空 items 中的 recording_url，觸發學生作答區塊 reset
                           if (
                             onUpdateItemRecording &&
                             currentQuestionIndex !== undefined
                           ) {
                             onUpdateItemRecording(currentQuestionIndex, "");
                           }
-                          // 不自動開始新的錄音，只是清除
+
+                          // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
+                          if (onAssessmentComplete && currentQuestionIndex !== undefined) {
+                            onAssessmentComplete(currentQuestionIndex, null as any);
+                          }
                         }}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                         title="清除錄音"
@@ -1038,15 +1074,57 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   className={`transition-all duration-300 ${isAssessing ? "blur-sm opacity-30" : ""}`}
                 >
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      // 呼叫後端 DELETE API 清空 DB
+                      if (assignmentId && currentQuestionIndex !== undefined) {
+                        try {
+                          const apiUrl = import.meta.env.VITE_API_URL || "";
+                          const token = useStudentAuthStore.getState().token;
+
+                          const response = await fetch(
+                            `${apiUrl}/api/speech/assessment/${assignmentId}/item/${currentQuestionIndex}`,
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                            }
+                          );
+
+                          if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                          }
+
+                          toast.success("錄音和評估結果已刪除");
+                        } catch (error) {
+                          console.error("刪除 DB 記錄失敗:", error);
+                          toast.error("刪除失敗，請稍後再試");
+                          return; // 失敗時不繼續清除前端狀態
+                        }
+                      }
+
+                      // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
-                        const newResults = { ...prev };
-                        delete newResults[currentQuestionIndex];
+                        const { [currentQuestionIndex]: _, ...newResults } = prev;
                         return newResults;
                       });
+
+                      // 清空 items 中的 recording_url，觸發學生作答區塊 reset
+                      if (
+                        onUpdateItemRecording &&
+                        currentQuestionIndex !== undefined
+                      ) {
+                        onUpdateItemRecording(currentQuestionIndex, "");
+                      }
+
+                      // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
+                      if (onAssessmentComplete && currentQuestionIndex !== undefined) {
+                        onAssessmentComplete(currentQuestionIndex, null as any);
+                      }
                     }}
                     className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
-                    title="清除評估結果"
+                    title="清除錄音和評估結果"
                     disabled={isAssessing}
                   >
                     <X className="w-4 h-4" />
