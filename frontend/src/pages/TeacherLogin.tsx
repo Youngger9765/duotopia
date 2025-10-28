@@ -38,26 +38,14 @@ export default function TeacherLogin() {
     setIsLoading(true);
     setError("");
 
-    console.log("🔑 [DEBUG] 教師登入開始");
-    console.log("🔑 [DEBUG] 登入資料:", {
-      email: formData.email,
-      password: "***",
-    });
-
     try {
       const result = await apiClient.teacherLogin(formData);
-      console.log("🔑 [DEBUG] 登入成功，結果:", result);
 
       useTeacherAuthStore.getState().login(result.access_token, {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
         is_demo: result.user.is_demo,
-      });
-
-      console.log("🔑 [DEBUG] localStorage 檢查:", {
-        teacher_auth_storage: localStorage.getItem("teacher-auth-storage"),
-        keys: Object.keys(localStorage),
       });
 
       navigate("/teacher/dashboard");
@@ -73,26 +61,17 @@ export default function TeacherLogin() {
     setIsLoading(true);
     setError("");
 
-    console.log("🔑 [DEBUG] 快速登入開始");
-    console.log("🔑 [DEBUG] 快速登入資料:", { email, password: "demo123" });
-
     try {
       const result = await apiClient.teacherLogin({
         email,
         password: "demo123",
       });
-      console.log("🔑 [DEBUG] 快速登入成功，結果:", result);
 
       useTeacherAuthStore.getState().login(result.access_token, {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
         is_demo: result.user.is_demo,
-      });
-
-      console.log("🔑 [DEBUG] localStorage 檢查:", {
-        teacher_auth_storage: localStorage.getItem("teacher-auth-storage"),
-        keys: Object.keys(localStorage),
       });
 
       navigate("/teacher/dashboard");

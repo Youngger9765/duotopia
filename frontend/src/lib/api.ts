@@ -120,7 +120,6 @@ class ApiClient {
       try {
         const { state } = JSON.parse(studentAuth);
         if (state?.token) {
-          if (DEBUG) console.log("🔑 [DEBUG] Using student token");
           return state.token;
         }
       } catch (e) {
@@ -134,7 +133,6 @@ class ApiClient {
       try {
         const { state } = JSON.parse(teacherAuth);
         if (state?.token) {
-          if (DEBUG) console.log("🔑 [DEBUG] Using teacher token");
           return state.token;
         }
       } catch (e) {
@@ -142,7 +140,6 @@ class ApiClient {
       }
     }
 
-    if (DEBUG) console.log("🔑 [DEBUG] No token found");
     return null;
   }
 
@@ -165,29 +162,11 @@ class ApiClient {
         `Bearer ${currentToken}`;
     }
 
-    // 🔍 DEBUG: API請求詳情
-    if (DEBUG) {
-      console.log("🌐 [DEBUG] API 請求開始");
-      console.log("🌐 [DEBUG] URL:", url);
-      console.log("🌐 [DEBUG] Method:", options.method || "GET");
-      console.log("🌐 [DEBUG] Headers:", headers);
-      console.log("🌐 [DEBUG] Token exists:", !!currentToken);
-      console.log(
-        "🌐 [DEBUG] Token preview:",
-        currentToken ? `${currentToken.substring(0, 20)}...` : "null",
-      );
-    }
-
     try {
       const response = await fetch(url, {
         ...options,
         headers,
       });
-
-      if (DEBUG) {
-        console.log("🌐 [DEBUG] Response status:", response.status);
-        console.log("🌐 [DEBUG] Response ok:", response.ok);
-      }
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
@@ -210,7 +189,6 @@ class ApiClient {
       }
 
       const result = await response.json();
-      if (DEBUG) console.log("🌐 [DEBUG] API請求成功，回應數據:", result);
       return result;
     } catch (err) {
       // If it's already an ApiError, re-throw it
@@ -230,8 +208,6 @@ class ApiClient {
 
   // ============ Auth Methods ============
   async teacherLogin(data: LoginRequest): Promise<LoginResponse> {
-    if (DEBUG) console.log("🔑 [DEBUG] teacherLogin 方法被調用");
-
     const response = await this.request<LoginResponse>(
       "/api/auth/teacher/login",
       {
@@ -240,7 +216,6 @@ class ApiClient {
       },
     );
 
-    if (DEBUG) console.log("🔑 [DEBUG] 登入成功，返回 response");
     // Note: Token storage is handled by teacherAuthStore in the calling component
 
     return response;
