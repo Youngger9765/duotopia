@@ -229,18 +229,24 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">教師後台</p>
           </div>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-12 min-h-12 w-12">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <div className="flex flex-col h-full bg-white dark:bg-gray-800">
-                <SidebarContent onNavigate={() => {}} />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-12 min-h-12 w-12"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="flex flex-col h-full bg-white dark:bg-gray-800">
+                  <SidebarContent onNavigate={() => {}} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
 
