@@ -161,9 +161,11 @@ export default function ClassroomDetail({
     }
   }, [location.search]);
 
-  const fetchClassroomDetail = async () => {
+  const fetchClassroomDetail = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const classrooms =
         (await apiClient.getTeacherClassrooms()) as ClassroomInfo[];
       const currentClassroom = classrooms.find((c) => c.id === Number(id));
@@ -178,7 +180,9 @@ export default function ClassroomDetail({
       console.error("Fetch classroom error:", err);
       navigate("/teacher/classrooms");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -499,14 +503,20 @@ export default function ClassroomDetail({
     }
   };
 
-  const handleSaveStudent = () => {
-    // Refresh data after save
-    fetchClassroomDetail();
+  const handleSaveStudent = async () => {
+    // Refresh data after save (parallel requests, no loading spinner)
+    await Promise.all([
+      fetchStudents(), // 更新學生列表（派作業需要）
+      fetchClassroomDetail(false), // 更新班級資訊（學生數統計），不顯示載入畫面
+    ]);
   };
 
-  const handleDeleteStudent = () => {
-    // Refresh data after delete
-    fetchClassroomDetail();
+  const handleDeleteStudent = async () => {
+    // Refresh data after delete (parallel requests, no loading spinner)
+    await Promise.all([
+      fetchStudents(), // 更新學生列表（派作業需要）
+      fetchClassroomDetail(false), // 更新班級資訊（學生數統計），不顯示載入畫面
+    ]);
   };
 
   const handleCloseDialog = () => {
