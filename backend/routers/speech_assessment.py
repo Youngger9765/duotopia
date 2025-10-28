@@ -710,9 +710,7 @@ async def delete_item_recording_and_assessment(
     # 首先獲取作業的 content_ids
     progress_records = (
         db.query(StudentContentProgress)
-        .filter(
-            StudentContentProgress.student_assignment_id == student_assignment.id
-        )
+        .filter(StudentContentProgress.student_assignment_id == student_assignment.id)
         .order_by(StudentContentProgress.order_index)
         .all()
     )
@@ -761,9 +759,13 @@ async def delete_item_recording_and_assessment(
     if not progress:
         # 如果沒有記錄，直接返回成功（冪等性）
         logger.info(
-            f"No progress record found for assignment {assignment_id}, item {item_index} (content_item_id: {target_item.id}) - nothing to delete"
+            f"No progress record for assignment {assignment_id}, "
+            f"item {item_index} (content_item_id: {target_item.id})"
         )
-        return {"message": "No recording or assessment to delete", "deleted": False}
+        return {
+            "message": "No recording or assessment to delete",
+            "deleted": False,
+        }
 
     # 4. 清空所有錄音和評估相關欄位
     progress.recording_url = None
