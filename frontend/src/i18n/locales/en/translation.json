@@ -102,6 +102,7 @@
     "stats": {
       "satisfaction": "Student Satisfaction",
       "improvementTime": "Average Improvement",
+      "improvementValue": "3 Months",
       "speakingImprovement": "Speaking Improvement",
       "availability": "Learn Anytime, Anywhere"
     },
