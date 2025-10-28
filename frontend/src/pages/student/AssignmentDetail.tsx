@@ -300,9 +300,6 @@ export default function AssignmentDetail() {
   };
 
   const submitAssignment = async (e?: React.MouseEvent) => {
-    console.log("🔥 [DEBUG] submitAssignment 被呼叫了！");
-    console.log("🔥 [DEBUG] Event:", e);
-
     // 防止預設行為和事件冒泡
     if (e) {
       e.preventDefault();
@@ -310,25 +307,17 @@ export default function AssignmentDetail() {
     }
 
     if (!assignment) {
-      console.log("🔥 [DEBUG] No assignment, returning");
       return;
     }
 
     // 檢查是否所有項目都有錄音
     const itemsLength = assignment.content.items?.length || 0;
     const missingRecordings = itemsLength - recordings.size;
-    console.log("🔥 [DEBUG] Items length:", itemsLength);
-    console.log("🔥 [DEBUG] Recordings size:", recordings.size);
-    console.log("🔥 [DEBUG] Missing recordings:", missingRecordings);
 
     if (missingRecordings > 0) {
       toast.warning(`還有 ${missingRecordings} 個項目未錄音`);
       return;
     }
-
-    console.log("🚀 [DEBUG] 開始提交作業");
-    console.log("🚀 [DEBUG] Assignment ID:", id);
-    console.log("🚀 [DEBUG] 當前 URL:", window.location.href);
 
     try {
       setSubmitting(true);
@@ -345,46 +334,24 @@ export default function AssignmentDetail() {
         completed_at: new Date().toISOString(),
       };
 
-      console.log("🚀 [DEBUG] 提交數據:", submissionData);
-      console.log(
-        "🚀 [DEBUG] API endpoint:",
-        `/api/students/assignments/${id}/submit`,
-      );
-
-      const response = await apiClient.post(
+      await apiClient.post(
         `/api/students/assignments/${id}/submit`,
         submissionData,
       );
 
-      console.log("🚀 [DEBUG] 提交成功！響應:", response);
       toast.success("作業提交成功！");
 
       // 直接跳轉到包含 /detail 的正確 URL
       const targetUrl = `/student/assignment/${id}/detail`;
-      console.log("🚀 [DEBUG] 準備跳轉到:", targetUrl);
-      console.log("🚀 [DEBUG] 目前的 location.href:", window.location.href);
-      console.log(
-        "🚀 [DEBUG] 目前的 location.pathname:",
-        window.location.pathname,
-      );
 
       // 強制跳轉，使用 setTimeout 確保 toast 顯示
       setTimeout(() => {
-        console.log("🚀 [DEBUG] 執行跳轉！");
-        console.log("🚀 [DEBUG] window.location.href = ", targetUrl);
         window.location.href = targetUrl;
-        console.log("🚀 [DEBUG] 跳轉指令已執行");
       }, 500);
     } catch (error: unknown) {
-      console.error("❌ [DEBUG] 提交失敗:", error);
-      if (error instanceof Error) {
-        console.error("❌ [DEBUG] 錯誤類型:", error.constructor.name);
-        console.error("❌ [DEBUG] 錯誤訊息:", error.message);
-        console.error("❌ [DEBUG] 錯誤堆疊:", error.stack);
-      }
+      console.error("提交失敗:", error);
       toast.error("提交失敗，請稍後再試");
     } finally {
-      console.log("🚀 [DEBUG] finally 區塊執行");
       setSubmitting(false);
     }
   };
