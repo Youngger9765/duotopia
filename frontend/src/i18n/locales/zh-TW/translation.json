@@ -102,6 +102,7 @@
     "stats": {
       "satisfaction": "學生滿意度",
       "improvementTime": "平均進步",
+      "improvementValue": "3個月",
       "speakingImprovement": "口說能力提升",
       "availability": "隨時隨地學習"
     },
