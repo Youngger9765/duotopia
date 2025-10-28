@@ -11,6 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessmentTemplate";
 import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
@@ -23,6 +31,7 @@ import {
   Circle,
   Clock,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -132,6 +141,8 @@ export default function StudentActivityPageContent({
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [saving] = useState(false);
   const [submitting] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [incompleteItems, setIncompleteItems] = useState<string[]>([]);
 
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
@@ -781,6 +792,65 @@ export default function StudentActivityPageContent({
       return;
     }
 
+    // 檢查所有題目是否都有錄音和 AI 評估
+    const incomplete: string[] = [];
+
+    activities.forEach((activity) => {
+      // 檢查是否是需要錄音的題型
+      const needsRecording = [
+        "reading_assessment",
+        "grouped_questions",
+        "speaking",
+      ].includes(activity.type);
+
+      if (needsRecording && activity.items && activity.items.length > 0) {
+        // 逐題檢查
+        activity.items.forEach((item, itemIndex) => {
+          const hasRecording = item.recording_url && item.recording_url !== "";
+          const hasAiAssessment =
+            item.ai_assessment ||
+            (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
+
+          if (!hasRecording || !hasAiAssessment) {
+            const itemLabel = `${activity.title} - 第 ${itemIndex + 1} 題`;
+            if (!hasRecording) {
+              incomplete.push(`${itemLabel}（未錄音）`);
+            } else if (!hasAiAssessment) {
+              incomplete.push(`${itemLabel}（未分析）`);
+            }
+          }
+        });
+      } else if (needsRecording && !activity.items) {
+        // 單一錄音題目（如 reading_assessment）
+        const hasRecording = activity.audio_url && activity.audio_url !== "";
+        const hasAiAssessment =
+          activity.ai_scores && Object.keys(activity.ai_scores).length > 0;
+
+        if (!hasRecording || !hasAiAssessment) {
+          if (!hasRecording) {
+            incomplete.push(`${activity.title}（未錄音）`);
+          } else if (!hasAiAssessment) {
+            incomplete.push(`${activity.title}（未分析）`);
+          }
+        }
+      }
+    });
+
+    // 如果有未完成的題目，顯示 dialog
+    if (incomplete.length > 0) {
+      setIncompleteItems(incomplete);
+      setShowSubmitDialog(true);
+      return;
+    }
+
+    // 所有題目都完成，直接提交
+    if (onSubmit) {
+      onSubmit();
+    }
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowSubmitDialog(false);
     if (onSubmit) {
       onSubmit();
     }
@@ -1358,6 +1428,50 @@ export default function StudentActivityPageContent({
           </CardContent>
         </Card>
       </div>
+
+      {/* 提交確認 Dialog */}
+      <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              尚有題目未完成
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              以下題目尚未完成錄音或 AI 評估，確定要提交作業嗎？
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 max-h-[300px] overflow-y-auto">
+              <ul className="space-y-2">
+                {incompleteItems.map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span className="text-gray-700">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSubmitDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleConfirmSubmit}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              確定提交
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
