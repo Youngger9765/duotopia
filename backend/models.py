@@ -771,7 +771,8 @@ class StudentItemProgress(Base):
     @property
     def has_ai_assessment(self):
         """Check if AI assessment exists"""
-        return any([self.accuracy_score, self.fluency_score, self.pronunciation_score])
+        # 使用 ai_assessed_at 判斷是否有 AI 評估，因為分數可能為 0
+        return self.ai_assessed_at is not None
 
     def __repr__(self):
         return (

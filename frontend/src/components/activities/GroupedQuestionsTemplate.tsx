@@ -100,7 +100,7 @@ interface GroupedQuestionsTemplateProps {
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
   onAssessmentComplete?: (
     index: number,
-    assessmentResult: AssessmentResult,
+    assessmentResult: AssessmentResult | null,
   ) => void; // AI 評估完成回調
 }
 
@@ -866,10 +866,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
                           // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
-                            const {
-                              [currentQuestionIndex]: _unused,
-                              ...newResults
-                            } = prev;
+                            // Remove the key using destructuring
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            const { [currentQuestionIndex]: _, ...newResults } =
+                              prev;
                             return newResults;
                           });
 
@@ -886,7 +886,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                             onAssessmentComplete &&
                             currentQuestionIndex !== undefined
                           ) {
-                            onAssessmentComplete(currentQuestionIndex, {});
+                            onAssessmentComplete(currentQuestionIndex, null);
                           }
                         }}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
@@ -1116,10 +1116,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
                       // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
-                        const {
-                          [currentQuestionIndex]: _unused,
-                          ...newResults
-                        } = prev;
+                        // Remove the key using destructuring
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { [currentQuestionIndex]: _, ...newResults } =
+                          prev;
                         return newResults;
                       });
 
@@ -1136,7 +1136,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                         onAssessmentComplete &&
                         currentQuestionIndex !== undefined
                       ) {
-                        onAssessmentComplete(currentQuestionIndex, {});
+                        onAssessmentComplete(currentQuestionIndex, null);
                       }
                     }}
                     className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
