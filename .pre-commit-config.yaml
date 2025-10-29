@@ -101,6 +101,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-rls-in-migrations
+        name: Check RLS in Alembic migrations
+        entry: bash -c 'if git diff --cached --name-only | grep -q "backend/alembic/versions/.*\.py"; then echo "⚠️ 重要提醒：新增 migration 時記得啟用 RLS！" && echo "參考：backend/alembic/rls_template.py" && echo "檢查：enable_rls(表名) + create_*_policies(表名)"; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # ==========================================
   # 📝 BASIC: 基本檔案檢查（極快）
   # ==========================================
