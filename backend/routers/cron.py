@@ -639,26 +639,26 @@ async def recording_error_report_cron(
                 db_session.close()
 
         # 📊 查詢成功的錄音次數（從 PostgreSQL StudentItemProgress）
-        # 最近 1 小時成功錄音
-        success_1h = (
+        # 最近 1 小時成功錄音 - 只計數，不需要 student_id
+        success_count_1h = (
             db.query(StudentItemProgress)
             .filter(
                 StudentItemProgress.updated_at
                 >= datetime.now(timezone.utc) - timedelta(hours=1),
                 StudentItemProgress.recording_url.isnot(None),
             )
-            .all()
+            .count()
         )
 
         # 最近 24 小時成功錄音
-        success_24h = (
+        success_count_24h = (
             db.query(StudentItemProgress)
             .filter(
                 StudentItemProgress.updated_at
                 >= datetime.now(timezone.utc) - timedelta(hours=24),
                 StudentItemProgress.recording_url.isnot(None),
             )
-            .all()
+            .count()
         )
 
         # 📊 錄音統計（成功 + 錯誤）
@@ -667,8 +667,7 @@ async def recording_error_report_cron(
                 set(row.student_id for row in results_1h if hasattr(row, "student_id"))
             ),
             "error_count": total_errors_1h,
-            "success_users": len(set(s.student_id for s in success_1h)),
-            "success_count": len(success_1h),
+            "success_count": success_count_1h,
         }
 
         usage_stats_24h = {
@@ -676,8 +675,7 @@ async def recording_error_report_cron(
                 set(row.student_id for row in results_24h if hasattr(row, "student_id"))
             ),
             "error_count": total_errors_24h,
-            "success_users": len(set(s.student_id for s in success_24h)),
-            "success_count": len(success_24h),
+            "success_count": success_count_24h,
         }
 
         # 使用 OpenAI 生成摘要（如果有錯誤）
@@ -806,7 +804,6 @@ async def recording_error_report_cron(
                                 <th>成功錄音</th>
                                 <th>失敗錄音</th>
                                 <th>成功率</th>
-                                <th>活躍學生</th>
                             </tr>
                             <tr>
                                 <td><strong>最近 1 小時</strong></td>
@@ -821,7 +818,6 @@ async def recording_error_report_cron(
                                            else 'error'}">
                                     {success_rate_1h}%
                                 </td>
-                                <td>{usage_stats_1h['success_users']} 位</td>
                             </tr>
                             <tr>
                                 <td><strong>最近 24 小時</strong></td>
@@ -836,7 +832,6 @@ async def recording_error_report_cron(
                                            else 'error'}">
                                     {success_rate_24h}%
                                 </td>
-                                <td>{usage_stats_24h['success_users']} 位</td>
                             </tr>
                         </table>
                         <p style="color: #6b7280; font-size: 0.9em; margin-top: 10px;">
