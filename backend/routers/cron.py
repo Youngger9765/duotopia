@@ -12,7 +12,14 @@ import logging
 import os
 
 from database import get_db
-from models import Teacher, TeacherSubscriptionTransaction, TransactionType, Student
+from models import (
+    Teacher,
+    TeacherSubscriptionTransaction,
+    TransactionType,
+    Student,
+    Classroom,
+    ClassroomStudent,
+)
 from services.subscription_calculator import SubscriptionCalculator
 from services.email_service import email_service
 from services.tappay_service import TapPayService
@@ -534,8 +541,7 @@ async def recording_error_report_cron(
         total_errors_24h = sum(row.error_count for row in results_24h)
         total_errors_1h = sum(row.error_count for row in results_1h)
 
-        # 🔥 新增：查詢有錯誤的學生名單（最近 24 小時）
-        # Step 1: 從 BigQuery 取得有錯誤的 student_ids
+        # 🔥 查詢有錯誤的學生名單（含老師和班級資訊）
         query_student_ids = f"""
         SELECT
             student_id,
@@ -551,37 +557,167 @@ async def recording_error_report_cron(
 
         student_errors = list(client.query(query_student_ids).result())
 
-        # Step 2: 從 PostgreSQL 查詢學生資料
+        # 從 PostgreSQL 查詢學生、老師、班級資料
         students_with_errors = []
         if student_errors:
-            # 使用 DATABASE_URL 連接
             engine = create_engine(os.getenv("DATABASE_URL"))
             SessionLocal = sessionmaker(bind=engine)
             db_session = SessionLocal()
 
             try:
                 student_ids = [row.student_id for row in student_errors]
-                students = (
-                    db_session.query(Student).filter(Student.id.in_(student_ids)).all()
+
+                # JOIN 學生、班級、老師資料
+                students_data = (
+                    db_session.query(
+                        Student.id,
+                        Student.name,
+                        Student.email,
+                        Classroom.name.label("classroom_name"),
+                        Teacher.name.label("teacher_name"),
+                        Teacher.email.label("teacher_email"),
+                    )
+                    .outerjoin(
+                        ClassroomStudent, Student.id == ClassroomStudent.student_id
+                    )
+                    .outerjoin(Classroom, ClassroomStudent.classroom_id == Classroom.id)
+                    .outerjoin(Teacher, Classroom.teacher_id == Teacher.id)
+                    .filter(Student.id.in_(student_ids))
+                    .all()
                 )
 
-                # 建立 student_id -> student 的 mapping
-                student_map = {s.id: s for s in students}
-
-                # 合併 BigQuery 錯誤資料和 PostgreSQL 學生資料
-                for error_row in student_errors:
-                    student = student_map.get(error_row.student_id)
-                    students_with_errors.append(
-                        {
-                            "student_id": error_row.student_id,
-                            "student_name": student.name if student else "（未找到）",
-                            "student_email": student.email if student else "（無 Email）",
-                            "error_count": error_row.error_count,
-                            "error_types": error_row.error_types,
+                # 建立 student_id -> data 的 mapping
+                student_data_map = {}
+                for row in students_data:
+                    if row.id not in student_data_map:
+                        student_data_map[row.id] = {
+                            "name": row.name,
+                            "email": row.email,
+                            "classrooms": [],
+                            "teachers": set(),
                         }
-                    )
+                    if row.classroom_name:
+                        student_data_map[row.id]["classrooms"].append(
+                            row.classroom_name
+                        )
+                    if row.teacher_name and row.teacher_email:
+                        student_data_map[row.id]["teachers"].add(
+                            f"{row.teacher_name} ({row.teacher_email})"
+                        )
+
+                # 合併錯誤資料
+                for error_row in student_errors:
+                    student_data = student_data_map.get(error_row.student_id)
+                    if student_data:
+                        students_with_errors.append(
+                            {
+                                "student_id": error_row.student_id,
+                                "student_name": student_data["name"],
+                                "student_email": student_data["email"] or "（無 Email）",
+                                "classrooms": ", ".join(student_data["classrooms"])
+                                or "（無班級）",
+                                "teachers": ", ".join(student_data["teachers"])
+                                or "（無老師）",
+                                "error_count": error_row.error_count,
+                                "error_types": error_row.error_types,
+                            }
+                        )
+                    else:
+                        students_with_errors.append(
+                            {
+                                "student_id": error_row.student_id,
+                                "student_name": "（未找到）",
+                                "student_email": "（無 Email）",
+                                "classrooms": "（無班級）",
+                                "teachers": "（無老師）",
+                                "error_count": error_row.error_count,
+                                "error_types": error_row.error_types,
+                            }
+                        )
             finally:
                 db_session.close()
+
+        # 📊 查詢使用統計（1 小時 + 24 小時）
+        query_usage_1h = f"""
+        SELECT
+            COUNT(DISTINCT student_id) as active_users_1h,
+            COUNT(*) as total_requests_1h,
+            COUNTIF(httpRequest.status = 200) as successful_requests_1h,
+            COUNTIF(httpRequest.status >= 400) as failed_requests_1h
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.cloud_run_logs_*`
+        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
+            AND httpRequest.requestUrl LIKE '%/api/speech/assess%'
+            AND student_id IS NOT NULL
+        """
+
+        query_usage_24h = f"""
+        SELECT
+            COUNT(DISTINCT student_id) as active_users_24h,
+            COUNT(*) as total_requests_24h,
+            COUNTIF(httpRequest.status = 200) as successful_requests_24h,
+            COUNTIF(httpRequest.status >= 400) as failed_requests_24h
+        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.cloud_run_logs_*`
+        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+            AND httpRequest.requestUrl LIKE '%/api/speech/assess%'
+            AND student_id IS NOT NULL
+        """
+
+        usage_1h_result = list(client.query(query_usage_1h).result())
+        usage_24h_result = list(client.query(query_usage_24h).result())
+
+        usage_stats_1h = (
+            {
+                "active_users": usage_1h_result[0].active_users_1h,
+                "total_requests": usage_1h_result[0].total_requests_1h,
+                "successful_requests": usage_1h_result[0].successful_requests_1h,
+                "failed_requests": usage_1h_result[0].failed_requests_1h,
+                "success_rate": (
+                    round(
+                        usage_1h_result[0].successful_requests_1h
+                        / usage_1h_result[0].total_requests_1h
+                        * 100,
+                        2,
+                    )
+                    if usage_1h_result[0].total_requests_1h > 0
+                    else 0
+                ),
+            }
+            if usage_1h_result
+            else {
+                "active_users": 0,
+                "total_requests": 0,
+                "successful_requests": 0,
+                "failed_requests": 0,
+                "success_rate": 0,
+            }
+        )
+
+        usage_stats_24h = (
+            {
+                "active_users": usage_24h_result[0].active_users_24h,
+                "total_requests": usage_24h_result[0].total_requests_24h,
+                "successful_requests": usage_24h_result[0].successful_requests_24h,
+                "failed_requests": usage_24h_result[0].failed_requests_24h,
+                "success_rate": (
+                    round(
+                        usage_24h_result[0].successful_requests_24h
+                        / usage_24h_result[0].total_requests_24h
+                        * 100,
+                        2,
+                    )
+                    if usage_24h_result[0].total_requests_24h > 0
+                    else 0
+                ),
+            }
+            if usage_24h_result
+            else {
+                "active_users": 0,
+                "total_requests": 0,
+                "successful_requests": 0,
+                "failed_requests": 0,
+                "success_rate": 0,
+            }
+        )
 
         # 使用 OpenAI 生成摘要（如果有錯誤）
         ai_summary = ""
@@ -686,10 +822,56 @@ async def recording_error_report_cron(
                     </div>
             """
 
-        # 統計概覽
+        # 📊 使用統計概覽
         html_content += f"""
                     <div class="stats-box">
-                        <h3>📈 統計概覽</h3>
+                        <h3>📊 平台使用統計</h3>
+                        <table>
+                            <tr>
+                                <th>時間範圍</th>
+                                <th>活躍用戶</th>
+                                <th>總請求數</th>
+                                <th>成功率</th>
+                                <th>失敗數</th>
+                            </tr>
+                            <tr>
+                                <td><strong>最近 1 小時</strong></td>
+                                <td class="success">{usage_stats_1h['active_users']} 位學生</td>
+                                <td>{usage_stats_1h['total_requests']} 次</td>
+                                <td class="{'success' if usage_stats_1h['success_rate'] >= 95
+                                           else 'warning' if usage_stats_1h['success_rate'] >= 90
+                                           else 'error'}">
+                                    {usage_stats_1h['success_rate']}%
+                                </td>
+                                <td class="{'error' if usage_stats_1h['failed_requests'] > 10
+                                           else 'warning' if usage_stats_1h['failed_requests'] > 0
+                                           else 'success'}">
+                                    {usage_stats_1h['failed_requests']}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>最近 24 小時</strong></td>
+                                <td class="success">{usage_stats_24h['active_users']} 位學生</td>
+                                <td>{usage_stats_24h['total_requests']} 次</td>
+                                <td class="{'success' if usage_stats_24h['success_rate'] >= 95
+                                           else 'warning' if usage_stats_24h['success_rate'] >= 90
+                                           else 'error'}">
+                                    {usage_stats_24h['success_rate']}%
+                                </td>
+                                <td class="{'error' if usage_stats_24h['failed_requests'] > 100
+                                           else 'warning' if usage_stats_24h['failed_requests'] > 0
+                                           else 'success'}">
+                                    {usage_stats_24h['failed_requests']}
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="color: #6b7280; font-size: 0.9em; margin-top: 10px;">
+                            💡 統計範圍：錄音評估 API (/api/speech/assess)
+                        </p>
+                    </div>
+
+                    <div class="stats-box">
+                        <h3>🚨 錄音錯誤統計</h3>
                         <table>
                             <tr>
                                 <th>時間範圍</th>
@@ -779,42 +961,45 @@ async def recording_error_report_cron(
                     </div>
             """
 
-        # 🔥 新增：受影響學生名單
+        # 🔥 受影響學生名單（含老師和班級）
         if students_with_errors:
             html_content += f"""
                     <div class="stats-box">
                         <h3>👥 受影響學生名單（最近 24 小時，共 {len(students_with_errors)} 位）</h3>
-                        <table>
+                        <table style="font-size: 0.9em;">
                             <tr>
                                 <th>ID</th>
                                 <th>學生姓名</th>
-                                <th>Email</th>
+                                <th>班級</th>
+                                <th>老師</th>
                                 <th>錯誤次數</th>
                                 <th>錯誤類型</th>
                             </tr>
             """
             for student in students_with_errors:
                 student_name = student["student_name"] or "（未設定）"
-                student_email = student["student_email"] or "（無 Email）"
+                classrooms = student.get("classrooms", "（無班級）")
+                teachers = student.get("teachers", "（無老師）")
                 error_types_display = (
-                    student["error_types"][:100] + "..."
-                    if len(student["error_types"]) > 100
+                    student["error_types"][:80] + "..."
+                    if len(student["error_types"]) > 80
                     else student["error_types"]
                 )
 
                 html_content += f"""
                             <tr>
                                 <td>{student['student_id']}</td>
-                                <td>{student_name}</td>
-                                <td>{student_email}</td>
-                                <td>{student['error_count']}</td>
-                                <td style="font-size: 0.9em; color: #666;">{error_types_display}</td>
+                                <td><strong>{student_name}</strong></td>
+                                <td style="color: #059669;">{classrooms}</td>
+                                <td style="color: #dc2626; font-size: 0.85em;">{teachers}</td>
+                                <td style="text-align: center; font-weight: bold;">{student['error_count']}</td>
+                                <td style="font-size: 0.85em; color: #666;">{error_types_display}</td>
                             </tr>
                 """
             html_content += """
                         </table>
                         <p style="color: #6b7280; font-size: 0.9em; margin-top: 10px;">
-                            💡 提示：可以聯繫這些學生確認他們的使用環境，或主動排查技術問題
+                            💡 提示：可直接聯繫老師或學生確認使用環境，或主動排查技術問題
                         </p>
                     </div>
             """
