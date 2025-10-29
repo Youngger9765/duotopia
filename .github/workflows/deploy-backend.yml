@@ -166,6 +166,59 @@ jobs:
         fi
         echo "✅ No pending model changes detected"
 
+    - name: 🔒 Verify RLS Configuration
+      env:
+        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
+      run: |
+        echo "🔍 Checking RLS status for all tables..."
+
+        # 檢查沒有啟用 RLS 的表
+        TABLES_WITHOUT_RLS=$(psql "$DATABASE_URL" -t -c "
+          SELECT tablename
+          FROM pg_tables
+          WHERE schemaname = 'public'
+            AND NOT rowsecurity
+            AND tablename != 'alembic_version'
+          ORDER BY tablename;
+        " | xargs)
+
+        if [ ! -z "$TABLES_WITHOUT_RLS" ]; then
+          echo "❌ ERROR: The following tables do not have RLS enabled:"
+          for table in $TABLES_WITHOUT_RLS; do
+            echo "   - $table"
+          done
+          echo ""
+          echo "📝 Security Issue: All tables must have Row Level Security enabled!"
+          echo "Please add RLS to your migration or run:"
+          echo "   psql \$DATABASE_URL -f backend/migrations/enable_rls_all_tables.sql"
+          exit 1
+        fi
+
+        # 檢查啟用了 RLS 但沒有 Policy 的表
+        TABLES_WITHOUT_POLICIES=$(psql "$DATABASE_URL" -t -c "
+          SELECT t.tablename
+          FROM pg_tables t
+          WHERE t.schemaname = 'public'
+            AND t.rowsecurity = true
+            AND NOT EXISTS (
+              SELECT 1 FROM pg_policies p
+              WHERE p.tablename = t.tablename
+            )
+          ORDER BY t.tablename;
+        " | xargs)
+
+        if [ ! -z "$TABLES_WITHOUT_POLICIES" ]; then
+          echo "⚠️  WARNING: The following tables have RLS enabled but no policies:"
+          for table in $TABLES_WITHOUT_POLICIES; do
+            echo "   - $table"
+          done
+          echo ""
+          echo "Note: Tables without policies will deny all access."
+          echo "This may be intentional, but please verify."
+        fi
+
+        echo "✅ All tables have RLS enabled"
+
     - name: Deploy backend to Cloud Run
       run: |
         # 環境變數設定

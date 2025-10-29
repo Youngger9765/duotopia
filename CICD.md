@@ -354,6 +354,201 @@ git push
 - `Can't locate revision`：alembic_version 表不同步
 - `could not translate host name`：需要設定 Pooler URL
 
+## 🔒 Supabase Row Level Security (RLS) 管理
+
+### ⚠️ 重要：建立新資料表時必須啟用 RLS！
+
+所有儲存在 Supabase 的業務資料表**必須啟用 Row Level Security (RLS)**，否則會造成嚴重的資料安全漏洞。
+
+### RLS 是什麼？
+
+**Row Level Security = 行級安全控制**
+
+功能：控制誰可以存取資料庫的哪些資料
+
+範例：
+```sql
+-- ❌ 沒有 RLS：任何人都能看到所有老師資料
+SELECT * FROM teachers;  -- 可看到所有老師的 email、付款記錄
+
+-- ✅ 有 RLS：只能看到自己的資料
+SELECT * FROM teachers WHERE id = 當前登入的老師ID;
+```
+
+### 為什麼 Alembic Migration 不會自動啟用 RLS？
+
+- **Supabase Dashboard** 建立的表 → ✅ 自動啟用 RLS
+- **Alembic Migration** 建立的表 → ❌ **不會自動啟用 RLS**
+
+因此，使用 Alembic 建表時，**必須手動在 migration 中加入 RLS 配置**。
+
+### RLS Migration 標準流程
+
+#### 1. 使用 RLS Template
+
+專案已提供完整的 RLS Template：`backend/alembic/rls_template.py`
+
+#### 2. Migration 範例（建立教師專屬資料表）
+
+```python
+"""add courses table
+
+Revision ID: xxx
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# 🔒 匯入 RLS 函數
+from alembic.rls_template import (
+    enable_rls,
+    disable_rls,
+    create_teacher_only_policies,
+    drop_all_policies,
+)
+
+def upgrade() -> None:
+    # 1️⃣ 建立資料表
+    op.create_table(
+        'courses',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('teacher_id', sa.Integer(), nullable=False),
+        sa.Column('title', sa.String(255), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['teacher_id'], ['teachers.id'], ondelete='CASCADE'),
+    )
+
+    # 2️⃣ 啟用 RLS（必須！）
+    enable_rls('courses')
+
+    # 3️⃣ 建立 Policies（必須！）
+    # 教師只能存取自己的課程
+    create_teacher_only_policies(
+        'courses',
+        owner_column='teacher_id',
+        allow_insert=True,
+        allow_update=True,
+        allow_delete=True,
+    )
+
+def downgrade() -> None:
+    # 1️⃣ 刪除 Policies
+    drop_all_policies('courses')
+
+    # 2️⃣ 關閉 RLS
+    disable_rls('courses')
+
+    # 3️⃣ 刪除資料表
+    op.drop_table('courses')
+```
+
+#### 3. 不同類型資料表的 Policy 選擇
+
+| 資料表類型 | 使用的 Policy 函數 | 說明 |
+|-----------|------------------|------|
+| 教師專屬資料 | `create_teacher_only_policies()` | 班級、課程、作業範本 |
+| 學生專屬資料 | `create_student_only_policies()` | 學生進度、學生答案 |
+| 師生共享資料 | `create_teacher_student_shared_policies()` | 作業派發（教師派，學生做） |
+| JOIN 關聯資料 | `create_join_based_policies()` | 沒有直接 student_id 的表 |
+
+範例參考：`backend/alembic/rls_template.py` 有完整說明
+
+### RLS 自動檢查機制（四層防護）
+
+#### 第一層：Pre-commit Hook 提醒
+```bash
+# commit 時如果修改了 alembic/versions/*.py，會顯示提醒：
+⚠️ 重要提醒：新增 migration 時記得啟用 RLS！
+參考：backend/alembic/rls_template.py
+檢查：enable_rls(表名) + create_*_policies(表名)
+```
+
+#### 第二層：本地手動檢查
+```bash
+# 隨時可以執行 RLS 檢查腳本
+export DATABASE_URL=$STAGING_SUPABASE_POOLER_URL
+./scripts/check_rls.sh
+
+# 輸出範例：
+🔍 檢查 Supabase RLS 配置...
+1️⃣ 檢查未啟用 RLS 的資料表...
+✅ 所有業務資料表都已啟用 RLS
+
+2️⃣ 檢查已啟用 RLS 但缺少 Policy 的資料表...
+✅ 所有啟用 RLS 的表都有 Policy
+
+3️⃣ RLS 配置摘要...
+ tablename | rls_enabled | policies
+-----------+-------------+----------
+ teachers  |     ✅      |    2
+ students  |     ✅      |    3
+ ...
+```
+
+#### 第三層：CI/CD 自動驗證
+GitHub Actions 會在部署前自動檢查：
+
+```yaml
+- name: 🔒 Verify RLS Configuration
+  run: |
+    # 檢查是否有表未啟用 RLS
+    # 如果有 → 部署失敗 ❌
+    # 如果沒有 → 繼續部署 ✅
+```
+
+#### 第四層：Supabase Security Advisor
+Supabase Dashboard 會定期掃描並發送警告郵件
+
+### RLS 快速檢查指令
+
+```bash
+# 檢查 Staging 環境
+export DATABASE_URL=$(grep STAGING_SUPABASE_POOLER_URL .env.staging | cut -d '=' -f2)
+./scripts/check_rls.sh
+
+# 檢查 Production 環境
+export DATABASE_URL=$(grep PRODUCTION_SUPABASE_POOLER_URL .env.production | cut -d '=' -f2)
+./scripts/check_rls.sh
+```
+
+### 如果忘記啟用 RLS 怎麼辦？
+
+#### 方法一：修改 Migration（推薦）
+```bash
+# 1. 編輯 migration 檔案，加入 RLS 配置
+# 2. 重新執行 migration
+cd backend
+alembic downgrade -1
+alembic upgrade head
+```
+
+#### 方法二：手動執行修復腳本
+```bash
+# 使用專案提供的 RLS 修復腳本
+export PGPASSWORD=你的密碼
+psql "你的資料庫URL" -f backend/migrations/enable_rls_all_tables.sql
+```
+
+### RLS 最佳實踐總結
+
+✅ **DO（必須做）**：
+- 每次建立新表時**必須**啟用 RLS
+- 使用 `rls_template.py` 提供的標準函數
+- 本地測試時驗證 RLS Policy 是否正確
+- Commit 前執行 `./scripts/check_rls.sh` 檢查
+
+❌ **DON'T（絕對不要）**：
+- 建表後忘記啟用 RLS
+- 啟用 RLS 但沒有建立 Policy（表會無法存取）
+- 跳過 CI/CD 的 RLS 檢查
+- 忽略 Supabase Security Advisor 警告
+
+### 參考資源
+
+- **RLS Template**：`backend/alembic/rls_template.py`
+- **修復腳本**：`backend/migrations/enable_rls_all_tables.sql`
+- **檢查腳本**：`scripts/check_rls.sh`
+- **Supabase 官方文件**：https://supabase.com/docs/guides/database/postgres/row-level-security
+
 ## 🔴 Supabase Pooler 設定（CI/CD 必須）
 
 ### 問題背景
