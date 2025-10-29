@@ -637,87 +637,22 @@ async def recording_error_report_cron(
             finally:
                 db_session.close()
 
-        # 📊 查詢使用統計（1 小時 + 24 小時）
-        query_usage_1h = f"""
-        SELECT
-            COUNT(DISTINCT student_id) as active_users_1h,
-            COUNT(*) as total_requests_1h,
-            COUNTIF(httpRequest.status = 200) as successful_requests_1h,
-            COUNTIF(httpRequest.status >= 400) as failed_requests_1h
-        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.cloud_run_logs_*`
-        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
-            AND httpRequest.requestUrl LIKE '%/api/speech/assess%'
-            AND student_id IS NOT NULL
-        """
+        # 📊 錄音錯誤統計（從 audio_playback_errors 計算）
+        usage_stats_1h = {
+            "active_users": len(
+                set(row.student_id for row in results_1h if hasattr(row, "student_id"))
+            ),
+            "total_errors": total_errors_1h,
+            "error_types": len(set(row.error_type for row in results_1h)),
+        }
 
-        query_usage_24h = f"""
-        SELECT
-            COUNT(DISTINCT student_id) as active_users_24h,
-            COUNT(*) as total_requests_24h,
-            COUNTIF(httpRequest.status = 200) as successful_requests_24h,
-            COUNTIF(httpRequest.status >= 400) as failed_requests_24h
-        FROM `{os.getenv("GCP_PROJECT_ID")}.duotopia_logs.cloud_run_logs_*`
-        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-            AND httpRequest.requestUrl LIKE '%/api/speech/assess%'
-            AND student_id IS NOT NULL
-        """
-
-        usage_1h_result = list(client.query(query_usage_1h).result())
-        usage_24h_result = list(client.query(query_usage_24h).result())
-
-        usage_stats_1h = (
-            {
-                "active_users": usage_1h_result[0].active_users_1h,
-                "total_requests": usage_1h_result[0].total_requests_1h,
-                "successful_requests": usage_1h_result[0].successful_requests_1h,
-                "failed_requests": usage_1h_result[0].failed_requests_1h,
-                "success_rate": (
-                    round(
-                        usage_1h_result[0].successful_requests_1h
-                        / usage_1h_result[0].total_requests_1h
-                        * 100,
-                        2,
-                    )
-                    if usage_1h_result[0].total_requests_1h > 0
-                    else 0
-                ),
-            }
-            if usage_1h_result
-            else {
-                "active_users": 0,
-                "total_requests": 0,
-                "successful_requests": 0,
-                "failed_requests": 0,
-                "success_rate": 0,
-            }
-        )
-
-        usage_stats_24h = (
-            {
-                "active_users": usage_24h_result[0].active_users_24h,
-                "total_requests": usage_24h_result[0].total_requests_24h,
-                "successful_requests": usage_24h_result[0].successful_requests_24h,
-                "failed_requests": usage_24h_result[0].failed_requests_24h,
-                "success_rate": (
-                    round(
-                        usage_24h_result[0].successful_requests_24h
-                        / usage_24h_result[0].total_requests_24h
-                        * 100,
-                        2,
-                    )
-                    if usage_24h_result[0].total_requests_24h > 0
-                    else 0
-                ),
-            }
-            if usage_24h_result
-            else {
-                "active_users": 0,
-                "total_requests": 0,
-                "successful_requests": 0,
-                "failed_requests": 0,
-                "success_rate": 0,
-            }
-        )
+        usage_stats_24h = {
+            "active_users": len(
+                set(row.student_id for row in results_24h if hasattr(row, "student_id"))
+            ),
+            "total_errors": total_errors_24h,
+            "error_types": len(set(row.error_type for row in results_24h)),
+        }
 
         # 使用 OpenAI 生成摘要（如果有錯誤）
         ai_summary = ""
@@ -822,56 +757,49 @@ async def recording_error_report_cron(
                     </div>
             """
 
-        # 📊 使用統計概覽
+        # 📊 錄音錯誤統計概覽
         html_content += f"""
                     <div class="stats-box">
-                        <h3>📊 平台使用統計</h3>
+                        <h3>📊 錄音錯誤統計概覽</h3>
                         <table>
                             <tr>
                                 <th>時間範圍</th>
-                                <th>活躍用戶</th>
-                                <th>總請求數</th>
-                                <th>成功率</th>
-                                <th>失敗數</th>
+                                <th>受影響學生</th>
+                                <th>錯誤次數</th>
+                                <th>錯誤類型</th>
                             </tr>
                             <tr>
                                 <td><strong>最近 1 小時</strong></td>
-                                <td class="success">{usage_stats_1h['active_users']} 位學生</td>
-                                <td>{usage_stats_1h['total_requests']} 次</td>
-                                <td class="{'success' if usage_stats_1h['success_rate'] >= 95
-                                           else 'warning' if usage_stats_1h['success_rate'] >= 90
-                                           else 'error'}">
-                                    {usage_stats_1h['success_rate']}%
+                                <td class="{'warning' if usage_stats_1h['active_users'] > 0 else 'success'}">
+                                    {usage_stats_1h['active_users']} 位
                                 </td>
-                                <td class="{'error' if usage_stats_1h['failed_requests'] > 10
-                                           else 'warning' if usage_stats_1h['failed_requests'] > 0
+                                <td class="{'error' if usage_stats_1h['total_errors'] > 10
+                                           else 'warning' if usage_stats_1h['total_errors'] > 0
                                            else 'success'}">
-                                    {usage_stats_1h['failed_requests']}
+                                    {usage_stats_1h['total_errors']}
                                 </td>
+                                <td>{usage_stats_1h['error_types']} 種</td>
                             </tr>
                             <tr>
                                 <td><strong>最近 24 小時</strong></td>
-                                <td class="success">{usage_stats_24h['active_users']} 位學生</td>
-                                <td>{usage_stats_24h['total_requests']} 次</td>
-                                <td class="{'success' if usage_stats_24h['success_rate'] >= 95
-                                           else 'warning' if usage_stats_24h['success_rate'] >= 90
-                                           else 'error'}">
-                                    {usage_stats_24h['success_rate']}%
+                                <td class="{'warning' if usage_stats_24h['active_users'] > 0 else 'success'}">
+                                    {usage_stats_24h['active_users']} 位
                                 </td>
-                                <td class="{'error' if usage_stats_24h['failed_requests'] > 100
-                                           else 'warning' if usage_stats_24h['failed_requests'] > 0
+                                <td class="{'error' if usage_stats_24h['total_errors'] > 100
+                                           else 'warning' if usage_stats_24h['total_errors'] > 0
                                            else 'success'}">
-                                    {usage_stats_24h['failed_requests']}
+                                    {usage_stats_24h['total_errors']}
                                 </td>
+                                <td>{usage_stats_24h['error_types']} 種</td>
                             </tr>
                         </table>
                         <p style="color: #6b7280; font-size: 0.9em; margin-top: 10px;">
-                            💡 統計範圍：錄音評估 API (/api/speech/assess)
+                            💡 統計來源：audio_playback_errors 錄音錯誤記錄
                         </p>
                     </div>
 
                     <div class="stats-box">
-                        <h3>🚨 錄音錯誤統計</h3>
+                        <h3>🚨 錯誤嚴重程度</h3>
                         <table>
                             <tr>
                                 <th>時間範圍</th>
