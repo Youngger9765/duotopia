@@ -1548,9 +1548,9 @@ export default function TeacherAssignmentDetailPage() {
                                         variant="outline"
                                         className="text-orange-600 border-orange-600 hover:bg-orange-50 transition-colors h-12 min-h-12 dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
                                         onClick={() => {
-                                          // 導向到批改頁面
+                                          // 導向到批改頁面，帶上 studentId
                                           navigate(
-                                            `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                            `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
                                           );
                                         }}
                                       >
