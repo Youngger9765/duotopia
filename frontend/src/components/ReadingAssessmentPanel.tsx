@@ -1836,8 +1836,8 @@ export default function ReadingAssessmentPanel({
         open={batchPasteDialogOpen}
         onOpenChange={setBatchPasteDialogOpen}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader className="pb-4">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="pb-4 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900">
               批次貼上素材
             </DialogTitle>
@@ -1845,7 +1845,7 @@ export default function ReadingAssessmentPanel({
               每行一個項目，支援自動生成 TTS 與翻譯
             </p>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
                 請貼上內容：
@@ -1854,7 +1854,7 @@ export default function ReadingAssessmentPanel({
                 value={batchPasteText}
                 onChange={(e) => setBatchPasteText(e.target.value)}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
-                className="w-full h-80 px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
+                className="w-full min-h-80 max-h-[60vh] px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-y overflow-y-auto"
               />
               <div className="text-xs text-gray-500 mt-2">
                 {batchPasteText.split("\n").filter((line) => line.trim())
@@ -1887,7 +1887,7 @@ export default function ReadingAssessmentPanel({
               </label>
             </div>
           </div>
-          <DialogFooter className="pt-6">
+          <DialogFooter className="pt-6 flex-shrink-0 border-t border-gray-200 mt-4">
             <Button
               variant="outline"
               onClick={() => setBatchPasteDialogOpen(false)}
