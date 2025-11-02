@@ -74,6 +74,7 @@ def test_frontend_build():
     """測試 Frontend 建置"""
     print("=== 測試 4: Frontend 建置檔案 ===")
     import glob  # noqa: F401
+    from core.config import settings
 
     js_files = glob.glob("frontend/dist/assets/*.js")
     if not js_files:
@@ -82,22 +83,22 @@ def test_frontend_build():
     found_app_id = False
     found_app_key = False
 
+    # 從環境變數取得實際的 APP_KEY（不要硬編碼）
+    expected_app_key = settings.tappay_app_key
+
     for js_file in js_files:
         with open(js_file, "r") as f:
             content = f.read()
-            if "164155" in content:
+            if settings.tappay_app_id in content:
                 found_app_id = True
-            if (
-                "***REMOVED_APP_KEY***"
-                in content
-            ):
+            if expected_app_key and expected_app_key in content:
                 found_app_key = True
 
     assert found_app_id, "APP_ID 未注入建置檔案"
     assert found_app_key, "APP_KEY 未注入建置檔案"
 
     print(f"✅ 找到 {len(js_files)} 個 JS 檔案")
-    print("✅ APP_ID (164155) 已注入")
+    print(f"✅ APP_ID ({settings.tappay_app_id}) 已注入")
     print("✅ APP_KEY 已注入")
     print()
 
