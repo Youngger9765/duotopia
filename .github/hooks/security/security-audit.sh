@@ -161,8 +161,116 @@ else
     report_success "No Python logging with sensitive data"
 fi
 
-# 8. Check for TODO security items
-echo -e "${BLUE}[8/8] Checking for security TODOs...${NC}"
+# 8. Check for TapPay credentials (CRITICAL!)
+echo -e "${BLUE}[8/11] Checking for TapPay credentials...${NC}"
+tappay_issues=0
+
+# Check for TapPay APP_KEY pattern (app_ + 60-70 chars)
+if grep -r "app_[a-zA-Z0-9]{60,70}" \
+    --include="*.py" \
+    --include="*.ts" \
+    --include="*.tsx" \
+    --include="*.js" \
+    --include="*.sh" \
+    --include="*.md" \
+    . \
+    --exclude-dir=node_modules \
+    --exclude-dir=.git \
+    2>/dev/null | \
+    grep -v "your-" | \
+    grep -v "YOUR_" | \
+    grep -v "PLACEHOLDER" | \
+    grep -v "example" | \
+    grep -v "REDACTED" | \
+    grep -v "\\.\\.\\."; then
+    report_error "TapPay APP_KEY pattern detected!"
+    ((tappay_issues++))
+fi
+
+# Check for TapPay PARTNER_KEY pattern (partner_ + 60-70 chars)
+if grep -r "partner_[a-zA-Z0-9]{60,70}" \
+    --include="*.py" \
+    --include="*.ts" \
+    --include="*.tsx" \
+    --include="*.js" \
+    --include="*.sh" \
+    --include="*.md" \
+    . \
+    --exclude-dir=node_modules \
+    --exclude-dir=.git \
+    2>/dev/null | \
+    grep -v "your-" | \
+    grep -v "YOUR_" | \
+    grep -v "PLACEHOLDER" | \
+    grep -v "example" | \
+    grep -v "REDACTED" | \
+    grep -v "\\.\\.\\."; then
+    report_error "TapPay PARTNER_KEY pattern detected!"
+    ((tappay_issues++))
+fi
+
+# Check for known leaked TapPay credentials (use pattern, not full value)
+if grep -rE "app_4H0U1hnw[a-zA-Z0-9]{56}|partner_WiCZj1tZ[a-zA-Z0-9]{56}|partner_PHgswvYE[a-zA-Z0-9]{56}" \
+    --include="*.py" \
+    --include="*.ts" \
+    --include="*.tsx" \
+    --include="*.js" \
+    --include="*.md" \
+    . \
+    --exclude-dir=node_modules \
+    --exclude-dir=.git \
+    --exclude-dir=__pycache__ \
+    --exclude="check-tappay-credentials.sh" \
+    --exclude="security-audit.sh" \
+    2>/dev/null | \
+    grep -v "pattern" | \
+    grep -v "REDACTED" | \
+    grep -v "\\.\\.\\."; then
+    report_error "BLOCKED! Previously leaked TapPay credentials pattern detected!"
+    ((tappay_issues++))
+fi
+
+if [ "$tappay_issues" -eq 0 ]; then
+    report_success "No TapPay credentials detected"
+fi
+
+# 9. Check for hardcoded MERCHANT_ID
+echo -e "${BLUE}[9/11] Checking for TapPay MERCHANT_ID...${NC}"
+if grep -r "tppf_duotopia_[a-zA-Z0-9_]\\+" \
+    --include="*.py" \
+    --include="*.ts" \
+    --include="*.tsx" \
+    --include="*.js" \
+    . \
+    --exclude-dir=node_modules \
+    --exclude-dir=.git \
+    --exclude-dir=tests \
+    --exclude-dir=__tests__ \
+    --exclude="*.md" \
+    2>/dev/null | \
+    grep -v "getenv" | \
+    grep -v "import.meta.env" | \
+    grep -v "example" | \
+    grep -v "測試" | \
+    grep -v "assert.*tappay_merchant_id"; then
+    report_error "Hardcoded TapPay MERCHANT_ID found!"
+else
+    report_success "No hardcoded MERCHANT_ID"
+fi
+
+# 10. Check for service account keys
+echo -e "${BLUE}[10/11] Checking for service account key files...${NC}"
+if find . -type f \( -name "*-key.json" -o -name "*-sa.json" -o -name "*credentials.json" -o -name "service-account-key.json" \) \
+    ! -path "*/node_modules/*" \
+    ! -path "*/.git/*" \
+    2>/dev/null | grep -v ".gitignore"; then
+    report_error "Service account key files found in repository!"
+else
+    report_success "No service account key files"
+fi
+
+# 11. Check for TODO security items
+echo -e "${BLUE}[11/11] Checking for security TODOs...${NC}"
 security_todos=$(grep -r "TODO.*security\|FIXME.*security\|XXX.*security\|HACK" \
     --include="*.py" \
     --include="*.ts" \
