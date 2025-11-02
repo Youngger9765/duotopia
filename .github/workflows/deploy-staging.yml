@@ -110,8 +110,8 @@ jobs:
             -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/duotopia/frontend:staging-${{ github.sha }} \
             -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/duotopia/frontend:staging-latest \
             --build-arg VITE_API_URL=https://${{ env.BACKEND_SERVICE }}-316409492201.${{ env.GCP_REGION }}.run.app \
-            --build-arg VITE_TAPPAY_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
-            --build-arg VITE_TAPPAY_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }} \
+            --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
+            --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }} \
             --build-arg VITE_TAPPAY_SERVER_TYPE=production \
             -f frontend/Dockerfile \
             frontend/
