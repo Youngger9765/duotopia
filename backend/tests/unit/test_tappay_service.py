@@ -34,7 +34,9 @@ class TestTapPayServiceConfiguration:
     def test_service_initialization_requires_env_vars(self):
         """測試服務初始化必須有環境變數"""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="TAPPAY_PARTNER_KEY environment variable is required"):
+            with pytest.raises(
+                ValueError, match="TAPPAY_PARTNER_KEY environment variable is required"
+            ):
                 TapPayService()
 
     def test_service_does_not_use_app_id_app_key(self):
