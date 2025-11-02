@@ -37,10 +37,7 @@ class TestTapPayServiceConfiguration:
             service = TapPayService()
 
             # 檢查預設值
-            assert (
-                service.partner_key
-                == "***REMOVED_PARTNER_KEY***"
-            )
+            assert service.partner_key == "***REMOVED_PARTNER_KEY***"
             assert service.merchant_id == "GlobalTesting_CTBC"
             assert service.environment == "sandbox"
 

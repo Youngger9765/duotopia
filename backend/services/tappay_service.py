@@ -18,11 +18,17 @@ class TapPayService:
     """TapPay 金流服務"""
 
     def __init__(self):
-        self.partner_key = os.getenv(
-            "TAPPAY_PARTNER_KEY",
-            "***REMOVED_PARTNER_KEY***",
-        )
-        self.merchant_id = os.getenv("TAPPAY_MERCHANT_ID", "GlobalTesting_CTBC")
+        # 使用 settings 自動選擇正確的環境參數
+        from core.config import settings
+
+        self.environment = settings.TAPPAY_ENV
+        self.partner_key = settings.tappay_partner_key
+        self.merchant_id = settings.tappay_merchant_id
+
+        if not self.partner_key:
+            raise ValueError("TAPPAY_PARTNER_KEY environment variable is required")
+        if not self.merchant_id:
+            raise ValueError("TAPPAY_MERCHANT_ID environment variable is required")
 
         # 根據環境選擇 API URL
         self.environment = os.getenv("TAPPAY_ENV", "sandbox")
