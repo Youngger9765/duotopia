@@ -31,18 +31,11 @@ class TestTapPayServiceConfiguration:
                 == "https://sandbox.tappaysdk.com/tpc/payment/pay-by-prime"
             )
 
-    def test_service_initialization_with_defaults(self):
-        """測試使用預設值初始化服務"""
+    def test_service_initialization_requires_env_vars(self):
+        """測試服務初始化必須有環境變數"""
         with patch.dict(os.environ, {}, clear=True):
-            service = TapPayService()
-
-            # 檢查預設值
-            assert (
-                service.partner_key
-                == "***REMOVED_PARTNER_KEY***"
-            )
-            assert service.merchant_id == "GlobalTesting_CTBC"
-            assert service.environment == "sandbox"
+            with pytest.raises(ValueError, match="TAPPAY_PARTNER_KEY environment variable is required"):
+                TapPayService()
 
     def test_service_does_not_use_app_id_app_key(self):
         """測試服務不再使用 APP_ID 和 APP_KEY（Frontend 專用）"""

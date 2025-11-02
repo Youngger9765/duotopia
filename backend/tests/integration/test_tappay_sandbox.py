@@ -74,11 +74,12 @@ def test_frontend_build():
     """測試 Frontend 建置"""
     print("=== 測試 4: Frontend 建置檔案 ===")
     import glob  # noqa: F401
-    from core.config import settings
 
     js_files = glob.glob("frontend/dist/assets/*.js")
     if not js_files:
         raise FileNotFoundError("找不到建置檔案！請先執行 npm run build")
+
+    from core.config import settings
 
     found_app_id = False
     found_app_key = False
