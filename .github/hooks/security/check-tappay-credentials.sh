@@ -14,10 +14,10 @@ NC='\033[0m' # No Color
 FOUND_ISSUES=0
 
 # 檢查所有即將 commit 的檔案（排除 security hooks 自身）
-FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -v "security/check-tappay-credentials.sh" | grep -v "security/security-audit.sh")
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -v "security/check-tappay-credentials.sh" | grep -v "security/security-audit.sh" || true)
 
 if [ -z "$FILES" ]; then
-    echo "✅ No files to check"
+    echo "✅ No files to check (empty commit or only security scripts)"
     exit 0
 fi
 
