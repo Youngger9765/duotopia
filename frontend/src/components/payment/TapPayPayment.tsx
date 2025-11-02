@@ -40,10 +40,19 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   }, []);
 
   const initializeTapPay = () => {
-    // TapPay App credentials from environment variables
-    const APP_ID = parseInt(import.meta.env.VITE_TAPPAY_APP_ID || "164155");
-    const APP_KEY = import.meta.env.VITE_TAPPAY_APP_KEY;
+    // TapPay 環境切換邏輯
     const SERVER_TYPE = import.meta.env.VITE_TAPPAY_SERVER_TYPE || "sandbox";
+
+    // 根據環境自動選擇對應的 credentials
+    const APP_ID = parseInt(
+      SERVER_TYPE === "production"
+        ? import.meta.env.VITE_TAPPAY_PRODUCTION_APP_ID || "164155"
+        : import.meta.env.VITE_TAPPAY_SANDBOX_APP_ID || "164155",
+    );
+    const APP_KEY =
+      SERVER_TYPE === "production"
+        ? import.meta.env.VITE_TAPPAY_PRODUCTION_APP_KEY
+        : import.meta.env.VITE_TAPPAY_SANDBOX_APP_KEY;
 
     if (!window.TPDirect) {
       console.error("TapPay SDK not loaded");

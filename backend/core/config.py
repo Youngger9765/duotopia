@@ -68,6 +68,37 @@ class Settings:
     # GCP (optional)
     GCP_PROJECT_ID: Optional[str] = os.getenv("GCP_PROJECT_ID", "duotopia-469413")
 
+    # TapPay Configuration
+    TAPPAY_ENV: Literal["sandbox", "production"] = os.getenv("TAPPAY_ENV", "sandbox")
+
+    @property
+    def tappay_app_id(self) -> str:
+        """Get TapPay APP_ID based on environment"""
+        if self.TAPPAY_ENV == "production":
+            return os.getenv("TAPPAY_PRODUCTION_APP_ID", "")
+        return os.getenv("TAPPAY_SANDBOX_APP_ID", "164155")
+
+    @property
+    def tappay_app_key(self) -> str:
+        """Get TapPay APP_KEY based on environment"""
+        if self.TAPPAY_ENV == "production":
+            return os.getenv("TAPPAY_PRODUCTION_APP_KEY", "")
+        return os.getenv("TAPPAY_SANDBOX_APP_KEY", "")
+
+    @property
+    def tappay_partner_key(self) -> str:
+        """Get TapPay PARTNER_KEY based on environment"""
+        if self.TAPPAY_ENV == "production":
+            return os.getenv("TAPPAY_PRODUCTION_PARTNER_KEY", "")
+        return os.getenv("TAPPAY_SANDBOX_PARTNER_KEY", "")
+
+    @property
+    def tappay_merchant_id(self) -> str:
+        """Get TapPay MERCHANT_ID based on environment"""
+        if self.TAPPAY_ENV == "production":
+            return os.getenv("TAPPAY_PRODUCTION_MERCHANT_ID", "")
+        return os.getenv("TAPPAY_SANDBOX_MERCHANT_ID", "")
+
     @property
     def deployment_name(self) -> str:
         """Get deployment name for logging"""
