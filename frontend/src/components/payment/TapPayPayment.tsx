@@ -520,6 +520,18 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className="h-8"
             />
           </div>
+
+          {/* Prorated Payment Notice - 移至底部 */}
+          {!isCardUpdate && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mt-4">
+              <p className="text-sm text-blue-800 font-medium mb-1">
+                💡 首月比例計費
+              </p>
+              <p className="text-xs text-blue-700">
+                本次付款按本月剩餘天數比例計算。下個月 1 號起，將以全額 (NT$ {planName === "Tutor Teachers" ? "230" : "330"}) 自動續訂。
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

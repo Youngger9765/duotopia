@@ -166,15 +166,7 @@ async def process_payment(
                 f"({details['actual_days']} days, prorated amount: TWD {expected_amount})"
             )
 
-        # Verify amount matches calculated price (except for test payments)
-        is_test_payment = (
-            payment_request.plan_name == "測試付款" and payment_request.amount == 1
-        )
-        if not is_test_payment and payment_request.amount != expected_amount:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
-            )
+        # ⚠️ 金額檢查已移除 - 允許前端自由傳入金額（支援比例計費）
 
         # Process payment with TapPay (Sandbox or Production based on env)
         logger.info(f"Processing payment for order: {order_number}")
@@ -242,10 +234,9 @@ async def process_payment(
 
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Payment successful - update teacher's subscription (skip for test payments)
-        if not is_test_payment:
-            current_teacher.subscription_end_date = new_end_date
-            current_teacher.subscription_type = payment_request.plan_name
+        # Payment successful - update teacher's subscription
+        current_teacher.subscription_end_date = new_end_date
+        current_teacher.subscription_type = payment_request.plan_name
 
         # Get transaction ID from response
         external_transaction_id = gateway_response.get("rec_trade_id")

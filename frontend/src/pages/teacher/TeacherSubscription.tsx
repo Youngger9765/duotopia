@@ -24,9 +24,11 @@ import {
   XCircle,
   Clock,
   RefreshCw,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import TeacherLayout from "@/components/TeacherLayout";
+import TapPayPayment from "@/components/payment/TapPayPayment";
 import { SubscriptionCardManagement } from "@/components/payment/SubscriptionCardManagement";
 import { apiClient } from "@/lib/api";
 
@@ -58,6 +60,11 @@ export default function TeacherSubscription() {
   );
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<{
+    name: string;
+    price: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchSubscriptionData();
@@ -94,6 +101,44 @@ export default function TeacherSubscription() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpgrade = () => {
+    setShowUpgradeDialog(true);
+  };
+
+  // 計算首月比例付款金額
+  const calculateProratedAmount = (fullPrice: number): number => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+
+    // 計算當月天數
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // 計算到月底的剩餘天數（包含今天）
+    const currentDay = now.getDate();
+    const remainingDays = daysInMonth - currentDay + 1;
+
+    // 按比例計算（四捨五入）
+    return Math.round(fullPrice * (remainingDays / daysInMonth));
+  };
+
+  const handleSelectUpgradePlan = (planName: string, price: number) => {
+    // 計算首月比例金額
+    const proratedAmount = calculateProratedAmount(price);
+    setSelectedUpgradePlan({ name: planName, price: proratedAmount });
+  };
+
+  const handleUpgradeSuccess = async (transactionId: string) => {
+    toast.success(`訂閱成功！交易編號：${transactionId}`);
+    setShowUpgradeDialog(false);
+    setSelectedUpgradePlan(null);
+    await fetchSubscriptionData();
+  };
+
+  const handleUpgradeError = (error: string) => {
+    toast.error(`訂閱失敗：${error}`);
   };
 
   const handleCancelSubscription = async () => {
@@ -199,18 +244,6 @@ export default function TeacherSubscription() {
                     </div>
                     <p className="text-sm text-gray-600 mt-1">訂閱狀態良好</p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    {subscription.auto_renew && (
-                      <Button
-                        onClick={() => setShowCancelDialog(true)}
-                        variant="outline"
-                        className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:border-red-300"
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        取消續訂
-                      </Button>
-                    )}
-                  </div>
                 </div>
 
                 <Separator />
@@ -240,23 +273,39 @@ export default function TeacherSubscription() {
 
                   <div className="flex items-start gap-3">
                     <RefreshCw className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm text-gray-600">自動續訂</p>
                       {subscription.auto_renew ? (
-                        <p className="font-semibold text-green-600">已啟用</p>
+                        <div className="space-y-2">
+                          <p className="font-semibold text-green-600">已啟用</p>
+                          <div>
+                            <Button
+                              onClick={() => setShowCancelDialog(true)}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700 hover:border-red-300"
+                            >
+                              <XCircle className="w-4 h-4 mr-2" />
+                              取消續訂
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
-                        <div>
+                        <div className="space-y-2">
                           <p className="font-semibold text-orange-600">
                             已取消
                           </p>
-                          <Button
-                            onClick={handleReactivateSubscription}
-                            size="sm"
-                            variant="link"
-                            className="h-auto p-0 text-blue-600"
-                          >
-                            重新啟用
-                          </Button>
+                          <div>
+                            <Button
+                              onClick={handleReactivateSubscription}
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              重新啟用
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -290,9 +339,13 @@ export default function TeacherSubscription() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   尚未訂閱
                 </h3>
-                <p className="text-gray-600">
-                  請聯繫客服購買訂閱方案
+                <p className="text-gray-600 mb-4">
+                  選擇適合您的訂閱方案
                 </p>
+                <Button onClick={handleUpgrade}>
+                  查看訂閱方案
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
               </div>
             )}
           </CardContent>
@@ -412,6 +465,129 @@ export default function TeacherSubscription() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 訂閱方案選擇對話框 */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>選擇訂閱方案</DialogTitle>
+            <DialogDescription>
+              選擇最適合您的訂閱方案開始使用
+            </DialogDescription>
+          </DialogHeader>
+
+          {!selectedUpgradePlan ? (
+            <div className="grid md:grid-cols-2 gap-6 py-4">
+              {/* Tutor Teachers 方案 */}
+              <Card className="border-2 hover:border-blue-500 transition-colors">
+                <CardHeader>
+                  <CardTitle>Tutor Teachers</CardTitle>
+                  <CardDescription>適合家教老師</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold">NT$ 230</span>
+                      <span className="text-gray-600"> / 月</span>
+                    </div>
+                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                      <span className="text-blue-700">
+                        首月: NT$ {calculateProratedAmount(230)}
+                      </span>
+                      <span className="text-gray-500 text-xs ml-1">
+                        (按剩餘天數比例)
+                      </span>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>無限制學生數量</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>完整作業功能</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>語音評估功能</span>
+                    </li>
+                  </ul>
+                  <Button
+                    onClick={() =>
+                      handleSelectUpgradePlan("Tutor Teachers", 230)
+                    }
+                    className="w-full"
+                  >
+                    選擇此方案
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* School Teachers 方案 */}
+              <Card className="border-2 border-blue-500 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-blue-500">推薦</Badge>
+                </div>
+                <CardHeader>
+                  <CardTitle>School Teachers</CardTitle>
+                  <CardDescription>適合學校老師</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold">NT$ 330</span>
+                      <span className="text-gray-600"> / 月</span>
+                    </div>
+                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                      <span className="text-blue-700">
+                        首月: NT$ {calculateProratedAmount(330)}
+                      </span>
+                      <span className="text-gray-500 text-xs ml-1">
+                        (按剩餘天數比例)
+                      </span>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>所有 Tutor Teachers 功能</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>進階班級管理</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>批次作業功能</span>
+                    </li>
+                  </ul>
+                  <Button
+                    onClick={() =>
+                      handleSelectUpgradePlan("School Teachers", 330)
+                    }
+                    className="w-full"
+                  >
+                    選擇此方案
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="py-4">
+              <TapPayPayment
+                planName={selectedUpgradePlan.name}
+                amount={selectedUpgradePlan.price}
+                onPaymentSuccess={handleUpgradeSuccess}
+                onPaymentError={handleUpgradeError}
+                onCancel={() => {
+                  setSelectedUpgradePlan(null);
+                }}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
