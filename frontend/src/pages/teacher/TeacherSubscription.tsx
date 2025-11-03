@@ -263,49 +263,61 @@ export default function TeacherSubscription() {
 
                   <div className="flex items-start gap-3">
                     <Clock className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
-                      <p className="text-sm text-gray-600">剩餘天數</p>
-                      <p className="font-semibold">
-                        {subscription.days_remaining} 天
-                      </p>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-2">剩餘天數</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              subscription.days_remaining <= 7
+                                ? "bg-red-500"
+                                : subscription.days_remaining <= 14
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
+                            }`}
+                            style={{
+                              width: `${Math.min(100, (subscription.days_remaining / 30) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="font-semibold text-sm whitespace-nowrap">
+                          {subscription.days_remaining} 天
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <RefreshCw className="w-5 h-5 text-blue-600 mt-1" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">自動續訂</p>
+                      <p className="text-sm text-gray-600 mb-2">自動續訂</p>
                       {subscription.auto_renew ? (
-                        <div className="space-y-2">
+                        <div className="flex items-center gap-3">
                           <p className="font-semibold text-green-600">已啟用</p>
-                          <div>
-                            <Button
-                              onClick={() => setShowCancelDialog(true)}
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-red-700 hover:border-red-300"
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              取消續訂
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={() => setShowCancelDialog(true)}
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:border-red-300"
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            取消續訂
+                          </Button>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="flex items-center gap-3">
                           <p className="font-semibold text-orange-600">
                             已取消
                           </p>
-                          <div>
-                            <Button
-                              onClick={handleReactivateSubscription}
-                              size="sm"
-                              variant="outline"
-                              className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
-                            >
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              重新啟用
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={handleReactivateSubscription}
+                            size="sm"
+                            variant="outline"
+                            className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            重新啟用
+                          </Button>
                         </div>
                       )}
                     </div>
