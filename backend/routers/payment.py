@@ -263,7 +263,9 @@ async def process_payment(
             current_teacher.card_type = card_info.get("type")
             current_teacher.card_funding = card_info.get("funding")
             current_teacher.card_issuer = card_info.get("issuer")
-            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_country = card_info.get(
+                "countrycode"
+            )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = now
 
             logger.info(
@@ -867,7 +869,7 @@ async def get_subscription_status(
 # ==================== 💳 卡片管理 API ====================
 
 
-@router.get("/api/payment/saved-card")
+@router.get("/payment/saved-card")
 async def get_saved_card(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -900,7 +902,7 @@ async def get_saved_card(
     }
 
 
-@router.delete("/api/payment/saved-card")
+@router.delete("/payment/saved-card")
 async def delete_saved_card(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
@@ -943,7 +945,7 @@ class UpdateCardRequest(BaseModel):
     cardholder: Optional[Dict[str, Any]] = None
 
 
-@router.post("/api/payment/update-card")
+@router.post("/payment/update-card")
 async def update_saved_card(
     request: UpdateCardRequest,
     current_teacher: Teacher = Depends(get_current_teacher),
@@ -997,7 +999,9 @@ async def update_saved_card(
             current_teacher.card_type = card_info.get("type")
             current_teacher.card_funding = card_info.get("funding")
             current_teacher.card_issuer = card_info.get("issuer")
-            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_country = card_info.get(
+                "countrycode"
+            )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = datetime.now(timezone.utc)
 
             db.commit()
