@@ -2788,7 +2788,13 @@ async def cancel_subscription(
         if not current_teacher.subscription_end_date:
             raise HTTPException(status_code=400, detail="您目前沒有有效的訂閱")
 
-        if not current_teacher.is_subscription_active:
+        # 處理 timezone-aware 和 naive datetime 比較
+        now = datetime.now(timezone.utc)
+        end_date = current_teacher.subscription_end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        if end_date < now:
             raise HTTPException(status_code=400, detail="您的訂閱已過期")
 
         # 檢查是否已經取消過
