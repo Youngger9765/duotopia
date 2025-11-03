@@ -68,7 +68,6 @@ export default function TeacherSubscription() {
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showTestPaymentDialog, setShowTestPaymentDialog] = useState(false);
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<{
     name: string;
     price: number;
@@ -188,16 +187,6 @@ export default function TeacherSubscription() {
     }
   };
 
-  const handleTestPaymentSuccess = async (transactionId: string) => {
-    toast.success(`測試付款成功！交易編號：${transactionId}`);
-    setShowTestPaymentDialog(false);
-    await fetchSubscriptionData();
-  };
-
-  const handleTestPaymentError = (error: string) => {
-    toast.error(`測試付款失敗：${error}`);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("zh-TW", {
       year: "numeric",
@@ -249,18 +238,9 @@ export default function TeacherSubscription() {
   return (
     <TeacherLayout>
       <div className="container mx-auto p-6 max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">訂閱管理</h1>
-            <p className="text-gray-600 mt-2">管理您的訂閱方案與付款記錄</p>
-          </div>
-          <Button
-            onClick={() => setShowTestPaymentDialog(true)}
-            variant="outline"
-            className="border-orange-500 text-orange-600 hover:bg-orange-50"
-          >
-            測試付款 (NT$1)
-          </Button>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">訂閱管理</h1>
+          <p className="text-gray-600 mt-2">管理您的訂閱方案與付款記錄</p>
         </div>
 
         {/* 訂閱狀態卡片 */}
@@ -697,34 +677,6 @@ export default function TeacherSubscription() {
         </DialogContent>
       </Dialog>
 
-      {/* 測試付款對話框 */}
-      <Dialog
-        open={showTestPaymentDialog}
-        onOpenChange={setShowTestPaymentDialog}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>測試付款 (NT$1)</DialogTitle>
-            <DialogDescription>
-              使用真實信用卡進行 NT$1 測試付款
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mb-4 p-4 bg-yellow-50 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              ⚠️ 這是真實付款測試，將會從您的信用卡扣款 NT$1
-            </p>
-          </div>
-
-          <TapPayPayment
-            amount={1}
-            planName="測試付款"
-            onPaymentSuccess={handleTestPaymentSuccess}
-            onPaymentError={handleTestPaymentError}
-            onCancel={() => setShowTestPaymentDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </TeacherLayout>
   );
 }
