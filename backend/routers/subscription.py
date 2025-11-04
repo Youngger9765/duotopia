@@ -25,6 +25,7 @@ class SubscriptionStatusResponse(BaseModel):
     auto_renew: bool  # 是否自動續訂
     cancelled_at: Optional[str]  # 取消續訂時間
     created_at: str
+    quota_used: int = 0  # 已使用配額（秒）
 
 
 @router.get("/subscription/status", response_model=SubscriptionStatusResponse)
@@ -39,6 +40,10 @@ async def get_subscription_status(
     if current_teacher.subscription_end_date:
         now = datetime.now(timezone.utc)
         is_active = current_teacher.subscription_end_date > now
+
+    # 取得配額使用量（從當前訂閱週期）
+    current_period = current_teacher.current_period
+    quota_used = current_period.quota_used if current_period else 0
 
     return SubscriptionStatusResponse(
         status=current_teacher.subscription_status or "INACTIVE",
@@ -57,6 +62,7 @@ async def get_subscription_status(
         created_at=current_teacher.created_at.isoformat()
         if current_teacher.created_at
         else datetime.now(timezone.utc).isoformat(),
+        quota_used=quota_used,
     )
 
 

@@ -8,7 +8,12 @@ import uuid
 import os
 
 from database import get_db
-from models import Teacher, TeacherSubscriptionTransaction, TransactionType
+from models import (
+    Teacher,
+    TeacherSubscriptionTransaction,
+    TransactionType,
+    SubscriptionPeriod,
+)
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
 from services.email_service import email_service
@@ -238,8 +243,34 @@ async def process_payment(
         current_teacher.subscription_end_date = new_end_date
         current_teacher.subscription_type = payment_request.plan_name
 
+        # ✅ 創建新的訂閱週期記錄
+        quota_total = 4000 if payment_request.plan_name == "School Teachers" else 1800
+        new_period = SubscriptionPeriod(
+            teacher_id=current_teacher.id,
+            plan_name=payment_request.plan_name,
+            amount_paid=amount,
+            quota_total=quota_total,
+            quota_used=0,
+            start_date=now,
+            end_date=new_end_date,
+            payment_method="manual",  # 手動刷卡付款
+            payment_id=None,  # 稍後更新
+            payment_status="paid",
+            status="active",
+        )
+        db.add(new_period)
+        db.flush()  # 取得 ID 但不 commit
+
+        # 將舊的訂閱週期標記為過期
+        for old_period in current_teacher.subscription_periods:
+            if old_period.id != new_period.id and old_period.status == "active":
+                old_period.status = "expired"
+
         # Get transaction ID from response
         external_transaction_id = gateway_response.get("rec_trade_id")
+
+        # ✅ 更新訂閱週期的 payment_id
+        new_period.payment_id = external_transaction_id
 
         # 💳 儲存信用卡 Token（用於自動續訂）
         # 根據 TapPay 文件，交易授權成功才會返回有效的 card_key 和 card_token

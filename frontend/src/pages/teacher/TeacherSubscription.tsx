@@ -25,6 +25,7 @@ import {
   Clock,
   RefreshCw,
   ArrowRight,
+  Gauge,
 } from "lucide-react";
 import { toast } from "sonner";
 import TeacherLayout from "@/components/TeacherLayout";
@@ -40,6 +41,7 @@ interface SubscriptionInfo {
   is_active: boolean;
   auto_renew: boolean;
   cancelled_at: string | null;
+  quota_used?: number;
 }
 
 interface Transaction {
@@ -243,6 +245,11 @@ export default function TeacherSubscription() {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">訂閱狀態良好</p>
+                    <p className="text-sm text-blue-600 mt-1 font-medium">
+                      {subscription.plan === "School Teachers"
+                        ? "4000 秒 AI 評估配額/月 (66 分鐘)"
+                        : "1800 秒 AI 評估配額/月 (30 分鐘)"}
+                    </p>
                   </div>
                 </div>
 
@@ -251,39 +258,57 @@ export default function TeacherSubscription() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 text-blue-600 mt-1" />
-                    <div>
-                      <p className="text-sm text-gray-600">到期日</p>
-                      <p className="font-semibold">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-1">到期日</p>
+                      <p className="font-semibold text-sm">
                         {subscription.end_date
                           ? formatDate(subscription.end_date)
                           : "N/A"}
                       </p>
+                      <div className="mt-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all ${
+                                subscription.days_remaining <= 7
+                                  ? "bg-red-500"
+                                  : subscription.days_remaining <= 14
+                                    ? "bg-yellow-500"
+                                    : "bg-green-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(100, (subscription.days_remaining / 30) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="font-semibold text-sm whitespace-nowrap">
+                            {subscription.days_remaining} 天
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-blue-600 mt-1" />
+                    <Gauge className="w-5 h-5 text-blue-600 mt-1" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-2">剩餘天數</p>
+                      <p className="text-sm text-gray-600 mb-2">配額使用</p>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
-                            className={`h-2 rounded-full transition-all ${
-                              subscription.days_remaining <= 7
-                                ? "bg-red-500"
-                                : subscription.days_remaining <= 14
-                                  ? "bg-yellow-500"
-                                  : "bg-green-500"
-                            }`}
+                            className="h-2 rounded-full transition-all bg-blue-500"
                             style={{
-                              width: `${Math.min(100, (subscription.days_remaining / 30) * 100)}%`,
+                              width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%`,
                             }}
                           />
                         </div>
                         <p className="font-semibold text-sm whitespace-nowrap">
-                          {subscription.days_remaining} 天
+                          {Math.round(((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%
                         </p>
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {subscription.quota_used || 0} / {subscription.plan === "School Teachers" ? "4000" : "1800"} 秒
+                      </p>
                     </div>
                   </div>
 
@@ -501,12 +526,12 @@ export default function TeacherSubscription() {
                 <CardContent className="space-y-4">
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold">NT$ 230</span>
+                      <span className="text-3xl font-bold">NT$ 330</span>
                       <span className="text-gray-600"> / 月</span>
                     </div>
                     <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
                       <span className="text-blue-700">
-                        首月: NT$ {calculateProratedAmount(230)}
+                        首月: NT$ {calculateProratedAmount(330)}
                       </span>
                       <span className="text-gray-500 text-xs ml-1">
                         (按剩餘天數比例)
@@ -514,6 +539,10 @@ export default function TeacherSubscription() {
                     </div>
                   </div>
                   <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>1800 秒 AI 評估/月 (30 分鐘)</span>
+                    </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>無限制學生數量</span>
@@ -529,7 +558,7 @@ export default function TeacherSubscription() {
                   </ul>
                   <Button
                     onClick={() =>
-                      handleSelectUpgradePlan("Tutor Teachers", 230)
+                      handleSelectUpgradePlan("Tutor Teachers", 330)
                     }
                     className="w-full"
                   >
@@ -550,12 +579,12 @@ export default function TeacherSubscription() {
                 <CardContent className="space-y-4">
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold">NT$ 330</span>
+                      <span className="text-3xl font-bold">NT$ 660</span>
                       <span className="text-gray-600"> / 月</span>
                     </div>
                     <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
                       <span className="text-blue-700">
-                        首月: NT$ {calculateProratedAmount(330)}
+                        首月: NT$ {calculateProratedAmount(660)}
                       </span>
                       <span className="text-gray-500 text-xs ml-1">
                         (按剩餘天數比例)
@@ -563,6 +592,10 @@ export default function TeacherSubscription() {
                     </div>
                   </div>
                   <ul className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>4000 秒 AI 評估/月 (66 分鐘)</span>
+                    </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>所有 Tutor Teachers 功能</span>
@@ -578,7 +611,7 @@ export default function TeacherSubscription() {
                   </ul>
                   <Button
                     onClick={() =>
-                      handleSelectUpgradePlan("School Teachers", 330)
+                      handleSelectUpgradePlan("School Teachers", 660)
                     }
                     className="w-full"
                   >

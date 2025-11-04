@@ -29,9 +29,9 @@ from routers import (
     teacher_review,
     subscription,
     payment,
-    test_subscription,
     cron,
 )
+from tests.integration.api import test_subscription
 from routes import logs
 from api import debug
 

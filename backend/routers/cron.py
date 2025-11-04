@@ -16,6 +16,7 @@ from models import (
     Teacher,
     TeacherSubscriptionTransaction,
     TransactionType,
+    SubscriptionPeriod,
     Student,
     Classroom,
     ClassroomStudent,
@@ -211,6 +212,30 @@ async def monthly_renewal_cron(
             previous_end_date = teacher.subscription_end_date
             teacher.subscription_end_date = new_end_date
             teacher.subscription_renewed_at = now_utc
+
+            # ✅ 創建新的訂閱週期記錄
+            quota_total = (
+                4000 if teacher.subscription_type == "School Teachers" else 1800
+            )
+            new_period = SubscriptionPeriod(
+                teacher_id=teacher.id,
+                plan_name=teacher.subscription_type,
+                amount_paid=amount,
+                quota_total=quota_total,
+                quota_used=0,
+                start_date=now_utc,
+                end_date=new_end_date,
+                payment_method="auto_renew",  # 自動續訂
+                payment_id=rec_id,
+                payment_status="paid",
+                status="active",
+            )
+            db.add(new_period)
+
+            # 將舊的訂閱週期標記為過期
+            for old_period in teacher.subscription_periods:
+                if old_period.id != new_period.id and old_period.status == "active":
+                    old_period.status = "expired"
 
             # ⚠️ 重要：更新 card_token（TapPay 每次交易會刷新 token）
             if gateway_response.get("card_secret"):
