@@ -16,7 +16,7 @@ from models import (
 )
 from auth import verify_token
 from pydantic import BaseModel
-from datetime import datetime  # noqa: F401
+from datetime import datetime, timezone as dt_timezone  # noqa: F401
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -270,3 +270,50 @@ async def get_teacher_profile(current_teacher: Teacher = Depends(get_current_tea
         is_demo=current_teacher.is_demo,
         is_active=current_teacher.is_active,
     )
+
+
+@router.get("/quota-usage")
+async def get_quota_usage_analytics(
+    start_date: str = None,
+    end_date: str = None,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    取得配額使用統計分析
+
+    提供：
+    - 配額使用摘要
+    - 每日使用趨勢
+    - 學生使用排行
+    - 作業使用排行
+    - 功能使用分佈
+    """
+    from services.quota_analytics_service import QuotaAnalyticsService
+
+    # 解析日期（如果提供）
+    start_dt = None
+    end_dt = None
+
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date).replace(tzinfo=dt_timezone.utc)
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="Invalid start_date format (use ISO format)"
+            )
+
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date).replace(tzinfo=dt_timezone.utc)
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="Invalid end_date format (use ISO format)"
+            )
+
+    # 取得統計資料
+    analytics = QuotaAnalyticsService.get_usage_summary(
+        current_teacher, start_date=start_dt, end_date=end_dt
+    )
+
+    return analytics

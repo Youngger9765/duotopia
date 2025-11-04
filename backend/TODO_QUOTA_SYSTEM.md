@@ -1,6 +1,6 @@
 # 配額系統實作待辦事項 (Quota System TODO)
 
-## 📊 當前狀態 (2025-11-04)
+## 📊 當前狀態 (2025-11-05 更新)
 
 ### ✅ 已完成 (Phase 1 - 核心架構)
 
@@ -41,42 +41,51 @@
 
 ---
 
-## 🚧 待完成 (Phase 2 - 功能整合)
+## ✅ 已完成 (Phase 2 - 功能整合)
 
-### ❌ 核心功能缺失 (高優先級)
+### 1. 語音評分配額扣除 ✅
+**檔案**: `routers/speech_assessment.py` (lines 570-632)
 
-#### 1. 錄音功能整合配額扣除
-**檔案**: `routers/speech_assessment.py`
+**已實作功能**:
+- [x] 從 assignment 取得 teacher
+- [x] 錄音前檢查配額是否足夠 (避免浪費 Azure API)
+- [x] AI 評分後扣除配額
+- [x] 學生做作業扣老師配額，老師自測不扣
+- [x] 配額不足返回 HTTP 402
+- [x] 記錄 PointUsageLog
 
-**需要修改的端點**:
-```python
-# 1. 錄音上傳 - 扣除錄音時長
-@router.post("/api/speech/upload")
-async def upload_recording(...):
-    # ❌ 缺少：扣除配額
-    # TODO: 
-    # 1. 計算錄音時長 (秒)
-    # 2. QuotaService.deduct_quota(teacher, duration, "秒", "speech_recording")
-    # 3. 配額不足時返回 402 錯誤
-    pass
+**測試覆蓋**:
+- [x] E2E 測試 (tests/integration/test_quota_e2e.py)
+  - 配額扣除功能 ✅
+  - 配額不足檢查 ✅
+  - 老師自測不扣配額 ✅
 
-# 2. AI 評分 - 扣除評分時長
-@router.post("/api/speech/assess")
-async def assess_pronunciation(...):
-    # ❌ 缺少：扣除配額
-    # TODO:
-    # 1. 使用錄音時長
-    # 2. QuotaService.deduct_quota(teacher, duration, "秒", "speech_assessment")
-    pass
-```
+### 2. 前端配額檢查與顯示 ✅
+**檔案**: `frontend/src/components/AssignmentDialog.tsx`
 
-**測試需求**:
-- [ ] 測試錄音扣配額
-- [ ] 測試評分扣配額
-- [ ] 測試配額不足時阻止錄音
-- [ ] 測試配額記錄正確
+**已實作功能**:
+- [x] 載入並顯示配額餘額
+- [x] 派作業前檢查配額 (≤0 阻擋)
+- [x] 配額餘額顏色標示 (綠/橘/紅)
+- [x] 處理 HTTP 402 錯誤
+- [x] 配額不足導向訂閱頁
 
-#### 2. 文字批改功能配額扣除
+### 3. 效能優化 ✅
+**已實作**:
+- [x] 資料庫 indexes (7 個索引)
+  - subscription_periods: (teacher_id, status), end_date
+  - point_usage_logs: teacher_id, period_id, created_at, feature_type
+  - 複合索引: (teacher_id, created_at)
+- [x] 修復 N+1 query (Teacher.current_period)
+- [x] 效能測試 (QPS 3500-5000)
+
+---
+
+## 🚧 待完成 (Phase 3 - 進階功能)
+
+### ❌ 次要功能 (中優先級)
+
+#### 1. 文字批改功能配額扣除
 **檔案**: `routers/text_correction.py` (如果存在)
 
 **需要實作**:
@@ -100,40 +109,15 @@ async def correct_text(...):
 - [ ] 測試 500 字 = 50 秒換算正確
 - [ ] 測試配額不足阻止批改
 
-#### 3. 前端配額顯示整合
-**檔案**: 
-- `frontend/src/pages/teacher/TeacherSubscription.tsx`
-- `frontend/src/components/QuotaIndicator.tsx` (新建)
+#### 2. 前端配額即時更新 (優化)
+**目標**: 學生提交錄音後，老師端即時看到配額變化
 
-**需要實作**:
-```typescript
-// 1. 錄音前檢查配額
-async function beforeRecording() {
-  const quota = await checkQuota();
-  if (quota.remaining < estimatedDuration) {
-    showQuotaExceededModal();
-    return false;
-  }
-  return true;
-}
+**可選方案**:
+- Option 1: 輪詢 (每 30 秒查詢一次)
+- Option 2: WebSocket (即時推送)
+- Option 3: Server-Sent Events (SSE)
 
-// 2. 即時顯示剩餘配額
-<QuotaIndicator 
-  total={1800}
-  used={500}
-  remaining={1300}
-/>
-
-// 3. 配額不足提示升級
-<QuotaExceededModal 
-  onUpgrade={() => navigate('/pricing')}
-/>
-```
-
-**測試需求**:
-- [ ] E2E 測試：錄音前檢查配額
-- [ ] E2E 測試：配額不足顯示提示
-- [ ] E2E 測試：配額即時更新
+**建議**: 先用輪詢，未來有需要再升級 WebSocket
 
 ---
 
