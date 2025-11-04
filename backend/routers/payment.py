@@ -248,7 +248,7 @@ async def process_payment(
         new_period = SubscriptionPeriod(
             teacher_id=current_teacher.id,
             plan_name=payment_request.plan_name,
-            amount_paid=amount,
+            amount_paid=payment_request.amount,
             quota_total=quota_total,
             quota_used=0,
             start_date=now,

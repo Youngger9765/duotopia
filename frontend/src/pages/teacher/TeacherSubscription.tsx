@@ -303,11 +303,22 @@ export default function TeacherSubscription() {
                           />
                         </div>
                         <p className="font-semibold text-sm whitespace-nowrap">
-                          {Math.round(((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%
+                          {Math.round(
+                            ((subscription.quota_used || 0) /
+                              (subscription.plan === "School Teachers"
+                                ? 4000
+                                : 1800)) *
+                              100,
+                          )}
+                          %
                         </p>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {subscription.quota_used || 0} / {subscription.plan === "School Teachers" ? "4000" : "1800"} 秒
+                        {subscription.quota_used || 0} /{" "}
+                        {subscription.plan === "School Teachers"
+                          ? "4000"
+                          : "1800"}{" "}
+                        秒
                       </p>
                     </div>
                   </div>
@@ -376,9 +387,7 @@ export default function TeacherSubscription() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   尚未訂閱
                 </h3>
-                <p className="text-gray-600 mb-4">
-                  選擇適合您的訂閱方案
-                </p>
+                <p className="text-gray-600 mb-4">選擇適合您的訂閱方案</p>
                 <Button onClick={handleUpgrade}>
                   查看訂閱方案
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -635,7 +644,6 @@ export default function TeacherSubscription() {
           )}
         </DialogContent>
       </Dialog>
-
     </TeacherLayout>
   );
 }

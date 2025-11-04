@@ -213,6 +213,9 @@ async def monthly_renewal_cron(
             teacher.subscription_end_date = new_end_date
             teacher.subscription_renewed_at = now_utc
 
+            # 取得交易 ID
+            rec_id = gateway_response.get("rec_trade_id")
+
             # ✅ 創建新的訂閱週期記錄
             quota_total = (
                 4000 if teacher.subscription_type == "School Teachers" else 1800

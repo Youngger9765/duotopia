@@ -8,8 +8,6 @@
 3. Server 重啟後配額仍存在
 """
 import requests
-import json
-import subprocess
 import time
 
 BASE_URL = "http://localhost:8080"

@@ -11,9 +11,6 @@ E2E 測試：語音評分配額扣除功能
 7. 測試配額不足情境
 """
 
-import requests
-import json
-import time
 from datetime import datetime
 
 BASE_URL = "http://localhost:8080"
@@ -197,7 +194,7 @@ def test_speech_assessment_quota_deduction():
         new_quota_used = teacher.current_period.quota_used
         expected_quota_used = initial_quota_used + required_seconds
 
-        print(f"\n📊 Quota verification:")
+        print("\n📊 Quota verification:")
         print(f"   Initial: {initial_quota_used} seconds")
         print(f"   Deducted: {required_seconds} seconds")
         print(f"   Expected: {expected_quota_used} seconds")
@@ -223,7 +220,7 @@ def test_speech_assessment_quota_deduction():
             .all()
         )
 
-        print(f"\n📝 PointUsageLog verification:")
+        print("\n📝 PointUsageLog verification:")
         print(f"   Total logs for this assignment: {len(logs)}")
         for log in logs:
             print(

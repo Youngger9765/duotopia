@@ -9,8 +9,7 @@
 5. 付款方式追蹤
 """
 
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from database import SessionLocal
 from models import Teacher, SubscriptionPeriod
 
@@ -143,7 +142,7 @@ def test_5_payment_method_tracking():
     manual_count = sum(1 for p in all_periods if p.payment_method == "manual")
     auto_count = sum(1 for p in all_periods if p.payment_method == "auto_renew")
 
-    print(f"✅ 付款方式統計:")
+    print("✅ 付款方式統計:")
     print(f"   手動付款: {manual_count} 筆")
     print(f"   自動續訂: {auto_count} 筆")
 
@@ -175,7 +174,7 @@ def test_6_helper_properties():
         teacher.quota_remaining == expected_remaining
     ), f"quota_remaining 計算錯誤: {teacher.quota_remaining} != {expected_remaining}"
 
-    print(f"✅ Helper properties:")
+    print("✅ Helper properties:")
     print(f"   quota_total: {teacher.quota_total}")
     print(f"   quota_remaining: {teacher.quota_remaining}")
     print(f"   quota_used: {teacher.current_period.quota_used}")

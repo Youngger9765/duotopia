@@ -11,7 +11,6 @@
 7. 舊用戶遷移 (沒有 period)
 """
 
-import pytest
 from datetime import datetime, timedelta, timezone
 from database import SessionLocal
 from models import Teacher, SubscriptionPeriod
@@ -69,9 +68,9 @@ def test_scenario_1_new_user_first_payment():
         current_period.quota_total == 1800
     ), f"❌ 配額應該是 1800，實際：{current_period.quota_total}"
     assert current_period.quota_used == 0, f"❌ 已用配額應該是 0，實際：{current_period.quota_used}"
-    assert current_period.payment_method == "manual", f"❌ 付款方式應該是 manual"
+    assert current_period.payment_method == "manual", "❌ 付款方式應該是 manual"
 
-    print(f"✅ 新用戶首次付款成功")
+    print("✅ 新用戶首次付款成功")
     print(f"   - 配額：{current_period.quota_used}/{current_period.quota_total} 秒")
     print(f"   - 付款方式：{current_period.payment_method}")
     print(f"   - 剩餘：{new_teacher.quota_remaining} 秒")
@@ -166,7 +165,7 @@ def test_scenario_2_use_quota_then_renew():
     assert all_periods[1].status == "active", "❌ 第二週期應該是 active"
     assert teacher.current_period.id == period2.id, "❌ current_period 應該是新週期"
 
-    print(f"✅ 續約成功，歷史記錄保留")
+    print("✅ 續約成功，歷史記錄保留")
     print(
         f"   - 第一週期：{all_periods[0].quota_used}/{all_periods[0].quota_total} 秒 (expired)"
     )
@@ -253,7 +252,7 @@ def test_scenario_3_quota_exhausted_then_renew():
         teacher.quota_remaining == 1800
     ), f"❌ 剩餘配額應該是 1800，實際：{teacher.quota_remaining}"
 
-    print(f"✅ 續約後配額重新充值")
+    print("✅ 續約後配額重新充值")
     print(
         f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒"
     )
@@ -340,7 +339,7 @@ def test_scenario_4_change_plan():
     assert teacher.current_period.quota_total == 4000, "❌ 新配額應該是 4000"
     assert teacher.quota_total == 4000, "❌ teacher.quota_total 應該是 4000"
 
-    print(f"✅ 方案更換成功")
+    print("✅ 方案更換成功")
     print(f"   - 新方案：{period2.plan_name}")
     print(f"   - 新配額：{period2.quota_used}/{period2.quota_total} 秒")
 
@@ -396,7 +395,7 @@ def test_scenario_5_expired_then_renew():
     db.add(period1)
     db.commit()
 
-    print(f"⚠️  訂閱已過期 5 天")
+    print("⚠️  訂閱已過期 5 天")
 
     # 重新付款
     period2 = SubscriptionPeriod(
@@ -422,7 +421,7 @@ def test_scenario_5_expired_then_renew():
     assert teacher.current_period.status == "active", "❌ 應該是 active"
     assert teacher.current_period.quota_used == 0, "❌ 新週期配額應該是 0"
 
-    print(f"✅ 重新付款成功")
+    print("✅ 重新付款成功")
     print(
         f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒"
     )
@@ -469,10 +468,10 @@ def test_scenario_6_no_period_legacy_user():
     assert legacy_teacher.quota_total == 0, "❌ 沒有 period 時 quota_total 應該是 0"
     assert legacy_teacher.quota_remaining == 0, "❌ 沒有 period 時 quota_remaining 應該是 0"
 
-    print(f"✅ 舊用戶狀態正確")
-    print(f"   - current_period: None")
+    print("✅ 舊用戶狀態正確")
+    print("   - current_period: None")
     print(f"   - quota_total: {legacy_teacher.quota_total}")
-    print(f"   - 建議：需要重新付款以創建 subscription_period")
+    print("   - 建議：需要重新付款以創建 subscription_period")
 
     # 清理
     db.delete(legacy_teacher)
@@ -565,7 +564,7 @@ def test_scenario_7_multiple_renewals_history():
 
     assert len(all_periods) == 3, f"❌ 應該有 3 個月記錄，實際：{len(all_periods)}"
 
-    print(f"✅ 完整保留 3 個月歷史")
+    print("✅ 完整保留 3 個月歷史")
     for i, p in enumerate(all_periods, 1):
         print(
             f"   - 第 {i} 月：{p.quota_used}/{p.quota_total} 秒 "

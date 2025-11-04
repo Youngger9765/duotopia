@@ -3,9 +3,8 @@ QuotaService 單元測試
 """
 import pytest
 from services.quota_service import QuotaService
-from models import Teacher, SubscriptionPeriod, PointUsageLog
+from models import Teacher
 from database import SessionLocal
-from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 
 

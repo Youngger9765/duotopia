@@ -153,7 +153,10 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_quota", quota_delta: -quota.used }),
+        body: JSON.stringify({
+          action: "update_quota",
+          quota_delta: -quota.used,
+        }),
       });
 
       if (response.ok) {
@@ -267,7 +270,7 @@ export default function TestSubscription() {
                       <span className="font-medium text-sm">
                         {status.end_date
                           ? new Date(status.end_date).toLocaleDateString(
-                              "zh-TW"
+                              "zh-TW",
                             )
                           : "無"}
                       </span>

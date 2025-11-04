@@ -12,10 +12,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from database import SessionLocal
-from models import Teacher, Student, SubscriptionPeriod, PointUsageLog
+from models import Teacher
 from main import app
-import io
-from datetime import datetime, timedelta, timezone
 
 client = TestClient(app)
 

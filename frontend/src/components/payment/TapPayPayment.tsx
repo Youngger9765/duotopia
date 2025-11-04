@@ -528,7 +528,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
                 💡 首月比例計費
               </p>
               <p className="text-xs text-blue-700">
-                本次付款按本月剩餘天數比例計算。下個月 1 號起，將以全額 (NT$ {planName === "Tutor Teachers" ? "230" : "330"}) 自動續訂。
+                本次付款按本月剩餘天數比例計算。下個月 1 號起，將以全額 (NT${" "}
+                {planName === "Tutor Teachers" ? "230" : "330"}) 自動續訂。
               </p>
             </div>
           )}

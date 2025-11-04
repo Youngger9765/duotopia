@@ -9,10 +9,9 @@
 """
 
 from sqlalchemy.orm import Session
-from models import Teacher, SubscriptionPeriod, PointUsageLog
+from models import Teacher, PointUsageLog
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
-from datetime import datetime, timezone
 
 
 class QuotaService:
