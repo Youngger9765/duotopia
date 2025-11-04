@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +27,26 @@ import {
   RefreshCw,
   ArrowRight,
   Gauge,
+  TrendingUp,
+  Users,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import TeacherLayout from "@/components/TeacherLayout";
 import TapPayPayment from "@/components/payment/TapPayPayment";
 import { SubscriptionCardManagement } from "@/components/payment/SubscriptionCardManagement";
@@ -55,12 +74,36 @@ interface Transaction {
   subscription_type: string;
 }
 
+interface QuotaUsageAnalytics {
+  summary: {
+    total_used: number;
+    total_quota: number;
+    percentage: number;
+  };
+  daily_usage: Array<{ date: string; seconds: number }>;
+  top_students: Array<{
+    student_id: number;
+    name: string;
+    seconds: number;
+    count: number;
+  }>;
+  top_assignments: Array<{
+    assignment_id: number;
+    title: string;
+    seconds: number;
+    students: number;
+  }>;
+  feature_breakdown: Record<string, number>;
+}
+
 export default function TeacherSubscription() {
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
     null,
   );
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [analytics, setAnalytics] = useState<QuotaUsageAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<{
@@ -102,6 +145,21 @@ export default function TeacherSubscription() {
       toast.error("載入訂閱資料失敗");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const data = await apiClient.get<QuotaUsageAnalytics>(
+        "/api/teachers/quota-usage",
+      );
+      setAnalytics(data);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+      toast.error("載入使用統計失敗");
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -222,7 +280,29 @@ export default function TeacherSubscription() {
           <p className="text-gray-600 mt-2">管理您的訂閱方案與付款記錄</p>
         </div>
 
-        {/* 訂閱狀態卡片 */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="overview">
+              <CreditCard className="w-4 h-4 mr-2" />
+              訂閱總覽
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              onClick={() => {
+                if (!analytics) fetchAnalytics();
+              }}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              使用統計
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <DollarSign className="w-4 h-4 mr-2" />
+              付款歷史
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* 訂閱狀態卡片 */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -397,13 +477,184 @@ export default function TeacherSubscription() {
           </CardContent>
         </Card>
 
-        {/* 💳 信用卡管理 */}
-        <div className="mb-6">
-          <SubscriptionCardManagement />
-        </div>
+            {/* 💳 信用卡管理 */}
+            <div>
+              <SubscriptionCardManagement />
+            </div>
+          </TabsContent>
 
-        {/* 付款歷史 */}
-        <Card>
+          <TabsContent value="analytics" className="space-y-6">
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : analytics ? (
+              <>
+                {/* 配額使用摘要 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gauge className="w-5 h-5" />
+                      配額使用摘要
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">總配額</p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {analytics.summary.total_quota}
+                        </p>
+                        <p className="text-xs text-gray-500">秒</p>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">已使用</p>
+                        <p className="text-3xl font-bold text-orange-600">
+                          {analytics.summary.total_used}
+                        </p>
+                        <p className="text-xs text-gray-500">秒</p>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">使用率</p>
+                        <p className="text-3xl font-bold text-green-600">
+                          {analytics.summary.percentage}%
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          剩餘{" "}
+                          {analytics.summary.total_quota -
+                            analytics.summary.total_used}{" "}
+                          秒
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 每日使用趨勢 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      每日使用趨勢
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={analytics.daily_usage}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="seconds"
+                          stroke="#3b82f6"
+                          name="使用秒數"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* 學生使用排行 & 作業使用排行 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        學生使用排行
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={analytics.top_students}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="seconds" fill="#10b981" name="使用秒數" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        作業使用排行
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={analytics.top_assignments}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="title" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="seconds" fill="#f59e0b" name="使用秒數" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 功能使用分佈 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>功能使用分佈</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(analytics.feature_breakdown).map(
+                            ([name, value]) => ({
+                              name,
+                              value,
+                            }),
+                          )}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={(props: any) =>
+                            `${props.name}: ${(props.percent * 100).toFixed(0)}%`
+                          }
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {Object.entries(analytics.feature_breakdown).map(
+                            (_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={
+                                  ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"][
+                                    index % 4
+                                  ]
+                                }
+                              />
+                            ),
+                          )}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">暫無使用統計資料</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            {/* 付款歷史 */}
+            <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5" />
@@ -458,6 +709,8 @@ export default function TeacherSubscription() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* 取消續訂確認對話框 */}
