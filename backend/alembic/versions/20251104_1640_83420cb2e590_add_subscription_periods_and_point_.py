@@ -48,7 +48,10 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), onupdate=sa.func.now(), nullable=True
+            "updated_at",
+            sa.DateTime(timezone=True),
+            onupdate=sa.func.now(),
+            nullable=True,
         ),
         # 主鍵與外鍵
         sa.PrimaryKeyConstraint("id"),
@@ -59,7 +62,9 @@ def upgrade() -> None:
     op.create_index(
         "ix_subscription_periods_teacher_id", "subscription_periods", ["teacher_id"]
     )
-    op.create_index("ix_subscription_periods_status", "subscription_periods", ["status"])
+    op.create_index(
+        "ix_subscription_periods_status", "subscription_periods", ["status"]
+    )
     op.create_index(
         "ix_subscription_periods_dates",
         "subscription_periods",
@@ -77,7 +82,9 @@ def upgrade() -> None:
         sa.Column("assignment_id", sa.Integer(), nullable=True),
         # 功能資訊
         sa.Column("feature_type", sa.String(), nullable=False),
-        sa.Column("feature_detail", postgresql.JSON(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "feature_detail", postgresql.JSON(astext_type=sa.Text()), nullable=True
+        ),
         # 點數消耗
         sa.Column("points_used", sa.Integer(), nullable=False),
         sa.Column("quota_before", sa.Integer(), nullable=True),
@@ -104,8 +111,12 @@ def upgrade() -> None:
     )
 
     # 創建索引
-    op.create_index("ix_point_usage_logs_teacher_id", "point_usage_logs", ["teacher_id"])
-    op.create_index("ix_point_usage_logs_student_id", "point_usage_logs", ["student_id"])
+    op.create_index(
+        "ix_point_usage_logs_teacher_id", "point_usage_logs", ["teacher_id"]
+    )
+    op.create_index(
+        "ix_point_usage_logs_student_id", "point_usage_logs", ["student_id"]
+    )
     op.create_index(
         "ix_point_usage_logs_subscription_period_id",
         "point_usage_logs",
@@ -176,5 +187,7 @@ def downgrade() -> None:
     # 刪除 subscription_periods 表
     op.drop_index("ix_subscription_periods_dates", table_name="subscription_periods")
     op.drop_index("ix_subscription_periods_status", table_name="subscription_periods")
-    op.drop_index("ix_subscription_periods_teacher_id", table_name="subscription_periods")
+    op.drop_index(
+        "ix_subscription_periods_teacher_id", table_name="subscription_periods"
+    )
     op.drop_table("subscription_periods")

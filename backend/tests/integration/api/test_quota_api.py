@@ -7,6 +7,7 @@ import json
 
 BASE_URL = "http://localhost:8080"
 
+
 def test_get_status():
     """測試取得訂閱狀態（包含配額）"""
     print("\n1️⃣ 測試取得訂閱狀態")
@@ -16,18 +17,17 @@ def test_get_status():
     print(json.dumps(data, indent=2, ensure_ascii=False))
     return data
 
+
 def test_update_quota(delta):
     """測試更新配額"""
     print(f"\n2️⃣ 測試更新配額 ({delta:+d} 秒)")
     payload = {"action": "update_quota", "quota_delta": delta}
-    response = requests.post(
-        f"{BASE_URL}/api/test/subscription/update",
-        json=payload
-    )
+    response = requests.post(f"{BASE_URL}/api/test/subscription/update", json=payload)
     print(f"Status: {response.status_code}")
     data = response.json()
     print(json.dumps(data, indent=2, ensure_ascii=False))
     return data
+
 
 def test_reset_quota():
     """測試重置配額"""
@@ -42,6 +42,7 @@ def test_reset_quota():
     else:
         print("配額已經是 0，無需重置")
         return status
+
 
 if __name__ == "__main__":
     print("=" * 60)

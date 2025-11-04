@@ -558,13 +558,15 @@ async def assess_pronunciation_endpoint(
             student_assignment_id = student_assignment.id
 
             # 找到作業的老師（配額扣除對象）
-            assignment = db.query(Assignment).filter(
-                Assignment.id == assignment_id
-            ).first()
+            assignment = (
+                db.query(Assignment).filter(Assignment.id == assignment_id).first()
+            )
             if assignment:
-                teacher = db.query(Teacher).filter(
-                    Teacher.id == assignment.teacher_id
-                ).first()
+                teacher = (
+                    db.query(Teacher)
+                    .filter(Teacher.id == assignment.teacher_id)
+                    .first()
+                )
 
     # 📊 配額檢查（評分前檢查，避免浪費 Azure API 額度）
     if teacher and assignment:
@@ -585,7 +587,7 @@ async def assess_pronunciation_endpoint(
                         "quota_used": quota_info["quota_used"],
                         "quota_remaining": quota_info["quota_remaining"],
                         "required": int(duration_seconds),
-                    }
+                    },
                 )
 
             logger.info(
@@ -619,7 +621,7 @@ async def assess_pronunciation_endpoint(
                     "reference_text": reference_text,
                     "accuracy_score": assessment_result["accuracy_score"],
                     "audio_size_bytes": len(audio_data),
-                }
+                },
             )
             logger.info(
                 f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "

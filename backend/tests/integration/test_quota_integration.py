@@ -14,15 +14,17 @@ import time
 
 BASE_URL = "http://localhost:8080"
 
+
 def get_auth_token():
     """登入取得 JWT token"""
     response = requests.post(
         f"{BASE_URL}/api/teachers/login",
-        json={"email": "demo@duotopia.com", "password": "demo123"}
+        json={"email": "demo@duotopia.com", "password": "demo123"},
     )
     if response.status_code == 200:
         return response.json().get("access_token")
     return None
+
 
 def verify_db_quota():
     """直接查詢資料庫驗證 quota_used"""
@@ -30,23 +32,24 @@ def verify_db_quota():
     from models import Teacher
 
     db = next(get_db())
-    teacher = db.query(Teacher).filter_by(email='demo@duotopia.com').first()
+    teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
     current_period = teacher.current_period
     quota = current_period.quota_used if current_period else 0
     db.close()
     return quota
 
+
 def test_1_update_quota_via_test_api():
     """測試 1: 透過測試 API 更新配額"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("測試 1: 測試頁面更新配額 → 資料庫更新")
-    print("="*60)
+    print("=" * 60)
 
     # 1. 先重置配額為 0
     print("\n📝 步驟 1: 重置配額")
     response = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
-        json={"action": "update_quota", "quota_delta": -10000}
+        json={"action": "update_quota", "quota_delta": -10000},
     )
     print(f"Status: {response.status_code}")
 
@@ -54,11 +57,11 @@ def test_1_update_quota_via_test_api():
     print("\n📝 步驟 2: 更新配額 +888 秒")
     response = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
-        json={"action": "update_quota", "quota_delta": 888}
+        json={"action": "update_quota", "quota_delta": 888},
     )
     data = response.json()
     print(f"API Response: {data['message']}")
-    api_quota = data['status']['quota_used']
+    api_quota = data["status"]["quota_used"]
 
     # 3. 驗證資料庫
     print("\n📝 步驟 3: 驗證資料庫")
@@ -70,11 +73,12 @@ def test_1_update_quota_via_test_api():
     assert db_quota == 888, f"資料庫配額錯誤: {db_quota}"
     print("\n✅ 測試 1 通過：配額正確寫入資料庫")
 
+
 def test_2_read_quota_via_subscription_api():
     """測試 2: 訂閱頁面讀取配額"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("測試 2: 訂閱頁面讀取配額 → 正確顯示")
-    print("="*60)
+    print("=" * 60)
 
     # 1. 取得 token
     print("\n📝 步驟 1: 登入取得 token")
@@ -101,17 +105,18 @@ def test_2_read_quota_via_subscription_api():
     assert api_quota == 888, f"配額應為 888，實際為 {api_quota}"
     print("\n✅ 測試 2 通過：訂閱 API 正確讀取配額")
 
+
 def test_3_quota_persistence():
     """測試 3: 配額持久化（模擬重啟）"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("測試 3: 配額持久化驗證")
-    print("="*60)
+    print("=" * 60)
 
     # 1. 更新配額為特定值
     print("\n📝 步驟 1: 設定配額為 1234 秒")
     response = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
-        json={"action": "update_quota", "quota_delta": 1234 - verify_db_quota()}
+        json={"action": "update_quota", "quota_delta": 1234 - verify_db_quota()},
     )
     initial_quota = verify_db_quota()
     print(f"初始配額: {initial_quota}")
@@ -129,17 +134,18 @@ def test_3_quota_persistence():
     assert final_quota == 1234, f"配額持久化失敗: {final_quota} != 1234"
     print("\n✅ 測試 3 通過：配額已持久化到資料庫")
 
+
 def test_4_frontend_integration():
     """測試 4: 前端整合測試"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("測試 4: 前端整合 - 測試頁面 → 訂閱頁面")
-    print("="*60)
+    print("=" * 60)
 
     # 1. 透過測試 API 設定配額
     print("\n📝 步驟 1: 透過測試 API 設定配額 555 秒")
     requests.post(
         f"{BASE_URL}/api/test/subscription/update",
-        json={"action": "update_quota", "quota_delta": 555 - verify_db_quota()}
+        json={"action": "update_quota", "quota_delta": 555 - verify_db_quota()},
     )
 
     # 2. 透過訂閱 API 讀取
@@ -156,9 +162,10 @@ def test_4_frontend_integration():
     else:
         print("⚠️ 跳過測試 4（無法登入）")
 
+
 if __name__ == "__main__":
     print("🧪 配額功能整合測試 (TDD)")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # 執行所有測試
@@ -167,9 +174,9 @@ if __name__ == "__main__":
         test_3_quota_persistence()
         test_4_frontend_integration()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("✅✅✅ 所有測試通過！✅✅✅")
-        print("="*60)
+        print("=" * 60)
         print("\n📌 請手動測試前端：")
         print("1. 打開 http://localhost:5173/test-sub")
         print("2. 點擊 +500秒 按鈕")
@@ -182,5 +189,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ 錯誤：{e}")
         import traceback
+
         traceback.print_exc()
         exit(1)

@@ -7,12 +7,13 @@ import json
 
 BASE_URL = "http://localhost:8080"
 
+
 # 模擬登入取得 token（使用 demo 帳號）
 def get_auth_token():
     """登入並取得 JWT token"""
     response = requests.post(
         f"{BASE_URL}/api/teachers/login",
-        json={"email": "demo@duotopia.com", "password": "demo123"}
+        json={"email": "demo@duotopia.com", "password": "demo123"},
     )
     if response.status_code == 200:
         data = response.json()
@@ -21,6 +22,7 @@ def get_auth_token():
         print(f"❌ 登入失敗: {response.status_code}")
         print(response.text)
         return None
+
 
 def test_subscription_status_with_quota():
     """測試 /subscription/status 是否包含 quota_used"""
@@ -48,6 +50,7 @@ def test_subscription_status_with_quota():
 
     return data
 
+
 def test_update_quota_and_check():
     """測試更新配額後，訂閱頁面是否能看到變化"""
     print("\n2️⃣ 測試更新配額並檢查訂閱頁面")
@@ -56,7 +59,7 @@ def test_update_quota_and_check():
     print("\n📝 步驟 1: 使用測試 API 更新配額")
     response = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
-        json={"action": "update_quota", "quota_delta": 500}
+        json={"action": "update_quota", "quota_delta": 500},
     )
     print(f"Status: {response.status_code}")
     print(json.dumps(response.json(), indent=2, ensure_ascii=False))
@@ -74,6 +77,7 @@ def test_update_quota_and_check():
             print("✅ 配額已正確更新並顯示在訂閱頁面！")
         else:
             print(f"❌ 配額不一致！預期 500，實際 {data.get('quota_used')}")
+
 
 if __name__ == "__main__":
     print("=" * 60)

@@ -65,7 +65,9 @@ def test_scenario_1_new_user_first_payment():
     current_period = new_teacher.current_period
 
     assert current_period is not None, "❌ 應該有 current_period"
-    assert current_period.quota_total == 1800, f"❌ 配額應該是 1800，實際：{current_period.quota_total}"
+    assert (
+        current_period.quota_total == 1800
+    ), f"❌ 配額應該是 1800，實際：{current_period.quota_total}"
     assert current_period.quota_used == 0, f"❌ 已用配額應該是 0，實際：{current_period.quota_used}"
     assert current_period.payment_method == "manual", f"❌ 付款方式應該是 manual"
 
@@ -165,8 +167,12 @@ def test_scenario_2_use_quota_then_renew():
     assert teacher.current_period.id == period2.id, "❌ current_period 應該是新週期"
 
     print(f"✅ 續約成功，歷史記錄保留")
-    print(f"   - 第一週期：{all_periods[0].quota_used}/{all_periods[0].quota_total} 秒 (expired)")
-    print(f"   - 第二週期：{all_periods[1].quota_used}/{all_periods[1].quota_total} 秒 (active)")
+    print(
+        f"   - 第一週期：{all_periods[0].quota_used}/{all_periods[0].quota_total} 秒 (expired)"
+    )
+    print(
+        f"   - 第二週期：{all_periods[1].quota_used}/{all_periods[1].quota_total} 秒 (active)"
+    )
 
     # 清理
     for p in all_periods:
@@ -243,10 +249,14 @@ def test_scenario_3_quota_exhausted_then_renew():
     db.refresh(teacher)
 
     assert teacher.current_period.quota_used == 0, "❌ 新週期配額應該是 0"
-    assert teacher.quota_remaining == 1800, f"❌ 剩餘配額應該是 1800，實際：{teacher.quota_remaining}"
+    assert (
+        teacher.quota_remaining == 1800
+    ), f"❌ 剩餘配額應該是 1800，實際：{teacher.quota_remaining}"
 
     print(f"✅ 續約後配額重新充值")
-    print(f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒")
+    print(
+        f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒"
+    )
     print(f"   - 剩餘：{teacher.quota_remaining} 秒")
 
     # 清理
@@ -324,7 +334,9 @@ def test_scenario_4_change_plan():
 
     db.refresh(teacher)
 
-    assert teacher.current_period.plan_name == "School Teachers", "❌ 方案應該是 School Teachers"
+    assert (
+        teacher.current_period.plan_name == "School Teachers"
+    ), "❌ 方案應該是 School Teachers"
     assert teacher.current_period.quota_total == 4000, "❌ 新配額應該是 4000"
     assert teacher.quota_total == 4000, "❌ teacher.quota_total 應該是 4000"
 
@@ -411,7 +423,9 @@ def test_scenario_5_expired_then_renew():
     assert teacher.current_period.quota_used == 0, "❌ 新週期配額應該是 0"
 
     print(f"✅ 重新付款成功")
-    print(f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒")
+    print(
+        f"   - 新配額：{teacher.current_period.quota_used}/{teacher.current_period.quota_total} 秒"
+    )
 
     # 清理
     db.delete(period1)

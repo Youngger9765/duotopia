@@ -18,6 +18,7 @@ from datetime import datetime
 
 BASE_URL = "http://localhost:8080"
 
+
 def get_db_connection():
     """建立資料庫連線"""
     from sqlalchemy import create_engine
@@ -26,14 +27,19 @@ def get_db_connection():
     import os
 
     load_dotenv()
-    database_url = os.getenv("DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia")
+    database_url = os.getenv(
+        "DATABASE_URL",
+        "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia",
+    )
     engine = create_engine(database_url)
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
 
+
 def get_teacher_info(db, teacher_email="demo@duotopia.com"):
     """取得老師資訊和當前配額"""
     from models import Teacher
+
     teacher = db.query(Teacher).filter(Teacher.email == teacher_email).first()
     if not teacher:
         print(f"❌ Teacher not found: {teacher_email}")
@@ -47,16 +53,20 @@ def get_teacher_info(db, teacher_email="demo@duotopia.com"):
         print(f"   Plan: {teacher.current_period.plan_name}")
         print(f"   Quota Total: {teacher.current_period.quota_total} seconds")
         print(f"   Quota Used: {teacher.current_period.quota_used} seconds")
-        print(f"   Quota Remaining: {teacher.current_period.quota_total - teacher.current_period.quota_used} seconds")
+        print(
+            f"   Quota Remaining: {teacher.current_period.quota_total - teacher.current_period.quota_used} seconds"
+        )
         print(f"   Status: {teacher.current_period.status}")
     else:
         print("   ⚠️  No active subscription period")
 
     return teacher
 
+
 def get_student_info(db, student_email="test_student@example.com"):
     """取得學生資訊"""
     from models import Student
+
     student = db.query(Student).filter(Student.email == student_email).first()
     if not student:
         print(f"❌ Student not found: {student_email}")
@@ -66,12 +76,15 @@ def get_student_info(db, student_email="test_student@example.com"):
     print(f"   Email: {student.email}")
     return student
 
+
 def get_or_create_test_assignment(db, teacher_id):
     """取得或建立測試作業"""
     from models import Assignment
 
     # 嘗試找現有的作業
-    assignment = db.query(Assignment).filter(Assignment.teacher_id == teacher_id).first()
+    assignment = (
+        db.query(Assignment).filter(Assignment.teacher_id == teacher_id).first()
+    )
 
     if assignment:
         print(f"\n📝 Using existing Assignment ID: {assignment.id}")
@@ -83,7 +96,7 @@ def get_or_create_test_assignment(db, teacher_id):
         teacher_id=teacher_id,
         title="配額測試作業",
         description="用於測試配額扣除功能",
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
     db.add(assignment)
     db.commit()
@@ -93,6 +106,7 @@ def get_or_create_test_assignment(db, teacher_id):
     print(f"   Title: {assignment.title}")
 
     return assignment
+
 
 def test_speech_assessment_quota_deduction():
     """測試語音評分配額扣除"""
@@ -125,7 +139,7 @@ def test_speech_assessment_quota_deduction():
                 email="test_student@example.com",
                 name="Test Student",
                 password_hash=pwd_context.hash("password123"),
-                birthdate=date(2010, 1, 1)
+                birthdate=date(2010, 1, 1),
             )
             db.add(student)
             db.commit()
@@ -146,6 +160,7 @@ def test_speech_assessment_quota_deduction():
 
         required_seconds = 5  # 假設 5 秒錄音
         from services.quota_service import QuotaService
+
         has_quota = QuotaService.check_quota(teacher, required_seconds)
         print(f"Required: {required_seconds} seconds")
         print(f"Has quota: {has_quota}")
@@ -169,7 +184,7 @@ def test_speech_assessment_quota_deduction():
             feature_type="speech_assessment",
             unit_count=required_seconds,
             unit_type="秒",
-            feature_detail={"text": "Hello world", "duration": required_seconds}
+            feature_detail={"text": "Hello world", "duration": required_seconds},
         )
 
         print(f"✅ Quota deducted: {required_seconds} seconds")
@@ -191,20 +206,29 @@ def test_speech_assessment_quota_deduction():
         if new_quota_used == expected_quota_used:
             print("✅ Quota updated correctly")
         else:
-            print(f"❌ Quota mismatch! Expected {expected_quota_used}, got {new_quota_used}")
+            print(
+                f"❌ Quota mismatch! Expected {expected_quota_used}, got {new_quota_used}"
+            )
             return False
 
         # 7. 驗證 PointUsageLog
         from models import PointUsageLog
-        logs = db.query(PointUsageLog).filter(
-            PointUsageLog.teacher_id == teacher.id,
-            PointUsageLog.assignment_id == assignment.id
-        ).all()
+
+        logs = (
+            db.query(PointUsageLog)
+            .filter(
+                PointUsageLog.teacher_id == teacher.id,
+                PointUsageLog.assignment_id == assignment.id,
+            )
+            .all()
+        )
 
         print(f"\n📝 PointUsageLog verification:")
         print(f"   Total logs for this assignment: {len(logs)}")
         for log in logs:
-            print(f"   - Log ID {log.id}: {log.unit_count} {log.unit_type} = {log.points_used} points")
+            print(
+                f"   - Log ID {log.id}: {log.unit_count} {log.unit_type} = {log.points_used} points"
+            )
             print(f"     Quota before: {log.quota_before}, after: {log.quota_after}")
 
         if len(logs) > 0:
@@ -221,10 +245,12 @@ def test_speech_assessment_quota_deduction():
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
     finally:
         db.close()
+
 
 def test_quota_exceeded():
     """測試配額不足情境"""
@@ -246,10 +272,13 @@ def test_quota_exceeded():
         period.quota_used = period.quota_total  # 用盡配額
         db.commit()
 
-        print(f"\n⚠️  Temporarily set quota_used = quota_total ({period.quota_total} seconds)")
+        print(
+            f"\n⚠️  Temporarily set quota_used = quota_total ({period.quota_total} seconds)"
+        )
 
         # 嘗試扣除配額（應該失敗）
         from services.quota_service import QuotaService
+
         has_quota = QuotaService.check_quota(teacher, 1)
 
         print(f"Check quota for 1 second: {has_quota}")
@@ -270,10 +299,12 @@ def test_quota_exceeded():
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
     finally:
         db.close()
+
 
 def test_teacher_self_testing():
     """測試老師自己測試不扣配額"""
@@ -309,6 +340,7 @@ def test_teacher_self_testing():
         return False
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
