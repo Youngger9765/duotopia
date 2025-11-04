@@ -22,7 +22,10 @@ from models import (
     StudentAssignment,
     StudentItemProgress,
     ContentItem,
+    Assignment,
+    Teacher,
 )
+from services.quota_service import QuotaService
 
 # 設定 logger
 logger = logging.getLogger(__name__)
@@ -537,11 +540,11 @@ async def assess_pronunciation_endpoint(
     # 轉換音檔格式為 WAV（Azure Speech SDK 需要）
     wav_audio_data = convert_audio_to_wav(audio_data, audio_file.content_type)
 
-    # 進行發音評估
-    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
-
-    # 找到學生的 assignment 記錄
+    # 🎯 找到學生的 assignment 與老師（配額檢查）
     student_assignment_id = None
+    teacher = None
+    assignment = None
+
     if assignment_id:
         student_assignment = (
             db.query(StudentAssignment)
@@ -553,6 +556,80 @@ async def assess_pronunciation_endpoint(
         )
         if student_assignment:
             student_assignment_id = student_assignment.id
+
+            # 找到作業的老師（配額扣除對象）
+            assignment = db.query(Assignment).filter(
+                Assignment.id == assignment_id
+            ).first()
+            if assignment:
+                teacher = db.query(Teacher).filter(
+                    Teacher.id == assignment.teacher_id
+                ).first()
+
+    # 📊 配額檢查（評分前檢查，避免浪費 Azure API 額度）
+    if teacher and assignment:
+        # 計算錄音時長
+        try:
+            audio = AudioSegment.from_file(BytesIO(audio_data))
+            duration_seconds = len(audio) / 1000.0  # 毫秒轉秒
+
+            # ✅ 檢查配額是否足夠
+            if not QuotaService.check_quota(teacher, int(duration_seconds)):
+                quota_info = QuotaService.get_quota_info(teacher)
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "error": "QUOTA_EXCEEDED",
+                        "message": f"老師配額不足！還需要 {int(duration_seconds - quota_info['quota_remaining'])} 秒",
+                        "quota_total": quota_info["quota_total"],
+                        "quota_used": quota_info["quota_used"],
+                        "quota_remaining": quota_info["quota_remaining"],
+                        "required": int(duration_seconds),
+                    }
+                )
+
+            logger.info(
+                f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
+            )
+        except HTTPException:
+            raise  # 配額不足，直接拋出
+        except Exception as e:
+            logger.error(f"❌ Quota check failed: {e}")
+            # 計算時長失敗，允許繼續評分
+
+    # 進行發音評估
+    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
+
+    # 📊 評分成功後扣除配額
+    if teacher and assignment:
+        try:
+            audio = AudioSegment.from_file(BytesIO(audio_data))
+            duration_seconds = len(audio) / 1000.0
+
+            # 扣除老師的配額並記錄
+            QuotaService.deduct_quota(
+                db=db,
+                teacher=teacher,
+                student_id=current_student.id,
+                assignment_id=assignment.id,
+                feature_type="speech_assessment",
+                unit_count=duration_seconds,
+                unit_type="秒",
+                feature_detail={
+                    "reference_text": reference_text,
+                    "accuracy_score": assessment_result["accuracy_score"],
+                    "audio_size_bytes": len(audio_data),
+                }
+            )
+            logger.info(
+                f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "
+                f"for student {current_student.id} assignment {assignment.id}"
+            )
+        except HTTPException:
+            raise  # 配額扣除失敗，回滾整個操作
+        except Exception as e:
+            logger.error(f"❌ Quota deduction failed: {e}")
+            # 其他錯誤只記錄，不影響評分結果
 
     # 儲存結果到資料庫
     updated_progress = save_assessment_result(
