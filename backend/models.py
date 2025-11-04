@@ -19,9 +19,10 @@ from sqlalchemy import (
     Numeric,
     UniqueConstraint,
     TypeDecorator,
+    select,
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy.sql import func
 from database import Base
 import enum
@@ -300,13 +301,32 @@ class Teacher(Base):
 
     @property
     def current_period(self):
-        """取得當前有效的訂閱週期"""
-        # 只取 status='active' 的週期（不管時間）
-        # 假設同時只有一個 active period
-        for period in self.subscription_periods:
-            if period.status == "active":
-                return period
-        return None
+        """取得當前有效的訂閱週期
+
+        優化說明：
+        - 使用 SQL query 而非 Python 循環（避免 N+1 query）
+        - 利用 (teacher_id, status) 複合索引
+        - 只查詢需要的欄位
+        """
+        # 從 session 取得當前 session（如果物件已 attached）
+        session = Session.object_session(self)
+        if not session:
+            # Fallback: 使用原始方法（物件未 attached 時）
+            for period in self.subscription_periods:
+                if period.status == "active":
+                    return period
+            return None
+
+        # 使用 SQL query（利用索引）
+        stmt = (
+            select(SubscriptionPeriod)
+            .where(
+                SubscriptionPeriod.teacher_id == self.id,
+                SubscriptionPeriod.status == "active"
+            )
+            .limit(1)
+        )
+        return session.execute(stmt).scalar_one_or_none()
 
     @property
     def quota_total(self) -> int:
