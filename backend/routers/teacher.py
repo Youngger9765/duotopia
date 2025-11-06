@@ -17,8 +17,9 @@ from models import (
 from auth import verify_token
 from pydantic import BaseModel
 from datetime import datetime, timezone as dt_timezone  # noqa: F401
+from services.quota_analytics_service import QuotaAnalyticsService
 
-router = APIRouter()
+router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
 
@@ -289,8 +290,6 @@ async def get_quota_usage_analytics(
     - 作業使用排行
     - 功能使用分佈
     """
-    from services.quota_analytics_service import QuotaAnalyticsService
-
     # 解析日期（如果提供）
     start_dt = None
     end_dt = None
