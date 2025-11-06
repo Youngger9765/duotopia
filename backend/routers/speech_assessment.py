@@ -511,7 +511,7 @@ async def assess_pronunciation_endpoint(
     reference_text: str = Form(...),
     progress_id: int = Form(...),
     item_index: Optional[int] = Form(None),  # 題目索引
-    assignment_id: Optional[int] = Form(None),
+    assignment_id: Optional[int] = Form(None),  # 🔥 這是 StudentAssignment.id (學生作業ID)
     db: Session = Depends(get_db),
     current_student: Student = Depends(get_current_student),
 ):
@@ -545,56 +545,63 @@ async def assess_pronunciation_endpoint(
     teacher = None
     assignment = None
 
+    # 🔍 Debug: 檢查前端傳入的 assignment_id (實際上是 StudentAssignment.id)
+    print(f"🔍 Received assignment_id (StudentAssignment.id) from frontend: {assignment_id}")
+    logger.info(f"🔍 Received assignment_id (StudentAssignment.id): {assignment_id}")
+
     if assignment_id:
+        print(f"✅ assignment_id exists, querying StudentAssignment by ID...")
+        # 🔥 修正：assignment_id 是 StudentAssignment.id，不是 Assignment.id
         student_assignment = (
             db.query(StudentAssignment)
             .filter(
-                StudentAssignment.assignment_id == assignment_id,
+                StudentAssignment.id == assignment_id,  # 🔥 改用 id 而不是 assignment_id
                 StudentAssignment.student_id == current_student.id,
             )
             .first()
         )
         if student_assignment:
             student_assignment_id = student_assignment.id
+            print(f"✅ Found StudentAssignment: id={student_assignment.id}, assignment_id={student_assignment.assignment_id}")
 
             # 找到作業的老師（配額扣除對象）
             assignment = (
-                db.query(Assignment).filter(Assignment.id == assignment_id).first()
+                db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
             )
             if assignment:
+                print(f"✅ Found Assignment: {assignment.id}, teacher_id={assignment.teacher_id}")
                 teacher = (
                     db.query(Teacher)
                     .filter(Teacher.id == assignment.teacher_id)
                     .first()
                 )
+                if teacher:
+                    print(f"✅ Found Teacher: {teacher.id} ({teacher.name})")
+                else:
+                    print(f"❌ Teacher not found for assignment {assignment.id}")
+            else:
+                print(f"❌ Assignment not found with id {student_assignment.assignment_id}")
+        else:
+            print(f"❌ StudentAssignment not found for id={assignment_id}, student_id={current_student.id}")
 
-    # 📊 配額檢查（評分前檢查，避免浪費 Azure API 額度）
+    # 📊 配額檢查（僅記錄狀態，不阻擋學生學習）
     if teacher and assignment:
         # 計算錄音時長
         try:
             audio = AudioSegment.from_file(BytesIO(audio_data))
             duration_seconds = len(audio) / 1000.0  # 毫秒轉秒
 
-            # ✅ 檢查配額是否足夠
+            # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
             if not QuotaService.check_quota(teacher, int(duration_seconds)):
                 quota_info = QuotaService.get_quota_info(teacher)
-                raise HTTPException(
-                    status_code=402,
-                    detail={
-                        "error": "QUOTA_EXCEEDED",
-                        "message": f"老師配額不足！還需要 {int(duration_seconds - quota_info['quota_remaining'])} 秒",
-                        "quota_total": quota_info["quota_total"],
-                        "quota_used": quota_info["quota_used"],
-                        "quota_remaining": quota_info["quota_remaining"],
-                        "required": int(duration_seconds),
-                    },
+                logger.warning(
+                    f"⚠️ Teacher {teacher.id} quota exceeded, but allowing student to continue learning. "
+                    f"Required: {int(duration_seconds)}s, Available: {quota_info['quota_remaining']}s"
                 )
-
-            logger.info(
-                f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
-            )
-        except HTTPException:
-            raise  # 配額不足，直接拋出
+            else:
+                logger.info(
+                    f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
+                )
         except Exception as e:
             logger.error(f"❌ Quota check failed: {e}")
             # 計算時長失敗，允許繼續評分

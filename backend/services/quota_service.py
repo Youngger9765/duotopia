@@ -12,6 +12,9 @@ from sqlalchemy.orm import Session
 from models import Teacher, PointUsageLog
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class QuotaService:
@@ -144,27 +147,19 @@ class QuotaService:
         # 2. 換算為秒數
         points_used = QuotaService.convert_unit_to_seconds(unit_count, unit_type)
 
-        # 3. 檢查配額是否足夠
+        # 3. 檢查配額狀態（僅記錄，不阻擋學生學習）
         quota_before = current_period.quota_used
         quota_after = quota_before + points_used
         quota_remaining = current_period.quota_total - quota_after
 
+        # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
         if quota_remaining < 0:
-            raise HTTPException(
-                status_code=402,
-                detail={
-                    "error": "QUOTA_EXCEEDED",
-                    "message": f"配額不足！還需要 {abs(quota_remaining)} 秒",
-                    "quota_total": current_period.quota_total,
-                    "quota_used": quota_before,
-                    "quota_remaining": max(
-                        0, current_period.quota_total - quota_before
-                    ),
-                    "required": points_used,
-                },
+            logger.warning(
+                f"⚠️ Teacher {teacher.id} quota exceeded: {abs(quota_remaining)}s over limit, "
+                f"but allowing operation to continue (配額超限但允許繼續使用)"
             )
 
-        # 4. 扣除配額
+        # 4. 扣除配額（即使超額也繼續扣除）
         current_period.quota_used = quota_after
 
         # 5. 記錄使用明細

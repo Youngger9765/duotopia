@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/test", tags=["test-subscription"])
 class UpdateSubscriptionRequest(BaseModel):
     action: str
     months: Optional[int] = 1
+    quota_delta: Optional[int] = None  # For update_quota action
 
 
 class SubscriptionStatusResponse(BaseModel):
@@ -191,6 +192,19 @@ async def update_subscription_status(
         else:
             current_teacher.subscription_end_date = now + timedelta(days=7)
         message = "設定為一週後到期"
+
+    elif request.action == "update_quota":
+        # Update quota usage
+        if request.quota_delta is None:
+            raise HTTPException(status_code=400, detail="quota_delta is required for update_quota action")
+
+        current_period = current_teacher.current_period
+        if not current_period:
+            raise HTTPException(status_code=404, detail="No active subscription period")
+
+        # Update quota_used
+        current_period.quota_used = max(0, current_period.quota_used + request.quota_delta)
+        message = f"配額使用量已調整 {request.quota_delta:+d} 秒 (當前: {current_period.quota_used}秒)"
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
