@@ -493,20 +493,28 @@ export function AssignmentDialog({
               {/* 配額顯示 */}
               {quotaInfo && (
                 <div className="mt-1 flex items-center gap-2 text-xs">
-                  <Gauge className="h-3 w-3 text-gray-500" />
+                  <Gauge className={cn(
+                    "h-3 w-3",
+                    quotaInfo.quota_remaining <= 0 ? "text-red-500" : "text-gray-500"
+                  )} />
                   <span className="text-gray-600">
                     配額餘額：
                     <span className={cn(
                       "font-semibold ml-1",
                       quotaInfo.quota_remaining > 300 ? "text-green-600" :
                       quotaInfo.quota_remaining > 100 ? "text-orange-600" :
-                      "text-red-600"
+                      quotaInfo.quota_remaining > 0 ? "text-red-600" :
+                      "text-red-700"
                     )}>
                       {quotaInfo.quota_remaining}
                     </span>
                     <span className="text-gray-500"> / {quotaInfo.quota_total} 秒</span>
                   </span>
-                  {quotaInfo.quota_remaining <= 100 && (
+                  {quotaInfo.quota_remaining <= 0 ? (
+                    <Badge variant="destructive" className="text-xs py-0 px-1.5 animate-pulse">
+                      配額已用完
+                    </Badge>
+                  ) : quotaInfo.quota_remaining <= 100 && (
                     <Badge variant="destructive" className="text-xs py-0 px-1.5">
                       配額不足
                     </Badge>
@@ -1100,11 +1108,20 @@ export function AssignmentDialog({
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={loading || !canProceed()}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  disabled={loading || !canProceed() || (quotaInfo !== null && quotaInfo.quota_remaining <= 0)}
+                  className={cn(
+                    "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
+                    quotaInfo !== null && quotaInfo.quota_remaining <= 0 && "opacity-50 cursor-not-allowed"
+                  )}
+                  title={quotaInfo !== null && quotaInfo.quota_remaining <= 0 ? "配額已用完，無法創建作業" : ""}
                 >
                   {loading ? (
                     <>創建中...</>
+                  ) : quotaInfo !== null && quotaInfo.quota_remaining <= 0 ? (
+                    <>
+                      <Gauge className="h-4 w-4 mr-1" />
+                      配額已用完
+                    </>
                   ) : (
                     <>
                       <Check className="h-4 w-4 mr-1" />

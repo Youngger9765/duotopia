@@ -43,9 +43,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import TeacherLayout from "@/components/TeacherLayout";
 import TapPayPayment from "@/components/payment/TapPayPayment";
@@ -122,7 +119,7 @@ export default function TeacherSubscription() {
       // 獲取訂閱狀態
       try {
         const subData = await apiClient.get<SubscriptionInfo>(
-          "/subscription/status",
+          "/api/subscription/status",
         );
         console.log("Subscription data:", subData);
         setSubscription(subData);
@@ -281,22 +278,23 @@ export default function TeacherSubscription() {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="overview">
-              <CreditCard className="w-4 h-4 mr-2" />
+          <TabsList className="grid w-full grid-cols-3 mb-6 h-auto p-1 bg-gray-100">
+            <TabsTrigger value="overview" className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <CreditCard className="w-5 h-5" />
               訂閱總覽
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
+              className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
               onClick={() => {
                 if (!analytics) fetchAnalytics();
               }}
             >
-              <TrendingUp className="w-4 h-4 mr-2" />
+              <TrendingUp className="w-5 h-5" />
               使用統計
             </TabsTrigger>
-            <TabsTrigger value="history">
-              <DollarSign className="w-4 h-4 mr-2" />
+            <TabsTrigger value="history" className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <DollarSign className="w-5 h-5" />
               付款歷史
             </TabsTrigger>
           </TabsList>
@@ -600,49 +598,6 @@ export default function TeacherSubscription() {
                   </Card>
                 </div>
 
-                {/* 功能使用分佈 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>功能使用分佈</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={Object.entries(analytics.feature_breakdown).map(
-                            ([name, value]) => ({
-                              name,
-                              value,
-                            }),
-                          )}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={(props: any) =>
-                            `${props.name}: ${(props.percent * 100).toFixed(0)}%`
-                          }
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {Object.entries(analytics.feature_breakdown).map(
-                            (_, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={
-                                  ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"][
-                                    index % 4
-                                  ]
-                                }
-                              />
-                            ),
-                          )}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
               </>
             ) : (
               <div className="text-center py-12">

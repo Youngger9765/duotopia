@@ -862,29 +862,43 @@ async def get_subscription_status(
     - 到期日
     - 是否自動續訂
     - 取消時間
+    - 配額使用狀況
     """
+    # Calculate is_active
+    is_active = False
+    if current_teacher.subscription_end_date:
+        end_date_utc = (
+            current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
+            if current_teacher.subscription_end_date.tzinfo is None
+            else current_teacher.subscription_end_date
+        )
+        is_active = end_date_utc > datetime.now(timezone.utc)
+
+    # Get quota used from current subscription period
+    current_period = current_teacher.current_period
+    quota_used = current_period.quota_used if current_period else 0
+
     return {
-        "subscription_end_date": (
+        "status": current_teacher.subscription_status or "INACTIVE",
+        "plan": current_teacher.subscription_type,
+        "end_date": (
             current_teacher.subscription_end_date.isoformat()
             if current_teacher.subscription_end_date
             else None
         ),
-        "auto_renew": current_teacher.subscription_auto_renew,
+        "days_remaining": current_teacher.days_remaining,
+        "is_active": is_active,
+        "auto_renew": (
+            current_teacher.subscription_auto_renew
+            if current_teacher.subscription_auto_renew is not None
+            else True
+        ),
         "cancelled_at": (
             current_teacher.subscription_cancelled_at.isoformat()
             if current_teacher.subscription_cancelled_at
             else None
         ),
-        "is_active": (
-            (
-                current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
-                if current_teacher.subscription_end_date.tzinfo is None
-                else current_teacher.subscription_end_date
-            )
-            > datetime.now(timezone.utc)
-            if current_teacher.subscription_end_date
-            else False
-        ),
+        "quota_used": quota_used,
     }
 
 
