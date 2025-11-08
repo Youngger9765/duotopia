@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
@@ -909,8 +909,8 @@ async def get_subscription_status(
 
 @router.get("/subscription/usage/history")
 async def get_quota_usage_history(
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=0, le=1000, description="返回記錄數量上限"),
+    offset: int = Query(0, ge=0, description="分頁偏移量"),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
