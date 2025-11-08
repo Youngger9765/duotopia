@@ -196,8 +196,41 @@ def upgrade() -> None:
     """
     )
 
+    # ========== 4. 啟用 RLS ==========
+    op.execute("ALTER TABLE subscription_periods ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE point_usage_logs ENABLE ROW LEVEL SECURITY")
+
+    # 創建 RLS Policies
+    # subscription_periods: 老師只能看到自己的訂閱期間
+    op.execute(
+        """
+        CREATE POLICY subscription_periods_teacher_policy ON subscription_periods
+        FOR ALL
+        TO authenticated
+        USING (teacher_id = current_setting('app.current_teacher_id', TRUE)::integer)
+    """
+    )
+
+    # point_usage_logs: 老師只能看到自己的使用記錄
+    op.execute(
+        """
+        CREATE POLICY point_usage_logs_teacher_policy ON point_usage_logs
+        FOR ALL
+        TO authenticated
+        USING (teacher_id = current_setting('app.current_teacher_id', TRUE)::integer)
+    """
+    )
+
 
 def downgrade() -> None:
+    # 移除 RLS policies
+    op.execute(
+        "DROP POLICY IF EXISTS point_usage_logs_teacher_policy ON point_usage_logs"
+    )
+    op.execute(
+        "DROP POLICY IF EXISTS subscription_periods_teacher_policy ON subscription_periods"
+    )
+
     # 刪除 point_usage_logs 表及索引
     op.drop_index("ix_point_usage_logs_teacher_created", table_name="point_usage_logs")
     op.drop_index("ix_point_usage_logs_feature_type", table_name="point_usage_logs")
