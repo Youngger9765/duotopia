@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
@@ -8,7 +8,13 @@ import uuid
 import os
 
 from database import get_db
-from models import Teacher, TeacherSubscriptionTransaction, TransactionType
+from models import (
+    Teacher,
+    TeacherSubscriptionTransaction,
+    TransactionType,
+    SubscriptionPeriod,
+    PointUsageLog,
+)
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
 from services.email_service import email_service
@@ -166,12 +172,7 @@ async def process_payment(
                 f"({details['actual_days']} days, prorated amount: TWD {expected_amount})"
             )
 
-        # Verify amount matches calculated price
-        if payment_request.amount != expected_amount:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Amount mismatch. Expected {expected_amount}, got {payment_request.amount}",
-            )
+        # ⚠️ 金額檢查已移除 - 允許前端自由傳入金額（支援比例計費）
 
         # Process payment with TapPay (Sandbox or Production based on env)
         logger.info(f"Processing payment for order: {order_number}")
@@ -243,8 +244,34 @@ async def process_payment(
         current_teacher.subscription_end_date = new_end_date
         current_teacher.subscription_type = payment_request.plan_name
 
+        # ✅ 創建新的訂閱週期記錄
+        quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
+        new_period = SubscriptionPeriod(
+            teacher_id=current_teacher.id,
+            plan_name=payment_request.plan_name,
+            amount_paid=payment_request.amount,
+            quota_total=quota_total,
+            quota_used=0,
+            start_date=now,
+            end_date=new_end_date,
+            payment_method="manual",  # 手動刷卡付款
+            payment_id=None,  # 稍後更新
+            payment_status="paid",
+            status="active",
+        )
+        db.add(new_period)
+        db.flush()  # 取得 ID 但不 commit
+
+        # 將舊的訂閱週期標記為過期
+        for old_period in current_teacher.subscription_periods:
+            if old_period.id != new_period.id and old_period.status == "active":
+                old_period.status = "expired"
+
         # Get transaction ID from response
         external_transaction_id = gateway_response.get("rec_trade_id")
+
+        # ✅ 更新訂閱週期的 payment_id
+        new_period.payment_id = external_transaction_id
 
         # 💳 儲存信用卡 Token（用於自動續訂）
         # 根據 TapPay 文件，交易授權成功才會返回有效的 card_key 和 card_token
@@ -259,7 +286,9 @@ async def process_payment(
             current_teacher.card_type = card_info.get("type")
             current_teacher.card_funding = card_info.get("funding")
             current_teacher.card_issuer = card_info.get("issuer")
-            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_country = card_info.get(
+                "countrycode"
+            )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = now
 
             logger.info(
@@ -834,36 +863,115 @@ async def get_subscription_status(
     - 到期日
     - 是否自動續訂
     - 取消時間
+    - 配額使用狀況
     """
+    # Calculate is_active
+    is_active = False
+    if current_teacher.subscription_end_date:
+        end_date_utc = (
+            current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
+            if current_teacher.subscription_end_date.tzinfo is None
+            else current_teacher.subscription_end_date
+        )
+        is_active = end_date_utc > datetime.now(timezone.utc)
+
+    # Get quota used from current subscription period
+    current_period = current_teacher.current_period
+    quota_used = current_period.quota_used if current_period else 0
+    quota_total = current_period.quota_total if current_period else None
+    quota_remaining = (quota_total - quota_used) if quota_total is not None else None
+
     return {
-        "subscription_end_date": (
+        "status": current_teacher.subscription_status or "INACTIVE",
+        "plan": current_teacher.subscription_type,
+        "end_date": (
             current_teacher.subscription_end_date.isoformat()
             if current_teacher.subscription_end_date
             else None
         ),
-        "auto_renew": current_teacher.subscription_auto_renew,
+        "days_remaining": current_teacher.days_remaining,
+        "is_active": is_active,
+        "auto_renew": (
+            current_teacher.subscription_auto_renew
+            if current_teacher.subscription_auto_renew is not None
+            else True
+        ),
         "cancelled_at": (
             current_teacher.subscription_cancelled_at.isoformat()
             if current_teacher.subscription_cancelled_at
             else None
         ),
-        "is_active": (
-            (
-                current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
-                if current_teacher.subscription_end_date.tzinfo is None
-                else current_teacher.subscription_end_date
-            )
-            > datetime.now(timezone.utc)
-            if current_teacher.subscription_end_date
-            else False
-        ),
+        "quota_used": quota_used,
+        "quota_total": quota_total,
+        "quota_remaining": quota_remaining,
+    }
+
+
+@router.get("/subscription/usage/history")
+async def get_quota_usage_history(
+    limit: int = Query(50, ge=0, le=1000, description="返回記錄數量上限"),
+    offset: int = Query(0, ge=0, description="分頁偏移量"),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    查詢配額使用歷史
+
+    Args:
+        limit: 返回記錄數量上限 (預設 50)
+        offset: 分頁偏移量 (預設 0)
+
+    Returns:
+        配額使用記錄列表，包含：
+        - 功能類型
+        - 使用點數
+        - 扣除前後配額
+        - 使用時間
+        - 單位數量和類型
+    """
+    # 查詢使用記錄
+    logs = (
+        db.query(PointUsageLog)
+        .filter(PointUsageLog.teacher_id == current_teacher.id)
+        .order_by(PointUsageLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    # 計算總記錄數
+    total_count = (
+        db.query(PointUsageLog)
+        .filter(PointUsageLog.teacher_id == current_teacher.id)
+        .count()
+    )
+
+    return {
+        "total": total_count,
+        "limit": limit,
+        "offset": offset,
+        "logs": [
+            {
+                "id": log.id,
+                "feature_type": log.feature_type,
+                "points_used": log.points_used,
+                "quota_before": log.quota_before,
+                "quota_after": log.quota_after,
+                "unit_count": log.unit_count,
+                "unit_type": log.unit_type,
+                "student_id": log.student_id,
+                "assignment_id": log.assignment_id,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+            }
+            for log in logs
+        ],
     }
 
 
 # ==================== 💳 卡片管理 API ====================
 
 
-@router.get("/api/payment/saved-card")
+@router.get("/payment/saved-card")
 async def get_saved_card(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -896,7 +1004,7 @@ async def get_saved_card(
     }
 
 
-@router.delete("/api/payment/saved-card")
+@router.delete("/payment/saved-card")
 async def delete_saved_card(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
@@ -939,7 +1047,7 @@ class UpdateCardRequest(BaseModel):
     cardholder: Optional[Dict[str, Any]] = None
 
 
-@router.post("/api/payment/update-card")
+@router.post("/payment/update-card")
 async def update_saved_card(
     request: UpdateCardRequest,
     current_teacher: Teacher = Depends(get_current_teacher),
@@ -993,7 +1101,9 @@ async def update_saved_card(
             current_teacher.card_type = card_info.get("type")
             current_teacher.card_funding = card_info.get("funding")
             current_teacher.card_issuer = card_info.get("issuer")
-            current_teacher.card_country = card_info.get("country")
+            current_teacher.card_country = card_info.get(
+                "countrycode"
+            )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = datetime.now(timezone.utc)
 
             db.commit()

@@ -618,9 +618,69 @@ STAGING_SUPABASE_ANON_KEY   # Supabase anon key
 # JWT
 STAGING_JWT_SECRET          # JWT 簽名密鑰
 
+# TapPay Payment（⚠️ 重要：區分 Sandbox 和 Production）
+TAPPAY_SANDBOX_APP_ID       # Sandbox APP ID (測試用)
+TAPPAY_SANDBOX_APP_KEY      # Sandbox APP KEY (測試用)
+TAPPAY_SANDBOX_PARTNER_KEY  # Sandbox PARTNER KEY (測試用)
+TAPPAY_SANDBOX_MERCHANT_ID  # Sandbox MERCHANT ID (測試用)
+
+TAPPAY_PRODUCTION_APP_ID    # Production APP ID (正式環境)
+TAPPAY_PRODUCTION_APP_KEY   # Production APP KEY (正式環境)
+TAPPAY_PRODUCTION_PARTNER_KEY # Production PARTNER KEY (正式環境)
+TAPPAY_PRODUCTION_MERCHANT_ID # Production MERCHANT ID (正式環境)
+
 # GCP
 GCP_SA_KEY                  # Service Account JSON
 ```
+
+### ⚠️ TapPay 配置重要注意事項
+
+#### Frontend 環境變數命名規則
+Frontend 使用 Vite build-time 注入，必須使用 `VITE_TAPPAY_PRODUCTION_*` 前綴：
+
+```yaml
+# ❌ 錯誤：這樣會導致 appKey = undefined
+--build-arg VITE_TAPPAY_APP_ID=xxx
+--build-arg VITE_TAPPAY_APP_KEY=xxx
+
+# ✅ 正確：必須使用 PRODUCTION 前綴
+--build-arg VITE_TAPPAY_PRODUCTION_APP_ID=xxx
+--build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=xxx
+--build-arg VITE_TAPPAY_SERVER_TYPE=production
+```
+
+#### Backend 環境變數
+Backend 使用 runtime 環境變數，支援雙環境切換：
+
+```yaml
+# Backend Cloud Run 環境變數
+TAPPAY_ENV=production  # 或 sandbox
+
+# 兩套完整 credentials
+TAPPAY_SANDBOX_APP_ID=xxx
+TAPPAY_SANDBOX_APP_KEY=xxx
+TAPPAY_SANDBOX_PARTNER_KEY=xxx
+TAPPAY_SANDBOX_MERCHANT_ID=xxx
+
+TAPPAY_PRODUCTION_APP_ID=xxx
+TAPPAY_PRODUCTION_APP_KEY=xxx
+TAPPAY_PRODUCTION_PARTNER_KEY=xxx
+TAPPAY_PRODUCTION_MERCHANT_ID=xxx
+```
+
+#### Staging vs Production 環境配置
+
+**Staging 環境（測試真實刷卡）**：
+- Frontend: `VITE_TAPPAY_PRODUCTION_*` + `VITE_TAPPAY_SERVER_TYPE=production`
+- Backend: `TAPPAY_ENV=production` + 所有 production credentials
+
+**Production 環境（正式刷卡）**：
+- Frontend: `VITE_TAPPAY_PRODUCTION_*` + `VITE_TAPPAY_SERVER_TYPE=production`
+- Backend: `TAPPAY_ENV=production` + 所有 production credentials
+
+**本地開發（測試模擬刷卡）**：
+- Frontend: `VITE_TAPPAY_SANDBOX_*` + `VITE_TAPPAY_SERVER_TYPE=sandbox`
+- Backend: `TAPPAY_ENV=sandbox` + 所有 sandbox credentials
 
 ## 📝 部署日誌模板
 

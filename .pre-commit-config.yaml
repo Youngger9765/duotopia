@@ -46,6 +46,15 @@ repos:
   # ==========================================
   - repo: local
     hooks:
+      # 🔥 超嚴格 TapPay Credentials 檢查（第一道防線）
+      - id: check-tappay-credentials
+        name: 🔥 CRITICAL - Check TapPay credentials (STRICT)
+        entry: ./.github/hooks/security/check-tappay-credentials.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
       - id: check-credentials
         name: Check for hardcoded credentials
         entry: ./.github/hooks/security/check-credentials.sh
@@ -77,7 +86,7 @@ repos:
         pass_filenames: false
 
       - id: security-audit
-        name: Comprehensive security audit
+        name: Comprehensive security audit (Enhanced)
         entry: ./.github/hooks/security/security-audit.sh
         language: script
         pass_filenames: false

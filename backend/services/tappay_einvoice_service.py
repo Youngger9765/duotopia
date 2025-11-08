@@ -20,11 +20,13 @@ class TapPayEInvoiceService:
     """TapPay 電子發票服務"""
 
     def __init__(self):
-        self.partner_key = os.getenv(
-            "TAPPAY_PARTNER_KEY",
-            "***REMOVED_PARTNER_KEY***",
-        )
-        self.merchant_id = os.getenv("TAPPAY_MERCHANT_ID", "GlobalTesting_CTBC")
+        self.partner_key = os.getenv("TAPPAY_PARTNER_KEY")
+        if not self.partner_key:
+            raise ValueError("TAPPAY_PARTNER_KEY environment variable is required")
+
+        self.merchant_id = os.getenv("TAPPAY_MERCHANT_ID")
+        if not self.merchant_id:
+            raise ValueError("TAPPAY_MERCHANT_ID environment variable is required")
 
         # 根據環境選擇 API URL
         self.environment = os.getenv("TAPPAY_ENV", "sandbox")

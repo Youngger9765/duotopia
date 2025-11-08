@@ -552,6 +552,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
         formData.append("progress_id", String(currentProgressId));
         formData.append("item_index", String(currentQuestionIndex));
+        // 🔥 加上 assignment_id 以便後端扣除配額
+        if (assignmentId) {
+          formData.append("assignment_id", String(assignmentId));
+        }
 
         result = await retryAIAnalysis(
           async () => {

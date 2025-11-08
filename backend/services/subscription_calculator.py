@@ -17,12 +17,12 @@ class SubscriptionCalculator:
 
     # 方案價格
     PLAN_PRICES = {
-        "Tutor Teachers": 230,
-        "School Teachers": 330,
+        "Tutor Teachers": 330,
+        "School Teachers": 660,
     }
 
     # 預設方案價格（用於未知方案）
-    DEFAULT_PRICE = 230
+    DEFAULT_PRICE = 330
 
     @staticmethod
     def calculate_first_subscription(

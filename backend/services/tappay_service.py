@@ -10,6 +10,7 @@ import hmac
 import hashlib
 from typing import Dict
 from datetime import datetime
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +19,12 @@ class TapPayService:
     """TapPay 金流服務"""
 
     def __init__(self):
-        self.partner_key = os.getenv(
-            "TAPPAY_PARTNER_KEY",
-            "***REMOVED_PARTNER_KEY***",
-        )
-        self.merchant_id = os.getenv("TAPPAY_MERCHANT_ID", "GlobalTesting_CTBC")
+        # 使用 settings 自動選擇正確的環境參數
+        self.environment = settings.TAPPAY_ENV
+        self.partner_key = settings.tappay_partner_key
+        self.merchant_id = settings.tappay_merchant_id
 
         # 根據環境選擇 API URL
-        self.environment = os.getenv("TAPPAY_ENV", "sandbox")
         if self.environment == "production":
             self.pay_by_prime_url = (
                 "https://prod.tappaysdk.com/tpc/payment/pay-by-prime"
@@ -45,6 +44,7 @@ class TapPayService:
         self.api_url = self.pay_by_prime_url
 
         logger.info(f"TapPay Service initialized in {self.environment} mode")
+        logger.info(f"Using merchant_id: {self.merchant_id}")
 
     def process_payment(
         self,

@@ -18,10 +18,12 @@ from sqlalchemy import (
     DECIMAL,
     Numeric,
     UniqueConstraint,
+    Index,
     TypeDecorator,
+    select,
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy.sql import func
 from database import Base
 import enum
@@ -116,6 +118,126 @@ class ContentType(str, enum.Enum):
 
 
 # ============ 使用者系統 ============
+class SubscriptionPeriod(Base):
+    """訂閱週期表 - 記錄每次付款的訂閱週期"""
+
+    __tablename__ = "subscription_periods"
+    __table_args__ = (
+        Index("ix_subscription_periods_teacher_status", "teacher_id", "status"),
+        Index("ix_subscription_periods_end_date", "end_date"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(
+        Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # 訂閱資訊
+    plan_name = Column(String, nullable=False)  # "Tutor Teachers" or "School Teachers"
+    amount_paid = Column(Integer, nullable=False)  # 330 or 660
+    quota_total = Column(Integer, nullable=False)  # 10000 or 25000 點
+    quota_used = Column(Integer, default=0, nullable=False)
+
+    # 時間範圍
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+
+    # 付款資訊
+    payment_method = Column(String, nullable=False)  # "auto_renew" or "manual"
+    payment_id = Column(String, nullable=True)  # TapPay rec_id
+    payment_status = Column(
+        String, default="paid", nullable=False
+    )  # paid/pending/failed/refunded
+
+    # 狀態
+    status = Column(
+        String, default="active", nullable=False
+    )  # active/expired/cancelled
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    cancel_reason = Column(String, nullable=True)
+
+    # 時間戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # 關聯
+    teacher = relationship("Teacher", back_populates="subscription_periods")
+    usage_logs = relationship(
+        "PointUsageLog",
+        back_populates="subscription_period",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        start = self.start_date.date() if self.start_date else "None"
+        end = self.end_date.date() if self.end_date else "None"
+        return (
+            f"<SubscriptionPeriod teacher={self.teacher_id} "
+            f"period={start}-{end} method={self.payment_method}>"
+        )
+
+
+class PointUsageLog(Base):
+    """點數使用記錄表 - 追蹤每一筆配額消耗"""
+
+    __tablename__ = "point_usage_logs"
+    __table_args__ = (
+        Index("ix_point_usage_logs_teacher_id", "teacher_id"),
+        Index("ix_point_usage_logs_period_id", "subscription_period_id"),
+        Index("ix_point_usage_logs_created_at", "created_at"),
+        Index("ix_point_usage_logs_feature_type", "feature_type"),
+        Index("ix_point_usage_logs_teacher_created", "teacher_id", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # 關聯
+    subscription_period_id = Column(
+        Integer,
+        ForeignKey("subscription_periods.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    teacher_id = Column(
+        Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="SET NULL"), nullable=True
+    )  # 哪個學生用的
+    assignment_id = Column(Integer, nullable=True)  # 哪個作業
+
+    # 功能資訊
+    feature_type = Column(
+        String, nullable=False
+    )  # "speech_recording", "speech_assessment", "text_correction"
+    feature_detail = Column(JSON)  # 詳細資訊 {"duration": 30, "file_url": "..."}
+
+    # 點數消耗
+    points_used = Column(Integer, nullable=False)  # 本次消耗點數
+    quota_before = Column(Integer)  # 使用前配額
+    quota_after = Column(Integer)  # 使用後配額
+
+    # 單位資訊
+    unit_count = Column(Float)  # 單位數量（30秒、500字）
+    unit_type = Column(String)  # "秒", "字", "張"
+
+    # 時間
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # 關聯
+    teacher = relationship("Teacher", back_populates="point_usage_logs")
+    student = relationship("Student")
+    subscription_period = relationship(
+        "SubscriptionPeriod", back_populates="usage_logs"
+    )
+
+    def __repr__(self):
+        return (
+            f"<PointUsageLog teacher={self.teacher_id} "
+            f"student={self.student_id} feature={self.feature_type} "
+            f"points={self.points_used}>"
+        )
+
+
 class Teacher(Base):
     """教師模型（個體戶）"""
 
@@ -185,6 +307,61 @@ class Teacher(Base):
         back_populates="teacher",
         cascade="all, delete-orphan",
     )
+    subscription_periods = relationship(
+        "SubscriptionPeriod",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        order_by="SubscriptionPeriod.start_date.desc()",
+    )
+    point_usage_logs = relationship(
+        "PointUsageLog",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        order_by="PointUsageLog.created_at.desc()",
+    )
+
+    @property
+    def current_period(self):
+        """取得當前有效的訂閱週期
+
+        優化說明：
+        - 使用 SQL query 而非 Python 循環（避免 N+1 query）
+        - 利用 (teacher_id, status) 複合索引
+        - 只查詢需要的欄位
+        """
+        # 從 session 取得當前 session（如果物件已 attached）
+        session = Session.object_session(self)
+        if not session:
+            # Fallback: 使用原始方法（物件未 attached 時）
+            for period in self.subscription_periods:
+                if period.status == "active":
+                    return period
+            return None
+
+        # 使用 SQL query（利用索引）
+        stmt = (
+            select(SubscriptionPeriod)
+            .where(
+                SubscriptionPeriod.teacher_id == self.id,
+                SubscriptionPeriod.status == "active",
+            )
+            .limit(1)
+        )
+        return session.execute(stmt).scalar_one_or_none()
+
+    @property
+    def quota_total(self) -> int:
+        """當前週期的總配額"""
+        period = self.current_period
+        return period.quota_total if period else 0
+
+    @property
+    def quota_remaining(self) -> int:
+        """當前週期的剩餘配額"""
+        period = self.current_period
+        if not period:
+            return 0
+        return max(0, period.quota_total - period.quota_used)
 
     @property
     def subscription_status(self):

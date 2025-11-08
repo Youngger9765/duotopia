@@ -24,11 +24,15 @@ class SubscriptionStatus(BaseModel):
     status: str
     days_remaining: int
     end_date: Optional[str] = None
+    plan: Optional[str] = None  # "Tutor Teachers" or "School Teachers"
+    quota_used: int = 0  # 已使用配額（秒）
 
 
 class UpdateRequest(BaseModel):
     action: str
     months: Optional[int] = None
+    plan: Optional[str] = None  # "Tutor Teachers" or "School Teachers"
+    quota_delta: Optional[int] = None  # 配額變化量（秒）
 
 
 class UpdateResponse(BaseModel):
@@ -59,12 +63,18 @@ def get_subscription_status(teacher: Teacher) -> SubscriptionStatus:
     """取得訂閱狀態"""
     days_remaining = calculate_days_remaining(teacher.subscription_end_date)
 
+    # 取得配額使用量（從當前訂閱週期）
+    current_period = teacher.current_period
+    quota_used = current_period.quota_used if current_period else 0
+
     return SubscriptionStatus(
         status="subscribed" if days_remaining > 0 else "expired",
         days_remaining=days_remaining,
         end_date=teacher.subscription_end_date.isoformat()
         if teacher.subscription_end_date
         else None,
+        plan=teacher.subscription_type or "Tutor Teachers",
+        quota_used=quota_used,
     )
 
 
@@ -147,6 +157,32 @@ async def update_subscription(request: UpdateRequest, db: Session = Depends(get_
         # 設定一週後到期
         teacher.subscription_end_date = now + timedelta(days=7)
         message = "已設定一週後到期"
+
+    elif request.action == "change_plan":
+        # 切換方案
+        if not request.plan:
+            raise HTTPException(status_code=400, detail="缺少 plan 參數")
+        if request.plan not in ["Tutor Teachers", "School Teachers"]:
+            raise HTTPException(
+                status_code=400, detail="plan 必須是 'Tutor Teachers' 或 'School Teachers'"
+            )
+        teacher.subscription_type = request.plan
+        message = f"已切換方案至 {request.plan}"
+
+    elif request.action == "update_quota":
+        # 更新配額使用量
+        if request.quota_delta is None:
+            raise HTTPException(status_code=400, detail="缺少 quota_delta 參數")
+
+        # ✅ 更新當前訂閱週期的配額
+        current_period = teacher.current_period
+        if current_period:
+            current = current_period.quota_used
+            new_quota = max(0, current + request.quota_delta)
+            current_period.quota_used = new_quota
+            message = f"配額已更新：{current} → {new_quota} 秒"
+        else:
+            raise HTTPException(status_code=400, detail="沒有有效的訂閱週期，無法更新配額")
 
     else:
         raise HTTPException(status_code=400, detail=f"不支援的操作: {request.action}")

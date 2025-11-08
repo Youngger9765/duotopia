@@ -22,7 +22,10 @@ from models import (
     StudentAssignment,
     StudentItemProgress,
     ContentItem,
+    Assignment,
+    Teacher,
 )
+from services.quota_service import QuotaService
 
 # 設定 logger
 logger = logging.getLogger(__name__)
@@ -508,7 +511,7 @@ async def assess_pronunciation_endpoint(
     reference_text: str = Form(...),
     progress_id: int = Form(...),
     item_index: Optional[int] = Form(None),  # 題目索引
-    assignment_id: Optional[int] = Form(None),
+    assignment_id: Optional[int] = Form(None),  # 🔥 這是 StudentAssignment.id (學生作業ID)
     db: Session = Depends(get_db),
     current_student: Student = Depends(get_current_student),
 ):
@@ -537,22 +540,119 @@ async def assess_pronunciation_endpoint(
     # 轉換音檔格式為 WAV（Azure Speech SDK 需要）
     wav_audio_data = convert_audio_to_wav(audio_data, audio_file.content_type)
 
-    # 進行發音評估
-    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
-
-    # 找到學生的 assignment 記錄
+    # 🎯 找到學生的 assignment 與老師（配額檢查）
     student_assignment_id = None
+    teacher = None
+    assignment = None
+
+    # 🔍 Debug: 檢查前端傳入的 assignment_id (實際上是 StudentAssignment.id)
+    print(
+        f"🔍 Received assignment_id (StudentAssignment.id) from frontend: {assignment_id}"
+    )
+    logger.info(f"🔍 Received assignment_id (StudentAssignment.id): {assignment_id}")
+
     if assignment_id:
+        print("✅ assignment_id exists, querying StudentAssignment by ID...")
+        # 🔥 修正：assignment_id 是 StudentAssignment.id，不是 Assignment.id
         student_assignment = (
             db.query(StudentAssignment)
             .filter(
-                StudentAssignment.assignment_id == assignment_id,
+                StudentAssignment.id == assignment_id,  # 🔥 改用 id 而不是 assignment_id
                 StudentAssignment.student_id == current_student.id,
             )
             .first()
         )
         if student_assignment:
             student_assignment_id = student_assignment.id
+            print(
+                "✅ Found StudentAssignment: "
+                f"id={student_assignment.id}, "
+                f"assignment_id={student_assignment.assignment_id}"
+            )
+
+            # 找到作業的老師（配額扣除對象）
+            assignment = (
+                db.query(Assignment)
+                .filter(Assignment.id == student_assignment.assignment_id)
+                .first()
+            )
+            if assignment:
+                print(
+                    f"✅ Found Assignment: {assignment.id}, teacher_id={assignment.teacher_id}"
+                )
+                teacher = (
+                    db.query(Teacher)
+                    .filter(Teacher.id == assignment.teacher_id)
+                    .first()
+                )
+                if teacher:
+                    print(f"✅ Found Teacher: {teacher.id} ({teacher.name})")
+                else:
+                    print(f"❌ Teacher not found for assignment {assignment.id}")
+            else:
+                print(
+                    f"❌ Assignment not found with id {student_assignment.assignment_id}"
+                )
+        else:
+            print(
+                f"❌ StudentAssignment not found for id={assignment_id}, student_id={current_student.id}"
+            )
+
+    # 📊 配額檢查（僅記錄狀態，不阻擋學生學習）
+    if teacher and assignment:
+        # 計算錄音時長
+        try:
+            audio = AudioSegment.from_file(BytesIO(audio_data))
+            duration_seconds = len(audio) / 1000.0  # 毫秒轉秒
+
+            # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
+            if not QuotaService.check_quota(teacher, int(duration_seconds)):
+                quota_info = QuotaService.get_quota_info(teacher)
+                logger.warning(
+                    f"⚠️ Teacher {teacher.id} quota exceeded, but allowing student to continue learning. "
+                    f"Required: {int(duration_seconds)}s, Available: {quota_info['quota_remaining']}s"
+                )
+            else:
+                logger.info(
+                    f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
+                )
+        except Exception as e:
+            logger.error(f"❌ Quota check failed: {e}")
+            # 計算時長失敗，允許繼續評分
+
+    # 進行發音評估
+    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
+
+    # 📊 評分成功後扣除配額
+    if teacher and assignment:
+        try:
+            audio = AudioSegment.from_file(BytesIO(audio_data))
+            duration_seconds = len(audio) / 1000.0
+
+            # 扣除老師的配額並記錄
+            QuotaService.deduct_quota(
+                db=db,
+                teacher=teacher,
+                student_id=current_student.id,
+                assignment_id=assignment.id,
+                feature_type="speech_assessment",
+                unit_count=duration_seconds,
+                unit_type="秒",
+                feature_detail={
+                    "reference_text": reference_text,
+                    "accuracy_score": assessment_result["accuracy_score"],
+                    "audio_size_bytes": len(audio_data),
+                },
+            )
+            logger.info(
+                f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "
+                f"for student {current_student.id} assignment {assignment.id}"
+            )
+        except HTTPException:
+            raise  # 配額扣除失敗，回滾整個操作
+        except Exception as e:
+            logger.error(f"❌ Quota deduction failed: {e}")
+            # 其他錯誤只記錄，不影響評分結果
 
     # 儲存結果到資料庫
     updated_progress = save_assessment_result(

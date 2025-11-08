@@ -40,10 +40,19 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   }, []);
 
   const initializeTapPay = () => {
-    // TapPay App credentials from environment variables
-    const APP_ID = parseInt(import.meta.env.VITE_TAPPAY_APP_ID || "164155");
-    const APP_KEY = import.meta.env.VITE_TAPPAY_APP_KEY;
+    // TapPay 環境切換邏輯
     const SERVER_TYPE = import.meta.env.VITE_TAPPAY_SERVER_TYPE || "sandbox";
+
+    // 根據環境自動選擇對應的 credentials
+    const APP_ID = parseInt(
+      SERVER_TYPE === "production"
+        ? import.meta.env.VITE_TAPPAY_PRODUCTION_APP_ID || "164155"
+        : import.meta.env.VITE_TAPPAY_SANDBOX_APP_ID || "164155",
+    );
+    const APP_KEY =
+      SERVER_TYPE === "production"
+        ? import.meta.env.VITE_TAPPAY_PRODUCTION_APP_KEY
+        : import.meta.env.VITE_TAPPAY_SANDBOX_APP_KEY;
 
     if (!window.TPDirect) {
       console.error("TapPay SDK not loaded");
@@ -511,6 +520,19 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className="h-8"
             />
           </div>
+
+          {/* Prorated Payment Notice - 移至底部 */}
+          {!isCardUpdate && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mt-4">
+              <p className="text-sm text-blue-800 font-medium mb-1">
+                💡 首月比例計費
+              </p>
+              <p className="text-xs text-blue-700">
+                本次付款按本月剩餘天數比例計算。下個月 1 號起，將以全額 (NT${" "}
+                {planName === "Tutor Teachers" ? "230" : "330"}) 自動續訂。
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

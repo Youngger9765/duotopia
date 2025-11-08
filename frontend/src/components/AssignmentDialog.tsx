@@ -38,6 +38,7 @@ import {
   Clock,
   MessageSquare,
   Loader2,
+  Gauge,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -93,6 +94,13 @@ const contentTypeLabels: Record<string, string> = {
   speaking_quiz: "口說測驗",
 };
 
+interface QuotaInfo {
+  quota_total: number;
+  quota_used: number;
+  quota_remaining: number;
+  plan_name: string;
+}
+
 export function AssignmentDialog({
   open,
   onClose,
@@ -116,6 +124,7 @@ export function AssignmentDialog({
   const [selectedContents, setSelectedContents] = useState<Set<number>>(
     new Set(),
   );
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -128,6 +137,7 @@ export function AssignmentDialog({
   useEffect(() => {
     if (open) {
       loadPrograms();
+      loadQuotaInfo();
       // Reset form when dialog opens
       setSelectedContents(new Set());
       setFormData({
@@ -140,6 +150,31 @@ export function AssignmentDialog({
       setCurrentStep(1);
     }
   }, [open, classroomId, students]);
+
+  const loadQuotaInfo = async () => {
+    try {
+      const response = await apiClient.get<{
+        subscription_period: {
+          quota_total: number;
+          quota_used: number;
+          plan_name: string;
+        };
+      }>("/api/teachers/subscription");
+
+      if (response.subscription_period) {
+        setQuotaInfo({
+          quota_total: response.subscription_period.quota_total,
+          quota_used: response.subscription_period.quota_used,
+          quota_remaining:
+            response.subscription_period.quota_total -
+            response.subscription_period.quota_used,
+          plan_name: response.subscription_period.plan_name,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load quota info:", error);
+    }
+  };
 
   const loadPrograms = async () => {
     try {
@@ -326,6 +361,20 @@ export function AssignmentDialog({
       return;
     }
 
+    // 配額檢查
+    if (quotaInfo && quotaInfo.quota_remaining <= 0) {
+      toast.error("配額不足，無法派發作業", {
+        description: "請升級方案或等待下個計費週期",
+        action: {
+          label: "查看方案",
+          onClick: () => {
+            window.location.href = "/teacher/subscription";
+          },
+        },
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       // Create one assignment with multiple contents (新架構)
@@ -350,9 +399,42 @@ export function AssignmentDialog({
       );
       onSuccess?.();
       handleClose();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to create assignment:", error);
-      toast.error("創建作業失敗");
+
+      // 處理 HTTP 402 配額不足錯誤
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "status" in error.response &&
+        error.response.status === 402
+      ) {
+        const errorData = "data" in error.response ? error.response.data : null;
+        const detailMessage =
+          errorData &&
+          typeof errorData === "object" &&
+          "detail" in errorData &&
+          errorData.detail &&
+          typeof errorData.detail === "object" &&
+          "message" in errorData.detail
+            ? String(errorData.detail.message)
+            : "請升級方案或等待下個計費週期";
+
+        toast.error("配額不足，無法派發作業", {
+          description: detailMessage,
+          action: {
+            label: "查看方案",
+            onClick: () => {
+              window.location.href = "/teacher/subscription";
+            },
+          },
+        });
+      } else {
+        toast.error("創建作業失敗");
+      }
     } finally {
       setLoading(false);
     }
@@ -425,9 +507,62 @@ export function AssignmentDialog({
         {/* Compact Header with Clear Steps */}
         <div className="px-6 py-3 border-b bg-gray-50">
           <div className="flex items-center">
-            <DialogTitle className="text-lg font-semibold">
-              指派新作業
-            </DialogTitle>
+            <div className="flex-1">
+              <DialogTitle className="text-lg font-semibold">
+                指派新作業
+              </DialogTitle>
+              {/* 配額顯示 */}
+              {quotaInfo && (
+                <div className="mt-1 flex items-center gap-2 text-xs">
+                  <Gauge
+                    className={cn(
+                      "h-3 w-3",
+                      quotaInfo.quota_remaining <= 0
+                        ? "text-red-500"
+                        : "text-gray-500",
+                    )}
+                  />
+                  <span className="text-gray-600">
+                    配額餘額：
+                    <span
+                      className={cn(
+                        "font-semibold ml-1",
+                        quotaInfo.quota_remaining > 300
+                          ? "text-green-600"
+                          : quotaInfo.quota_remaining > 100
+                            ? "text-orange-600"
+                            : quotaInfo.quota_remaining > 0
+                              ? "text-red-600"
+                              : "text-red-700",
+                      )}
+                    >
+                      {quotaInfo.quota_remaining}
+                    </span>
+                    <span className="text-gray-500">
+                      {" "}
+                      / {quotaInfo.quota_total} 秒
+                    </span>
+                  </span>
+                  {quotaInfo.quota_remaining <= 0 ? (
+                    <Badge
+                      variant="destructive"
+                      className="text-xs py-0 px-1.5 animate-pulse"
+                    >
+                      配額已用完
+                    </Badge>
+                  ) : (
+                    quotaInfo.quota_remaining <= 100 && (
+                      <Badge
+                        variant="destructive"
+                        className="text-xs py-0 px-1.5"
+                      >
+                        配額不足
+                      </Badge>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Centered Step Indicator with Icons */}
             <div className="flex-1 flex items-center justify-center">
@@ -1014,11 +1149,30 @@ export function AssignmentDialog({
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={loading || !canProceed()}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  disabled={
+                    loading ||
+                    !canProceed() ||
+                    (quotaInfo !== null && quotaInfo.quota_remaining <= 0)
+                  }
+                  className={cn(
+                    "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
+                    quotaInfo !== null &&
+                      quotaInfo.quota_remaining <= 0 &&
+                      "opacity-50 cursor-not-allowed",
+                  )}
+                  title={
+                    quotaInfo !== null && quotaInfo.quota_remaining <= 0
+                      ? "配額已用完，無法創建作業"
+                      : ""
+                  }
                 >
                   {loading ? (
                     <>創建中...</>
+                  ) : quotaInfo !== null && quotaInfo.quota_remaining <= 0 ? (
+                    <>
+                      <Gauge className="h-4 w-4 mr-1" />
+                      配額已用完
+                    </>
                   ) : (
                     <>
                       <Check className="h-4 w-4 mr-1" />
