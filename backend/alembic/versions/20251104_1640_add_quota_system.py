@@ -202,11 +202,11 @@ def upgrade() -> None:
 
     # 創建 RLS Policies
     # subscription_periods: 老師只能看到自己的訂閱期間
+    # 使用 PUBLIC 以相容本地和 Supabase（Supabase 會自動限制為 authenticated）
     op.execute(
         """
         CREATE POLICY subscription_periods_teacher_policy ON subscription_periods
         FOR ALL
-        TO authenticated
         USING (teacher_id = current_setting('app.current_teacher_id', TRUE)::integer)
     """
     )
@@ -216,7 +216,6 @@ def upgrade() -> None:
         """
         CREATE POLICY point_usage_logs_teacher_policy ON point_usage_logs
         FOR ALL
-        TO authenticated
         USING (teacher_id = current_setting('app.current_teacher_id', TRUE)::integer)
     """
     )
