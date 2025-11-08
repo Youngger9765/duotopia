@@ -218,7 +218,7 @@ async def monthly_renewal_cron(
 
             # ✅ 創建新的訂閱週期記錄
             quota_total = (
-                4000 if teacher.subscription_type == "School Teachers" else 1800
+                25000 if teacher.subscription_type == "School Teachers" else 10000
             )
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,

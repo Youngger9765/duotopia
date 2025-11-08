@@ -18,6 +18,7 @@ from sqlalchemy import (
     DECIMAL,
     Numeric,
     UniqueConstraint,
+    Index,
     TypeDecorator,
     select,
 )
@@ -121,6 +122,10 @@ class SubscriptionPeriod(Base):
     """訂閱週期表 - 記錄每次付款的訂閱週期"""
 
     __tablename__ = "subscription_periods"
+    __table_args__ = (
+        Index("ix_subscription_periods_teacher_status", "teacher_id", "status"),
+        Index("ix_subscription_periods_end_date", "end_date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     teacher_id = Column(
@@ -130,7 +135,7 @@ class SubscriptionPeriod(Base):
     # 訂閱資訊
     plan_name = Column(String, nullable=False)  # "Tutor Teachers" or "School Teachers"
     amount_paid = Column(Integer, nullable=False)  # 330 or 660
-    quota_total = Column(Integer, nullable=False)  # 1800 or 4000 秒
+    quota_total = Column(Integer, nullable=False)  # 10000 or 25000 點
     quota_used = Column(Integer, default=0, nullable=False)
 
     # 時間範圍
@@ -164,13 +169,25 @@ class SubscriptionPeriod(Base):
     )
 
     def __repr__(self):
-        return f"<SubscriptionPeriod teacher={self.teacher_id} period={self.start_date.date() if self.start_date else 'None'}-{self.end_date.date() if self.end_date else 'None'} method={self.payment_method}>"
+        start = self.start_date.date() if self.start_date else "None"
+        end = self.end_date.date() if self.end_date else "None"
+        return (
+            f"<SubscriptionPeriod teacher={self.teacher_id} "
+            f"period={start}-{end} method={self.payment_method}>"
+        )
 
 
 class PointUsageLog(Base):
     """點數使用記錄表 - 追蹤每一筆配額消耗"""
 
     __tablename__ = "point_usage_logs"
+    __table_args__ = (
+        Index("ix_point_usage_logs_teacher_id", "teacher_id"),
+        Index("ix_point_usage_logs_period_id", "subscription_period_id"),
+        Index("ix_point_usage_logs_created_at", "created_at"),
+        Index("ix_point_usage_logs_feature_type", "feature_type"),
+        Index("ix_point_usage_logs_teacher_created", "teacher_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -214,7 +231,11 @@ class PointUsageLog(Base):
     )
 
     def __repr__(self):
-        return f"<PointUsageLog teacher={self.teacher_id} student={self.student_id} feature={self.feature_type} points={self.points_used}>"
+        return (
+            f"<PointUsageLog teacher={self.teacher_id} "
+            f"student={self.student_id} feature={self.feature_type} "
+            f"points={self.points_used}>"
+        )
 
 
 class Teacher(Base):
@@ -322,7 +343,7 @@ class Teacher(Base):
             select(SubscriptionPeriod)
             .where(
                 SubscriptionPeriod.teacher_id == self.id,
-                SubscriptionPeriod.status == "active"
+                SubscriptionPeriod.status == "active",
             )
             .limit(1)
         )

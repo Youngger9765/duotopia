@@ -31,7 +31,7 @@ export default function TestSubscription() {
 
   const [quota, setQuota] = useState<QuotaState>({
     used: 0,
-    total: 1800,
+    total: 10000,
     plan: "Tutor Teachers",
   });
 
@@ -55,7 +55,7 @@ export default function TestSubscription() {
         setQuota((prev) => ({
           ...prev,
           plan: data.plan as "Tutor Teachers" | "School Teachers",
-          total: data.plan === "School Teachers" ? 4000 : 1800,
+          total: data.plan === "School Teachers" ? 25000 : 10000,
           used: data.quota_used || 0,
         }));
       }
@@ -191,7 +191,7 @@ export default function TestSubscription() {
         setQuota((prev) => ({
           ...prev,
           plan: newPlan,
-          total: newPlan === "School Teachers" ? 4000 : 1800,
+          total: newPlan === "School Teachers" ? 25000 : 10000,
         }));
         setMessage(`已切換方案至 ${newPlan}`);
         setTimeout(() => setMessage(""), 3000);
@@ -358,8 +358,8 @@ export default function TestSubscription() {
                   <p className="font-bold text-blue-600">{quota.plan}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     {quota.plan === "School Teachers"
-                      ? "4000 秒/月 (66 分鐘)"
-                      : "1800 秒/月 (30 分鐘)"}
+                      ? "25000 點/月 (約 416 分鐘口說評估)"
+                      : "10000 點/月 (約 166 分鐘口說評估)"}
                   </p>
                 </div>
                 <button

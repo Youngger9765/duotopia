@@ -9,15 +9,11 @@ from database import get_db
 from models import (
     Teacher,
     Student,
-    Assignment,
     PointUsageLog,
-    SubscriptionPeriod,
     Classroom,
     ClassroomStudent,
-    Program,
     StudentAssignment,
 )
-from routers.teachers import get_current_teacher
 
 router = APIRouter(prefix="/api/test", tags=["test-subscription"])
 
@@ -26,6 +22,7 @@ class UpdateSubscriptionRequest(BaseModel):
     action: str
     months: Optional[int] = 1
     quota_delta: Optional[int] = None  # For update_quota action
+    plan: Optional[str] = None  # For change_plan action
 
 
 class SubscriptionStatusResponse(BaseModel):
@@ -196,15 +193,41 @@ async def update_subscription_status(
     elif request.action == "update_quota":
         # Update quota usage
         if request.quota_delta is None:
-            raise HTTPException(status_code=400, detail="quota_delta is required for update_quota action")
+            raise HTTPException(
+                status_code=400,
+                detail="quota_delta is required for update_quota action",
+            )
 
         current_period = current_teacher.current_period
         if not current_period:
             raise HTTPException(status_code=404, detail="No active subscription period")
 
         # Update quota_used
-        current_period.quota_used = max(0, current_period.quota_used + request.quota_delta)
-        message = f"配額使用量已調整 {request.quota_delta:+d} 秒 (當前: {current_period.quota_used}秒)"
+        current_period.quota_used = max(
+            0, current_period.quota_used + request.quota_delta
+        )
+        message = (
+            f"配額使用量已調整 {request.quota_delta:+d} 秒 (當前: {current_period.quota_used}秒)"
+        )
+
+    elif request.action == "change_plan":
+        # Change subscription plan
+        new_plan = request.plan
+        if new_plan not in ["Tutor Teachers", "School Teachers"]:
+            raise HTTPException(status_code=400, detail="Invalid plan name")
+
+        # Update teacher subscription type
+        current_teacher.subscription_type = new_plan
+
+        # Update current period's quota_total
+        current_period = current_teacher.current_period
+        if current_period:
+            new_quota = 25000 if new_plan == "School Teachers" else 10000
+            current_period.quota_total = new_quota
+            current_period.plan_name = new_plan
+            message = f"已切換方案至 {new_plan}，配額已更新為 {new_quota} 點"
+        else:
+            message = f"已切換方案至 {new_plan}（無有效訂閱週期）"
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
@@ -265,18 +288,23 @@ async def create_demo_usage_data(db: Session = Depends(get_db)):
     ).delete()
 
     # 獲取 demo 老師的學生
-    students = db.query(Student).join(
-        ClassroomStudent
-    ).join(Classroom).filter(
-        Classroom.teacher_id == demo.id
-    ).limit(10).all()
+    students = (
+        db.query(Student)
+        .join(ClassroomStudent)
+        .join(Classroom)
+        .filter(Classroom.teacher_id == demo.id)
+        .limit(10)
+        .all()
+    )
 
     # 獲取 demo 老師的作業
-    assignments = db.query(StudentAssignment).join(
-        Classroom
-    ).filter(
-        Classroom.teacher_id == demo.id
-    ).limit(10).all()
+    assignments = (
+        db.query(StudentAssignment)
+        .join(Classroom)
+        .filter(Classroom.teacher_id == demo.id)
+        .limit(10)
+        .all()
+    )
 
     if not students:
         return {"message": "請先建立學生資料"}
@@ -285,7 +313,12 @@ async def create_demo_usage_data(db: Session = Depends(get_db)):
 
     # 建立過去 30 天的假資料
     now = datetime.now(timezone.utc)
-    feature_types = ["speech_recording", "speech_assessment", "text_correction", "image_correction"]
+    feature_types = [
+        "speech_recording",
+        "speech_assessment",
+        "text_correction",
+        "image_correction",
+    ]
     total_created = 0
     total_seconds = 0
 
@@ -322,7 +355,9 @@ async def create_demo_usage_data(db: Session = Depends(get_db)):
                 student_id=student.id,
                 assignment_id=assignment.id,
                 feature_type=feature_type,
-                feature_detail={"duration": seconds} if "speech" in feature_type else {},
+                feature_detail={"duration": seconds}
+                if "speech" in feature_type
+                else {},
                 points_used=points_used,
                 quota_before=current_period.quota_total,
                 quota_after=current_period.quota_total - total_seconds,

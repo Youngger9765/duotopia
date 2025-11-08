@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 配額使用統計 API 測試 (TDD)
 
@@ -142,9 +143,7 @@ def setup_test_data():
     }
 
     # 清理
-    db.query(PointUsageLog).filter(
-        PointUsageLog.teacher_id == teacher.id
-    ).delete()
+    db.query(PointUsageLog).filter(PointUsageLog.teacher_id == teacher.id).delete()
     for assignment in assignments:
         db.delete(assignment)
     for student in students:
@@ -172,7 +171,7 @@ def test_get_quota_usage_summary(setup_test_data):
     # 暫時跳過（需要實作認證）
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get(
+    _ = client.get(
         "/api/teachers/quota-usage",
         # headers=headers,
         params={
@@ -203,7 +202,7 @@ def test_get_daily_usage_trend(setup_test_data):
 
     teacher = setup_test_data["teacher"]
 
-    response = client.get("/api/teachers/quota-usage")
+    _ = client.get("/api/teachers/quota-usage")
 
     assert response.status_code == 200
     data = response.json()
@@ -229,7 +228,7 @@ def test_get_top_students(setup_test_data):
     """
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get("/api/teachers/quota-usage")
+    _ = client.get("/api/teachers/quota-usage")
 
     assert response.status_code == 200
     data = response.json()
@@ -259,7 +258,7 @@ def test_get_top_assignments(setup_test_data):
     """
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get("/api/teachers/quota-usage")
+    _ = client.get("/api/teachers/quota-usage")
 
     assert response.status_code == 200
     data = response.json()
@@ -289,7 +288,7 @@ def test_get_feature_breakdown(setup_test_data):
     """
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get("/api/teachers/quota-usage")
+    _ = client.get("/api/teachers/quota-usage")
 
     assert response.status_code == 200
     data = response.json()
@@ -312,7 +311,7 @@ def test_date_range_filter():
     """
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get(
+    _ = client.get(
         "/api/teachers/quota-usage",
         params={
             "start_date": "2024-11-01",
@@ -340,7 +339,7 @@ def test_empty_usage_data():
     """
     pytest.skip("需要實作 teacher 登入認證")
 
-    response = client.get("/api/teachers/quota-usage")
+    _ = client.get("/api/teachers/quota-usage")
 
     assert response.status_code == 200
     data = response.json()

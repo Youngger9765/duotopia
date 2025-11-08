@@ -56,7 +56,7 @@ export default function PricingPage() {
       studentRange: "1-100人",
       monthlyPrice: 330,
       features: [
-        "1800 秒配額/月（錄音、評分、文字批改）",
+        "10000 點配額/月（錄音、評分、文字批改）",
         "支援 1-100 位學生",
         "無限制派發作業（不扣配額）",
         "AI 語音評估與批改",
@@ -72,7 +72,7 @@ export default function PricingPage() {
       studentRange: "101-200人",
       monthlyPrice: 660,
       features: [
-        "4000 秒配額/月（錄音、評分、文字批改）",
+        "25000 點配額/月（錄音、評分、文字批改）",
         "支援 101-200 位學生",
         "無限制派發作業（不扣配額）",
         "AI 語音評估與批改",

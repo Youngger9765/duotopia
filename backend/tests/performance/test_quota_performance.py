@@ -10,7 +10,7 @@
 import time
 from sqlalchemy import text
 from database import SessionLocal
-from models import Teacher, SubscriptionPeriod
+from models import Teacher
 from services.quota_service import QuotaService
 
 
@@ -114,12 +114,16 @@ def test_index_coverage():
     db = SessionLocal()
 
     # 檢查 subscription_periods indexes
-    result = db.execute(text("""
+    result = db.execute(
+        text(
+            """
         SELECT indexname, indexdef
         FROM pg_indexes
         WHERE tablename = 'subscription_periods'
         AND indexname LIKE 'ix_%'
-    """))
+    """
+        )
+    )
 
     indexes = result.fetchall()
 
@@ -133,8 +137,8 @@ def test_index_coverage():
     # 驗證關鍵 index 存在
     index_names = [idx[0] for idx in indexes]
     required_indexes = [
-        'ix_subscription_periods_teacher_status',
-        'ix_subscription_periods_end_date'
+        "ix_subscription_periods_teacher_status",
+        "ix_subscription_periods_end_date",
     ]
 
     missing = [idx for idx in required_indexes if idx not in index_names]
@@ -163,13 +167,17 @@ def test_explain_query():
         return False
 
     # EXPLAIN ANALYZE current_period 查詢
-    result = db.execute(text(f"""
+    result = db.execute(
+        text(
+            f"""
         EXPLAIN ANALYZE
         SELECT * FROM subscription_periods
         WHERE teacher_id = {teacher.id}
         AND status = 'active'
         LIMIT 1
-    """))
+    """
+        )
+    )
 
     print("\n" + "=" * 70)
     print("📊 Query Plan (EXPLAIN ANALYZE)")
@@ -179,20 +187,24 @@ def test_explain_query():
         print(row[0])
 
     # 檢查是否使用 Index Scan（不是 Seq Scan）
-    result = db.execute(text(f"""
+    result = db.execute(
+        text(
+            f"""
         EXPLAIN
         SELECT * FROM subscription_periods
         WHERE teacher_id = {teacher.id}
         AND status = 'active'
         LIMIT 1
-    """))
+    """
+        )
+    )
 
-    plan = '\n'.join([row[0] for row in result])
+    plan = "\n".join([row[0] for row in result])
 
-    if 'Index Scan' in plan or 'Bitmap Index Scan' in plan:
+    if "Index Scan" in plan or "Bitmap Index Scan" in plan:
         print("\n✅ 使用 Index Scan（已優化）")
         success = True
-    elif 'Seq Scan' in plan:
+    elif "Seq Scan" in plan:
         print("\n⚠️  使用 Seq Scan（未使用索引）")
         success = False
     else:

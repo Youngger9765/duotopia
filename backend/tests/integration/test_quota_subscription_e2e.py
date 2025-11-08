@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 E2E 測試：配額系統與訂閱系統整合
 
@@ -185,8 +186,8 @@ def test_2_quota_deduction_updates_period():
 
     db = get_db_connection()
     try:
-        from models import SubscriptionPeriod, Assignment, PointUsageLog
-        from services.quota_service import QuotaService
+        from models import SubscriptionPeriod, Assignment  # noqa: E402
+        from services.quota_service import QuotaService  # noqa: E402
 
         # 建立測試資料
         teacher = create_test_teacher(db)
@@ -240,7 +241,9 @@ def test_2_quota_deduction_updates_period():
 
         # 驗證 SubscriptionPeriod 更新
         db.refresh(period)
-        assert period.quota_used == 100, f"Expected quota_used=100, got {period.quota_used}"
+        assert (
+            period.quota_used == 100
+        ), f"Expected quota_used=100, got {period.quota_used}"
         print(f"✅ Period quota_used updated: {period.quota_used}")
 
         # 驗證 PointUsageLog
@@ -268,72 +271,9 @@ def test_2_quota_deduction_updates_period():
         db.close()
 
 
-def test_3_expired_period_blocks_deduction():
-    """
-    測試 3: 過期訂閱無法扣配額
-
-    Given: 老師訂閱已過期 (end_date < now)
-    When: 嘗試扣配額
-    Then: current_period = None, check_quota = False
-    """
-    print("\n" + "=" * 70)
-    print("🧪 Test 3: Expired Period Blocks Deduction")
-    print("=" * 70)
-
-    db = get_db_connection()
-    try:
-        from models import SubscriptionPeriod
-        from services.quota_service import QuotaService
-
-        teacher = create_test_teacher(db)
-
-        # 創建已過期的訂閱
-        now = datetime.now(timezone.utc)
-        period = SubscriptionPeriod(
-            teacher_id=teacher.id,
-            plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
-            quota_total=1800,
-            quota_used=500,
-            start_date=now - timedelta(days=60),
-            end_date=now - timedelta(days=30),  # 30天前過期
-            payment_method="credit_card",
-            payment_status="paid",
-            status="expired",  # 已過期
-        )
-        db.add(period)
-        db.commit()
-
-        print(f"✅ Created expired period")
-        print(f"   End date: {period.end_date}")
-        print(f"   Status: {period.status}")
-
-        # 檢查 current_period
-        db.refresh(teacher)
-        assert (
-            teacher.current_period is None
-        ), "Expired period should not be current_period"
-        print(f"✅ teacher.current_period is None (correct)")
-
-        # 嘗試檢查配額
-        has_quota = QuotaService.check_quota(teacher, 10)
-        assert has_quota is False, "Should not have quota when expired"
-        print(f"✅ check_quota returns False (correct)")
-
-        print("✅ Test 3 PASSED: Expired period correctly blocks quota operations")
-        return True
-
-    except AssertionError as e:
-        print(f"❌ Test 3 FAILED: {e}")
-        return False
-    except Exception as e:
-        print(f"❌ Test 3 ERROR: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return False
-    finally:
-        db.close()
+# test_3_expired_period_blocks_deduction 已刪除
+# 理由：與 test_complete_quota_flow_e2e.py::test_subscription_expired_cannot_deduct_quota 重複
+# 保留後者因為使用 pytest fixtures，測試更完整
 
 
 def test_4_auto_renewal_resets_quota():
@@ -424,16 +364,21 @@ def test_4_auto_renewal_resets_quota():
         db.close()
 
 
-def test_5_quota_insufficient_blocks_operation():
+def test_5_check_quota_function():
     """
-    測試 5: 配額不足阻止操作
+    測試 5: check_quota 函數正確性
 
     Given: 老師配額剩 5 秒
-    When: 嘗試扣 10 秒
-    Then: check_quota returns False
+    When: 呼叫 check_quota(10) 和 check_quota(5)
+    Then:
+      - check_quota(10) returns False (不足)
+      - check_quota(5) returns True (剛好)
+
+    注意：此測試只測試 check_quota() 函數，不測試實際扣除
+    實際扣除行為（允許超額）測試在 test_complete_quota_flow_e2e.py
     """
     print("\n" + "=" * 70)
-    print("🧪 Test 5: Quota Insufficient Blocks Operation")
+    print("🧪 Test 5: check_quota Function Correctness")
     print("=" * 70)
 
     db = get_db_connection()
@@ -461,17 +406,21 @@ def test_5_quota_insufficient_blocks_operation():
 
         print(f"✅ Setup: quota remaining = 5 seconds")
 
-        # 嘗試扣 10 秒（應該失敗）
+        # 測試 check_quota() 函數
         has_quota = QuotaService.check_quota(teacher, 10)
-        assert has_quota is False, "Should not have enough quota"
+        assert (
+            has_quota is False
+        ), "check_quota(10) should return False when only 5 remaining"
         print(f"✅ check_quota(10) = False (correct)")
 
-        # 嘗試扣 5 秒（應該成功）
         has_quota = QuotaService.check_quota(teacher, 5)
-        assert has_quota is True, "Should have enough for 5 seconds"
+        assert has_quota is True, "check_quota(5) should return True when 5 remaining"
         print(f"✅ check_quota(5) = True (correct)")
 
-        print("✅ Test 5 PASSED: Quota check correctly blocks insufficient quota")
+        print("✅ Test 5 PASSED: check_quota function works correctly")
+        print(
+            "   Note: Actual deduction allows over-quota usage (tested in test_complete_quota_flow_e2e.py)"
+        )
         return True
 
     except AssertionError as e:
@@ -545,13 +494,13 @@ def test_6_multiple_periods_only_active_counts():
         # 驗證 current_period
         db.refresh(teacher)
         assert teacher.current_period is not None, "Should have current period"
-        assert (
-            teacher.current_period.id == active_period.id
-        ), "Should use active period"
+        assert teacher.current_period.id == active_period.id, "Should use active period"
         assert teacher.current_period.quota_total == 4000, "Should be School Teachers"
         print(f"✅ current_period = active_period (correct)")
         print(f"   Plan: {teacher.current_period.plan_name}")
-        print(f"   Quota: {teacher.current_period.quota_used}/{teacher.current_period.quota_total}")
+        print(
+            f"   Quota: {teacher.current_period.quota_used}/{teacher.current_period.quota_total}"
+        )
 
         print("✅ Test 6 PASSED: Only active period is used")
         return True
@@ -583,9 +532,9 @@ def test_7_quota_analytics_matches_period():
 
     db = get_db_connection()
     try:
-        from models import SubscriptionPeriod, Assignment, PointUsageLog
-        from services.quota_service import QuotaService
-        from services.quota_analytics_service import QuotaAnalyticsService
+        from models import SubscriptionPeriod, Assignment, PointUsageLog  # noqa: E402
+        from services.quota_service import QuotaService  # noqa: E402
+        from services.quota_analytics_service import QuotaAnalyticsService  # noqa: E402
 
         teacher = create_test_teacher(db)
         student = create_test_student(db)
@@ -677,11 +626,13 @@ if __name__ == "__main__":
     print("=" * 70)
 
     results = []
-    results.append(("Payment Creates Period", test_1_payment_creates_period_with_quota()))
+    results.append(
+        ("Payment Creates Period", test_1_payment_creates_period_with_quota())
+    )
     results.append(("Quota Updates Period", test_2_quota_deduction_updates_period()))
-    results.append(("Expired Blocks Deduction", test_3_expired_period_blocks_deduction()))
+    # test_3 已刪除（重複，移至 test_complete_quota_flow_e2e.py）
     results.append(("Auto Renewal Resets", test_4_auto_renewal_resets_quota()))
-    results.append(("Insufficient Blocks", test_5_quota_insufficient_blocks_operation()))
+    results.append(("Check Quota Function", test_5_check_quota_function()))
     results.append(("Only Active Counts", test_6_multiple_periods_only_active_counts()))
     results.append(("Analytics Matches", test_7_quota_analytics_matches_period()))
 

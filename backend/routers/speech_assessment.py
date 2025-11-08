@@ -546,11 +546,13 @@ async def assess_pronunciation_endpoint(
     assignment = None
 
     # 🔍 Debug: 檢查前端傳入的 assignment_id (實際上是 StudentAssignment.id)
-    print(f"🔍 Received assignment_id (StudentAssignment.id) from frontend: {assignment_id}")
+    print(
+        f"🔍 Received assignment_id (StudentAssignment.id) from frontend: {assignment_id}"
+    )
     logger.info(f"🔍 Received assignment_id (StudentAssignment.id): {assignment_id}")
 
     if assignment_id:
-        print(f"✅ assignment_id exists, querying StudentAssignment by ID...")
+        print("✅ assignment_id exists, querying StudentAssignment by ID...")
         # 🔥 修正：assignment_id 是 StudentAssignment.id，不是 Assignment.id
         student_assignment = (
             db.query(StudentAssignment)
@@ -562,14 +564,22 @@ async def assess_pronunciation_endpoint(
         )
         if student_assignment:
             student_assignment_id = student_assignment.id
-            print(f"✅ Found StudentAssignment: id={student_assignment.id}, assignment_id={student_assignment.assignment_id}")
+            print(
+                "✅ Found StudentAssignment: "
+                f"id={student_assignment.id}, "
+                f"assignment_id={student_assignment.assignment_id}"
+            )
 
             # 找到作業的老師（配額扣除對象）
             assignment = (
-                db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
+                db.query(Assignment)
+                .filter(Assignment.id == student_assignment.assignment_id)
+                .first()
             )
             if assignment:
-                print(f"✅ Found Assignment: {assignment.id}, teacher_id={assignment.teacher_id}")
+                print(
+                    f"✅ Found Assignment: {assignment.id}, teacher_id={assignment.teacher_id}"
+                )
                 teacher = (
                     db.query(Teacher)
                     .filter(Teacher.id == assignment.teacher_id)
@@ -580,9 +590,13 @@ async def assess_pronunciation_endpoint(
                 else:
                     print(f"❌ Teacher not found for assignment {assignment.id}")
             else:
-                print(f"❌ Assignment not found with id {student_assignment.assignment_id}")
+                print(
+                    f"❌ Assignment not found with id {student_assignment.assignment_id}"
+                )
         else:
-            print(f"❌ StudentAssignment not found for id={assignment_id}, student_id={current_student.id}")
+            print(
+                f"❌ StudentAssignment not found for id={assignment_id}, student_id={current_student.id}"
+            )
 
     # 📊 配額檢查（僅記錄狀態，不阻擋學生學習）
     if teacher and assignment:

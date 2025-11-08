@@ -279,7 +279,10 @@ export default function TeacherSubscription() {
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6 h-auto p-1 bg-gray-100">
-            <TabsTrigger value="overview" className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
               <CreditCard className="w-5 h-5" />
               訂閱總覽
             </TabsTrigger>
@@ -293,7 +296,10 @@ export default function TeacherSubscription() {
               <TrendingUp className="w-5 h-5" />
               使用統計
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="history"
+              className="flex items-center gap-2 py-3 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
               <DollarSign className="w-5 h-5" />
               付款歷史
             </TabsTrigger>
@@ -301,179 +307,183 @@ export default function TeacherSubscription() {
 
           <TabsContent value="overview" className="space-y-6">
             {/* 訂閱狀態卡片 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              當前訂閱狀態
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {subscription && subscription.is_active ? (
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-semibold">
-                        {subscription.plan || "未知方案"}
-                      </h3>
-                      <Badge className="bg-green-500">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        有效
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">訂閱狀態良好</p>
-                    <p className="text-sm text-blue-600 mt-1 font-medium">
-                      {subscription.plan === "School Teachers"
-                        ? "4000 秒 AI 評估配額/月 (66 分鐘)"
-                        : "1800 秒 AI 評估配額/月 (30 分鐘)"}
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-blue-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-1">到期日</p>
-                      <p className="font-semibold text-sm">
-                        {subscription.end_date
-                          ? formatDate(subscription.end_date)
-                          : "N/A"}
-                      </p>
-                      <div className="mt-2">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  當前訂閱狀態
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {subscription && subscription.is_active ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
                         <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all ${
-                                subscription.days_remaining <= 7
-                                  ? "bg-red-500"
-                                  : subscription.days_remaining <= 14
-                                    ? "bg-yellow-500"
-                                    : "bg-green-500"
-                              }`}
-                              style={{
-                                width: `${Math.min(100, (subscription.days_remaining / 30) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="font-semibold text-sm whitespace-nowrap">
-                            {subscription.days_remaining} 天
-                          </p>
+                          <h3 className="text-xl font-semibold">
+                            {subscription.plan || "未知方案"}
+                          </h3>
+                          <Badge className="bg-green-500">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            有效
+                          </Badge>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Gauge className="w-5 h-5 text-blue-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-2">配額使用</p>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full transition-all bg-blue-500"
-                            style={{
-                              width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <p className="font-semibold text-sm whitespace-nowrap">
-                          {Math.round(
-                            ((subscription.quota_used || 0) /
-                              (subscription.plan === "School Teachers"
-                                ? 4000
-                                : 1800)) *
-                              100,
-                          )}
-                          %
+                        <p className="text-sm text-gray-600 mt-1">
+                          訂閱狀態良好
+                        </p>
+                        <p className="text-sm text-blue-600 mt-1 font-medium">
+                          {subscription.plan === "School Teachers"
+                            ? "25000 點 AI 評估配額/月 (約 416 分鐘口說評估)"
+                            : "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)"}
                         </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {subscription.quota_used || 0} /{" "}
-                        {subscription.plan === "School Teachers"
-                          ? "4000"
-                          : "1800"}{" "}
-                        秒
-                      </p>
                     </div>
-                  </div>
 
-                  <div className="flex items-start gap-3">
-                    <RefreshCw className="w-5 h-5 text-blue-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-2">自動續訂</p>
-                      {subscription.auto_renew ? (
-                        <div className="flex items-center gap-3">
-                          <p className="font-semibold text-green-600">已啟用</p>
-                          <Button
-                            onClick={() => setShowCancelDialog(true)}
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700 hover:border-red-300"
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            取消續訂
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <p className="font-semibold text-orange-600">
-                            已取消
+                    <Separator />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-5 h-5 text-blue-600 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 mb-1">到期日</p>
+                          <p className="font-semibold text-sm">
+                            {subscription.end_date
+                              ? formatDate(subscription.end_date)
+                              : "N/A"}
                           </p>
-                          <Button
-                            onClick={handleReactivateSubscription}
-                            size="sm"
-                            variant="outline"
-                            className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
-                          >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            重新啟用
-                          </Button>
+                          <div className="mt-2">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all ${
+                                    subscription.days_remaining <= 7
+                                      ? "bg-red-500"
+                                      : subscription.days_remaining <= 14
+                                        ? "bg-yellow-500"
+                                        : "bg-green-500"
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(100, (subscription.days_remaining / 30) * 100)}%`,
+                                  }}
+                                />
+                              </div>
+                              <p className="font-semibold text-sm whitespace-nowrap">
+                                {subscription.days_remaining} 天
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Gauge className="w-5 h-5 text-blue-600 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 mb-2">配額使用</p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="h-2 rounded-full transition-all bg-blue-500"
+                                style={{
+                                  width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="font-semibold text-sm whitespace-nowrap">
+                              {Math.round(
+                                ((subscription.quota_used || 0) /
+                                  (subscription.plan === "School Teachers"
+                                    ? 4000
+                                    : 1800)) *
+                                  100,
+                              )}
+                              %
+                            </p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {subscription.quota_used || 0} /{" "}
+                            {subscription.plan === "School Teachers"
+                              ? "25000"
+                              : "10000"}{" "}
+                            點
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="w-5 h-5 text-blue-600 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 mb-2">自動續訂</p>
+                          {subscription.auto_renew ? (
+                            <div className="flex items-center gap-3">
+                              <p className="font-semibold text-green-600">
+                                已啟用
+                              </p>
+                              <Button
+                                onClick={() => setShowCancelDialog(true)}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700 hover:border-red-300"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                取消續訂
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <p className="font-semibold text-orange-600">
+                                已取消
+                              </p>
+                              <Button
+                                onClick={handleReactivateSubscription}
+                                size="sm"
+                                variant="outline"
+                                className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
+                              >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                重新啟用
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* 取消續訂警告提示 */}
-                {!subscription.auto_renew && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <p className="text-orange-800 text-sm">
-                      ⚠️ 您已取消自動續訂，訂閱將於{" "}
-                      {subscription.end_date
-                        ? formatDate(subscription.end_date)
-                        : "到期日"}{" "}
-                      到期後失效
-                    </p>
+                    {/* 取消續訂警告提示 */}
+                    {!subscription.auto_renew && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <p className="text-orange-800 text-sm">
+                          ⚠️ 您已取消自動續訂，訂閱將於{" "}
+                          {subscription.end_date
+                            ? formatDate(subscription.end_date)
+                            : "到期日"}{" "}
+                          到期後失效
+                        </p>
+                      </div>
+                    )}
+
+                    {subscription.days_remaining <= 7 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p className="text-yellow-800 text-sm">
+                          ⚠️ 您的訂閱即將到期
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      尚未訂閱
+                    </h3>
+                    <p className="text-gray-600 mb-4">選擇適合您的訂閱方案</p>
+                    <Button onClick={handleUpgrade}>
+                      查看訂閱方案
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                   </div>
                 )}
-
-                {subscription.days_remaining <= 7 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-yellow-800 text-sm">
-                      ⚠️ 您的訂閱即將到期
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  尚未訂閱
-                </h3>
-                <p className="text-gray-600 mb-4">選擇適合您的訂閱方案</p>
-                <Button onClick={handleUpgrade}>
-                  查看訂閱方案
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
             {/* 💳 信用卡管理 */}
             <div>
@@ -503,14 +513,14 @@ export default function TeacherSubscription() {
                         <p className="text-3xl font-bold text-blue-600">
                           {analytics.summary.total_quota}
                         </p>
-                        <p className="text-xs text-gray-500">秒</p>
+                        <p className="text-xs text-gray-500">點</p>
                       </div>
                       <div className="text-center p-4 bg-orange-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">已使用</p>
                         <p className="text-3xl font-bold text-orange-600">
                           {analytics.summary.total_used}
                         </p>
-                        <p className="text-xs text-gray-500">秒</p>
+                        <p className="text-xs text-gray-500">點</p>
                       </div>
                       <div className="text-center p-4 bg-green-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">使用率</p>
@@ -521,7 +531,7 @@ export default function TeacherSubscription() {
                           剩餘{" "}
                           {analytics.summary.total_quota -
                             analytics.summary.total_used}{" "}
-                          秒
+                          點
                         </p>
                       </div>
                     </div>
@@ -571,7 +581,11 @@ export default function TeacherSubscription() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip />
-                          <Bar dataKey="seconds" fill="#10b981" name="使用秒數" />
+                          <Bar
+                            dataKey="seconds"
+                            fill="#10b981"
+                            name="使用秒數"
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -591,13 +605,16 @@ export default function TeacherSubscription() {
                           <XAxis dataKey="title" />
                           <YAxis />
                           <Tooltip />
-                          <Bar dataKey="seconds" fill="#f59e0b" name="使用秒數" />
+                          <Bar
+                            dataKey="seconds"
+                            fill="#f59e0b"
+                            name="使用秒數"
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>
                 </div>
-
               </>
             ) : (
               <div className="text-center py-12">
@@ -610,60 +627,60 @@ export default function TeacherSubscription() {
           <TabsContent value="history">
             {/* 付款歷史 */}
             <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
-              付款歷史
-            </CardTitle>
-            <CardDescription>最近 10 筆交易記錄</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {transactions.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>目前沒有交易記錄</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {transactions.map((txn) => (
-                  <div
-                    key={txn.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors gap-4"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                        <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold dark:text-gray-100">
-                          {txn.subscription_type}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {formatDate(txn.created_at)}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          訂閱 {txn.months} 個月
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-4">
-                      <div className="text-left sm:text-right">
-                        <p className="font-semibold text-lg dark:text-gray-100">
-                          {txn.currency} ${txn.amount}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {txn.type}
-                        </p>
-                      </div>
-                      {getStatusBadge(txn.status)}
-                    </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  付款歷史
+                </CardTitle>
+                <CardDescription>最近 10 筆交易記錄</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {transactions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>目前沒有交易記錄</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {transactions.map((txn) => (
+                      <div
+                        key={txn.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors gap-4"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                            <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold dark:text-gray-100">
+                              {txn.subscription_type}
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {formatDate(txn.created_at)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              訂閱 {txn.months} 個月
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-4">
+                          <div className="text-left sm:text-right">
+                            <p className="font-semibold text-lg dark:text-gray-100">
+                              {txn.currency} ${txn.amount}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {txn.type}
+                            </p>
+                          </div>
+                          {getStatusBadge(txn.status)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -758,7 +775,7 @@ export default function TeacherSubscription() {
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>1800 秒 AI 評估/月 (30 分鐘)</span>
+                      <span>10000 點 AI 評估/月 (約 166 分鐘口說評估)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -811,7 +828,7 @@ export default function TeacherSubscription() {
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>4000 秒 AI 評估/月 (66 分鐘)</span>
+                      <span>25000 點 AI 評估/月 (約 416 分鐘口說評估)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />

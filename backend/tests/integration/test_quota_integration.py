@@ -1,3 +1,4 @@
+# flake8: noqa
 #!/usr/bin/env python3
 """
 配額功能整合測試 (TDD)
@@ -15,7 +16,7 @@ BASE_URL = "http://localhost:8080"
 
 def get_auth_token():
     """登入取得 JWT token"""
-    response = requests.post(
+    _ = requests.post(
         f"{BASE_URL}/api/teachers/login",
         json={"email": "demo@duotopia.com", "password": "demo123"},
     )
@@ -45,7 +46,7 @@ def test_1_update_quota_via_test_api():
 
     # 1. 先重置配額為 0
     print("\n📝 步驟 1: 重置配額")
-    response = requests.post(
+    _ = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
         json={"action": "update_quota", "quota_delta": -10000},
     )
@@ -53,7 +54,7 @@ def test_1_update_quota_via_test_api():
 
     # 2. 更新配額 +888
     print("\n📝 步驟 2: 更新配額 +888 秒")
-    response = requests.post(
+    _ = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
         json={"action": "update_quota", "quota_delta": 888},
     )
@@ -88,7 +89,7 @@ def test_2_read_quota_via_subscription_api():
     # 2. 呼叫訂閱 API
     print("\n📝 步驟 2: 呼叫 /subscription/status")
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{BASE_URL}/subscription/status", headers=headers)
+    _ = requests.get(f"{BASE_URL}/subscription/status", headers=headers)
     data = response.json()
     api_quota = data.get("quota_used")
     print(f"API 回傳 quota_used: {api_quota}")
@@ -112,7 +113,7 @@ def test_3_quota_persistence():
 
     # 1. 更新配額為特定值
     print("\n📝 步驟 1: 設定配額為 1234 秒")
-    response = requests.post(
+    _ = requests.post(
         f"{BASE_URL}/api/test/subscription/update",
         json={"action": "update_quota", "quota_delta": 1234 - verify_db_quota()},
     )
@@ -151,7 +152,7 @@ def test_4_frontend_integration():
     token = get_auth_token()
     if token:
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get(f"{BASE_URL}/subscription/status", headers=headers)
+        _ = requests.get(f"{BASE_URL}/subscription/status", headers=headers)
         quota = response.json().get("quota_used")
         print(f"訂閱 API 讀取到: {quota} 秒")
 

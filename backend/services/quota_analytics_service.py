@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as SessionType
 from sqlalchemy import func
 from models import Teacher, PointUsageLog, Student, Assignment
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 
 class QuotaAnalyticsService:
@@ -16,7 +16,9 @@ class QuotaAnalyticsService:
 
     @staticmethod
     def get_usage_summary(
-        teacher: Teacher, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+        teacher: Teacher,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
         取得配額使用統計摘要

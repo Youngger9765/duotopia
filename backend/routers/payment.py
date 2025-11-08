@@ -244,7 +244,7 @@ async def process_payment(
         current_teacher.subscription_type = payment_request.plan_name
 
         # ✅ 創建新的訂閱週期記錄
-        quota_total = 4000 if payment_request.plan_name == "School Teachers" else 1800
+        quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
         new_period = SubscriptionPeriod(
             teacher_id=current_teacher.id,
             plan_name=payment_request.plan_name,
