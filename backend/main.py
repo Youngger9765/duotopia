@@ -31,7 +31,6 @@ from routers import (
     payment,
     cron,
 )
-from tests.integration.api import test_subscription
 from routes import logs
 from api import debug
 
@@ -141,7 +140,12 @@ app.include_router(logs.router)  # 日誌路由（無需認證）
 app.include_router(auth.router)
 app.include_router(subscription.router)  # 訂閱路由
 app.include_router(payment.router, prefix="/api", tags=["payment"])  # 金流路由
-app.include_router(test_subscription.router)  # 測試訂閱路由（模擬充值，不經過 TapPay）
+
+# 測試路由 - 僅在開發和 Staging 環境啟用
+if environment in ["development", "staging"]:
+    from tests.integration.api import test_subscription
+
+    app.include_router(test_subscription.router)  # 測試訂閱路由（模擬充值，不經過 TapPay）
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(assignments.router)
