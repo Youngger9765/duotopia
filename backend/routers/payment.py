@@ -13,6 +13,7 @@ from models import (
     TeacherSubscriptionTransaction,
     TransactionType,
     SubscriptionPeriod,
+    PointUsageLog,
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
@@ -877,6 +878,8 @@ async def get_subscription_status(
     # Get quota used from current subscription period
     current_period = current_teacher.current_period
     quota_used = current_period.quota_used if current_period else 0
+    quota_total = current_period.quota_total if current_period else None
+    quota_remaining = (quota_total - quota_used) if quota_total is not None else None
 
     return {
         "status": current_teacher.subscription_status or "INACTIVE",
@@ -899,6 +902,69 @@ async def get_subscription_status(
             else None
         ),
         "quota_used": quota_used,
+        "quota_total": quota_total,
+        "quota_remaining": quota_remaining,
+    }
+
+
+@router.get("/subscription/usage/history")
+async def get_quota_usage_history(
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    查詢配額使用歷史
+
+    Args:
+        limit: 返回記錄數量上限 (預設 50)
+        offset: 分頁偏移量 (預設 0)
+
+    Returns:
+        配額使用記錄列表，包含：
+        - 功能類型
+        - 使用點數
+        - 扣除前後配額
+        - 使用時間
+        - 單位數量和類型
+    """
+    # 查詢使用記錄
+    logs = (
+        db.query(PointUsageLog)
+        .filter(PointUsageLog.teacher_id == current_teacher.id)
+        .order_by(PointUsageLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    # 計算總記錄數
+    total_count = (
+        db.query(PointUsageLog)
+        .filter(PointUsageLog.teacher_id == current_teacher.id)
+        .count()
+    )
+
+    return {
+        "total": total_count,
+        "limit": limit,
+        "offset": offset,
+        "logs": [
+            {
+                "id": log.id,
+                "feature_type": log.feature_type,
+                "points_used": log.points_used,
+                "quota_before": log.quota_before,
+                "quota_after": log.quota_after,
+                "unit_count": log.unit_count,
+                "unit_type": log.unit_type,
+                "student_id": log.student_id,
+                "assignment_id": log.assignment_id,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+            }
+            for log in logs
+        ],
     }
 
 
