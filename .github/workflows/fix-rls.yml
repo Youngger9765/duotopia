@@ -1,0 +1,58 @@
+name: Fix RLS for Missing Tables
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to fix (production or staging)'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  fix-rls:
+    name: Apply RLS Fix
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Apply RLS fix to Production
+        if: github.event.inputs.environment == 'production'
+        run: |
+          echo "Applying RLS fix to Production database..."
+          psql "${{ secrets.PRODUCTION_DATABASE_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
+      
+      - name: Apply RLS fix to Staging
+        if: github.event.inputs.environment == 'staging'
+        run: |
+          echo "Applying RLS fix to Staging database..."
+          psql "${{ secrets.STAGING_DATABASE_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
+      
+      - name: Verify RLS status
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            DB_URL="${{ secrets.PRODUCTION_DATABASE_URL }}"
+          else
+            DB_URL="${{ secrets.STAGING_DATABASE_URL }}"
+          fi
+          
+          echo "Verifying RLS status..."
+          psql "$DB_URL" -c "
+            SELECT 
+              tablename,
+              CASE WHEN rowsecurity THEN 'Enabled' ELSE 'Disabled' END as rls_status
+            FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename IN ('point_usage_logs', 'subscription_periods')
+            ORDER BY tablename;
+          "
