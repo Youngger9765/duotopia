@@ -2785,6 +2785,13 @@ async def cancel_subscription(
     logger = logging.getLogger(__name__)
 
     try:
+        print(f"🔍 [CANCEL_SUB] Teacher: {current_teacher.email}")
+        print(
+            f"🔍 [CANCEL_SUB] subscription_end_date: {current_teacher.subscription_end_date}"
+        )
+        print(
+            f"🔍 [CANCEL_SUB] subscription_auto_renew: {current_teacher.subscription_auto_renew}"
+        )
         logger.info(f"Cancel subscription request for teacher: {current_teacher.email}")
         logger.info(f"  subscription_end_date: {current_teacher.subscription_end_date}")
         logger.info(
@@ -2820,11 +2827,21 @@ async def cancel_subscription(
             }
 
         # 更新自動續訂狀態
+        print(
+            f"🔍 [CANCEL_SUB] Before update: auto_renew={current_teacher.subscription_auto_renew}"
+        )
         current_teacher.subscription_auto_renew = False
         current_teacher.subscription_cancelled_at = datetime.now(timezone.utc)
         current_teacher.updated_at = datetime.now(timezone.utc)
+        print(
+            f"🔍 [CANCEL_SUB] After update: auto_renew={current_teacher.subscription_auto_renew}"
+        )
 
         db.commit()
+        db.refresh(current_teacher)
+        print(
+            f"🔍 [CANCEL_SUB] After commit & refresh: auto_renew={current_teacher.subscription_auto_renew}"
+        )
 
         logger.info(
             f"Teacher {current_teacher.email} cancelled auto-renewal. "
