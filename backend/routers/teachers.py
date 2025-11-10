@@ -2785,8 +2785,17 @@ async def cancel_subscription(
     logger = logging.getLogger(__name__)
 
     try:
+        logger.info(f"Cancel subscription request for teacher: {current_teacher.email}")
+        logger.info(f"  subscription_end_date: {current_teacher.subscription_end_date}")
+        logger.info(
+            f"  subscription_auto_renew: {current_teacher.subscription_auto_renew}"
+        )
+
         # 檢查是否有有效訂閱
         if not current_teacher.subscription_end_date:
+            logger.warning(
+                f"Teacher {current_teacher.email} has no subscription_end_date"
+            )
             raise HTTPException(status_code=400, detail="您目前沒有有效的訂閱")
 
         # 處理 timezone-aware 和 naive datetime 比較
@@ -2796,11 +2805,19 @@ async def cancel_subscription(
             end_date = end_date.replace(tzinfo=timezone.utc)
 
         if end_date < now:
+            logger.warning(
+                f"Teacher {current_teacher.email} subscription expired: {end_date} < {now}"
+            )
             raise HTTPException(status_code=400, detail="您的訂閱已過期")
 
         # 檢查是否已經取消過
         if not current_teacher.subscription_auto_renew:
-            raise HTTPException(status_code=400, detail="您已經取消過自動續訂")
+            return {
+                "success": True,
+                "message": "您已經取消過續訂",
+                "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+                "auto_renew": False,
+            }
 
         # 更新自動續訂狀態
         current_teacher.subscription_auto_renew = False
