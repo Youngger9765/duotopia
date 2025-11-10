@@ -72,6 +72,7 @@ jobs:
             --set-env-vars "TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}" \
             --set-env-vars "TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}" \
             --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --set-env-vars "CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}" \
             --set-env-vars "SMTP_HOST=smtp.gmail.com" \
             --set-env-vars "SMTP_PORT=587" \
             --set-env-vars "SMTP_USER=${{ secrets.SMTP_USER }}" \

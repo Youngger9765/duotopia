@@ -75,6 +75,7 @@ jobs:
             --set-env-vars "AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}" \
             --set-env-vars "AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}" \
             --set-env-vars "AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}" \
+            --set-env-vars "CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}" \
             --set-env-vars "SMTP_HOST=smtp.gmail.com" \
             --set-env-vars "SMTP_PORT=587" \
             --set-env-vars "SMTP_USER=${{ secrets.SMTP_USER }}" \
