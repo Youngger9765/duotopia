@@ -30,20 +30,20 @@ jobs:
         if: github.event.inputs.environment == 'production'
         run: |
           echo "Applying RLS fix to Production database..."
-          psql "${{ secrets.PRODUCTION_DATABASE_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
-      
+          psql "${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
+
       - name: Apply RLS fix to Staging
         if: github.event.inputs.environment == 'staging'
         run: |
           echo "Applying RLS fix to Staging database..."
-          psql "${{ secrets.STAGING_DATABASE_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
+          psql "${{ secrets.STAGING_DATABASE_POOLER_URL }}" -f backend/migrations/fix_rls_missing_tables.sql
       
       - name: Verify RLS status
         run: |
           if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
-            DB_URL="${{ secrets.PRODUCTION_DATABASE_URL }}"
+            DB_URL="${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}"
           else
-            DB_URL="${{ secrets.STAGING_DATABASE_URL }}"
+            DB_URL="${{ secrets.STAGING_DATABASE_POOLER_URL }}"
           fi
           
           echo "Verifying RLS status..."
