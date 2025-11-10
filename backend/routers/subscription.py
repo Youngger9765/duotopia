@@ -17,12 +17,20 @@ from models import (
 
 router = APIRouter(prefix="/api/test", tags=["test-subscription"])
 
+# 🔐 測試訂閱功能白名單（僅允許特定帳號使用模擬加值）
+TEST_SUBSCRIPTION_WHITELIST = [
+    "demo@duotopia.com",
+    "kaddyeunice@apps.ntpc.edu.tw",
+    "ceeks.edu@gmail.com",
+]
+
 
 class UpdateSubscriptionRequest(BaseModel):
     action: str
     months: Optional[int] = 1
     quota_delta: Optional[int] = None  # For update_quota action
     plan: Optional[str] = None  # For change_plan action
+    email: Optional[str] = None  # 指定要操作的測試帳號（必須在白名單內）
 
 
 class SubscriptionStatusResponse(BaseModel):
@@ -38,15 +46,21 @@ class SubscriptionStatusResponse(BaseModel):
 
 
 @router.get("/subscription/status", response_model=SubscriptionStatusResponse)
-async def get_subscription_status(db: Session = Depends(get_db)):
-    """Get current subscription status for demo account (no auth required for testing)"""
+async def get_subscription_status(
+    email: Optional[str] = None, db: Session = Depends(get_db)
+):
+    """Get current subscription status for test account (no auth required for testing)"""
 
-    # Always use demo account for testing
-    demo = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
-    if not demo:
-        raise HTTPException(status_code=404, detail="Demo account not found")
+    # 預設使用 demo 帳號
+    target_email = email or "demo@duotopia.com"
 
-    current_teacher = demo
+    # 🔐 檢查是否在白名單內
+    if target_email not in TEST_SUBSCRIPTION_WHITELIST:
+        raise HTTPException(status_code=403, detail="Email not in test whitelist")
+
+    current_teacher = db.query(Teacher).filter_by(email=target_email).first()
+    if not current_teacher:
+        raise HTTPException(status_code=404, detail=f"Account {target_email} not found")
 
     # Calculate is_active based on subscription_end_date
     is_active = False
@@ -121,24 +135,22 @@ async def update_subscription_status(
 ):
     """Update subscription status for testing purposes"""
 
-    # Always use demo account for testing
-    demo = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
-    if not demo:
-        # Create demo account if it doesn't exist
-        from passlib.context import CryptContext
+    # 使用指定的 email 或預設 demo 帳號
+    target_email = request.email or "demo@duotopia.com"
 
-        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-        demo = Teacher(
-            email="demo@duotopia.com",
-            name="Demo Teacher",
-            password_hash=pwd_context.hash("demo123"),
-            email_verified=True,
-            created_at=datetime.now(timezone.utc),
+    # 🔐 檢查是否在白名單內
+    if target_email not in TEST_SUBSCRIPTION_WHITELIST:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Email {target_email} not in test whitelist. Allowed: {TEST_SUBSCRIPTION_WHITELIST}",
         )
-        db.add(demo)
-        db.commit()
-    current_teacher = demo
+
+    current_teacher = db.query(Teacher).filter_by(email=target_email).first()
+    if not current_teacher:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Account {target_email} not found. Please register first.",
+        )
 
     now = datetime.now(timezone.utc)
     message = ""
