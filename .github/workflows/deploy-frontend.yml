@@ -168,14 +168,25 @@ jobs:
           BUILD_TIMESTAMP=""
         fi
 
+        # TapPay build args - 根據環境動態設定
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          TAPPAY_SERVER_TYPE="production"
+          TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+          TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
+        else
+          TAPPAY_SERVER_TYPE="sandbox"
+          TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+          TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
+        fi
+
         docker build -f $DOCKERFILE \
           $CACHE_FLAG \
           $BUILD_TIMESTAMP \
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
           --build-arg VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }} \
-          --build-arg VITE_TAPPAY_APP_ID=${{ secrets.VITE_TAPPAY_APP_ID }} \
-          --build-arg VITE_TAPPAY_APP_KEY=${{ secrets.VITE_TAPPAY_APP_KEY }} \
-          --build-arg VITE_TAPPAY_SERVER_TYPE=${{ secrets.VITE_TAPPAY_SERVER_TYPE }} \
+          --build-arg VITE_TAPPAY_SERVER_TYPE=$TAPPAY_SERVER_TYPE \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=$TAPPAY_PRODUCTION_APP_ID \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=$TAPPAY_PRODUCTION_APP_KEY \
           -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA .
 
         docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA

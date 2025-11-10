@@ -223,10 +223,11 @@ jobs:
       run: |
         # 環境變數設定
         ENV_VARS="DATABASE_URL=${{ steps.db_env.outputs.DATABASE_URL }}"
+        ENV_VARS="$ENV_VARS,DATABASE_POOLER_URL=${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}"
         ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
         ENV_VARS="$ENV_VARS,JWT_SECRET=${{ steps.db_env.outputs.JWT_SECRET }}"
         ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
-        ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=10080"
+        ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=1440"
         ENV_VARS="$ENV_VARS,ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }}"
         ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ steps.db_env.outputs.SUPABASE_URL }}"
         ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ steps.db_env.outputs.SUPABASE_KEY }}"
@@ -245,10 +246,22 @@ jobs:
         ENV_VARS="$ENV_VARS,REGION=$REGION"
         ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
 
-        # TapPay 配置
-        ENV_VARS="$ENV_VARS,TAPPAY_PARTNER_KEY=${{ secrets.TAPPAY_PARTNER_KEY }}"
-        ENV_VARS="$ENV_VARS,TAPPAY_MERCHANT_ID=${{ secrets.TAPPAY_MERCHANT_ID }}"
-        ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
+        # TapPay 配置（根據環境設定 Sandbox/Production）
+        ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_MERCHANT_ID=${{ secrets.TAPPAY_SANDBOX_MERCHANT_ID }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
+        ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
+
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"
+        else
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
+        fi
+
         ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
 
         # Cron Job 配置
