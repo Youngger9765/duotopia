@@ -106,21 +106,21 @@ jobs:
       id: db_env
       run: |
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          echo "🔥 Using Supabase Production"
+          echo "🔥 Using Production Database"
         else
-          echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          echo "🆓 Using Supabase Staging"
+          echo "🆓 Using Staging Database"
         fi
 
     - name: Build and push backend image
