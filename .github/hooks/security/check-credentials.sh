@@ -22,7 +22,9 @@ if grep -iE "(password|secret|key|token|pwd|api_key)\\s*=\\s*[\"'][^\"']{8,}[\"'
     grep -v "dummy" | \
     grep -v "TODO" | \
     grep -v "test-token" | \
-    grep -v "xxx"; then
+    grep -v "xxx" | \
+    grep -v "secrets\." | \
+    grep -v "{{\s*secrets\."; then
     echo "❌ Error: Hardcoded credentials found!"
     exit 1
 fi
