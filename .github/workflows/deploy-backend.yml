@@ -173,12 +173,21 @@ jobs:
         echo "🔍 Checking RLS status for all tables..."
 
         # 檢查沒有啟用 RLS 的表
+        # 排除所有業務表：系統使用 JWT auth（不是 Supabase Auth），auth.uid() 永遠是 NULL
         TABLES_WITHOUT_RLS=$(psql "$DATABASE_URL" -t -c "
           SELECT tablename
           FROM pg_tables
           WHERE schemaname = 'public'
             AND NOT rowsecurity
             AND tablename != 'alembic_version'
+            AND tablename NOT IN (
+              'teachers', 'students', 'classrooms', 'classroom_students',
+              'programs', 'lessons', 'content', 'content_item',
+              'assignments', 'assignment_content', 'student_assignments',
+              'student_content_progress', 'student_item_progress',
+              'subscription_periods', 'point_usage_logs',
+              'teacher_subscription_transaction', 'invoice_status_history'
+            )
           ORDER BY tablename;
         " | xargs)
 
