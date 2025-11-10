@@ -27,7 +27,8 @@ def get_test_engine():
         _test_engine = create_engine(
             "sqlite:///./test.db", echo=False, connect_args={"check_same_thread": False}
         )
-        Base.metadata.create_all(_test_engine)
+        # checkfirst=True: 避免平行測試時重複創建表
+        Base.metadata.create_all(_test_engine, checkfirst=True)
     return _test_engine
 
 
@@ -53,7 +54,8 @@ def ensure_tables(test_engine, request):
         yield
         return
 
-    Base.metadata.create_all(bind=test_engine)
+    # checkfirst=True: 避免平行測試時重複創建表
+    Base.metadata.create_all(bind=test_engine, checkfirst=True)
     yield
     # Cleanup happens in shared_test_session
 
@@ -62,7 +64,8 @@ def ensure_tables(test_engine, request):
 def shared_test_session(test_engine):
     """Create a shared test database session that will be used by both test_session and test_client"""
     # 🔧 確保 tables 存在（每個測試開始前都檢查）
-    Base.metadata.create_all(bind=test_engine)
+    # checkfirst=True: 避免平行測試時重複創建表
+    Base.metadata.create_all(bind=test_engine, checkfirst=True)
 
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
