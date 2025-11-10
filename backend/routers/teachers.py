@@ -2817,14 +2817,21 @@ async def cancel_subscription(
             )
             raise HTTPException(status_code=400, detail="您的訂閱已過期")
 
-        # 檢查是否已經取消過
-        if not current_teacher.subscription_auto_renew:
+        # 檢查是否已經取消過（必須明確是 False，None 代表未設定要當作 True）
+        if current_teacher.subscription_auto_renew is False:
             return {
                 "success": True,
                 "message": "您已經取消過續訂",
                 "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
                 "auto_renew": False,
             }
+
+        # 如果是 None，先設定為 True（向後相容舊訂閱）
+        if current_teacher.subscription_auto_renew is None:
+            print(
+                "🔍 [CANCEL_SUB] auto_renew was None, setting to True for backwards compatibility"
+            )
+            current_teacher.subscription_auto_renew = True
 
         # 更新自動續訂狀態
         print(
