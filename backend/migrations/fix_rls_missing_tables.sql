@@ -1,6 +1,7 @@
 -- Fix RLS for missing tables
 -- Date: 2025-11-10
 -- Issue: point_usage_logs and subscription_periods missing RLS
+-- Issue 2: teachers table needs RLS disabled for backend access
 
 -- Enable RLS for point_usage_logs (only if table exists)
 DO $$
@@ -57,5 +58,17 @@ BEGIN
     WITH CHECK (auth.uid()::text = teacher_id::text);
 
     RAISE NOTICE 'Policies created for subscription_periods';
+  END IF;
+END $$;
+
+-- Disable RLS for teachers table (backend needs direct access)
+-- This is necessary because backend uses JWT auth, not Supabase Auth
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'teachers') THEN
+    ALTER TABLE teachers DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for teachers table (backend service access)';
+  ELSE
+    RAISE NOTICE 'Table teachers does not exist, skipping';
   END IF;
 END $$;
