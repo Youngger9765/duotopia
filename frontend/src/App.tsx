@@ -1,3 +1,4 @@
+// Test workflow trigger: 2025-11-10
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Home from "./pages/Home";
