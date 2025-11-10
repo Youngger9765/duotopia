@@ -61,8 +61,8 @@ jobs:
             --set-env-vars "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" \
             --set-env-vars "JWT_ALGORITHM=HS256" \
             --set-env-vars "JWT_EXPIRE_MINUTES=1440" \
-            --set-env-vars "ENABLE_PAYMENT=false" \
-            --set-env-vars "TAPPAY_ENV=sandbox" \
+            --set-env-vars "ENABLE_PAYMENT=true" \
+            --set-env-vars "TAPPAY_ENV=production" \
             --set-env-vars "TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}" \
             --set-env-vars "TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}" \
             --set-env-vars "TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}" \
