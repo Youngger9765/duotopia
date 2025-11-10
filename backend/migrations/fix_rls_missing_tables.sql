@@ -1,74 +1,170 @@
--- Fix RLS for missing tables
+-- Fix RLS Configuration for JWT-based Backend
 -- Date: 2025-11-10
--- Issue: point_usage_logs and subscription_periods missing RLS
--- Issue 2: teachers table needs RLS disabled for backend access
+-- Issue: Backend uses JWT auth (not Supabase Auth), so auth.uid() is always NULL
+-- Solution: DISABLE RLS for all business tables, let backend handle authorization
 
--- Enable RLS for point_usage_logs (only if table exists)
-DO $$
-BEGIN
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'point_usage_logs') THEN
-    ALTER TABLE point_usage_logs ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled for point_usage_logs';
-  ELSE
-    RAISE NOTICE 'Table point_usage_logs does not exist, skipping';
-  END IF;
-END $$;
+-- =============================================================================
+-- Background:
+-- - Our backend uses JWT tokens for authentication
+-- - Supabase RLS policies rely on auth.uid() which is only set by Supabase Auth
+-- - When backend connects directly, auth.uid() = NULL, causing all RLS checks to fail
+-- - Therefore, we DISABLE RLS and handle all authorization in backend code
+-- =============================================================================
 
--- Enable RLS for subscription_periods (only if table exists)
-DO $$
-BEGIN
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'subscription_periods') THEN
-    ALTER TABLE subscription_periods ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled for subscription_periods';
-  ELSE
-    RAISE NOTICE 'Table subscription_periods does not exist, skipping';
-  END IF;
-END $$;
-
--- Create policies for point_usage_logs (only if table exists)
-DO $$
-BEGIN
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'point_usage_logs') THEN
-    DROP POLICY IF EXISTS "Teachers can view their own usage logs" ON point_usage_logs;
-    CREATE POLICY "Teachers can view their own usage logs"
-    ON point_usage_logs FOR SELECT
-    USING (auth.uid()::text = teacher_id::text);
-
-    DROP POLICY IF EXISTS "Teachers can insert their own usage logs" ON point_usage_logs;
-    CREATE POLICY "Teachers can insert their own usage logs"
-    ON point_usage_logs FOR INSERT
-    WITH CHECK (auth.uid()::text = teacher_id::text);
-
-    RAISE NOTICE 'Policies created for point_usage_logs';
-  END IF;
-END $$;
-
--- Create policies for subscription_periods (only if table exists)
-DO $$
-BEGIN
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'subscription_periods') THEN
-    DROP POLICY IF EXISTS "Teachers can view their own subscription periods" ON subscription_periods;
-    CREATE POLICY "Teachers can view their own subscription periods"
-    ON subscription_periods FOR SELECT
-    USING (auth.uid()::text = teacher_id::text);
-
-    DROP POLICY IF EXISTS "Teachers can insert their own subscription periods" ON subscription_periods;
-    CREATE POLICY "Teachers can insert their own subscription periods"
-    ON subscription_periods FOR INSERT
-    WITH CHECK (auth.uid()::text = teacher_id::text);
-
-    RAISE NOTICE 'Policies created for subscription_periods';
-  END IF;
-END $$;
-
--- Disable RLS for teachers table (backend needs direct access)
--- This is necessary because backend uses JWT auth, not Supabase Auth
+-- Core User Tables
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'teachers') THEN
     ALTER TABLE teachers DISABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS disabled for teachers table (backend service access)';
-  ELSE
-    RAISE NOTICE 'Table teachers does not exist, skipping';
+    RAISE NOTICE 'RLS disabled for teachers';
   END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'students') THEN
+    ALTER TABLE students DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for students';
+  END IF;
+END $$;
+
+-- Classroom Management
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'classrooms') THEN
+    ALTER TABLE classrooms DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for classrooms';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'classroom_students') THEN
+    ALTER TABLE classroom_students DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for classroom_students';
+  END IF;
+END $$;
+
+-- Program & Content
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'programs') THEN
+    ALTER TABLE programs DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for programs';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'lessons') THEN
+    ALTER TABLE lessons DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for lessons';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'content') THEN
+    ALTER TABLE content DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for content';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'content_item') THEN
+    ALTER TABLE content_item DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for content_item';
+  END IF;
+END $$;
+
+-- Assignments
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'assignments') THEN
+    ALTER TABLE assignments DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for assignments';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'assignment_content') THEN
+    ALTER TABLE assignment_content DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for assignment_content';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'student_assignments') THEN
+    ALTER TABLE student_assignments DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for student_assignments';
+  END IF;
+END $$;
+
+-- Student Progress
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'student_content_progress') THEN
+    ALTER TABLE student_content_progress DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for student_content_progress';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'student_item_progress') THEN
+    ALTER TABLE student_item_progress DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for student_item_progress';
+  END IF;
+END $$;
+
+-- Subscription & Billing
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'subscription_periods') THEN
+    ALTER TABLE subscription_periods DISABLE ROW LEVEL SECURITY;
+    -- Drop any existing policies
+    DROP POLICY IF EXISTS "Teachers can view their own subscription periods" ON subscription_periods;
+    DROP POLICY IF EXISTS "Teachers can insert their own subscription periods" ON subscription_periods;
+    RAISE NOTICE 'RLS disabled for subscription_periods';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'point_usage_logs') THEN
+    ALTER TABLE point_usage_logs DISABLE ROW LEVEL SECURITY;
+    -- Drop any existing policies
+    DROP POLICY IF EXISTS "Teachers can view their own usage logs" ON point_usage_logs;
+    DROP POLICY IF EXISTS "Teachers can insert their own usage logs" ON point_usage_logs;
+    RAISE NOTICE 'RLS disabled for point_usage_logs';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'teacher_subscription_transaction') THEN
+    ALTER TABLE teacher_subscription_transaction DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for teacher_subscription_transaction';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'invoice_status_history') THEN
+    ALTER TABLE invoice_status_history DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for invoice_status_history';
+  END IF;
+END $$;
+
+-- Summary
+DO $$
+BEGIN
+  RAISE NOTICE '=================================================================';
+  RAISE NOTICE 'RLS Configuration Complete';
+  RAISE NOTICE 'All business tables have RLS DISABLED';
+  RAISE NOTICE 'Authorization is handled by backend JWT + code logic';
+  RAISE NOTICE '=================================================================';
 END $$;
