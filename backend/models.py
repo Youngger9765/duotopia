@@ -339,6 +339,7 @@ class Teacher(Base):
                 SubscriptionPeriod.teacher_id == self.id,
                 SubscriptionPeriod.status == "active",
             )
+            .order_by(SubscriptionPeriod.start_date.desc())  # 最新的 period 優先
             .limit(1)
         )
         return session.execute(stmt).scalar_one_or_none()
