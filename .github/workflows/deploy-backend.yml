@@ -268,7 +268,7 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"
         else
-          ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"  # Staging also uses production TapPay
         fi
 
         ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
