@@ -221,9 +221,7 @@ async def monthly_renewal_cron(
             rec_id = gateway_response.get("rec_trade_id")
 
             # ✅ 創建新的訂閱週期記錄
-            quota_total = (
-                25000 if plan_name == "School Teachers" else 10000
-            )
+            quota_total = 25000 if plan_name == "School Teachers" else 10000
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,
                 plan_name=plan_name,  # 🔄 使用 Period.plan_name
@@ -434,8 +432,12 @@ async def test_cron_notification(
     )
 
     # 統計有卡片的用戶
-    teachers_with_card = [p.teacher for p in periods_expiring_soon if p.teacher.card_key]
-    teachers_without_card = [p.teacher for p in periods_expiring_soon if not p.teacher.card_key]
+    teachers_with_card = [
+        p.teacher for p in periods_expiring_soon if p.teacher.card_key
+    ]
+    teachers_without_card = [
+        p.teacher for p in periods_expiring_soon if not p.teacher.card_key
+    ]
 
     # 發送測試通知到 Duotopia 官方信箱
     notification_content = f"""
@@ -507,7 +509,7 @@ async def test_cron_notification(
         "status": "success",
         "timestamp": now_taipei.isoformat(),
         "statistics": {
-            "total_expiring_soon": len(teachers_expiring_soon),
+            "total_expiring_soon": len(periods_expiring_soon),
             "with_card": len(teachers_with_card),
             "without_card": len(teachers_without_card),
         },

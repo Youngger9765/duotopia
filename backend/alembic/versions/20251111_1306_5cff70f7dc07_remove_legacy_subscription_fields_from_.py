@@ -24,8 +24,8 @@ from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
-revision: str = '5cff70f7dc07'
-down_revision: Union[str, None] = '20251104_1640'
+revision: str = "5cff70f7dc07"
+down_revision: Union[str, None] = "20251104_1640"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -53,13 +53,25 @@ def downgrade() -> None:
             sa.Column("subscription_status", sa.String(length=50), nullable=True)
         )
         batch_op.add_column(
-            sa.Column("subscription_start_date", postgresql.TIMESTAMP(timezone=True), nullable=True)
+            sa.Column(
+                "subscription_start_date",
+                postgresql.TIMESTAMP(timezone=True),
+                nullable=True,
+            )
         )
         batch_op.add_column(
-            sa.Column("subscription_end_date", postgresql.TIMESTAMP(timezone=True), nullable=True)
+            sa.Column(
+                "subscription_end_date",
+                postgresql.TIMESTAMP(timezone=True),
+                nullable=True,
+            )
         )
         batch_op.add_column(
-            sa.Column("subscription_renewed_at", postgresql.TIMESTAMP(timezone=True), nullable=True)
+            sa.Column(
+                "subscription_renewed_at",
+                postgresql.TIMESTAMP(timezone=True),
+                nullable=True,
+            )
         )
         batch_op.add_column(
             sa.Column("monthly_message_limit", sa.Integer(), nullable=True)

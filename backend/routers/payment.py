@@ -241,7 +241,11 @@ async def process_payment(
             raise HTTPException(status_code=400, detail=error_msg)
 
         # Payment successful - 關閉舊的訂閱週期
-        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id, status="active").all():
+        for period in (
+            db.query(SubscriptionPeriod)
+            .filter_by(teacher_id=current_teacher.id, status="active")
+            .all()
+        ):
             period.status = "expired"
 
         # ✅ 創建新的訂閱週期記錄

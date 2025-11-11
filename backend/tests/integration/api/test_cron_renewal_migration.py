@@ -51,17 +51,23 @@ def teacher_with_subscription(db_session: Session):
 class TestCronRenewalSystem:
     """測試新訂閱系統"""
 
-    def test_query_uses_subscription_periods(self, db_session, teacher_with_subscription):
+    def test_query_uses_subscription_periods(
+        self, db_session, teacher_with_subscription
+    ):
         """✅ 查詢 SubscriptionPeriod.end_date"""
         tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).date()
 
         # 新邏輯：查詢 SubscriptionPeriod 表
-        periods = db_session.query(SubscriptionPeriod).filter(
-            SubscriptionPeriod.status == "active",
-            SubscriptionPeriod.payment_method == "auto_renew",
-            SubscriptionPeriod.cancelled_at.is_(None),
-            func.date(SubscriptionPeriod.end_date) == tomorrow,
-        ).all()
+        periods = (
+            db_session.query(SubscriptionPeriod)
+            .filter(
+                SubscriptionPeriod.status == "active",
+                SubscriptionPeriod.payment_method == "auto_renew",
+                SubscriptionPeriod.cancelled_at.is_(None),
+                func.date(SubscriptionPeriod.end_date) == tomorrow,
+            )
+            .all()
+        )
 
         assert len(periods) == 1
         assert periods[0].teacher.email == "test_teacher@test.com"
@@ -74,9 +80,11 @@ class TestCronRenewalSystem:
 
     def test_creates_new_period_on_renewal(self, db_session, teacher_with_subscription):
         """✅ 續訂創建新的 SubscriptionPeriod"""
-        old_period_count = db_session.query(SubscriptionPeriod).filter_by(
-            teacher_id=teacher_with_subscription.id
-        ).count()
+        old_period_count = (
+            db_session.query(SubscriptionPeriod)
+            .filter_by(teacher_id=teacher_with_subscription.id)
+            .count()
+        )
 
         assert old_period_count == 1
 
@@ -103,9 +111,11 @@ class TestCronRenewalSystem:
         db_session.commit()
 
         # 驗證
-        new_period_count = db_session.query(SubscriptionPeriod).filter_by(
-            teacher_id=teacher_with_subscription.id
-        ).count()
+        new_period_count = (
+            db_session.query(SubscriptionPeriod)
+            .filter_by(teacher_id=teacher_with_subscription.id)
+            .count()
+        )
 
         assert new_period_count == 2
 

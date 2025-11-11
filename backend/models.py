@@ -365,6 +365,7 @@ class Teacher(Base):
             return "expired"
 
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
 
         # 確保 end_date 有 timezone
@@ -385,6 +386,7 @@ class Teacher(Base):
             return 0
 
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
 
         # 確保 end_date 有 timezone
@@ -405,6 +407,7 @@ class Teacher(Base):
             return False
 
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
 
         # 確保 end_date 有 timezone

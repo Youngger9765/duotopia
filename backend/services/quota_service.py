@@ -161,7 +161,9 @@ class QuotaService:
         effective_limit = current_period.quota_total * (
             1 + QuotaService.QUOTA_BUFFER_PERCENTAGE
         )
-        buffer_amount = current_period.quota_total * QuotaService.QUOTA_BUFFER_PERCENTAGE
+        buffer_amount = (
+            current_period.quota_total * QuotaService.QUOTA_BUFFER_PERCENTAGE
+        )
 
         # 5. 檢查是否超過硬限制
         if quota_after > effective_limit:

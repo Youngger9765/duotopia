@@ -73,7 +73,11 @@ async def get_subscription_status(
         plan_name = current_period.plan_name
         quota_used = current_period.quota_used
         # 取消時間從 status 判斷（如果 status='cancelled' 使用 updated_at）
-        cancelled_at = current_period.cancelled_at if hasattr(current_period, 'cancelled_at') else None
+        cancelled_at = (
+            current_period.cancelled_at
+            if hasattr(current_period, "cancelled_at")
+            else None
+        )
     else:
         # 沒有訂閱週期
         is_active = False
@@ -129,7 +133,9 @@ async def reset_test_accounts(db: Session = Depends(get_db)):
     expired = db.query(Teacher).filter_by(email="expired@duotopia.com").first()
     if expired:
         # 關閉所有現有 period（讓訂閱過期）
-        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=expired.id).all():
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=expired.id).all()
+        ):
             period.status = "expired"
             period.end_date = now - timedelta(days=1)
 
@@ -181,7 +187,9 @@ async def update_subscription_status(
     if request.action == "set_subscribed":
         # Set as subscribed (has days remaining) - 創建新 period
         # 關閉所有現有 period
-        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all():
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
             period.status = "expired"
 
         new_period = SubscriptionPeriod(
@@ -201,7 +209,9 @@ async def update_subscription_status(
 
     elif request.action == "set_expired":
         # Set as expired (no days remaining) - 關閉所有 period
-        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all():
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
             period.status = "expired"
             period.end_date = now - timedelta(days=1)
         message = "設定為未訂閱狀態"
@@ -217,7 +227,11 @@ async def update_subscription_status(
         else:
             # Create new subscription from today
             # 先關閉現有 period
-            for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all():
+            for period in (
+                db.query(SubscriptionPeriod)
+                .filter_by(teacher_id=current_teacher.id)
+                .all()
+            ):
                 period.status = "expired"
 
             new_period = SubscriptionPeriod(
@@ -238,7 +252,9 @@ async def update_subscription_status(
     elif request.action == "reset_to_new":
         # Reset to new account with 30 days
         # 關閉所有現有 period
-        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all():
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
             period.status = "expired"
 
         new_period = SubscriptionPeriod(

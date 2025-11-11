@@ -5,9 +5,7 @@ E2E 整合測試執行器
 
 import subprocess
 import sys
-import json
 from datetime import datetime
-from pathlib import Path
 
 
 class Colors:
@@ -87,9 +85,7 @@ def run_tests():
             )
         else:
             print_failure("部分測試失敗")
-            print(
-                f"\n{Colors.FAIL}{Colors.BOLD}⚠️  請檢查失敗的測試項目 ⚠️{Colors.ENDC}\n"
-            )
+            print(f"\n{Colors.FAIL}{Colors.BOLD}⚠️  請檢查失敗的測試項目 ⚠️{Colors.ENDC}\n")
 
         return result.returncode
 
