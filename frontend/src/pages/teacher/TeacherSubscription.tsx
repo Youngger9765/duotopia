@@ -394,17 +394,20 @@ export default function TeacherSubscription() {
                               <div
                                 className="h-2 rounded-full transition-all bg-blue-500"
                                 style={{
-                                  width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 4000 : 1800)) * 100)}%`,
+                                  width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 25000 : 10000)) * 100)}%`,
                                 }}
                               />
                             </div>
                             <p className="font-semibold text-sm whitespace-nowrap">
-                              {Math.round(
-                                ((subscription.quota_used || 0) /
-                                  (subscription.plan === "School Teachers"
-                                    ? 4000
-                                    : 1800)) *
-                                  100,
+                              {Math.min(
+                                100,
+                                Math.round(
+                                  ((subscription.quota_used || 0) /
+                                    (subscription.plan === "School Teachers"
+                                      ? 25000
+                                      : 10000)) *
+                                    100,
+                                ),
                               )}
                               %
                             </p>
