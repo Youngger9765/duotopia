@@ -25,6 +25,7 @@ from models import (
     ProgramLevel,
     ContentType,
     AssignmentStatus,
+    SubscriptionPeriod,
 )
 from auth import get_password_hash
 
@@ -43,7 +44,7 @@ def create_demo_data(db: Session):
         is_demo=True,
         is_active=True,
         email_verified=True,
-        subscription_end_date=datetime.now() + timedelta(days=300),
+        # 🔄 不再使用舊欄位，改用 subscription_periods 表
     )
     db.add(demo_teacher)
 
@@ -55,7 +56,7 @@ def create_demo_data(db: Session):
         is_demo=False,
         is_active=True,
         email_verified=True,
-        subscription_end_date=datetime.now() - timedelta(days=10),  # 10天前過期
+        # 🔄 不再使用舊欄位，改用 subscription_periods 表
     )
     db.add(expired_teacher)
 
@@ -67,7 +68,7 @@ def create_demo_data(db: Session):
         is_demo=False,
         is_active=True,
         email_verified=True,
-        subscription_end_date=datetime.now() + timedelta(days=30),  # 30天試用期
+        # 🔄 不再使用舊欄位，改用 subscription_periods 表
     )
     db.add(trial_teacher)
 
@@ -76,6 +77,45 @@ def create_demo_data(db: Session):
     print("   - demo@duotopia.com (充值300天)")
     print("   - expired@duotopia.com (未訂閱/已過期)")
     print("   - trial@duotopia.com (30天試用期)")
+
+    # ============ 1.4 創建對應的 subscription_periods ============
+    # Demo 老師的訂閱週期（300天，大配額）
+    demo_period = SubscriptionPeriod(
+        teacher_id=demo_teacher.id,
+        plan_name="Demo Unlimited Plan",
+        amount_paid=0,
+        quota_total=999999999,  # 無限配額
+        quota_used=0,
+        start_date=datetime.now(),
+        end_date=datetime.now() + timedelta(days=300),
+        payment_method="manual",
+        payment_status="completed",
+        status="active",
+    )
+    db.add(demo_period)
+
+    # Trial 老師的訂閱週期（30天試用）
+    trial_period = SubscriptionPeriod(
+        teacher_id=trial_teacher.id,
+        plan_name="30-Day Trial",
+        amount_paid=0,
+        quota_total=18000,  # 30天 * 10分鐘/天 * 60秒 = 18000秒
+        quota_used=0,
+        start_date=datetime.now(),
+        end_date=datetime.now() + timedelta(days=30),
+        payment_method="trial",
+        payment_status="completed",
+        status="active",
+    )
+    db.add(trial_period)
+
+    # Expired 老師沒有 subscription_period（已過期）
+
+    db.commit()
+    print("✅ 建立訂閱週期 (subscription_periods):")
+    print("   - demo@duotopia.com: 999999999秒配額（無限）")
+    print("   - trial@duotopia.com: 18000秒配額（30天試用）")
+    print("   - expired@duotopia.com: 無訂閱週期")
 
     # ============ 2. Demo 班級 ============
     classroom_a = Classroom(

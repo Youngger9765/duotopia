@@ -201,6 +201,31 @@ async def get_teacher_dashboard(
     )
 
 
+@router.get("/subscription")
+async def get_teacher_subscription(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """取得教師訂閱資訊（用於顯示配額）"""
+    current_period = current_teacher.current_period
+
+    if not current_period:
+        return {
+            "subscription_period": None,
+            "message": "No active subscription",
+        }
+
+    return {
+        "subscription_period": {
+            "quota_total": current_period.quota_total,
+            "quota_used": current_period.quota_used,
+            "plan_name": current_period.plan_name,
+            "status": current_period.status,
+            "end_date": current_period.end_date.isoformat(),
+        }
+    }
+
+
 @router.get("/classrooms")
 async def get_teacher_classrooms(
     current_teacher: Teacher = Depends(get_current_teacher),

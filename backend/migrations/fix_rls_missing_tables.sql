@@ -1,15 +1,13 @@
 -- Fix RLS Configuration for JWT-based Backend
--- Date: 2025-11-10
--- Issue: Backend uses JWT auth (not Supabase Auth), so auth.uid() is always NULL
--- Solution: DISABLE RLS for all business tables, let backend handle authorization
-
--- =============================================================================
--- Background:
--- - Our backend uses JWT tokens for authentication
--- - Supabase RLS policies rely on auth.uid() which is only set by Supabase Auth
--- - When backend connects directly, auth.uid() = NULL, causing all RLS checks to fail
--- - Therefore, we DISABLE RLS and handle all authorization in backend code
--- =============================================================================
+-- =============================================
+-- DISABLE RLS for all business tables because:
+-- - Backend uses JWT auth (not Supabase Auth)
+-- - auth.uid() is always NULL with direct database connections
+-- - All authorization handled in backend code (78 verification points)
+--
+-- Security Architecture:
+-- HTTPS → JWT → Backend Code → Database
+-- (No direct frontend-to-database access)
 
 -- Core User Tables
 DO $$
@@ -45,7 +43,7 @@ BEGIN
   END IF;
 END $$;
 
--- Program & Content
+-- Content Management
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'programs') THEN
@@ -78,7 +76,7 @@ BEGIN
   END IF;
 END $$;
 
--- Assignments
+-- Assignment Management
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'assignments') THEN
@@ -103,7 +101,7 @@ BEGIN
   END IF;
 END $$;
 
--- Student Progress
+-- Progress Tracking
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'student_content_progress') THEN
@@ -120,15 +118,18 @@ BEGIN
   END IF;
 END $$;
 
--- Subscription & Billing
+-- Subscription & Billing (with policy cleanup)
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'subscription_periods') THEN
-    ALTER TABLE subscription_periods DISABLE ROW LEVEL SECURITY;
-    -- Drop any existing policies
+    -- Drop existing policies first
     DROP POLICY IF EXISTS "Teachers can view their own subscription periods" ON subscription_periods;
     DROP POLICY IF EXISTS "Teachers can insert their own subscription periods" ON subscription_periods;
-    RAISE NOTICE 'RLS disabled for subscription_periods';
+    DROP POLICY IF EXISTS "Teachers can update their own subscription periods" ON subscription_periods;
+
+    -- Disable RLS
+    ALTER TABLE subscription_periods DISABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'RLS disabled for subscription_periods (policies dropped)';
   END IF;
 END $$;
 
@@ -136,9 +137,6 @@ DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'point_usage_logs') THEN
     ALTER TABLE point_usage_logs DISABLE ROW LEVEL SECURITY;
-    -- Drop any existing policies
-    DROP POLICY IF EXISTS "Teachers can view their own usage logs" ON point_usage_logs;
-    DROP POLICY IF EXISTS "Teachers can insert their own usage logs" ON point_usage_logs;
     RAISE NOTICE 'RLS disabled for point_usage_logs';
   END IF;
 END $$;
@@ -164,7 +162,7 @@ DO $$
 BEGIN
   RAISE NOTICE '=================================================================';
   RAISE NOTICE 'RLS Configuration Complete';
-  RAISE NOTICE 'All business tables have RLS DISABLED';
+  RAISE NOTICE 'All 17 business tables have RLS DISABLED';
   RAISE NOTICE 'Authorization is handled by backend JWT + code logic';
   RAISE NOTICE '=================================================================';
 END $$;

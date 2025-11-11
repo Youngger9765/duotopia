@@ -11,7 +11,7 @@ import smtplib
 
 from sqlalchemy.orm import Session
 
-from models import Student, Teacher
+from models import Student, Teacher, SubscriptionPeriod
 
 logger = logging.getLogger(__name__)
 
@@ -437,8 +437,22 @@ class EmailService:
             teacher.email_verification_token = None
             teacher.is_active = True
 
-            # 🎯 重要：啟動 30 天訂閱！
-            teacher.subscription_end_date = datetime.utcnow() + timedelta(days=30)
+            # 🎯 重要：啟動 30 天訂閱！創建 SubscriptionPeriod
+            now = datetime.utcnow()
+
+            new_period = SubscriptionPeriod(
+                teacher_id=teacher.id,
+                plan_name="Tutor Teachers",
+                amount_paid=0,
+                quota_total=10000,
+                quota_used=0,
+                start_date=now,
+                end_date=now + timedelta(days=30),
+                payment_method="trial",
+                payment_status="completed",
+                status="active",
+            )
+            db.add(new_period)
 
             db.commit()
 

@@ -29,6 +29,11 @@ class QuotaService:
         "分鐘": 60,  # 1 分鐘 = 60 秒
     }
 
+    # ========== 配額超額緩衝 ==========
+    # 允許超額使用 20% 作為緩衝（給老師續費的時間）
+    # 例如：10,000 秒配額 → 最多可用到 12,000 秒
+    QUOTA_BUFFER_PERCENTAGE = 0.20
+
     @staticmethod
     def convert_unit_to_seconds(unit_count: float, unit_type: str) -> int:
         """
@@ -147,22 +152,57 @@ class QuotaService:
         # 2. 換算為秒數
         points_used = QuotaService.convert_unit_to_seconds(unit_count, unit_type)
 
-        # 3. 檢查配額狀態（僅記錄，不阻擋學生學習）
+        # 3. 計算配額狀態
         quota_before = current_period.quota_used
         quota_after = quota_before + points_used
         quota_remaining = current_period.quota_total - quota_after
 
-        # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
-        if quota_remaining < 0:
-            logger.warning(
-                f"⚠️ Teacher {teacher.id} quota exceeded: {abs(quota_remaining)}s over limit, "
-                f"but allowing operation to continue (配額超限但允許繼續使用)"
+        # 4. 計算硬限制（基本配額 + 20% 緩衝）
+        effective_limit = current_period.quota_total * (
+            1 + QuotaService.QUOTA_BUFFER_PERCENTAGE
+        )
+        buffer_amount = (
+            current_period.quota_total * QuotaService.QUOTA_BUFFER_PERCENTAGE
+        )
+
+        # 5. 檢查是否超過硬限制
+        if quota_after > effective_limit:
+            # ❌ 超過硬限制，拒絕操作
+            over_limit = quota_after - effective_limit
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "error": "QUOTA_HARD_LIMIT_EXCEEDED",
+                    "message": "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
+                    "quota_used": quota_before,
+                    "quota_total": current_period.quota_total,
+                    "quota_limit": int(effective_limit),
+                    "buffer_percentage": int(
+                        QuotaService.QUOTA_BUFFER_PERCENTAGE * 100
+                    ),
+                    "over_limit": int(over_limit),
+                },
             )
 
-        # 4. 扣除配額（即使超額也繼續扣除）
+        # 6. 檢查是否在緩衝區間（超過基本配額但未超過硬限制）
+        if quota_after > current_period.quota_total:
+            buffer_used = quota_after - current_period.quota_total
+            buffer_remaining = buffer_amount - buffer_used
+            logger.warning(
+                f"⚠️ Teacher {teacher.id} using buffer quota: "
+                f"{int(buffer_used)}s/{int(buffer_amount)}s used, "
+                f"{int(buffer_remaining)}s remaining before hard limit"
+            )
+        elif quota_remaining < 0:
+            # 理論上不會進入（上面已經處理超額情況）
+            logger.warning(
+                f"⚠️ Teacher {teacher.id} quota exceeded: {abs(quota_remaining)}s over limit"
+            )
+
+        # 7. 扣除配額
         current_period.quota_used = quota_after
 
-        # 5. 記錄使用明細
+        # 8. 記錄使用明細
         usage_log = PointUsageLog(
             subscription_period_id=current_period.id,
             teacher_id=teacher.id,
@@ -178,7 +218,7 @@ class QuotaService:
         )
         db.add(usage_log)
 
-        # 6. Commit
+        # 9. Commit
         db.commit()
         db.refresh(usage_log)
 

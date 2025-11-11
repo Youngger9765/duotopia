@@ -854,9 +854,9 @@ export function AssignmentDialog({
 
               {/* Quick Select All */}
               <Card className="p-2 mb-2 bg-blue-50 border-blue-200">
-                <button
+                <div
                   onClick={toggleAllStudents}
-                  className="flex items-center gap-3 w-full"
+                  className="flex items-center gap-3 w-full cursor-pointer"
                 >
                   <Checkbox
                     checked={formData.assign_to_all}
@@ -873,7 +873,7 @@ export function AssignmentDialog({
                   {formData.assign_to_all && (
                     <Badge className="bg-blue-600 text-white">全選</Badge>
                   )}
-                </button>
+                </div>
               </Card>
 
               {/* Student Grid - Maximum use of space */}
@@ -881,11 +881,11 @@ export function AssignmentDialog({
                 <ScrollArea className="h-full">
                   <div className="grid grid-cols-3 gap-1.5 p-1">
                     {students.map((student) => (
-                      <button
+                      <div
                         key={student.id}
                         onClick={() => toggleStudent(student.id)}
                         className={cn(
-                          "p-2 rounded-md border transition-all text-left relative",
+                          "p-2 rounded-md border transition-all text-left relative cursor-pointer",
                           formData.student_ids.includes(student.id)
                             ? "bg-blue-50 border-blue-300 shadow-sm"
                             : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
@@ -894,7 +894,7 @@ export function AssignmentDialog({
                         <div className="flex items-start gap-2">
                           <Checkbox
                             checked={formData.student_ids.includes(student.id)}
-                            className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4"
+                            className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4 pointer-events-none"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-xs truncate">
@@ -910,7 +910,7 @@ export function AssignmentDialog({
                             <CheckCircle2 className="h-3 w-3 text-blue-600" />
                           </div>
                         )}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </ScrollArea>

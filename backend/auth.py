@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Test workflow trigger: 2025-11-10
+
 # 🔐 Security: No default values for secrets
 SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
 

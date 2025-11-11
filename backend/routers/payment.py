@@ -240,9 +240,13 @@ async def process_payment(
 
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Payment successful - update teacher's subscription
-        current_teacher.subscription_end_date = new_end_date
-        current_teacher.subscription_type = payment_request.plan_name
+        # Payment successful - 關閉舊的訂閱週期
+        for period in (
+            db.query(SubscriptionPeriod)
+            .filter_by(teacher_id=current_teacher.id, status="active")
+            .all()
+        ):
+            period.status = "expired"
 
         # ✅ 創建新的訂閱週期記錄
         quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
@@ -865,46 +869,60 @@ async def get_subscription_status(
     - 取消時間
     - 配額使用狀況
     """
-    # Calculate is_active
-    is_active = False
-    if current_teacher.subscription_end_date:
-        end_date_utc = (
-            current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
-            if current_teacher.subscription_end_date.tzinfo is None
-            else current_teacher.subscription_end_date
+    try:
+        # Calculate is_active
+        is_active = False
+        if current_teacher.subscription_end_date:
+            end_date_utc = (
+                current_teacher.subscription_end_date.replace(tzinfo=timezone.utc)
+                if current_teacher.subscription_end_date.tzinfo is None
+                else current_teacher.subscription_end_date
+            )
+            is_active = end_date_utc > datetime.now(timezone.utc)
+
+        # Get quota used from current subscription period
+        current_period = None
+        try:
+            current_period = current_teacher.current_period
+        except Exception as e:
+            logger.error(f"Error fetching current_period: {e}")
+            # Continue without period data
+
+        quota_used = current_period.quota_used if current_period else 0
+        quota_total = current_period.quota_total if current_period else None
+        quota_remaining = (
+            (quota_total - quota_used) if quota_total is not None else None
         )
-        is_active = end_date_utc > datetime.now(timezone.utc)
 
-    # Get quota used from current subscription period
-    current_period = current_teacher.current_period
-    quota_used = current_period.quota_used if current_period else 0
-    quota_total = current_period.quota_total if current_period else None
-    quota_remaining = (quota_total - quota_used) if quota_total is not None else None
-
-    return {
-        "status": current_teacher.subscription_status or "INACTIVE",
-        "plan": current_teacher.subscription_type,
-        "end_date": (
-            current_teacher.subscription_end_date.isoformat()
-            if current_teacher.subscription_end_date
-            else None
-        ),
-        "days_remaining": current_teacher.days_remaining,
-        "is_active": is_active,
-        "auto_renew": (
-            current_teacher.subscription_auto_renew
-            if current_teacher.subscription_auto_renew is not None
-            else True
-        ),
-        "cancelled_at": (
-            current_teacher.subscription_cancelled_at.isoformat()
-            if current_teacher.subscription_cancelled_at
-            else None
-        ),
-        "quota_used": quota_used,
-        "quota_total": quota_total,
-        "quota_remaining": quota_remaining,
-    }
+        return {
+            "status": current_teacher.subscription_status or "INACTIVE",
+            "plan": current_period.plan_name if current_period else None,
+            "end_date": (
+                current_teacher.subscription_end_date.isoformat()
+                if current_teacher.subscription_end_date
+                else None
+            ),
+            "days_remaining": current_teacher.days_remaining,
+            "is_active": is_active,
+            "auto_renew": (
+                current_teacher.subscription_auto_renew
+                if current_teacher.subscription_auto_renew is not None
+                else True
+            ),
+            "cancelled_at": (
+                current_teacher.subscription_cancelled_at.isoformat()
+                if current_teacher.subscription_cancelled_at
+                else None
+            ),
+            "quota_used": quota_used,
+            "quota_total": quota_total,
+            "quota_remaining": quota_remaining,
+        }
+    except Exception as e:
+        logger.error(f"Error in get_subscription_status: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch subscription status: {str(e)}"
+        )
 
 
 @router.get("/subscription/usage/history")

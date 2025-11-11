@@ -180,37 +180,41 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
+    // 🔴 BUG FIX: 如果沒有 initialAssessmentResults，清空舊的評分結果
     if (
-      initialAssessmentResults &&
-      Object.keys(initialAssessmentResults).length > 0
+      !initialAssessmentResults ||
+      Object.keys(initialAssessmentResults).length === 0
     ) {
-      // Check if it has items structure
-      if (
-        initialAssessmentResults.items &&
-        typeof initialAssessmentResults.items === "object"
-      ) {
-        const itemsResults: Record<number, AssessmentResult> = {};
-        const items = initialAssessmentResults.items as Record<string, unknown>;
+      setAssessmentResults({});
+      return;
+    }
 
-        Object.keys(items).forEach((key) => {
-          const index = parseInt(key);
-          if (!isNaN(index) && items[key]) {
-            itemsResults[index] = items[key] as AssessmentResult;
-          }
-        });
+    // Check if it has items structure
+    if (
+      initialAssessmentResults.items &&
+      typeof initialAssessmentResults.items === "object"
+    ) {
+      const itemsResults: Record<number, AssessmentResult> = {};
+      const items = initialAssessmentResults.items as Record<string, unknown>;
 
-        setAssessmentResults(itemsResults);
-      } else if (
-        !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
-      ) {
-        setAssessmentResults({
-          0: initialAssessmentResults as AssessmentResult,
-        });
-      } else {
-        setAssessmentResults(
-          initialAssessmentResults as Record<number, AssessmentResult>,
-        );
-      }
+      Object.keys(items).forEach((key) => {
+        const index = parseInt(key);
+        if (!isNaN(index) && items[key]) {
+          itemsResults[index] = items[key] as AssessmentResult;
+        }
+      });
+
+      setAssessmentResults(itemsResults);
+    } else if (
+      !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
+    ) {
+      setAssessmentResults({
+        0: initialAssessmentResults as AssessmentResult,
+      });
+    } else {
+      setAssessmentResults(
+        initialAssessmentResults as Record<number, AssessmentResult>,
+      );
     }
   }, [initialAssessmentResults]);
 

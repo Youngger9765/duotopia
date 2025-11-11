@@ -106,21 +106,21 @@ jobs:
       id: db_env
       run: |
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          echo "🔥 Using Supabase Production"
+          echo "🔥 Using Production Database"
         else
-          echo "DATABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_SUPABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_PROJECT_URL }}" >> $GITHUB_OUTPUT
+          echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
           echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          echo "🆓 Using Supabase Staging"
+          echo "🆓 Using Staging Database"
         fi
 
     - name: Build and push backend image
@@ -174,7 +174,6 @@ jobs:
 
         # 檢查沒有啟用 RLS 的表
         # 排除所有業務表：系統使用 JWT auth（不是 Supabase Auth），auth.uid() 永遠是 NULL
-        # 所有授權邏輯由後端程式碼處理，RLS 會阻擋正常存取
         TABLES_WITHOUT_RLS=$(psql "$DATABASE_URL" -t -c "
           SELECT tablename
           FROM pg_tables
@@ -269,7 +268,7 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"
         else
-          ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"  # Staging also uses production TapPay
         fi
 
         ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"

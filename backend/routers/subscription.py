@@ -13,6 +13,7 @@ from models import (
     Classroom,
     ClassroomStudent,
     StudentAssignment,
+    SubscriptionPeriod,
 )
 
 router = APIRouter(prefix="/api/test", tags=["test-subscription"])
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/test", tags=["test-subscription"])
 # 🔐 測試訂閱功能白名單（僅允許特定帳號使用模擬加值）
 TEST_SUBSCRIPTION_WHITELIST = [
     "demo@duotopia.com",
+    "purpleice9765@msn.com",
     "kaddyeunice@apps.ntpc.edu.tw",
     "ceeks.edu@gmail.com",
 ]
@@ -62,30 +64,37 @@ async def get_subscription_status(
     if not current_teacher:
         raise HTTPException(status_code=404, detail=f"Account {target_email} not found")
 
-    # Calculate is_active based on subscription_end_date
-    is_active = False
-    if current_teacher.subscription_end_date:
-        now = datetime.now(timezone.utc)
-        is_active = current_teacher.subscription_end_date > now
-
-    # 取得配額使用量（從當前訂閱週期）
+    # 🔄 新系統：從 subscription_periods 取得資料
     current_period = current_teacher.current_period
-    quota_used = current_period.quota_used if current_period else 0
+
+    if current_period:
+        now = datetime.now(timezone.utc)
+        is_active = current_period.end_date > now
+        end_date = current_period.end_date
+        plan_name = current_period.plan_name
+        quota_used = current_period.quota_used
+        # 取消時間從 status 判斷（如果 status='cancelled' 使用 updated_at）
+        cancelled_at = (
+            current_period.cancelled_at
+            if hasattr(current_period, "cancelled_at")
+            else None
+        )
+    else:
+        # 沒有訂閱週期
+        is_active = False
+        end_date = None
+        plan_name = None
+        quota_used = 0
+        cancelled_at = None
 
     return SubscriptionStatusResponse(
-        status=current_teacher.subscription_status or "INACTIVE",
-        plan=current_teacher.subscription_type,
-        end_date=current_teacher.subscription_end_date.isoformat()
-        if current_teacher.subscription_end_date
-        else None,
+        status=current_teacher.subscription_status,
+        plan=plan_name,
+        end_date=end_date.isoformat() if end_date else None,
         days_remaining=current_teacher.days_remaining,
         is_active=is_active,
-        auto_renew=current_teacher.subscription_auto_renew
-        if current_teacher.subscription_auto_renew is not None
-        else True,
-        cancelled_at=current_teacher.subscription_cancelled_at.isoformat()
-        if current_teacher.subscription_cancelled_at
-        else None,
+        auto_renew=True,  # 新系統暫不支援自動續訂
+        cancelled_at=cancelled_at.isoformat() if cancelled_at else None,
         created_at=current_teacher.created_at.isoformat()
         if current_teacher.created_at
         else datetime.now(timezone.utc).isoformat(),
@@ -96,19 +105,40 @@ async def get_subscription_status(
 @router.post("/subscription/reset-test-accounts")
 async def reset_test_accounts(db: Session = Depends(get_db)):
     """Reset demo and expired test accounts to default state"""
+
     now = datetime.now(timezone.utc)
 
     # 1. Reset Demo account (has subscription)
     demo = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
     if demo:
-        demo.subscription_end_date = now + timedelta(days=30)
-        demo.subscription_type = "Tutor Teachers"
+        # 關閉所有現有 period
+        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=demo.id).all():
+            period.status = "expired"
+
+        # 創建新的 30 天訂閱
+        new_period = SubscriptionPeriod(
+            teacher_id=demo.id,
+            plan_name="Tutor Teachers",
+            amount_paid=0,
+            quota_total=10000,
+            quota_used=0,
+            start_date=now,
+            end_date=now + timedelta(days=30),
+            payment_method="manual",
+            payment_status="completed",
+            status="active",
+        )
+        db.add(new_period)
 
     # 2. Reset Expired account (subscription expired)
     expired = db.query(Teacher).filter_by(email="expired@duotopia.com").first()
     if expired:
-        expired.subscription_end_date = now - timedelta(days=1)
-        expired.subscription_type = None
+        # 關閉所有現有 period（讓訂閱過期）
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=expired.id).all()
+        ):
+            period.status = "expired"
+            period.end_date = now - timedelta(days=1)
 
     db.commit()
 
@@ -156,50 +186,135 @@ async def update_subscription_status(
     message = ""
 
     if request.action == "set_subscribed":
-        # Set as subscribed (has days remaining)
-        current_teacher.subscription_end_date = now + timedelta(days=30)
+        # Set as subscribed (has days remaining) - 創建新 period
+        # 關閉所有現有 period
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
+            period.status = "expired"
+
+        new_period = SubscriptionPeriod(
+            teacher_id=current_teacher.id,
+            plan_name="Tutor Teachers",
+            amount_paid=0,
+            quota_total=10000,
+            quota_used=0,
+            start_date=now,
+            end_date=now + timedelta(days=30),
+            payment_method="manual",
+            payment_status="completed",
+            status="active",
+        )
+        db.add(new_period)
         message = "設定為已訂閱狀態（30天）"
 
     elif request.action == "set_expired":
-        # Set as expired (no days remaining)
-        current_teacher.subscription_end_date = now - timedelta(
-            days=1
-        )  # Expired yesterday
+        # Set as expired (no days remaining) - 關閉所有 period
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
+            period.status = "expired"
+            period.end_date = now - timedelta(days=1)
         message = "設定為未訂閱狀態"
 
     elif request.action == "add_months":
         # Add months to current subscription
         months = request.months or 1
-        if (
-            current_teacher.subscription_end_date
-            and current_teacher.subscription_end_date > now
-        ):
+        current_period = current_teacher.current_period
+
+        if current_period and current_period.end_date > now:
             # Extend existing subscription
-            current_teacher.subscription_end_date += timedelta(days=30 * months)
+            current_period.end_date += timedelta(days=30 * months)
         else:
-            # Start new subscription from today
-            current_teacher.subscription_end_date = now + timedelta(days=30 * months)
+            # Create new subscription from today
+            # 先關閉現有 period
+            for period in (
+                db.query(SubscriptionPeriod)
+                .filter_by(teacher_id=current_teacher.id)
+                .all()
+            ):
+                period.status = "expired"
+
+            new_period = SubscriptionPeriod(
+                teacher_id=current_teacher.id,
+                plan_name="Tutor Teachers",
+                amount_paid=0,
+                quota_total=10000,
+                quota_used=0,
+                start_date=now,
+                end_date=now + timedelta(days=30 * months),
+                payment_method="manual",
+                payment_status="completed",
+                status="active",
+            )
+            db.add(new_period)
         message = f"已充值 {months} 個月"
 
     elif request.action == "reset_to_new":
         # Reset to new account with 30 days
-        current_teacher.subscription_end_date = now + timedelta(days=30)
+        # 關閉所有現有 period
+        for period in (
+            db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id).all()
+        ):
+            period.status = "expired"
+
+        new_period = SubscriptionPeriod(
+            teacher_id=current_teacher.id,
+            plan_name="Tutor Teachers",
+            amount_paid=0,
+            quota_total=10000,
+            quota_used=0,
+            start_date=now,
+            end_date=now + timedelta(days=30),
+            payment_method="manual",
+            payment_status="completed",
+            status="active",
+        )
+        db.add(new_period)
         message = "重置為新帳號（30天）"
 
     elif request.action == "expire_tomorrow":
         # Set to expire tomorrow
-        if not current_teacher.subscription_end_date:
-            current_teacher.subscription_end_date = now + timedelta(days=1)
+        current_period = current_teacher.current_period
+        if current_period:
+            current_period.end_date = now + timedelta(days=1)
         else:
-            current_teacher.subscription_end_date = now + timedelta(days=1)
+            # 創建明天到期的 period
+            new_period = SubscriptionPeriod(
+                teacher_id=current_teacher.id,
+                plan_name="Tutor Teachers",
+                amount_paid=0,
+                quota_total=10000,
+                quota_used=0,
+                start_date=now,
+                end_date=now + timedelta(days=1),
+                payment_method="manual",
+                payment_status="completed",
+                status="active",
+            )
+            db.add(new_period)
         message = "設定為明天到期"
 
     elif request.action == "expire_in_week":
         # Set to expire in a week
-        if not current_teacher.subscription_end_date:
-            current_teacher.subscription_end_date = now + timedelta(days=7)
+        current_period = current_teacher.current_period
+        if current_period:
+            current_period.end_date = now + timedelta(days=7)
         else:
-            current_teacher.subscription_end_date = now + timedelta(days=7)
+            # 創建一週後到期的 period
+            new_period = SubscriptionPeriod(
+                teacher_id=current_teacher.id,
+                plan_name="Tutor Teachers",
+                amount_paid=0,
+                quota_total=10000,
+                quota_used=0,
+                start_date=now,
+                end_date=now + timedelta(days=7),
+                payment_method="manual",
+                payment_status="completed",
+                status="active",
+            )
+            db.add(new_period)
         message = "設定為一週後到期"
 
     elif request.action == "update_quota":
@@ -228,10 +343,7 @@ async def update_subscription_status(
         if new_plan not in ["Tutor Teachers", "School Teachers"]:
             raise HTTPException(status_code=400, detail="Invalid plan name")
 
-        # Update teacher subscription type
-        current_teacher.subscription_type = new_plan
-
-        # Update current period's quota_total
+        # Update current period's quota_total and plan_name
         current_period = current_teacher.current_period
         if current_period:
             new_quota = 25000 if new_plan == "School Teachers" else 10000
@@ -239,7 +351,22 @@ async def update_subscription_status(
             current_period.plan_name = new_plan
             message = f"已切換方案至 {new_plan}，配額已更新為 {new_quota} 點"
         else:
-            message = f"已切換方案至 {new_plan}（無有效訂閱週期）"
+            # 創建新的訂閱週期
+            new_quota = 25000 if new_plan == "School Teachers" else 10000
+            new_period = SubscriptionPeriod(
+                teacher_id=current_teacher.id,
+                plan_name=new_plan,
+                amount_paid=0,
+                quota_total=new_quota,
+                quota_used=0,
+                start_date=now,
+                end_date=now + timedelta(days=30),
+                payment_method="manual",
+                payment_status="completed",
+                status="active",
+            )
+            db.add(new_period)
+            message = f"已切換方案至 {new_plan}，配額已更新為 {new_quota} 點（創建新訂閱週期）"
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
@@ -247,31 +374,31 @@ async def update_subscription_status(
     db.commit()
     db.refresh(current_teacher)
 
-    # Calculate is_active
-    is_active = False
-    if current_teacher.subscription_end_date:
-        is_active = current_teacher.subscription_end_date > now
-
-    # Get quota used
+    # Get updated period
     current_period = current_teacher.current_period
-    quota_used = current_period.quota_used if current_period else 0
+    is_active = False
+    end_date = None
+    plan_name = None
+    quota_used = 0
+
+    if current_period:
+        is_active = current_period.end_date > now
+        end_date = current_period.end_date
+        plan_name = current_period.plan_name
+        quota_used = current_period.quota_used
 
     return {
         "message": message,
         "status": SubscriptionStatusResponse(
-            status=current_teacher.subscription_status or "INACTIVE",
-            plan=current_teacher.subscription_type,
-            end_date=current_teacher.subscription_end_date.isoformat()
-            if current_teacher.subscription_end_date
-            else None,
+            status=current_teacher.subscription_status,
+            plan=plan_name,
+            end_date=end_date.isoformat() if end_date else None,
             days_remaining=current_teacher.days_remaining,
             is_active=is_active,
             auto_renew=current_teacher.subscription_auto_renew
             if current_teacher.subscription_auto_renew is not None
             else True,
-            cancelled_at=current_teacher.subscription_cancelled_at.isoformat()
-            if current_teacher.subscription_cancelled_at
-            else None,
+            cancelled_at=None,
             created_at=current_teacher.created_at.isoformat()
             if current_teacher.created_at
             else now.isoformat(),

@@ -169,12 +169,13 @@ jobs:
         fi
 
         # TapPay build args - 根據環境動態設定
+        # ⚠️ Staging also uses production TapPay for real payments
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           TAPPAY_SERVER_TYPE="production"
           TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
           TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
         else
-          TAPPAY_SERVER_TYPE="sandbox"
+          TAPPAY_SERVER_TYPE="production"  # Staging uses production TapPay
           TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
           TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
         fi

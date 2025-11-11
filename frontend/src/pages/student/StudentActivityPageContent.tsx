@@ -1244,18 +1244,33 @@ export default function StudentActivityPageContent({
                               "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
                               "flex items-center justify-center text-sm sm:text-xs font-medium",
                               "min-w-[32px] sm:min-w-[32px]",
-                              needsCorrection
-                                ? "bg-red-100 text-red-800 border-red-400"
-                                : isTeacherPassed
-                                  ? "bg-green-100 text-green-800 border-green-400"
-                                  : isCompleted
-                                    ? "bg-yellow-100 text-yellow-800 border-yellow-400"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                              // 保持學生原本的完成狀態樣式
+                              isCompleted
+                                ? "bg-green-100 text-green-800 border-green-400"
+                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
                               isActiveItem && "border-2 border-blue-600",
                             )}
-                            title={needsCorrection ? "需要訂正" : ""}
+                            title={
+                              needsCorrection
+                                ? "老師要求訂正"
+                                : isTeacherPassed
+                                  ? "老師已通過"
+                                  : isCompleted
+                                    ? "已完成"
+                                    : "未完成"
+                            }
                           >
                             {itemIndex + 1}
+                            {/* 老師評分圖標 - 右上角圓點徽章 */}
+                            {hasTeacherGraded && (
+                              <span
+                                className={cn(
+                                  "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
+                                  teacherPassed ? "bg-green-500" : "bg-red-500",
+                                )}
+                                aria-label={teacherPassed ? "通過" : "未通過"}
+                              />
+                            )}
                           </button>
                         );
                       })}

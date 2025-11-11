@@ -263,20 +263,14 @@ class Teacher(Base):
     password_reset_sent_at = Column(DateTime(timezone=True))  # 最後發送密碼重設郵件時間
     password_reset_expires_at = Column(DateTime(timezone=True))  # token 過期時間
 
-    # 訂閱系統
-    subscription_type = Column(String, nullable=True)  # 訂閱類型（與 DB 一致，但不使用）
-    subscription_status_db = Column(
-        "subscription_status", String, nullable=True
-    )  # 訂閱狀態（與 DB 一致，但不使用）
-    subscription_start_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱開始日
-    subscription_end_date = Column(DateTime(timezone=True))  # 訂閱到期日
-    subscription_renewed_at = Column(DateTime(timezone=True), nullable=True)  # 最後續訂時間
-    subscription_auto_renew = Column(Boolean, default=True)  # 是否自動續訂
+    # 訂閱系統 - 新系統使用 subscription_periods 表
+    # 移除舊欄位：subscription_type, subscription_status, subscription_start_date,
+    #            subscription_end_date, subscription_renewed_at, monthly_message_limit,
+    #            messages_used_this_month
+    subscription_auto_renew = Column(Boolean, default=True)  # 是否自動續訂（全域偏好）
     subscription_cancelled_at = Column(DateTime(timezone=True), nullable=True)  # 取消續訂時間
     trial_start_date = Column(DateTime(timezone=True), nullable=True)  # 試用開始日
     trial_end_date = Column(DateTime(timezone=True), nullable=True)  # 試用結束日
-    monthly_message_limit = Column(Integer, nullable=True)  # 每月訊息限制（與 DB 一致，但不使用）
-    messages_used_this_month = Column(Integer, nullable=True)  # 本月已用訊息（與 DB 一致，但不使用）
 
     # TapPay 信用卡 Token（用於自動續訂扣款）
     card_key = Column(String(255), nullable=True)  # TapPay Card Key（永久有效）
@@ -345,6 +339,7 @@ class Teacher(Base):
                 SubscriptionPeriod.teacher_id == self.id,
                 SubscriptionPeriod.status == "active",
             )
+            .order_by(SubscriptionPeriod.start_date.desc())  # 最新的 period 優先
             .limit(1)
         )
         return session.execute(stmt).scalar_one_or_none()
@@ -365,38 +360,71 @@ class Teacher(Base):
 
     @property
     def subscription_status(self):
-        """獲取訂閱狀態"""
+        """獲取訂閱狀態 - 從 subscription_periods 計算"""
+        period = self.current_period
+        if not period:
+            return "expired"
+
         from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc)
 
-        # 簡單邏輯：有天數就是已訂閱，沒天數就是未訂閱
-        if self.subscription_end_date and self.subscription_end_date > now:
+        # 確保 end_date 有 timezone
+        end_date = period.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        if end_date > now:
             return "subscribed"
         else:
             return "expired"
 
     @property
     def days_remaining(self):
-        """獲取剩餘天數"""
+        """獲取剩餘天數 - 從 subscription_periods 計算"""
+        period = self.current_period
+        if not period:
+            return 0
+
         from datetime import datetime, timezone
 
-        if not self.subscription_end_date:
-            return 0
-        elif self.subscription_end_date > datetime.now(timezone.utc):
-            return (self.subscription_end_date - datetime.now(timezone.utc)).days
+        now = datetime.now(timezone.utc)
+
+        # 確保 end_date 有 timezone
+        end_date = period.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        if end_date > now:
+            return (end_date - now).days
         else:
             return 0
 
     @property
+    def subscription_end_date(self):
+        """獲取訂閱結束日期 - 從 subscription_periods 計算"""
+        period = self.current_period
+        if not period:
+            return None
+        return period.end_date
+
+    @property
     def can_assign_homework(self):
-        """是否可以分派作業"""
+        """是否可以分派作業 - 檢查是否有有效的 subscription_period"""
+        period = self.current_period
+        if not period:
+            return False
+
         from datetime import datetime, timezone
 
-        # 只有有效訂閱才能分派作業
-        return self.subscription_end_date and self.subscription_end_date > datetime.now(
-            timezone.utc
-        )
+        now = datetime.now(timezone.utc)
+
+        # 確保 end_date 有 timezone
+        end_date = period.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        return end_date > now
 
     def __repr__(self):
         return f"<Teacher {self.name} ({self.email})>"
