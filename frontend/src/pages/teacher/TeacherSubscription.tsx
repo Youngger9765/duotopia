@@ -121,10 +121,21 @@ export default function TeacherSubscription() {
         const subData = await apiClient.get<SubscriptionInfo>(
           "/api/subscription/status",
         );
-        console.log("Subscription data:", subData);
         setSubscription(subData);
       } catch (error) {
         console.error("Failed to fetch subscription:", error);
+        // If 401, user is not logged in - show appropriate message
+        if (error && typeof error === "object" && "status" in error) {
+          if (error.status === 401) {
+            toast.error("請先登入教師帳號");
+          } else if (error.status === 403) {
+            toast.error("權限不足");
+          } else {
+            toast.error("載入訂閱資料失敗");
+          }
+        } else {
+          toast.error("載入訂閱資料失敗");
+        }
       }
 
       // 獲取付款歷史
@@ -132,7 +143,6 @@ export default function TeacherSubscription() {
         const txnData = await apiClient.get<{ transactions: Transaction[] }>(
           "/api/payment/history",
         );
-        console.log("Transaction data:", txnData);
         setTransactions(txnData.transactions || []);
       } catch (error) {
         console.error("Failed to fetch transactions:", error);
