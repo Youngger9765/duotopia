@@ -32,7 +32,7 @@ interface DashboardData {
   subscription_end_date?: string;
   days_remaining?: number;
   can_assign_homework?: boolean;
-  is_test_account?: boolean;  // 後端提供的白名單狀態
+  is_test_account?: boolean; // 後端提供的白名單狀態
 }
 
 export default function TeacherDashboard() {

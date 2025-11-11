@@ -64,8 +64,7 @@ export default function TestSubscription() {
     }
 
     fetchStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navigate, TEST_SUBSCRIPTION_WHITELIST]);
 
   const fetchStatus = async () => {
     if (!user) return;
@@ -74,7 +73,9 @@ export default function TestSubscription() {
       const apiUrl =
         import.meta.env.VITE_API_URL ||
         window.location.origin.replace(":5173", ":8080");
-      const response = await fetch(`${apiUrl}/api/test/subscription/status?email=${encodeURIComponent(user.email)}`);
+      const response = await fetch(
+        `${apiUrl}/api/test/subscription/status?email=${encodeURIComponent(user.email)}`,
+      );
       const data: SubscriptionStatus = await response.json();
       setStatus(data);
 
@@ -157,7 +158,11 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_quota", email: user.email, quota_delta: delta }),
+        body: JSON.stringify({
+          action: "update_quota",
+          email: user.email,
+          quota_delta: delta,
+        }),
       });
 
       if (response.ok) {
@@ -220,7 +225,11 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "change_plan", email: user.email, plan: newPlan }),
+        body: JSON.stringify({
+          action: "change_plan",
+          email: user.email,
+          plan: newPlan,
+        }),
       });
 
       if (response.ok) {
@@ -262,11 +271,10 @@ export default function TestSubscription() {
             訂閱 & 配額測試控制台
           </h1>
           <p className="text-gray-600">
-            當前測試帳號：<span className="font-semibold text-blue-600">{user?.email}</span>
+            當前測試帳號：
+            <span className="font-semibold text-blue-600">{user?.email}</span>
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            僅供白名單帳號使用
-          </p>
+          <p className="text-sm text-gray-500 mt-1">僅供白名單帳號使用</p>
         </div>
 
         {/* 訊息顯示 */}
