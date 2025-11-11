@@ -400,6 +400,14 @@ class Teacher(Base):
             return 0
 
     @property
+    def subscription_end_date(self):
+        """獲取訂閱結束日期 - 從 subscription_periods 計算"""
+        period = self.current_period
+        if not period:
+            return None
+        return period.end_date
+
+    @property
     def can_assign_homework(self):
         """是否可以分派作業 - 檢查是否有有效的 subscription_period"""
         period = self.current_period
