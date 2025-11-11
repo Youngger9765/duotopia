@@ -648,8 +648,26 @@ async def assess_pronunciation_endpoint(
                 f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "
                 f"for student {current_student.id} assignment {assignment.id}"
             )
-        except HTTPException:
-            raise  # 配額扣除失敗，回滾整個操作
+        except HTTPException as e:
+            # 配額扣除失敗（可能是硬限制超額），向學生顯示友善訊息
+            if e.status_code == 402 and isinstance(e.detail, dict):
+                error_type = e.detail.get("error")
+                if error_type == "QUOTA_HARD_LIMIT_EXCEEDED":
+                    # 硬限制超額，學生看到友善訊息
+                    logger.error(
+                        f"❌ Quota hard limit exceeded for teacher {teacher.id}, "
+                        f"blocking student {current_student.id}"
+                    )
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "error": "QUOTA_HARD_LIMIT_EXCEEDED",
+                            "message": "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
+                            "teacher_quota_info": e.detail,
+                        },
+                    )
+            # 其他 HTTPException 直接拋出
+            raise
         except Exception as e:
             logger.error(f"❌ Quota deduction failed: {e}")
             # 其他錯誤只記錄，不影響評分結果

@@ -82,13 +82,17 @@ async def monthly_renewal_cron(
             "date": today_taipei.isoformat(),
         }
 
-    # 找出今天到期且開啟自動續訂的用戶（用台北時間的日期）
+    # 🔄 新系統：找出今天到期且開啟自動續訂的用戶
+    # - 續訂偏好：查 Teacher.subscription_auto_renew
+    # - 到期日：查 SubscriptionPeriod.end_date
     teachers_to_renew = (
         db.query(Teacher)
+        .join(SubscriptionPeriod, Teacher.id == SubscriptionPeriod.teacher_id)
         .filter(
-            func.date(Teacher.subscription_end_date) == today_taipei,
             Teacher.subscription_auto_renew.is_(True),
             Teacher.is_active.is_(True),
+            SubscriptionPeriod.status == "active",
+            func.date(SubscriptionPeriod.end_date) == today_taipei,
         )
         .all()
     )
@@ -110,10 +114,11 @@ async def monthly_renewal_cron(
 
     for teacher in teachers_to_renew:
         try:
-            # 檢查訂閱類型
-            if not teacher.subscription_type:
+            # 🔄 新系統：從 current_period 取得訂閱資訊
+            current_period = teacher.current_period
+            if not current_period:
                 logger.warning(
-                    f"Teacher {teacher.email} has no subscription_type, skipping"
+                    f"Teacher {teacher.email} has no active subscription period, skipping"
                 )
                 results["skipped"] += 1
                 continue
@@ -133,10 +138,11 @@ async def monthly_renewal_cron(
                 )
                 continue
 
-            # 計算新的到期日和應付金額
-            current_end_date = teacher.subscription_end_date
+            # 🔄 新系統：計算新的到期日和應付金額（從 Period 取得）
+            current_end_date = current_period.end_date
+            plan_name = current_period.plan_name
             new_end_date, amount = SubscriptionCalculator.calculate_renewal(
-                current_end_date, teacher.subscription_type
+                current_end_date, plan_name
             )
 
             # 生成訂單編號
@@ -152,7 +158,7 @@ async def monthly_renewal_cron(
                 card_key=teacher.card_key,
                 card_token=teacher.card_token,
                 amount=amount,
-                details=f"{teacher.subscription_type} Monthly Renewal",
+                details=f"{plan_name} Monthly Renewal",  # 🔄 使用 Period.plan_name
                 cardholder={
                     "name": teacher.name,
                     "email": teacher.email,
@@ -174,7 +180,7 @@ async def monthly_renewal_cron(
                     teacher_id=teacher.id,
                     teacher_email=teacher.email,
                     transaction_type=TransactionType.RECHARGE,
-                    subscription_type=teacher.subscription_type,
+                    subscription_type=plan_name,  # 🔄 使用 Period.plan_name
                     amount=amount,
                     currency="TWD",
                     status="FAILED",
@@ -208,26 +214,24 @@ async def monthly_renewal_cron(
 
                 continue
 
-            # ✅ 扣款成功 - 更新訂閱
-            previous_end_date = teacher.subscription_end_date
-            teacher.subscription_end_date = new_end_date
-            teacher.subscription_renewed_at = now_utc
+            # ✅ 扣款成功 - 🔄 新系統：創建新 Period，舊 Period 標記過期
+            previous_end_date = current_period.end_date
 
             # 取得交易 ID
             rec_id = gateway_response.get("rec_trade_id")
 
             # ✅ 創建新的訂閱週期記錄
             quota_total = (
-                25000 if teacher.subscription_type == "School Teachers" else 10000
+                25000 if plan_name == "School Teachers" else 10000
             )
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,
-                plan_name=teacher.subscription_type,
+                plan_name=plan_name,  # 🔄 使用 Period.plan_name
                 amount_paid=amount,
                 quota_total=quota_total,
                 quota_used=0,
-                start_date=now_utc,
-                end_date=new_end_date,
+                start_date=current_end_date,  # 🔄 從舊 Period 結束日開始
+                end_date=new_end_date,  # 🔄 SubscriptionCalculator 已計算好
                 payment_method="auto_renew",  # 自動續訂
                 payment_id=rec_id,
                 payment_status="paid",
@@ -235,10 +239,8 @@ async def monthly_renewal_cron(
             )
             db.add(new_period)
 
-            # 將舊的訂閱週期標記為過期
-            for old_period in teacher.subscription_periods:
-                if old_period.id != new_period.id and old_period.status == "active":
-                    old_period.status = "expired"
+            # 🔄 將舊的 Period 標記為過期
+            current_period.status = "expired"
 
             # ⚠️ 重要：更新 card_token（TapPay 每次交易會刷新 token）
             if gateway_response.get("card_secret"):
@@ -252,7 +254,7 @@ async def monthly_renewal_cron(
                 teacher_id=teacher.id,
                 teacher_email=teacher.email,
                 transaction_type=TransactionType.RECHARGE,
-                subscription_type=teacher.subscription_type,
+                subscription_type=plan_name,  # 🔄 使用 Period.plan_name
                 amount=amount,
                 currency="TWD",
                 status="SUCCESS",
@@ -284,7 +286,7 @@ async def monthly_renewal_cron(
                     teacher_email=teacher.email,
                     teacher_name=teacher.name,
                     new_end_date=new_end_date,
-                    plan_name=teacher.subscription_type,
+                    plan_name=plan_name,
                 )
             except Exception as e:
                 logger.error(f"Failed to send renewal email to {teacher.email}: {e}")
@@ -329,38 +331,42 @@ async def renewal_reminder_cron(
 
     logger.info(f"📧 Renewal reminder cron started at {now_utc}")
 
-    # 找出 7 天內到期的用戶（且尚未取消自動續訂）
-    teachers_to_remind = (
-        db.query(Teacher)
+    # 🔄 新系統：找出 7 天內到期的訂閱週期
+    periods_to_remind = (
+        db.query(SubscriptionPeriod)
+        .join(Teacher, SubscriptionPeriod.teacher_id == Teacher.id)
         .filter(
-            Teacher.subscription_end_date <= seven_days_later,
-            Teacher.subscription_end_date > now_utc,
+            SubscriptionPeriod.status == "active",
+            SubscriptionPeriod.payment_method == "auto_renew",
+            SubscriptionPeriod.end_date <= seven_days_later,
+            SubscriptionPeriod.end_date > now_utc,
             Teacher.subscription_auto_renew.is_(True),
             Teacher.is_active.is_(True),
         )
         .all()
     )
 
-    logger.info(f"Found {len(teachers_to_remind)} teachers to remind")
+    logger.info(f"Found {len(periods_to_remind)} periods to remind")
 
     results = {
         "status": "completed",
-        "total": len(teachers_to_remind),
+        "total": len(periods_to_remind),
         "success": 0,
         "failed": 0,
     }
 
-    for teacher in teachers_to_remind:
+    for period in periods_to_remind:
         try:
-            days_remaining = (teacher.subscription_end_date - now_utc).days
+            teacher = period.teacher
+            days_remaining = (period.end_date - now_utc).days
 
             # 發送提醒 Email
             email_service.send_renewal_reminder(
                 teacher_email=teacher.email,
                 teacher_name=teacher.name,
-                end_date=teacher.subscription_end_date,
+                end_date=period.end_date,
                 days_remaining=days_remaining,
-                plan_name=teacher.subscription_type or "訂閱方案",
+                plan_name=period.plan_name,
             )
 
             results["success"] += 1
@@ -413,12 +419,14 @@ async def test_cron_notification(
     # 7 天後
     seven_days_later = now_utc + timedelta(days=7)
 
-    # 統計即將到期的用戶（7 天內）
-    teachers_expiring_soon = (
-        db.query(Teacher)
+    # 🔄 新系統：統計即將到期的訂閱週期（7 天內）
+    periods_expiring_soon = (
+        db.query(SubscriptionPeriod)
+        .join(Teacher, SubscriptionPeriod.teacher_id == Teacher.id)
         .filter(
-            Teacher.subscription_end_date <= seven_days_later,
-            Teacher.subscription_end_date > now_utc,
+            SubscriptionPeriod.status == "active",
+            SubscriptionPeriod.end_date <= seven_days_later,
+            SubscriptionPeriod.end_date > now_utc,
             Teacher.subscription_auto_renew.is_(True),
             Teacher.is_active.is_(True),
         )
@@ -426,8 +434,8 @@ async def test_cron_notification(
     )
 
     # 統計有卡片的用戶
-    teachers_with_card = [t for t in teachers_expiring_soon if t.card_key]
-    teachers_without_card = [t for t in teachers_expiring_soon if not t.card_key]
+    teachers_with_card = [p.teacher for p in periods_expiring_soon if p.teacher.card_key]
+    teachers_without_card = [p.teacher for p in periods_expiring_soon if not p.teacher.card_key]
 
     # 發送測試通知到 Duotopia 官方信箱
     notification_content = f"""
@@ -436,7 +444,7 @@ async def test_cron_notification(
 
     <h3>📊 訂閱統計</h3>
     <ul>
-        <li>7 天內即將到期的用戶：<strong>{len(teachers_expiring_soon)}</strong> 位</li>
+        <li>7 天內即將到期的用戶：<strong>{len(periods_expiring_soon)}</strong> 位</li>
         <li>已儲存信用卡：<strong>{len(teachers_with_card)}</strong> 位</li>
         <li>未儲存信用卡：<strong>{len(teachers_without_card)}</strong> 位</li>
     </ul>
@@ -453,24 +461,28 @@ async def test_cron_notification(
     if teachers_with_card:
         notification_content += "<h4>已儲存卡片的用戶：</h4><ul>"
         for teacher in teachers_with_card:
-            days_left = (teacher.subscription_end_date - now_utc).days
-            notification_content += f"""
-            <li>{teacher.name} ({teacher.email})
-                - 到期日: {teacher.subscription_end_date.strftime('%Y-%m-%d')}
-                - 剩餘: {days_left} 天
-                - 卡片: ****{teacher.card_last_four}
-            </li>
-            """
+            period = teacher.current_period
+            if period:
+                days_left = (period.end_date - now_utc).days
+                notification_content += f"""
+                <li>{teacher.name} ({teacher.email})
+                    - 到期日: {period.end_date.strftime('%Y-%m-%d')}
+                    - 剩餘: {days_left} 天
+                    - 卡片: ****{teacher.card_last_four}
+                </li>
+                """
         notification_content += "</ul>"
 
     if teachers_without_card:
         notification_content += "<h4>⚠️ 未儲存卡片的用戶（需手動處理）：</h4><ul>"
         for teacher in teachers_without_card:
-            days_left = (teacher.subscription_end_date - now_utc).days
-            notification_content += f"""
-            <li>{teacher.name} ({teacher.email})
-                - 到期日: {teacher.subscription_end_date.strftime('%Y-%m-%d')}
-                - 剩餘: {days_left} 天
+            period = teacher.current_period
+            if period:
+                days_left = (period.end_date - now_utc).days
+                notification_content += f"""
+                <li>{teacher.name} ({teacher.email})
+                    - 到期日: {period.end_date.strftime('%Y-%m-%d')}
+                    - 剩餘: {days_left} 天
             </li>
             """
         notification_content += "</ul>"

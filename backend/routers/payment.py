@@ -240,9 +240,9 @@ async def process_payment(
 
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Payment successful - update teacher's subscription
-        current_teacher.subscription_end_date = new_end_date
-        current_teacher.subscription_type = payment_request.plan_name
+        # Payment successful - 關閉舊的訂閱週期
+        for period in db.query(SubscriptionPeriod).filter_by(teacher_id=current_teacher.id, status="active").all():
+            period.status = "expired"
 
         # ✅ 創建新的訂閱週期記錄
         quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
