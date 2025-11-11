@@ -55,9 +55,9 @@ def run_tests():
     print_header("🧪 E2E 整合測試：訂閱系統重構驗證")
 
     print_section("📋 測試配置")
-    print(f"  測試文件: test_subscription_integration_full.py")
+    print("  測試文件: test_subscription_integration_full.py")
     print(f"  執行時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  測試模式: E2E Integration")
+    print("  測試模式: E2E Integration")
 
     print_section("🚀 開始執行測試...")
 
