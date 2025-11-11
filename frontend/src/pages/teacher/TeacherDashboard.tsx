@@ -32,6 +32,7 @@ interface DashboardData {
   subscription_end_date?: string;
   days_remaining?: number;
   can_assign_homework?: boolean;
+  is_test_account?: boolean;  // 後端提供的白名單狀態
 }
 
 export default function TeacherDashboard() {
@@ -137,13 +138,11 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {/* Test Mode Button - Show for test accounts */}
-            {(dashboardData.teacher.email === "demo@duotopia.com" ||
-              dashboardData.teacher.email === "trial@duotopia.com" ||
-              dashboardData.teacher.email === "expired@duotopia.com") && (
+            {/* Test Mode Button - Show for whitelist accounts */}
+            {dashboardData.is_test_account && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
-                  onClick={() => navigate("/test-sub")}
+                  onClick={() => navigate("/teacher/test-sub")}
                   className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white"
                 >
                   <Settings className="mr-2 h-4 w-4" />

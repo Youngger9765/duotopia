@@ -21,6 +21,8 @@ router = APIRouter(prefix="/api/test", tags=["test-subscription"])
 # 🔐 測試訂閱功能白名單（僅允許特定帳號使用模擬加值）
 TEST_SUBSCRIPTION_WHITELIST = [
     "demo@duotopia.com",
+    "expired@duotopia.com",
+    "trial@duotopia.com",
     "purpleice9765@msn.com",
     "kaddyeunice@apps.ntpc.edu.tw",
     "ceeks.edu@gmail.com",

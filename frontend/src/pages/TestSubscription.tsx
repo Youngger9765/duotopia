@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { Gauge, Plus, Minus, TrendingUp, TrendingDown } from "lucide-react";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import TeacherLayout from "@/components/TeacherLayout";
+import { useNavigate } from "react-router-dom";
 
 interface SubscriptionStatus {
   status: string;
@@ -25,6 +28,8 @@ interface QuotaState {
 }
 
 export default function TestSubscription() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useTeacherAuthStore();
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -37,16 +42,39 @@ export default function TestSubscription() {
 
   const [customAmount, setCustomAmount] = useState<string>("100");
 
+  // 白名單檢查（與後端保持一致）
+  const TEST_SUBSCRIPTION_WHITELIST = [
+    "demo@duotopia.com",
+    "expired@duotopia.com",
+    "trial@duotopia.com",
+    "purpleice9765@msn.com",
+    "kaddyeunice@apps.ntpc.edu.tw",
+    "ceeks.edu@gmail.com",
+  ];
+
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      navigate("/teacher/login");
+      return;
+    }
+
+    if (!TEST_SUBSCRIPTION_WHITELIST.includes(user.email)) {
+      setMessage("❌ 您的帳號不在測試白名單中，無法使用此功能");
+      return;
+    }
+
     fetchStatus();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user]);
 
   const fetchStatus = async () => {
+    if (!user) return;
+
     try {
       const apiUrl =
         import.meta.env.VITE_API_URL ||
         window.location.origin.replace(":5173", ":8080");
-      const response = await fetch(`${apiUrl}/api/test/subscription/status`);
+      const response = await fetch(`${apiUrl}/api/test/subscription/status?email=${encodeURIComponent(user.email)}`);
       const data: SubscriptionStatus = await response.json();
       setStatus(data);
 
@@ -65,6 +93,8 @@ export default function TestSubscription() {
   };
 
   const updateStatus = async (action: string, params?: UpdateParams) => {
+    if (!user) return;
+
     setLoading(true);
     setMessage("");
 
@@ -75,7 +105,7 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, ...params }),
+        body: JSON.stringify({ action, email: user.email, ...params }),
       });
 
       const data: UpdateResponse = await response.json();
@@ -117,6 +147,8 @@ export default function TestSubscription() {
   };
 
   const updateUsed = async (delta: number) => {
+    if (!user) return;
+
     try {
       const apiUrl =
         import.meta.env.VITE_API_URL ||
@@ -125,7 +157,7 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_quota", quota_delta: delta }),
+        body: JSON.stringify({ action: "update_quota", email: user.email, quota_delta: delta }),
       });
 
       if (response.ok) {
@@ -145,6 +177,8 @@ export default function TestSubscription() {
   };
 
   const resetQuota = async () => {
+    if (!user) return;
+
     try {
       const apiUrl =
         import.meta.env.VITE_API_URL ||
@@ -155,6 +189,7 @@ export default function TestSubscription() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "update_quota",
+          email: user.email,
           quota_delta: -quota.used,
         }),
       });
@@ -172,6 +207,8 @@ export default function TestSubscription() {
   };
 
   const togglePlan = async () => {
+    if (!user) return;
+
     const newPlan =
       quota.plan === "Tutor Teachers" ? "School Teachers" : "Tutor Teachers";
 
@@ -183,7 +220,7 @@ export default function TestSubscription() {
       const response = await fetch(`${apiUrl}/api/test/subscription/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "change_plan", plan: newPlan }),
+        body: JSON.stringify({ action: "change_plan", email: user.email, plan: newPlan }),
       });
 
       if (response.ok) {
@@ -217,15 +254,18 @@ export default function TestSubscription() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-6xl mx-auto">
+    <TeacherLayout>
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             訂閱 & 配額測試控制台
           </h1>
           <p className="text-gray-600">
-            測試帳號：demo@duotopia.com | 僅供開發測試使用
+            當前測試帳號：<span className="font-semibold text-blue-600">{user?.email}</span>
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            僅供白名單帳號使用
           </p>
         </div>
 
@@ -491,6 +531,6 @@ export default function TestSubscription() {
           </div>
         </div>
       </div>
-    </div>
+    </TeacherLayout>
   );
 }

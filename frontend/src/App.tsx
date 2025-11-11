@@ -211,7 +211,14 @@ function App() {
         <Route path="/debug" element={<DebugPage />} />
 
         {/* Test Pages */}
-        <Route path="/test-sub" element={<TestSubscription />} />
+        <Route
+          path="/teacher/test-sub"
+          element={
+            <ProtectedRoute>
+              <TestSubscription />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />

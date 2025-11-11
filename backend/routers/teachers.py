@@ -110,6 +110,7 @@ class TeacherDashboard(BaseModel):
     subscription_end_date: Optional[str]
     days_remaining: int
     can_assign_homework: bool
+    is_test_account: bool  # 是否為測試帳號（白名單）
 
 
 # ============ Teacher Endpoints ============
@@ -184,6 +185,17 @@ async def get_teacher_dashboard(
         .count()
     )
 
+    # 測試訂閱白名單（與 routers/subscription.py 保持一致）
+    TEST_SUBSCRIPTION_WHITELIST = [
+        "demo@duotopia.com",
+        "expired@duotopia.com",
+        "trial@duotopia.com",
+        "purpleice9765@msn.com",
+        "kaddyeunice@apps.ntpc.edu.tw",
+        "ceeks.edu@gmail.com",
+    ]
+    is_test_account = current_teacher.email in TEST_SUBSCRIPTION_WHITELIST
+
     return TeacherDashboard(
         teacher=TeacherProfile.from_orm(current_teacher),
         classroom_count=len(classrooms),
@@ -198,6 +210,7 @@ async def get_teacher_dashboard(
         else None,
         days_remaining=current_teacher.days_remaining,
         can_assign_homework=current_teacher.can_assign_homework,
+        is_test_account=is_test_account,
     )
 
 
