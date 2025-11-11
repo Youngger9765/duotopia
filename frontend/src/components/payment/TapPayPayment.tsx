@@ -224,9 +224,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
     // Get Prime Token from TapPay
     window.TPDirect.card.getPrime(async (result) => {
-      console.log("TapPay getPrime 完整結果:", JSON.stringify(result, null, 2));
-      console.log("所有欄位:", Object.keys(result));
-
       if (result.status !== 0) {
         console.error(
           "TapPay getPrime 失敗，status:",
@@ -253,15 +250,13 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       const prime = (result as any).card?.prime || result.prime;
 
       if (!prime) {
-        console.error("Prime token 不存在！完整結果:", result);
+        console.error("Prime token 不存在於 result.card.prime 或 result.prime");
         if (onPaymentError)
           onPaymentError("無法取得付款憑證 (prime token 為空)");
         toast.error("無法取得付款憑證");
         setIsProcessing(false);
         return;
       }
-
-      console.log("Prime token 取得成功:", prime.substring(0, 20) + "...");
 
       try {
         // 🔧 修復：取得正確的 auth token 和用戶資料
