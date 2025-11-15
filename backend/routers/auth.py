@@ -99,6 +99,7 @@ async def teacher_login(
             "name": teacher.name,
             "phone": teacher.phone,
             "is_demo": teacher.is_demo,
+            "is_admin": teacher.is_admin,
         },
     }
 

@@ -1,8 +1,13 @@
-"""Admin routes for seeding and managing the database."""
+"""Admin routes for seeding and managing the database + subscription management."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from sqlalchemy import or_, func
+from typing import Dict, Any, Optional
+from pydantic import BaseModel
+from datetime import datetime, timezone
+import logging
+
 from database import get_db, engine, Base
 from models import (
     Teacher,
@@ -18,12 +23,63 @@ from models import (
     StudentContentProgress,
     StudentItemProgress,
     TeacherSubscriptionTransaction,
+    SubscriptionPeriod,
 )
+from routers.teachers import get_current_teacher
 import os
 import subprocess
 import sys
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+# ============ Admin 權限檢查 ============
+async def get_current_admin(
+    current_teacher: Teacher = Depends(get_current_teacher),
+) -> Teacher:
+    """確認當前用戶是 Admin"""
+    if not current_teacher.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required. Please contact administrator if you need access.",
+        )
+    return current_teacher
+
+
+# ============ Request/Response Models ============
+# ⚠️ DEPRECATED: ExtendSubscriptionRequest/Response removed (old extend API deleted)
+class TeacherSubscriptionInfo(BaseModel):
+    """教師訂閱資訊"""
+
+    id: int
+    email: str
+    name: str
+    plan_name: Optional[str] = None
+    end_date: Optional[str] = None
+    days_remaining: Optional[int] = None
+    quota_used: int
+    quota_total: Optional[int] = None
+    quota_percentage: Optional[float] = None
+    status: str  # active/expired/cancelled/none
+    total_periods: int  # 總共訂閱過幾期
+    created_at: str
+
+
+class ExtensionHistoryRecord(BaseModel):
+    """延展歷史記錄"""
+
+    id: int
+    teacher_email: str
+    teacher_name: Optional[str] = None
+    plan_name: str
+    months: int
+    amount: float
+    extended_at: str
+    admin_email: Optional[str] = None
+    admin_name: Optional[str] = None
+    reason: Optional[str] = None
+    quota_granted: Optional[int] = None
 
 
 @router.post("/database/rebuild")
@@ -209,3 +265,255 @@ def get_entity_data(
             "has_more": (offset + limit) < total,
         },
     }
+
+
+# ============ 訂閱管理 API ============
+# ⚠️ DEPRECATED: Old admin subscription APIs removed
+# Use /api/admin/subscription/* endpoints from admin_subscriptions.py instead
+@router.get("/subscription/teachers")
+async def list_teachers(
+    search: Optional[str] = Query(None, description="搜尋 email 或 name"),
+    status_filter: Optional[str] = Query(
+        None, description="訂閱狀態: active/expired/all", regex="^(active|expired|all)$"
+    ),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    查詢所有教師訂閱列表
+
+    支援：
+    - 搜尋 email/name
+    - 過濾訂閱狀態
+    - 分頁
+    """
+    # 基本查詢
+    query = db.query(Teacher)
+
+    # 搜尋條件
+    if search:
+        query = query.filter(
+            or_(Teacher.email.ilike(f"%{search}%"), Teacher.name.ilike(f"%{search}%"))
+        )
+
+    # 總數
+    total = query.count()
+
+    # 分頁
+    teachers = (
+        query.order_by(Teacher.created_at.desc()).offset(offset).limit(limit).all()
+    )
+
+    # 組裝訂閱資訊
+    result = []
+    now = datetime.now(timezone.utc)
+
+    for teacher in teachers:
+        # 計算總共訂閱過幾期（只計算成功付費的，排除 admin 手動創建、取消的）
+        total_periods = (
+            db.query(SubscriptionPeriod)
+            .filter(
+                SubscriptionPeriod.teacher_id == teacher.id,
+                SubscriptionPeriod.payment_method.notin_(
+                    ["admin_create", "manual_extension", "admin_edit"]
+                ),
+                SubscriptionPeriod.status != "cancelled",
+            )
+            .count()
+        )
+
+        # 獲取最新的訂閱週期（不限 status，包括 active/cancelled/expired）
+        current_period = (
+            db.query(SubscriptionPeriod)
+            .filter_by(teacher_id=teacher.id)
+            .order_by(SubscriptionPeriod.end_date.desc())
+            .first()
+        )
+
+        # 計算訂閱狀態
+        if current_period:
+            # 檢查是否已取消
+            if current_period.status == "cancelled":
+                subscription_status = "cancelled"
+                days_remaining = 0
+            else:
+                # 根據 end_date 判斷是否過期
+                end_date_utc = (
+                    current_period.end_date.replace(tzinfo=timezone.utc)
+                    if current_period.end_date.tzinfo is None
+                    else current_period.end_date
+                )
+                days_remaining = (end_date_utc - now).days
+                is_active = end_date_utc > now
+                subscription_status = "active" if is_active else "expired"
+
+            # 配額百分比
+            quota_percentage = (
+                (current_period.quota_used / current_period.quota_total * 100)
+                if current_period.quota_total > 0
+                else 0
+            )
+        else:
+            days_remaining = None
+            subscription_status = "none"
+            quota_percentage = None
+
+        # 過濾狀態
+        if status_filter and status_filter != "all":
+            if status_filter != subscription_status:
+                continue
+
+        result.append(
+            TeacherSubscriptionInfo(
+                id=teacher.id,
+                email=teacher.email,
+                name=teacher.name,
+                plan_name=current_period.plan_name if current_period else None,
+                end_date=current_period.end_date.isoformat()
+                if current_period
+                else None,
+                days_remaining=days_remaining
+                if days_remaining and days_remaining > 0
+                else 0,
+                quota_used=current_period.quota_used if current_period else 0,
+                quota_total=current_period.quota_total if current_period else None,
+                quota_percentage=quota_percentage,
+                status=subscription_status,
+                total_periods=total_periods,
+                created_at=teacher.created_at.isoformat()
+                if teacher.created_at
+                else None,
+            )
+        )
+
+    return {"total": total, "teachers": result, "limit": limit, "offset": offset}
+
+
+@router.get("/subscription/extension-history")
+async def get_extension_history(
+    limit: int = Query(100, ge=1, le=500, description="返回記錄數量"),
+    offset: int = Query(0, ge=0, description="分頁偏移量"),
+    admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    ⚠️ DEPRECATED: 改用 /api/admin/subscription/history
+
+    查詢 Admin 操作歷史 - 從 subscription_periods 撈資料
+    """
+    # 查詢所有 Admin 操作（從 subscription_periods，不再用 teacher_subscription_transactions）
+    periods = (
+        db.query(SubscriptionPeriod, Teacher)
+        .join(Teacher, SubscriptionPeriod.teacher_id == Teacher.id)
+        .filter(
+            SubscriptionPeriod.payment_method.in_(
+                ["admin_create", "manual_extension", "admin_edit"]
+            )
+        )
+        .order_by(SubscriptionPeriod.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    # 計算總數
+    total = (
+        db.query(SubscriptionPeriod)
+        .filter(
+            SubscriptionPeriod.payment_method.in_(
+                ["admin_create", "manual_extension", "admin_edit"]
+            )
+        )
+        .count()
+    )
+
+    # 組裝回應（保持舊格式相容）
+    history = []
+    for period, teacher in periods:
+        history.append(
+            ExtensionHistoryRecord(
+                id=period.id,
+                teacher_email=teacher.email,
+                teacher_name=teacher.name,
+                plan_name=period.plan_name,
+                months=0,  # 不再記錄 months
+                amount=0.0,  # 不再記錄 amount
+                extended_at=period.created_at.isoformat()
+                if period.created_at
+                else None,
+                admin_email=None,  # 不再記錄 admin info
+                admin_name=None,
+                reason=None,  # 不再記錄 reason
+                quota_granted=period.quota_total,  # 使用 quota_total
+            )
+        )
+
+    return {"total": total, "history": history, "limit": limit, "offset": offset}
+
+
+@router.get("/subscription/stats")
+async def get_admin_stats(
+    admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin Dashboard 統計資料
+
+    返回：
+    - 總用戶數
+    - 付費用戶數
+    - 本月收入
+    - 配額使用率
+    """
+    now = datetime.now(timezone.utc)
+
+    # 總用戶數
+    total_teachers = db.query(Teacher).count()
+
+    # 付費用戶數（有 active subscription）
+    active_subscriptions = (
+        db.query(SubscriptionPeriod).filter_by(status="active").count()
+    )
+
+    # 本月收入
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_revenue = (
+        db.query(func.sum(TeacherSubscriptionTransaction.amount))
+        .filter(
+            TeacherSubscriptionTransaction.status == "SUCCESS",
+            TeacherSubscriptionTransaction.processed_at >= month_start,
+            TeacherSubscriptionTransaction.amount > 0,  # 排除免費延展
+        )
+        .scalar()
+        or 0
+    )
+
+    # 配額總使用率
+    quota_stats = (
+        db.query(
+            func.sum(SubscriptionPeriod.quota_used).label("total_used"),
+            func.sum(SubscriptionPeriod.quota_total).label("total_quota"),
+        )
+        .filter_by(status="active")
+        .first()
+    )
+
+    quota_usage_percentage = (
+        (quota_stats.total_used / quota_stats.total_quota * 100)
+        if quota_stats.total_quota and quota_stats.total_quota > 0
+        else 0
+    )
+
+    return {
+        "total_teachers": total_teachers,
+        "active_subscriptions": active_subscriptions,
+        "monthly_revenue": float(monthly_revenue),
+        "quota_usage_percentage": round(quota_usage_percentage, 2),
+        "generated_at": now.isoformat(),
+    }
+
+
+# ⚠️ DEPRECATED: Old cancel/edit subscription APIs removed
+# Use /api/admin/subscription/cancel and /api/admin/subscription/edit from admin_subscriptions.py instead

@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CreditCard,
   Menu,
+  Crown,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -23,11 +24,20 @@ interface TeacherProfile {
   phone?: string;
   is_demo: boolean;
   is_active: boolean;
+  is_admin?: boolean;
 }
 
 interface SystemConfig {
   enablePayment: boolean;
   environment: string;
+}
+
+interface SidebarItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  adminOnly?: boolean;
 }
 
 interface TeacherLayoutProps {
@@ -76,7 +86,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     navigate("/teacher/login");
   };
 
-  const allSidebarItems = [
+  const allSidebarItems: SidebarItem[] = [
     {
       id: "dashboard",
       label: "儀表板",
@@ -114,6 +124,10 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     // 如果是訂閱選單，只在付款功能啟用時顯示
     if (item.id === "subscription") {
       return config?.enablePayment === true;
+    }
+    // 如果是 Admin 選單，只有 is_admin 的人才看得到
+    if (item.adminOnly) {
+      return teacherProfile?.is_admin === true;
     }
     return true;
   });
@@ -204,6 +218,22 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
               </div>
             )}
           </div>
+        )}
+        {teacherProfile?.is_admin && (
+          <Link
+            to="/admin/subscription"
+            className="block mb-2"
+            onClick={onNavigate}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
+            >
+              <Crown className="h-4 w-4 text-yellow-500" />
+              {!sidebarCollapsed && <span className="ml-2">系統管理</span>}
+            </Button>
+          </Link>
         )}
         <Button
           variant="ghost"

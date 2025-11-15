@@ -46,6 +46,7 @@ export default function TeacherLogin() {
         name: result.user.name,
         email: result.user.email,
         is_demo: result.user.is_demo,
+        is_admin: result.user.is_admin,
       });
 
       navigate("/teacher/dashboard");
@@ -72,6 +73,7 @@ export default function TeacherLogin() {
         name: result.user.name,
         email: result.user.email,
         is_demo: result.user.is_demo,
+        is_admin: result.user.is_admin,
       });
 
       navigate("/teacher/dashboard");

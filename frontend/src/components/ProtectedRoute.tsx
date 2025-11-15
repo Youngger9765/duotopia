@@ -3,13 +3,22 @@ import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireAdmin?: boolean;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  requireAdmin = false,
+}: ProtectedRouteProps) {
   const isAuthenticated = useTeacherAuthStore((state) => state.isAuthenticated);
+  const user = useTeacherAuthStore((state) => state.user);
 
   if (!isAuthenticated) {
     return <Navigate to="/teacher/login" replace />;
+  }
+
+  if (requireAdmin && !user?.is_admin) {
+    return <Navigate to="/teacher/dashboard" replace />;
   }
 
   return <>{children}</>;
