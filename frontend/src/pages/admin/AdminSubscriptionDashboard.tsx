@@ -33,7 +33,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users,
   Crown,
@@ -42,40 +41,55 @@ import {
   DollarSign,
   CheckCircle,
   XCircle,
-  Clock,
   Edit,
-  History,
+  Loader2,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
 // Types
 interface TeacherSubscriptionInfo {
-  id: number;
-  email: string;
-  name: string;
-  plan_name: string | null;
-  end_date: string | null;
-  days_remaining: number | null;
-  quota_used: number;
-  quota_total: number | null;
-  quota_percentage: number | null;
-  status: "active" | "expired" | "cancelled" | "none";
-  total_periods: number;
-  created_at: string;
+  teacher_id: number;
+  teacher_name: string;
+  teacher_email: string;
+  current_subscription: {
+    period_id: number;
+    plan_name: string;
+    quota_total: number;
+    quota_used: number;
+    end_date: string;
+    status: string;
+  } | null;
 }
 
-interface ExtensionHistoryRecord {
+interface SubscriptionPeriod {
   id: number;
-  teacher_email: string;
-  teacher_name: string | null;
   plan_name: string;
-  months: number;
-  amount: number;
-  extended_at: string;
-  admin_email: string | null;
-  admin_name: string | null;
-  reason: string | null;
-  quota_granted: number | null;
+  quota_total: number;
+  quota_used: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  payment_method: string;
+  payment_status: string;
+  amount_paid?: number;
+}
+
+interface EditHistoryRecord {
+  action: string;
+  admin_email: string;
+  admin_name: string;
+  admin_id: number;
+  timestamp: string;
+  reason: string;
+  changes: {
+    // For create action: direct values
+    plan_name?: string | { from: string; to: string };
+    quota_total?: number | { from: number; to: number };
+    end_date?: string | { from: string; to: string };
+    status?: string | { from: string; to: string };
+  };
 }
 
 interface AdminStats {
@@ -109,10 +123,19 @@ export default function AdminSubscriptionDashboard() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [teachers, setTeachers] = useState<TeacherSubscriptionInfo[]>([]);
-  const [history, setHistory] = useState<ExtensionHistoryRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [expandedTeacherId, setExpandedTeacherId] = useState<number | null>(
+    null,
+  );
+  const [expandedPeriodId, setExpandedPeriodId] = useState<number | null>(null);
+  const [teacherPeriods, setTeacherPeriods] = useState<
+    Record<number, SubscriptionPeriod[]>
+  >({});
+  const [periodHistory, setPeriodHistory] = useState<
+    Record<number, EditHistoryRecord[]>
+  >({});
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] =
@@ -132,17 +155,15 @@ export default function AdminSubscriptionDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, teachersRes, historyRes] = await Promise.all([
+      const [statsRes, teachersRes] = await Promise.all([
         apiClient.get("/api/admin/subscription/stats"),
-        apiClient.get("/api/admin/subscription/teachers?limit=50"),
-        apiClient.get("/api/admin/subscription/history?limit=50"),
+        apiClient.get("/api/admin/subscription/all-teachers"),
       ]);
 
       setStats(statsRes as AdminStats);
       setTeachers(
         (teachersRes as { teachers: TeacherSubscriptionInfo[] }).teachers,
       );
-      setHistory((historyRes as { history: ExtensionHistoryRecord[] }).history);
     } catch (error: unknown) {
       console.error("Failed to load dashboard data:", error);
       if (isApiError(error) && error.response?.status === 403) {
@@ -163,10 +184,13 @@ export default function AdminSubscriptionDashboard() {
 
   const handleOpenEditModal = (teacher: TeacherSubscriptionInfo) => {
     setSelectedTeacher(teacher);
+    const hasSubscription = !!teacher.current_subscription;
     setEditForm({
-      action: "edit",
-      plan_name: teacher.plan_name || "",
-      end_date: teacher.end_date ? teacher.end_date.split("T")[0] : "",
+      action: hasSubscription ? "edit" : "create",
+      plan_name: teacher.current_subscription?.plan_name || "",
+      end_date: teacher.current_subscription?.end_date
+        ? teacher.current_subscription.end_date.split("T")[0]
+        : "",
       quota_total: undefined,
       reason: "",
     });
@@ -180,18 +204,32 @@ export default function AdminSubscriptionDashboard() {
       return;
     }
 
+    // Validation for create action
+    if (editForm.action === "create" && !editForm.plan_name) {
+      setErrorMessage("Please select a plan for creating subscription");
+      return;
+    }
+
     try {
       setLoading(true);
       let response: unknown;
 
       if (editForm.action === "cancel") {
         response = await apiClient.post("/api/admin/subscription/cancel", {
-          teacher_email: selectedTeacher.email,
+          teacher_email: selectedTeacher.teacher_email,
+          reason: editForm.reason,
+        });
+      } else if (editForm.action === "create") {
+        response = await apiClient.post("/api/admin/subscription/create", {
+          teacher_email: selectedTeacher.teacher_email,
+          plan_name: editForm.plan_name,
+          end_date: editForm.end_date,
+          quota_total: editForm.quota_total,
           reason: editForm.reason,
         });
       } else {
         response = await apiClient.post("/api/admin/subscription/edit", {
-          teacher_email: selectedTeacher.email,
+          teacher_email: selectedTeacher.teacher_email,
           plan_name: editForm.plan_name,
           end_date: editForm.end_date,
           quota_total: editForm.quota_total,
@@ -200,10 +238,16 @@ export default function AdminSubscriptionDashboard() {
       }
 
       setSuccessMessage(
-        `Success! ${selectedTeacher.name} - ${
+        `Success! ${selectedTeacher.teacher_name} - ${
           (response as { message?: string })?.message || "Operation completed"
         }`,
       );
+
+      // Clear cached periods and history to force refresh
+      setTeacherPeriods({});
+      setPeriodHistory({});
+      setExpandedTeacherId(null);
+      setExpandedPeriodId(null);
 
       await loadDashboardData();
       setEditModalOpen(false);
@@ -228,14 +272,32 @@ export default function AdminSubscriptionDashboard() {
   };
 
   const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      // If search is empty, reload all teachers
+      await loadDashboardData();
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await apiClient.get(
-        `/api/admin/subscription/teachers?search=${encodeURIComponent(searchQuery)}&limit=100`,
+        "/api/admin/subscription/all-teachers",
       );
-      setTeachers(
-        (response as { teachers: TeacherSubscriptionInfo[] }).teachers,
+      const allTeachers = (response as { teachers: TeacherSubscriptionInfo[] })
+        .teachers;
+
+      // Filter teachers by email or name
+      const filtered = allTeachers.filter(
+        (teacher) =>
+          teacher.teacher_email
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          teacher.teacher_name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()),
       );
+
+      setTeachers(filtered);
     } catch (error: unknown) {
       console.error("Search failed:", error);
       if (isApiError(error)) {
@@ -248,6 +310,65 @@ export default function AdminSubscriptionDashboard() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleTeacherExpand = async (teacherId: number) => {
+    if (expandedTeacherId === teacherId) {
+      setExpandedTeacherId(null);
+      setExpandedPeriodId(null);
+    } else {
+      setExpandedTeacherId(teacherId);
+      setExpandedPeriodId(null);
+
+      // Fetch periods if not already loaded
+      if (!teacherPeriods[teacherId]) {
+        try {
+          const response = await apiClient.get(
+            `/api/admin/subscription/teacher/${teacherId}/periods`,
+          );
+          setTeacherPeriods((prev) => ({
+            ...prev,
+            [teacherId]: (response as { periods: SubscriptionPeriod[] })
+              .periods,
+          }));
+        } catch (error) {
+          console.error("Failed to load periods:", error);
+          setErrorMessage("Failed to load subscription periods");
+        }
+      }
+    }
+  };
+
+  const togglePeriodExpand = async (periodId: number | undefined) => {
+    if (!periodId) {
+      console.error("Period ID is undefined");
+      return;
+    }
+
+    if (expandedPeriodId === periodId) {
+      setExpandedPeriodId(null);
+    } else {
+      setExpandedPeriodId(periodId);
+
+      // Fetch history if not already loaded
+      if (!periodHistory[periodId]) {
+        try {
+          const response = await apiClient.get(
+            `/api/admin/subscription/period/${periodId}/history`,
+          );
+          const history = (response as { edit_history: EditHistoryRecord[] })
+            .edit_history;
+          // Reverse to show newest first
+          setPeriodHistory((prev) => ({
+            ...prev,
+            [periodId]: [...history].reverse(),
+          }));
+        } catch (error) {
+          console.error("Failed to load period history:", error);
+          setErrorMessage("Failed to load edit history");
+        }
+      }
     }
   };
 
@@ -266,7 +387,7 @@ export default function AdminSubscriptionDashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Clock className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
           <p>Loading...</p>
         </div>
       </div>
@@ -379,246 +500,475 @@ export default function AdminSubscriptionDashboard() {
         </div>
       )}
 
-      <Tabs defaultValue="subscriptions" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-16 bg-gray-100 p-1 rounded-lg">
-          <TabsTrigger
-            value="subscriptions"
-            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600"
-          >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
             All Subscriptions
-          </TabsTrigger>
-          <TabsTrigger
-            value="history"
-            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600"
-          >
-            <History className="w-5 h-5" />
-            Operation History
-          </TabsTrigger>
-        </TabsList>
+          </CardTitle>
+          <CardDescription>
+            View all teacher subscription status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 mb-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search email or name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <Button onClick={handleSearch} disabled={loading}>
+              <Search className="w-4 h-4 mr-2" />
+              Search
+            </Button>
+          </div>
 
-        <TabsContent value="subscriptions">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                All Subscriptions
-              </CardTitle>
-              <CardDescription>
-                View all teacher subscription status
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Search email or name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                  />
-                </div>
-                <Button onClick={handleSearch} disabled={loading}>
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Periods</TableHead>
-                      <TableHead>Quota</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teachers.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="text-center text-gray-500"
-                        >
-                          No data
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      teachers.map((teacher) => (
-                        <TableRow key={teacher.id}>
-                          <TableCell className="font-mono text-sm">
-                            {teacher.email}
-                          </TableCell>
-                          <TableCell>{teacher.name}</TableCell>
-                          <TableCell>{teacher.plan_name || "-"}</TableCell>
-                          <TableCell>{formatDate(teacher.end_date)}</TableCell>
-                          <TableCell>
-                            <span className="text-sm text-gray-600">
-                              {teacher.total_periods > 0
-                                ? `${teacher.total_periods} 期`
-                                : "未訂閱"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {teacher.quota_total ? (
-                              <div className="space-y-1">
-                                <div className="text-sm">
-                                  {teacher.quota_used.toLocaleString()} /{" "}
-                                  {teacher.quota_total.toLocaleString()}
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-blue-500 h-2 rounded-full"
-                                    style={{
-                                      width: `${Math.min(teacher.quota_percentage || 0, 100)}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Periods</TableHead>
+                  <TableHead>Quota</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teachers.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={8}
+                      className="text-center text-gray-500"
+                    >
+                      No data
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  teachers.map((teacher) => (
+                    <>
+                      <TableRow
+                        key={teacher.teacher_email}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => toggleTeacherExpand(teacher.teacher_id)}
+                      >
+                        <TableCell className="font-mono text-sm">
+                          <div className="flex items-center gap-2">
+                            {expandedTeacherId === teacher.teacher_id ? (
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
                             ) : (
-                              "-"
+                              <ChevronRight className="w-4 h-4 text-gray-500" />
                             )}
-                          </TableCell>
-                          <TableCell>
-                            {teacher.status === "active" && (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                                Active
-                              </span>
-                            )}
-                            {teacher.status === "expired" && (
-                              <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">
-                                Expired
-                              </span>
-                            )}
-                            {teacher.status === "cancelled" && (
-                              <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">
-                                Cancelled
-                              </span>
-                            )}
-                            {teacher.status === "none" && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
-                                None
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenEditModal(teacher)}
-                              className="h-8"
-                            >
-                              <Edit className="w-3 h-3 mr-1" />
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Admin Operation History
-              </CardTitle>
-              <CardDescription>
-                View all admin subscription operations (extend, edit, cancel)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Teacher</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Months</TableHead>
-                      <TableHead>Quota</TableHead>
-                      <TableHead>Admin</TableHead>
-                      <TableHead>Reason</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {history.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center text-gray-500"
-                        >
-                          No operation history
+                            {teacher.teacher_email}
+                          </div>
+                        </TableCell>
+                        <TableCell>{teacher.teacher_name}</TableCell>
+                        <TableCell>
+                          {teacher.current_subscription?.plan_name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {teacher.current_subscription
+                            ? formatDate(teacher.current_subscription.end_date)
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-600">
+                            {teacherPeriods[teacher.teacher_id]?.length || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {teacher.current_subscription ? (
+                            <div className="space-y-1">
+                              <div className="text-sm">
+                                {teacher.current_subscription.quota_used.toLocaleString()}{" "}
+                                /{" "}
+                                {teacher.current_subscription.quota_total.toLocaleString()}
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-500 h-2 rounded-full"
+                                  style={{
+                                    width: `${Math.min((teacher.current_subscription.quota_used / teacher.current_subscription.quota_total) * 100 || 0, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {teacher.current_subscription?.status === "active" ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                              None
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditModal(teacher)}
+                            className="h-8"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      history.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="text-sm">
-                            {formatDate(record.extended_at)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {record.teacher_name || "-"}
+
+                      {/* Layer 2: Subscription Periods */}
+                      {expandedTeacherId === teacher.teacher_id &&
+                        teacherPeriods[teacher.teacher_id] && (
+                          <TableRow key={`${teacher.teacher_email}-periods`}>
+                            <TableCell colSpan={8} className="bg-gray-50 p-0">
+                              <div className="p-4">
+                                <h4 className="font-semibold mb-3 text-sm">
+                                  Subscription Periods
+                                </h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead className="w-12"></TableHead>
+                                      <TableHead>Plan</TableHead>
+                                      <TableHead>Start Date</TableHead>
+                                      <TableHead>End Date</TableHead>
+                                      <TableHead>Quota</TableHead>
+                                      <TableHead>Payment</TableHead>
+                                      <TableHead>Status</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {teacherPeriods[teacher.teacher_id].map(
+                                      (period) => (
+                                        <>
+                                          <TableRow
+                                            key={period.id}
+                                            className="cursor-pointer hover:bg-gray-100"
+                                            onClick={() =>
+                                              togglePeriodExpand(period.id)
+                                            }
+                                          >
+                                            <TableCell>
+                                              {expandedPeriodId ===
+                                              period.id ? (
+                                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                                              ) : (
+                                                <ChevronRight className="w-4 h-4 text-gray-500" />
+                                              )}
+                                            </TableCell>
+                                            <TableCell>
+                                              {period.plan_name}
+                                            </TableCell>
+                                            <TableCell>
+                                              {formatDate(period.start_date)}
+                                            </TableCell>
+                                            <TableCell>
+                                              {formatDate(period.end_date)}
+                                            </TableCell>
+                                            <TableCell>
+                                              {period.quota_used.toLocaleString()}{" "}
+                                              /{" "}
+                                              {period.quota_total.toLocaleString()}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="text-sm">
+                                                <div>
+                                                  {period.payment_method}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                  $
+                                                  {period.amount_paid?.toLocaleString() ||
+                                                    "0"}
+                                                </div>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span
+                                                className={`px-2 py-1 rounded text-xs ${
+                                                  period.status === "active"
+                                                    ? "bg-green-100 text-green-800"
+                                                    : "bg-gray-100 text-gray-800"
+                                                }`}
+                                              >
+                                                {period.status}
+                                              </span>
+                                            </TableCell>
+                                          </TableRow>
+
+                                          {/* Layer 3: Edit History */}
+                                          {expandedPeriodId === period.id &&
+                                            periodHistory[period.id] && (
+                                              <TableRow
+                                                key={`${period.id}-history`}
+                                              >
+                                                <TableCell
+                                                  colSpan={7}
+                                                  className="bg-blue-50 p-0"
+                                                >
+                                                  <div className="p-4">
+                                                    <h5 className="font-semibold mb-3 text-sm">
+                                                      Edit History
+                                                    </h5>
+                                                    {periodHistory[period.id]
+                                                      .length === 0 ? (
+                                                      <p className="text-sm text-gray-500">
+                                                        No edit history
+                                                      </p>
+                                                    ) : (
+                                                      <div className="space-y-2">
+                                                        {periodHistory[
+                                                          period.id
+                                                        ].map((record, idx) => (
+                                                          <div
+                                                            key={idx}
+                                                            className="bg-white p-3 rounded border text-sm"
+                                                          >
+                                                            <div className="flex justify-between mb-2">
+                                                              <span
+                                                                className={`font-semibold capitalize ${
+                                                                  record.action ===
+                                                                  "create"
+                                                                    ? "text-green-700"
+                                                                    : record.action ===
+                                                                        "cancel"
+                                                                      ? "text-red-700"
+                                                                      : "text-blue-700"
+                                                                }`}
+                                                              >
+                                                                {record.action}
+                                                              </span>
+                                                              <span className="text-xs text-gray-500">
+                                                                {new Date(
+                                                                  record.timestamp,
+                                                                ).toLocaleString(
+                                                                  "zh-TW",
+                                                                )}
+                                                              </span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-600 mb-2">
+                                                              Admin:{" "}
+                                                              {
+                                                                record.admin_name
+                                                              }{" "}
+                                                              (
+                                                              {
+                                                                record.admin_email
+                                                              }
+                                                              )
+                                                            </div>
+                                                            {Object.keys(
+                                                              record.changes,
+                                                            ).length > 0 && (
+                                                              <div className="text-xs bg-gray-50 p-2 rounded mb-2 space-y-1">
+                                                                <div className="font-semibold">
+                                                                  {record.action ===
+                                                                  "create"
+                                                                    ? "Initial Values:"
+                                                                    : "Changes:"}
+                                                                </div>
+                                                                {record.action ===
+                                                                "create" ? (
+                                                                  <>
+                                                                    {typeof record
+                                                                      .changes
+                                                                      .plan_name ===
+                                                                      "string" && (
+                                                                      <div>
+                                                                        Plan:{" "}
+                                                                        {
+                                                                          record
+                                                                            .changes
+                                                                            .plan_name
+                                                                        }
+                                                                      </div>
+                                                                    )}
+                                                                    {typeof record
+                                                                      .changes
+                                                                      .quota_total ===
+                                                                      "number" && (
+                                                                      <div>
+                                                                        Quota:{" "}
+                                                                        {record.changes.quota_total.toLocaleString()}
+                                                                      </div>
+                                                                    )}
+                                                                    {typeof record
+                                                                      .changes
+                                                                      .end_date ===
+                                                                      "string" && (
+                                                                      <div>
+                                                                        End
+                                                                        Date:{" "}
+                                                                        {formatDate(
+                                                                          record
+                                                                            .changes
+                                                                            .end_date,
+                                                                        )}
+                                                                      </div>
+                                                                    )}
+                                                                    {typeof record
+                                                                      .changes
+                                                                      .status ===
+                                                                      "string" && (
+                                                                      <div>
+                                                                        Status:{" "}
+                                                                        {
+                                                                          record
+                                                                            .changes
+                                                                            .status
+                                                                        }
+                                                                      </div>
+                                                                    )}
+                                                                  </>
+                                                                ) : (
+                                                                  <>
+                                                                    {record
+                                                                      .changes
+                                                                      .plan_name &&
+                                                                      typeof record
+                                                                        .changes
+                                                                        .plan_name ===
+                                                                        "object" && (
+                                                                        <div>
+                                                                          Plan:{" "}
+                                                                          {
+                                                                            record
+                                                                              .changes
+                                                                              .plan_name
+                                                                              .from
+                                                                          }{" "}
+                                                                          →{" "}
+                                                                          {
+                                                                            record
+                                                                              .changes
+                                                                              .plan_name
+                                                                              .to
+                                                                          }
+                                                                        </div>
+                                                                      )}
+                                                                    {record
+                                                                      .changes
+                                                                      .quota_total &&
+                                                                      typeof record
+                                                                        .changes
+                                                                        .quota_total ===
+                                                                        "object" && (
+                                                                        <div>
+                                                                          Quota:{" "}
+                                                                          {record.changes.quota_total.from.toLocaleString()}{" "}
+                                                                          →{" "}
+                                                                          {record.changes.quota_total.to.toLocaleString()}
+                                                                        </div>
+                                                                      )}
+                                                                    {record
+                                                                      .changes
+                                                                      .end_date &&
+                                                                      typeof record
+                                                                        .changes
+                                                                        .end_date ===
+                                                                        "object" && (
+                                                                        <div>
+                                                                          End
+                                                                          Date:{" "}
+                                                                          {formatDate(
+                                                                            record
+                                                                              .changes
+                                                                              .end_date
+                                                                              .from,
+                                                                          )}{" "}
+                                                                          →{" "}
+                                                                          {formatDate(
+                                                                            record
+                                                                              .changes
+                                                                              .end_date
+                                                                              .to,
+                                                                          )}
+                                                                        </div>
+                                                                      )}
+                                                                    {record
+                                                                      .changes
+                                                                      .status &&
+                                                                      typeof record
+                                                                        .changes
+                                                                        .status ===
+                                                                        "object" && (
+                                                                        <div>
+                                                                          Status:{" "}
+                                                                          {
+                                                                            record
+                                                                              .changes
+                                                                              .status
+                                                                              .from
+                                                                          }{" "}
+                                                                          →{" "}
+                                                                          {
+                                                                            record
+                                                                              .changes
+                                                                              .status
+                                                                              .to
+                                                                          }
+                                                                        </div>
+                                                                      )}
+                                                                  </>
+                                                                )}
+                                                              </div>
+                                                            )}
+                                                            <div className="text-xs text-gray-700 bg-yellow-50 p-2 rounded">
+                                                              <span className="font-semibold">
+                                                                Reason:
+                                                              </span>{" "}
+                                                              {record.reason}
+                                                            </div>
+                                                          </div>
+                                                        ))}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </TableCell>
+                                              </TableRow>
+                                            )}
+                                        </>
+                                      ),
+                                    )}
+                                  </TableBody>
+                                </Table>
                               </div>
-                              <div className="text-xs text-gray-500 font-mono">
-                                {record.teacher_email}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {record.plan_name}
-                          </TableCell>
-                          <TableCell>{record.months} mo</TableCell>
-                          <TableCell>
-                            {record.quota_granted
-                              ? record.quota_granted.toLocaleString() + " pts"
-                              : "-"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium text-sm">
-                                {record.admin_name || "-"}
-                              </div>
-                              <div className="text-xs text-gray-500 font-mono">
-                                {record.admin_email || "-"}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm max-w-xs truncate">
-                            {record.reason || "-"}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                    </>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Edit Subscription Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Subscription</DialogTitle>
+            <DialogTitle>
+              {editForm.action === "create"
+                ? "Create Subscription"
+                : editForm.action === "cancel"
+                  ? "Cancel Subscription"
+                  : "Edit Subscription"}
+            </DialogTitle>
             <DialogDescription>
               {selectedTeacher &&
-                `${selectedTeacher.name} (${selectedTeacher.email})`}
+                `${selectedTeacher.teacher_name} (${selectedTeacher.teacher_email})`}
             </DialogDescription>
           </DialogHeader>
 
@@ -636,25 +986,42 @@ export default function AdminSubscriptionDashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="edit">Edit Subscription</SelectItem>
-                  <SelectItem value="cancel">Cancel Subscription</SelectItem>
+                  {!selectedTeacher?.current_subscription && (
+                    <SelectItem value="create">Create Subscription</SelectItem>
+                  )}
+                  {selectedTeacher?.current_subscription && (
+                    <>
+                      <SelectItem value="edit">Edit Subscription</SelectItem>
+                      <SelectItem value="cancel">
+                        Cancel Subscription
+                      </SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Plan Name (only for edit) */}
-            {editForm.action === "edit" && (
+            {/* Plan Name (for create and edit) */}
+            {(editForm.action === "create" || editForm.action === "edit") && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Plan Name
-                  {selectedTeacher?.plan_name && (
-                    <span className="text-xs text-gray-500 ml-2">
-                      (Current: {selectedTeacher.plan_name})
-                    </span>
+                  Plan Name{" "}
+                  {editForm.action === "create" && (
+                    <span className="text-red-500">*</span>
                   )}
+                  {editForm.action === "edit" &&
+                    selectedTeacher?.current_subscription?.plan_name && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        (Current:{" "}
+                        {selectedTeacher.current_subscription.plan_name})
+                      </span>
+                    )}
                 </label>
                 <Select
-                  value={editForm.plan_name || "NO_CHANGE"}
+                  value={
+                    editForm.plan_name ||
+                    (editForm.action === "create" ? "" : "NO_CHANGE")
+                  }
                   onValueChange={(value) =>
                     setEditForm({
                       ...editForm,
@@ -663,10 +1030,18 @@ export default function AdminSubscriptionDashboard() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue
+                      placeholder={
+                        editForm.action === "create"
+                          ? "Select a plan"
+                          : "— No change —"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="NO_CHANGE">— No change —</SelectItem>
+                    {editForm.action === "edit" && (
+                      <SelectItem value="NO_CHANGE">— No change —</SelectItem>
+                    )}
                     <SelectItem value="30-Day Trial">30-Day Trial</SelectItem>
                     <SelectItem value="Tutor Teachers">
                       Tutor Teachers
@@ -683,11 +1058,18 @@ export default function AdminSubscriptionDashboard() {
               </div>
             )}
 
-            {/* End Date (only for edit) */}
-            {editForm.action === "edit" && (
+            {/* End Date (for create and edit) */}
+            {(editForm.action === "create" || editForm.action === "edit") && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  End Date (optional)
+                  End Date{" "}
+                  {editForm.action === "create" ? (
+                    <span className="text-xs text-gray-500">
+                      (optional, defaults to plan duration)
+                    </span>
+                  ) : (
+                    "(optional)"
+                  )}
                 </label>
                 <Input
                   type="date"
@@ -698,36 +1080,39 @@ export default function AdminSubscriptionDashboard() {
                   placeholder="YYYY-MM-DD"
                 />
                 <p className="text-xs text-gray-500">
-                  Leave empty to keep current end date
+                  {editForm.action === "create"
+                    ? "Leave empty to use default plan duration"
+                    : "Leave empty to keep current end date"}
                 </p>
               </div>
             )}
 
-            {/* Custom Quota (only for VIP plan) */}
-            {editForm.action === "edit" && editForm.plan_name === "VIP" && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Custom Quota (optional)
-                </label>
-                <Input
-                  type="number"
-                  value={editForm.quota_total || ""}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      quota_total: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  placeholder="Enter custom quota (e.g., 50000)"
-                  min="1"
-                />
-                <p className="text-xs text-gray-500">
-                  Leave empty to keep current quota for VIP plan
-                </p>
-              </div>
-            )}
+            {/* Custom Quota (for VIP plan in create and edit) */}
+            {(editForm.action === "create" || editForm.action === "edit") &&
+              editForm.plan_name === "VIP" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Custom Quota (optional)
+                  </label>
+                  <Input
+                    type="number"
+                    value={editForm.quota_total || ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        quota_total: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    placeholder="Enter custom quota (e.g., 50000)"
+                    min="1"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Leave empty to keep current quota for VIP plan
+                  </p>
+                </div>
+              )}
 
             {/* Reason (always required) */}
             <div className="space-y-2">
@@ -756,7 +1141,7 @@ export default function AdminSubscriptionDashboard() {
               <Button type="submit" disabled={loading || !editForm.reason}>
                 {loading ? (
                   <>
-                    <Clock className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Processing...
                   </>
                 ) : editForm.action === "cancel" ? (

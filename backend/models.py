@@ -22,7 +22,7 @@ from sqlalchemy import (
     TypeDecorator,
     select,
 )
-from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID, JSONB
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.sql import func
 from database import Base
@@ -66,6 +66,24 @@ class UUID(TypeDecorator):
             if isinstance(value, str):
                 return uuid.UUID(value)
             return value
+
+
+# ============ SQLite 兼容的 JSONB 類型 ============
+class JSONType(TypeDecorator):
+    """
+    跨資料庫的 JSON 類型
+    - PostgreSQL: 使用 JSONB
+    - SQLite: 使用 JSON
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB())
+        else:
+            return dialect.type_descriptor(JSON())
 
 
 # ============ Enums ============
@@ -156,12 +174,22 @@ class SubscriptionPeriod(Base):
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     cancel_reason = Column(String, nullable=True)
 
+    # Admin 操作記錄（結構化欄位 + JSONB metadata）
+    admin_id = Column(
+        Integer, ForeignKey("teachers.id", ondelete="SET NULL"), nullable=True
+    )
+    admin_reason = Column(Text, nullable=True)
+    admin_metadata = Column(JSONType, nullable=True)  # 記錄完整操作歷史
+
     # 時間戳
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # 關聯
-    teacher = relationship("Teacher", back_populates="subscription_periods")
+    teacher = relationship(
+        "Teacher", foreign_keys=[teacher_id], back_populates="subscription_periods"
+    )
+    admin = relationship("Teacher", foreign_keys=[admin_id])
     usage_logs = relationship(
         "PointUsageLog",
         back_populates="subscription_period",
@@ -304,6 +332,7 @@ class Teacher(Base):
     )
     subscription_periods = relationship(
         "SubscriptionPeriod",
+        foreign_keys="SubscriptionPeriod.teacher_id",
         back_populates="teacher",
         cascade="all, delete-orphan",
         order_by="SubscriptionPeriod.start_date.desc()",
