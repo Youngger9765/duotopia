@@ -251,6 +251,9 @@ async def edit_subscription(
     if current_period.status == "expired":
         current_period.status = "active"
 
+    # 🔐 標記為 admin 操作
+    current_period.payment_method = "admin_edit"
+
     # 更新 plan_name (如果提供)
     if request.plan_name:
         current_period.plan_name = request.plan_name

@@ -235,6 +235,7 @@ class TestEditSubscription:
         )
         assert period.plan_name == "Tutor Teachers"
         assert period.quota_total == 10000
+        assert period.payment_method == "admin_edit"  # ✅ 檢查 payment_method
 
     def test_edit_subscription_change_quota(
         self, test_client, db_session: Session, admin_token, teacher_with_subscription
@@ -263,6 +264,7 @@ class TestEditSubscription:
             .first()
         )
         assert period.quota_total == 50000
+        assert period.payment_method == "admin_edit"  # ✅ 檢查 payment_method
 
     def test_edit_subscription_change_end_date(
         self, test_client, db_session: Session, admin_token, teacher_with_subscription
@@ -291,6 +293,7 @@ class TestEditSubscription:
         assert period.end_date.year == 2026
         assert period.end_date.month == 6
         assert period.end_date.day == 30
+        assert period.payment_method == "admin_edit"  # ✅ 檢查 payment_method
 
 
 class TestCancelSubscription:
