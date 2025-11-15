@@ -216,20 +216,23 @@ jobs:
       run: |
         echo "🔍 Cleaning up old frontend container images..."
         KEEP_COUNT=2
-        FRONTEND_IMAGES=$(gcloud container images list-tags \
+        FRONTEND_IMAGES=$(gcloud artifacts docker images list \
           $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
-          --format="value(digest)" \
-          --sort-by="~timestamp" 2>/dev/null || echo "")
+          --format="value(version)" \
+          --sort-by="~UPDATE_TIME" 2>/dev/null || echo "")
 
         if [ ! -z "$FRONTEND_IMAGES" ]; then
-          TOTAL=$(echo "$FRONTEND_IMAGES" | wc -l)
+          TOTAL=$(echo "$FRONTEND_IMAGES" | wc -l | xargs)
+          echo "  Found $TOTAL frontend images (keeping $KEEP_COUNT)"
           if [ $TOTAL -gt $KEEP_COUNT ]; then
             TO_DELETE=$(echo "$FRONTEND_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
-            for DIGEST in $TO_DELETE; do
-              echo "  Deleting frontend image: $DIGEST"
-              gcloud container images delete \
-                "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}@sha256:$DIGEST" \
-                --force-delete-tags --quiet || true
+            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l | xargs)
+            echo "  Deleting $DELETE_COUNT old frontend images..."
+            echo "$TO_DELETE" | while read DIGEST; do
+              echo "    Deleting: $DIGEST"
+              gcloud artifacts docker images delete \
+                "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}@${DIGEST}" \
+                --quiet --delete-tags 2>/dev/null || echo "    Failed to delete (may be in use)"
             done
           fi
         fi

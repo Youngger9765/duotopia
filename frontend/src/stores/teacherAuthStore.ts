@@ -6,6 +6,7 @@ export interface TeacherUser {
   name: string;
   email: string;
   is_demo?: boolean;
+  is_admin?: boolean;
   phone?: string;
 }
 

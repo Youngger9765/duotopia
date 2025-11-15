@@ -96,6 +96,7 @@ export interface LoginResponse {
     email: string;
     name: string;
     is_demo: boolean;
+    is_admin?: boolean;
   };
 }
 
