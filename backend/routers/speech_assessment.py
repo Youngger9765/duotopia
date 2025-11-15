@@ -23,9 +23,9 @@ from models import (
     StudentItemProgress,
     ContentItem,
     Assignment,
-    Teacher,
 )
 from services.quota_service import QuotaService
+from sqlalchemy.orm import joinedload
 
 # 設定 logger
 logger = logging.getLogger(__name__)
@@ -522,11 +522,14 @@ async def assess_pronunciation_endpoint(
 
     if assignment_id:
         print("✅ assignment_id exists, querying StudentAssignment by ID...")
-        # 🔥 修正：assignment_id 是 StudentAssignment.id，不是 Assignment.id
+        # 🔥 優化：使用 joinedload 減少資料庫查詢次數（3次 → 1次）
         student_assignment = (
             db.query(StudentAssignment)
+            .options(
+                joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher)
+            )
             .filter(
-                StudentAssignment.id == assignment_id,  # 🔥 改用 id 而不是 assignment_id
+                StudentAssignment.id == assignment_id,
                 StudentAssignment.student_id == current_student.id,
             )
             .first()
@@ -539,21 +542,13 @@ async def assess_pronunciation_endpoint(
                 f"assignment_id={student_assignment.assignment_id}"
             )
 
-            # 找到作業的老師（配額扣除對象）
-            assignment = (
-                db.query(Assignment)
-                .filter(Assignment.id == student_assignment.assignment_id)
-                .first()
-            )
+            # 從已經 join 的物件直接取得 (不用再查詢)
+            assignment = student_assignment.assignment
             if assignment:
                 print(
                     f"✅ Found Assignment: {assignment.id}, teacher_id={assignment.teacher_id}"
                 )
-                teacher = (
-                    db.query(Teacher)
-                    .filter(Teacher.id == assignment.teacher_id)
-                    .first()
-                )
+                teacher = assignment.teacher
                 if teacher:
                     print(f"✅ Found Teacher: {teacher.id} ({teacher.name})")
                 else:
@@ -680,9 +675,11 @@ async def get_student_assessments(
     獲取學生的評估歷史記錄
     """
     # 查詢有 ai_scores 的 StudentContentProgress 記錄，只顯示當前學生的記錄
+    # 🔥 優化：使用 joinedload 預載 content，避免 N+1 查詢
     progress_records = (
         db.query(StudentContentProgress)
         .join(StudentContentProgress.student_assignment)
+        .options(joinedload(StudentContentProgress.content))
         .filter(
             StudentContentProgress.ai_scores.isnot(None),
             StudentAssignment.student_id == current_student.id,

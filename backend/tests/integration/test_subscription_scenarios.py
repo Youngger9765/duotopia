@@ -23,7 +23,7 @@ def test_scenario_1_new_user_first_payment():
     流程：
     1. 新用戶註冊
     2. 首次刷卡付款 330元 (Tutor Teachers)
-    3. 驗證：創建 subscription_period，配額 1800秒
+    3. 驗證：創建 subscription_period，配額 10000點
     """
     print("\n" + "=" * 60)
     print("情境 1: 新用戶首次付款")
@@ -47,7 +47,7 @@ def test_scenario_1_new_user_first_payment():
         teacher_id=new_teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=0,
         start_date=datetime.now(timezone.utc),
         end_date=datetime.now(timezone.utc) + timedelta(days=30),
@@ -65,7 +65,7 @@ def test_scenario_1_new_user_first_payment():
 
     assert current_period is not None, "❌ 應該有 current_period"
     assert (
-        current_period.quota_total == 1800
+        current_period.quota_total == 10000
     ), f"❌ 配額應該是 1800，實際：{current_period.quota_total}"
     assert current_period.quota_used == 0, f"❌ 已用配額應該是 0，實際：{current_period.quota_used}"
     assert current_period.payment_method == "manual", "❌ 付款方式應該是 manual"
@@ -114,7 +114,7 @@ def test_scenario_2_use_quota_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=500,  # 已使用 500 秒
         start_date=now - timedelta(days=25),
         end_date=now + timedelta(days=5),
@@ -134,7 +134,7 @@ def test_scenario_2_use_quota_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=0,  # 新週期配額歸零
         start_date=now + timedelta(days=5),
         end_date=now + timedelta(days=35),
@@ -186,7 +186,7 @@ def test_scenario_3_quota_exhausted_then_renew():
     情境 3: 配額用完後續約
 
     流程：
-    1. 用戶用完 1800 秒配額
+    1. 用戶用完 10000 點配額
     2. 續約後配額重新充值
     """
     print("\n" + "=" * 60)
@@ -212,8 +212,8 @@ def test_scenario_3_quota_exhausted_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
-        quota_used=1800,  # 用完了！
+        quota_total=10000,
+        quota_used=10000,  # 用完了！
         start_date=now - timedelta(days=25),
         end_date=now + timedelta(days=5),
         payment_method="auto_renew",
@@ -233,7 +233,7 @@ def test_scenario_3_quota_exhausted_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=0,
         start_date=now + timedelta(days=5),
         end_date=now + timedelta(days=35),
@@ -249,7 +249,7 @@ def test_scenario_3_quota_exhausted_then_renew():
 
     assert teacher.current_period.quota_used == 0, "❌ 新週期配額應該是 0"
     assert (
-        teacher.quota_remaining == 1800
+        teacher.quota_remaining == 10000
     ), f"❌ 剩餘配額應該是 1800，實際：{teacher.quota_remaining}"
 
     print("✅ 續約後配額重新充值")
@@ -271,9 +271,9 @@ def test_scenario_4_change_plan():
     情境 4: 更換方案 (Tutor → School)
 
     流程：
-    1. 用戶原本是 Tutor (330元/1800秒)
-    2. 更換成 School (660元/4000秒)
-    3. 驗證：新週期配額是 4000 秒
+    1. 用戶原本是 Tutor (330元/10000點)
+    2. 更換成 School (660元/25000點)
+    3. 驗證：新週期配額是 25000 點
     """
     print("\n" + "=" * 60)
     print("情境 4: 更換方案 (Tutor → School)")
@@ -298,7 +298,7 @@ def test_scenario_4_change_plan():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=300,
         start_date=now - timedelta(days=10),
         end_date=now + timedelta(days=20),
@@ -310,7 +310,7 @@ def test_scenario_4_change_plan():
     db.add(period1)
     db.commit()
 
-    print(f"📊 原方案：Tutor Teachers (1800秒)，已用 {period1.quota_used} 秒")
+    print(f"📊 原方案：Tutor Teachers (10000點)，已用 {period1.quota_used} 秒")
 
     # 更換成 School 方案
     period1.status = "expired"
@@ -318,7 +318,7 @@ def test_scenario_4_change_plan():
         teacher_id=teacher.id,
         plan_name="School Teachers",
         amount_paid=660,
-        quota_total=4000,  # 升級到 4000 秒
+        quota_total=25000,  # 升級到 25000 點
         quota_used=0,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -336,8 +336,8 @@ def test_scenario_4_change_plan():
     assert (
         teacher.current_period.plan_name == "School Teachers"
     ), "❌ 方案應該是 School Teachers"
-    assert teacher.current_period.quota_total == 4000, "❌ 新配額應該是 4000"
-    assert teacher.quota_total == 4000, "❌ teacher.quota_total 應該是 4000"
+    assert teacher.current_period.quota_total == 25000, "❌ 新配額應該是 4000"
+    assert teacher.quota_total == 25000, "❌ teacher.quota_total 應該是 4000"
 
     print("✅ 方案更換成功")
     print(f"   - 新方案：{period2.plan_name}")
@@ -383,7 +383,7 @@ def test_scenario_5_expired_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=800,
         start_date=now - timedelta(days=35),
         end_date=now - timedelta(days=5),  # 已過期
@@ -402,7 +402,7 @@ def test_scenario_5_expired_then_renew():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=0,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -511,7 +511,7 @@ def test_scenario_7_multiple_renewals_history():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=500,
         start_date=now - timedelta(days=60),
         end_date=now - timedelta(days=30),
@@ -526,7 +526,7 @@ def test_scenario_7_multiple_renewals_history():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=1200,
         start_date=now - timedelta(days=30),
         end_date=now,
@@ -541,7 +541,7 @@ def test_scenario_7_multiple_renewals_history():
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=330,
-        quota_total=1800,
+        quota_total=10000,
         quota_used=300,
         start_date=now,
         end_date=now + timedelta(days=30),
