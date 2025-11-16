@@ -33,74 +33,80 @@ def upgrade() -> None:
     """)
 
     # 2. Create user_word_progress table (核心記憶追蹤表)
-    op.create_table(
-        'user_word_progress',
-        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column('student_id', sa.Integer(), sa.ForeignKey('students.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('student_assignment_id', sa.Integer(), sa.ForeignKey('student_assignments.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('content_item_id', sa.Integer(), sa.ForeignKey('content_items.id', ondelete='CASCADE'), nullable=False),
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS user_word_progress (
+            id SERIAL PRIMARY KEY,
+            student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            student_assignment_id INTEGER NOT NULL REFERENCES student_assignments(id) ON DELETE CASCADE,
+            content_item_id INTEGER NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
 
-        # 艾賓浩斯記憶曲線相關欄位
-        sa.Column('memory_strength', sa.Numeric(5, 4), server_default='0', nullable=False),
-        sa.Column('repetition_count', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('correct_count', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('incorrect_count', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('last_review_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('next_review_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('easiness_factor', sa.Numeric(3, 2), server_default='2.5', nullable=False),
-        sa.Column('interval_days', sa.Numeric(10, 2), server_default='1', nullable=False),
-        sa.Column('total_attempts', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('accuracy_rate', sa.Numeric(5, 4), server_default='0', nullable=False),
+            -- 艾賓浩斯記憶曲線相關欄位
+            memory_strength NUMERIC(5, 4) DEFAULT 0 NOT NULL,
+            repetition_count INTEGER DEFAULT 0 NOT NULL,
+            correct_count INTEGER DEFAULT 0 NOT NULL,
+            incorrect_count INTEGER DEFAULT 0 NOT NULL,
+            last_review_at TIMESTAMPTZ,
+            next_review_at TIMESTAMPTZ,
+            easiness_factor NUMERIC(3, 2) DEFAULT 2.5 NOT NULL,
+            interval_days NUMERIC(10, 2) DEFAULT 1 NOT NULL,
+            total_attempts INTEGER DEFAULT 0 NOT NULL,
+            accuracy_rate NUMERIC(5, 4) DEFAULT 0 NOT NULL,
 
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
 
-        sa.UniqueConstraint('student_assignment_id', 'content_item_id', name='uq_user_word_progress_assignment_item'),
-        sa.CheckConstraint('memory_strength >= 0 AND memory_strength <= 1', name='check_memory_strength_range'),
-        sa.CheckConstraint('easiness_factor >= 1.3', name='check_easiness_factor_min')
-    )
+            CONSTRAINT uq_user_word_progress_assignment_item
+                UNIQUE (student_assignment_id, content_item_id),
+            CONSTRAINT check_memory_strength_range
+                CHECK (memory_strength >= 0 AND memory_strength <= 1),
+            CONSTRAINT check_easiness_factor_min
+                CHECK (easiness_factor >= 1.3)
+        )
+    """)
 
     # Create indexes for user_word_progress
-    op.create_index('idx_user_word_progress_student', 'user_word_progress', ['student_id', 'student_assignment_id'])
-    op.create_index('idx_user_word_progress_next_review', 'user_word_progress', ['student_assignment_id', 'next_review_at'])
-    op.create_index('idx_user_word_progress_memory', 'user_word_progress', ['memory_strength'])
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_student ON user_word_progress (student_id, student_assignment_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_next_review ON user_word_progress (student_assignment_id, next_review_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_memory ON user_word_progress (memory_strength)")
 
     # 3. Create practice_sessions table
-    op.create_table(
-        'practice_sessions',
-        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column('student_id', sa.Integer(), sa.ForeignKey('students.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('student_assignment_id', sa.Integer(), sa.ForeignKey('student_assignments.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('practice_mode', sa.String(20), nullable=False),
-        sa.Column('words_practiced', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('correct_count', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('total_time_seconds', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('started_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS practice_sessions (
+            id SERIAL PRIMARY KEY,
+            student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            student_assignment_id INTEGER NOT NULL REFERENCES student_assignments(id) ON DELETE CASCADE,
+            practice_mode VARCHAR(20) NOT NULL,
+            words_practiced INTEGER DEFAULT 0 NOT NULL,
+            correct_count INTEGER DEFAULT 0 NOT NULL,
+            total_time_seconds INTEGER DEFAULT 0 NOT NULL,
+            started_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+            completed_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
 
-        sa.CheckConstraint("practice_mode IN ('listening', 'writing')", name='check_practice_mode')
-    )
+            CONSTRAINT check_practice_mode CHECK (practice_mode IN ('listening', 'writing'))
+        )
+    """)
 
     # Create indexes for practice_sessions
-    op.create_index('idx_practice_sessions_student', 'practice_sessions', ['student_id', 'student_assignment_id'])
-    op.create_index('idx_practice_sessions_started', 'practice_sessions', ['started_at'])
+    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_sessions_student ON practice_sessions (student_id, student_assignment_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_sessions_started ON practice_sessions (started_at)")
 
     # 4. Create practice_answers table
-    op.create_table(
-        'practice_answers',
-        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column('practice_session_id', sa.Integer(), sa.ForeignKey('practice_sessions.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('content_item_id', sa.Integer(), sa.ForeignKey('content_items.id'), nullable=False),
-        sa.Column('is_correct', sa.Boolean(), nullable=False),
-        sa.Column('time_spent_seconds', sa.Integer(), server_default='0', nullable=False),
-        sa.Column('answer_data', sa.dialects.postgresql.JSONB(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False)
-    )
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS practice_answers (
+            id SERIAL PRIMARY KEY,
+            practice_session_id INTEGER NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
+            content_item_id INTEGER NOT NULL REFERENCES content_items(id),
+            is_correct BOOLEAN NOT NULL,
+            time_spent_seconds INTEGER DEFAULT 0 NOT NULL,
+            answer_data JSONB,
+            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+    """)
 
     # Create indexes for practice_answers
-    op.create_index('idx_practice_answers_session', 'practice_answers', ['practice_session_id'])
-    op.create_index('idx_practice_answers_item', 'practice_answers', ['content_item_id'])
+    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_answers_session ON practice_answers (practice_session_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_answers_item ON practice_answers (content_item_id)")
 
     # ========================================
     # PostgreSQL Functions for Ebbinghaus Memory Curve
