@@ -539,12 +539,13 @@ async def get_transaction_analytics(
     交易分析：獲取所有付款交易記錄
     返回：教師、時間、金額、方案
     """
-    # 查詢所有付款記錄（含 teacher 資訊）
-    # Note: 使用 payment_status 而非 status
+    # 查詢所有成功的交易記錄（含 teacher 資訊）
+    # Note: TeacherSubscriptionTransaction 使用 status 欄位，不是 payment_status
+    # status 可能值: PENDING, SUCCESS, FAILED (參考 TransactionStatus enum)
     transactions = (
         db.query(TeacherSubscriptionTransaction, Teacher)
         .join(Teacher, TeacherSubscriptionTransaction.teacher_id == Teacher.id)
-        .filter(TeacherSubscriptionTransaction.payment_status == "paid")
+        .filter(TeacherSubscriptionTransaction.status.in_(["SUCCESS", "paid"]))  # 兼容舊資料
         .order_by(TeacherSubscriptionTransaction.created_at.desc())
         .all()
     )
@@ -558,11 +559,13 @@ async def get_transaction_analytics(
                 "teacher_name": teacher.name,
                 "teacher_email": teacher.email,
                 "amount": txn.amount,
-                "plan_name": txn.plan_name,
-                "payment_method": txn.payment_method,
+                # 使用 subscription_type 而非 plan_name (生產環境欄位)
+                "plan_name": txn.subscription_type or "Unknown",
+                "payment_method": txn.payment_method or "Unknown",
                 "status": txn.status,
                 "created_at": txn.created_at.isoformat(),
-                "rec_trade_id": txn.rec_trade_id,
+                # 使用 external_transaction_id 而非 rec_trade_id
+                "rec_trade_id": txn.external_transaction_id or "",
             }
         )
 
