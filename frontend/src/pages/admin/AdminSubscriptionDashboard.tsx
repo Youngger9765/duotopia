@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users,
   Crown,
@@ -45,8 +46,22 @@ import {
   Loader2,
   ChevronRight,
   ChevronDown,
+  Receipt,
+  GraduationCap,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 // Types
 interface TeacherSubscriptionInfo {
@@ -117,6 +132,58 @@ function isApiError(error: unknown): error is ApiError {
   );
 }
 
+// Transaction Analytics Types
+interface Transaction {
+  id: number;
+  teacher_id: number;
+  teacher_name: string;
+  teacher_email: string;
+  amount: number;
+  plan_name: string;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  rec_trade_id: string;
+}
+
+interface MonthlyTransactionStats {
+  month: string;
+  total: number;
+  by_teacher: Record<string, number>;
+}
+
+interface TransactionAnalytics {
+  transactions: Transaction[];
+  total_count: number;
+  total_revenue: number;
+  monthly_stats: MonthlyTransactionStats[];
+}
+
+// Learning Analytics Types
+interface TeacherStats {
+  teacher_id: number;
+  teacher_name: string;
+  teacher_email: string;
+  classrooms_count: number;
+  students_count: number;
+  assignments_count: number;
+  total_points_used: number;
+}
+
+interface MonthlyPointsUsage {
+  month: string;
+  teacher_name: string;
+  total_points: number;
+  by_classroom: Record<string, number>;
+}
+
+interface LearningAnalytics {
+  teacher_stats: TeacherStats[];
+  monthly_points_usage: MonthlyPointsUsage[];
+  total_teachers: number;
+  total_points_used: number;
+}
+
 export default function AdminSubscriptionDashboard() {
   const navigate = useNavigate();
 
@@ -137,6 +204,13 @@ export default function AdminSubscriptionDashboard() {
     Record<number, EditHistoryRecord[]>
   >({});
 
+  // Analytics data
+  const [transactionAnalytics, setTransactionAnalytics] =
+    useState<TransactionAnalytics | null>(null);
+  const [learningAnalytics, setLearningAnalytics] =
+    useState<LearningAnalytics | null>(null);
+  const [activeTab, setActiveTab] = useState("subscriptions");
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] =
     useState<TeacherSubscriptionInfo | null>(null);
@@ -151,6 +225,14 @@ export default function AdminSubscriptionDashboard() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "transactions") {
+      loadTransactionAnalytics();
+    } else if (activeTab === "learning") {
+      loadLearningAnalytics();
+    }
+  }, [activeTab]);
 
   const loadDashboardData = async () => {
     try {
@@ -177,6 +259,36 @@ export default function AdminSubscriptionDashboard() {
       } else {
         setErrorMessage("Load failed: Unknown error");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTransactionAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get(
+        "/api/admin/subscription/analytics/transactions",
+      );
+      setTransactionAnalytics(response as TransactionAnalytics);
+    } catch (error: unknown) {
+      console.error("Failed to load transaction analytics:", error);
+      setErrorMessage("Failed to load transaction analytics");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadLearningAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get(
+        "/api/admin/subscription/analytics/learning",
+      );
+      setLearningAnalytics(response as LearningAnalytics);
+    } catch (error: unknown) {
+      console.error("Failed to load learning analytics:", error);
+      setErrorMessage("Failed to load learning analytics");
     } finally {
       setLoading(false);
     }
@@ -500,460 +612,783 @@ export default function AdminSubscriptionDashboard() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            All Subscriptions
-          </CardTitle>
-          <CardDescription>
-            View all teacher subscription status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 mb-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search email or name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-              />
-            </div>
-            <Button onClick={handleSearch} disabled={loading}>
-              <Search className="w-4 h-4 mr-2" />
-              Search
-            </Button>
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger
+            value="subscriptions"
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Subscriptions
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="flex items-center gap-2">
+            <Receipt className="w-4 h-4" />
+            Transactions
+          </TabsTrigger>
+          <TabsTrigger value="learning" className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            Learning
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Periods</TableHead>
-                  <TableHead>Quota</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-gray-500"
-                    >
-                      No data
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  teachers.map((teacher) => (
-                    <>
-                      <TableRow
-                        key={teacher.teacher_email}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => toggleTeacherExpand(teacher.teacher_id)}
-                      >
-                        <TableCell className="font-mono text-sm">
-                          <div className="flex items-center gap-2">
-                            {expandedTeacherId === teacher.teacher_id ? (
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-gray-500" />
-                            )}
-                            {teacher.teacher_email}
-                          </div>
-                        </TableCell>
-                        <TableCell>{teacher.teacher_name}</TableCell>
-                        <TableCell>
-                          {teacher.current_subscription?.plan_name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {teacher.current_subscription
-                            ? formatDate(teacher.current_subscription.end_date)
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-600">
-                            {teacherPeriods[teacher.teacher_id]?.length || "-"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {teacher.current_subscription ? (
-                            <div className="space-y-1">
-                              <div className="text-sm">
-                                {teacher.current_subscription.quota_used.toLocaleString()}{" "}
-                                /{" "}
-                                {teacher.current_subscription.quota_total.toLocaleString()}
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-500 h-2 rounded-full"
-                                  style={{
-                                    width: `${Math.min((teacher.current_subscription.quota_used / teacher.current_subscription.quota_total) * 100 || 0, 100)}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {teacher.current_subscription?.status === "active" ? (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
-                              None
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenEditModal(teacher)}
-                            className="h-8"
-                          >
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
+        {/* Subscriptions Tab */}
+        <TabsContent value="subscriptions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                All Subscriptions
+              </CardTitle>
+              <CardDescription>
+                View all teacher subscription status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search email or name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                  />
+                </div>
+                <Button onClick={handleSearch} disabled={loading}>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Periods</TableHead>
+                      <TableHead>Quota</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teachers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-gray-500"
+                        >
+                          No data
                         </TableCell>
                       </TableRow>
-
-                      {/* Layer 2: Subscription Periods */}
-                      {expandedTeacherId === teacher.teacher_id &&
-                        teacherPeriods[teacher.teacher_id] && (
-                          <TableRow key={`${teacher.teacher_email}-periods`}>
-                            <TableCell colSpan={8} className="bg-gray-50 p-0">
-                              <div className="p-4">
-                                <h4 className="font-semibold mb-3 text-sm">
-                                  Subscription Periods
-                                </h4>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead className="w-12"></TableHead>
-                                      <TableHead>Plan</TableHead>
-                                      <TableHead>Start Date</TableHead>
-                                      <TableHead>End Date</TableHead>
-                                      <TableHead>Quota</TableHead>
-                                      <TableHead>Payment</TableHead>
-                                      <TableHead>Status</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {teacherPeriods[teacher.teacher_id].map(
-                                      (period) => (
-                                        <>
-                                          <TableRow
-                                            key={period.id}
-                                            className="cursor-pointer hover:bg-gray-100"
-                                            onClick={() =>
-                                              togglePeriodExpand(period.id)
-                                            }
-                                          >
-                                            <TableCell>
-                                              {expandedPeriodId ===
-                                              period.id ? (
-                                                <ChevronDown className="w-4 h-4 text-gray-500" />
-                                              ) : (
-                                                <ChevronRight className="w-4 h-4 text-gray-500" />
-                                              )}
-                                            </TableCell>
-                                            <TableCell>
-                                              {period.plan_name}
-                                            </TableCell>
-                                            <TableCell>
-                                              {formatDate(period.start_date)}
-                                            </TableCell>
-                                            <TableCell>
-                                              {formatDate(period.end_date)}
-                                            </TableCell>
-                                            <TableCell>
-                                              {period.quota_used.toLocaleString()}{" "}
-                                              /{" "}
-                                              {period.quota_total.toLocaleString()}
-                                            </TableCell>
-                                            <TableCell>
-                                              <div className="text-sm">
-                                                <div>
-                                                  {period.payment_method}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                  $
-                                                  {period.amount_paid?.toLocaleString() ||
-                                                    "0"}
-                                                </div>
-                                              </div>
-                                            </TableCell>
-                                            <TableCell>
-                                              <span
-                                                className={`px-2 py-1 rounded text-xs ${
-                                                  period.status === "active"
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-gray-100 text-gray-800"
-                                                }`}
-                                              >
-                                                {period.status}
-                                              </span>
-                                            </TableCell>
-                                          </TableRow>
-
-                                          {/* Layer 3: Edit History */}
-                                          {expandedPeriodId === period.id &&
-                                            periodHistory[period.id] && (
-                                              <TableRow
-                                                key={`${period.id}-history`}
-                                              >
-                                                <TableCell
-                                                  colSpan={7}
-                                                  className="bg-blue-50 p-0"
-                                                >
-                                                  <div className="p-4">
-                                                    <h5 className="font-semibold mb-3 text-sm">
-                                                      Edit History
-                                                    </h5>
-                                                    {periodHistory[period.id]
-                                                      .length === 0 ? (
-                                                      <p className="text-sm text-gray-500">
-                                                        No edit history
-                                                      </p>
-                                                    ) : (
-                                                      <div className="space-y-2">
-                                                        {periodHistory[
-                                                          period.id
-                                                        ].map((record, idx) => (
-                                                          <div
-                                                            key={idx}
-                                                            className="bg-white p-3 rounded border text-sm"
-                                                          >
-                                                            <div className="flex justify-between mb-2">
-                                                              <span
-                                                                className={`font-semibold capitalize ${
-                                                                  record.action ===
-                                                                  "create"
-                                                                    ? "text-green-700"
-                                                                    : record.action ===
-                                                                        "cancel"
-                                                                      ? "text-red-700"
-                                                                      : "text-blue-700"
-                                                                }`}
-                                                              >
-                                                                {record.action}
-                                                              </span>
-                                                              <span className="text-xs text-gray-500">
-                                                                {new Date(
-                                                                  record.timestamp,
-                                                                ).toLocaleString(
-                                                                  "zh-TW",
-                                                                )}
-                                                              </span>
-                                                            </div>
-                                                            <div className="text-xs text-gray-600 mb-2">
-                                                              Admin:{" "}
-                                                              {
-                                                                record.admin_name
-                                                              }{" "}
-                                                              (
-                                                              {
-                                                                record.admin_email
-                                                              }
-                                                              )
-                                                            </div>
-                                                            {Object.keys(
-                                                              record.changes,
-                                                            ).length > 0 && (
-                                                              <div className="text-xs bg-gray-50 p-2 rounded mb-2 space-y-1">
-                                                                <div className="font-semibold">
-                                                                  {record.action ===
-                                                                  "create"
-                                                                    ? "Initial Values:"
-                                                                    : "Changes:"}
-                                                                </div>
-                                                                {record.action ===
-                                                                "create" ? (
-                                                                  <>
-                                                                    {typeof record
-                                                                      .changes
-                                                                      .plan_name ===
-                                                                      "string" && (
-                                                                      <div>
-                                                                        Plan:{" "}
-                                                                        {
-                                                                          record
-                                                                            .changes
-                                                                            .plan_name
-                                                                        }
-                                                                      </div>
-                                                                    )}
-                                                                    {typeof record
-                                                                      .changes
-                                                                      .quota_total ===
-                                                                      "number" && (
-                                                                      <div>
-                                                                        Quota:{" "}
-                                                                        {record.changes.quota_total.toLocaleString()}
-                                                                      </div>
-                                                                    )}
-                                                                    {typeof record
-                                                                      .changes
-                                                                      .end_date ===
-                                                                      "string" && (
-                                                                      <div>
-                                                                        End
-                                                                        Date:{" "}
-                                                                        {formatDate(
-                                                                          record
-                                                                            .changes
-                                                                            .end_date,
-                                                                        )}
-                                                                      </div>
-                                                                    )}
-                                                                    {typeof record
-                                                                      .changes
-                                                                      .status ===
-                                                                      "string" && (
-                                                                      <div>
-                                                                        Status:{" "}
-                                                                        {
-                                                                          record
-                                                                            .changes
-                                                                            .status
-                                                                        }
-                                                                      </div>
-                                                                    )}
-                                                                  </>
-                                                                ) : (
-                                                                  <>
-                                                                    {record
-                                                                      .changes
-                                                                      .plan_name &&
-                                                                      typeof record
-                                                                        .changes
-                                                                        .plan_name ===
-                                                                        "object" && (
-                                                                        <div>
-                                                                          Plan:{" "}
-                                                                          {
-                                                                            record
-                                                                              .changes
-                                                                              .plan_name
-                                                                              .from
-                                                                          }{" "}
-                                                                          →{" "}
-                                                                          {
-                                                                            record
-                                                                              .changes
-                                                                              .plan_name
-                                                                              .to
-                                                                          }
-                                                                        </div>
-                                                                      )}
-                                                                    {record
-                                                                      .changes
-                                                                      .quota_total &&
-                                                                      typeof record
-                                                                        .changes
-                                                                        .quota_total ===
-                                                                        "object" && (
-                                                                        <div>
-                                                                          Quota:{" "}
-                                                                          {record.changes.quota_total.from.toLocaleString()}{" "}
-                                                                          →{" "}
-                                                                          {record.changes.quota_total.to.toLocaleString()}
-                                                                        </div>
-                                                                      )}
-                                                                    {record
-                                                                      .changes
-                                                                      .end_date &&
-                                                                      typeof record
-                                                                        .changes
-                                                                        .end_date ===
-                                                                        "object" && (
-                                                                        <div>
-                                                                          End
-                                                                          Date:{" "}
-                                                                          {formatDate(
-                                                                            record
-                                                                              .changes
-                                                                              .end_date
-                                                                              .from,
-                                                                          )}{" "}
-                                                                          →{" "}
-                                                                          {formatDate(
-                                                                            record
-                                                                              .changes
-                                                                              .end_date
-                                                                              .to,
-                                                                          )}
-                                                                        </div>
-                                                                      )}
-                                                                    {record
-                                                                      .changes
-                                                                      .status &&
-                                                                      typeof record
-                                                                        .changes
-                                                                        .status ===
-                                                                        "object" && (
-                                                                        <div>
-                                                                          Status:{" "}
-                                                                          {
-                                                                            record
-                                                                              .changes
-                                                                              .status
-                                                                              .from
-                                                                          }{" "}
-                                                                          →{" "}
-                                                                          {
-                                                                            record
-                                                                              .changes
-                                                                              .status
-                                                                              .to
-                                                                          }
-                                                                        </div>
-                                                                      )}
-                                                                  </>
-                                                                )}
-                                                              </div>
-                                                            )}
-                                                            <div className="text-xs text-gray-700 bg-yellow-50 p-2 rounded">
-                                                              <span className="font-semibold">
-                                                                Reason:
-                                                              </span>{" "}
-                                                              {record.reason}
-                                                            </div>
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </TableCell>
-                                              </TableRow>
-                                            )}
-                                        </>
-                                      ),
-                                    )}
-                                  </TableBody>
-                                </Table>
+                    ) : (
+                      teachers.map((teacher) => (
+                        <React.Fragment key={teacher.teacher_email}>
+                          <TableRow
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() =>
+                              toggleTeacherExpand(teacher.teacher_id)
+                            }
+                          >
+                            <TableCell className="font-mono text-sm">
+                              <div className="flex items-center gap-2">
+                                {expandedTeacherId === teacher.teacher_id ? (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                                )}
+                                {teacher.teacher_email}
                               </div>
                             </TableCell>
+                            <TableCell>{teacher.teacher_name}</TableCell>
+                            <TableCell>
+                              {teacher.current_subscription?.plan_name || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {teacher.current_subscription
+                                ? formatDate(
+                                    teacher.current_subscription.end_date,
+                                  )
+                                : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-gray-600">
+                                {teacherPeriods[teacher.teacher_id]?.length ||
+                                  "-"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {teacher.current_subscription ? (
+                                <div className="space-y-1">
+                                  <div className="text-sm">
+                                    {teacher.current_subscription.quota_used.toLocaleString()}{" "}
+                                    /{" "}
+                                    {teacher.current_subscription.quota_total.toLocaleString()}
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-blue-500 h-2 rounded-full"
+                                      style={{
+                                        width: `${Math.min((teacher.current_subscription.quota_used / teacher.current_subscription.quota_total) * 100 || 0, 100)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {teacher.current_subscription?.status ===
+                              "active" ? (
+                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                                  None
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEditModal(teacher)}
+                                className="h-8"
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                            </TableCell>
                           </TableRow>
-                        )}
-                    </>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+
+                          {/* Layer 2: Subscription Periods */}
+                          {expandedTeacherId === teacher.teacher_id &&
+                            teacherPeriods[teacher.teacher_id] && (
+                              <TableRow
+                                key={`${teacher.teacher_email}-periods`}
+                              >
+                                <TableCell
+                                  colSpan={8}
+                                  className="bg-gray-50 p-0"
+                                >
+                                  <div className="p-4">
+                                    <h4 className="font-semibold mb-3 text-sm">
+                                      Subscription Periods
+                                    </h4>
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead className="w-12"></TableHead>
+                                          <TableHead>Plan</TableHead>
+                                          <TableHead>Start Date</TableHead>
+                                          <TableHead>End Date</TableHead>
+                                          <TableHead>Quota</TableHead>
+                                          <TableHead>Payment</TableHead>
+                                          <TableHead>Status</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {teacherPeriods[teacher.teacher_id].map(
+                                          (period) => (
+                                            <>
+                                              <TableRow
+                                                key={period.id}
+                                                className="cursor-pointer hover:bg-gray-100"
+                                                onClick={() =>
+                                                  togglePeriodExpand(period.id)
+                                                }
+                                              >
+                                                <TableCell>
+                                                  {expandedPeriodId ===
+                                                  period.id ? (
+                                                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                                                  ) : (
+                                                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {period.plan_name}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {formatDate(
+                                                    period.start_date,
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {formatDate(period.end_date)}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {period.quota_used.toLocaleString()}{" "}
+                                                  /{" "}
+                                                  {period.quota_total.toLocaleString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                  <div className="text-sm">
+                                                    <div>
+                                                      {period.payment_method}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                      $
+                                                      {period.amount_paid?.toLocaleString() ||
+                                                        "0"}
+                                                    </div>
+                                                  </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span
+                                                    className={`px-2 py-1 rounded text-xs ${
+                                                      period.status === "active"
+                                                        ? "bg-green-100 text-green-800"
+                                                        : "bg-gray-100 text-gray-800"
+                                                    }`}
+                                                  >
+                                                    {period.status}
+                                                  </span>
+                                                </TableCell>
+                                              </TableRow>
+
+                                              {/* Layer 3: Edit History */}
+                                              {expandedPeriodId === period.id &&
+                                                periodHistory[period.id] && (
+                                                  <TableRow
+                                                    key={`${period.id}-history`}
+                                                  >
+                                                    <TableCell
+                                                      colSpan={7}
+                                                      className="bg-blue-50 p-0"
+                                                    >
+                                                      <div className="p-4">
+                                                        <h5 className="font-semibold mb-3 text-sm">
+                                                          Edit History
+                                                        </h5>
+                                                        {periodHistory[
+                                                          period.id
+                                                        ].length === 0 ? (
+                                                          <p className="text-sm text-gray-500">
+                                                            No edit history
+                                                          </p>
+                                                        ) : (
+                                                          <div className="space-y-2">
+                                                            {periodHistory[
+                                                              period.id
+                                                            ].map(
+                                                              (record, idx) => (
+                                                                <div
+                                                                  key={idx}
+                                                                  className="bg-white p-3 rounded border text-sm"
+                                                                >
+                                                                  <div className="flex justify-between mb-2">
+                                                                    <span
+                                                                      className={`font-semibold capitalize ${
+                                                                        record.action ===
+                                                                        "create"
+                                                                          ? "text-green-700"
+                                                                          : record.action ===
+                                                                              "cancel"
+                                                                            ? "text-red-700"
+                                                                            : "text-blue-700"
+                                                                      }`}
+                                                                    >
+                                                                      {
+                                                                        record.action
+                                                                      }
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500">
+                                                                      {new Date(
+                                                                        record.timestamp,
+                                                                      ).toLocaleString(
+                                                                        "zh-TW",
+                                                                      )}
+                                                                    </span>
+                                                                  </div>
+                                                                  <div className="text-xs text-gray-600 mb-2">
+                                                                    Admin:{" "}
+                                                                    {
+                                                                      record.admin_name
+                                                                    }{" "}
+                                                                    (
+                                                                    {
+                                                                      record.admin_email
+                                                                    }
+                                                                    )
+                                                                  </div>
+                                                                  {Object.keys(
+                                                                    record.changes,
+                                                                  ).length >
+                                                                    0 && (
+                                                                    <div className="text-xs bg-gray-50 p-2 rounded mb-2 space-y-1">
+                                                                      <div className="font-semibold">
+                                                                        {record.action ===
+                                                                        "create"
+                                                                          ? "Initial Values:"
+                                                                          : "Changes:"}
+                                                                      </div>
+                                                                      {record.action ===
+                                                                      "create" ? (
+                                                                        <>
+                                                                          {typeof record
+                                                                            .changes
+                                                                            .plan_name ===
+                                                                            "string" && (
+                                                                            <div>
+                                                                              Plan:{" "}
+                                                                              {
+                                                                                record
+                                                                                  .changes
+                                                                                  .plan_name
+                                                                              }
+                                                                            </div>
+                                                                          )}
+                                                                          {typeof record
+                                                                            .changes
+                                                                            .quota_total ===
+                                                                            "number" && (
+                                                                            <div>
+                                                                              Quota:{" "}
+                                                                              {record.changes.quota_total.toLocaleString()}
+                                                                            </div>
+                                                                          )}
+                                                                          {typeof record
+                                                                            .changes
+                                                                            .end_date ===
+                                                                            "string" && (
+                                                                            <div>
+                                                                              End
+                                                                              Date:{" "}
+                                                                              {formatDate(
+                                                                                record
+                                                                                  .changes
+                                                                                  .end_date,
+                                                                              )}
+                                                                            </div>
+                                                                          )}
+                                                                          {typeof record
+                                                                            .changes
+                                                                            .status ===
+                                                                            "string" && (
+                                                                            <div>
+                                                                              Status:{" "}
+                                                                              {
+                                                                                record
+                                                                                  .changes
+                                                                                  .status
+                                                                              }
+                                                                            </div>
+                                                                          )}
+                                                                        </>
+                                                                      ) : (
+                                                                        <>
+                                                                          {record
+                                                                            .changes
+                                                                            .plan_name &&
+                                                                            typeof record
+                                                                              .changes
+                                                                              .plan_name ===
+                                                                              "object" && (
+                                                                              <div>
+                                                                                Plan:{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .plan_name
+                                                                                    .from
+                                                                                }{" "}
+                                                                                →{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .plan_name
+                                                                                    .to
+                                                                                }
+                                                                              </div>
+                                                                            )}
+                                                                          {record
+                                                                            .changes
+                                                                            .quota_total &&
+                                                                            typeof record
+                                                                              .changes
+                                                                              .quota_total ===
+                                                                              "object" && (
+                                                                              <div>
+                                                                                Quota:{" "}
+                                                                                {record.changes.quota_total.from.toLocaleString()}{" "}
+                                                                                →{" "}
+                                                                                {record.changes.quota_total.to.toLocaleString()}
+                                                                              </div>
+                                                                            )}
+                                                                          {record
+                                                                            .changes
+                                                                            .end_date &&
+                                                                            typeof record
+                                                                              .changes
+                                                                              .end_date ===
+                                                                              "object" && (
+                                                                              <div>
+                                                                                End
+                                                                                Date:{" "}
+                                                                                {formatDate(
+                                                                                  record
+                                                                                    .changes
+                                                                                    .end_date
+                                                                                    .from,
+                                                                                )}{" "}
+                                                                                →{" "}
+                                                                                {formatDate(
+                                                                                  record
+                                                                                    .changes
+                                                                                    .end_date
+                                                                                    .to,
+                                                                                )}
+                                                                              </div>
+                                                                            )}
+                                                                          {record
+                                                                            .changes
+                                                                            .status &&
+                                                                            typeof record
+                                                                              .changes
+                                                                              .status ===
+                                                                              "object" && (
+                                                                              <div>
+                                                                                Status:{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .status
+                                                                                    .from
+                                                                                }{" "}
+                                                                                →{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .status
+                                                                                    .to
+                                                                                }
+                                                                              </div>
+                                                                            )}
+                                                                        </>
+                                                                      )}
+                                                                    </div>
+                                                                  )}
+                                                                  <div className="text-xs text-gray-700 bg-yellow-50 p-2 rounded">
+                                                                    <span className="font-semibold">
+                                                                      Reason:
+                                                                    </span>{" "}
+                                                                    {
+                                                                      record.reason
+                                                                    }
+                                                                  </div>
+                                                                </div>
+                                                              ),
+                                                            )}
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                )}
+                                            </>
+                                          ),
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="w-5 h-5" />
+                Transaction Analytics
+              </CardTitle>
+              <CardDescription>
+                View all payment transactions and monthly revenue trends
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading && !transactionAnalytics ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+              ) : transactionAnalytics ? (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-2xl font-bold">
+                          ${transactionAnalytics.total_revenue.toLocaleString()}
+                        </div>
+                        <p className="text-xs text-gray-600">Total Revenue</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-2xl font-bold">
+                          {transactionAnalytics.total_count}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Total Transactions
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Monthly Revenue Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Monthly Revenue Trend
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={transactionAnalytics.monthly_stats}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="total"
+                            stroke="#8884d8"
+                            name="Total Revenue"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Transaction Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        All Transactions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Teacher</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Plan</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Method</TableHead>
+                              <TableHead>Trade ID</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {transactionAnalytics.transactions.map((txn) => (
+                              <TableRow key={txn.id}>
+                                <TableCell>
+                                  {new Date(txn.created_at).toLocaleDateString(
+                                    "zh-TW",
+                                  )}
+                                </TableCell>
+                                <TableCell>{txn.teacher_name}</TableCell>
+                                <TableCell className="text-sm">
+                                  {txn.teacher_email}
+                                </TableCell>
+                                <TableCell>{txn.plan_name}</TableCell>
+                                <TableCell className="font-semibold">
+                                  ${txn.amount.toLocaleString()}
+                                </TableCell>
+                                <TableCell>{txn.payment_method}</TableCell>
+                                <TableCell className="text-xs text-gray-500">
+                                  {txn.rec_trade_id}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No transaction data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Learning Tab */}
+        <TabsContent value="learning">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="w-5 h-5" />
+                Learning Analytics
+              </CardTitle>
+              <CardDescription>
+                Teacher activity and points usage statistics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading && !learningAnalytics ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+              ) : learningAnalytics ? (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-2xl font-bold">
+                          {learningAnalytics.total_points_used.toLocaleString()}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Total Points Used
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-2xl font-bold">
+                          {learningAnalytics.total_teachers}
+                        </div>
+                        <p className="text-xs text-gray-600">Active Teachers</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Monthly Points Usage Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Monthly Points Usage
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                          data={learningAnalytics.monthly_points_usage.reduce(
+                            (acc, item) => {
+                              const existing = acc.find(
+                                (x) => x.month === item.month,
+                              );
+                              if (existing) {
+                                existing[item.teacher_name] = item.total_points;
+                              } else {
+                                acc.push({
+                                  month: item.month,
+                                  [item.teacher_name]: item.total_points,
+                                });
+                              }
+                              return acc;
+                            },
+                            [] as Record<string, string | number>[],
+                          )}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          {/* Generate bars for each teacher dynamically */}
+                          {Array.from(
+                            new Set(
+                              learningAnalytics.monthly_points_usage.map(
+                                (x) => x.teacher_name,
+                              ),
+                            ),
+                          ).map((teacher, idx) => (
+                            <Bar
+                              key={teacher}
+                              dataKey={teacher}
+                              fill={
+                                [
+                                  "#8884d8",
+                                  "#82ca9d",
+                                  "#ffc658",
+                                  "#ff8042",
+                                  "#a4de6c",
+                                ][idx % 5]
+                              }
+                            />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Teacher Stats Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Teacher Statistics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Teacher</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Classes</TableHead>
+                              <TableHead>Students</TableHead>
+                              <TableHead>Assignments</TableHead>
+                              <TableHead>Points Used</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {learningAnalytics.teacher_stats.map((teacher) => (
+                              <TableRow key={teacher.teacher_id}>
+                                <TableCell>{teacher.teacher_name}</TableCell>
+                                <TableCell className="text-sm">
+                                  {teacher.teacher_email}
+                                </TableCell>
+                                <TableCell>
+                                  {teacher.classrooms_count}
+                                </TableCell>
+                                <TableCell>{teacher.students_count}</TableCell>
+                                <TableCell>
+                                  {teacher.assignments_count}
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  {teacher.total_points_used.toLocaleString()}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No learning data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Subscription Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>

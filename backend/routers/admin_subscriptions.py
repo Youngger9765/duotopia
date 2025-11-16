@@ -14,7 +14,16 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from database import get_db
-from models import Teacher, SubscriptionPeriod
+from models import (
+    Teacher,
+    SubscriptionPeriod,
+    TeacherSubscriptionTransaction,
+    Classroom,
+    Student,
+    Assignment,
+    PointUsageLog,
+    ClassroomStudent,
+)
 from routers.admin import get_current_admin
 
 router = APIRouter(prefix="/api/admin/subscription", tags=["admin-subscription"])
@@ -25,7 +34,9 @@ class CreateSubscriptionRequest(BaseModel):
     """創建訂閱請求"""
 
     teacher_email: EmailStr
-    plan_name: str  # "30-Day Trial" | "Tutor Teachers" | "School Teachers" | "Demo Unlimited Plan" | "VIP"
+    # "30-Day Trial" | "Tutor Teachers" | "School Teachers" |
+    # "Demo Unlimited Plan" | "VIP"
+    plan_name: str
     end_date: str  # YYYY-MM-DD (月底日期)
     quota_total: Optional[int] = None  # VIP 方案可自訂 quota
     reason: str
@@ -123,7 +134,9 @@ async def create_subscription(
     if existing:
         raise HTTPException(
             status_code=400,
-            detail="Teacher already has an active subscription. Use /edit to modify it.",
+            detail=(
+                "Teacher already has an active subscription. " "Use /edit to modify it."
+            ),
         )
 
     # 計算 quota (VIP 方案可自訂)
@@ -226,7 +239,10 @@ async def edit_subscription(
     if not current_period:
         raise HTTPException(
             status_code=404,
-            detail="No active subscription found. Use /create to create a new subscription.",
+            detail=(
+                "No active subscription found. "
+                "Use /create to create a new subscription."
+            ),
         )
 
     # 🔐 標記為 admin 操作
@@ -510,4 +526,182 @@ async def get_period_edit_history(
         "period_id": period.id,
         "plan_name": period.plan_name,
         "edit_history": edit_history,
+    }
+
+
+# ============ Analytics APIs ============
+@router.get("/analytics/transactions")
+async def get_transaction_analytics(
+    db: Session = Depends(get_db),
+    admin: Teacher = Depends(get_current_admin),
+):
+    """
+    交易分析：獲取所有付款交易記錄
+    返回：教師、時間、金額、方案
+    """
+    # 查詢所有付款記錄（含 teacher 資訊）
+    transactions = (
+        db.query(TeacherSubscriptionTransaction, Teacher)
+        .join(Teacher, TeacherSubscriptionTransaction.teacher_id == Teacher.id)
+        .filter(TeacherSubscriptionTransaction.status == "paid")
+        .order_by(TeacherSubscriptionTransaction.created_at.desc())
+        .all()
+    )
+
+    transaction_list = []
+    for txn, teacher in transactions:
+        transaction_list.append(
+            {
+                "id": txn.id,
+                "teacher_id": teacher.id,
+                "teacher_name": teacher.name,
+                "teacher_email": teacher.email,
+                "amount": txn.amount,
+                "plan_name": txn.plan_name,
+                "payment_method": txn.payment_method,
+                "status": txn.status,
+                "created_at": txn.created_at.isoformat(),
+                "rec_trade_id": txn.rec_trade_id,
+            }
+        )
+
+    # 計算月度統計
+    from collections import defaultdict
+
+    monthly_stats = defaultdict(lambda: {"total": 0, "by_teacher": defaultdict(int)})
+
+    for txn, teacher in transactions:
+        if txn.created_at:
+            month_key = txn.created_at.strftime("%Y-%m")
+            monthly_stats[month_key]["total"] += txn.amount
+            monthly_stats[month_key]["by_teacher"][teacher.name] += txn.amount
+
+    # 轉換為列表格式
+    monthly_data = []
+    for month, data in sorted(monthly_stats.items()):
+        monthly_data.append(
+            {
+                "month": month,
+                "total": data["total"],
+                "by_teacher": dict(data["by_teacher"]),
+            }
+        )
+
+    return {
+        "transactions": transaction_list,
+        "total_count": len(transaction_list),
+        "total_revenue": sum(txn.amount for txn, _ in transactions),
+        "monthly_stats": monthly_data,
+    }
+
+
+@router.get("/analytics/learning")
+async def get_learning_analytics(
+    db: Session = Depends(get_db),
+    admin: Teacher = Depends(get_current_admin),
+):
+    """
+    學習分析：獲取教師的班級、學生、作業、點數使用統計
+    """
+    from collections import defaultdict
+
+    # 1. 獲取所有教師的基本統計
+    teachers = db.query(Teacher).all()
+
+    teacher_stats = []
+    for teacher in teachers:
+        # 統計班級數
+        classrooms_count = (
+            db.query(Classroom)
+            .filter(Classroom.teacher_id == teacher.id, Classroom.is_active.is_(True))
+            .count()
+        )
+
+        # 統計學生數（透過 classroom_students 關聯表）
+        students_count = (
+            db.query(Student.id)
+            .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+            .join(Classroom, ClassroomStudent.classroom_id == Classroom.id)
+            .filter(
+                Classroom.teacher_id == teacher.id,
+                Student.is_active.is_(True),
+                ClassroomStudent.is_active.is_(True),
+            )
+            .distinct()
+            .count()
+        )
+
+        # 統計作業數
+        assignments_count = (
+            db.query(Assignment)
+            .filter(Assignment.teacher_id == teacher.id, Assignment.is_active.is_(True))
+            .count()
+        )
+
+        # 統計總點數使用
+        total_points_used = (
+            db.query(func.sum(PointUsageLog.points_used))
+            .filter(PointUsageLog.teacher_id == teacher.id)
+            .scalar()
+            or 0
+        )
+
+        teacher_stats.append(
+            {
+                "teacher_id": teacher.id,
+                "teacher_name": teacher.name,
+                "teacher_email": teacher.email,
+                "classrooms_count": classrooms_count,
+                "students_count": students_count,
+                "assignments_count": assignments_count,
+                "total_points_used": total_points_used,
+            }
+        )
+
+    # 2. 月度點數使用統計
+    # 查詢所有點數使用記錄
+    usage_logs = (
+        db.query(PointUsageLog, Teacher, Classroom, Student)
+        .join(Teacher, PointUsageLog.teacher_id == Teacher.id)
+        .outerjoin(Student, PointUsageLog.student_id == Student.id)
+        .outerjoin(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+        .outerjoin(Classroom, ClassroomStudent.classroom_id == Classroom.id)
+        .order_by(PointUsageLog.created_at.desc())
+        .all()
+    )
+
+    # 按月統計（group by teacher 和 classroom）
+    monthly_points_by_teacher = defaultdict(
+        lambda: defaultdict(lambda: {"total": 0, "by_classroom": defaultdict(int)})
+    )
+
+    for log, teacher, classroom, student in usage_logs:
+        if log.created_at:
+            month_key = log.created_at.strftime("%Y-%m")
+            monthly_points_by_teacher[month_key][teacher.name][
+                "total"
+            ] += log.points_used
+            if classroom:
+                monthly_points_by_teacher[month_key][teacher.name]["by_classroom"][
+                    classroom.name
+                ] += log.points_used
+
+    # 轉換為列表格式
+    monthly_points_data = []
+    for month, teachers_data in sorted(monthly_points_by_teacher.items()):
+        for teacher_name, data in teachers_data.items():
+            monthly_points_data.append(
+                {
+                    "month": month,
+                    "teacher_name": teacher_name,
+                    "total_points": data["total"],
+                    "by_classroom": dict(data["by_classroom"]),
+                }
+            )
+
+    return {
+        "teacher_stats": teacher_stats,
+        "monthly_points_usage": monthly_points_data,
+        "total_teachers": len(teachers),
+        "total_points_used": sum(t["total_points_used"] for t in teacher_stats),
     }
