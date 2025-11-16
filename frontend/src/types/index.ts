@@ -55,6 +55,9 @@ export interface ContentItem {
   question?: string;
   answer?: string;
   options?: string[];
+  // Example sentence fields
+  example_sentence?: string;
+  example_sentence_translation?: string;
 }
 
 export interface Content {

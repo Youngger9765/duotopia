@@ -54,7 +54,7 @@ const contentTypes: ContentType[] = [
     name: "造句練習",
     description: "使用指定單字或句型造句",
     icon: "✍️",
-    disabled: true,
+    disabled: false,
   },
   {
     type: "speaking_quiz",

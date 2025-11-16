@@ -56,10 +56,9 @@ interface ContentRow {
     gender: string;
     speed: string;
   };
-  // Phase 1: Example sentence fields
+  // Example sentence fields
   example_sentence?: string;
   example_sentence_translation?: string;
-  example_sentence_definition?: string;
 }
 
 interface TTSModalProps {
@@ -801,6 +800,7 @@ interface SortableRowInnerProps {
     index: number,
     lang: "chinese" | "english",
   ) => Promise<void>;
+  handleGenerateExampleTranslation: (index: number) => Promise<void>;
   rowsLength: number;
 }
 
@@ -814,6 +814,7 @@ function SortableRowInner({
   handleRemoveAudio,
   handleGenerateSingleDefinition,
   handleGenerateSingleDefinitionWithLang,
+  handleGenerateExampleTranslation,
   rowsLength,
 }: SortableRowInnerProps) {
   const {
@@ -860,7 +861,7 @@ function SortableRowInner({
             value={row.text}
             onChange={(e) => handleUpdateRow(index, "text", e.target.value)}
             className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
-            placeholder="輸入文本"
+            placeholder="輸入單字"
             maxLength={200}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -970,6 +971,45 @@ function SortableRowInner({
             </div>
           </div>
         </div>
+
+        {/* Example sentence fields */}
+        <div className="space-y-2 pt-2 border-t border-gray-200">
+          <div className="text-xs font-medium text-gray-500 mb-1">例句（選填）</div>
+
+          {/* Example sentence input */}
+          <input
+            type="text"
+            value={row.example_sentence || ""}
+            onChange={(e) => handleUpdateRow(index, "example_sentence", e.target.value)}
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            placeholder="輸入例句（英文）"
+            maxLength={200}
+          />
+
+          {/* Example sentence translation (Chinese) with inline button */}
+          <div className="relative">
+            <input
+              type="text"
+              value={row.example_sentence_translation || ""}
+              onChange={(e) => handleUpdateRow(index, "example_sentence_translation", e.target.value)}
+              className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
+              placeholder="例句中文翻譯"
+              maxLength={200}
+            />
+            {row.example_sentence && row.example_sentence.trim() && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+                <button
+                  onClick={() => handleGenerateExampleTranslation(index)}
+                  className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
+                  title="AI 生成例句中文翻譯"
+                >
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">中</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Action buttons */}
@@ -996,7 +1036,7 @@ function SortableRowInner({
   );
 }
 
-interface ReadingAssessmentPanelProps {
+interface SentenceMakingPanelProps {
   content?: { id?: number; title?: string; items?: ContentRow[] };
   editingContent?: { id?: number; title?: string; items?: ContentRow[] };
   onUpdateContent?: (content: Record<string, unknown>) => void;
@@ -1009,15 +1049,15 @@ interface ReadingAssessmentPanelProps {
   isCreating?: boolean; // 是否為新增模式
 }
 
-export default function ReadingAssessmentPanel({
+export default function SentenceMakingPanel({
   content,
   editingContent,
   onUpdateContent,
   onSave,
   lessonId,
   isCreating = false,
-}: ReadingAssessmentPanelProps) {
-  const [title, setTitle] = useState("朗讀評測內容");
+}: SentenceMakingPanelProps) {
+  const [title, setTitle] = useState("造句練習內容");
   const [rows, setRows] = useState<ContentRow[]>([
     {
       id: "1",
@@ -1027,7 +1067,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
-      example_sentence_definition: "",
     },
     {
       id: "2",
@@ -1037,7 +1076,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
-      example_sentence_definition: "",
     },
     {
       id: "3",
@@ -1047,7 +1085,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
-      example_sentence_definition: "",
     },
   ]);
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
@@ -1110,7 +1147,6 @@ export default function ReadingAssessmentPanel({
               selectedLanguage?: "chinese" | "english";
               example_sentence?: string;
               example_sentence_translation?: string;
-              example_sentence_definition?: string;
             },
             index: number,
           ) => ({
@@ -1122,7 +1158,6 @@ export default function ReadingAssessmentPanel({
             selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
             example_sentence: item.example_sentence || "",
             example_sentence_translation: item.example_sentence_translation || "",
-            example_sentence_definition: item.example_sentence_definition || "",
           }),
         );
         setRows(convertedRows);
@@ -1147,7 +1182,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
-      example_sentence_definition: row.example_sentence_definition,
     }));
 
     onUpdateContent({
@@ -1185,7 +1219,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
-      example_sentence_definition: "",
     };
     setRows([...rows, newRow]);
   };
@@ -1603,6 +1636,79 @@ export default function ReadingAssessmentPanel({
     }
   };
 
+  // Example sentence translation functions
+  const handleGenerateExampleTranslation = async (index: number) => {
+    const newRows = [...rows];
+    if (!newRows[index].example_sentence) {
+      toast.error("請先輸入例句");
+      return;
+    }
+
+    toast.info("生成例句中文翻譯中...");
+    try {
+      // Generate Chinese translation
+      const chineseResponse = (await apiClient.translateText(
+        newRows[index].example_sentence!,
+        "zh-TW",
+      )) as { translation: string };
+
+      newRows[index].example_sentence_translation = chineseResponse.translation;
+
+      setRows(newRows);
+      toast.success("例句中文翻譯生成完成");
+    } catch (error) {
+      console.error("Example sentence translation error:", error);
+      toast.error("例句翻譯失敗，請稍後再試");
+    }
+  };
+
+  const handleBatchGenerateExampleTranslations = async () => {
+    // Collect items that need example sentence translation
+    const itemsNeedTranslation: { index: number; text: string }[] = [];
+
+    rows.forEach((row, index) => {
+      if (
+        row.example_sentence &&
+        row.example_sentence.trim() &&
+        !row.example_sentence_translation
+      ) {
+        itemsNeedTranslation.push({ index, text: row.example_sentence });
+      }
+    });
+
+    if (itemsNeedTranslation.length === 0) {
+      toast.info("沒有需要翻譯的例句");
+      return;
+    }
+
+    toast.info(`開始批次生成例句中文翻譯...`);
+    const newRows = [...rows];
+
+    try {
+      // Batch translate to Chinese
+      const chineseTexts = itemsNeedTranslation.map((item) => item.text);
+      const chineseResponse = await apiClient.batchTranslate(
+        chineseTexts,
+        "zh-TW",
+      );
+      const chineseTranslations =
+        (chineseResponse as { translations?: string[] }).translations || [];
+
+      itemsNeedTranslation.forEach((item, idx) => {
+        newRows[item.index].example_sentence_translation =
+          chineseTranslations[idx] || "";
+      });
+
+      setRows(newRows);
+      toast.success(
+        `批次例句中文翻譯完成！處理了 ${itemsNeedTranslation.length} 個項目`,
+      );
+    } catch (error) {
+      console.error("Batch example translation error:", error);
+      toast.error("批次例句翻譯失敗，請稍後再試");
+    }
+  };
+
   const handleBatchPaste = async (autoTTS: boolean, autoTranslate: boolean) => {
     // 分割文字，每行一個項目
     const lines = batchPasteText
@@ -1629,7 +1735,6 @@ export default function ReadingAssessmentPanel({
       selectedLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
-      example_sentence_definition: "",
     }));
 
     // 批次處理 TTS 和翻譯
@@ -1795,6 +1900,16 @@ export default function ReadingAssessmentPanel({
             <Globe className="h-4 w-4 mr-1" />
             批次生成翻譯
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleBatchGenerateExampleTranslations()}
+            className="bg-purple-100 hover:bg-purple-200 border-purple-300"
+            title="批次生成例句翻譯（中文+英文）"
+          >
+            <Globe className="h-4 w-4 mr-1" />
+            批次生成例句翻譯
+          </Button>
         </div>
       </div>
 
@@ -1827,6 +1942,9 @@ export default function ReadingAssessmentPanel({
                   }
                   handleGenerateSingleDefinitionWithLang={
                     handleGenerateSingleDefinitionWithLang
+                  }
+                  handleGenerateExampleTranslation={
+                    handleGenerateExampleTranslation
                   }
                   rowsLength={rows.length}
                 />
@@ -1967,6 +2085,8 @@ export default function ReadingAssessmentPanel({
                   translation: row.definition || "",
                   selectedLanguage: row.selectedLanguage || "chinese",
                   audio_url: row.audioUrl || row.audio_url || "",
+                  example_sentence: row.example_sentence || "",
+                  example_sentence_translation: row.example_sentence_translation || "",
                 })),
                 target_wpm: 60,
                 target_accuracy: 0.8,
@@ -1998,7 +2118,7 @@ export default function ReadingAssessmentPanel({
                 // 創建模式：新增內容
                 try {
                   const newContent = await apiClient.createContent(lessonId, {
-                    type: "reading_assessment",
+                    type: "sentence_making",
                     ...saveData,
                   });
                   toast.success("內容已成功創建");

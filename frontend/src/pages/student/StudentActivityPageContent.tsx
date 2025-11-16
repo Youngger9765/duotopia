@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessmentTemplate";
 import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
 import GroupedQuestionsTemplate from "@/components/activities/GroupedQuestionsTemplate";
+import SentenceMakingActivity from "@/components/activities/SentenceMakingActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1038,6 +1039,26 @@ export default function StudentActivityPageContent({
             readOnly={isReadOnly}
           />
         );
+
+      case "sentence_making":
+        // 新版造句練習：使用艾賓浩斯記憶曲線系統
+        // 直接使用 SentenceMakingActivity 組件，它會從 API 獲取練習題目
+        return (
+          <SentenceMakingActivity
+            assignmentId={assignmentId}
+            onComplete={() => {
+              // 完成後的處理（可選）
+              toast.success("作業已完成！");
+            }}
+          />
+        );
+
+        // 舊版造句練習（向後兼容）：使用錄音方式
+        // 如果以後需要支援舊版，可以檢查 activity.items 是否存在
+        // if (activity.items && activity.items.length > 0) {
+        //   const smAnswer = answers.get(activity.id);
+        //   ...使用 SentenceMakingTemplate
+        // }
 
       case "listening_cloze":
         return (

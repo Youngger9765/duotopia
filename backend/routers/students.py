@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta  # noqa: F401
@@ -15,6 +16,10 @@ from models import (
     AssignmentStatus,
     AssignmentContent,
     StudentContentProgress,
+    UserWordProgress,
+    PracticeSession,
+    PracticeAnswer,
+    Assignment,
 )
 from auth import (
     create_access_token,
@@ -1403,3 +1408,262 @@ async def unbind_email(
         "old_email": old_email,
         "removed_by": "teacher" if is_teacher else "student",
     }
+
+
+# ============ 造句練習 Sentence Making Endpoints ============
+
+
+class PracticeWord(BaseModel):
+    """練習單字資料"""
+
+    content_item_id: int
+    text: str
+    translation: str
+    example_sentence: str
+    example_sentence_translation: str
+    audio_url: Optional[str] = None
+    memory_strength: float
+    priority_score: float
+
+
+class PracticeWordsResponse(BaseModel):
+    """練習單字回應"""
+
+    session_id: int
+    answer_mode: str
+    words: List[PracticeWord]
+
+
+class SubmitAnswerRequest(BaseModel):
+    """提交答案請求"""
+
+    content_item_id: int
+    is_correct: bool
+    time_spent_seconds: int
+    answer_data: Dict[str, Any]  # {"selected_words": [...], "attempts": 3}
+
+
+class SubmitAnswerResponse(BaseModel):
+    """提交答案回應"""
+
+    success: bool
+    new_memory_strength: float
+    next_review_at: Optional[datetime]
+
+
+class MasteryStatusResponse(BaseModel):
+    """達標狀態回應"""
+
+    current_mastery: float
+    target_mastery: float
+    achieved: bool
+    words_mastered: int
+    total_words: int
+
+
+@router.get("/assignments/{assignment_id}/practice-words", response_model=PracticeWordsResponse)
+async def get_practice_words(
+    assignment_id: int,
+    current_student: Student = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    獲取練習題目（10個單字）
+    - 根據艾賓浩斯記憶曲線智能選擇單字
+    - 優先選擇即將遺忘或從未練習的單字
+    """
+    # 驗證是學生身份
+    if not isinstance(current_student, Student):
+        raise HTTPException(
+            status_code=403, detail="Only students can access this endpoint"
+        )
+
+    # 1. 取得學生作業實例
+    student_assignment = (
+        db.query(StudentAssignment)
+        .join(Assignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 2. 創建新的練習 session
+    assignment = student_assignment.assignment
+    practice_session = PracticeSession(
+        student_id=current_student.id,
+        student_assignment_id=student_assignment.id,
+        practice_mode=assignment.answer_mode,
+    )
+    db.add(practice_session)
+    db.commit()
+    db.refresh(practice_session)
+
+    # 3. 使用 SQL function 選擇 10 個單字
+    result = db.execute(
+        text("""
+            SELECT * FROM get_words_for_practice(
+                :student_assignment_id,
+                :limit_count
+            )
+        """),
+        {"student_assignment_id": student_assignment.id, "limit_count": 10},
+    )
+
+    words = []
+    for row in result:
+        words.append(
+            PracticeWord(
+                content_item_id=row[0],
+                text=row[1],
+                translation=row[2],
+                example_sentence=row[3],
+                example_sentence_translation=row[4],
+                audio_url=row[5],
+                memory_strength=float(row[6]),
+                priority_score=float(row[7]),
+            )
+        )
+
+    return PracticeWordsResponse(
+        session_id=practice_session.id,
+        answer_mode=assignment.answer_mode,
+        words=words,
+    )
+
+
+@router.post(
+    "/practice-sessions/{session_id}/submit-answer", response_model=SubmitAnswerResponse
+)
+async def submit_answer(
+    session_id: int,
+    request: SubmitAnswerRequest,
+    current_student: Student = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    提交單字答案
+    - 記錄答題結果
+    - 更新記憶強度（使用 SM-2 演算法）
+    - 計算下次複習時間
+    """
+    # 驗證是學生身份
+    if not isinstance(current_student, Student):
+        raise HTTPException(
+            status_code=403, detail="Only students can access this endpoint"
+        )
+
+    # 1. 驗證 session 屬於當前學生
+    session = (
+        db.query(PracticeSession)
+        .filter(
+            PracticeSession.id == session_id,
+            PracticeSession.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Practice session not found")
+
+    # 2. 記錄答案
+    practice_answer = PracticeAnswer(
+        practice_session_id=session_id,
+        content_item_id=request.content_item_id,
+        is_correct=request.is_correct,
+        time_spent_seconds=request.time_spent_seconds,
+        answer_data=request.answer_data,
+    )
+    db.add(practice_answer)
+
+    # 3. 更新記憶強度（使用 PostgreSQL function）
+    result = db.execute(
+        text("""
+            SELECT * FROM update_memory_strength(
+                :student_assignment_id,
+                :content_item_id,
+                :is_correct
+            )
+        """),
+        {
+            "student_assignment_id": session.student_assignment_id,
+            "content_item_id": request.content_item_id,
+            "is_correct": request.is_correct,
+        },
+    )
+
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to update memory strength")
+
+    # 4. 更新 session 統計
+    session.words_practiced += 1
+    if request.is_correct:
+        session.correct_count += 1
+    session.total_time_seconds += request.time_spent_seconds
+
+    db.commit()
+
+    return SubmitAnswerResponse(
+        success=True,
+        new_memory_strength=float(row[0]),
+        next_review_at=row[1],
+    )
+
+
+@router.get("/assignments/{assignment_id}/mastery-status", response_model=MasteryStatusResponse)
+async def get_mastery_status(
+    assignment_id: int,
+    current_student: Student = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    檢查作業完成度
+    - 計算整體熟悉度
+    - 判斷是否達成目標（90%）
+    - 返回已掌握的單字數
+    """
+    # 驗證是學生身份
+    if not isinstance(current_student, Student):
+        raise HTTPException(
+            status_code=403, detail="Only students can access this endpoint"
+        )
+
+    # 1. 取得學生作業實例
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 2. 使用 SQL function 計算達標狀態
+    result = db.execute(
+        text("""
+            SELECT * FROM calculate_assignment_mastery(
+                :student_assignment_id
+            )
+        """),
+        {"student_assignment_id": student_assignment.id},
+    )
+
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to calculate mastery")
+
+    return MasteryStatusResponse(
+        current_mastery=float(row[0]),
+        target_mastery=float(row[1]),
+        achieved=row[2],
+        words_mastered=row[3],
+        total_words=row[4],
+    )

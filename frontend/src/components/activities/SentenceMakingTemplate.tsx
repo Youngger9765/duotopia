@@ -28,10 +28,9 @@ interface Question {
   teacher_review_score?: number;
   teacher_reviewed_at?: string;
   review_status?: string;
-  // Phase 1: Example sentence fields
+  // Example sentence fields
   example_sentence?: string;
   example_sentence_translation?: string;
-  example_sentence_definition?: string;
   [key: string]: unknown;
 }
 
@@ -184,41 +183,37 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
-    // 🔴 BUG FIX: 如果沒有 initialAssessmentResults，清空舊的評分結果
     if (
-      !initialAssessmentResults ||
-      Object.keys(initialAssessmentResults).length === 0
+      initialAssessmentResults &&
+      Object.keys(initialAssessmentResults).length > 0
     ) {
-      setAssessmentResults({});
-      return;
-    }
+      // Check if it has items structure
+      if (
+        initialAssessmentResults.items &&
+        typeof initialAssessmentResults.items === "object"
+      ) {
+        const itemsResults: Record<number, AssessmentResult> = {};
+        const items = initialAssessmentResults.items as Record<string, unknown>;
 
-    // Check if it has items structure
-    if (
-      initialAssessmentResults.items &&
-      typeof initialAssessmentResults.items === "object"
-    ) {
-      const itemsResults: Record<number, AssessmentResult> = {};
-      const items = initialAssessmentResults.items as Record<string, unknown>;
+        Object.keys(items).forEach((key) => {
+          const index = parseInt(key);
+          if (!isNaN(index) && items[key]) {
+            itemsResults[index] = items[key] as AssessmentResult;
+          }
+        });
 
-      Object.keys(items).forEach((key) => {
-        const index = parseInt(key);
-        if (!isNaN(index) && items[key]) {
-          itemsResults[index] = items[key] as AssessmentResult;
-        }
-      });
-
-      setAssessmentResults(itemsResults);
-    } else if (
-      !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
-    ) {
-      setAssessmentResults({
-        0: initialAssessmentResults as AssessmentResult,
-      });
-    } else {
-      setAssessmentResults(
-        initialAssessmentResults as Record<number, AssessmentResult>,
-      );
+        setAssessmentResults(itemsResults);
+      } else if (
+        !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
+      ) {
+        setAssessmentResults({
+          0: initialAssessmentResults as AssessmentResult,
+        });
+      } else {
+        setAssessmentResults(
+          initialAssessmentResults as Record<number, AssessmentResult>,
+        );
+      }
     }
   }, [initialAssessmentResults]);
 
@@ -560,10 +555,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
         formData.append("progress_id", String(currentProgressId));
         formData.append("item_index", String(currentQuestionIndex));
-        // 🔥 加上 assignment_id 以便後端扣除配額
-        if (assignmentId) {
-          formData.append("assignment_id", String(assignmentId));
-        }
 
         result = await retryAIAnalysis(
           async () => {
@@ -784,6 +775,22 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
               <div className="flex items-center gap-2 text-sm sm:text-base text-purple-600 bg-purple-50 rounded px-2 sm:px-3 py-1.5 sm:py-2">
                 <Languages className="w-4 h-4" />
                 <span>{currentQuestion.translation}</span>
+              </div>
+            )}
+
+            {/* 例句顯示 */}
+            {currentQuestion?.example_sentence && (
+              <div className="space-y-2 border-t border-gray-200 pt-3 mt-3">
+                <div className="text-xs font-medium text-gray-500">參考例句</div>
+                <div className="text-sm text-gray-800 bg-blue-50 rounded px-3 py-2">
+                  💡 {currentQuestion.example_sentence}
+                </div>
+                {currentQuestion.example_sentence_translation && (
+                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                    <span className="text-gray-400">🇹🇼 中文:</span>
+                    <span>{currentQuestion.example_sentence_translation}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

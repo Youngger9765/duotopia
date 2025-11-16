@@ -371,6 +371,8 @@ async def get_teacher_programs(
                                             "text": item.text,
                                             "translation": item.translation,
                                             "audio_url": item.audio_url,
+                                            "example_sentence": item.example_sentence,
+                                            "example_sentence_translation": item.example_sentence_translation,
                                             "order_index": item.order_index,
                                         }
                                     )
@@ -1992,6 +1994,7 @@ class ContentCreate(BaseModel):
     items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
+    time_limit_seconds: Optional[int] = None
     order_index: Optional[int] = None  # None = 自動計算為最後一個位置
     level: Optional[str] = "A1"
     tags: Optional[List[str]] = []
@@ -2051,6 +2054,8 @@ async def get_lesson_contents(
                 "text": item.text,
                 "translation": item.translation,
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
             }
             for item in content_items
         ]
@@ -2111,13 +2116,21 @@ async def create_content(
         order_index = content_data.order_index
 
     # 建立 Content（不再使用 items 欄位）
+    # 根據 content_data.type 設定正確的類型
+    try:
+        content_type = ContentType(content_data.type)
+    except ValueError:
+        # 如果類型不存在，預設使用 READING_ASSESSMENT
+        content_type = ContentType.READING_ASSESSMENT
+
     content = Content(
         lesson_id=lesson_id,
-        type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
+        type=content_type,
         title=content_data.title,
         # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
+        time_limit_seconds=content_data.time_limit_seconds,
         order_index=order_index,
         level=content_data.level,
         tags=content_data.tags or [],
@@ -2136,10 +2149,17 @@ async def create_content(
                 text=item_data.get("text", ""),
                 translation=item_data.get("translation", ""),
                 audio_url=item_data.get("audio_url"),
+                example_sentence=item_data.get("example_sentence"),
+                example_sentence_translation=item_data.get("example_sentence_translation"),
             )
             db.add(content_item)
             items_created.append(
-                {"text": content_item.text, "translation": content_item.translation}
+                {
+                    "text": content_item.text,
+                    "translation": content_item.translation,
+                    "example_sentence": content_item.example_sentence,
+                    "example_sentence_translation": content_item.example_sentence_translation,
+                }
             )
 
     db.commit()
@@ -2205,6 +2225,8 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "created_at": item.created_at.isoformat() if item.created_at else None,
                 "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 "content_id": item.content_id,
@@ -2330,6 +2352,8 @@ async def update_content(
                     text=item_data.get("text", ""),
                     translation=translation_value,
                     audio_url=item_data.get("audio_url"),
+                    example_sentence=item_data.get("example_sentence"),
+                    example_sentence_translation=item_data.get("example_sentence_translation"),
                     item_metadata=metadata,
                 )
                 db.add(content_item)
@@ -2371,6 +2395,8 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "options": item.item_metadata.get("options", [])
                 if item.item_metadata
                 else [],
@@ -2715,6 +2741,8 @@ async def get_assignment_preview(
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
+                    "example_sentence": item.example_sentence,
+                    "example_sentence_translation": item.example_sentence_translation,
                     "recording_url": None,  # 預覽模式沒有學生錄音
                 }
                 items_data.append(item_data)
