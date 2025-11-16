@@ -540,10 +540,11 @@ async def get_transaction_analytics(
     返回：教師、時間、金額、方案
     """
     # 查詢所有付款記錄（含 teacher 資訊）
+    # Note: 使用 payment_status 而非 status
     transactions = (
         db.query(TeacherSubscriptionTransaction, Teacher)
         .join(Teacher, TeacherSubscriptionTransaction.teacher_id == Teacher.id)
-        .filter(TeacherSubscriptionTransaction.status == "paid")
+        .filter(TeacherSubscriptionTransaction.payment_status == "paid")
         .order_by(TeacherSubscriptionTransaction.created_at.desc())
         .all()
     )
