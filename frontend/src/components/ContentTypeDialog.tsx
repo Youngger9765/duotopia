@@ -92,7 +92,7 @@ export default function ContentTypeDialog({
         "dialogs.contentTypeDialog.types.sentence_making.description",
       ),
       icon: "✍️",
-      disabled: true,
+      disabled: false,
     },
     {
       type: "speaking_quiz",

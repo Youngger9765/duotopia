@@ -113,6 +113,7 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    answer_mode: str = "writing"  # 造句練習答題模式：'listening' 或 'writing'，預設為 'writing'
 
 
 class UpdateAssignmentRequest(BaseModel):
@@ -280,6 +281,7 @@ async def create_assignment(
         classroom_id=request.classroom_id,
         teacher_id=current_user.id,
         due_date=request.due_date,
+        answer_mode=request.answer_mode,  # 設定答題模式
         is_active=True,
     )
     db.add(assignment)
@@ -1803,6 +1805,12 @@ async def get_student_submission(
                         "question_audio_url": item.audio_url
                         if hasattr(item, "audio_url")
                         else "",  # 題目參考音檔
+                        "example_sentence": item.example_sentence
+                        if hasattr(item, "example_sentence")
+                        else "",
+                        "example_sentence_translation": item.example_sentence_translation
+                        if hasattr(item, "example_sentence_translation")
+                        else "",
                         "student_answer": "",  # 預設空字串
                         "student_audio_url": "",  # 學生錄音檔案
                         "transcript": "",  # 語音辨識結果

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, memo } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
@@ -29,10 +28,9 @@ interface Question {
   teacher_review_score?: number;
   teacher_reviewed_at?: string;
   review_status?: string;
-  // Phase 1: Example sentence fields
+  // Example sentence fields
   example_sentence?: string;
   example_sentence_translation?: string;
-  example_sentence_definition?: string;
   [key: string]: unknown;
 }
 
@@ -107,7 +105,6 @@ interface GroupedQuestionsTemplateProps {
     index: number,
     assessmentResult: AssessmentResult | null,
   ) => void; // AI 評估完成回調
-  onAnalyzingStateChange?: (isAnalyzing: boolean) => void; // 🔒 分析狀態變化回調
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -131,9 +128,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   authToken, // 認證 token
   onUploadSuccess,
   onAssessmentComplete,
-  onAnalyzingStateChange, // 🔒 分析狀態變化回調
 }: GroupedQuestionsTemplateProps) {
-  const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -188,41 +183,37 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
-    // 🔴 BUG FIX: 如果沒有 initialAssessmentResults，清空舊的評分結果
     if (
-      !initialAssessmentResults ||
-      Object.keys(initialAssessmentResults).length === 0
+      initialAssessmentResults &&
+      Object.keys(initialAssessmentResults).length > 0
     ) {
-      setAssessmentResults({});
-      return;
-    }
+      // Check if it has items structure
+      if (
+        initialAssessmentResults.items &&
+        typeof initialAssessmentResults.items === "object"
+      ) {
+        const itemsResults: Record<number, AssessmentResult> = {};
+        const items = initialAssessmentResults.items as Record<string, unknown>;
 
-    // Check if it has items structure
-    if (
-      initialAssessmentResults.items &&
-      typeof initialAssessmentResults.items === "object"
-    ) {
-      const itemsResults: Record<number, AssessmentResult> = {};
-      const items = initialAssessmentResults.items as Record<string, unknown>;
+        Object.keys(items).forEach((key) => {
+          const index = parseInt(key);
+          if (!isNaN(index) && items[key]) {
+            itemsResults[index] = items[key] as AssessmentResult;
+          }
+        });
 
-      Object.keys(items).forEach((key) => {
-        const index = parseInt(key);
-        if (!isNaN(index) && items[key]) {
-          itemsResults[index] = items[key] as AssessmentResult;
-        }
-      });
-
-      setAssessmentResults(itemsResults);
-    } else if (
-      !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
-    ) {
-      setAssessmentResults({
-        0: initialAssessmentResults as AssessmentResult,
-      });
-    } else {
-      setAssessmentResults(
-        initialAssessmentResults as Record<number, AssessmentResult>,
-      );
+        setAssessmentResults(itemsResults);
+      } else if (
+        !Object.prototype.hasOwnProperty.call(initialAssessmentResults, "0")
+      ) {
+        setAssessmentResults({
+          0: initialAssessmentResults as AssessmentResult,
+        });
+      } else {
+        setAssessmentResults(
+          initialAssessmentResults as Record<number, AssessmentResult>,
+        );
+      }
     }
   }, [initialAssessmentResults]);
 
@@ -366,7 +357,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       // 播放音檔
       audio.play().catch((err) => {
-        console.log(t("groupedQuestionsTemplate.messages.autoplayFailed"), err);
+        console.log("自動播放失敗，可能需要用戶互動:", err);
       });
     }
 
@@ -396,17 +387,16 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     const contentItemId = items[currentQuestionIndex]?.id;
 
     if (!audioUrl || !referenceText) {
-      toast.error(t("groupedQuestionsTemplate.messages.recordingRequired"));
+      toast.error("請先錄音並確保有參考文本");
       return;
     }
 
     if (!assignmentId || !contentItemId) {
-      toast.error(t("groupedQuestionsTemplate.messages.missingInfo"));
+      toast.error("缺少作業或題目資訊，無法上傳");
       return;
     }
 
     setIsAssessing(true);
-    onAnalyzingStateChange?.(true); // 🔒 通知父元件開始分析
     try {
       let gcsAudioUrl = audioUrl as string;
       let currentProgressId =
@@ -421,7 +411,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         audioUrl.startsWith("blob:") &&
         !isPreviewMode
       ) {
-        toast.info(t("groupedQuestionsTemplate.messages.uploadingRecording"));
+        toast.info("正在上傳錄音...");
 
         // Convert blob URL to blob
         const response = await fetch(audioUrl as string);
@@ -466,17 +456,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             return await uploadResponse.json();
           },
           (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.uploadRetrying", {
-                attempt,
-              }),
-              error,
-            );
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.uploadRetrying", {
-                attempt,
-              }),
-            );
+            console.log(`上傳失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
           },
         );
 
@@ -488,11 +469,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           onUploadSuccess(currentQuestionIndex, gcsAudioUrl, currentProgressId);
         }
 
-        toast.success(t("groupedQuestionsTemplate.messages.uploadSuccess"));
+        toast.success("錄音已上傳到雲端");
       }
 
       // 🤖 開始 AI 分析
-      toast.info(t("groupedQuestionsTemplate.messages.aiAnalyzing"));
+      toast.info("AI 正在分析您的發音...");
 
       // Convert audio URL to blob for AI analysis
       const response = await fetch(
@@ -513,7 +494,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       // Get authentication token from store
       if (!token) {
-        toast.error(t("groupedQuestionsTemplate.messages.relogin"));
+        toast.error("請重新登入");
         return;
       }
 
@@ -554,13 +535,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             return data.assessment;
           },
           (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-              error,
-            );
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-            );
+            console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
           },
         );
       } else {
@@ -579,10 +555,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
         formData.append("progress_id", String(currentProgressId));
         formData.append("item_index", String(currentQuestionIndex));
-        // 🔥 加上 assignment_id 以便後端扣除配額
-        if (assignmentId) {
-          formData.append("assignment_id", String(assignmentId));
-        }
 
         result = await retryAIAnalysis(
           async () => {
@@ -610,13 +582,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             return await assessResponse.json();
           },
           (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-              error,
-            );
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-            );
+            console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+            toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
           },
         );
       }
@@ -674,13 +641,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         onAssessmentComplete(currentQuestionIndex, result);
       }
 
-      toast.success(t("groupedQuestionsTemplate.messages.assessmentComplete"));
+      toast.success("AI 發音評估完成！");
     } catch (error) {
       console.error("Assessment error:", error);
-      toast.error(t("groupedQuestionsTemplate.messages.assessmentFailed"));
+      toast.error("AI 評估失敗，請稍後再試");
     } finally {
       setIsAssessing(false);
-      onAnalyzingStateChange?.(false); // 🔓 通知父元件分析結束
     }
   };
 
@@ -694,7 +660,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
               <img
                 src={currentQuestion.image_url}
-                alt={t("groupedQuestionsTemplate.labels.questionImage")}
+                alt="題目圖片"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -704,7 +670,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                         <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <p class="text-sm">${t("groupedQuestionsTemplate.labels.imageLoadFailed")}</p>
+                        <p class="text-sm">圖片載入失敗</p>
                       </div>
                     </div>
                   `;
@@ -777,16 +743,14 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                             window.speechSynthesis.speak(utterance);
                           }
                         }}
-                        title={`${t("groupedQuestionsTemplate.labels.clickToPronounciate")}: ${word}`}
+                        title={`點擊發音: ${word}`}
                       >
                         {word}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <span className="text-gray-400 italic">
-                    {t("groupedQuestionsTemplate.labels.noQuestionText")}
-                  </span>
+                  <span className="text-gray-400 italic">無題目文字</span>
                 )}
               </div>
 
@@ -795,7 +759,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 value={playbackRate}
                 onChange={(e) => updatePlaybackRate(parseFloat(e.target.value))}
                 className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white"
-                title={t("groupedQuestionsTemplate.labels.playbackSpeed")}
+                title="播放速度"
               >
                 <option value={0.5}>0.5x</option>
                 <option value={0.75}>0.75x</option>
@@ -813,12 +777,28 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 <span>{currentQuestion.translation}</span>
               </div>
             )}
+
+            {/* 例句顯示 */}
+            {currentQuestion?.example_sentence && (
+              <div className="space-y-2 border-t border-gray-200 pt-3 mt-3">
+                <div className="text-xs font-medium text-gray-500">參考例句</div>
+                <div className="text-sm text-gray-800 bg-blue-50 rounded px-3 py-2">
+                  💡 {currentQuestion.example_sentence}
+                </div>
+                {currentQuestion.example_sentence_translation && (
+                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                    <span className="text-gray-400">🇹🇼 中文:</span>
+                    <span>{currentQuestion.example_sentence_translation}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 學生錄音區 - 超精簡版 */}
           <div className="bg-white rounded-lg border border-gray-200 p-3">
             <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">
-              {t("groupedQuestionsTemplate.labels.studentAnswer")}
+              學生作答
             </div>
 
             {/* 錄音控制 - 一行搞定 */}
@@ -895,18 +875,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                                 throw new Error(`HTTP ${response.status}`);
                               }
 
-                              toast.success(
-                                t(
-                                  "groupedQuestionsTemplate.messages.deletionSuccess",
-                                ),
-                              );
+                              toast.success("錄音和評估結果已刪除");
                             } catch (error) {
                               console.error("刪除 DB 記錄失敗:", error);
-                              toast.error(
-                                t(
-                                  "groupedQuestionsTemplate.messages.deletionFailed",
-                                ),
-                              );
+                              toast.error("刪除失敗，請稍後再試");
                               return; // 失敗時不繼續清除前端狀態
                             }
                           }
@@ -937,9 +909,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           }
                         }}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                        title={t(
-                          "groupedQuestionsTemplate.labels.clearRecording",
-                        )}
+                        title="清除錄音"
                       >
                         <svg
                           className="w-3.5 h-3.5"
@@ -969,13 +939,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           });
                           onStartRecording?.();
                         }}
-                        title={
-                          readOnly
-                            ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                            : t(
-                                "groupedQuestionsTemplate.labels.startRecording",
-                              )
-                        }
+                        title={readOnly ? "檢視模式" : "開始錄音"}
                       >
                         <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
@@ -994,20 +958,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           };
                           input.click();
                         }}
-                        title={
-                          readOnly
-                            ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                            : t("groupedQuestionsTemplate.labels.uploadAudio")
-                        }
+                        title={readOnly ? "檢視模式" : "上傳音檔"}
                       >
                         <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
                       <span className="text-sm sm:text-base text-gray-600">
-                        {readOnly
-                          ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                          : t(
-                              "groupedQuestionsTemplate.labels.startRecordingOrUpload",
-                            )}
+                        {readOnly ? "檢視模式" : "開始錄音或上傳"}
                       </span>
                     </>
                   )}
@@ -1026,7 +982,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     className="border-red-600 text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
                   >
                     <Square className="w-3 h-3 mr-1" />
-                    {t("groupedQuestionsTemplate.labels.stopping")}
+                    停止
                   </Button>
                 </>
               )}
@@ -1058,7 +1014,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
-                {t("groupedQuestionsTemplate.labels.teacherFeedback")}
+                老師評語
                 {currentQuestion?.teacher_feedback &&
                   currentQuestion.teacher_passed !== null &&
                   currentQuestion.teacher_passed !== undefined && (
@@ -1070,16 +1026,14 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       }
                     >
                       {currentQuestion.teacher_passed
-                        ? t("groupedQuestionsTemplate.labels.passed")
-                        : t("groupedQuestionsTemplate.labels.notPassed")}
+                        ? "（通過）"
+                        : "（未通過）"}
                     </span>
                   )}
               </div>
               <div className="text-sm sm:text-base text-gray-700">
                 {currentQuestion?.teacher_feedback || (
-                  <span className="text-gray-400">
-                    {t("groupedQuestionsTemplate.labels.noTeacherFeedback")}
-                  </span>
+                  <span className="text-gray-400">尚無老師評語</span>
                 )}
               </div>
               {currentQuestion?.teacher_reviewed_at && (
@@ -1117,12 +1071,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   {isAssessing ? (
                     <>
                       <Loader2 className="w-7 h-7 mr-3 animate-spin" />
-                      {t("groupedQuestionsTemplate.labels.analyzing")}
+                      上傳並分析中
                     </>
                   ) : (
                     <>
                       <Brain className="w-7 h-7 mr-3 animate-pulse" />
-                      {t("groupedQuestionsTemplate.labels.uploadAndAnalyze")}
+                      上傳並分析
                     </>
                   )}
                 </Button>
@@ -1171,18 +1125,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                             throw new Error(`HTTP ${response.status}`);
                           }
 
-                          toast.success(
-                            t(
-                              "groupedQuestionsTemplate.messages.deletionSuccess",
-                            ),
-                          );
+                          toast.success("錄音和評估結果已刪除");
                         } catch (error) {
                           console.error("刪除 DB 記錄失敗:", error);
-                          toast.error(
-                            t(
-                              "groupedQuestionsTemplate.messages.deletionFailed",
-                            ),
-                          );
+                          toast.error("刪除失敗，請稍後再試");
                           return; // 失敗時不繼續清除前端狀態
                         }
                       }
@@ -1213,7 +1159,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       }
                     }}
                     className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
-                    title={t("groupedQuestionsTemplate.labels.deleteRecording")}
+                    title="清除錄音和評估結果"
                     disabled={isAssessing}
                   >
                     <X className="w-4 h-4" />
@@ -1242,11 +1188,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                         />
                       </div>
                       <p className="text-base font-medium text-purple-600 animate-pulse">
-                        {t("groupedQuestionsTemplate.labels.aiAnalyzing")}
+                        AI 正在分析中...
                       </p>
-                      <p className="text-xs text-purple-400 mt-1">
-                        {t("groupedQuestionsTemplate.labels.pleaseWait")}
-                      </p>
+                      <p className="text-xs text-purple-400 mt-1">請稍候片刻</p>
                     </div>
                   </div>
                 )}
@@ -1265,19 +1209,17 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   />
                 </div>
                 <p className="text-base font-medium text-purple-600 animate-pulse">
-                  {t("groupedQuestionsTemplate.labels.aiAnalyzing")}
+                  AI 正在分析中...
                 </p>
-                <p className="text-xs text-purple-400 mt-1">
-                  {t("groupedQuestionsTemplate.labels.pleaseWait")}
-                </p>
+                <p className="text-xs text-purple-400 mt-1">請稍候片刻</p>
               </div>
             ) : (
               <div className="text-center text-gray-400 py-8">
                 <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
                   {items[currentQuestionIndex]?.recording_url
-                    ? t("groupedQuestionsTemplate.labels.clickToAssess")
-                    : t("groupedQuestionsTemplate.labels.pleaseRecordFirst")}
+                    ? "點擊上方按鈕開始評估"
+                    : "請先錄音"}
                 </p>
               </div>
             )}

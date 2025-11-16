@@ -33,6 +33,7 @@ import {
   MessageSquare,
   Loader2,
   Gauge,
+  X,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -122,6 +123,7 @@ export function AssignmentDialog({
     student_ids: [] as number[],
     assign_to_all: true,
     due_date: undefined as Date | undefined,
+    answer_mode: "writing" as "listening" | "writing", // 答題模式：聽力或寫作
   });
 
   useEffect(() => {
@@ -136,6 +138,7 @@ export function AssignmentDialog({
         student_ids: students.map((s) => s.id), // 預設全選所有學生
         assign_to_all: true,
         due_date: undefined,
+        answer_mode: "writing", // 預設為寫作模式
       });
       setCurrentStep(1);
     }
@@ -283,6 +286,68 @@ export function AssignmentDialog({
     }
   };
 
+  // Helper function: Get the content type of the first selected content
+  const getSelectedContentType = (): string | null => {
+    if (selectedContents.size === 0) return null;
+
+    // Find the first selected content's type
+    for (const program of programs) {
+      for (const lesson of program.lessons || []) {
+        for (const content of lesson.contents || []) {
+          if (selectedContents.has(content.id)) {
+            return content.type;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // Helper function: Check if a content should be disabled
+  const isContentDisabled = (content: Content): boolean => {
+    const selectedType = getSelectedContentType();
+    // If no content is selected, all are available
+    // If content is selected, only same type is available
+    return selectedType !== null && selectedType !== content.type;
+  };
+
+  // Helper function: Clear all selections
+  const clearAllSelections = () => {
+    setSelectedContents(new Set());
+  };
+
+  // Helper function: Check if all selected contents have audio
+  const checkAllContentsHaveAudio = (): boolean => {
+    for (const program of programs) {
+      for (const lesson of program.lessons || []) {
+        for (const content of lesson.contents || []) {
+          if (selectedContents.has(content.id)) {
+            // Check if this content has items with audio
+            // Note: We'll need to fetch full content details to check items
+            // For now, we assume content object might have this info
+            // This will need proper implementation when we have the full data structure
+            return true; // Placeholder - will implement proper check
+          }
+        }
+      }
+    }
+    return true;
+  };
+
+  // Helper function: Handle answer mode change
+  const handleAnswerModeChange = (mode: "listening" | "writing") => {
+    // Only check audio for listening mode in sentence_making
+    if (mode === "listening" && getSelectedContentType() === "sentence_making") {
+      const hasAudio = checkAllContentsHaveAudio();
+      if (!hasAudio) {
+        toast.error("所選內容缺少音檔，請先在內容管理中為所有項目添加音檔");
+        return; // Don't change mode
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, answer_mode: mode }));
+  };
+
   const toggleContent = (contentId: number) => {
     setSelectedContents((prev) => {
       const newSet = new Set(prev);
@@ -298,7 +363,16 @@ export function AssignmentDialog({
   const toggleAllInLesson = (lesson: Lesson) => {
     if (!lesson.contents) return;
 
-    const lessonContentIds = lesson.contents.map((c) => c.id);
+    const selectedType = getSelectedContentType();
+
+    // Filter out disabled contents (different type)
+    const selectableContents = lesson.contents.filter(
+      (c) => selectedType === null || selectedType === c.type
+    );
+
+    if (selectableContents.length === 0) return;
+
+    const lessonContentIds = selectableContents.map((c) => c.id);
     const allSelected = lessonContentIds.every((id) =>
       selectedContents.has(id),
     );
@@ -377,6 +451,7 @@ export function AssignmentDialog({
         due_date: formData.due_date
           ? formData.due_date.toISOString()
           : undefined,
+        answer_mode: formData.answer_mode, // 答題模式：listening 或 writing
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -439,6 +514,7 @@ export function AssignmentDialog({
       student_ids: [],
       assign_to_all: true,
       due_date: undefined,
+      answer_mode: "writing",
     });
     setSelectedContents(new Set());
     setExpandedPrograms(new Set());
@@ -638,14 +714,25 @@ export function AssignmentDialog({
                   {t("dialogs.assignmentDialog.selectContent.description")}
                 </p>
                 {selectedContents.size > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50 text-blue-700"
-                  >
-                    {t("dialogs.assignmentDialog.selectContent.selected", {
-                      count: selectedContents.size,
-                    })}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-50 text-blue-700"
+                    >
+                      {t("dialogs.assignmentDialog.selectContent.selected", {
+                        count: selectedContents.size,
+                      })}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllSelections}
+                      className="h-7 px-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      {t("dialogs.assignmentDialog.selectContent.clearAll")}
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -783,53 +870,64 @@ export function AssignmentDialog({
                                   {expandedLessons.has(lesson.id) &&
                                     lesson.contents && (
                                       <div className="ml-6 space-y-1 pb-2 bg-white">
-                                        {lesson.contents.map((content) => (
-                                          <button
-                                            key={content.id}
-                                            onClick={() =>
-                                              toggleContent(content.id)
-                                            }
-                                            className={cn(
-                                              "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
-                                              selectedContents.has(
-                                                content.id,
-                                              ) &&
-                                                "bg-blue-50 hover:bg-blue-100",
-                                            )}
-                                          >
-                                            {selectedContents.has(
-                                              content.id,
-                                            ) ? (
-                                              <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                            ) : (
-                                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                            )}
-                                            <div className="flex-1">
-                                              <div className="text-sm font-medium">
-                                                {content.title}
-                                              </div>
-                                              <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Badge
-                                                  variant="outline"
-                                                  className="px-1 py-0"
-                                                >
-                                                  {useContentTypeLabel(
-                                                    content.type,
-                                                    t,
-                                                  )}
-                                                </Badge>
-                                                {content.items_count && (
-                                                  <span>
-                                                    {content.items_count}{" "}
-                                                    {t(
-                                                      "dialogs.assignmentDialog.selectContent.items",
+                                        {lesson.contents.map((content) => {
+                                          const disabled = isContentDisabled(content);
+                                          const selected = selectedContents.has(content.id);
+
+                                          return (
+                                            <button
+                                              key={content.id}
+                                              onClick={() =>
+                                                !disabled && toggleContent(content.id)
+                                              }
+                                              disabled={disabled}
+                                              className={cn(
+                                                "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
+                                                disabled
+                                                  ? "opacity-50 cursor-not-allowed bg-gray-100"
+                                                  : "hover:bg-gray-50 cursor-pointer",
+                                                selected && !disabled &&
+                                                  "bg-blue-50 hover:bg-blue-100",
+                                              )}
+                                            >
+                                              {selected ? (
+                                                <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                              ) : (
+                                                <Circle className={cn(
+                                                  "h-4 w-4 flex-shrink-0",
+                                                  disabled ? "text-gray-300" : "text-gray-400"
+                                                )} />
+                                              )}
+                                              <div className="flex-1">
+                                                <div className={cn(
+                                                  "text-sm font-medium",
+                                                  disabled && "text-gray-400"
+                                                )}>
+                                                  {content.title}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                  <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                      "px-1 py-0",
+                                                      disabled && "opacity-50"
                                                     )}
-                                                  </span>
-                                                )}
+                                                  >
+                                                    {useContentTypeLabel(
+                                                      content.type,
+                                                      t,
+                                                    )}
+                                                  </Badge>
+                                                  {content.items_count && (
+                                                    <span className={disabled ? "text-gray-400" : ""}>
+                                                      {content.items_count} 題
+                                                    </span>
+                                                  )}
+                                                </div>
                                               </div>
-                                            </div>
-                                          </button>
-                                        ))}
+                                            </button>
+                                          );
+                                        })}
                                       </div>
                                     )}
                                 </div>
@@ -1140,6 +1238,46 @@ export function AssignmentDialog({
                               )}
                         </span>
                       </div>
+                      {getSelectedContentType() && (
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-3 w-3 text-blue-600" />
+                          <span className="text-gray-700">作業類型：</span>
+                          <span className="font-medium text-blue-900">
+                            {useContentTypeLabel(getSelectedContentType()!, t)}
+                          </span>
+                        </div>
+                      )}
+                      {getSelectedContentType() === "sentence_making" && (
+                        <div className="mt-2 pt-2 border-t border-blue-200">
+                          <div className="text-xs font-medium text-blue-900 mb-2">
+                            答題模式：
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="answer_mode"
+                                value="writing"
+                                checked={formData.answer_mode === "writing"}
+                                onChange={(e) => handleAnswerModeChange(e.target.value as "writing" | "listening")}
+                                className="w-3 h-3 text-blue-600"
+                              />
+                              <span className="text-xs text-gray-700">寫作模式作答（不播放音檔）</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="answer_mode"
+                                value="listening"
+                                checked={formData.answer_mode === "listening"}
+                                onChange={(e) => handleAnswerModeChange(e.target.value as "writing" | "listening")}
+                                className="w-3 h-3 text-blue-600"
+                              />
+                              <span className="text-xs text-gray-700">聽力模式作答（播放音檔）</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
                       {formData.due_date && (
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3 text-blue-600" />

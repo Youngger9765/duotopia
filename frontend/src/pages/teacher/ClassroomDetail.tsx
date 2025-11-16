@@ -19,6 +19,7 @@ import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import SentenceMakingPanel from "@/components/SentenceMakingPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
@@ -133,6 +134,11 @@ export default function ClassroomDetail({
   const [showReadingEditor, setShowReadingEditor] = useState(false);
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
+
+  // Sentence Making Editor state
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] = useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<number | null>(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<number | null>(null);
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -880,6 +886,12 @@ export default function ClassroomDetail({
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
+      setShowContentTypeDialog(false);
+    } else if (selection.type === "sentence_making") {
+      // For sentence_making, use popup for new content creation
+      setSentenceMakingLessonId(selection.lessonId);
+      setSentenceMakingContentId(null); // null for new content
+      setShowSentenceMakingEditor(true);
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -1752,6 +1764,20 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
+                ) : selectedContent.type === "sentence_making" ? (
+                  /* SentenceMakingPanel has its own save button */
+                  <SentenceMakingPanel
+                    content={selectedContent as ReadingAssessmentContent}
+                    editingContent={
+                      editingContent as ReadingAssessmentContent | undefined
+                    }
+                    onUpdateContent={(
+                      updatedContent: Record<string, unknown>,
+                    ) => {
+                      setEditingContent(updatedContent as unknown as Content);
+                    }}
+                    onSave={handleSaveContent}
+                  />
                 ) : (
                   /* Other Content Types */
                   <div className="space-y-4">
@@ -2224,6 +2250,54 @@ export default function ClassroomDetail({
                   setEditorContentId(null);
                 }}
                 isCreating={!editorContentId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sentence Making Editor */}
+      {showSentenceMakingEditor && sentenceMakingLessonId && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">造句練習設定</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SentenceMakingPanel
+                content={undefined}
+                editingContent={{ id: sentenceMakingContentId || undefined }}
+                lessonId={sentenceMakingLessonId}
+                onUpdateContent={(updatedContent) => {
+                  // Handle content update if needed
+                  console.log("Content updated:", updatedContent);
+                }}
+                onSave={async () => {
+                  // SentenceMakingPanel handles save internally
+                  // Just close the editor on successful save
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                  await refreshPrograms();
+                  toast.success("內容已成功儲存");
+                }}
+                onCancel={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+                isCreating={!sentenceMakingContentId}
               />
             </div>
           </div>
