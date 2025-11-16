@@ -1,7 +1,7 @@
 """add example sentence fields to content_items
 
 Revision ID: 85160fa3d3cc
-Revises: b6fb1f60db50
+Revises: 59686379aa20
 Create Date: 2025-11-10 10:33:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "85160fa3d3cc"
-down_revision: Union[str, None] = "b6fb1f60db50"
+down_revision: Union[str, None] = "59686379aa20"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
