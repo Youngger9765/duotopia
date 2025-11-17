@@ -296,7 +296,7 @@ class Teacher(Base):
     # 移除舊欄位：subscription_type, subscription_status, subscription_start_date,
     #            subscription_end_date, subscription_renewed_at, monthly_message_limit,
     #            messages_used_this_month
-    subscription_auto_renew = Column(Boolean, default=True)  # 是否自動續訂（全域偏好）
+    subscription_auto_renew = Column(Boolean, default=False)  # 是否自動續訂（全域偏好）
     subscription_cancelled_at = Column(DateTime(timezone=True), nullable=True)  # 取消續訂時間
     trial_start_date = Column(DateTime(timezone=True), nullable=True)  # 試用開始日
     trial_end_date = Column(DateTime(timezone=True), nullable=True)  # 試用結束日
