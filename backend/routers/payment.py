@@ -240,7 +240,43 @@ async def process_payment(
 
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Payment successful - 關閉舊的訂閱週期
+        # Payment successful - 檢查是否有 Trial period 需要轉移點數
+        # 🔥 PRD Section 2.3: Trial 點數可帶入付費方案
+        trial_period = (
+            db.query(SubscriptionPeriod)
+            .filter(
+                SubscriptionPeriod.teacher_id == current_teacher.id,
+                SubscriptionPeriod.payment_method == "trial",
+                SubscriptionPeriod.status == "active",
+            )
+            .first()
+        )
+
+        trial_remaining_points = 0
+        trial_metadata = None
+
+        if trial_period:
+            # 計算 Trial 剩餘點數
+            trial_remaining_points = trial_period.quota_total - trial_period.quota_used
+
+            # 記錄轉移資訊（如果有剩餘點數）
+            if trial_remaining_points > 0:
+                trial_metadata = {
+                    "trial_credits_transferred": trial_remaining_points,
+                    "from_period_id": trial_period.id,
+                    "transferred_at": now.isoformat(),
+                }
+                logger.info(
+                    f"Trial credits transfer: {current_teacher.email} - "
+                    f"{trial_remaining_points} points from Trial to paid plan"
+                )
+
+            # 取消 Trial period
+            trial_period.status = "cancelled"
+            trial_period.cancelled_at = now
+            trial_period.cancel_reason = "Upgraded to paid plan"
+
+        # 關閉舊的訂閱週期（除了剛才已處理的 Trial）
         for period in (
             db.query(SubscriptionPeriod)
             .filter_by(teacher_id=current_teacher.id, status="active")
@@ -248,8 +284,9 @@ async def process_payment(
         ):
             period.status = "expired"
 
-        # ✅ 創建新的訂閱週期記錄
+        # ✅ 創建新的訂閱週期記錄（包含 Trial 剩餘點數）
         quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
+        quota_total += trial_remaining_points  # 🔥 加上 Trial 剩餘點數
         new_period = SubscriptionPeriod(
             teacher_id=current_teacher.id,
             plan_name=payment_request.plan_name,
@@ -262,6 +299,7 @@ async def process_payment(
             payment_id=None,  # 稍後更新
             payment_status="paid",
             status="active",
+            admin_metadata=trial_metadata,  # 🔥 記錄 Trial 點數轉移
         )
         db.add(new_period)
         db.flush()  # 取得 ID 但不 commit
@@ -295,9 +333,13 @@ async def process_payment(
             )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = now
 
+            # 🔥 刷卡成功後自動啟用 auto_renew
+            current_teacher.subscription_auto_renew = True
+            current_teacher.subscription_cancelled_at = None  # 清除取消記錄
+
             logger.info(
                 f"Card saved for auto-renewal: {current_teacher.email} - "
-                f"****{current_teacher.card_last_four} ({current_teacher.card_issuer})"
+                f"****{current_teacher.card_last_four} ({current_teacher.card_issuer}), auto_renew enabled"
             )
 
         # ⚠️ CRITICAL FIX: Commit teacher's subscription update FIRST
