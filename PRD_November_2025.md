@@ -786,8 +786,430 @@ class Teacher(Base):
 
 ---
 
-**文件版本**: 1.0
+## 十、信用卡綁定與自動續訂流程規範
+
+### 10.1 功能概述
+定義前端信用卡綁定、解綁與自動續訂之間的互動邏輯，確保使用者體驗一致且符合商業邏輯。
+
+### 10.2 核心規則
+
+#### 規則 1: 綁卡時詢問自動續訂
+**情境**: 使用者首次綁定信用卡或更換信用卡
+
+**流程**:
+```
+1. 使用者輸入信用卡資訊
+2. TapPay 驗證成功
+3. ❓ 顯示確認對話框: "是否啟用自動續訂？"
+   - 選項 A: "是，自動續訂" → subscription_auto_renew = True
+   - 選項 B: "否，手動續訂" → subscription_auto_renew = False
+4. 儲存綁卡資訊 (card_key, card_token) + auto_renew 設定
+5. 前端更新顯示狀態
+```
+
+**UI 要點**:
+- 清楚說明自動續訂的意義（每月 1 號自動扣款）
+- 提供兩個選項，預設不勾選（使用者主動選擇）
+- 說明可隨時在設定中變更
+
+**API 呼叫**:
+```typescript
+POST /api/teachers/bind-card
+{
+  "card_key": "...",
+  "card_token": "...",
+  "auto_renew": true  // 根據使用者選擇
+}
+```
+
+**後端驗證**:
+```python
+# routers/payment.py or routers/teachers.py
+def bind_card(teacher: Teacher, card_key: str, card_token: str, auto_renew: bool):
+    teacher.card_key = card_key
+    teacher.card_token = card_token
+    teacher.subscription_auto_renew = auto_renew
+    db.commit()
+```
+
+---
+
+#### 規則 2: 刪除綁卡時自動關閉續訂
+**情境**: 使用者解除信用卡綁定
+
+**業務邏輯**:
+- 沒有綁卡 → 無法自動扣款 → auto_renew 必須關閉
+- 避免使用者誤以為會自動續訂，但實際上無法扣款
+
+**流程**:
+```
+1. 使用者點擊「刪除信用卡」
+2. ❓ 顯示確認對話框:
+   "刪除信用卡後，自動續訂將會關閉。確定要刪除嗎？"
+3. 使用者確認
+4. 後端執行:
+   - card_key = NULL
+   - card_token = NULL
+   - subscription_auto_renew = False  ← 強制關閉
+5. 前端即時更新:
+   - 隱藏信用卡資訊顯示
+   - 自動續訂開關變為 OFF（且 disabled）
+   - 顯示提示: "請先綁定信用卡才能啟用自動續訂"
+```
+
+**API 呼叫**:
+```typescript
+DELETE /api/teachers/card
+// 或
+POST /api/teachers/unbind-card
+```
+
+**後端實作**:
+```python
+@router.delete("/card")
+def unbind_card(
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    # 刪除綁卡資訊
+    teacher.card_key = None
+    teacher.card_token = None
+
+    # 🔴 強制關閉自動續訂
+    teacher.subscription_auto_renew = False
+
+    db.commit()
+
+    return {
+        "message": "信用卡已解綁，自動續訂已關閉",
+        "card_bound": False,
+        "auto_renew": False
+    }
+```
+
+**前端連動**:
+```typescript
+// 刪除綁卡後，UI 必須即時更新
+const handleUnbindCard = async () => {
+  await api.unbindCard();
+
+  // 更新 UI 狀態
+  setCardBound(false);
+  setAutoRenew(false);
+  setAutoRenewDisabled(true);  // 禁用自動續訂開關
+
+  // 顯示提示
+  showToast("信用卡已解綁，自動續訂已關閉");
+}
+```
+
+---
+
+#### 規則 3: 只取消續訂，保留綁卡
+**情境**: 使用者只想關閉自動續訂，但保留信用卡資訊
+
+**業務邏輯**:
+- 使用者可能希望手動續訂，而非自動扣款
+- 保留綁卡資訊方便未來使用
+
+**流程**:
+```
+1. 使用者在「訂閱設定」頁面
+2. 關閉「自動續訂」開關
+3. ❓ 顯示確認對話框:
+   "關閉自動續訂後，將不會在每月 1 號自動扣款。
+    信用卡資訊會保留，您仍可手動續訂。確定要關閉嗎？"
+4. 使用者確認
+5. 後端執行:
+   - subscription_auto_renew = False
+   - card_key 保持不變
+   - card_token 保持不變
+6. 前端更新:
+   - 自動續訂開關 OFF
+   - 信用卡資訊仍然顯示
+   - 顯示提示: "已關閉自動續訂，您可隨時手動續訂"
+```
+
+**API 呼叫**:
+```typescript
+PATCH /api/teachers/subscription-settings
+{
+  "auto_renew": false
+}
+```
+
+**後端實作**:
+```python
+@router.patch("/subscription-settings")
+def update_subscription_settings(
+    settings: SubscriptionSettings,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    # 只更新 auto_renew，不動 card_key/card_token
+    teacher.subscription_auto_renew = settings.auto_renew
+    db.commit()
+
+    return {
+        "message": "訂閱設定已更新",
+        "auto_renew": teacher.subscription_auto_renew,
+        "card_bound": bool(teacher.card_key)  # 綁卡狀態不變
+    }
+```
+
+---
+
+### 10.3 狀態矩陣
+
+| 綁卡狀態 | auto_renew | 允許？ | 說明 |
+|---------|-----------|-------|------|
+| ❌ 未綁卡 | False | ✅ 允許 | 初始狀態 / 解綁後狀態 |
+| ❌ 未綁卡 | True  | ❌ **禁止** | 不合理狀態，後端應拒絕 |
+| ✅ 已綁卡 | False | ✅ 允許 | 手動續訂模式 |
+| ✅ 已綁卡 | True  | ✅ 允許 | 自動續訂模式 |
+
+**後端驗證規則**:
+```python
+# 在任何更新 auto_renew 的 API 中
+def validate_auto_renew(teacher: Teacher, auto_renew: bool):
+    if auto_renew and not teacher.card_key:
+        raise HTTPException(
+            status_code=400,
+            detail="無法啟用自動續訂：尚未綁定信用卡"
+        )
+```
+
+---
+
+### 10.4 前端 UI 規範
+
+#### UI 元素互動邏輯
+
+**信用卡設定頁面**:
+```tsx
+<Card title="信用卡管理">
+  {cardBound ? (
+    <>
+      <CardDisplay lastFour={cardInfo.lastFour} />
+      <Button onClick={handleUnbindCard} variant="danger">
+        刪除信用卡
+      </Button>
+    </>
+  ) : (
+    <Button onClick={handleBindCard} variant="primary">
+      綁定信用卡
+    </Button>
+  )}
+</Card>
+
+<Card title="自動續訂設定">
+  <Switch
+    checked={autoRenew}
+    disabled={!cardBound}  // ← 沒綁卡時禁用
+    onChange={handleAutoRenewChange}
+    label="每月自動續訂"
+  />
+
+  {!cardBound && (
+    <HelpText variant="warning">
+      請先綁定信用卡才能啟用自動續訂
+    </HelpText>
+  )}
+</Card>
+```
+
+**綁卡對話框**:
+```tsx
+<Modal title="綁定信用卡" onClose={handleClose}>
+  <TapPayCardForm onSuccess={handleCardSuccess} />
+
+  <Divider />
+
+  <Checkbox
+    checked={enableAutoRenew}
+    onChange={setEnableAutoRenew}
+    label="啟用自動續訂"
+  />
+  <HelpText>
+    啟用後，系統將在每月 1 號自動扣款並續訂。
+    您可隨時在設定中關閉此功能。
+  </HelpText>
+
+  <ButtonGroup>
+    <Button onClick={handleClose}>取消</Button>
+    <Button onClick={handleConfirm} variant="primary">
+      確認綁定
+    </Button>
+  </ButtonGroup>
+</Modal>
+```
+
+---
+
+### 10.5 測試案例
+
+#### Test Case 1: 綁卡時選擇啟用自動續訂
+```
+Given: 使用者未綁卡，auto_renew = False
+When: 使用者綁定信用卡，選擇「啟用自動續訂」
+Then:
+  - card_key 和 card_token 儲存成功
+  - auto_renew = True
+  - 前端顯示綁卡資訊
+  - 自動續訂開關為 ON
+```
+
+#### Test Case 2: 綁卡時選擇不啟用自動續訂
+```
+Given: 使用者未綁卡，auto_renew = False
+When: 使用者綁定信用卡，選擇「不啟用自動續訂」
+Then:
+  - card_key 和 card_token 儲存成功
+  - auto_renew = False
+  - 前端顯示綁卡資訊
+  - 自動續訂開關為 OFF（但可手動開啟）
+```
+
+#### Test Case 3: 刪除綁卡，自動關閉續訂
+```
+Given: 使用者已綁卡，auto_renew = True
+When: 使用者刪除信用卡綁定
+Then:
+  - card_key = NULL
+  - card_token = NULL
+  - auto_renew = False（強制關閉）
+  - 前端隱藏綁卡資訊
+  - 自動續訂開關為 OFF 且 disabled
+```
+
+#### Test Case 4: 只關閉自動續訂
+```
+Given: 使用者已綁卡，auto_renew = True
+When: 使用者關閉自動續訂開關
+Then:
+  - card_key 保持不變
+  - card_token 保持不變
+  - auto_renew = False
+  - 前端仍顯示綁卡資訊
+  - 自動續訂開關為 OFF（可再次開啟）
+```
+
+#### Test Case 5: 未綁卡嘗試啟用自動續訂（後端防禦）
+```
+Given: 使用者未綁卡，card_key = NULL
+When: 前端發送請求設定 auto_renew = True
+Then:
+  - 後端回傳 400 錯誤
+  - 錯誤訊息: "無法啟用自動續訂：尚未綁定信用卡"
+  - auto_renew 保持 False
+```
+
+---
+
+### 10.6 API 規格
+
+#### API 1: 綁定信用卡
+```
+POST /api/teachers/bind-card
+
+Request:
+{
+  "card_key": "string",
+  "card_token": "string",
+  "auto_renew": boolean
+}
+
+Response:
+{
+  "message": "信用卡綁定成功",
+  "card_bound": true,
+  "auto_renew": true,
+  "card_last_four": "1234"
+}
+```
+
+#### API 2: 解除綁卡
+```
+DELETE /api/teachers/card
+
+Response:
+{
+  "message": "信用卡已解綁，自動續訂已關閉",
+  "card_bound": false,
+  "auto_renew": false
+}
+```
+
+#### API 3: 更新自動續訂設定
+```
+PATCH /api/teachers/subscription-settings
+
+Request:
+{
+  "auto_renew": boolean
+}
+
+Response:
+{
+  "message": "訂閱設定已更新",
+  "auto_renew": false,
+  "card_bound": true
+}
+
+Error (400):
+{
+  "detail": "無法啟用自動續訂：尚未綁定信用卡"
+}
+```
+
+---
+
+### 10.7 驗收標準
+
+#### 前端驗收
+- [ ] 綁卡時顯示「是否啟用自動續訂」選項
+- [ ] 綁卡後，UI 正確顯示綁卡狀態與自動續訂狀態
+- [ ] 刪除綁卡時顯示警告訊息（含自動關閉續訂說明）
+- [ ] 刪除綁卡後，自動續訂開關自動關閉且禁用
+- [ ] 未綁卡時，自動續訂開關為禁用狀態
+- [ ] 關閉自動續訂時顯示確認對話框
+- [ ] 所有操作成功後顯示適當的 toast 訊息
+
+#### 後端驗收
+- [ ] `POST /api/teachers/bind-card` 正確儲存 card + auto_renew
+- [ ] `DELETE /api/teachers/card` 強制設定 auto_renew = False
+- [ ] 後端驗證：未綁卡時拒絕設定 auto_renew = True
+- [ ] 所有 API 正確回傳操作後的狀態
+- [ ] 資料庫約束：不允許 card_key=NULL 且 auto_renew=True
+
+#### 整合測試
+- [ ] 完整流程：綁卡 → 啟用續訂 → 關閉續訂 → 刪除綁卡
+- [ ] 邊界案例：未綁卡嘗試啟用續訂（應被拒絕）
+- [ ] 邊界案例：刪除綁卡時，續訂自動關閉
+- [ ] UI 與後端狀態完全同步
+
+---
+
+### 10.8 實作優先順序
+
+**Phase 1 (Must Have)**:
+1. ✅ 後端 API: `DELETE /api/teachers/card` 強制關閉 auto_renew
+2. ✅ 後端驗證: 拒絕未綁卡時設定 auto_renew = True
+3. ✅ 前端: 刪除綁卡時自動關閉續訂 UI
+
+**Phase 2 (Should Have)**:
+4. ⏳ 綁卡時詢問自動續訂對話框
+5. ⏳ 未綁卡時禁用自動續訂開關
+6. ⏳ 所有確認對話框與警告訊息
+
+**Phase 3 (Nice to Have)**:
+7. ⏳ 完整的 E2E 測試套件
+8. ⏳ 使用者引導（tooltips, help text）
+
+---
+
+**文件版本**: 1.1
 **建立日期**: 2025-11-17
-**最後更新**: 2025-11-17
+**最後更新**: 2025-11-17 (新增第十章：信用卡綁定規範)
 **負責人**: 產品團隊
 **狀態**: ✅ Final 版本
