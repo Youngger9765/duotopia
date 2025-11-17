@@ -20,45 +20,34 @@
 
 ## 二、核心功能交付清單
 
-### 2.1 後台管理選單（角色切換）
+### 2.1 Admin 訂閱管理 - Trial Plan 顯示
 
 #### 功能描述
-實作多角色後台管理系統，支援不同訂閱層級的使用者檢視與管理功能。
+確保 `/admin/subscription` 頁面正確顯示新註冊用戶的 Trial 訂閱資訊。
 
-#### 支援角色
-1. **試用者 (Trial)**
-   - 30天免費試用期
-   - 基礎功能存取
-   - 顯示試用剩餘天數
-   - 升級訂閱提示
+#### 需求
+1. **Plan 欄位顯示**
+   - 新註冊用戶應顯示 "30-Day Trial"
+   - 已付費用戶顯示對應方案名稱（Tutor Teachers / School Teachers）
 
-2. **訂閱者 - Tutor**
-   - NT$330/月
-   - 10,000點配額
-   - 完整教師功能
-   - 基礎統計分析
-
-3. **訂閱者 - School**
-   - NT$660/月
-   - 25,000點配額
-   - 完整教師功能
-   - 進階統計分析
-   - 學校管理功能（Phase 2）
-
-#### 技術實作
-- **資料模型**: `Teacher.subscription_tier` (trial/tutor/school)
-- **權限管理**: Role-Based Access Control (RBAC)
-- **前端元件**:
-  - `RoleSwitcher.tsx` - 角色切換選單
-  - `SubscriptionBadge.tsx` - 訂閱層級徽章
-  - `UpgradePrompt.tsx` - 升級提示元件
+2. **End Date 欄位顯示**
+   - Trial 用戶：顯示註冊日期 + 30 天
+   - 付費用戶：顯示訂閱到期日
+   - 格式：YYYY-MM-DD
 
 #### 驗收標準
-- [ ] 使用者登入後正確顯示對應角色
-- [ ] 不同角色看到對應的功能選單
-- [ ] 升級/降級訂閱後角色即時更新
-- [ ] 試用期到期後自動鎖定進階功能
-- [ ] 角色權限正確限制 API 存取
+- [x] 新註冊用戶在 admin/subscription 頁面 Plan 欄位顯示 "30-Day Trial"
+- [x] Trial 用戶的 End Date 正確顯示（註冊日 + 30天）
+- [x] 付費用戶的 Plan 和 End Date 正確顯示
+
+#### 實作記錄
+- **完成日期**: 2025-11-18
+- **修改檔案**:
+  - `services/email_service.py:445` - 修改 `plan_name="30-Day Trial"`
+  - `models.py:299` - 修改 `subscription_auto_renew` default=False（新用戶預設不啟用自動續訂）
+  - `tests/integration/api/test_trial_plan_display.py` - 新增 TDD 測試
+- **測試**: 2 passed (test_email_verification_creates_trial_plan, test_trial_plan_name_and_duration)
+- **額外修復**: 新註冊用戶預設 `subscription_auto_renew=False`（沒綁卡不應啟用續訂）
 
 ---
 

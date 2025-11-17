@@ -442,7 +442,7 @@ class EmailService:
 
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,
-                plan_name="Tutor Teachers",
+                plan_name="30-Day Trial",
                 amount_paid=0,
                 quota_total=10000,
                 quota_used=0,
