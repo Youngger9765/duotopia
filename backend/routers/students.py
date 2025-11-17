@@ -16,7 +16,6 @@ from models import (
     AssignmentStatus,
     AssignmentContent,
     StudentContentProgress,
-    UserWordProgress,
     PracticeSession,
     PracticeAnswer,
     Assignment,
