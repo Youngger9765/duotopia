@@ -747,6 +747,7 @@ class Teacher(Base):
 - [x] 回應格式符合規格 ✅
 - [x] 錯誤處理完善 ✅
 - [x] Email 通知實作 (send_renewal_success) ✅
+- [x] ✅ **已部署到 main** (2025-11-18)
 - [ ] Cloud Scheduler 正確觸發 Cron Job (待部署)
 - [ ] Production 環境成功執行第一次續訂 (待驗證)
 
