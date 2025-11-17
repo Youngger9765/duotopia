@@ -115,7 +115,9 @@ export default function PricingPage() {
     try {
       // Mock API call - will be replaced with real API
       console.log("Payment successful, transaction ID:", transactionId);
-      toast.success(t("pricing.payment.success", { planName: selectedPlan?.name }));
+      toast.success(
+        t("pricing.payment.success", { planName: selectedPlan?.name }),
+      );
       setShowPaymentDialog(false);
       // Navigate to dashboard after successful payment
       setTimeout(() => {
@@ -275,7 +277,9 @@ export default function PricingPage() {
                         {userInfo.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {userInfo.role === "teacher" ? t("pricing.header.teacherAccount") : t("pricing.header.studentAccount")}
+                        {userInfo.role === "teacher"
+                          ? t("pricing.header.teacherAccount")
+                          : t("pricing.header.studentAccount")}
                       </div>
                     </div>
                   </div>
@@ -383,12 +387,16 @@ export default function PricingPage() {
                   <div className="mb-8">
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-600">{t("pricing.billing.monthly")}</span>
+                        <span className="text-gray-600">
+                          {t("pricing.billing.monthly")}
+                        </span>
                         <div className="text-right">
                           <span className="text-3xl font-bold text-gray-900">
                             NT$ {plan.monthlyPrice}
                           </span>
-                          <span className="text-gray-600 ml-1">{t("pricing.billing.perMonth")}</span>
+                          <span className="text-gray-600 ml-1">
+                            {t("pricing.billing.perMonth")}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -415,7 +423,9 @@ export default function PricingPage() {
                     }`}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    {userInfo?.role === "student" ? t("pricing.actions.studentCannotSubscribe") : t("pricing.actions.subscribe")}
+                    {userInfo?.role === "student"
+                      ? t("pricing.actions.studentCannotSubscribe")
+                      : t("pricing.actions.subscribe")}
                   </Button>
 
                   {userInfo?.role === "student" && (
@@ -432,9 +442,13 @@ export default function PricingPage() {
         {/* Bottom Info */}
         <div className="mt-16 text-center">
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-auto shadow-md">
-            <h3 className="font-semibold text-gray-900 mb-3">{t("pricing.billing.monthly")}</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              {t("pricing.billing.monthly")}
+            </h3>
             <div className="text-sm text-gray-600">
-              <p className="font-medium text-gray-900 mb-1">{t("pricing.billing.monthly")}</p>
+              <p className="font-medium text-gray-900 mb-1">
+                {t("pricing.billing.monthly")}
+              </p>
               <p>{t("pricing.billing.description")}</p>
             </div>
           </div>
@@ -461,7 +475,10 @@ export default function PricingPage() {
             <DialogTitle>{t("pricing.payment.title")}</DialogTitle>
             <DialogDescription className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-600" />
-              {t("pricing.payment.securePayment")} - {t("pricing.payment.selectedPlan", { planName: selectedPlan?.name })}
+              {t("pricing.payment.securePayment")} -{" "}
+              {t("pricing.payment.selectedPlan", {
+                planName: selectedPlan?.name,
+              })}
             </DialogDescription>
           </DialogHeader>
 
