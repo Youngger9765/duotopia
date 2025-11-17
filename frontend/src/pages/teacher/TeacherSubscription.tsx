@@ -58,6 +58,8 @@ interface SubscriptionInfo {
   auto_renew: boolean;
   cancelled_at: string | null;
   quota_used?: number;
+  quota_total?: number;
+  quota_remaining?: number;
 }
 
 interface SavedCardInfo {
@@ -368,25 +370,48 @@ export default function TeacherSubscription() {
                 {subscription && subscription.is_active ? (
                   <div className="space-y-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <h3 className="text-xl font-semibold">
                             {subscription.plan || "未知方案"}
                           </h3>
-                          <Badge className="bg-green-500">
+                          <Badge
+                            className={
+                              subscription.plan === "30-Day Trial"
+                                ? "bg-blue-500"
+                                : "bg-green-500"
+                            }
+                          >
                             <CheckCircle className="w-3 h-3 mr-1" />
-                            有效
+                            {subscription.plan === "30-Day Trial"
+                              ? "試用中"
+                              : "有效"}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
-                          訂閱狀態良好
+                          {subscription.plan === "30-Day Trial"
+                            ? "試用期間，剩餘點數可帶入付費方案"
+                            : "訂閱狀態良好"}
                         </p>
                         <p className="text-sm text-blue-600 mt-1 font-medium">
                           {subscription.plan === "School Teachers"
                             ? "25000 點 AI 評估配額/月 (約 416 分鐘口說評估)"
-                            : "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)"}
+                            : subscription.plan === "30-Day Trial"
+                              ? "10000 點 AI 評估配額 (試用期 30 天)"
+                              : "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)"}
                         </p>
                       </div>
+                      {subscription.plan === "30-Day Trial" && (
+                        <div className="flex-shrink-0">
+                          <Button
+                            onClick={handleUpgrade}
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                          >
+                            <TrendingUp className="w-4 h-4 mr-2" />
+                            升級至付費方案
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     <Separator />
@@ -434,7 +459,7 @@ export default function TeacherSubscription() {
                               <div
                                 className="h-2 rounded-full transition-all bg-blue-500"
                                 style={{
-                                  width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.plan === "School Teachers" ? 25000 : 10000)) * 100)}%`,
+                                  width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.quota_total || 10000)) * 100)}%`,
                                 }}
                               />
                             </div>
@@ -443,9 +468,7 @@ export default function TeacherSubscription() {
                                 100,
                                 Math.round(
                                   ((subscription.quota_used || 0) /
-                                    (subscription.plan === "School Teachers"
-                                      ? 25000
-                                      : 10000)) *
+                                    (subscription.quota_total || 10000)) *
                                     100,
                                 ),
                               )}
@@ -454,9 +477,7 @@ export default function TeacherSubscription() {
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {subscription.quota_used || 0} /{" "}
-                            {subscription.plan === "School Teachers"
-                              ? "25000"
-                              : "10000"}{" "}
+                            {(subscription.quota_total || 0).toLocaleString()}{" "}
                             點
                           </p>
                         </div>
