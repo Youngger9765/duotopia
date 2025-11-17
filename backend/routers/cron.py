@@ -82,29 +82,55 @@ async def monthly_renewal_cron(
             "date": today_taipei.isoformat(),
         }
 
-    # 🔄 新系統：找出今天到期且開啟自動續訂的用戶
-    # - 續訂偏好：查 Teacher.subscription_auto_renew
-    # - 到期日：查 SubscriptionPeriod.end_date
-    teachers_to_renew = (
-        db.query(Teacher)
-        .join(SubscriptionPeriod, Teacher.id == SubscriptionPeriod.teacher_id)
+    # ========================================
+    # Phase 1: 標記所有過期訂閱為 expired
+    # ========================================
+    logger.info("📋 Phase 1: Marking expired subscriptions")
+
+    expired_periods = (
+        db.query(SubscriptionPeriod)
         .filter(
-            Teacher.subscription_auto_renew.is_(True),
-            Teacher.is_active.is_(True),
             SubscriptionPeriod.status == "active",
-            func.date(SubscriptionPeriod.end_date) == today_taipei,
+            SubscriptionPeriod.end_date < today_taipei
         )
         .all()
     )
 
-    logger.info(f"Found {len(teachers_to_renew)} teachers to renew")
+    marked_expired = 0
+    for period in expired_periods:
+        period.status = "expired"
+        marked_expired += 1
+
+    if marked_expired > 0:
+        db.commit()
+        logger.info(f"✅ Marked {marked_expired} subscriptions as expired")
+    else:
+        logger.info("✅ No expired subscriptions to mark")
+
+    # ========================================
+    # Phase 2: 處理自動續訂
+    # ========================================
+    logger.info("💳 Phase 2: Processing auto-renewals")
+
+    # 找出所有 auto_renew 啟用的教師
+    teachers_with_auto_renew = (
+        db.query(Teacher)
+        .filter(
+            Teacher.subscription_auto_renew.is_(True),
+            Teacher.is_active.is_(True),
+        )
+        .all()
+    )
+
+    logger.info(f"Found {len(teachers_with_auto_renew)} teachers with auto_renew enabled")
 
     results = {
         "status": "completed",
         "date": today_taipei.isoformat(),
-        "total": len(teachers_to_renew),
-        "success": 0,
-        "failed": 0,
+        "marked_expired": marked_expired,
+        "auto_renewed": 0,
+        "renewal_failed": 0,
+        "auto_renew_disabled": 0,
         "skipped": 0,
         "errors": [],
     }
@@ -112,38 +138,82 @@ async def monthly_renewal_cron(
     # 初始化 TapPay 服務
     tappay_service = TapPayService()
 
-    for teacher in teachers_to_renew:
-        try:
-            # 🔄 新系統：從 current_period 取得訂閱資訊
-            current_period = teacher.current_period
-            if not current_period:
-                logger.warning(
-                    f"Teacher {teacher.email} has no active subscription period, skipping"
-                )
-                results["skipped"] += 1
-                continue
+    # 計算上個月的日期範圍
+    from dateutil.relativedelta import relativedelta
+    last_month_start = (today_taipei.replace(day=1) - relativedelta(months=1))
+    last_month_end = today_taipei.replace(day=1) - relativedelta(days=1)
 
+    # 當月日期範圍
+    from calendar import monthrange
+    current_month_start = today_taipei.replace(day=1)
+    current_month_end = today_taipei.replace(day=monthrange(today_taipei.year, today_taipei.month)[1])
+
+    for teacher in teachers_with_auto_renew:
+        try:
             # 💳 檢查是否有儲存的信用卡 Token
             if not teacher.card_key or not teacher.card_token:
-                logger.warning(
-                    f"Teacher {teacher.email} has no saved card (auto_renew enabled but no card), "
-                    f"skipping auto-charge"
+                logger.info(
+                    f"Teacher {teacher.email} has auto_renew but no card, skipping"
                 )
                 results["skipped"] += 1
-                results["errors"].append(
-                    {
-                        "teacher": teacher.email,
-                        "error": "No saved card for auto-renewal",
-                    }
-                )
                 continue
 
-            # 🔄 新系統：計算新的到期日和應付金額（從 Period 取得）
-            current_end_date = current_period.end_date
-            plan_name = current_period.plan_name
-            new_end_date, amount = SubscriptionCalculator.calculate_renewal(
-                current_end_date, plan_name
+            # ========================================
+            # 檢查 1: 防重複扣款
+            # ========================================
+            # 查詢是否已有本月訂閱
+            existing_current_month = (
+                db.query(SubscriptionPeriod)
+                .filter(
+                    SubscriptionPeriod.teacher_id == teacher.id,
+                    SubscriptionPeriod.start_date >= current_month_start,
+                    SubscriptionPeriod.status == "active"
+                )
+                .first()
             )
+
+            if existing_current_month:
+                logger.info(
+                    f"Teacher {teacher.email} already has current month subscription, skipping"
+                )
+                results["skipped"] += 1
+                continue
+
+            # ========================================
+            # 檢查 2: 防錯誤扣款 + 關閉 auto_renew
+            # ========================================
+            # 查詢是否有上個月訂閱
+            last_month_subscription = (
+                db.query(SubscriptionPeriod)
+                .filter(
+                    SubscriptionPeriod.teacher_id == teacher.id,
+                    SubscriptionPeriod.start_date == last_month_start,
+                    SubscriptionPeriod.end_date == last_month_end
+                )
+                .first()
+            )
+
+            if not last_month_subscription:
+                # 沒有上個月訂閱 → 關閉 auto_renew
+                logger.warning(
+                    f"Teacher {teacher.email} has no last month subscription, "
+                    f"disabling auto_renew"
+                )
+                teacher.subscription_auto_renew = False
+                db.commit()
+                results["auto_renew_disabled"] += 1
+
+                # TODO: 發送通知信
+                # email_service.send_auto_renew_disabled_notification(teacher)
+
+                continue
+
+            # ========================================
+            # 取得上個月訂閱資訊用於續訂
+            # ========================================
+            plan_name = last_month_subscription.plan_name
+            amount = 330 if plan_name == "Tutor Teachers" else 660
+            quota_total = 10000 if plan_name == "Tutor Teachers" else 25000
 
             # 生成訂單編號
             order_number = f"RENEWAL_{teacher.id}_{today_taipei.strftime('%Y%m%d')}"
@@ -180,15 +250,15 @@ async def monthly_renewal_cron(
                     teacher_id=teacher.id,
                     teacher_email=teacher.email,
                     transaction_type=TransactionType.RECHARGE,
-                    subscription_type=plan_name,  # 🔄 使用 Period.plan_name
+                    subscription_type=plan_name,
                     amount=amount,
                     currency="TWD",
                     status="FAILED",
                     months=1,
-                    period_start=current_end_date,
-                    period_end=new_end_date,
-                    previous_end_date=current_end_date,
-                    new_end_date=current_end_date,  # 失敗不延長
+                    period_start=current_month_start,
+                    period_end=current_month_end,
+                    previous_end_date=last_month_end,
+                    new_end_date=last_month_end,  # 失敗不延長
                     processed_at=now_utc,
                     payment_provider="tappay",
                     payment_method="card_token",
@@ -200,7 +270,7 @@ async def monthly_renewal_cron(
                 db.add(failed_transaction)
                 db.commit()
 
-                results["failed"] += 1
+                results["renewal_failed"] += 1
                 results["errors"].append(
                     {
                         "teacher": teacher.email,
@@ -214,31 +284,24 @@ async def monthly_renewal_cron(
 
                 continue
 
-            # ✅ 扣款成功 - 🔄 新系統：創建新 Period，舊 Period 標記過期
-            previous_end_date = current_period.end_date
-
-            # 取得交易 ID
+            # ✅ 扣款成功 - 創建新的訂閱週期
             rec_id = gateway_response.get("rec_trade_id")
 
             # ✅ 創建新的訂閱週期記錄
-            quota_total = 25000 if plan_name == "School Teachers" else 10000
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,
-                plan_name=plan_name,  # 🔄 使用 Period.plan_name
+                plan_name=plan_name,
                 amount_paid=amount,
                 quota_total=quota_total,
                 quota_used=0,
-                start_date=current_end_date,  # 🔄 從舊 Period 結束日開始
-                end_date=new_end_date,  # 🔄 SubscriptionCalculator 已計算好
+                start_date=current_month_start,
+                end_date=current_month_end,
                 payment_method="auto_renew",  # 自動續訂
                 payment_id=rec_id,
                 payment_status="paid",
                 status="active",
             )
             db.add(new_period)
-
-            # 🔄 將舊的 Period 標記為過期
-            current_period.status = "expired"
 
             # ⚠️ 重要：更新 card_token（TapPay 每次交易會刷新 token）
             if gateway_response.get("card_secret"):
@@ -252,15 +315,15 @@ async def monthly_renewal_cron(
                 teacher_id=teacher.id,
                 teacher_email=teacher.email,
                 transaction_type=TransactionType.RECHARGE,
-                subscription_type=plan_name,  # 🔄 使用 Period.plan_name
+                subscription_type=plan_name,
                 amount=amount,
                 currency="TWD",
                 status="SUCCESS",
                 months=1,
-                period_start=current_end_date,
-                period_end=new_end_date,
-                previous_end_date=previous_end_date,
-                new_end_date=new_end_date,
+                period_start=current_month_start,
+                period_end=current_month_end,
+                previous_end_date=last_month_end,
+                new_end_date=current_month_end,
                 processed_at=now_utc,
                 payment_provider="tappay",
                 payment_method="card_token",
@@ -274,7 +337,7 @@ async def monthly_renewal_cron(
 
             logger.info(
                 f"✅ Auto-renewal success: {teacher.email} - "
-                f"{previous_end_date.date()} -> {new_end_date.date()} "
+                f"{plan_name} {current_month_start} to {current_month_end} "
                 f"(TWD {amount} charged)"
             )
 
@@ -283,24 +346,27 @@ async def monthly_renewal_cron(
                 email_service.send_renewal_success(
                     teacher_email=teacher.email,
                     teacher_name=teacher.name,
-                    new_end_date=new_end_date,
+                    new_end_date=current_month_end,
                     plan_name=plan_name,
                 )
             except Exception as e:
                 logger.error(f"Failed to send renewal email to {teacher.email}: {e}")
 
-            results["success"] += 1
+            results["auto_renewed"] += 1
 
         except Exception as e:
             db.rollback()
             logger.error(f"❌ Failed to renew {teacher.email}: {e}")
-            results["failed"] += 1
+            results["renewal_failed"] += 1
             results["errors"].append({"teacher": teacher.email, "error": str(e)})
 
     logger.info(
         f"🔄 Monthly renewal completed: "
-        f"{results['success']} success, {results['failed']} failed, "
-        f"{results['skipped']} skipped"
+        f"Marked expired: {results['marked_expired']}, "
+        f"Auto-renewed: {results['auto_renewed']}, "
+        f"Failed: {results['renewal_failed']}, "
+        f"Auto-renew disabled: {results['auto_renew_disabled']}, "
+        f"Skipped: {results['skipped']}"
     )
 
     return results

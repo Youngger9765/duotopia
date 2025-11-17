@@ -6,13 +6,9 @@ Monthly Renewal Cron Job 測試
 import pytest
 from datetime import datetime, date, timedelta, timezone
 from freezegun import freeze_time
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 from unittest.mock import Mock, patch
 
-from database import Base, get_db
-from main import app
 from models import (
     Teacher,
     SubscriptionPeriod,
@@ -21,46 +17,23 @@ from models import (
 )
 
 
-@pytest.fixture
-def db_session():
-    """Create test database session"""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
-    Base.metadata.create_all(engine)
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = TestSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
+@pytest.fixture(autouse=True)
+def mock_cron_secret():
+    """Mock CRON_SECRET for all tests"""
+    with patch("routers.cron.CRON_SECRET", "test-secret"):
+        yield
 
 
 @pytest.fixture
-def test_client(db_session):
-    """Create test client with test database"""
-
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-
-    app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def setup_test_data(db_session):
+def setup_test_data(test_session: Session):
     """準備測試資料"""
     # 清空相關表
-    db_session.query(TeacherSubscriptionTransaction).delete()
-    db_session.query(SubscriptionPeriod).delete()
-    db_session.query(Teacher).delete()
-    db_session.commit()
+    test_session.query(TeacherSubscriptionTransaction).delete()
+    test_session.query(SubscriptionPeriod).delete()
+    test_session.query(Teacher).delete()
+    test_session.commit()
 
-    return db_session
+    return test_session
 
 
 class TestMonthlyRenewalCron:
@@ -96,7 +69,7 @@ class TestMonthlyRenewalCron:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=231,
+            amount_paid=330,
             quota_total=10000,
             quota_used=0,
             start_date=date(2025, 11, 1),
@@ -144,7 +117,7 @@ class TestMonthlyRenewalCron:
             SubscriptionPeriod(
                 teacher_id=teacher.id,
                 plan_name="Tutor Teachers",
-                amount_paid=231,
+                amount_paid=330,
                 quota_total=10000,
                 start_date=date(2025, 10, 1),
                 end_date=date(2025, 10, 31),
@@ -154,7 +127,7 @@ class TestMonthlyRenewalCron:
             SubscriptionPeriod(
                 teacher_id=teacher.id,
                 plan_name="Tutor Teachers",
-                amount_paid=231,
+                amount_paid=330,
                 quota_total=10000,
                 start_date=date(2025, 9, 1),
                 end_date=date(2025, 9, 30),
@@ -203,7 +176,7 @@ class TestMonthlyRenewalCron:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=231,
+            amount_paid=330,
             quota_total=10000,
             start_date=date(2025, 12, 1),
             end_date=date(2025, 12, 31),
@@ -268,7 +241,7 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=231,
+            amount_paid=330,
             quota_total=10000,
             quota_used=0,
             start_date=date(2025, 11, 1),
@@ -299,7 +272,7 @@ class TestMonthlyRenewalCron:
             .first()
         )
         assert new_period is not None
-        assert new_period.end_date == date(2025, 12, 31)
+        assert new_period.end_date.date() == date(2025, 12, 31)
         assert new_period.status == "active"
         assert new_period.payment_method == "auto_renew"
         assert new_period.quota_total == 10000
@@ -311,7 +284,7 @@ class TestMonthlyRenewalCron:
         # Then: TapPay 被正確呼叫
         mock_tappay.pay_by_token.assert_called_once()
         call_args = mock_tappay.pay_by_token.call_args[1]
-        assert call_args["amount"] == 231
+        assert call_args["amount"] == 330
         assert call_args["card_key"] == "card_key_123"
 
     @freeze_time("2025-12-01 02:00:00")
@@ -322,9 +295,9 @@ class TestMonthlyRenewalCron:
         """
         情境 2.2: School Teachers 方案自動續訂
 
-        Given: School Teachers 方案（440元，25000點）
+        Given: School Teachers 方案（660元，25000點）
         When: 12/1 Cron 執行
-        Then: 扣款 440 元，配額 25000 點
+        Then: 扣款 660 元，配額 25000 點
         """
         db = setup_test_data
 
@@ -352,7 +325,7 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",  # School 方案
-            amount_paid=440,
+            amount_paid=660,
             quota_total=25000,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
@@ -367,9 +340,9 @@ class TestMonthlyRenewalCron:
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
-        # Then: 扣款 440 元
+        # Then: 扣款 660 元
         call_args = mock_tappay.pay_by_token.call_args[1]
-        assert call_args["amount"] == 440
+        assert call_args["amount"] == 660
 
         # Then: 新訂閱配額 25000
         new_period = (
@@ -424,7 +397,7 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=231,
+            amount_paid=330,
             quota_total=10000,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
@@ -461,7 +434,7 @@ class TestMonthlyRenewalCron:
     @freeze_time("2025-12-01 02:00:00")
     @patch("routers.cron.TapPayService")
     def test_skip_if_already_renewed_this_month(
-        self, mock_tappay_class, setup_test_data
+        self, mock_tappay_class, setup_test_data, test_client
     ):
         """
         情境 4.1: 檢查 1 - 已有本月訂閱，跳過
@@ -496,7 +469,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
 
@@ -504,7 +478,7 @@ class TestMonthlyRenewalCron:
         current_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=231,
+            amount_paid=330,
             quota_total=10000,
             start_date=date(2025, 12, 1),
             end_date=date(2025, 12, 31),
@@ -562,7 +536,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
         db.commit()
@@ -715,7 +690,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="manual",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
         db.commit()
@@ -764,7 +740,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="manual",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
         db.commit()
@@ -812,7 +789,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
         db.commit()
@@ -911,7 +889,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 12, 31),
             payment_method="auto_renew",
             status="active",
-            amount_paid=231,
+            amount_paid=330,
+            quota_total=10000,
         )
         db.add(old_period)
         db.commit()
@@ -931,4 +910,4 @@ class TestMonthlyRenewalCron:
             .first()
         )
         assert new_period is not None
-        assert new_period.end_date == date(2026, 1, 31)
+        assert new_period.end_date.date() == date(2026, 1, 31)
