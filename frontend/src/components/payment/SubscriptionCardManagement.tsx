@@ -123,7 +123,7 @@ export const SubscriptionCardManagement: React.FC = () => {
         // 確保自動續訂關閉（如果後端有設定的話）
         try {
           await apiClient.post("/api/teachers/subscription/cancel");
-        } catch (error) {
+        } catch {
           // 如果本來就是關閉的，忽略錯誤
           console.log("Auto-renew already disabled or not set");
         }

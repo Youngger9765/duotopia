@@ -48,8 +48,14 @@ import {
   ChevronDown,
   Receipt,
   GraduationCap,
+  Download,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import {
+  exportToCSV,
+  formatDate as csvFormatDate,
+  formatAmount,
+} from "@/lib/csvExport";
 import {
   LineChart,
   Line,
@@ -495,6 +501,82 @@ export default function AdminSubscriptionDashboard() {
     });
   };
 
+  // CSV Download Handlers
+  const handleDownloadSubscriptions = () => {
+    exportToCSV(
+      teachers,
+      [
+        { header: "Email", accessor: "teacher_email" },
+        { header: "Name", accessor: "teacher_name" },
+        {
+          header: "Plan",
+          accessor: (row) =>
+            row.current_subscription?.plan_name || "No Subscription",
+        },
+        {
+          header: "End Date",
+          accessor: (row) =>
+            row.current_subscription
+              ? csvFormatDate(row.current_subscription.end_date)
+              : "-",
+        },
+        {
+          header: "Quota Used",
+          accessor: (row) => row.current_subscription?.quota_used || 0,
+        },
+        {
+          header: "Quota Total",
+          accessor: (row) => row.current_subscription?.quota_total || 0,
+        },
+        {
+          header: "Status",
+          accessor: (row) => row.current_subscription?.status || "None",
+        },
+      ],
+      `subscriptions_${new Date().toISOString().split("T")[0]}`,
+    );
+  };
+
+  const handleDownloadTransactions = () => {
+    if (!transactionAnalytics) return;
+    exportToCSV(
+      transactionAnalytics.transactions,
+      [
+        {
+          header: "Date",
+          accessor: (row) => csvFormatDate(row.created_at),
+        },
+        { header: "Teacher Name", accessor: "teacher_name" },
+        { header: "Teacher Email", accessor: "teacher_email" },
+        { header: "Plan", accessor: "plan_name" },
+        {
+          header: "Amount",
+          accessor: (row) => formatAmount(row.amount),
+        },
+        { header: "Payment Method", accessor: "payment_method" },
+        { header: "Trade ID", accessor: "rec_trade_id" },
+        { header: "Status", accessor: "status" },
+      ],
+      `transactions_${new Date().toISOString().split("T")[0]}`,
+    );
+  };
+
+  const handleDownloadLearning = () => {
+    if (!learningAnalytics) return;
+    exportToCSV(
+      learningAnalytics.teacher_stats,
+      [
+        { header: "Teacher Name", accessor: "teacher_name" },
+        { header: "Teacher Email", accessor: "teacher_email" },
+        { header: "Classrooms", accessor: "classrooms_count" },
+        { header: "Students", accessor: "students_count" },
+        { header: "Assignments", accessor: "assignments_count" },
+        { header: "Total Points Used", accessor: "total_points_used" },
+      ],
+      `learning_analytics_${new Date().toISOString().split("T")[0]}`,
+    );
+  };
+
   if (loading && !stats) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -635,13 +717,26 @@ export default function AdminSubscriptionDashboard() {
         <TabsContent value="subscriptions">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                All Subscriptions
-              </CardTitle>
-              <CardDescription>
-                View all teacher subscription status
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    All Subscriptions
+                  </CardTitle>
+                  <CardDescription>
+                    View all teacher subscription status
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadSubscriptions}
+                  disabled={teachers.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2 mb-4">
@@ -1113,13 +1208,29 @@ export default function AdminSubscriptionDashboard() {
         <TabsContent value="transactions">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5" />
-                Transaction Analytics
-              </CardTitle>
-              <CardDescription>
-                View all payment transactions and monthly revenue trends
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5" />
+                    Transaction Analytics
+                  </CardTitle>
+                  <CardDescription>
+                    View all payment transactions and monthly revenue trends
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadTransactions}
+                  disabled={
+                    !transactionAnalytics ||
+                    transactionAnalytics.transactions.length === 0
+                  }
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading && !transactionAnalytics ? (
@@ -1238,13 +1349,29 @@ export default function AdminSubscriptionDashboard() {
         <TabsContent value="learning">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5" />
-                Learning Analytics
-              </CardTitle>
-              <CardDescription>
-                Teacher activity and points usage statistics
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5" />
+                    Learning Analytics
+                  </CardTitle>
+                  <CardDescription>
+                    Teacher activity and points usage statistics
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadLearning}
+                  disabled={
+                    !learningAnalytics ||
+                    learningAnalytics.teacher_stats.length === 0
+                  }
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading && !learningAnalytics ? (
