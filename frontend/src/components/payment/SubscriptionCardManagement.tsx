@@ -299,7 +299,10 @@ export const SubscriptionCardManagement: React.FC = () => {
       </Dialog>
 
       {/* 🔴 PRD Rule 1: 自動續訂確認 Dialog */}
-      <Dialog open={showAutoRenewConfirm} onOpenChange={setShowAutoRenewConfirm}>
+      <Dialog
+        open={showAutoRenewConfirm}
+        onOpenChange={setShowAutoRenewConfirm}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600">

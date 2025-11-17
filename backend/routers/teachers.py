@@ -2913,10 +2913,7 @@ async def reactivate_subscription(
 
         # 🔴 PRD 規則：必須先綁卡才能啟用自動續訂
         if not current_teacher.card_key or not current_teacher.card_token:
-            raise HTTPException(
-                status_code=400,
-                detail="無法啟用自動續訂：尚未綁定信用卡"
-            )
+            raise HTTPException(status_code=400, detail="無法啟用自動續訂：尚未綁定信用卡")
 
         # 檢查是否已經啟用
         if current_teacher.subscription_auto_renew:

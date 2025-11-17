@@ -4,7 +4,7 @@ Monthly Renewal Cron Job 測試
 測試每月 1 號自動續訂邏輯的所有情境
 """
 import pytest
-from datetime import datetime, date, timedelta, timezone
+from datetime import date
 from freezegun import freeze_time
 from sqlalchemy.orm import Session
 from unittest.mock import Mock, patch
@@ -13,7 +13,6 @@ from models import (
     Teacher,
     SubscriptionPeriod,
     TeacherSubscriptionTransaction,
-    TransactionType,
 )
 
 
@@ -336,7 +335,7 @@ class TestMonthlyRenewalCron:
         db.commit()
 
         # When
-        response = test_client.post(
+        test_client.post(
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
@@ -697,7 +696,7 @@ class TestMonthlyRenewalCron:
         db.commit()
 
         # When
-        response = test_client.post(
+        test_client.post(
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
@@ -747,7 +746,7 @@ class TestMonthlyRenewalCron:
         db.commit()
 
         # When
-        response = test_client.post(
+        test_client.post(
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
@@ -796,7 +795,7 @@ class TestMonthlyRenewalCron:
         db.commit()
 
         # When
-        response = test_client.post(
+        test_client.post(
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
@@ -817,7 +816,7 @@ class TestMonthlyRenewalCron:
         When: Cron 執行
         Then: 跳過，不處理任何訂閱
         """
-        db = setup_test_data
+        setup_test_data
 
         # When
         response = test_client.post(
@@ -837,7 +836,7 @@ class TestMonthlyRenewalCron:
         When: Cron 執行
         Then: 返回 401 Unauthorized
         """
-        db = setup_test_data
+        setup_test_data
 
         # When: 使用錯誤的 secret
         with patch("routers.cron.CRON_SECRET", "correct-secret"):
@@ -896,7 +895,7 @@ class TestMonthlyRenewalCron:
         db.commit()
 
         # When
-        response = test_client.post(
+        test_client.post(
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 

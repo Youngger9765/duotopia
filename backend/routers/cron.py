@@ -6,7 +6,7 @@ Cron Job API Endpoints
 
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import func, create_engine
+from sqlalchemy import create_engine
 from datetime import datetime, timedelta, timezone
 import logging
 import os
@@ -22,7 +22,6 @@ from models import (
     ClassroomStudent,
     StudentItemProgress,
 )
-from services.subscription_calculator import SubscriptionCalculator
 from services.email_service import email_service
 from services.tappay_service import TapPayService
 from google.cloud import bigquery
@@ -91,7 +90,7 @@ async def monthly_renewal_cron(
         db.query(SubscriptionPeriod)
         .filter(
             SubscriptionPeriod.status == "active",
-            SubscriptionPeriod.end_date < today_taipei
+            SubscriptionPeriod.end_date < today_taipei,
         )
         .all()
     )
@@ -122,7 +121,9 @@ async def monthly_renewal_cron(
         .all()
     )
 
-    logger.info(f"Found {len(teachers_with_auto_renew)} teachers with auto_renew enabled")
+    logger.info(
+        f"Found {len(teachers_with_auto_renew)} teachers with auto_renew enabled"
+    )
 
     results = {
         "status": "completed",
@@ -140,13 +141,17 @@ async def monthly_renewal_cron(
 
     # 計算上個月的日期範圍
     from dateutil.relativedelta import relativedelta
-    last_month_start = (today_taipei.replace(day=1) - relativedelta(months=1))
+
+    last_month_start = today_taipei.replace(day=1) - relativedelta(months=1)
     last_month_end = today_taipei.replace(day=1) - relativedelta(days=1)
 
     # 當月日期範圍
     from calendar import monthrange
+
     current_month_start = today_taipei.replace(day=1)
-    current_month_end = today_taipei.replace(day=monthrange(today_taipei.year, today_taipei.month)[1])
+    current_month_end = today_taipei.replace(
+        day=monthrange(today_taipei.year, today_taipei.month)[1]
+    )
 
     for teacher in teachers_with_auto_renew:
         try:
@@ -167,7 +172,7 @@ async def monthly_renewal_cron(
                 .filter(
                     SubscriptionPeriod.teacher_id == teacher.id,
                     SubscriptionPeriod.start_date >= current_month_start,
-                    SubscriptionPeriod.status == "active"
+                    SubscriptionPeriod.status == "active",
                 )
                 .first()
             )
@@ -188,7 +193,7 @@ async def monthly_renewal_cron(
                 .filter(
                     SubscriptionPeriod.teacher_id == teacher.id,
                     SubscriptionPeriod.start_date == last_month_start,
-                    SubscriptionPeriod.end_date == last_month_end
+                    SubscriptionPeriod.end_date == last_month_end,
                 )
                 .first()
             )
