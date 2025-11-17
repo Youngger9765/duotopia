@@ -40,7 +40,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from "recharts";
@@ -58,6 +58,15 @@ interface SubscriptionInfo {
   auto_renew: boolean;
   cancelled_at: string | null;
   quota_used?: number;
+}
+
+interface SavedCardInfo {
+  has_card: boolean;
+  card: {
+    last_four: string;
+    card_type: string;
+    issuer: string;
+  } | null;
 }
 
 interface Transaction {
@@ -107,9 +116,29 @@ export default function TeacherSubscription() {
     name: string;
     price: number;
   } | null>(null);
+  const [savedCardInfo, setSavedCardInfo] = useState<SavedCardInfo | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchSubscriptionData();
+
+    // 🔴 PRD Rule 2: 監聽信用卡刪除事件，重新載入訂閱狀態（auto_renew 會被關閉）
+    const handleSubscriptionChanged = () => {
+      fetchSubscriptionData();
+    };
+
+    window.addEventListener(
+      "subscriptionStatusChanged",
+      handleSubscriptionChanged,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "subscriptionStatusChanged",
+        handleSubscriptionChanged,
+      );
+    };
   }, []);
 
   const fetchSubscriptionData = async () => {
@@ -136,6 +165,17 @@ export default function TeacherSubscription() {
         } else {
           toast.error("載入訂閱資料失敗");
         }
+      }
+
+      // 🔴 獲取綁卡狀態（用於判斷是否能啟用自動續訂）
+      try {
+        const cardData = await apiClient.get<SavedCardInfo>(
+          "/api/payment/saved-card",
+        );
+        setSavedCardInfo(cardData);
+      } catch (error) {
+        console.error("Failed to fetch card info:", error);
+        setSavedCardInfo(null);
       }
 
       // 獲取付款歷史
@@ -442,19 +482,32 @@ export default function TeacherSubscription() {
                               </Button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <p className="font-semibold text-orange-600">
-                                已取消
-                              </p>
-                              <Button
-                                onClick={handleReactivateSubscription}
-                                size="sm"
-                                variant="outline"
-                                className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
-                              >
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                重新啟用
-                              </Button>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-3">
+                                <p className="font-semibold text-orange-600">
+                                  已取消
+                                </p>
+                                <Button
+                                  onClick={handleReactivateSubscription}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-blue-600 hover:text-blue-700 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={!savedCardInfo?.has_card}
+                                  title={
+                                    !savedCardInfo?.has_card
+                                      ? "請先在下方「付款方式管理」綁定信用卡"
+                                      : ""
+                                  }
+                                >
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  啟用續訂
+                                </Button>
+                              </div>
+                              {!savedCardInfo?.has_card && (
+                                <p className="text-xs text-gray-500">
+                                  💳 請先在下方「付款方式管理」綁定信用卡
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -499,7 +552,7 @@ export default function TeacherSubscription() {
             </Card>
 
             {/* 💳 信用卡管理 */}
-            <div>
+            <div data-card-management>
               <SubscriptionCardManagement />
             </div>
           </TabsContent>
@@ -565,7 +618,7 @@ export default function TeacherSubscription() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis />
-                        <Tooltip />
+                        <RechartsTooltip />
                         <Legend />
                         <Line
                           type="monotone"
@@ -593,7 +646,7 @@ export default function TeacherSubscription() {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" />
                           <YAxis />
-                          <Tooltip />
+                          <RechartsTooltip />
                           <Bar
                             dataKey="seconds"
                             fill="#10b981"
@@ -617,7 +670,7 @@ export default function TeacherSubscription() {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="title" />
                           <YAxis />
-                          <Tooltip />
+                          <RechartsTooltip />
                           <Bar
                             dataKey="seconds"
                             fill="#f59e0b"

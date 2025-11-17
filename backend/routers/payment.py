@@ -1051,11 +1051,24 @@ async def delete_saved_card(
     current_teacher.card_country = None
     current_teacher.card_saved_at = None
 
+    # 🔴 PRD Rule 2: 刪除綁卡時強制關閉自動續訂
+    # 因為沒有卡就無法自動扣款，避免使用者誤以為會自動續訂
+    auto_renew_was_enabled = current_teacher.subscription_auto_renew
+    current_teacher.subscription_auto_renew = False
+
     db.commit()
 
-    logger.info(f"Card deleted for {current_teacher.email}: {deleted_card_info}")
+    logger.info(
+        f"Card deleted for {current_teacher.email}: {deleted_card_info}. "
+        f"Auto-renew disabled: {auto_renew_was_enabled} -> False"
+    )
 
-    return {"success": True, "message": "信用卡資訊已刪除"}
+    return {
+        "success": True,
+        "message": "信用卡已解綁，自動續訂已關閉",
+        "card_bound": False,
+        "auto_renew": False,
+    }
 
 
 class UpdateCardRequest(BaseModel):
@@ -1063,6 +1076,7 @@ class UpdateCardRequest(BaseModel):
 
     prime: str  # TapPay prime token
     cardholder: Optional[Dict[str, Any]] = None
+    auto_renew: Optional[bool] = None  # PRD Rule 1: 綁卡時可設定自動續訂
 
 
 @router.post("/payment/update-card")
@@ -1124,6 +1138,10 @@ async def update_saved_card(
             )  # Use countrycode (TW) not country (TAIWAN R.O.C.)
             current_teacher.card_saved_at = datetime.now(timezone.utc)
 
+            # 🔴 PRD Rule 1: 綁卡時可設定自動續訂
+            if request.auto_renew is not None:
+                current_teacher.subscription_auto_renew = request.auto_renew
+
             db.commit()
 
             logger.info(
@@ -1147,6 +1165,8 @@ async def update_saved_card(
             return {
                 "success": True,
                 "message": "信用卡已更新",
+                "card_bound": True,
+                "auto_renew": current_teacher.subscription_auto_renew,
                 "card": {
                     "last_four": current_teacher.card_last_four,
                     "issuer": current_teacher.card_issuer,

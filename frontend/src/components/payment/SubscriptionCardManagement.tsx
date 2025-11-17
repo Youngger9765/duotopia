@@ -52,6 +52,8 @@ export const SubscriptionCardManagement: React.FC = () => {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
+  const [pendingCardUpdate, setPendingCardUpdate] = useState(false);
 
   useEffect(() => {
     fetchSavedCard();
@@ -79,10 +81,20 @@ export const SubscriptionCardManagement: React.FC = () => {
   const handleDeleteCard = async () => {
     try {
       setDeleting(true);
-      await apiClient.delete("/api/payment/saved-card");
-      toast.success("信用卡已刪除");
+      const response = await apiClient.delete<{
+        success: boolean;
+        message: string;
+        card_bound: boolean;
+        auto_renew: boolean;
+      }>("/api/payment/saved-card");
+
+      // 🔴 PRD Rule 2: 刪除綁卡後，自動續訂已被關閉
+      toast.success(response.message || "信用卡已解綁，自動續訂已關閉");
       setSavedCard(null);
       setShowDeleteDialog(false);
+
+      // 觸發頁面重新載入訂閱狀態（包含 auto_renew）
+      window.dispatchEvent(new CustomEvent("subscriptionStatusChanged"));
     } catch (error: unknown) {
       console.error("Failed to delete card:", error);
       const apiError = error as { response?: { data?: { detail?: string } } };
@@ -93,9 +105,49 @@ export const SubscriptionCardManagement: React.FC = () => {
   };
 
   const handleUpdateSuccess = async () => {
-    toast.success("信用卡已更新");
+    // 🔴 PRD Rule 1: 綁卡成功後詢問是否啟用自動續訂
     setShowUpdateDialog(false);
-    await fetchSavedCard();
+    setShowAutoRenewConfirm(true);
+    // 不要設為 true，讓用戶可以點擊按鈕
+  };
+
+  const handleAutoRenewChoice = async (enableAutoRenew: boolean) => {
+    try {
+      setShowAutoRenewConfirm(false);
+
+      // 🔴 根據用戶選擇，呼叫對應 API 設定 auto_renew
+      if (enableAutoRenew) {
+        // 啟用自動續訂
+        await apiClient.post("/api/teachers/subscription/reactivate");
+      } else {
+        // 確保自動續訂關閉（如果後端有設定的話）
+        try {
+          await apiClient.post("/api/teachers/subscription/cancel");
+        } catch (error) {
+          // 如果本來就是關閉的，忽略錯誤
+          console.log("Auto-renew already disabled or not set");
+        }
+      }
+
+      // 重新載入卡片資訊
+      await fetchSavedCard();
+
+      // 觸發頁面更新訂閱狀態
+      window.dispatchEvent(new CustomEvent("subscriptionStatusChanged"));
+
+      if (enableAutoRenew) {
+        toast.success("信用卡已綁定，自動續訂已啟用");
+      } else {
+        toast.success("信用卡已綁定，可手動續訂");
+      }
+
+      setPendingCardUpdate(false);
+    } catch (error) {
+      console.error("Failed to set auto-renew:", error);
+      const apiError = error as { response?: { data?: { detail?: string } } };
+      toast.error(apiError.response?.data?.detail || "設定失敗，請稍後再試");
+      setPendingCardUpdate(false);
+    }
   };
 
   if (loading) {
@@ -213,16 +265,19 @@ export const SubscriptionCardManagement: React.FC = () => {
               <AlertTriangle className="w-5 h-5" />
               確認刪除信用卡
             </DialogTitle>
-            <DialogDescription className="space-y-2 pt-2">
-              <p>刪除信用卡後，自動續訂功能將無法使用。</p>
-              <p className="text-sm text-gray-600">
-                卡號：•••• {savedCard?.last_four}
-              </p>
-              <p className="text-sm font-medium text-orange-600">
-                ⚠️ 下次續訂時需要手動付款
-              </p>
+            <DialogDescription>
+              刪除信用卡後，自動續訂功能將無法使用。
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-2 pt-2">
+            <div className="text-sm text-gray-600">
+              卡號：•••• {savedCard?.last_four}
+            </div>
+            <div className="text-sm font-medium text-orange-600">
+              ⚠️ 下次續訂時需要手動付款
+            </div>
+          </div>
 
           <DialogFooter>
             <Button
@@ -238,6 +293,55 @@ export const SubscriptionCardManagement: React.FC = () => {
               disabled={deleting}
             >
               {deleting ? "刪除中..." : "確認刪除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🔴 PRD Rule 1: 自動續訂確認 Dialog */}
+      <Dialog open={showAutoRenewConfirm} onOpenChange={setShowAutoRenewConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <RefreshCw className="w-5 h-5" />
+              啟用自動續訂？
+            </DialogTitle>
+            <DialogDescription>
+              ✅ 信用卡已成功綁定！是否要啟用自動續訂功能？
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2">
+            <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-2">
+              <div className="font-medium text-blue-900">
+                💡 自動續訂的好處：
+              </div>
+              <ul className="space-y-1 text-blue-800 ml-4">
+                <li>• 每月 1 號自動扣款，不用擔心忘記續訂</li>
+                <li>• 確保服務不中斷</li>
+                <li>• 隨時可以取消，沒有綁約限制</li>
+              </ul>
+            </div>
+            <div className="text-sm text-gray-600">
+              ℹ️ 您隨時可以在訂閱管理頁面變更此設定
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleAutoRenewChoice(false)}
+              disabled={pendingCardUpdate}
+              className="w-full sm:w-auto"
+            >
+              否，手動續訂
+            </Button>
+            <Button
+              onClick={() => handleAutoRenewChoice(true)}
+              disabled={pendingCardUpdate}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white dark:text-white"
+            >
+              是，自動續訂
             </Button>
           </DialogFooter>
         </DialogContent>
