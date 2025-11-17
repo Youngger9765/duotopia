@@ -1174,44 +1174,44 @@ Error (400):
 ### 10.7 驗收標準
 
 #### 前端驗收
-- [ ] 綁卡時顯示「是否啟用自動續訂」選項
-- [ ] 綁卡後，UI 正確顯示綁卡狀態與自動續訂狀態
-- [ ] 刪除綁卡時顯示警告訊息（含自動關閉續訂說明）
-- [ ] 刪除綁卡後，自動續訂開關自動關閉且禁用
-- [ ] 未綁卡時，自動續訂開關為禁用狀態
-- [ ] 關閉自動續訂時顯示確認對話框
-- [ ] 所有操作成功後顯示適當的 toast 訊息
+- [x] 綁卡時顯示「是否啟用自動續訂」選項 ✅ (ce701d5)
+- [x] 綁卡後，UI 正確顯示綁卡狀態與自動續訂狀態 ✅
+- [x] 刪除綁卡時顯示警告訊息（含自動關閉續訂說明） ✅
+- [x] 刪除綁卡後，自動續訂開關自動關閉且禁用 ✅
+- [x] 未綁卡時，自動續訂開關為禁用狀態 ✅
+- [x] 關閉自動續訂時顯示確認對話框 ✅
+- [x] 所有操作成功後顯示適當的 toast 訊息 ✅
 
 #### 後端驗收
-- [ ] `POST /api/teachers/bind-card` 正確儲存 card + auto_renew
-- [ ] `DELETE /api/teachers/card` 強制設定 auto_renew = False
-- [ ] 後端驗證：未綁卡時拒絕設定 auto_renew = True
-- [ ] 所有 API 正確回傳操作後的狀態
-- [ ] 資料庫約束：不允許 card_key=NULL 且 auto_renew=True
+- [x] `POST /api/payment/update-card` 正確儲存 card + auto_renew ✅ (ce701d5)
+- [x] `DELETE /api/payment/saved-card` 強制設定 auto_renew = False ✅
+- [x] 後端驗證：未綁卡時拒絕設定 auto_renew = True ✅
+- [x] 所有 API 正確回傳操作後的狀態 ✅
+- [x] 資料庫約束：不允許 card_key=NULL 且 auto_renew=True ✅
 
 #### 整合測試
-- [ ] 完整流程：綁卡 → 啟用續訂 → 關閉續訂 → 刪除綁卡
-- [ ] 邊界案例：未綁卡嘗試啟用續訂（應被拒絕）
-- [ ] 邊界案例：刪除綁卡時，續訂自動關閉
-- [ ] UI 與後端狀態完全同步
+- [x] 完整流程：綁卡 → 啟用續訂 → 關閉續訂 → 刪除綁卡 ✅ (已實作)
+- [x] 邊界案例：未綁卡嘗試啟用續訂（應被拒絕） ✅
+- [x] 邊界案例：刪除綁卡時，續訂自動關閉 ✅
+- [x] UI 與後端狀態完全同步 ✅
 
 ---
 
 ### 10.8 實作優先順序
 
 **Phase 1 (Must Have)**:
-1. ✅ 後端 API: `DELETE /api/teachers/card` 強制關閉 auto_renew
+1. ✅ 後端 API: `DELETE /api/payment/saved-card` 強制關閉 auto_renew
 2. ✅ 後端驗證: 拒絕未綁卡時設定 auto_renew = True
 3. ✅ 前端: 刪除綁卡時自動關閉續訂 UI
 
 **Phase 2 (Should Have)**:
-4. ⏳ 綁卡時詢問自動續訂對話框
-5. ⏳ 未綁卡時禁用自動續訂開關
-6. ⏳ 所有確認對話框與警告訊息
+4. ✅ 綁卡時詢問自動續訂對話框 (ce701d5)
+5. ✅ 未綁卡時禁用自動續訂開關
+6. ✅ 所有確認對話框與警告訊息
 
 **Phase 3 (Nice to Have)**:
-7. ⏳ 完整的 E2E 測試套件
-8. ⏳ 使用者引導（tooltips, help text）
+7. ⏳ 完整的 E2E 測試套件 (已有基礎測試)
+8. ✅ 使用者引導（tooltips, help text）
 
 ---
 
