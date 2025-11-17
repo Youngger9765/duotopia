@@ -2150,7 +2150,9 @@ async def create_content(
                 translation=item_data.get("translation", ""),
                 audio_url=item_data.get("audio_url"),
                 example_sentence=item_data.get("example_sentence"),
-                example_sentence_translation=item_data.get("example_sentence_translation"),
+                example_sentence_translation=item_data.get(
+                    "example_sentence_translation"
+                ),
             )
             db.add(content_item)
             items_created.append(
@@ -2353,7 +2355,9 @@ async def update_content(
                     translation=translation_value,
                     audio_url=item_data.get("audio_url"),
                     example_sentence=item_data.get("example_sentence"),
-                    example_sentence_translation=item_data.get("example_sentence_translation"),
+                    example_sentence_translation=item_data.get(
+                        "example_sentence_translation"
+                    ),
                     item_metadata=metadata,
                 )
                 db.add(content_item)

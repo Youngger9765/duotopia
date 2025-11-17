@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '666c291b851d'
-down_revision: Union[str, None] = '1016469bbf26'
+revision: str = "666c291b851d"
+down_revision: Union[str, None] = "1016469bbf26"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,15 +25,18 @@ def upgrade() -> None:
 
     # 1. Add answer_mode column to assignments table
     # CRITICAL: Must have DEFAULT 'writing' for backward compatibility
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS answer_mode VARCHAR(20)
         DEFAULT 'writing'
         CHECK (answer_mode IN ('listening', 'writing'))
-    """)
+    """
+    )
 
     # 2. Create user_word_progress table (核心記憶追蹤表)
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS user_word_progress (
             id SERIAL PRIMARY KEY,
             student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
@@ -62,15 +65,23 @@ def upgrade() -> None:
             CONSTRAINT check_easiness_factor_min
                 CHECK (easiness_factor >= 1.3)
         )
-    """)
+    """
+    )
 
     # Create indexes for user_word_progress
-    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_student ON user_word_progress (student_id, student_assignment_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_next_review ON user_word_progress (student_assignment_id, next_review_at)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_user_word_progress_memory ON user_word_progress (memory_strength)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_user_word_progress_student ON user_word_progress (student_id, student_assignment_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_user_word_progress_next_review ON user_word_progress (student_assignment_id, next_review_at)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_user_word_progress_memory ON user_word_progress (memory_strength)"
+    )
 
     # 3. Create practice_sessions table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS practice_sessions (
             id SERIAL PRIMARY KEY,
             student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
@@ -85,14 +96,20 @@ def upgrade() -> None:
 
             CONSTRAINT check_practice_mode CHECK (practice_mode IN ('listening', 'writing'))
         )
-    """)
+    """
+    )
 
     # Create indexes for practice_sessions
-    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_sessions_student ON practice_sessions (student_id, student_assignment_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_sessions_started ON practice_sessions (started_at)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_practice_sessions_student ON practice_sessions (student_id, student_assignment_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_practice_sessions_started ON practice_sessions (started_at)"
+    )
 
     # 4. Create practice_answers table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS practice_answers (
             id SERIAL PRIMARY KEY,
             practice_session_id INTEGER NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
@@ -102,18 +119,24 @@ def upgrade() -> None:
             answer_data JSONB,
             created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
         )
-    """)
+    """
+    )
 
     # Create indexes for practice_answers
-    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_answers_session ON practice_answers (practice_session_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_practice_answers_item ON practice_answers (content_item_id)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_practice_answers_session ON practice_answers (practice_session_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_practice_answers_item ON practice_answers (content_item_id)"
+    )
 
     # ========================================
     # PostgreSQL Functions for Ebbinghaus Memory Curve
     # ========================================
 
     # Function 1: update_memory_strength - Core SM-2 Algorithm
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION update_memory_strength(
             p_student_assignment_id INTEGER,
             p_content_item_id INTEGER,
@@ -261,10 +284,12 @@ def upgrade() -> None:
                 v_progress.repetition_count;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Function 2: get_words_for_practice - Intelligent Word Selection
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION get_words_for_practice(
             p_student_assignment_id INTEGER,
             p_limit_count INTEGER DEFAULT 10
@@ -317,10 +342,12 @@ def upgrade() -> None:
             LIMIT p_limit_count;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Function 3: calculate_assignment_mastery - Check Assignment Completion
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION calculate_assignment_mastery(
             p_student_assignment_id INTEGER
         ) RETURNS TABLE (
@@ -376,7 +403,8 @@ def upgrade() -> None:
                 v_total_words;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -386,9 +414,9 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS update_memory_strength")
 
     # Drop tables (reverse order to respect foreign keys)
-    op.drop_table('practice_answers')
-    op.drop_table('practice_sessions')
-    op.drop_table('user_word_progress')
+    op.drop_table("practice_answers")
+    op.drop_table("practice_sessions")
+    op.drop_table("user_word_progress")
 
     # Remove answer_mode column from assignments
-    op.drop_column('assignments', 'answer_mode')
+    op.drop_column("assignments", "answer_mode")
