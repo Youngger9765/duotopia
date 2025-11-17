@@ -3,7 +3,7 @@ name: Deploy Backend
 on:
   workflow_dispatch:  # 手動觸發
   push:
-    branches: [ main, staging ]
+    branches: [ main, staging, develop ]
     paths:
       # 後端相關檔案
       - 'backend/**'
@@ -90,6 +90,10 @@ jobs:
           echo "ENV_NAME=production" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
           echo "🚀 Deploying to PRODUCTION"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          echo "ENV_NAME=develop" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.DEVELOP_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🔧 Deploying to DEVELOP"
         else
           echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
@@ -135,6 +139,15 @@ jobs:
           # Audio error monitoring always connects to production Supabase
           echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "🔥 Using Production Database"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          # Develop 使用 Staging 資料庫（共用）
+          echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+          echo "JWT_SECRET=${{ secrets.DEVELOP_JWT_SECRET }}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_URL=${{ secrets.DEVELOP_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "🔧 Using Staging Database (shared with develop)"
         else
           echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
           echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
@@ -309,6 +322,8 @@ jobs:
         # Cron Job 配置
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.DEVELOP_CRON_SECRET }}"
         else
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}"
         fi
@@ -317,14 +332,22 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           # Production: 預設禁用付款功能（免費優惠期）
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          # Develop: 預設啟用付款功能（測試用）
+          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.DEVELOP_ENABLE_PAYMENT }}"
         else
           # Staging: 預設啟用付款功能（測試用）
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
         fi
 
-        # 💰 成本優化：最大化節省費用，使用按需計費
-        # min-instances=0 避免 24/7 運行成本 (~$1,185/月 → $0.54/月)
-        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本 (冷啟動 3-5秒)
+        # 🚀 效能優化：提升資源配置以支援 10+ 學生同時使用
+        # Production & Staging 都設定 min-instances=1 避免冷啟動
+        # Develop 設定 min-instances=0 節省成本
+        if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          MIN_INSTANCES=0    # Develop: 節省成本
+        else
+          MIN_INSTANCES=1    # Production/Staging: 避免冷啟動延遲 (10-15秒)
+        fi
         MEMORY="1Gi"         # 翻倍記憶體處理多個音檔轉換 (pydub + ffmpeg)
         CPU=2                # 翻倍 CPU 加速音檔轉碼
         CONCURRENCY=20       # 降低並發減少資源競爭

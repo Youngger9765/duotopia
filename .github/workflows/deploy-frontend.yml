@@ -3,7 +3,7 @@ name: Deploy Frontend
 on:
   workflow_dispatch:  # 手動觸發
   push:
-    branches: [ main, staging ]
+    branches: [ main, staging, develop ]
     paths:
       # 前端相關檔案
       - 'frontend/**'
@@ -97,6 +97,11 @@ jobs:
           echo "FRONTEND_SERVICE=${{ secrets.PRODUCTION_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
           echo "🚀 Deploying to PRODUCTION"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          echo "ENV_NAME=develop" >> $GITHUB_OUTPUT
+          echo "FRONTEND_SERVICE=${{ secrets.DEVELOP_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.DEVELOP_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🔧 Deploying to DEVELOP"
         else
           echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
           echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
@@ -136,6 +141,8 @@ jobs:
           echo "⚠️ Backend service not found, using fallback URL"
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             BACKEND_URL="${{ secrets.PRODUCTION_BACKEND_URL }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            BACKEND_URL="${{ secrets.DEVELOP_BACKEND_URL }}"
           else
             BACKEND_URL="${{ secrets.STAGING_BACKEND_URL }}"
           fi
@@ -195,7 +202,8 @@ jobs:
     - name: Deploy frontend to Cloud Run
       run: |
         # 設定 min-instances = 0 最大化節省成本
-        MIN_INSTANCES=0  # Production 和 Staging 都設為 0 節省成本
+        # Production/Staging/Develop 都設為 0 節省成本
+        MIN_INSTANCES=0
 
         gcloud run deploy ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA \
