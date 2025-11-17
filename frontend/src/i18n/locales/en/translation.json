@@ -211,5 +211,277 @@
       "terms": "Terms of Service",
       "copyright": "© 2025 Duotopia. All rights reserved."
     }
+  },
+  "pricing": {
+    "title": "Pricing Plans",
+    "subtitle": "Choose the Right Plan for You",
+    "description": "Teaching management platform designed for ESL teachers",
+    "needMore": "Need more students or custom plans?",
+    "contactUs": "Contact:",
+    "header": {
+      "logo": "Duotopia",
+      "teacherLogin": "Teacher Login",
+      "backToDashboard": "Back to Dashboard",
+      "backToStudentArea": "Back to Student Area",
+      "teacherAccount": "Teacher Account",
+      "studentAccount": "Student Account"
+    },
+    "tutorPlan": {
+      "name": "Tutor Teachers",
+      "description": "Small Tutoring ESL Teachers",
+      "studentRange": "1-100 students",
+      "features": {
+        "quota": "10,000 points/month (recordings, grading, text feedback)",
+        "students": "Support 1-100 students",
+        "assignments": "Unlimited assignment creation (no quota deduction)",
+        "aiEvaluation": "AI voice evaluation and feedback",
+        "fullFeatures": "Full feature access",
+        "support": "Standard customer support",
+        "progressTracking": "Learning progress tracking"
+      }
+    },
+    "schoolPlan": {
+      "name": "School Teachers",
+      "description": "Campus ESL Teachers",
+      "studentRange": "101-200 students",
+      "popular": "Popular",
+      "features": {
+        "quota": "25,000 points/month (recordings, grading, text feedback)",
+        "students": "Support 101-200 students",
+        "assignments": "Unlimited assignment creation (no quota deduction)",
+        "aiEvaluation": "AI voice evaluation and feedback",
+        "fullFeatures": "Full feature access",
+        "prioritySupport": "Priority customer support",
+        "advancedAnalytics": "Advanced analytics",
+        "multiClassroom": "Multi-classroom management",
+        "batchAssignment": "Batch assignment assignment"
+      }
+    },
+    "billing": {
+      "monthly": "Monthly Plan",
+      "perMonth": "/month",
+      "description": "Monthly billing, flexible adjustments, upgrade or change your plan anytime"
+    },
+    "actions": {
+      "subscribe": "Subscribe Now",
+      "studentCannotSubscribe": "Students Cannot Subscribe",
+      "loginRequired": "Please login to subscribe",
+      "studentAccountWarning": "Student accounts cannot subscribe to teacher plans, please use a teacher account",
+      "logoutFirst": "Please logout first and login with a teacher account to subscribe"
+    },
+    "payment": {
+      "title": "Complete Payment",
+      "securePayment": "Secure Payment Process",
+      "selectedPlan": "You selected {{planName}} plan",
+      "success": "Successfully subscribed to {{planName}} plan!",
+      "error": "Subscription error occurred, please contact support",
+      "failed": "Payment failed: {{error}}",
+      "redirecting": "Payment page opened automatically",
+      "hasSubscription": "You already have a subscription, redirecting to subscription management"
+    }
+  },
+  "teacherDashboard": {
+    "header": {
+      "title": "Duotopia",
+      "subtitle": "Teacher Dashboard",
+      "demoAccount": "Demo Account",
+      "logout": "Logout"
+    },
+    "welcome": {
+      "title": "Welcome back, {{name}}!",
+      "subtitle": "Manage your classes, courses, and student learning progress"
+    },
+    "subscription": {
+      "trial": "30-Day Free Trial",
+      "trialRemaining": "Your free trial expires in {{days}} days",
+      "expiryDate": "Expiry Date: {{date}}",
+      "daysRemaining": "{{days}} days remaining in free trial",
+      "days": "days"
+    },
+    "stats": {
+      "classrooms": "Classrooms",
+      "classroomsDesc": "Classrooms you manage",
+      "students": "Total Students",
+      "studentsDesc": "Students across all classes",
+      "programs": "Programs",
+      "programsDesc": "Created programs"
+    },
+    "classrooms": {
+      "title": "My Classrooms",
+      "description": "List of classrooms you currently manage",
+      "empty": "No classrooms created yet",
+      "studentCount": "{{count}} students",
+      "manage": "Manage",
+      "createNew": "Create New Classroom"
+    },
+    "students": {
+      "title": "Recent Active Students",
+      "description": "Student list from all classes",
+      "empty": "No student data yet",
+      "viewAll": "View All Students"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "description": "Frequently used feature shortcuts",
+      "createProgram": "Create Program",
+      "manageStudents": "Manage Students",
+      "viewStats": "View Statistics"
+    },
+    "error": {
+      "loadFailed": "Failed to load dashboard, please login again",
+      "backToLogin": "Back to Login"
+    },
+    "loading": "Loading..."
+  },
+  "admin": {
+    "subscription": {
+      "title": "Admin Subscription Dashboard",
+      "description": "Manage user subscriptions and extend VIP access",
+      "backToDashboard": "Back to Dashboard",
+      "stats": {
+        "totalTeachers": "Total Teachers",
+        "activeSubs": "Active Subs",
+        "monthlyRevenue": "Monthly Revenue",
+        "quotaUsage": "Quota Usage"
+      },
+      "tabs": {
+        "subscriptions": "Subscriptions",
+        "transactions": "Transactions",
+        "learning": "Learning"
+      },
+      "subscriptions": {
+        "title": "All Subscriptions",
+        "description": "View all teacher subscription status",
+        "downloadCSV": "Download CSV",
+        "search": "Search email or name...",
+        "searchButton": "Search",
+        "noData": "No data",
+        "columns": {
+          "email": "Email",
+          "name": "Name",
+          "plan": "Plan",
+          "endDate": "End Date",
+          "periods": "Periods",
+          "quota": "Quota",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "status": {
+          "active": "Active",
+          "none": "None"
+        },
+        "edit": "Edit",
+        "periodsTitle": "Subscription Periods",
+        "periodColumns": {
+          "plan": "Plan",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "quota": "Quota",
+          "payment": "Payment",
+          "status": "Status"
+        },
+        "history": {
+          "title": "Edit History",
+          "noHistory": "No edit history",
+          "admin": "Admin:",
+          "initialValues": "Initial Values:",
+          "changes": "Changes:",
+          "reason": "Reason:",
+          "actions": {
+            "create": "create",
+            "cancel": "cancel",
+            "edit": "edit"
+          }
+        }
+      },
+      "transactions": {
+        "title": "Transaction Analytics",
+        "description": "View all payment transactions and monthly revenue trends",
+        "totalRevenue": "Total Revenue",
+        "totalCount": "Total Transactions",
+        "monthlyTrend": "Monthly Revenue Trend",
+        "allTransactions": "All Transactions",
+        "noData": "No transaction data available",
+        "columns": {
+          "date": "Date",
+          "teacher": "Teacher",
+          "email": "Email",
+          "plan": "Plan",
+          "amount": "Amount",
+          "method": "Method",
+          "tradeId": "Trade ID"
+        }
+      },
+      "learning": {
+        "title": "Learning Analytics",
+        "description": "Teacher activity and points usage statistics",
+        "totalPoints": "Total Points Used",
+        "activeTeachers": "Active Teachers",
+        "monthlyUsage": "Monthly Points Usage",
+        "teacherStats": "Teacher Statistics",
+        "noData": "No learning data available",
+        "columns": {
+          "teacher": "Teacher",
+          "email": "Email",
+          "classes": "Classes",
+          "students": "Students",
+          "assignments": "Assignments",
+          "pointsUsed": "Points Used"
+        }
+      },
+      "editModal": {
+        "createTitle": "Create Subscription",
+        "cancelTitle": "Cancel Subscription",
+        "editTitle": "Edit Subscription",
+        "action": "Action",
+        "actions": {
+          "create": "Create Subscription",
+          "edit": "Edit Subscription",
+          "cancel": "Cancel Subscription"
+        },
+        "planName": "Plan Name",
+        "planRequired": "Please select a plan for creating subscription",
+        "planCurrent": "(Current: {{plan}})",
+        "planNoChange": "— No change —",
+        "planSelect": "Select a plan",
+        "plans": {
+          "trial": "30-Day Trial",
+          "tutor": "Tutor Teachers",
+          "school": "School Teachers",
+          "demo": "Demo Unlimited Plan",
+          "vip": "VIP"
+        },
+        "endDate": "End Date",
+        "endDateOptional": "(optional, defaults to plan duration)",
+        "endDateKeep": "Leave empty to keep current end date",
+        "endDateDefault": "Leave empty to use default plan duration",
+        "customQuota": "Custom Quota (optional)",
+        "customQuotaPlaceholder": "Enter custom quota (e.g., 50000)",
+        "customQuotaHelp": "Leave empty to keep current quota for VIP plan",
+        "reason": "Reason",
+        "reasonPlaceholder": "Enter reason for this action...",
+        "reasonRequired": "Please fill all required fields",
+        "buttons": {
+          "cancel": "Cancel",
+          "submit": "Update Subscription",
+          "submitCancel": "Cancel Subscription",
+          "processing": "Processing..."
+        }
+      },
+      "messages": {
+        "success": "Success! {{teacher}} - {{message}}",
+        "error": "Failed: {{error}}",
+        "noPermission": "No admin permission",
+        "loadFailed": "Load failed: {{error}}",
+        "searchFailed": "Search failed: {{error}}"
+      },
+      "refund": {
+        "button": "Refund",
+        "success": "Refund successful",
+        "failed": "Refund failed",
+        "confirm": "Are you sure you want to refund?",
+        "processing": "Processing refund..."
+      }
+    }
   }
 }
