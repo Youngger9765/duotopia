@@ -1198,9 +1198,13 @@ class UserWordProgress(Base):
     __tablename__ = "user_word_progress"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
     student_assignment_id = Column(
-        Integer, ForeignKey("student_assignments.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
     )
     content_item_id = Column(
         Integer, ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
@@ -1234,8 +1238,12 @@ class UserWordProgress(Base):
         Numeric(5, 4), default=0, server_default="0", nullable=False
     )  # 正確率
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # Relationships
     student = relationship("Student")
@@ -1264,9 +1272,13 @@ class PracticeSession(Base):
     __tablename__ = "practice_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
     student_assignment_id = Column(
-        Integer, ForeignKey("student_assignments.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     # 練習模式
@@ -1286,9 +1298,13 @@ class PracticeSession(Base):
     )  # 總花費時間（秒）
 
     # 時間戳記
-    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    started_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     completed_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # Relationships
     student = relationship("Student")
@@ -1323,7 +1339,9 @@ class PracticeAnswer(Base):
     answer_data = Column(JSON)  # {"selected_words": [...], "attempts": 3}
 
     # 時間戳記
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # Relationships
     session = relationship("PracticeSession", back_populates="answers")

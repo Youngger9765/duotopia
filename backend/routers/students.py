@@ -1604,7 +1604,9 @@ class MasteryStatusResponse(BaseModel):
     total_words: int
 
 
-@router.get("/assignments/{assignment_id}/practice-words", response_model=PracticeWordsResponse)
+@router.get(
+    "/assignments/{assignment_id}/practice-words", response_model=PracticeWordsResponse
+)
 async def get_practice_words(
     assignment_id: int,
     current_student: Student = Depends(get_current_user),
@@ -1648,12 +1650,14 @@ async def get_practice_words(
 
     # 3. 使用 SQL function 選擇 10 個單字
     result = db.execute(
-        text("""
+        text(
+            """
             SELECT * FROM get_words_for_practice(
                 :student_assignment_id,
                 :limit_count
             )
-        """),
+        """
+        ),
         {"student_assignment_id": student_assignment.id, "limit_count": 10},
     )
 
@@ -1725,13 +1729,15 @@ async def submit_answer(
 
     # 3. 更新記憶強度（使用 PostgreSQL function）
     result = db.execute(
-        text("""
+        text(
+            """
             SELECT * FROM update_memory_strength(
                 :student_assignment_id,
                 :content_item_id,
                 :is_correct
             )
-        """),
+        """
+        ),
         {
             "student_assignment_id": session.student_assignment_id,
             "content_item_id": request.content_item_id,
@@ -1758,7 +1764,9 @@ async def submit_answer(
     )
 
 
-@router.get("/assignments/{assignment_id}/mastery-status", response_model=MasteryStatusResponse)
+@router.get(
+    "/assignments/{assignment_id}/mastery-status", response_model=MasteryStatusResponse
+)
 async def get_mastery_status(
     assignment_id: int,
     current_student: Student = Depends(get_current_user),
@@ -1791,11 +1799,13 @@ async def get_mastery_status(
 
     # 2. 使用 SQL function 計算達標狀態
     result = db.execute(
-        text("""
+        text(
+            """
             SELECT * FROM calculate_assignment_mastery(
                 :student_assignment_id
             )
-        """),
+        """
+        ),
         {"student_assignment_id": student_assignment.id},
     )
 
