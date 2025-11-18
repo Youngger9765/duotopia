@@ -1678,6 +1678,7 @@
   "readingAssessmentPanel": {
     "title": "Title",
     "titleRequired": "Please enter a title",
+    "defaultTitle": "Reading Assessment Content",
     "batchActions": {
       "batchPaste": "Batch Paste",
       "batchPasteTooltip": "Batch paste content, one item per line",

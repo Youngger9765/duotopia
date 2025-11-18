@@ -1678,6 +1678,7 @@
   "readingAssessmentPanel": {
     "title": "標題",
     "titleRequired": "請輸入內容標題",
+    "defaultTitle": "朗讀評測內容",
     "batchActions": {
       "batchPaste": "批次貼上",
       "batchPasteTooltip": "批次貼上素材，每行一個項目",
