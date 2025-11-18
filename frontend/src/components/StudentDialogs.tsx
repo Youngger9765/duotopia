@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export interface Student {
   id: number;
@@ -56,6 +57,7 @@ export function StudentDialogs({
   onSwitchToEdit,
   classrooms = [],
 }: StudentDialogsProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Partial<Student>>({
     name: "",
     email: "",
@@ -195,7 +197,9 @@ export function StudentDialogs({
           student.id,
           formData,
         )) as Record<string, unknown>;
-        toast.success(`學生「${student.name}」資料已更新`);
+        toast.success(
+          t("dialogs.studentDialogs.success.updated", { name: student.name }),
+        );
         onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
@@ -278,12 +282,14 @@ export function StudentDialogs({
     setLoading(true);
     try {
       await apiClient.deleteStudent(student.id);
-      toast.success(`學生「${student.name}」已刪除`);
+      toast.success(
+        t("dialogs.studentDialogs.success.deleted", { name: student.name }),
+      );
       onDelete(student.id);
       onClose();
     } catch (error) {
       console.error("Error deleting student:", error);
-      toast.error("刪除失敗，請稍後再試");
+      toast.error(t("dialogs.studentDialogs.errors.deleteFailed"));
       setErrors({ submit: "刪除失敗，請稍後再試" });
     } finally {
       setLoading(false);

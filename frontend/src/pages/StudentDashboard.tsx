@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Trophy,
@@ -22,6 +23,7 @@ import {
 import { Assignment } from "@/types";
 
 export default function StudentDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, token } = useStudentAuthStore();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -68,7 +70,7 @@ export default function StudentDashboard() {
       setAssignments(data as Assignment[]);
     } catch (error) {
       console.error("Failed to load assignments:", error);
-      toast.error("無法載入作業列表");
+      toast.error(t("studentDashboard.errors.loadAssignments"));
       // Use mock data as fallback
       setAssignments([
         {
@@ -194,7 +196,7 @@ export default function StudentDashboard() {
 
   const handleEmailUpdate = async () => {
     if (!newEmail || !newEmail.includes("@")) {
-      toast.error("請輸入有效的 Email 地址");
+      toast.error(t("studentDashboard.errors.invalidEmail"));
       return;
     }
 
@@ -214,9 +216,9 @@ export default function StudentDashboard() {
       if (response.ok) {
         const data = await response.json();
         if (data.verification_sent) {
-          toast.success("驗證信已發送！請檢查您的信箱");
+          toast.success(t("studentDashboard.success.verificationSent"));
         } else {
-          toast.success("Email 已更新");
+          toast.success(t("studentDashboard.success.emailUpdated"));
         }
         setShowEmailPrompt(false);
         setShowEmailSetup(false);
@@ -224,11 +226,13 @@ export default function StudentDashboard() {
         loadEmailStatus();
       } else {
         const error = await response.text();
-        toast.error(`設定失敗：${error}`);
+        toast.error(
+          `${t("studentDashboard.errors.updateEmailFailed")}: ${error}`,
+        );
       }
     } catch (error) {
       console.error("Failed to update email:", error);
-      toast.error("設定失敗，請稍後再試");
+      toast.error(t("studentDashboard.errors.updateEmailFailed"));
     } finally {
       setIsSendingEmail(false);
     }
@@ -253,15 +257,15 @@ export default function StudentDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "NOT_STARTED":
-        return "待完成";
+        return t("studentDashboard.status.notStarted");
       case "IN_PROGRESS":
-        return "進行中";
+        return t("studentDashboard.status.inProgress");
       case "SUBMITTED":
-        return "已提交";
+        return t("studentDashboard.status.submitted");
       case "GRADED":
-        return "已評分";
+        return t("studentDashboard.status.graded");
       case "RETURNED":
-        return "已退回";
+        return t("studentDashboard.status.returned");
       default:
         return status;
     }
@@ -273,10 +277,12 @@ export default function StudentDashboard() {
         {/* Welcome Message */}
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            你好，{user?.name || "同學"}！歡迎回到 Duotopia 🚀
+            {t("studentDashboard.welcome.greeting", {
+              name: user?.name || "同學",
+            })}
           </h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-            繼續你的英語學習之旅吧
+            {t("studentDashboard.welcome.subtitle")}
           </p>
 
           {/* Email 狀態顯示 */}
@@ -290,14 +296,16 @@ export default function StudentDashboard() {
                 {emailVerified ? (
                   <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                     <CheckCircle className="h-4 w-4" />
-                    <span className="text-xs font-medium">已驗證</span>
+                    <span className="text-xs font-medium">
+                      {t("studentDashboard.email.verified")}
+                    </span>
                   </div>
                 ) : (
                   <Badge
                     variant="outline"
                     className="text-xs text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600"
                   >
-                    待驗證
+                    {t("studentDashboard.email.unverified")}
                   </Badge>
                 )}
               </div>
@@ -308,7 +316,7 @@ export default function StudentDashboard() {
                 className="text-xs sm:text-sm flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 h-10 min-h-10 dark:text-gray-300"
               >
                 <User className="h-4 w-4" />
-                個人資料
+                {t("studentDashboard.email.profile")}
               </Button>
             </div>
           )}
@@ -325,7 +333,7 @@ export default function StudentDashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <h3 className="font-medium text-blue-900 dark:text-blue-100 text-base sm:text-lg">
-                      📧 設定 Email 通知
+                      {t("studentDashboard.email.setupTitle")}
                     </h3>
                     <Button
                       variant="ghost"
@@ -339,23 +347,22 @@ export default function StudentDashboard() {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                        你的 Email 地址
+                        {t("studentDashboard.email.yourEmail")}
                       </label>
                       <Input
                         type="email"
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        placeholder="請輸入你的 Email 地址"
+                        placeholder={t(
+                          "studentDashboard.email.emailPlaceholder",
+                        )}
                         className="w-full border-blue-300 dark:border-blue-700 focus:border-blue-500 focus:ring-blue-500 dark:bg-blue-950/50 dark:text-gray-100 text-sm sm:text-base"
                       />
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                       <div className="flex-1 text-xs sm:text-sm text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 p-2 sm:p-3 rounded">
-                        <p>
-                          📌 點擊「發送驗證信」後，會發送驗證信到你的
-                          Email，點擊信中連結即可完成設定
-                        </p>
+                        <p>{t("studentDashboard.email.note")}</p>
                       </div>
                       <Button
                         onClick={handleEmailUpdate}
@@ -367,10 +374,10 @@ export default function StudentDashboard() {
                         {isSendingEmail ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            發送中...
+                            {t("studentDashboard.email.sending")}
                           </>
                         ) : (
-                          "驗證我的 Email"
+                          t("studentDashboard.email.verifyButton")
                         )}
                       </Button>
                     </div>
@@ -388,7 +395,7 @@ export default function StudentDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm text-gray-600 truncate">
-                    完成作業
+                    {t("studentDashboard.stats.completedAssignments")}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold">
                     {stats.completedAssignments}
@@ -404,10 +411,11 @@ export default function StudentDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm text-gray-600 truncate">
-                    平均分數
+                    {t("studentDashboard.stats.averageScore")}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold">
-                    {stats.averageScore}分
+                    {stats.averageScore}
+                    {t("studentDashboard.stats.scoreUnit")}
                   </p>
                 </div>
                 <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
@@ -420,10 +428,11 @@ export default function StudentDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm text-gray-600 truncate">
-                    練習時間
+                    {t("studentDashboard.stats.practiceTime")}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold">
-                    {stats.totalPracticeTime}分
+                    {stats.totalPracticeTime}
+                    {t("studentDashboard.stats.minutesUnit")}
                   </p>
                 </div>
                 <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
@@ -436,10 +445,11 @@ export default function StudentDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm text-gray-600 truncate">
-                    練習天數
+                    {t("studentDashboard.stats.practiceDays")}
                   </p>
                   <p className="text-lg sm:text-2xl font-bold">
-                    {stats.practiceDays}天
+                    {stats.practiceDays}
+                    {t("studentDashboard.stats.daysUnit")}
                   </p>
                 </div>
                 <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
@@ -454,7 +464,7 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                我的作業
+                {t("studentDashboard.assignments.title")}
               </CardTitle>
               <Button
                 variant="outline"
@@ -462,7 +472,7 @@ export default function StudentDashboard() {
                 onClick={handleViewAllAssignments}
                 className="flex items-center gap-2 h-12 min-h-12 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
               >
-                查看全部
+                {t("studentDashboard.assignments.viewAll")}
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -490,7 +500,9 @@ export default function StudentDashboard() {
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             (
                             {assignment.content.type === "reading_assessment"
-                              ? "朗讀評測"
+                              ? t(
+                                  "studentDashboard.assignments.readingAssessment",
+                                )
                               : assignment.content.type}
                             )
                           </span>
@@ -504,7 +516,7 @@ export default function StudentDashboard() {
                         <span className="flex items-center gap-1">
                           <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span className="truncate">
-                            截止日期：
+                            {t("studentDashboard.assignments.dueDate")}
                             {new Date(assignment.due_date).toLocaleDateString(
                               "zh-TW",
                             )}
@@ -514,7 +526,9 @@ export default function StudentDashboard() {
                       {assignment.score !== undefined && (
                         <span className="flex items-center gap-1">
                           <Trophy className="h-4 w-4 flex-shrink-0" />
-                          得分：{assignment.score}分
+                          {t("studentDashboard.assignments.score")}
+                          {assignment.score}
+                          {t("studentDashboard.stats.scoreUnit")}
                         </span>
                       )}
                     </div>
@@ -534,7 +548,7 @@ export default function StudentDashboard() {
                         onClick={() => handleStartAssignment(assignment.id)}
                         className="w-full sm:w-auto h-12 min-h-12"
                       >
-                        開始練習
+                        {t("studentDashboard.assignments.startPractice")}
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Button>
                     )}
@@ -547,7 +561,7 @@ export default function StudentDashboard() {
                         onClick={() => handleStartAssignment(assignment.id)}
                         className="w-full sm:w-auto h-12 min-h-12 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                       >
-                        查看結果
+                        {t("studentDashboard.assignments.viewResults")}
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Button>
                     )}

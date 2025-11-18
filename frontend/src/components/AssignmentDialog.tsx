@@ -43,6 +43,7 @@ import {
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface Student {
   id: number;
@@ -108,6 +109,7 @@ export function AssignmentDialog({
   students,
   onSuccess,
 }: AssignmentDialogProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>(
@@ -184,7 +186,7 @@ export function AssignmentDialog({
       setPrograms(response);
     } catch (error) {
       console.error("Failed to load programs:", error);
-      toast.error("無法載入課程資料");
+      toast.error(t("dialogs.assignmentDialog.errors.loadProgramsFailed"));
       setPrograms([]);
     } finally {
       setLoadingPrograms(false);
@@ -212,7 +214,7 @@ export function AssignmentDialog({
       );
     } catch (error) {
       console.error(`Failed to load lessons for program ${programId}:`, error);
-      toast.error("無法載入課程單元");
+      toast.error(t("dialogs.assignmentDialog.errors.loadLessonsFailed"));
     } finally {
       setLoadingLessons((prev) => ({ ...prev, [programId]: false }));
     }
@@ -249,7 +251,7 @@ export function AssignmentDialog({
       );
     } catch (error) {
       console.error(`Failed to load contents for lesson ${lessonId}:`, error);
-      toast.error("無法載入課程內容");
+      toast.error(t("dialogs.assignmentDialog.errors.loadContentsFailed"));
     } finally {
       setLoadingLessons((prev) => ({ ...prev, [lessonId]: false }));
     }
@@ -349,24 +351,24 @@ export function AssignmentDialog({
   const handleSubmit = async () => {
     // Validation
     if (selectedContents.size === 0) {
-      toast.error("請至少選擇一個課程內容");
+      toast.error(t("dialogs.assignmentDialog.errors.noContentSelected"));
       return;
     }
     if (!formData.title.trim()) {
-      toast.error("請輸入作業標題");
+      toast.error(t("dialogs.assignmentDialog.errors.titleRequired"));
       return;
     }
     if (formData.student_ids.length === 0) {
-      toast.error("請至少選擇一位學生");
+      toast.error(t("dialogs.assignmentDialog.errors.noStudentSelected"));
       return;
     }
 
     // 配額檢查
     if (quotaInfo && quotaInfo.quota_remaining <= 0) {
-      toast.error("配額不足，無法派發作業", {
-        description: "請升級方案或等待下個計費週期",
+      toast.error(t("dialogs.assignmentDialog.errors.quotaExceeded"), {
+        description: t("dialogs.assignmentDialog.errors.quotaExceededDesc"),
         action: {
-          label: "查看方案",
+          label: t("dialogs.assignmentDialog.actions.viewPlans"),
           onClick: () => {
             window.location.href = "/teacher/subscription";
           },
@@ -395,7 +397,9 @@ export function AssignmentDialog({
       );
 
       toast.success(
-        `成功創建作業，已指派給 ${result.student_count || 0} 位學生`,
+        t("dialogs.assignmentDialog.success.created", {
+          count: result.student_count || 0,
+        }),
       );
       onSuccess?.();
       handleClose();
@@ -423,17 +427,17 @@ export function AssignmentDialog({
             ? String(errorData.detail.message)
             : "請升級方案或等待下個計費週期";
 
-        toast.error("配額不足，無法派發作業", {
+        toast.error(t("dialogs.assignmentDialog.errors.quotaExceeded"), {
           description: detailMessage,
           action: {
-            label: "查看方案",
+            label: t("dialogs.assignmentDialog.actions.viewPlans"),
             onClick: () => {
               window.location.href = "/teacher/subscription";
             },
           },
         });
       } else {
-        toast.error("創建作業失敗");
+        toast.error(t("dialogs.assignmentDialog.errors.createFailed"));
       }
     } finally {
       setLoading(false);
@@ -496,9 +500,21 @@ export function AssignmentDialog({
   };
 
   const steps = [
-    { number: 1, title: "選擇內容", icon: BookOpen },
-    { number: 2, title: "選擇學生", icon: Users },
-    { number: 3, title: "作業詳情", icon: FileText },
+    {
+      number: 1,
+      title: t("dialogs.assignmentDialog.steps.selectContent"),
+      icon: BookOpen,
+    },
+    {
+      number: 2,
+      title: t("dialogs.assignmentDialog.steps.selectStudents"),
+      icon: Users,
+    },
+    {
+      number: 3,
+      title: t("dialogs.assignmentDialog.steps.details"),
+      icon: FileText,
+    },
   ];
 
   return (
@@ -509,7 +525,7 @@ export function AssignmentDialog({
           <div className="flex items-center">
             <div className="flex-1">
               <DialogTitle className="text-lg font-semibold">
-                指派新作業
+                {t("dialogs.assignmentDialog.title")}
               </DialogTitle>
               {/* 配額顯示 */}
               {quotaInfo && (
@@ -523,7 +539,7 @@ export function AssignmentDialog({
                     )}
                   />
                   <span className="text-gray-600">
-                    配額餘額：
+                    {t("dialogs.assignmentDialog.quota.remaining")}：
                     <span
                       className={cn(
                         "font-semibold ml-1",
@@ -548,7 +564,7 @@ export function AssignmentDialog({
                       variant="destructive"
                       className="text-xs py-0 px-1.5 animate-pulse"
                     >
-                      配額已用完
+                      {t("dialogs.assignmentDialog.quota.exhausted")}
                     </Badge>
                   ) : (
                     quotaInfo.quota_remaining <= 100 && (

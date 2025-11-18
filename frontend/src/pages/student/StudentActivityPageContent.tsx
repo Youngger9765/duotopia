@@ -39,6 +39,7 @@ import {
   selectSupportedMimeType,
   validateDuration,
 } from "@/utils/audioRecordingStrategy";
+import { useTranslation } from "react-i18next";
 
 // Activity type from API
 export interface Activity {
@@ -134,6 +135,8 @@ export default function StudentActivityPageContent({
   onSubmit,
   assignmentStatus = "",
 }: StudentActivityPageContentProps) {
+  const { t } = useTranslation();
+
   // State management
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
@@ -224,7 +227,9 @@ export default function StudentActivityPageContent({
   const startRecording = async (isReRecord: boolean = false) => {
     if (isReadOnly) {
       toast.warning(
-        isPreviewMode ? "預覽模式下無法錄音" : "檢視模式下無法錄音",
+        isPreviewMode
+          ? t("studentActivityPage.warnings.previewNoRecord")
+          : t("studentActivityPage.warnings.readonlyNoRecord"),
       );
       return;
     }
@@ -504,7 +509,7 @@ export default function StudentActivityPageContent({
               mediaRecorder.stop();
               setMediaRecorder(null);
               setIsRecording(false);
-              toast.info("錄音已達 45 秒上限，自動停止");
+              toast.info(t("studentActivityPage.warnings.recordingLimit"));
             }
           }, 0);
         }
@@ -579,7 +584,9 @@ export default function StudentActivityPageContent({
   const handleFileUpload = async (file: File) => {
     if (isReadOnly) {
       toast.warning(
-        isPreviewMode ? "預覽模式下無法上傳" : "檢視模式下無法上傳",
+        isPreviewMode
+          ? t("studentActivityPage.warnings.previewNoUpload")
+          : t("studentActivityPage.warnings.readonlyNoUpload"),
       );
       return;
     }
@@ -871,19 +878,47 @@ export default function StudentActivityPageContent({
   const getActivityTypeBadge = (type: string) => {
     switch (type) {
       case "reading_assessment":
-        return <Badge variant="outline">朗讀錄音</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.reading")}
+          </Badge>
+        );
       case "listening_cloze":
-        return <Badge variant="outline">聽力填空</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.listening")}
+          </Badge>
+        );
       case "speaking_practice":
-        return <Badge variant="outline">口說練習</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.speaking")}
+          </Badge>
+        );
       case "speaking_scenario":
-        return <Badge variant="outline">情境對話</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.speaking")}
+          </Badge>
+        );
       case "sentence_making":
-        return <Badge variant="outline">造句練習</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.speaking")}
+          </Badge>
+        );
       case "speaking_quiz":
-        return <Badge variant="outline">口說測驗</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.speaking")}
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">學習活動</Badge>;
+        return (
+          <Badge variant="outline">
+            {t("studentActivityPage.activityTypes.reading")}
+          </Badge>
+        );
     }
   };
 
@@ -1136,8 +1171,12 @@ export default function StudentActivityPageContent({
                   className="flex-shrink-0 px-2 sm:px-3"
                 >
                   <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">返回作業</span>
-                  <span className="sm:hidden">返回</span>
+                  <span className="hidden sm:inline">
+                    {t("studentActivityPage.buttons.back")}
+                  </span>
+                  <span className="sm:hidden">
+                    {t("studentActivityPage.buttons.backShort")}
+                  </span>
                 </Button>
               )}
               <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
@@ -1150,8 +1189,12 @@ export default function StudentActivityPageContent({
               {saving && (
                 <div className="flex items-center gap-1 sm:gap-2 text-xs text-gray-600">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  <span className="hidden sm:inline">自動儲存中...</span>
-                  <span className="sm:hidden">儲存中</span>
+                  <span className="hidden sm:inline">
+                    {t("studentActivityPage.status.saving")}
+                  </span>
+                  <span className="sm:hidden">
+                    {t("studentActivityPage.status.savingShort")}
+                  </span>
                 </div>
               )}
               {!isReadOnly && !isPreviewMode && (
@@ -1165,14 +1208,22 @@ export default function StudentActivityPageContent({
                   {submitting ? (
                     <>
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      <span className="hidden sm:inline">提交中...</span>
-                      <span className="sm:hidden">提交</span>
+                      <span className="hidden sm:inline">
+                        {t("studentActivityPage.buttons.submitting")}
+                      </span>
+                      <span className="sm:hidden">
+                        {t("studentActivityPage.buttons.submittingShort")}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Send className="h-3 w-3 mr-1" />
-                      <span className="hidden sm:inline">提交作業</span>
-                      <span className="sm:hidden">提交</span>
+                      <span className="hidden sm:inline">
+                        {t("studentActivityPage.buttons.submit")}
+                      </span>
+                      <span className="sm:hidden">
+                        {t("studentActivityPage.buttons.submitShort")}
+                      </span>
                     </>
                   )}
                 </Button>
@@ -1268,7 +1319,11 @@ export default function StudentActivityPageContent({
                                   "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
                                   teacherPassed ? "bg-green-500" : "bg-red-500",
                                 )}
-                                aria-label={teacherPassed ? "通過" : "未通過"}
+                                aria-label={
+                                  teacherPassed
+                                    ? t("studentActivityPage.feedback.passed")
+                                    : t("studentActivityPage.feedback.failed")
+                                }
                               />
                             )}
                           </button>
@@ -1354,8 +1409,12 @@ export default function StudentActivityPageContent({
                     className="flex-1 sm:flex-none min-w-0"
                   >
                     <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    <span className="hidden sm:inline">上一題</span>
-                    <span className="sm:hidden">上一題</span>
+                    <span className="hidden sm:inline">
+                      {t("studentActivityPage.buttons.previous")}
+                    </span>
+                    <span className="sm:hidden">
+                      {t("studentActivityPage.buttons.previous")}
+                    </span>
                   </Button>
 
                   {(() => {
@@ -1376,10 +1435,14 @@ export default function StudentActivityPageContent({
                           className="flex-1 sm:flex-none min-w-0"
                         >
                           <span className="hidden sm:inline">
-                            {submitting ? "提交中..." : "提交作業"}
+                            {submitting
+                              ? t("studentActivityPage.buttons.submitting")
+                              : t("studentActivityPage.buttons.submit")}
                           </span>
                           <span className="sm:hidden">
-                            {submitting ? "提交中" : "提交"}
+                            {submitting
+                              ? t("studentActivityPage.buttons.submittingShort")
+                              : t("studentActivityPage.buttons.submitShort")}
                           </span>
                           <Send className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                         </Button>
@@ -1393,8 +1456,12 @@ export default function StudentActivityPageContent({
                         onClick={handleNextActivity}
                         className="flex-1 sm:flex-none min-w-0"
                       >
-                        <span className="hidden sm:inline">下一題</span>
-                        <span className="sm:hidden">下一題</span>
+                        <span className="hidden sm:inline">
+                          {t("studentActivityPage.buttons.next")}
+                        </span>
+                        <span className="sm:hidden">
+                          {t("studentActivityPage.buttons.next")}
+                        </span>
                         <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                       </Button>
                     );
@@ -1417,7 +1484,9 @@ export default function StudentActivityPageContent({
                     ).length
                   }
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">已完成</p>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {t("studentActivityPage.status.completed")}
+                </p>
               </div>
               <div>
                 <div className="text-xl sm:text-2xl font-bold text-yellow-600">
@@ -1427,7 +1496,9 @@ export default function StudentActivityPageContent({
                     ).length
                   }
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">進行中</p>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {t("studentActivityPage.status.inProgress")}
+                </p>
               </div>
               <div>
                 <div className="text-xl sm:text-2xl font-bold text-gray-400">
@@ -1437,7 +1508,9 @@ export default function StudentActivityPageContent({
                     ).length
                   }
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">未開始</p>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {t("studentActivityPage.status.notStarted")}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -1450,10 +1523,10 @@ export default function StudentActivityPageContent({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-5 w-5" />
-              尚有題目未完成
+              {t("studentActivityPage.validation.title")}
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              以下題目尚未完成錄音或 AI 評估，確定要提交作業嗎？
+              {t("studentActivityPage.validation.incompleteItems")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -1474,7 +1547,7 @@ export default function StudentActivityPageContent({
               variant="outline"
               onClick={() => setShowSubmitDialog(false)}
             >
-              取消
+              {t("studentActivityPage.buttons.cancel")}
             </Button>
             <Button
               type="button"
@@ -1482,7 +1555,7 @@ export default function StudentActivityPageContent({
               onClick={handleConfirmSubmit}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              確定提交
+              {t("studentActivityPage.buttons.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

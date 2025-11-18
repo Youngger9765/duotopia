@@ -21,6 +21,7 @@ import { saveAs } from "file-saver";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Classroom } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface StudentImportDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function StudentImportDialog({
   onSuccess,
   classrooms,
 }: StudentImportDialogProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<ImportStudent[]>([]);
@@ -80,7 +82,7 @@ export function StudentImportDialog({
     });
     saveAs(blob, "學生批次匯入範本.xlsx");
 
-    toast.success("已下載範本檔案");
+    toast.success(t("dialogs.studentImportDialog.success.templateDownloaded"));
   };
 
   // 解析檔案
@@ -111,7 +113,7 @@ export function StudentImportDialog({
       };
       reader.readAsArrayBuffer(file);
     } else {
-      toast.error("請上傳 CSV 或 Excel 檔案");
+      toast.error(t("dialogs.studentImportDialog.errors.invalidFileType"));
     }
   };
 
@@ -298,13 +300,17 @@ export function StudentImportDialog({
       }
 
       if (successCount > 0) {
-        toast.success(`成功匯入 ${successCount} 位學生`);
+        toast.success(
+          t("dialogs.studentImportDialog.success.imported", {
+            count: successCount,
+          }),
+        );
         onSuccess(); // 更新父組件的資料
         // 不自動關閉，讓用戶查看結果
       }
     } catch (error) {
       console.error("Import failed:", error);
-      toast.error("匯入失敗");
+      toast.error(t("dialogs.studentImportDialog.errors.importFailed"));
     } finally {
       setImporting(false);
     }

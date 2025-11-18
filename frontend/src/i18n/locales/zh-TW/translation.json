@@ -296,7 +296,15 @@
       "trialRemaining": "您的免費試用將在 {{days}} 天後到期",
       "expiryDate": "到期日: {{date}}",
       "daysRemaining": "免費試用剩餘 {{days}} 天",
-      "days": "天"
+      "days": "天",
+      "statusSubscribed": "✅ 訂閱狀態：已訂閱",
+      "statusNotSubscribed": "⚠️ 訂閱狀態：未訂閱",
+      "willExpireIn": "您的訂閱將在 {{days}} 天後到期",
+      "noActiveSubscription": "您目前沒有有效訂閱，部分功能將受限",
+      "expiryDateLabel": "到期日:",
+      "remainingDays": "剩餘天數",
+      "testModeButton": "模擬訂閱充值（測試用）",
+      "testModeDescription": "點擊可模擬充值、過期等不同訂閱狀態"
     },
     "stats": {
       "classrooms": "班級數量",
@@ -482,6 +490,1292 @@
         "confirm": "確定要退款嗎？",
         "processing": "退款處理中..."
       }
+    }
+  },
+  "studentAssignmentList": {
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "無法載入作業列表"
+    },
+    "flowStatus": {
+      "title": "作業進度流程",
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "returned": "退回訂正",
+      "resubmitted": "重新提交",
+      "graded": "已完成"
+    },
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "graded": "已評分",
+      "returned": "已退回",
+      "resubmitted": "重新提交"
+    },
+    "progress": {
+      "title": "完成進度",
+      "activities": "{{completed}} / {{total}} 個活動"
+    },
+    "contentType": {
+      "default": "朗讀練習"
+    },
+    "dueDate": {
+      "overdue": "已逾期 {{days}} 天",
+      "today": "今天到期",
+      "remaining": "{{days}} 天後到期"
+    },
+    "score": {
+      "label": "分數: {{score}}"
+    },
+    "buttons": {
+      "start": "開始作業",
+      "continue": "繼續作業",
+      "view": "檢視作業",
+      "viewResults": "查看結果",
+      "resubmit": "重新提交"
+    },
+    "emptyStates": {
+      "notStarted": {
+        "title": "沒有未開始的作業",
+        "description": "所有作業都已經開始了！"
+      },
+      "inProgress": {
+        "title": "沒有進行中的作業",
+        "description": "開始練習作業吧！"
+      },
+      "submitted": {
+        "title": "沒有待批改的作業",
+        "description": "提交的作業會顯示在這裡。"
+      },
+      "graded": {
+        "title": "沒有已完成的作業",
+        "description": "完成並評分的作業會顯示在這裡，可以查看詳細成績。"
+      },
+      "returned": {
+        "title": "沒有需要訂正的作業",
+        "description": "需要重做的作業會顯示在這裡。"
+      },
+      "resubmitted": {
+        "title": "沒有重新提交的作業",
+        "description": "重新提交的作業會顯示在這裡。"
+      }
+    }
+  },
+  "studentAssignmentDetail": {
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "無法載入作業詳情",
+      "notFound": "找不到作業詳情"
+    },
+    "buttons": {
+      "back": "返回作業列表",
+      "start": "開始",
+      "continue": "繼續",
+      "view": "檢視作業",
+      "startAssignment": "開始作業",
+      "continueAssignment": "繼續作業",
+      "resubmit": "重新提交"
+    },
+    "overview": {
+      "estimatedTime": "預估時間: {{time}}",
+      "targetWPM": "目標語速: {{wpm}} WPM",
+      "targetAccuracy": "目標準確率: {{accuracy}}%"
+    },
+    "progress": {
+      "title": "活動進度",
+      "completed": "{{completed}} / {{total}} 完成",
+      "empty": "此作業尚未包含活動內容",
+      "activityNumber": "活動 {{number}}"
+    },
+    "contentTypes": {
+      "reading_assessment": "朗讀評測",
+      "listening": "聽力練習",
+      "grouped_questions": "基礎問候語練習"
+    },
+    "scoring": {
+      "title": "總評",
+      "score": "分數",
+      "scoreUnit": "分",
+      "detailRecord": "詳實記錄"
+    },
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "graded": "已評分",
+      "returned": "已退回",
+      "resubmitted": "重新提交"
+    },
+    "dueDate": {
+      "overdue": "已逾期 {{days}} 天",
+      "today": "今天到期",
+      "remaining": "{{days}} 天後到期"
+    }
+  },
+  "studentActivityPage": {
+    "buttons": {
+      "back": "返回作業",
+      "backShort": "返回",
+      "submit": "提交作業",
+      "submitShort": "提交",
+      "submitting": "提交中...",
+      "submittingShort": "提交中",
+      "previous": "上一題",
+      "next": "下一題",
+      "confirm": "確認提交",
+      "cancel": "再檢查一次"
+    },
+    "status": {
+      "saving": "自動儲存中...",
+      "savingShort": "儲存中",
+      "completed": "已完成",
+      "inProgress": "進行中",
+      "notStarted": "未開始"
+    },
+    "activityTypes": {
+      "reading": "朗讀錄音",
+      "listening": "聽力填空",
+      "speaking": "口說練習"
+    },
+    "warnings": {
+      "previewNoRecord": "預覽模式下無法錄音",
+      "readonlyNoRecord": "檢視模式下無法錄音",
+      "previewNoUpload": "預覽模式下無法上傳",
+      "readonlyNoUpload": "檢視模式下無法上傳",
+      "recordingLimit": "錄音已達 45 秒上限，自動停止"
+    },
+    "validation": {
+      "title": "請先完成以下項目",
+      "incompleteItems": "以下項目尚未完成："
+    },
+    "feedback": {
+      "passed": "通過",
+      "failed": "未通過"
+    }
+  },
+  "studentProfile": {
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "無法載入個人資料",
+      "loadError": "載入個人資料失敗",
+      "invalidEmail": "請輸入有效的 Email 地址",
+      "updateFailed": "更新失敗：{{error}}",
+      "updateError": "更新 Email 失敗",
+      "unbindFailed": "解除綁定失敗：{{error}}",
+      "unbindError": "解除綁定失敗"
+    },
+    "success": {
+      "verificationSent": "驗證信已發送到新的 Email 地址",
+      "emailUpdated": "Email 已更新",
+      "emailUnbound": "Email 綁定已解除"
+    },
+    "header": {
+      "back": "返回",
+      "title": "個人資料"
+    },
+    "basicInfo": {
+      "title": "基本資訊",
+      "name": "姓名",
+      "birthday": "生日",
+      "classroom": "班級",
+      "classroomNone": "未分配班級",
+      "school": "學校",
+      "schoolNone": "未設定學校",
+      "notSet": "未設定"
+    },
+    "email": {
+      "title": "Email 設定",
+      "noEmail": "未設定 Email",
+      "verified": "已驗證",
+      "verifiedAt": "已於 {{date}} 驗證",
+      "unverified": "尚未驗證",
+      "pending": "待驗證",
+      "newEmail": "新的 Email 地址",
+      "placeholder": "請輸入新的 Email 地址",
+      "update": "修改",
+      "setup": "設定",
+      "unbind": "解除綁定",
+      "confirm": "確認更新",
+      "updating": "更新中...",
+      "cancel": "取消"
+    },
+    "unbindDialog": {
+      "title": "確定要解除 Email 綁定嗎？",
+      "description": "解除綁定後，您將無法收到學習提醒和重要通知。",
+      "confirm": "確定解除",
+      "unbinding": "解除中...",
+      "cancel": "取消"
+    },
+    "account": {
+      "title": "帳號資訊",
+      "id": "帳號 ID",
+      "registeredAt": "註冊時間",
+      "logout": "登出帳號"
+    }
+  },
+  "teacherLogin": {
+    "header": {
+      "home": "返回首頁",
+      "title": "Duotopia",
+      "subtitle": "AI 驅動的英語學習平台",
+      "cardTitle": "教師登入",
+      "cardDescription": "使用您的 Email 帳號登入教師後台"
+    },
+    "form": {
+      "email": "Email",
+      "emailPlaceholder": "teacher@example.com",
+      "password": "密碼",
+      "passwordPlaceholder": "••••••••",
+      "login": "登入",
+      "loggingIn": "登入中...",
+      "forgotPassword": "忘記密碼？"
+    },
+    "demo": {
+      "separator": "測試帳號快速登入",
+      "demoTeacher": "Demo 教師（已充值300天）",
+      "demoEmail": "demo@duotopia.com",
+      "trialTeacher": "試用教師（30天試用期）",
+      "trialEmail": "trial@duotopia.com",
+      "expiredTeacher": "過期教師（未訂閱）",
+      "expiredEmail": "expired@duotopia.com",
+      "passwordHint": "🔐 測試帳號密碼均為：demo123",
+      "demoDescription": "demo@duotopia.com - 已充值300天",
+      "trialDescription": "trial@duotopia.com - 30天試用期",
+      "expiredDescription": "expired@duotopia.com - 未訂閱/已過期"
+    },
+    "footer": {
+      "noAccount": "還沒有帳號？",
+      "register": "立即註冊",
+      "studentLogin": "學生登入入口"
+    },
+    "errors": {
+      "loginFailed": "登入失敗，請檢查帳號密碼",
+      "quickLoginFailed": "{{email}} 帳號登入失敗"
+    }
+  },
+  "studentLogin": {
+    "header": {
+      "home": "返回首頁",
+      "welcome": "嗨，歡迎來到 Duotopia！"
+    },
+    "step1": {
+      "title": "請輸入老師 Email",
+      "placeholder": "teacher@example.com",
+      "next": "下一步",
+      "demoTeacher": "🎯 使用 Demo 教師 (demo@duotopia.com)",
+      "quickTest": "快速測試：",
+      "recentTeachers": "或選擇最近使用過的老師："
+    },
+    "step2": {
+      "title": "請選擇你的班級和名字"
+    },
+    "step3": {
+      "title": "請選擇你的名字"
+    },
+    "step4": {
+      "greeting": "你好，{{name}}！",
+      "placeholder": "請輸入你的密碼",
+      "login": "登入",
+      "selectOther": "選擇其他學生",
+      "demoHint": "💡 測試提示",
+      "demoPassword": "Demo 學生預設密碼：",
+      "passwordFormat": "正式使用時，密碼為學生的生日 (格式：YYYYMMDD)"
+    },
+    "buttons": {
+      "back": "返回"
+    },
+    "errors": {
+      "teacherNotFound": "找不到此教師帳號",
+      "teacherValidationFailed": "無法驗證教師帳號，請稍後再試",
+      "loadClassroomFailed": "無法載入班級學生資料",
+      "loginFailed": "密碼錯誤，請重新輸入"
+    }
+  },
+  "studentDashboard": {
+    "welcome": {
+      "greeting": "你好，{{name}}！歡迎回到 Duotopia 🚀",
+      "subtitle": "繼續你的英語學習之旅吧"
+    },
+    "email": {
+      "verified": "已驗證",
+      "unverified": "待驗證",
+      "profile": "個人資料",
+      "setupTitle": "📧 設定 Email 通知",
+      "yourEmail": "你的 Email 地址",
+      "emailPlaceholder": "請輸入你的 Email 地址",
+      "verifyButton": "驗證我的 Email",
+      "sending": "發送中...",
+      "note": "📌 點擊「發送驗證信」後，會發送驗證信到你的 Email，點擊信中連結即可完成設定"
+    },
+    "stats": {
+      "completedAssignments": "完成作業",
+      "averageScore": "平均分數",
+      "practiceTime": "練習時間",
+      "practiceDays": "練習天數",
+      "scoreUnit": "分",
+      "minutesUnit": "分",
+      "daysUnit": "天"
+    },
+    "assignments": {
+      "title": "我的作業",
+      "viewAll": "查看全部",
+      "startPractice": "開始練習",
+      "viewResults": "查看結果",
+      "dueDate": "截止日期：",
+      "score": "得分：",
+      "readingAssessment": "朗讀評測"
+    },
+    "status": {
+      "notStarted": "待完成",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "graded": "已評分",
+      "returned": "已退回"
+    },
+    "errors": {
+      "loadAssignments": "無法載入作業列表",
+      "invalidEmail": "請輸入有效的 Email 地址",
+      "updateEmailFailed": "設定失敗，請稍後再試"
+    },
+    "success": {
+      "verificationSent": "驗證信已發送！請檢查您的信箱",
+      "emailUpdated": "Email 已更新"
+    }
+  },
+  "teacherRegister": {
+    "header": {
+      "title": "Duotopia",
+      "subtitle": "AI 驅動的英語學習平台",
+      "cardTitle": "教師註冊",
+      "cardDescription": "建立您的教師帳號，開始管理班級與課程"
+    },
+    "form": {
+      "name": "姓名",
+      "namePlaceholder": "王老師",
+      "nameRequired": "*",
+      "email": "Email",
+      "emailPlaceholder": "teacher@example.com",
+      "emailRequired": "*",
+      "phone": "電話（選填）",
+      "phonePlaceholder": "0912-345-678",
+      "password": "密碼",
+      "passwordPlaceholder": "••••••••",
+      "passwordRequired": "*",
+      "passwordHint": "至少 6 個字元",
+      "confirmPassword": "確認密碼",
+      "confirmPasswordRequired": "*",
+      "register": "註冊",
+      "registering": "註冊中..."
+    },
+    "errors": {
+      "passwordMismatch": "密碼不一致",
+      "passwordTooShort": "密碼至少需要 6 個字元",
+      "registerFailed": "註冊失敗，請稍後再試"
+    },
+    "footer": {
+      "hasAccount": "已有帳號？",
+      "login": "立即登入",
+      "studentLogin": "學生登入入口"
+    }
+  },
+  "termsOfService": {
+    "header": {
+      "title": "使用者條款",
+      "lastUpdated": "最後更新日期：2025年1月13日"
+    },
+    "section1": {
+      "title": "1. 服務定義與範圍",
+      "item1": "1.1 Duotopia（以下稱「本服務」）是一個語言學習平台，提供互動式語言學習內容與評估服務。",
+      "item2": "1.2 本服務支援多種語言學習，包括但不限於英語、中文等語言的學習與練習。",
+      "item3": "1.3 用戶可透過本平台進行語言學習、完成作業、接受評估等學習活動。",
+      "item4": "1.4 學習內容與評估結果僅供教育用途使用。"
+    },
+    "section2": {
+      "title": "2. 用戶註冊與帳號管理",
+      "item1": "2.1 用戶須提供有效的電子郵件地址進行註冊。",
+      "item2": "2.2 用戶應妥善保管帳號密碼，對於帳號下的所有活動負完全責任。",
+      "item3": "2.3 若發現帳號遭未經授權使用，應立即通知本服務。",
+      "item4": "2.4 本服務保留隨時終止或暫停違反條款用戶帳號的權利。"
+    },
+    "section3": {
+      "title": "3. 著作權聲明",
+      "item1": "3.1 本服務提供的學習內容，其著作權屬於本公司或授權提供者所有。",
+      "item2": "3.2 用戶創建的學習記錄與作業內容，其著作權歸用戶所有。",
+      "item3": "3.3 用戶授權本服務使用其創建的內容以提供服務與改善系統。",
+      "item4": "3.4 學習內容僅供個人學習使用，不得進行商業使用或未經授權的散布。",
+      "item5": "3.5 本服務將妥善保存用戶的學習記錄，並依據隱私政策進行管理。"
+    },
+    "section4": {
+      "title": "4. 服務使用限制",
+      "item1": "4.1 用戶不得使用本服務進行任何違法或不當行為。",
+      "item2": "4.2 不得嘗試破壞、干擾或未經授權存取本服務系統。",
+      "item3": "4.3 不得使用本服務上傳或分享以下內容：",
+      "list": {
+        "item1": "侵犯他人著作權、商標權或其他智慧財產權的內容",
+        "item2": "違反法律法規的內容",
+        "item3": "惡意軟體、病毒或其他有害程式碼",
+        "item4": "不適當或冒犯性內容"
+      },
+      "item4": "4.4 每個訂閱方案都有相應的使用限制，超出限制需升級方案。"
+    },
+    "section5": {
+      "title": "5. 隱私保護",
+      "item1": "5.1 本服務重視用戶隱私，詳細隱私保護措施請參閱隱私權政策。",
+      "item2": "5.2 本服務採用業界標準加密技術保護用戶資料。",
+      "item3": "5.3 學習記錄與個人資料將依法妥善保管。",
+      "item4": "5.4 用戶資料僅用於提供服務，不會未經同意分享給第三方。"
+    },
+    "section6": {
+      "title": "6. 付費與訂閱",
+      "item1": "6.1 本服務提供免費與付費訂閱方案。",
+      "item2": "6.2 付費方案的費用、功能與限制以網站公告為準。",
+      "item3": "6.3 訂閱費用採預付制，不提供部分退款。",
+      "item4": "6.4 用戶可隨時取消訂閱，但已支付的費用不予退還。",
+      "item5": "6.5 用戶可選擇變更方案，變更將於下個計費週期生效。"
+    },
+    "section7": {
+      "title": "7. 免責聲明",
+      "item1": "7.1 本服務使用AI技術進行語音評估，評估結果僅供參考。",
+      "item2": "7.2 本服務提供的學習內容盡力確保品質，但不保證完全準確或適合所有學習者。",
+      "item3": "7.3 本服務不對學習成效承擔保證責任。",
+      "item4": "7.4 用戶因使用本服務而產生的任何損失，本服務不承擔責任。",
+      "item5": "7.5 本服務可能因系統維護、升級或不可抗力因素暫時中斷，將盡快恢復服務。"
+    },
+    "section8": {
+      "title": "8. 條款修改",
+      "item1": "8.1 本服務保留隨時修改使用者條款的權利。",
+      "item2": "8.2 條款修改後將在網站公告，繼續使用本服務視為同意修改後的條款。",
+      "item3": "8.3 若不同意修改後的條款，用戶可選擇停止使用本服務。"
+    },
+    "section9": {
+      "title": "9. 準據法與管轄法院",
+      "item1": "9.1 本條款之解釋與適用，以中華民國法律為準據法。",
+      "item2": "9.2 因本條款所生之爭議，雙方同意以台灣台北地方法院為第一審管轄法院。"
+    },
+    "section10": {
+      "title": "10. 聯絡方式",
+      "company": "語拓邦數位學習有限公司",
+      "taxId": "統編：60619397",
+      "contactPrompt": "若對本條款有任何疑問，請透過以下方式聯絡我們：",
+      "email": "電子郵件：myduotopia@gmail.com"
+    }
+  },
+  "dialogs": {
+    "assignmentDialog": {
+      "title": "指派新作業",
+      "steps": {
+        "selectContent": "選擇內容",
+        "selectStudents": "選擇學生",
+        "assignmentDetails": "作業詳情"
+      },
+      "quota": {
+        "remaining": "配額餘額：",
+        "total": "/ {{total}} 秒",
+        "depleted": "配額已用完",
+        "low": "配額不足",
+        "error": "配額不足，無法派發作業",
+        "errorDesc": "請升級方案或等待下個計費週期",
+        "viewPlans": "查看方案"
+      },
+      "selectContent": {
+        "description": "選擇要指派的課程內容（可多選）",
+        "selected": "已選擇 {{count}} 個",
+        "loading": "載入課程內容中...",
+        "loadingDesc": "請稍候，正在準備可指派的課程",
+        "empty": "尚無可用的課程內容",
+        "emptyDesc": "請先建立課程計畫和內容",
+        "units": "{{count}} 個單元",
+        "contents": "{{count}} 個內容",
+        "loadingLabel": "載入中...",
+        "selectAll": "全選",
+        "deselectAll": "取消全選"
+      },
+      "selectStudents": {
+        "description": "選擇要接收作業的學生",
+        "selected": "{{selected}}/{{total}} 已選",
+        "assignAll": "指派給全班所有學生",
+        "totalStudents": "共 {{count}} 位學生",
+        "allSelected": "全選",
+        "selectAllBtn": "全選",
+        "deselectAllBtn": "取消全選",
+        "invertSelection": "反選"
+      },
+      "details": {
+        "description": "填寫作業標題和詳細資訊",
+        "title": "作業標題",
+        "titleRequired": "*",
+        "titlePlaceholder": "例：Unit 1-3 綜合練習",
+        "instructions": "作業說明",
+        "instructionsPlaceholder": "請提供作業相關說明或要求...",
+        "startDate": "開始日期",
+        "dueDate": "截止日期",
+        "selectDate": "選擇日期",
+        "summary": "作業摘要",
+        "contentCount": "課程內容：",
+        "contentCountValue": "{{count}} 個",
+        "assignTo": "指派對象：",
+        "assignToAll": "全班學生",
+        "assignToSelected": "{{count}} 位學生",
+        "dueDateLabel": "截止日期：",
+        "dueDateValue": "{{date}}"
+      },
+      "buttons": {
+        "cancel": "取消",
+        "previous": "上一步",
+        "next": "下一步",
+        "create": "創建作業",
+        "creating": "創建中...",
+        "quotaDepleted": "配額已用完"
+      },
+      "errors": {
+        "noContent": "請至少選擇一個課程內容",
+        "noTitle": "請輸入作業標題",
+        "noStudents": "請至少選擇一位學生",
+        "createFailed": "創建作業失敗"
+      },
+      "success": {
+        "created": "成功創建作業，已指派給 {{count}} 位學生"
+      },
+      "contentTypes": {
+        "reading_assessment": "朗讀評測",
+        "speaking_practice": "口說練習",
+        "speaking_scenario": "情境對話",
+        "listening_cloze": "聽力填空",
+        "sentence_making": "造句練習",
+        "speaking_quiz": "口說測驗"
+      }
+    },
+    "classroomAssignDialog": {
+      "title": "分配班級",
+      "description": "為選中的 {{count}} 位學生分配班級",
+      "selectClassroom": "選擇班級",
+      "selectPlaceholder": "請選擇班級",
+      "buttons": {
+        "cancel": "取消",
+        "confirm": "確定分配"
+      }
+    },
+    "contentTypeDialog": {
+      "title": "選擇內容類型",
+      "description": "為 「{{lessonName}}」 選擇要新增的內容類型",
+      "processing": "處理中...",
+      "types": {
+        "reading_assessment": {
+          "name": "朗讀錄音",
+          "description": "學生朗讀課文並錄音",
+          "recommended": "推薦"
+        },
+        "speaking_practice": {
+          "name": "口說練習",
+          "description": "自由口說練習，AI 提供即時回饋",
+          "comingSoon": "即將推出"
+        },
+        "speaking_scenario": {
+          "name": "情境對話",
+          "description": "在特定情境下進行對話練習"
+        },
+        "listening_cloze": {
+          "name": "聽力填空",
+          "description": "聽音檔後填入缺少的單字"
+        },
+        "sentence_making": {
+          "name": "造句練習",
+          "description": "使用指定單字或句型造句"
+        },
+        "speaking_quiz": {
+          "name": "口說測驗",
+          "description": "回答問題測試口說能力"
+        }
+      },
+      "buttons": {
+        "cancel": "取消"
+      }
+    },
+    "copyProgramDialog": {
+      "title": "從課程庫複製",
+      "description": "選擇要複製到此班級的課程",
+      "search": "搜尋課程名稱...",
+      "selected": "已選擇 {{count}} 個課程",
+      "loading": "載入課程中...",
+      "empty": "目前沒有可複製的課程",
+      "emptyDesc": "請先到「所有課程」頁面建立課程",
+      "noResults": "找不到符合的課程",
+      "noResultsDesc": "請嘗試其他搜尋關鍵字",
+      "alreadyExists": "(已存在)",
+      "lessons": "{{count}} 個單元",
+      "hours": "{{count}} 小時",
+      "buttons": {
+        "cancel": "取消",
+        "copy": "複製到班級 ({{count}})",
+        "copying": "複製中..."
+      },
+      "success": "成功複製 {{count}} 個課程到班級",
+      "error": "複製失敗，請稍後再試",
+      "loadError": "載入課程失敗"
+    },
+    "createProgramDialog": {
+      "title": "建立課程到「{{classroomName}}」",
+      "description": "選擇建立課程的方式",
+      "tabs": {
+        "template": "從公版複製",
+        "classroom": "從其他班級複製",
+        "custom": "自建課程"
+      },
+      "template": {
+        "search": "搜尋公版課程模板...",
+        "selected": "已選擇 {{selected}} / {{total}} 個模板",
+        "selectAll": "全選",
+        "clear": "清除",
+        "loading": "載入中...",
+        "empty": "沒有可用的公版課程模板",
+        "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
+        "nameLabel": "新課程名稱（選填，留空使用原名）",
+        "namePlaceholder": "{{originalName}}",
+        "multipleNote": "已選擇 {{count}} 個模板，將使用原始名稱建立課程"
+      },
+      "classroom": {
+        "search": "搜尋其他班級的課程...",
+        "selected": "已選擇 {{selected}} / {{total}} 個課程",
+        "selectAll": "全選",
+        "clear": "清除",
+        "loading": "載入中...",
+        "empty": "沒有其他班級的課程",
+        "classroomLabel": "{{name}}",
+        "programsCount": "{{count}} 個課程",
+        "nameLabel": "新課程名稱（選填，留空使用原名）",
+        "namePlaceholder": "{{originalName}}",
+        "multipleNote": "已選擇 {{count}} 個課程，將使用原始名稱複製"
+      },
+      "custom": {
+        "nameLabel": "課程名稱",
+        "nameRequired": "*",
+        "namePlaceholder": "例如：進階英語會話",
+        "descLabel": "課程描述",
+        "descPlaceholder": "描述這個課程的內容和目標",
+        "levelLabel": "等級",
+        "hoursLabel": "預計時數",
+        "hoursPlaceholder": "20",
+        "tagsLabel": "標籤",
+        "levels": {
+          "A1": "A1 - 入門",
+          "A2": "A2 - 基礎",
+          "B1": "B1 - 中級",
+          "B2": "B2 - 中高級",
+          "C1": "C1 - 高級",
+          "C2": "C2 - 精通"
+        }
+      },
+      "buttons": {
+        "cancel": "取消",
+        "createSingle": "建立課程",
+        "createMultiple": "建立 {{count}} 個課程",
+        "creating": "建立中...",
+        "copySingle": "複製課程",
+        "copyMultiple": "複製 {{count}} 個課程",
+        "copying": "複製中...",
+        "createCustom": "建立自訂課程"
+      },
+      "duplicateWarning": "⚠️ 警告：以下課程已存在於班級中：\n\n{{names}}\n\n重複建立可能造成混淆，確定要繼續嗎？",
+      "success": {
+        "created": "成功建立 {{count}} 個課程！",
+        "copied": "成功複製 {{count}} 個課程！",
+        "custom": "成功建立自訂課程！"
+      },
+      "errors": {
+        "loadFailed": "載入課程資料失敗",
+        "createFailed": "建立失敗，請稍後再試",
+        "copyFailed": "複製失敗，請稍後再試"
+      }
+    },
+    "lessonDialog": {
+      "create": {
+        "title": "新增單元",
+        "description": "為課程新增學習單元"
+      },
+      "edit": {
+        "title": "編輯單元",
+        "description": "修改單元資訊"
+      },
+      "delete": {
+        "title": "確認刪除單元",
+        "description": "確定要刪除單元「{{name}}」嗎？此操作無法復原。",
+        "dataLabel": "單元資料：",
+        "confirmBtn": "確認刪除",
+        "deleting": "刪除中..."
+      },
+      "form": {
+        "nameLabel": "單元名稱",
+        "nameRequired": "*",
+        "namePlaceholder": "例：Unit 1: Greetings 打招呼",
+        "nameError": "單元名稱為必填",
+        "descLabel": "單元描述",
+        "descPlaceholder": "學習目標與內容簡述...",
+        "autoOrderNote": "ℹ️ 單元將自動排在課程最後"
+      },
+      "buttons": {
+        "cancel": "取消",
+        "create": "新增",
+        "save": "儲存",
+        "delete": "確認刪除",
+        "processing": "處理中...",
+        "deleting": "刪除中..."
+      },
+      "errors": {
+        "saveFailed": "儲存失敗，請稍後再試"
+      },
+      "success": {
+        "created": "單元「{{name}}」已新增",
+        "updated": "單元「{{name}}」已更新"
+      }
+    },
+    "programDialog": {
+      "create": {
+        "title": "建立新課程",
+        "description": "為班級建立新的課程內容"
+      },
+      "edit": {
+        "title": "編輯課程",
+        "description": "修改課程資訊"
+      },
+      "delete": {
+        "title": "確認刪除課程",
+        "description": "確定要刪除課程「{{name}}」嗎？此操作將同時刪除所有相關的單元。",
+        "dataLabel": "課程資料：",
+        "confirmBtn": "確認刪除",
+        "deleting": "刪除中...",
+        "warningLessons": "⚠️ 此課程包含 {{count}} 個課程單元"
+      },
+      "form": {
+        "nameLabel": "課程名稱",
+        "nameRequired": "*",
+        "namePlaceholder": "例：五年級英語基礎課程",
+        "nameError": "課程名稱為必填",
+        "descLabel": "課程描述",
+        "descPlaceholder": "課程的簡短描述...",
+        "levelLabel": "程度",
+        "levelRequired": "*",
+        "levelError": "程度為必填",
+        "levels": {
+          "PREA": "Pre-A",
+          "A1": "A1",
+          "A2": "A2",
+          "B1": "B1",
+          "B2": "B2",
+          "C1": "C1",
+          "C2": "C2"
+        },
+        "hoursLabel": "預估時數",
+        "hoursPlaceholder": "20",
+        "tagsLabel": "標籤",
+        "tagsNote": "(最多 5 個)",
+        "tagsPlaceholder": "按 Enter 新增標籤",
+        "tagsError": "最多只能新增 5 個標籤",
+        "tagsDuplicate": "此標籤已存在"
+      },
+      "buttons": {
+        "cancel": "取消",
+        "create": "建立",
+        "save": "儲存",
+        "delete": "確認刪除",
+        "processing": "處理中...",
+        "deleting": "刪除中..."
+      },
+      "errors": {
+        "saveFailed": "儲存失敗，請稍後再試",
+        "deleteFailed": "刪除失敗，請稍後再試"
+      }
+    },
+    "programDialogs": {
+      "view": {
+        "title": "課程詳情",
+        "idLabel": "ID: {{id}}",
+        "classroomLabel": "所屬班級",
+        "hoursLabel": "預計時數",
+        "hoursValue": "{{hours}} 小時",
+        "lessonsLabel": "課程單元",
+        "lessonsValue": "{{count}} 個課程單元",
+        "studentsLabel": "學生人數",
+        "studentsValue": "{{count}} 位學生"
+      },
+      "create": {
+        "title": "新增課程",
+        "description": "建立新的課程計畫"
+      },
+      "edit": {
+        "title": "編輯課程",
+        "description": "更新課程資訊"
+      },
+      "delete": {
+        "title": "確認刪除課程",
+        "description": "確定要刪除課程「{{name}}」嗎？此操作無法復原。",
+        "dataLabel": "課程資料：",
+        "classroom": "班級：{{name}}",
+        "warningLessons": "⚠️ 此課程包含 {{count}} 個課程單元"
+      },
+      "form": {
+        "nameLabel": "課程名稱",
+        "nameRequired": "*",
+        "namePlaceholder": "請輸入課程名稱",
+        "nameError": "課程名稱為必填",
+        "descLabel": "課程描述",
+        "descPlaceholder": "請輸入課程描述（選填）",
+        "classroomLabel": "所屬班級",
+        "classroomRequired": "*",
+        "classroomPlaceholder": "請選擇班級",
+        "classroomError": "請選擇班級",
+        "levelLabel": "課程等級",
+        "levels": {
+          "beginner": "初級",
+          "intermediate": "中級",
+          "advanced": "高級",
+          "expert": "專家"
+        },
+        "hoursLabel": "預計時數",
+        "hoursPlaceholder": "10",
+        "statusLabel": "狀態",
+        "statuses": {
+          "draft": "草稿",
+          "active": "進行中",
+          "archived": "已封存"
+        }
+      },
+      "buttons": {
+        "close": "關閉",
+        "edit": "編輯",
+        "cancel": "取消",
+        "create": "確定新增",
+        "save": "儲存變更",
+        "delete": "確認刪除",
+        "processing": "處理中...",
+        "deleting": "刪除中..."
+      },
+      "success": {
+        "created": "課程「{{name}}」已成功新增",
+        "updated": "課程「{{name}}」已更新",
+        "deleted": "課程「{{name}}」已刪除"
+      },
+      "errors": {
+        "saveFailed": "儲存失敗，請稍後再試",
+        "deleteFailed": "刪除失敗，請稍後再試"
+      }
+    },
+    "studentDialogs": {
+      "view": {
+        "title": "學生詳細資料",
+        "idLabel": "ID: {{id}}",
+        "studentNumber": "學號: {{number}}",
+        "emailLabel": "Email",
+        "phoneLabel": "電話",
+        "birthdateLabel": "生日",
+        "classroomLabel": "班級",
+        "classroomNone": "-",
+        "passwordLabel": "密碼狀態",
+        "passwordChanged": "已更改",
+        "passwordDefault": "預設密碼 ({{password}})",
+        "lastLoginLabel": "最後登入",
+        "lastLoginNever": "從未登入"
+      },
+      "create": {
+        "title": "新增學生",
+        "description": "填寫學生資料以新增學生。生日將作為預設密碼。"
+      },
+      "edit": {
+        "title": "編輯學生資料",
+        "description": "更新學生資料"
+      },
+      "delete": {
+        "title": "確認刪除學生",
+        "description": "確定要刪除學生「{{name}}」嗎？此操作無法復原。",
+        "dataLabel": "學生資料：",
+        "classroom": "班級：{{name}}"
+      },
+      "form": {
+        "nameLabel": "姓名",
+        "nameRequired": "*",
+        "namePlaceholder": "請輸入學生姓名",
+        "nameError": "姓名為必填",
+        "studentNumberLabel": "學號",
+        "studentNumberPlaceholder": "請輸入學號（選填）",
+        "emailLabel": "Email",
+        "emailOptional": "(選填)",
+        "emailPlaceholder": "student@example.com (選填)",
+        "emailError": "Email 格式不正確",
+        "phoneLabel": "電話",
+        "phonePlaceholder": "0912345678",
+        "birthdateLabel": "學生生日",
+        "birthdateRequired": "*",
+        "birthdateNote": "(請填寫學生的真實生日)",
+        "birthdateError": "生日為必填（用作預設密碼）",
+        "passwordNote": "⚠️ 學生登入密碼將設為: {{password}}",
+        "classroomLabel": "班級",
+        "classroomNone": "未分配班級",
+        "statusLabel": "狀態",
+        "statuses": {
+          "active": "活躍",
+          "inactive": "未活躍",
+          "suspended": "已停權"
+        }
+      },
+      "buttons": {
+        "close": "關閉",
+        "edit": "編輯",
+        "cancel": "取消",
+        "create": "新增",
+        "save": "儲存",
+        "delete": "確認刪除",
+        "processing": "處理中...",
+        "deleting": "刪除中..."
+      },
+      "success": {
+        "created": "學生「{{name}}」已成功新增",
+        "createdWithPassword": "預設密碼：{{password}}",
+        "updated": "學生「{{name}}」資料已更新",
+        "deleted": "學生「{{name}}」已刪除",
+        "warning": "⚠️ {{warning}}"
+      },
+      "errors": {
+        "saveFailed": "儲存失敗，請稍後再試",
+        "emailUsed": "Email已被使用，請使用其他Email",
+        "invalidBirthdate": "生日格式錯誤，請使用YYYY-MM-DD格式",
+        "fieldRequired": "請填寫所有必填欄位",
+        "deleteFailed": "刪除失敗，請稍後再試"
+      }
+    },
+    "studentImportDialog": {
+      "title": "批次匯入學生",
+      "steps": {
+        "title": "匯入步驟：",
+        "step1": "下載範本檔案",
+        "step2": "填寫學生資料（姓名、班級、生日）",
+        "step3": "上傳填寫好的檔案",
+        "step4": "確認資料無誤後執行匯入"
+      },
+      "duplicateHandling": {
+        "title": "重複學生處理方式：",
+        "skip": "跳過重複（預設）- 保留現有學生，跳過重複的資料",
+        "update": "更新資料 - 用新資料更新現有學生的生日（如密碼未改過也會更新）",
+        "addSuffix": "加上編號 - 在重複的姓名後加上編號（如：王小明-2）"
+      },
+      "buttons": {
+        "downloadTemplate": "下載範本",
+        "selectFile": "選擇檔案",
+        "cancel": "取消",
+        "import": "匯入 {{count}} 位學生",
+        "importing": "匯入中...",
+        "done": "完成"
+      },
+      "preview": {
+        "title": "預覽資料",
+        "valid": "有效: {{valid}} / 總計: {{total}}",
+        "columns": {
+          "status": "狀態",
+          "name": "姓名",
+          "classroom": "班級",
+          "birthdate": "生日",
+          "errors": "錯誤訊息"
+        }
+      },
+      "missingClassrooms": {
+        "title": "發現以下班級尚未建立：",
+        "description": "請先到「我的班級」頁面建立這些班級後，再重新上傳檔案。",
+        "goToClassrooms": "前往「我的班級」"
+      },
+      "results": {
+        "title": "匯入完成",
+        "success": "成功匯入: {{count}} 位學生",
+        "failed": "匯入失敗: {{count}} 位學生",
+        "skipNote": "已跳過重複的學生資料",
+        "updateNote": "已更新重複學生的資料",
+        "suffixNote": "重複的學生已加上編號區分"
+      },
+      "nextSteps": {
+        "title": "下一步：",
+        "password": "學生預設密碼為生日（格式：YYYYMMDD）",
+        "remind": "請提醒學生首次登入後修改密碼",
+        "viewStudents": "可以到「我的學生」頁面查看匯入的學生"
+      },
+      "errors": {
+        "fileTypeError": "請上傳 CSV 或 Excel 檔案",
+        "noData": "檔案沒有資料",
+        "noNameColumn": "找不到「姓名」欄位",
+        "importFailed": "匯入失敗",
+        "noValidData": "沒有有效的學生資料可以匯入",
+        "noStudentsFound": "沒有找到有效的學生資料"
+      },
+      "success": {
+        "templateDownloaded": "已下載範本檔案",
+        "imported": "成功匯入 {{count}} 位學生",
+        "partialFailed": "部分學生匯入失敗:\n{{errors}}"
+      }
+    }
+  },
+  "studentCompletionDashboard": {
+    "summary": {
+      "total": "總人數",
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "graded": "已批改"
+    },
+    "overallProgress": "整體完成進度",
+    "averageScore": "平均分數",
+    "searchPlaceholder": "搜尋學生姓名...",
+    "statusFilter": {
+      "all": "全部狀態",
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "已提交",
+      "graded": "已批改"
+    },
+    "table": {
+      "studentName": "學生姓名",
+      "pendingGrading": "待批改",
+      "graded": "已打正",
+      "pendingCorrection": "待訂正",
+      "pendingCompletion": "待完成",
+      "gradingComplete": "批改完"
+    },
+    "actions": {
+      "grade": "批改",
+      "view": "查看",
+      "remind": "提醒"
+    },
+    "messages": {
+      "openGrading": "開啟 {{name}} 的作業批改頁面",
+      "viewGrade": "查看 {{name}} 的批改結果 - 分數: {{score}}",
+      "reminderSent": "已發送提醒給 {{name}}",
+      "loadError": "無法載入學生狀態",
+      "noMatchingStudents": "沒有符合條件的學生"
+    }
+  },
+  "studentTable": {
+    "emptyState": {
+      "title": "尚無學生",
+      "addFirst": "新增第一位學生"
+    },
+    "total": "共 {{count}} 位學生",
+    "columns": {
+      "id": "ID",
+      "studentName": "學生姓名",
+      "contactInfo": "聯絡資訊",
+      "passwordStatus": "密碼狀態",
+      "status": "狀態",
+      "lastLogin": "最後登入",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "活躍",
+      "inactive": "未活躍",
+      "suspended": "已停權",
+      "unknown": "未知"
+    },
+    "passwordStatus": {
+      "changed": "已更改",
+      "notSet": "未設定生日",
+      "copyPassword": "複製密碼: {{password}}",
+      "passwordCopied": "密碼已複製: {{password}}",
+      "resetToDefault": "重設為預設密碼"
+    },
+    "classroom": {
+      "unassigned": "未分配"
+    },
+    "lastLogin": {
+      "never": "從未登入",
+      "daysAgo": "{{days}} 天前"
+    },
+    "actions": {
+      "view": "查看",
+      "viewDetails": "查看詳情",
+      "edit": "編輯",
+      "delete": "刪除",
+      "deleteConfirm": "確定要刪除學生「{{name}}」嗎？",
+      "deleteConfirmPermanent": "確定要刪除學生「{{name}}」嗎？此操作無法復原。"
+    },
+    "info": {
+      "email": "Email:",
+      "phone": "電話:",
+      "classroom": "班級:",
+      "password": "密碼:",
+      "lastLogin": "最後登入:"
+    }
+  },
+  "subscriptionProgressBanner": {
+    "subscribing": "正在訂閱: {{plan}}",
+    "steps": {
+      "selectPlan": "選擇方案",
+      "login": "登入帳號",
+      "payment": "填寫付款資訊",
+      "complete": "完成訂閱"
+    }
+  },
+  "teacherLayout": {
+    "title": "Duotopia",
+    "subtitle": "教師後台",
+    "nav": {
+      "dashboard": "儀表板",
+      "myClassrooms": "我的班級",
+      "allStudents": "所有學生",
+      "publicPrograms": "公版課程",
+      "subscription": "訂閱管理",
+      "systemAdmin": "系統管理"
+    }
+  },
+  "teacherSubscriptionBanner": {
+    "status": {
+      "subscribed": "訂閱狀態：已訂閱",
+      "notSubscribed": "訂閱狀態：未訂閱"
+    },
+    "expiry": {
+      "expiresIn": "您的訂閱在 {{days}} 天後到期",
+      "expiryDate": "到期日: {{date}}",
+      "daysRemaining": "剩餘天數"
+    },
+    "noSubscription": "您目前沒有有效的訂閱方案",
+    "actions": {
+      "renewNow": "立即續訂",
+      "viewPlans": "查看訂閱方案"
+    }
+  },
+  "readingAssessmentPanel": {
+    "title": "標題",
+    "titleRequired": "請輸入內容標題",
+    "batchActions": {
+      "batchPaste": "批次貼上",
+      "batchPasteTooltip": "批次貼上素材，每行一個項目",
+      "batchGenerateTTS": "批次生成TTS",
+      "batchGenerateTTSTooltip": "使用免費的 Microsoft Edge TTS 生成語音",
+      "batchGenerateTranslation": "批次生成翻譯",
+      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）"
+    },
+    "row": {
+      "dragToReorder": "拖曳以重新排序",
+      "textPlaceholder": "輸入文本",
+      "playAudio": "播放音檔",
+      "openTTSRecording": "開啟 TTS/錄音",
+      "rerecordGenerate": "重新錄製/生成",
+      "removeAudio": "移除音檔",
+      "noAudio": "沒有音檔可播放",
+      "playbackError": "音檔播放失敗，請檢查音檔格式",
+      "playbackFailed": "無法播放音檔",
+      "chineseTranslation": "中文翻譯",
+      "englishDefinition": "英文釋義",
+      "generateChinese": "生成中文翻譯",
+      "generateEnglish": "生成英文釋義",
+      "duplicate": "複製",
+      "delete": "刪除",
+      "addItem": "新增項目",
+      "maxRowsReached": "最多只能新增 15 列",
+      "minRowsRequired": "至少需要保留 1 列"
+    },
+    "ttsModal": {
+      "title": "音檔設定",
+      "tabs": {
+        "generate": "Generate",
+        "record": "Record"
+      },
+      "generate": {
+        "textLabel": "Text",
+        "textPlaceholder": "Enter text to generate speech",
+        "accent": "Accent",
+        "gender": "Gender",
+        "speed": "Speed",
+        "generating": "Generating...",
+        "generate": "Generate",
+        "play": "播放生成的音檔",
+        "audioReady": "TTS 音檔已準備",
+        "audioGenerated": "音檔已生成！點擊播放按鈕試聽",
+        "ttsDeleted": "已刪除 TTS 音檔",
+        "generateSuccess": "音檔生成成功！點擊播放按鈕試聽",
+        "generateFailed": "生成失敗，請重試"
+      },
+      "record": {
+        "startRecording": "開始錄音",
+        "stopRecording": "停止錄音",
+        "reRecord": "重新錄製",
+        "maxDuration": "最長錄音時間 30 秒",
+        "maxDurationReached": "已達到最長錄音時間 30 秒",
+        "recordingReady": "錄音檔案已準備 ({{duration}}秒)",
+        "recordingDeleted": "已刪除錄音檔案",
+        "recordingStarted": "開始錄音",
+        "recordingComplete": "錄音完成！可以試聽或重新錄製",
+        "micPermissionDenied": "無法啟動錄音，請檢查麥克風權限",
+        "fileTooLarge": "錄音檔案太大，請縮短錄音時間",
+        "recordingFailed": "錄音失敗，請檢查麥克風權限",
+        "uploading": "正在上傳錄音檔案...",
+        "playFailed": "無法播放錄音"
+      },
+      "sourceSelection": {
+        "title": "您有兩種音源可選擇，請選擇要使用的音檔：",
+        "tts": "TTS 語音",
+        "ttsSubtitle": "AI 生成",
+        "recording": "錄音檔案",
+        "recordingSubtitle": "教師錄製",
+        "pleaseSelect": "請選擇要使用的音源（TTS 或錄音）"
+      },
+      "actions": {
+        "close": "Close",
+        "confirm": "Confirm"
+      },
+      "messages": {
+        "noAudioGenerated": "請先生成或錄製音檔",
+        "uploadRetrying": "上傳失敗，正在重試... (第 {{attempt}}/3 次)",
+        "uploadFailed": "上傳失敗，請檢查網路連線後重試",
+        "audioRemoved": "已移除音檔",
+        "removeAudioFailed": "移除音檔失敗"
+      }
+    },
+    "batchPasteDialog": {
+      "title": "批次貼上素材",
+      "description": "每行一個項目，支援自動生成 TTS 與翻譯",
+      "inputLabel": "請貼上內容：",
+      "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
+      "itemCount": "{{count}} 個項目",
+      "autoGenerateTTS": "自動生成 TTS",
+      "autoTranslate": "自動翻譯",
+      "cancel": "取消",
+      "confirmPaste": "確認貼上",
+      "messages": {
+        "noContent": "請輸入內容",
+        "processing": "正在處理 {{count}} 個項目...",
+        "batchProcessingFailed": "批次處理失敗",
+        "addedAndSaved": "已新增 {{count}} 個項目並儲存（共 {{total}} 個）",
+        "addedAndCreated": "已新增 {{count}} 個項目並創建內容",
+        "added": "已新增 {{count}} 個項目（共 {{total}} 個）",
+        "saveFailed": "儲存失敗，請稍後再試"
+      }
+    },
+    "translation": {
+      "enterTextFirst": "請先輸入文本",
+      "translating": "生成翻譯中...",
+      "chineseComplete": "中文翻譯生成完成",
+      "englishComplete": "英文釋義生成完成",
+      "translationFailed": "翻譯失敗，請稍後再試",
+      "noItemsToTranslate": "沒有需要翻譯的項目",
+      "batchTranslating": "開始批次生成翻譯...",
+      "batchComplete": "批次翻譯完成！處理了 {{count}} 個項目",
+      "batchFailed": "批次翻譯失敗，請稍後再試"
+    },
+    "tts": {
+      "noItemsToGenerate": "所有項目都已有音檔",
+      "batchGenerating": "正在生成 {{count}} 個音檔...",
+      "batchSuccess": "成功生成 {{count}} 個音檔！音檔將在儲存內容時一併上傳。",
+      "batchSuccessAndSaved": "成功生成並儲存 {{count}} 個音檔！",
+      "batchFailed": "批次生成失敗，請重試",
+      "saveFailed": "儲存失敗，但音檔已生成"
+    },
+    "save": {
+      "button": "儲存",
+      "loading": "載入中...",
+      "atLeastOneItem": "請至少新增一個內容項目",
+      "titleRequired": "請輸入標題",
+      "saveSuccess": "儲存成功",
+      "saveFailed": "儲存失敗",
+      "createSuccess": "內容已成功創建",
+      "createFailed": "創建內容失敗",
+      "loadFailed": "載入內容失敗",
+      "updateFailed": "更新失敗，但音檔已生成"
     }
   }
 }

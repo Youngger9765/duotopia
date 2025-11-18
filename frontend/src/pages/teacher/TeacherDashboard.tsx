@@ -5,6 +5,7 @@ import TeacherLayout from "@/components/TeacherLayout";
 import { Users, UserCheck, BookOpen, Settings } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface DashboardData {
   teacher: {
@@ -36,6 +37,7 @@ interface DashboardData {
 }
 
 export default function TeacherDashboard() {
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
   );
@@ -68,7 +70,9 @@ export default function TeacherDashboard() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">
+              {t("teacherDashboard.loading")}
+            </p>
           </div>
         </div>
       </TeacherLayout>
@@ -79,7 +83,9 @@ export default function TeacherDashboard() {
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">載入失敗，請重新整理</p>
+          <p className="text-gray-500">
+            {t("teacherDashboard.error.loadFailed")}
+          </p>
         </div>
       </TeacherLayout>
     );
@@ -89,7 +95,9 @@ export default function TeacherDashboard() {
     <TeacherLayout>
       <div>
         <h2 className="text-3xl font-bold text-gray-900 mb-6">
-          歡迎回來，{dashboardData.teacher.name}！
+          {t("teacherDashboard.welcome.title", {
+            name: dashboardData.teacher.name,
+          })}
         </h2>
 
         {/* Subscription Status Card - Always Show */}
@@ -105,17 +113,19 @@ export default function TeacherDashboard() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   {dashboardData.subscription_status === "subscribed"
-                    ? "✅ 訂閱狀態：已訂閱"
-                    : "⚠️ 訂閱狀態：未訂閱"}
+                    ? t("teacherDashboard.subscription.statusSubscribed")
+                    : t("teacherDashboard.subscription.statusNotSubscribed")}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {dashboardData.subscription_status === "subscribed"
-                    ? `您的訂閱將在 ${dashboardData.days_remaining || 0} 天後到期`
-                    : "您目前沒有有效訂閱，部分功能將受限"}
+                    ? t("teacherDashboard.subscription.willExpireIn", {
+                        days: dashboardData.days_remaining || 0,
+                      })
+                    : t("teacherDashboard.subscription.noActiveSubscription")}
                 </p>
                 {dashboardData.subscription_end_date && (
                   <p className="text-xs text-gray-500 mt-2">
-                    到期日:{" "}
+                    {t("teacherDashboard.subscription.expiryDateLabel")}{" "}
                     {new Date(
                       dashboardData.subscription_end_date,
                     ).toLocaleDateString("zh-TW")}
@@ -134,7 +144,9 @@ export default function TeacherDashboard() {
                     ? dashboardData.days_remaining
                     : 0}
                 </div>
-                <div className="text-sm text-gray-600">剩餘天數</div>
+                <div className="text-sm text-gray-600">
+                  {t("teacherDashboard.subscription.remainingDays")}
+                </div>
               </div>
             </div>
 
@@ -146,10 +158,10 @@ export default function TeacherDashboard() {
                   className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  模擬訂閱充值（測試用）
+                  {t("teacherDashboard.subscription.testModeButton")}
                 </Button>
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  點擊可模擬充值、過期等不同訂閱狀態
+                  {t("teacherDashboard.subscription.testModeDescription")}
                 </p>
               </div>
             )}
@@ -160,7 +172,9 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">班級數量</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {t("teacherDashboard.stats.classrooms")}
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -172,7 +186,9 @@ export default function TeacherDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">學生總數</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {t("teacherDashboard.stats.students")}
+              </CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -184,7 +200,9 @@ export default function TeacherDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">課程計畫</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {t("teacherDashboard.stats.programs")}
+              </CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -199,7 +217,7 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>班級概覽</CardTitle>
+              <CardTitle>{t("teacherDashboard.classrooms.title")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -216,7 +234,9 @@ export default function TeacherDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        {classroom.student_count} 位學生
+                        {t("teacherDashboard.classrooms.studentCount", {
+                          count: classroom.student_count,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -227,7 +247,7 @@ export default function TeacherDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>最近活動學生</CardTitle>
+              <CardTitle>{t("teacherDashboard.students.title")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">

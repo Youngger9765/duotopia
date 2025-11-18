@@ -1,5 +1,6 @@
 import React from "react";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface SubscriptionProgressBannerProps {
   currentStep: "select-plan" | "login" | "payment" | "complete";
@@ -10,11 +11,29 @@ export default function SubscriptionProgressBanner({
   currentStep,
   selectedPlan,
 }: SubscriptionProgressBannerProps) {
+  const { t } = useTranslation();
+
   const steps = [
-    { id: "select-plan", label: "選擇方案", icon: "1" },
-    { id: "login", label: "登入帳號", icon: "2" },
-    { id: "payment", label: "填寫付款資訊", icon: "3" },
-    { id: "complete", label: "完成訂閱", icon: "4" },
+    {
+      id: "select-plan",
+      label: t("subscriptionProgressBanner.steps.selectPlan"),
+      icon: "1",
+    },
+    {
+      id: "login",
+      label: t("subscriptionProgressBanner.steps.login"),
+      icon: "2",
+    },
+    {
+      id: "payment",
+      label: t("subscriptionProgressBanner.steps.payment"),
+      icon: "3",
+    },
+    {
+      id: "complete",
+      label: t("subscriptionProgressBanner.steps.complete"),
+      icon: "4",
+    },
   ];
 
   const getStepStatus = (stepId: string) => {
@@ -32,7 +51,9 @@ export default function SubscriptionProgressBanner({
         {selectedPlan && (
           <div className="text-center mb-3">
             <span className="text-sm text-blue-700">
-              正在訂閱: <strong>{selectedPlan}</strong>
+              {t("subscriptionProgressBanner.subscribing", {
+                plan: selectedPlan,
+              })}
             </span>
           </div>
         )}

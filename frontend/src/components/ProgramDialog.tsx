@@ -11,6 +11,7 @@ import {
 import { AlertTriangle } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Program } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface ProgramDialogProps {
   program: Program | null;
@@ -42,6 +43,7 @@ export function ProgramDialog({
   onSave,
   onDelete,
 }: ProgramDialogProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ProgramFormData>({
     name: "",
     description: "",
@@ -182,7 +184,7 @@ export function ProgramDialog({
       onClose();
     } catch (error) {
       console.error("Failed to delete program:", error);
-      alert("刪除失敗，請稍後再試");
+      alert(t("dialogs.programDialog.errors.deleteFailed"));
     } finally {
       setLoading(false);
     }

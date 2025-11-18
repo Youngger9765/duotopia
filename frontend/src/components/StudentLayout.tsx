@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Home,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 export default function StudentLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useStudentAuthStore();
@@ -30,37 +32,37 @@ export default function StudentLayout() {
   const navItems = [
     {
       path: "/student/dashboard",
-      label: "首頁",
+      label: t("studentLayout.nav.home"),
       icon: Home,
       disabled: false,
     },
     {
       path: "/student/assignments",
-      label: "我的作業",
+      label: t("studentLayout.nav.assignments"),
       icon: BookOpen,
       disabled: false,
     },
     {
       path: "/student/progress",
-      label: "學習進度",
+      label: t("studentLayout.nav.progress"),
       icon: BarChart3,
       disabled: true,
     },
     {
       path: "/student/achievements",
-      label: "成就",
+      label: t("studentLayout.nav.achievements"),
       icon: Trophy,
       disabled: true,
     },
     {
       path: "/student/calendar",
-      label: "行事曆",
+      label: t("studentLayout.nav.calendar"),
       icon: Calendar,
       disabled: true,
     },
     {
       path: "/student/messages",
-      label: "訊息",
+      label: t("studentLayout.nav.messages"),
       icon: MessageSquare,
       disabled: true,
     },
@@ -69,13 +71,13 @@ export default function StudentLayout() {
   const bottomNavItems = [
     {
       path: "/student/profile",
-      label: "個人資料",
+      label: t("studentLayout.nav.profile"),
       icon: User,
       disabled: false,
     },
     {
       path: "/student/settings",
-      label: "設定",
+      label: t("studentLayout.nav.settings"),
       icon: Settings,
       disabled: true,
     },
@@ -126,9 +128,12 @@ export default function StudentLayout() {
                 {user?.name?.charAt(0).toUpperCase() || "S"}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-sm">{user?.name || "學生"}</p>
+                <p className="font-semibold text-sm">
+                  {user?.name || t("studentLayout.userInfo.defaultStudent")}
+                </p>
                 <p className="text-xs text-gray-600">
-                  {user?.classroom_name || "班級"}
+                  {user?.classroom_name ||
+                    t("studentLayout.userInfo.defaultClass")}
                 </p>
               </div>
             </div>
@@ -230,7 +235,7 @@ export default function StudentLayout() {
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 mr-3" />
-            登出
+            {t("studentLayout.nav.logout")}
           </Button>
         </div>
       </aside>
@@ -254,10 +259,10 @@ export default function StudentLayout() {
                 <div>
                   <h1 className="text-xl font-semibold text-gray-900">
                     {navItems.find((item) => isActive(item.path))?.label ||
-                      "學生專區"}
+                      t("studentLayout.header.defaultTitle")}
                   </h1>
                   <p className="text-sm text-gray-600">
-                    歡迎回來，{user?.name}！今天也要加油學習喔！
+                    {t("studentLayout.header.welcome", { name: user?.name })}
                   </p>
                 </div>
               </div>
@@ -265,12 +270,18 @@ export default function StudentLayout() {
               {/* Quick Stats */}
               <div className="hidden sm:flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-sm text-gray-600">連續學習</p>
-                  <p className="text-lg font-semibold text-green-600">7 天</p>
+                  <p className="text-sm text-gray-600">
+                    {t("studentLayout.stats.streak")}
+                  </p>
+                  <p className="text-lg font-semibold text-green-600">
+                    {t("studentLayout.stats.days", { count: 7 })}
+                  </p>
                 </div>
                 <div className="h-10 w-px bg-gray-200" />
                 <div className="text-right">
-                  <p className="text-sm text-gray-600">本週進度</p>
+                  <p className="text-sm text-gray-600">
+                    {t("studentLayout.stats.weekProgress")}
+                  </p>
                   <p className="text-lg font-semibold text-blue-600">85%</p>
                 </div>
               </div>

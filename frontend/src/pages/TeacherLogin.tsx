@@ -15,9 +15,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Zap, Home } from "lucide-react";
 import { apiClient } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useTranslation } from "react-i18next";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -52,7 +54,11 @@ export default function TeacherLogin() {
       navigate("/teacher/dashboard");
     } catch (err) {
       console.error("🔑 [ERROR] 登入失敗:", err);
-      setError(err instanceof Error ? err.message : "登入失敗，請檢查帳號密碼");
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("teacherLogin.errors.loginFailed"),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +85,7 @@ export default function TeacherLogin() {
       navigate("/teacher/dashboard");
     } catch (err) {
       console.error("🔑 [ERROR] 快速登入失敗:", err);
-      setError(`${email} 帳號登入失敗`);
+      setError(t("teacherLogin.errors.quickLoginFailed", { email }));
     } finally {
       setIsLoading(false);
     }
@@ -95,33 +101,37 @@ export default function TeacherLogin() {
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 h-12 min-h-12"
           >
             <Home className="h-4 w-4" />
-            <span>返回首頁</span>
+            <span>{t("teacherLogin.header.home")}</span>
           </Button>
         </Link>
       </div>
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Duotopia</h1>
-          <p className="text-gray-600">AI 驅動的英語學習平台</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            {t("teacherLogin.header.title")}
+          </h1>
+          <p className="text-gray-600">{t("teacherLogin.header.subtitle")}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>教師登入</CardTitle>
-            <CardDescription>使用您的 Email 帳號登入教師後台</CardDescription>
+            <CardTitle>{t("teacherLogin.header.cardTitle")}</CardTitle>
+            <CardDescription>
+              {t("teacherLogin.header.cardDescription")}
+            </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("teacherLogin.form.email")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="teacher@example.com"
+                    placeholder={t("teacherLogin.form.emailPlaceholder")}
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -134,13 +144,15 @@ export default function TeacherLogin() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">密碼</Label>
+                <Label htmlFor="password">
+                  {t("teacherLogin.form.password")}
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("teacherLogin.form.passwordPlaceholder")}
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
@@ -166,10 +178,10 @@ export default function TeacherLogin() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    登入中...
+                    {t("teacherLogin.form.loggingIn")}
                   </>
                 ) : (
-                  "登入"
+                  t("teacherLogin.form.login")
                 )}
               </Button>
 
@@ -178,7 +190,7 @@ export default function TeacherLogin() {
                   to="/teacher/forgot-password"
                   className="text-sm text-blue-600 hover:underline"
                 >
-                  忘記密碼？
+                  {t("teacherLogin.form.forgotPassword")}
                 </Link>
               </div>
             </form>
@@ -192,7 +204,7 @@ export default function TeacherLogin() {
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-2 bg-white text-gray-500">
-                      測試帳號快速登入
+                      {t("teacherLogin.demo.separator")}
                     </span>
                   </div>
                 </div>
@@ -208,10 +220,10 @@ export default function TeacherLogin() {
                     <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
                       <div className="font-medium">
-                        Demo 教師（已充值300天）
+                        {t("teacherLogin.demo.demoTeacher")}
                       </div>
                       <div className="text-xs text-gray-500">
-                        demo@duotopia.com
+                        {t("teacherLogin.demo.demoEmail")}
                       </div>
                     </div>
                   </Button>
@@ -226,10 +238,10 @@ export default function TeacherLogin() {
                     <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
                       <div className="font-medium text-xs sm:text-sm truncate">
-                        試用教師（30天試用期）
+                        {t("teacherLogin.demo.trialTeacher")}
                       </div>
                       <div className="text-xs text-gray-500">
-                        trial@duotopia.com
+                        {t("teacherLogin.demo.trialEmail")}
                       </div>
                     </div>
                   </Button>
@@ -243,9 +255,11 @@ export default function TeacherLogin() {
                   >
                     <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
-                      <div className="font-medium">過期教師（未訂閱）</div>
+                      <div className="font-medium">
+                        {t("teacherLogin.demo.expiredTeacher")}
+                      </div>
                       <div className="text-xs text-gray-500">
-                        expired@duotopia.com
+                        {t("teacherLogin.demo.expiredEmail")}
                       </div>
                     </div>
                   </Button>
@@ -256,12 +270,12 @@ export default function TeacherLogin() {
 
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-gray-600">
-              還沒有帳號？
+              {t("teacherLogin.footer.noAccount")}
               <Link
                 to="/teacher/register"
                 className="text-blue-600 hover:underline ml-1"
               >
-                立即註冊
+                {t("teacherLogin.footer.register")}
               </Link>
             </div>
             <div className="text-sm text-center text-gray-600">
@@ -269,7 +283,7 @@ export default function TeacherLogin() {
                 to="/student/login"
                 className="text-blue-600 hover:underline"
               >
-                學生登入入口
+                {t("teacherLogin.footer.studentLogin")}
               </Link>
             </div>
           </CardFooter>
@@ -279,12 +293,12 @@ export default function TeacherLogin() {
         {showDemoBlocks && (
           <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
             <div className="font-semibold mb-1">
-              🔐 測試帳號密碼均為：demo123
+              {t("teacherLogin.demo.passwordHint")}
             </div>
             <div className="space-y-1">
-              <div>✅ demo@duotopia.com - 已充值300天</div>
-              <div>🎁 trial@duotopia.com - 30天試用期</div>
-              <div>❌ expired@duotopia.com - 未訂閱/已過期</div>
+              <div>✅ {t("teacherLogin.demo.demoDescription")}</div>
+              <div>🎁 {t("teacherLogin.demo.trialDescription")}</div>
+              <div>❌ {t("teacherLogin.demo.expiredDescription")}</div>
             </div>
           </div>
         )}

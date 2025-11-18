@@ -296,7 +296,15 @@
       "trialRemaining": "Your free trial expires in {{days}} days",
       "expiryDate": "Expiry Date: {{date}}",
       "daysRemaining": "{{days}} days remaining in free trial",
-      "days": "days"
+      "days": "days",
+      "statusSubscribed": "✅ Subscription Status: Active",
+      "statusNotSubscribed": "⚠️ Subscription Status: Inactive",
+      "willExpireIn": "Your subscription will expire in {{days}} days",
+      "noActiveSubscription": "You currently have no active subscription, some features may be limited",
+      "expiryDateLabel": "Expiry Date:",
+      "remainingDays": "Days Remaining",
+      "testModeButton": "Simulate Subscription Recharge (Test Only)",
+      "testModeDescription": "Click to simulate recharge, expiry, and other subscription states"
     },
     "stats": {
       "classrooms": "Classrooms",
@@ -482,6 +490,1292 @@
         "confirm": "Are you sure you want to refund?",
         "processing": "Processing refund..."
       }
+    }
+  },
+  "studentAssignmentList": {
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Unable to load assignment list"
+    },
+    "flowStatus": {
+      "title": "Assignment Progress Flow",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "returned": "Returned for Revision",
+      "resubmitted": "Resubmitted",
+      "graded": "Completed"
+    },
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "graded": "Graded",
+      "returned": "Returned",
+      "resubmitted": "Resubmitted"
+    },
+    "progress": {
+      "title": "Completion Progress",
+      "activities": "{{completed}} / {{total}} activities"
+    },
+    "contentType": {
+      "default": "Reading Practice"
+    },
+    "dueDate": {
+      "overdue": "Overdue by {{days}} day(s)",
+      "today": "Due today",
+      "remaining": "Due in {{days}} day(s)"
+    },
+    "score": {
+      "label": "Score: {{score}}"
+    },
+    "buttons": {
+      "start": "Start Assignment",
+      "continue": "Continue Assignment",
+      "view": "View Assignment",
+      "viewResults": "View Results",
+      "resubmit": "Resubmit"
+    },
+    "emptyStates": {
+      "notStarted": {
+        "title": "No assignments to start",
+        "description": "All assignments have been started!"
+      },
+      "inProgress": {
+        "title": "No assignments in progress",
+        "description": "Start practicing your assignments!"
+      },
+      "submitted": {
+        "title": "No assignments pending grading",
+        "description": "Submitted assignments will appear here."
+      },
+      "graded": {
+        "title": "No completed assignments",
+        "description": "Completed and graded assignments will appear here. You can view detailed scores."
+      },
+      "returned": {
+        "title": "No assignments need revision",
+        "description": "Assignments that need to be redone will appear here."
+      },
+      "resubmitted": {
+        "title": "No resubmitted assignments",
+        "description": "Resubmitted assignments will appear here."
+      }
+    }
+  },
+  "studentAssignmentDetail": {
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Unable to load assignment details",
+      "notFound": "Assignment details not found"
+    },
+    "buttons": {
+      "back": "Back to Assignment List",
+      "start": "Start",
+      "continue": "Continue",
+      "view": "View Assignment",
+      "startAssignment": "Start Assignment",
+      "continueAssignment": "Continue Assignment",
+      "resubmit": "Resubmit"
+    },
+    "overview": {
+      "estimatedTime": "Estimated time: {{time}}",
+      "targetWPM": "Target speed: {{wpm}} WPM",
+      "targetAccuracy": "Target accuracy: {{accuracy}}%"
+    },
+    "progress": {
+      "title": "Activity Progress",
+      "completed": "{{completed}} / {{total}} Completed",
+      "empty": "This assignment does not yet contain any activities",
+      "activityNumber": "Activity {{number}}"
+    },
+    "contentTypes": {
+      "reading_assessment": "Reading Assessment",
+      "listening": "Listening Practice",
+      "grouped_questions": "Basic Greetings Practice"
+    },
+    "scoring": {
+      "title": "Overall Evaluation",
+      "score": "Score",
+      "scoreUnit": " pts",
+      "detailRecord": "Detailed Record"
+    },
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "graded": "Graded",
+      "returned": "Returned",
+      "resubmitted": "Resubmitted"
+    },
+    "dueDate": {
+      "overdue": "Overdue by {{days}} day(s)",
+      "today": "Due today",
+      "remaining": "Due in {{days}} day(s)"
+    }
+  },
+  "studentActivityPage": {
+    "buttons": {
+      "back": "Back to Assignment",
+      "backShort": "Back",
+      "submit": "Submit Assignment",
+      "submitShort": "Submit",
+      "submitting": "Submitting...",
+      "submittingShort": "Submitting",
+      "previous": "Previous",
+      "next": "Next",
+      "confirm": "Confirm Submission",
+      "cancel": "Review Again"
+    },
+    "status": {
+      "saving": "Auto-saving...",
+      "savingShort": "Saving",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started"
+    },
+    "activityTypes": {
+      "reading": "Reading Recording",
+      "listening": "Listening Cloze",
+      "speaking": "Speaking Practice"
+    },
+    "warnings": {
+      "previewNoRecord": "Cannot record in preview mode",
+      "readonlyNoRecord": "Cannot record in view mode",
+      "previewNoUpload": "Cannot upload in preview mode",
+      "readonlyNoUpload": "Cannot upload in view mode",
+      "recordingLimit": "Recording reached 45s limit, auto-stopped"
+    },
+    "validation": {
+      "title": "Please complete the following items",
+      "incompleteItems": "Incomplete items:"
+    },
+    "feedback": {
+      "passed": "Passed",
+      "failed": "Failed"
+    }
+  },
+  "studentProfile": {
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Unable to load profile",
+      "loadError": "Failed to load profile",
+      "invalidEmail": "Please enter a valid email address",
+      "updateFailed": "Update failed: {{error}}",
+      "updateError": "Failed to update email",
+      "unbindFailed": "Unbind failed: {{error}}",
+      "unbindError": "Failed to unbind email"
+    },
+    "success": {
+      "verificationSent": "Verification email sent to new address",
+      "emailUpdated": "Email updated successfully",
+      "emailUnbound": "Email unbound successfully"
+    },
+    "header": {
+      "back": "Back",
+      "title": "Profile"
+    },
+    "basicInfo": {
+      "title": "Basic Information",
+      "name": "Name",
+      "birthday": "Birthday",
+      "classroom": "Classroom",
+      "classroomNone": "No classroom assigned",
+      "school": "School",
+      "schoolNone": "No school set",
+      "notSet": "Not set"
+    },
+    "email": {
+      "title": "Email Settings",
+      "noEmail": "No email set",
+      "verified": "Verified",
+      "verifiedAt": "Verified on {{date}}",
+      "unverified": "Not verified",
+      "pending": "Pending verification",
+      "newEmail": "New email address",
+      "placeholder": "Enter new email address",
+      "update": "Update",
+      "setup": "Set up",
+      "unbind": "Unbind",
+      "confirm": "Confirm Update",
+      "updating": "Updating...",
+      "cancel": "Cancel"
+    },
+    "unbindDialog": {
+      "title": "Are you sure you want to unbind email?",
+      "description": "You will not receive learning reminders and important notifications after unbinding.",
+      "confirm": "Confirm Unbind",
+      "unbinding": "Unbinding...",
+      "cancel": "Cancel"
+    },
+    "account": {
+      "title": "Account Information",
+      "id": "Account ID",
+      "registeredAt": "Registered At",
+      "logout": "Logout"
+    }
+  },
+  "teacherLogin": {
+    "header": {
+      "home": "Back to Home",
+      "title": "Duotopia",
+      "subtitle": "AI-Powered English Learning Platform",
+      "cardTitle": "Teacher Login",
+      "cardDescription": "Sign in with your email account"
+    },
+    "form": {
+      "email": "Email",
+      "emailPlaceholder": "teacher@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "login": "Login",
+      "loggingIn": "Logging in...",
+      "forgotPassword": "Forgot password?"
+    },
+    "demo": {
+      "separator": "Quick Login with Test Accounts",
+      "demoTeacher": "Demo Teacher (300 days prepaid)",
+      "demoEmail": "demo@duotopia.com",
+      "trialTeacher": "Trial Teacher (30-day trial)",
+      "trialEmail": "trial@duotopia.com",
+      "expiredTeacher": "Expired Teacher (Unsubscribed)",
+      "expiredEmail": "expired@duotopia.com",
+      "passwordHint": "🔐 All test account passwords: demo123",
+      "demoDescription": "demo@duotopia.com - 300 days prepaid",
+      "trialDescription": "trial@duotopia.com - 30-day trial",
+      "expiredDescription": "expired@duotopia.com - Unsubscribed/Expired"
+    },
+    "footer": {
+      "noAccount": "Don't have an account?",
+      "register": "Sign Up Now",
+      "studentLogin": "Student Login Portal"
+    },
+    "errors": {
+      "loginFailed": "Login failed, please check your credentials",
+      "quickLoginFailed": "{{email}} login failed"
+    }
+  },
+  "studentLogin": {
+    "header": {
+      "home": "Back to Home",
+      "welcome": "Hi, Welcome to Duotopia!"
+    },
+    "step1": {
+      "title": "Enter Teacher's Email",
+      "placeholder": "teacher@example.com",
+      "next": "Next",
+      "demoTeacher": "🎯 Use Demo Teacher (demo@duotopia.com)",
+      "quickTest": "Quick Test:",
+      "recentTeachers": "Or select a recently used teacher:"
+    },
+    "step2": {
+      "title": "Select Your Class and Name"
+    },
+    "step3": {
+      "title": "Select Your Name"
+    },
+    "step4": {
+      "greeting": "Hello, {{name}}!",
+      "placeholder": "Enter your password",
+      "login": "Login",
+      "selectOther": "Select Another Student",
+      "demoHint": "💡 Test Hint",
+      "demoPassword": "Default demo password:",
+      "passwordFormat": "For production use, password is student's birthday (Format: YYYYMMDD)"
+    },
+    "buttons": {
+      "back": "Back"
+    },
+    "errors": {
+      "teacherNotFound": "Teacher account not found",
+      "teacherValidationFailed": "Unable to verify teacher account, please try again later",
+      "loadClassroomFailed": "Unable to load classroom student data",
+      "loginFailed": "Incorrect password, please try again"
+    }
+  },
+  "studentDashboard": {
+    "welcome": {
+      "greeting": "Hello, {{name}}! Welcome back to Duotopia 🚀",
+      "subtitle": "Continue your English learning journey"
+    },
+    "email": {
+      "verified": "Verified",
+      "unverified": "Pending",
+      "profile": "Profile",
+      "setupTitle": "📧 Set Up Email Notifications",
+      "yourEmail": "Your Email Address",
+      "emailPlaceholder": "Enter your email address",
+      "verifyButton": "Verify My Email",
+      "sending": "Sending...",
+      "note": "📌 After clicking Send Verification, an email will be sent to your inbox. Click the link in the email to complete setup"
+    },
+    "stats": {
+      "completedAssignments": "Completed",
+      "averageScore": "Avg Score",
+      "practiceTime": "Practice Time",
+      "practiceDays": "Practice Days",
+      "scoreUnit": "pts",
+      "minutesUnit": "min",
+      "daysUnit": "days"
+    },
+    "assignments": {
+      "title": "My Assignments",
+      "viewAll": "View All",
+      "startPractice": "Start Practice",
+      "viewResults": "View Results",
+      "dueDate": "Due Date:",
+      "score": "Score:",
+      "readingAssessment": "Reading Assessment"
+    },
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "graded": "Graded",
+      "returned": "Returned"
+    },
+    "errors": {
+      "loadAssignments": "Failed to load assignments",
+      "invalidEmail": "Please enter a valid email address",
+      "updateEmailFailed": "Setup failed, please try again later"
+    },
+    "success": {
+      "verificationSent": "Verification email sent! Please check your inbox",
+      "emailUpdated": "Email updated successfully"
+    }
+  },
+  "teacherRegister": {
+    "header": {
+      "title": "Duotopia",
+      "subtitle": "AI-Powered English Learning Platform",
+      "cardTitle": "Teacher Registration",
+      "cardDescription": "Create your teacher account to start managing classes and courses"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Ms. Wang",
+      "nameRequired": "*",
+      "email": "Email",
+      "emailPlaceholder": "teacher@example.com",
+      "emailRequired": "*",
+      "phone": "Phone (optional)",
+      "phonePlaceholder": "0912-345-678",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "passwordRequired": "*",
+      "passwordHint": "At least 6 characters",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordRequired": "*",
+      "register": "Register",
+      "registering": "Registering..."
+    },
+    "errors": {
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "registerFailed": "Registration failed, please try again later"
+    },
+    "footer": {
+      "hasAccount": "Already have an account?",
+      "login": "Login Now",
+      "studentLogin": "Student Login Portal"
+    }
+  },
+  "termsOfService": {
+    "header": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last Updated: January 13, 2025"
+    },
+    "section1": {
+      "title": "1. Service Definition and Scope",
+      "item1": "1.1 Duotopia (hereinafter referred to as \"the Service\") is a language learning platform that provides interactive language learning content and assessment services.",
+      "item2": "1.2 The Service supports multiple language learning, including but not limited to English, Chinese and other language learning and practice.",
+      "item3": "1.3 Users can engage in language learning, complete assignments, and receive assessments through this platform.",
+      "item4": "1.4 Learning content and assessment results are for educational purposes only."
+    },
+    "section2": {
+      "title": "2. User Registration and Account Management",
+      "item1": "2.1 Users must provide a valid email address for registration.",
+      "item2": "2.2 Users should keep their account password secure and are fully responsible for all activities under their account.",
+      "item3": "2.3 If unauthorized use of the account is discovered, the Service should be notified immediately.",
+      "item4": "2.4 The Service reserves the right to terminate or suspend accounts that violate the terms at any time."
+    },
+    "section3": {
+      "title": "3. Copyright Notice",
+      "item1": "3.1 The learning content provided by the Service is owned by the Company or authorized providers.",
+      "item2": "3.2 Users own the copyright to the learning records and assignment content they create.",
+      "item3": "3.3 Users authorize the Service to use their created content to provide services and improve the system.",
+      "item4": "3.4 Learning content is for personal learning use only and may not be used commercially or distributed without authorization.",
+      "item5": "3.5 The Service will properly preserve users' learning records and manage them according to the privacy policy."
+    },
+    "section4": {
+      "title": "4. Service Usage Restrictions",
+      "item1": "4.1 Users may not use the Service for any illegal or improper activities.",
+      "item2": "4.2 Users may not attempt to damage, interfere with, or gain unauthorized access to the Service system.",
+      "item3": "4.3 Users may not upload or share the following content using the Service:",
+      "list": {
+        "item1": "Content that infringes on others' copyrights, trademarks, or other intellectual property rights",
+        "item2": "Content that violates laws and regulations",
+        "item3": "Malware, viruses, or other harmful code",
+        "item4": "Inappropriate or offensive content"
+      },
+      "item4": "4.4 Each subscription plan has corresponding usage limits, and upgrading the plan is required to exceed the limits."
+    },
+    "section5": {
+      "title": "5. Privacy Protection",
+      "item1": "5.1 The Service values user privacy. Please refer to the Privacy Policy for detailed privacy protection measures.",
+      "item2": "5.2 The Service uses industry-standard encryption technology to protect user data.",
+      "item3": "5.3 Learning records and personal data will be properly managed in accordance with the law.",
+      "item4": "5.4 User data is only used to provide services and will not be shared with third parties without consent."
+    },
+    "section6": {
+      "title": "6. Payment and Subscription",
+      "item1": "6.1 The Service offers both free and paid subscription plans.",
+      "item2": "6.2 The fees, features, and restrictions of paid plans are subject to website announcements.",
+      "item3": "6.3 Subscription fees are prepaid and partial refunds are not available.",
+      "item4": "6.4 Users can cancel subscriptions at any time, but fees already paid will not be refunded.",
+      "item5": "6.5 Users can choose to change plans, with changes taking effect in the next billing cycle."
+    },
+    "section7": {
+      "title": "7. Disclaimer",
+      "item1": "7.1 The Service uses AI technology for speech assessment, and the assessment results are for reference only.",
+      "item2": "7.2 The Service strives to ensure the quality of learning content but does not guarantee complete accuracy or suitability for all learners.",
+      "item3": "7.3 The Service does not guarantee learning outcomes.",
+      "item4": "7.4 The Service is not responsible for any losses arising from the use of the Service.",
+      "item5": "7.5 The Service may be temporarily interrupted due to system maintenance, upgrades, or force majeure, and will be restored as soon as possible."
+    },
+    "section8": {
+      "title": "8. Terms Modification",
+      "item1": "8.1 The Service reserves the right to modify the terms of service at any time.",
+      "item2": "8.2 After modification, the terms will be announced on the website, and continued use of the Service is deemed as consent to the modified terms.",
+      "item3": "8.3 If you do not agree to the modified terms, you may choose to stop using the Service."
+    },
+    "section9": {
+      "title": "9. Governing Law and Jurisdiction",
+      "item1": "9.1 The interpretation and application of these terms shall be governed by the laws of the Republic of China.",
+      "item2": "9.2 Any disputes arising from these terms shall be subject to the jurisdiction of the Taipei District Court, Taiwan as the court of first instance."
+    },
+    "section10": {
+      "title": "10. Contact Information",
+      "company": "Language Expansion Digital Learning Co., Ltd.",
+      "taxId": "Tax ID: 60619397",
+      "contactPrompt": "If you have any questions about these terms, please contact us through the following:",
+      "email": "Email: myduotopia@gmail.com"
+    }
+  },
+  "dialogs": {
+    "assignmentDialog": {
+      "title": "Assign New Assignment",
+      "steps": {
+        "selectContent": "Select Content",
+        "selectStudents": "Select Students",
+        "assignmentDetails": "Assignment Details"
+      },
+      "quota": {
+        "remaining": "Quota Remaining:",
+        "total": "/ {{total}} seconds",
+        "depleted": "Quota Depleted",
+        "low": "Low Quota",
+        "error": "Insufficient quota, cannot assign assignment",
+        "errorDesc": "Please upgrade your plan or wait for the next billing cycle",
+        "viewPlans": "View Plans"
+      },
+      "selectContent": {
+        "description": "Select course content to assign (multiple selection)",
+        "selected": "{{count}} selected",
+        "loading": "Loading course content...",
+        "loadingDesc": "Please wait, preparing assignable courses",
+        "empty": "No available course content",
+        "emptyDesc": "Please create programs and content first",
+        "units": "{{count}} units",
+        "contents": "{{count}} contents",
+        "loadingLabel": "Loading...",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All"
+      },
+      "selectStudents": {
+        "description": "Select students to receive the assignment",
+        "selected": "{{selected}}/{{total}} selected",
+        "assignAll": "Assign to all students in class",
+        "totalStudents": "Total {{count}} students",
+        "allSelected": "All Selected",
+        "selectAllBtn": "Select All",
+        "deselectAllBtn": "Deselect All",
+        "invertSelection": "Invert Selection"
+      },
+      "details": {
+        "description": "Fill in assignment title and detailed information",
+        "title": "Assignment Title",
+        "titleRequired": "*",
+        "titlePlaceholder": "e.g., Unit 1-3 Comprehensive Practice",
+        "instructions": "Assignment Instructions",
+        "instructionsPlaceholder": "Provide assignment requirements...",
+        "startDate": "Start Date",
+        "dueDate": "Due Date",
+        "selectDate": "Select Date",
+        "summary": "Assignment Summary",
+        "contentCount": "Course Content:",
+        "contentCountValue": "{{count}} items",
+        "assignTo": "Assign To:",
+        "assignToAll": "All Students",
+        "assignToSelected": "{{count}} students",
+        "dueDateLabel": "Due Date:",
+        "dueDateValue": "{{date}}"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "previous": "Previous",
+        "next": "Next",
+        "create": "Create Assignment",
+        "creating": "Creating...",
+        "quotaDepleted": "Quota Depleted"
+      },
+      "errors": {
+        "noContent": "Please select at least one course content",
+        "noTitle": "Please enter assignment title",
+        "noStudents": "Please select at least one student",
+        "createFailed": "Failed to create assignment"
+      },
+      "success": {
+        "created": "Assignment created successfully, assigned to {{count}} students"
+      },
+      "contentTypes": {
+        "reading_assessment": "Reading Assessment",
+        "speaking_practice": "Speaking Practice",
+        "speaking_scenario": "Speaking Scenario",
+        "listening_cloze": "Listening Cloze",
+        "sentence_making": "Sentence Making",
+        "speaking_quiz": "Speaking Quiz"
+      }
+    },
+    "classroomAssignDialog": {
+      "title": "Assign Classroom",
+      "description": "Assign classroom for the selected {{count}} students",
+      "selectClassroom": "Select Classroom",
+      "selectPlaceholder": "Please select a classroom",
+      "buttons": {
+        "cancel": "Cancel",
+        "confirm": "Confirm Assignment"
+      }
+    },
+    "contentTypeDialog": {
+      "title": "Select Content Type",
+      "description": "Select the content type to add to \"{{lessonName}}\"",
+      "processing": "Processing...",
+      "types": {
+        "reading_assessment": {
+          "name": "Reading Recording",
+          "description": "Students read and record text",
+          "recommended": "Recommended"
+        },
+        "speaking_practice": {
+          "name": "Speaking Practice",
+          "description": "Free speaking practice with AI feedback",
+          "comingSoon": "Coming Soon"
+        },
+        "speaking_scenario": {
+          "name": "Scenario Dialogue",
+          "description": "Practice dialogues in specific scenarios"
+        },
+        "listening_cloze": {
+          "name": "Listening Cloze",
+          "description": "Fill in missing words after listening"
+        },
+        "sentence_making": {
+          "name": "Sentence Making",
+          "description": "Make sentences using given words or patterns"
+        },
+        "speaking_quiz": {
+          "name": "Speaking Quiz",
+          "description": "Test speaking ability through Q&A"
+        }
+      },
+      "buttons": {
+        "cancel": "Cancel"
+      }
+    },
+    "copyProgramDialog": {
+      "title": "Copy from Library",
+      "description": "Select programs to copy to this classroom",
+      "search": "Search program name...",
+      "selected": "{{count}} programs selected",
+      "loading": "Loading programs...",
+      "empty": "No copyable programs available",
+      "emptyDesc": "Please create programs in \"All Programs\" page first",
+      "noResults": "No matching programs found",
+      "noResultsDesc": "Try different search keywords",
+      "alreadyExists": "(Already exists)",
+      "lessons": "{{count}} lessons",
+      "hours": "{{count}} hours",
+      "buttons": {
+        "cancel": "Cancel",
+        "copy": "Copy to Classroom ({{count}})",
+        "copying": "Copying..."
+      },
+      "success": "Successfully copied {{count}} programs to classroom",
+      "error": "Copy failed, please try again later",
+      "loadError": "Failed to load programs"
+    },
+    "createProgramDialog": {
+      "title": "Create Program for \"{{classroomName}}\"",
+      "description": "Choose how to create the program",
+      "tabs": {
+        "template": "Copy from Template",
+        "classroom": "Copy from Other Classroom",
+        "custom": "Create Custom"
+      },
+      "template": {
+        "search": "Search template programs...",
+        "selected": "{{selected}} / {{total}} templates selected",
+        "selectAll": "Select All",
+        "clear": "Clear",
+        "loading": "Loading...",
+        "empty": "No template programs available",
+        "duplicate": "⚠️ This program already exists, creating duplicate may cause confusion",
+        "nameLabel": "New Program Name (optional, leave empty to use original)",
+        "namePlaceholder": "{{originalName}}",
+        "multipleNote": "{{count}} templates selected, will use original names"
+      },
+      "classroom": {
+        "search": "Search programs from other classrooms...",
+        "selected": "{{selected}} / {{total}} programs selected",
+        "selectAll": "Select All",
+        "clear": "Clear",
+        "loading": "Loading...",
+        "empty": "No programs from other classrooms",
+        "classroomLabel": "{{name}}",
+        "programsCount": "{{count}} programs",
+        "nameLabel": "New Program Name (optional, leave empty to use original)",
+        "namePlaceholder": "{{originalName}}",
+        "multipleNote": "{{count}} programs selected, will use original names"
+      },
+      "custom": {
+        "nameLabel": "Program Name",
+        "nameRequired": "*",
+        "namePlaceholder": "e.g., Advanced English Conversation",
+        "descLabel": "Program Description",
+        "descPlaceholder": "Describe the program content and goals",
+        "levelLabel": "Level",
+        "hoursLabel": "Estimated Hours",
+        "hoursPlaceholder": "20",
+        "tagsLabel": "Tags",
+        "levels": {
+          "A1": "A1 - Beginner",
+          "A2": "A2 - Elementary",
+          "B1": "B1 - Intermediate",
+          "B2": "B2 - Upper Intermediate",
+          "C1": "C1 - Advanced",
+          "C2": "C2 - Proficiency"
+        }
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "createSingle": "Create Program",
+        "createMultiple": "Create {{count}} Programs",
+        "creating": "Creating...",
+        "copySingle": "Copy Program",
+        "copyMultiple": "Copy {{count}} Programs",
+        "copying": "Copying...",
+        "createCustom": "Create Custom Program"
+      },
+      "duplicateWarning": "⚠️ Warning: The following programs already exist in the classroom:\n\n{{names}}\n\nCreating duplicates may cause confusion. Continue?",
+      "success": {
+        "created": "Successfully created {{count}} programs!",
+        "copied": "Successfully copied {{count}} programs!",
+        "custom": "Successfully created custom program!"
+      },
+      "errors": {
+        "loadFailed": "Failed to load program data",
+        "createFailed": "Creation failed, please try again later",
+        "copyFailed": "Copy failed, please try again later"
+      }
+    },
+    "lessonDialog": {
+      "create": {
+        "title": "Add Lesson",
+        "description": "Add a learning unit to the program"
+      },
+      "edit": {
+        "title": "Edit Lesson",
+        "description": "Modify lesson information"
+      },
+      "delete": {
+        "title": "Confirm Delete Lesson",
+        "description": "Are you sure you want to delete lesson \"{{name}}\"? This action cannot be undone.",
+        "dataLabel": "Lesson Data:",
+        "confirmBtn": "Confirm Delete",
+        "deleting": "Deleting..."
+      },
+      "form": {
+        "nameLabel": "Lesson Name",
+        "nameRequired": "*",
+        "namePlaceholder": "e.g., Unit 1: Greetings",
+        "nameError": "Lesson name is required",
+        "descLabel": "Lesson Description",
+        "descPlaceholder": "Learning objectives and content summary...",
+        "autoOrderNote": "ℹ️ Lesson will be automatically added at the end"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "create": "Add",
+        "save": "Save",
+        "delete": "Confirm Delete",
+        "processing": "Processing...",
+        "deleting": "Deleting..."
+      },
+      "errors": {
+        "saveFailed": "Save failed, please try again later"
+      },
+      "success": {
+        "created": "Lesson \"{{name}}\" added",
+        "updated": "Lesson \"{{name}}\" updated"
+      }
+    },
+    "programDialog": {
+      "create": {
+        "title": "Create New Program",
+        "description": "Create new program content for the classroom"
+      },
+      "edit": {
+        "title": "Edit Program",
+        "description": "Modify program information"
+      },
+      "delete": {
+        "title": "Confirm Delete Program",
+        "description": "Are you sure you want to delete program \"{{name}}\"? This will also delete all related lessons.",
+        "dataLabel": "Program Data:",
+        "confirmBtn": "Confirm Delete",
+        "deleting": "Deleting...",
+        "warningLessons": "⚠️ This program contains {{count}} lessons"
+      },
+      "form": {
+        "nameLabel": "Program Name",
+        "nameRequired": "*",
+        "namePlaceholder": "e.g., Grade 5 English Basics",
+        "nameError": "Program name is required",
+        "descLabel": "Program Description",
+        "descPlaceholder": "Brief description of the program...",
+        "levelLabel": "Level",
+        "levelRequired": "*",
+        "levelError": "Level is required",
+        "levels": {
+          "PREA": "Pre-A",
+          "A1": "A1",
+          "A2": "A2",
+          "B1": "B1",
+          "B2": "B2",
+          "C1": "C1",
+          "C2": "C2"
+        },
+        "hoursLabel": "Estimated Hours",
+        "hoursPlaceholder": "20",
+        "tagsLabel": "Tags",
+        "tagsNote": "(max 5)",
+        "tagsPlaceholder": "Press Enter to add tag",
+        "tagsError": "Maximum 5 tags allowed",
+        "tagsDuplicate": "Tag already exists"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "create": "Create",
+        "save": "Save",
+        "delete": "Confirm Delete",
+        "processing": "Processing...",
+        "deleting": "Deleting..."
+      },
+      "errors": {
+        "saveFailed": "Save failed, please try again later",
+        "deleteFailed": "Delete failed, please try again later"
+      }
+    },
+    "programDialogs": {
+      "view": {
+        "title": "Program Details",
+        "idLabel": "ID: {{id}}",
+        "classroomLabel": "Classroom",
+        "hoursLabel": "Estimated Hours",
+        "hoursValue": "{{hours}} hours",
+        "lessonsLabel": "Lessons",
+        "lessonsValue": "{{count}} lessons",
+        "studentsLabel": "Students",
+        "studentsValue": "{{count}} students"
+      },
+      "create": {
+        "title": "Add Program",
+        "description": "Create a new program plan"
+      },
+      "edit": {
+        "title": "Edit Program",
+        "description": "Update program information"
+      },
+      "delete": {
+        "title": "Confirm Delete Program",
+        "description": "Are you sure you want to delete program \"{{name}}\"? This action cannot be undone.",
+        "dataLabel": "Program Data:",
+        "classroom": "Classroom: {{name}}",
+        "warningLessons": "⚠️ This program contains {{count}} lessons"
+      },
+      "form": {
+        "nameLabel": "Program Name",
+        "nameRequired": "*",
+        "namePlaceholder": "Enter program name",
+        "nameError": "Program name is required",
+        "descLabel": "Program Description",
+        "descPlaceholder": "Enter program description (optional)",
+        "classroomLabel": "Classroom",
+        "classroomRequired": "*",
+        "classroomPlaceholder": "Select classroom",
+        "classroomError": "Please select a classroom",
+        "levelLabel": "Program Level",
+        "levels": {
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced",
+          "expert": "Expert"
+        },
+        "hoursLabel": "Estimated Hours",
+        "hoursPlaceholder": "10",
+        "statusLabel": "Status",
+        "statuses": {
+          "draft": "Draft",
+          "active": "Active",
+          "archived": "Archived"
+        }
+      },
+      "buttons": {
+        "close": "Close",
+        "edit": "Edit",
+        "cancel": "Cancel",
+        "create": "Create",
+        "save": "Save Changes",
+        "delete": "Confirm Delete",
+        "processing": "Processing...",
+        "deleting": "Deleting..."
+      },
+      "success": {
+        "created": "Program \"{{name}}\" created successfully",
+        "updated": "Program \"{{name}}\" updated",
+        "deleted": "Program \"{{name}}\" deleted"
+      },
+      "errors": {
+        "saveFailed": "Save failed, please try again later",
+        "deleteFailed": "Delete failed, please try again later"
+      }
+    },
+    "studentDialogs": {
+      "view": {
+        "title": "Student Details",
+        "idLabel": "ID: {{id}}",
+        "studentNumber": "Student Number: {{number}}",
+        "emailLabel": "Email",
+        "phoneLabel": "Phone",
+        "birthdateLabel": "Birthdate",
+        "classroomLabel": "Classroom",
+        "classroomNone": "-",
+        "passwordLabel": "Password Status",
+        "passwordChanged": "Changed",
+        "passwordDefault": "Default Password ({{password}})",
+        "lastLoginLabel": "Last Login",
+        "lastLoginNever": "Never Logged In"
+      },
+      "create": {
+        "title": "Add Student",
+        "description": "Fill in student information. Birthdate will be used as the default password."
+      },
+      "edit": {
+        "title": "Edit Student",
+        "description": "Update student information"
+      },
+      "delete": {
+        "title": "Confirm Delete Student",
+        "description": "Are you sure you want to delete student \"{{name}}\"? This action cannot be undone.",
+        "dataLabel": "Student Data:",
+        "classroom": "Classroom: {{name}}"
+      },
+      "form": {
+        "nameLabel": "Name",
+        "nameRequired": "*",
+        "namePlaceholder": "Enter student name",
+        "nameError": "Name is required",
+        "studentNumberLabel": "Student Number",
+        "studentNumberPlaceholder": "Enter student number (optional)",
+        "emailLabel": "Email",
+        "emailOptional": "(optional)",
+        "emailPlaceholder": "student@example.com (optional)",
+        "emailError": "Invalid email format",
+        "phoneLabel": "Phone",
+        "phonePlaceholder": "0912345678",
+        "birthdateLabel": "Student Birthdate",
+        "birthdateRequired": "*",
+        "birthdateNote": "(Enter the student's actual birthdate)",
+        "birthdateError": "Birthdate is required (used as default password)",
+        "passwordNote": "⚠️ Login password will be: {{password}}",
+        "classroomLabel": "Classroom",
+        "classroomNone": "Unassigned",
+        "statusLabel": "Status",
+        "statuses": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "suspended": "Suspended"
+        }
+      },
+      "buttons": {
+        "close": "Close",
+        "edit": "Edit",
+        "cancel": "Cancel",
+        "create": "Add",
+        "save": "Save",
+        "delete": "Confirm Delete",
+        "processing": "Processing...",
+        "deleting": "Deleting..."
+      },
+      "success": {
+        "created": "Student \"{{name}}\" added successfully",
+        "createdWithPassword": "Default password: {{password}}",
+        "updated": "Student \"{{name}}\" updated",
+        "deleted": "Student \"{{name}}\" deleted",
+        "warning": "⚠️ {{warning}}"
+      },
+      "errors": {
+        "saveFailed": "Save failed, please try again later",
+        "emailUsed": "Email already in use, please use another email",
+        "invalidBirthdate": "Invalid birthdate format, please use YYYY-MM-DD",
+        "fieldRequired": "Please fill in all required fields",
+        "deleteFailed": "Delete failed, please try again later"
+      }
+    },
+    "studentImportDialog": {
+      "title": "Batch Import Students",
+      "steps": {
+        "title": "Import Steps:",
+        "step1": "Download template file",
+        "step2": "Fill in student information (name, classroom, birthdate)",
+        "step3": "Upload the completed file",
+        "step4": "Confirm data and execute import"
+      },
+      "duplicateHandling": {
+        "title": "Duplicate Student Handling:",
+        "skip": "Skip duplicates (default) - Keep existing students, skip duplicates",
+        "update": "Update data - Update existing students' birthdate with new data (will update password if not changed)",
+        "addSuffix": "Add suffix - Add numbers to duplicate names (e.g., John-2)"
+      },
+      "buttons": {
+        "downloadTemplate": "Download Template",
+        "selectFile": "Select File",
+        "cancel": "Cancel",
+        "import": "Import {{count}} Students",
+        "importing": "Importing...",
+        "done": "Done"
+      },
+      "preview": {
+        "title": "Preview Data",
+        "valid": "Valid: {{valid}} / Total: {{total}}",
+        "columns": {
+          "status": "Status",
+          "name": "Name",
+          "classroom": "Classroom",
+          "birthdate": "Birthdate",
+          "errors": "Error Messages"
+        }
+      },
+      "missingClassrooms": {
+        "title": "The following classrooms have not been created:",
+        "description": "Please go to \"My Classrooms\" page to create these classrooms first, then re-upload the file.",
+        "goToClassrooms": "Go to \"My Classrooms\""
+      },
+      "results": {
+        "title": "Import Complete",
+        "success": "Successfully imported: {{count}} students",
+        "failed": "Import failed: {{count}} students",
+        "skipNote": "Duplicate students were skipped",
+        "updateNote": "Updated data for duplicate students",
+        "suffixNote": "Added numbers to distinguish duplicate students"
+      },
+      "nextSteps": {
+        "title": "Next Steps:",
+        "password": "Default student password is birthdate (format: YYYYMMDD)",
+        "remind": "Remind students to change password after first login",
+        "viewStudents": "View imported students in \"My Students\" page"
+      },
+      "errors": {
+        "fileTypeError": "Please upload CSV or Excel file",
+        "noData": "File contains no data",
+        "noNameColumn": "\"Name\" column not found",
+        "importFailed": "Import failed",
+        "noValidData": "No valid student data to import",
+        "noStudentsFound": "No valid student data found"
+      },
+      "success": {
+        "templateDownloaded": "Template file downloaded",
+        "imported": "Successfully imported {{count}} students",
+        "partialFailed": "Some students failed to import:\n{{errors}}"
+      }
+    }
+  },
+  "studentCompletionDashboard": {
+    "summary": {
+      "total": "Total",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "graded": "Graded"
+    },
+    "overallProgress": "Overall Progress",
+    "averageScore": "Average Score",
+    "searchPlaceholder": "Search student name...",
+    "statusFilter": {
+      "all": "All Status",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "graded": "Graded"
+    },
+    "table": {
+      "studentName": "Student Name",
+      "pendingGrading": "Pending Grading",
+      "graded": "Graded",
+      "pendingCorrection": "Pending Correction",
+      "pendingCompletion": "Pending Completion",
+      "gradingComplete": "Grading Complete"
+    },
+    "actions": {
+      "grade": "Grade",
+      "view": "View",
+      "remind": "Remind"
+    },
+    "messages": {
+      "openGrading": "Open grading page for {{name}}",
+      "viewGrade": "View {{name}}'s grade - Score: {{score}}",
+      "reminderSent": "Reminder sent to {{name}}",
+      "loadError": "Unable to load student statuses",
+      "noMatchingStudents": "No matching students"
+    }
+  },
+  "studentTable": {
+    "emptyState": {
+      "title": "No students yet",
+      "addFirst": "Add first student"
+    },
+    "total": "Total {{count}} students",
+    "columns": {
+      "id": "ID",
+      "studentName": "Student Name",
+      "contactInfo": "Contact Info",
+      "passwordStatus": "Password Status",
+      "status": "Status",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "unknown": "Unknown"
+    },
+    "passwordStatus": {
+      "changed": "Changed",
+      "notSet": "Birthday not set",
+      "copyPassword": "Copy password: {{password}}",
+      "passwordCopied": "Password copied: {{password}}",
+      "resetToDefault": "Reset to default password"
+    },
+    "classroom": {
+      "unassigned": "Unassigned"
+    },
+    "lastLogin": {
+      "never": "Never logged in",
+      "daysAgo": "{{days}} days ago"
+    },
+    "actions": {
+      "view": "View",
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete student \"{{name}}\"?",
+      "deleteConfirmPermanent": "Are you sure you want to delete student \"{{name}}\"? This action cannot be undone."
+    },
+    "info": {
+      "email": "Email:",
+      "phone": "Phone:",
+      "classroom": "Classroom:",
+      "password": "Password:",
+      "lastLogin": "Last Login:"
+    }
+  },
+  "subscriptionProgressBanner": {
+    "subscribing": "Subscribing: {{plan}}",
+    "steps": {
+      "selectPlan": "Select Plan",
+      "login": "Login",
+      "payment": "Payment",
+      "complete": "Complete"
+    }
+  },
+  "teacherLayout": {
+    "title": "Duotopia",
+    "subtitle": "Teacher Dashboard",
+    "nav": {
+      "dashboard": "Dashboard",
+      "myClassrooms": "My Classrooms",
+      "allStudents": "All Students",
+      "publicPrograms": "Public Programs",
+      "subscription": "Subscription",
+      "systemAdmin": "System Admin"
+    }
+  },
+  "teacherSubscriptionBanner": {
+    "status": {
+      "subscribed": "Subscription Status: Active",
+      "notSubscribed": "Subscription Status: Inactive"
+    },
+    "expiry": {
+      "expiresIn": "Your subscription expires in {{days}} days",
+      "expiryDate": "Expiry Date: {{date}}",
+      "daysRemaining": "Days Remaining"
+    },
+    "noSubscription": "You don't have an active subscription",
+    "actions": {
+      "renewNow": "Renew Now",
+      "viewPlans": "View Plans"
+    }
+  },
+  "readingAssessmentPanel": {
+    "title": "Title",
+    "titleRequired": "Please enter a title",
+    "batchActions": {
+      "batchPaste": "Batch Paste",
+      "batchPasteTooltip": "Batch paste content, one item per line",
+      "batchGenerateTTS": "Batch Generate TTS",
+      "batchGenerateTTSTooltip": "Generate speech using free Microsoft Edge TTS",
+      "batchGenerateTranslation": "Batch Generate Translation",
+      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings"
+    },
+    "row": {
+      "dragToReorder": "Drag to reorder",
+      "textPlaceholder": "Enter text",
+      "playAudio": "Play audio",
+      "openTTSRecording": "Open TTS/Recording",
+      "rerecordGenerate": "Re-record/Generate",
+      "removeAudio": "Remove audio",
+      "noAudio": "No audio available",
+      "playbackError": "Audio playback failed, please check audio format",
+      "playbackFailed": "Unable to play audio",
+      "chineseTranslation": "Chinese Translation",
+      "englishDefinition": "English Definition",
+      "generateChinese": "Generate Chinese Translation",
+      "generateEnglish": "Generate English Definition",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "addItem": "Add Item",
+      "maxRowsReached": "Maximum 15 rows allowed",
+      "minRowsRequired": "At least 1 row required"
+    },
+    "ttsModal": {
+      "title": "Audio Settings",
+      "tabs": {
+        "generate": "Generate",
+        "record": "Record"
+      },
+      "generate": {
+        "textLabel": "Text",
+        "textPlaceholder": "Enter text to generate speech",
+        "accent": "Accent",
+        "gender": "Gender",
+        "speed": "Speed",
+        "generating": "Generating...",
+        "generate": "Generate",
+        "play": "Play generated audio",
+        "audioReady": "TTS audio ready",
+        "audioGenerated": "Audio generated! Click play button to preview",
+        "ttsDeleted": "TTS audio deleted",
+        "generateSuccess": "Audio generated successfully! Click play button to preview",
+        "generateFailed": "Generation failed, please try again"
+      },
+      "record": {
+        "startRecording": "Start Recording",
+        "stopRecording": "Stop Recording",
+        "reRecord": "Re-record",
+        "maxDuration": "Maximum recording time: 30 seconds",
+        "maxDurationReached": "Maximum recording time reached: 30 seconds",
+        "recordingReady": "Recording ready ({{duration}}s)",
+        "recordingDeleted": "Recording deleted",
+        "recordingStarted": "Recording started",
+        "recordingComplete": "Recording complete! You can preview or re-record",
+        "micPermissionDenied": "Unable to start recording, please check microphone permissions",
+        "fileTooLarge": "Recording file too large, please shorten recording time",
+        "recordingFailed": "Recording failed, please check microphone permissions",
+        "uploading": "Uploading recording...",
+        "playFailed": "Unable to play recording"
+      },
+      "sourceSelection": {
+        "title": "You have two audio sources, please select one:",
+        "tts": "TTS Audio",
+        "ttsSubtitle": "AI Generated",
+        "recording": "Recording",
+        "recordingSubtitle": "Teacher Recorded",
+        "pleaseSelect": "Please select an audio source (TTS or Recording)"
+      },
+      "actions": {
+        "close": "Close",
+        "confirm": "Confirm"
+      },
+      "messages": {
+        "noAudioGenerated": "Please generate or record audio first",
+        "uploadRetrying": "Upload failed, retrying... (Attempt {{attempt}}/3)",
+        "uploadFailed": "Upload failed, please check your network connection",
+        "audioRemoved": "Audio removed",
+        "removeAudioFailed": "Failed to remove audio"
+      }
+    },
+    "batchPasteDialog": {
+      "title": "Batch Paste Content",
+      "description": "One item per line, supports auto TTS and translation",
+      "inputLabel": "Paste content:",
+      "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
+      "itemCount": "{{count}} items",
+      "autoGenerateTTS": "Auto Generate TTS",
+      "autoTranslate": "Auto Translate",
+      "cancel": "Cancel",
+      "confirmPaste": "Confirm Paste",
+      "messages": {
+        "noContent": "Please enter content",
+        "processing": "Processing {{count}} items...",
+        "batchProcessingFailed": "Batch processing failed",
+        "addedAndSaved": "Added {{count}} items and saved (total {{total}})",
+        "addedAndCreated": "Added {{count}} items and created content",
+        "added": "Added {{count}} items (total {{total}})",
+        "saveFailed": "Save failed, please try again later"
+      }
+    },
+    "translation": {
+      "enterTextFirst": "Please enter text first",
+      "translating": "Generating translation...",
+      "chineseComplete": "Chinese translation generated",
+      "englishComplete": "English definition generated",
+      "translationFailed": "Translation failed, please try again later",
+      "noItemsToTranslate": "No items to translate",
+      "batchTranslating": "Starting batch translation...",
+      "batchComplete": "Batch translation complete! Processed {{count}} items",
+      "batchFailed": "Batch translation failed, please try again later"
+    },
+    "tts": {
+      "noItemsToGenerate": "All items already have audio",
+      "batchGenerating": "Generating {{count}} audio files...",
+      "batchSuccess": "Successfully generated {{count}} audio files! Audio will be uploaded when content is saved.",
+      "batchSuccessAndSaved": "Successfully generated and saved {{count}} audio files!",
+      "batchFailed": "Batch generation failed, please try again",
+      "saveFailed": "Save failed, but audio was generated"
+    },
+    "save": {
+      "button": "Save",
+      "loading": "Loading...",
+      "atLeastOneItem": "Please add at least one content item",
+      "titleRequired": "Please enter a title",
+      "saveSuccess": "Saved successfully",
+      "saveFailed": "Save failed",
+      "createSuccess": "Content created successfully",
+      "createFailed": "Failed to create content",
+      "loadFailed": "Failed to load content",
+      "updateFailed": "Update failed, but audio was generated"
     }
   }
 }

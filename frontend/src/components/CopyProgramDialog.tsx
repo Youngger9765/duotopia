@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export interface TeacherProgram {
   id: number;
@@ -43,6 +44,7 @@ export default function CopyProgramDialog({
   onSuccess,
   classroomId,
 }: CopyProgramDialogProps) {
+  const { t } = useTranslation();
   const [programs, setPrograms] = useState<TeacherProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(false);
@@ -60,18 +62,16 @@ export default function CopyProgramDialog({
   const fetchPrograms = async () => {
     try {
       setLoading(true);
-      // Get copyable programs (templates + other classroom programs)
       const data = (await apiClient.getCopyablePrograms(
         classroomId,
       )) as TeacherProgram[];
-      // Filter out programs already in this classroom
       const availablePrograms = data.filter(
         (p) => p.classroom_id !== classroomId,
       );
       setPrograms(availablePrograms);
     } catch (error) {
       console.error("Failed to fetch programs:", error);
-      toast.error("載入課程失敗");
+      toast.error(t("dialogs.copyProgramDialog.loadError"));
     } finally {
       setLoading(false);
     }
@@ -93,12 +93,16 @@ export default function CopyProgramDialog({
     setCopying(true);
     try {
       await apiClient.copyProgramToClassroom(classroomId, selectedPrograms);
-      toast.success(`成功複製 ${selectedPrograms.length} 個課程到班級`);
+      toast.success(
+        t("dialogs.copyProgramDialog.successToast", {
+          count: selectedPrograms.length,
+        }),
+      );
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to copy programs:", error);
-      toast.error("複製失敗，請稍後再試");
+      toast.error(t("dialogs.copyProgramDialog.copyError"));
     } finally {
       setCopying(false);
     }
@@ -127,39 +131,42 @@ export default function CopyProgramDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Copy className="h-5 w-5" />
-            <span>從課程庫複製</span>
+            <span>{t("dialogs.copyProgramDialog.title")}</span>
           </DialogTitle>
-          <DialogDescription>選擇要複製到此班級的課程</DialogDescription>
+          <DialogDescription>
+            {t("dialogs.copyProgramDialog.description")}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Search Bar */}
         <div className="relative my-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="搜尋課程名稱..."
+            placeholder={t("dialogs.copyProgramDialog.searchPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Selected Count */}
         {selectedPrograms.length > 0 && (
           <div className="mb-3 px-3 py-2 bg-blue-50 rounded-md">
             <span className="text-sm font-medium text-blue-700">
-              已選擇 {selectedPrograms.length} 個課程
+              {t("dialogs.copyProgramDialog.selectedCount", {
+                count: selectedPrograms.length,
+              })}
             </span>
           </div>
         )}
 
-        {/* Programs List */}
         <div className="flex-1 overflow-y-auto min-h-[300px]">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">載入課程中...</p>
+                <p className="mt-2 text-gray-600">
+                  {t("dialogs.copyProgramDialog.loading")}
+                </p>
               </div>
             </div>
           ) : filteredPrograms.length === 0 ? (
@@ -168,17 +175,19 @@ export default function CopyProgramDialog({
               {programs.length === 0 ? (
                 <>
                   <p className="text-gray-600 font-medium">
-                    目前沒有可複製的課程
+                    {t("dialogs.copyProgramDialog.noProgramsTitle")}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    請先到「所有課程」頁面建立課程
+                    {t("dialogs.copyProgramDialog.noProgramsHint")}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-gray-600 font-medium">找不到符合的課程</p>
+                  <p className="text-gray-600 font-medium">
+                    {t("dialogs.copyProgramDialog.noResults")}
+                  </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    請嘗試其他搜尋關鍵字
+                    {t("dialogs.copyProgramDialog.noResultsHint")}
                   </p>
                 </>
               )}
@@ -217,7 +226,9 @@ export default function CopyProgramDialog({
                         {program.already_in_classroom && (
                           <span className="inline-flex items-center space-x-1 text-xs text-green-600">
                             <CheckCircle className="h-3 w-3" />
-                            <span>(已存在)</span>
+                            <span>
+                              ({t("dialogs.copyProgramDialog.alreadyExists")})
+                            </span>
                           </span>
                         )}
                       </div>
@@ -229,12 +240,20 @@ export default function CopyProgramDialog({
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Layers className="h-3 w-3" />
-                          <span>{program.lesson_count || 0} 個課程單元</span>
+                          <span>
+                            {t("dialogs.copyProgramDialog.lessonCount", {
+                              count: program.lesson_count || 0,
+                            })}
+                          </span>
                         </div>
                         {program.estimated_hours && (
                           <div className="flex items-center space-x-1">
                             <Clock className="h-3 w-3" />
-                            <span>{program.estimated_hours} 小時</span>
+                            <span>
+                              {t("dialogs.copyProgramDialog.hours", {
+                                hours: program.estimated_hours,
+                              })}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -248,7 +267,7 @@ export default function CopyProgramDialog({
 
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose} disabled={copying}>
-            取消
+            {t("dialogs.copyProgramDialog.cancel")}
           </Button>
           <Button
             onClick={handleCopyPrograms}
@@ -257,12 +276,14 @@ export default function CopyProgramDialog({
             {copying ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                複製中...
+                {t("dialogs.copyProgramDialog.copying")}
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4 mr-2" />
-                複製到班級 ({selectedPrograms.length})
+                {t("dialogs.copyProgramDialog.copyButton", {
+                  count: selectedPrograms.length,
+                })}
               </>
             )}
           </Button>

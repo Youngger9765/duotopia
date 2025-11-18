@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface StudentStatus {
   student_number: number;
@@ -24,6 +25,7 @@ interface StudentCompletionDashboardProps {
 export function StudentCompletionDashboard({
   assignmentId,
 }: StudentCompletionDashboardProps) {
+  const { t } = useTranslation();
   const [studentStatuses, setStudentStatuses] = useState<StudentStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,7 +97,7 @@ export function StudentCompletionDashboard({
       setStudentStatuses(mockData);
     } catch (error) {
       console.error("Failed to fetch student statuses:", error);
-      toast.error("無法載入學生狀態");
+      toast.error(t("studentCompletionDashboard.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -140,20 +142,31 @@ export function StudentCompletionDashboard({
 
   const handleGradeStudent = (student: StudentStatus) => {
     // TODO: Open grading dialog/modal
-    toast.info(`開啟 ${student.student_name} 的作業批改頁面`);
+    toast.info(
+      t("studentCompletionDashboard.actions.openGrading", {
+        name: student.student_name,
+      }),
+    );
     // In production: navigate to grading page or open modal
     // window.location.href = `/teacher/grade/${assignmentId}/${student.student_number}`;
   };
 
   const handleViewGrade = (student: StudentStatus) => {
     toast.info(
-      `查看 ${student.student_name} 的批改結果 - 分數: ${student.score}`,
+      t("studentCompletionDashboard.actions.viewGrade", {
+        name: student.student_name,
+        score: student.score,
+      }),
     );
     // In production: open grade details modal
   };
 
   const handleRemindStudent = (student: StudentStatus) => {
-    toast.success(`已發送提醒給 ${student.student_name}`);
+    toast.success(
+      t("studentCompletionDashboard.actions.remindSent", {
+        name: student.student_name,
+      }),
+    );
     // In production: call API to send reminder
     // apiClient.post(`/api/assignments/${assignmentId}/remind/${student.student_number}`);
   };
@@ -171,29 +184,39 @@ export function StudentCompletionDashboard({
       {/* Summary Statistics */}
       <div className="grid grid-cols-5 gap-3">
         <Card className="p-3 bg-gray-50">
-          <div className="text-xs text-gray-600">總人數</div>
+          <div className="text-xs text-gray-600">
+            {t("studentCompletionDashboard.stats.total")}
+          </div>
           <div className="text-xl font-bold">{statusCounts.total}</div>
         </Card>
         <Card className="p-3 bg-red-50">
-          <div className="text-xs text-gray-600">未開始</div>
+          <div className="text-xs text-gray-600">
+            {t("studentCompletionDashboard.stats.notStarted")}
+          </div>
           <div className="text-xl font-bold text-red-600">
             {statusCounts.notStarted}
           </div>
         </Card>
         <Card className="p-3 bg-yellow-50">
-          <div className="text-xs text-gray-600">進行中</div>
+          <div className="text-xs text-gray-600">
+            {t("studentCompletionDashboard.stats.inProgress")}
+          </div>
           <div className="text-xl font-bold text-yellow-600">
             {statusCounts.inProgress}
           </div>
         </Card>
         <Card className="p-3 bg-blue-50">
-          <div className="text-xs text-gray-600">已提交</div>
+          <div className="text-xs text-gray-600">
+            {t("studentCompletionDashboard.stats.submitted")}
+          </div>
           <div className="text-xl font-bold text-blue-600">
             {statusCounts.submitted}
           </div>
         </Card>
         <Card className="p-3 bg-green-50">
-          <div className="text-xs text-gray-600">已批改</div>
+          <div className="text-xs text-gray-600">
+            {t("studentCompletionDashboard.stats.graded")}
+          </div>
           <div className="text-xl font-bold text-green-600">
             {statusCounts.graded}
           </div>
@@ -203,7 +226,9 @@ export function StudentCompletionDashboard({
       {/* Overall Progress */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">整體完成進度</span>
+          <span className="text-sm font-medium">
+            {t("studentCompletionDashboard.progress.overall")}
+          </span>
           <span className="text-lg font-bold text-blue-600">
             {Math.round(
               ((statusCounts.submitted + statusCounts.graded) /
@@ -223,9 +248,10 @@ export function StudentCompletionDashboard({
         />
         {statusCounts.graded > 0 && (
           <div className="mt-2 text-sm text-gray-600">
-            平均分數：
+            {t("studentCompletionDashboard.progress.averageScore")}
             <span className="font-bold text-blue-600">
-              {averageScore.toFixed(1)} 分
+              {averageScore.toFixed(1)}{" "}
+              {t("studentCompletionDashboard.progress.points")}
             </span>
           </div>
         )}
@@ -237,7 +263,9 @@ export function StudentCompletionDashboard({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="搜尋學生姓名..."
+            placeholder={t(
+              "studentCompletionDashboard.filters.searchPlaceholder",
+            )}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -248,11 +276,21 @@ export function StudentCompletionDashboard({
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="all">全部狀態</option>
-          <option value="NOT_STARTED">未開始</option>
-          <option value="IN_PROGRESS">進行中</option>
-          <option value="SUBMITTED">已提交</option>
-          <option value="GRADED">已批改</option>
+          <option value="all">
+            {t("studentCompletionDashboard.filters.allStatus")}
+          </option>
+          <option value="NOT_STARTED">
+            {t("studentCompletionDashboard.filters.notStarted")}
+          </option>
+          <option value="IN_PROGRESS">
+            {t("studentCompletionDashboard.filters.inProgress")}
+          </option>
+          <option value="SUBMITTED">
+            {t("studentCompletionDashboard.filters.submitted")}
+          </option>
+          <option value="GRADED">
+            {t("studentCompletionDashboard.filters.graded")}
+          </option>
         </select>
         <Button
           variant="outline"
@@ -275,25 +313,25 @@ export function StudentCompletionDashboard({
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">
-                學生姓名
+                {t("studentCompletionDashboard.table.studentName")}
               </th>
               <th className="text-center px-4 py-3 text-sm font-medium text-gray-700">
-                待批改
+                {t("studentCompletionDashboard.table.pendingGrading")}
               </th>
               <th className="text-center px-4 py-3 text-sm font-medium text-gray-700">
-                已打正
+                {t("studentCompletionDashboard.table.graded")}
               </th>
               <th className="text-center px-4 py-3 text-sm font-medium text-gray-700">
-                待訂正
+                {t("studentCompletionDashboard.table.pendingCorrection")}
               </th>
               <th className="text-center px-4 py-3 text-sm font-medium text-gray-700">
-                待完成
+                {t("studentCompletionDashboard.table.pendingCompletion")}
               </th>
               <th className="text-center px-4 py-3 text-sm font-medium text-gray-700">
-                批改完
+                {t("studentCompletionDashboard.table.completed")}
               </th>
               <th className="text-right px-4 py-3 text-sm font-medium text-gray-700">
-                操作
+                {t("studentCompletionDashboard.table.actions")}
               </th>
             </tr>
           </thead>
@@ -344,7 +382,7 @@ export function StudentCompletionDashboard({
                         onClick={() => handleGradeStudent(student)}
                         className="text-blue-600 hover:bg-blue-50"
                       >
-                        批改
+                        {t("studentCompletionDashboard.buttons.grade")}
                       </Button>
                     )}
                     {student.status === "GRADED" && (
@@ -354,7 +392,7 @@ export function StudentCompletionDashboard({
                         onClick={() => handleViewGrade(student)}
                         className="text-green-600 hover:bg-green-50"
                       >
-                        查看
+                        {t("studentCompletionDashboard.buttons.view")}
                       </Button>
                     )}
                     {(student.status === "NOT_STARTED" ||
@@ -365,7 +403,7 @@ export function StudentCompletionDashboard({
                         onClick={() => handleRemindStudent(student)}
                         className="text-yellow-600 hover:bg-yellow-50"
                       >
-                        提醒
+                        {t("studentCompletionDashboard.buttons.remind")}
                       </Button>
                     )}
                   </div>
@@ -377,7 +415,7 @@ export function StudentCompletionDashboard({
 
         {filteredAndSortedStudents.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            沒有符合條件的學生
+            {t("studentCompletionDashboard.empty")}
           </div>
         )}
       </Card>
