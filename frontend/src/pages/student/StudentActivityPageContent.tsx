@@ -330,8 +330,8 @@ export default function StudentActivityPageContent({
             errorMessage: `File size ${audioBlob.size} below minimum ${strategy.minFileSize}`,
           });
 
-          toast.error("錄音失敗", {
-            description: "錄音檔案異常，請重新錄音",
+          toast.error(t("studentActivityPage.recording.failed"), {
+            description: t("studentActivityPage.recording.fileAbnormal"),
           });
 
           // 🔧 清理所有錄音狀態
@@ -367,8 +367,8 @@ export default function StudentActivityPageContent({
               errorMessage: `Validation failed (method: ${validationResult.method})`,
             });
 
-            toast.error("錄音驗證失敗", {
-              description: "錄音檔案異常，請重新錄音",
+            toast.error(t("studentActivityPage.recording.validationFailed"), {
+              description: t("studentActivityPage.recording.fileAbnormal"),
             });
 
             // 🔧 清理 stream
@@ -384,12 +384,16 @@ export default function StudentActivityPageContent({
           );
 
           if (!isPreviewMode) {
-            toast.success("錄音完成", {
-              description: `錄音時長 ${validationResult.duration.toFixed(1)} 秒`,
+            toast.success(t("studentActivityPage.recording.complete"), {
+              description: t("studentActivityPage.recording.duration", {
+                duration: validationResult.duration.toFixed(1),
+              }),
             });
           } else {
-            toast.success("錄音完成（預覽模式，不會儲存）", {
-              description: `錄音時長 ${validationResult.duration.toFixed(1)} 秒`,
+            toast.success(t("studentActivityPage.recording.completePreview"), {
+              description: t("studentActivityPage.recording.duration", {
+                duration: validationResult.duration.toFixed(1),
+              }),
             });
           }
         } catch (error) {
@@ -406,8 +410,8 @@ export default function StudentActivityPageContent({
             errorMessage: String(error),
           });
 
-          toast.error("錄音處理失敗", {
-            description: "無法驗證錄音，請重新錄音",
+          toast.error(t("studentActivityPage.recording.processingFailed"), {
+            description: t("studentActivityPage.recording.cannotValidate"),
           });
 
           // 🔧 清理所有錄音狀態
@@ -795,7 +799,7 @@ export default function StudentActivityPageContent({
     }
 
     if (isPreviewMode) {
-      toast.info("預覽模式下無法提交作業");
+      toast.info(t("studentActivityPage.preview.cannotSubmit"));
       return;
     }
 

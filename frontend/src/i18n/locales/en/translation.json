@@ -605,7 +605,11 @@
       "title": "Overall Evaluation",
       "score": "Score",
       "scoreUnit": " pts",
-      "detailRecord": "Detailed Record"
+      "detailRecord": "Detailed Record",
+      "noRecordsYet": "No grading records yet",
+      "questionNumber": "Question {{number}}",
+      "overallFeedback": "Overall Feedback",
+      "noFeedbackYet": "No feedback yet"
     },
     "status": {
       "notStarted": "Not Started",
@@ -664,6 +668,19 @@
       "completed": "Completed",
       "inProgress": "In Progress",
       "notStarted": "Not Started"
+    },
+    "recording": {
+      "failed": "Recording Failed",
+      "fileAbnormal": "Recording file is abnormal, please record again",
+      "validationFailed": "Recording Validation Failed",
+      "processingFailed": "Recording Processing Failed",
+      "cannotValidate": "Unable to validate recording, please record again",
+      "complete": "Recording Complete",
+      "duration": "Recording duration: {{duration}} seconds",
+      "completePreview": "Recording Complete (Preview mode, will not be saved)"
+    },
+    "preview": {
+      "cannotSubmit": "Cannot submit assignment in preview mode"
     }
   },
   "studentProfile": {

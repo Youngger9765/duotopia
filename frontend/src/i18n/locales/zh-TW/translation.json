@@ -605,7 +605,11 @@
       "title": "總評",
       "score": "分數",
       "scoreUnit": "分",
-      "detailRecord": "詳實記錄"
+      "detailRecord": "詳實記錄",
+      "noRecordsYet": "尚無評分記錄",
+      "questionNumber": "題目 {{number}}",
+      "overallFeedback": "總評",
+      "noFeedbackYet": "尚無總評"
     },
     "status": {
       "notStarted": "未開始",
@@ -664,6 +668,19 @@
       "completed": "已完成",
       "inProgress": "進行中",
       "notStarted": "未開始"
+    },
+    "recording": {
+      "failed": "錄音失敗",
+      "fileAbnormal": "錄音檔案異常，請重新錄音",
+      "validationFailed": "錄音驗證失敗",
+      "processingFailed": "錄音處理失敗",
+      "cannotValidate": "無法驗證錄音，請重新錄音",
+      "complete": "錄音完成",
+      "duration": "錄音時長 {{duration}} 秒",
+      "completePreview": "錄音完成（預覽模式，不會儲存）"
+    },
+    "preview": {
+      "cannotSubmit": "預覽模式下無法提交作業"
     }
   },
   "studentProfile": {

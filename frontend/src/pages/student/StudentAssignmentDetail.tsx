@@ -141,7 +141,9 @@ export default function StudentAssignmentDetail() {
                 activity.order_index !== undefined
                   ? activity.order_index
                   : index,
-              estimated_time: activity.estimated_time || "5 分鐘",
+              estimated_time:
+                activity.estimated_time ||
+                `5 ${t("studentActivityPage.stats.minutes")}`,
               items: activity.items || [],
               answers: activity.answers,
               recording_url: activity.recording_url,
@@ -631,7 +633,11 @@ export default function StudentAssignmentDetail() {
                             </span>
                             <div className="flex-1">
                               <div className="text-xs text-gray-500 truncate">
-                                {item.text || `題目 ${questionNumber}`}
+                                {item.text ||
+                                  t(
+                                    "studentAssignmentDetail.scoring.questionNumber",
+                                    { number: questionNumber },
+                                  )}
                               </div>
                               <div className="text-xs text-gray-700">
                                 {item.teacher_feedback}
@@ -643,16 +649,21 @@ export default function StudentAssignmentDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500">尚無評分記錄</div>
+                  <div className="text-sm text-gray-500">
+                    {t("studentAssignmentDetail.scoring.noRecordsYet")}
+                  </div>
                 )}
               </div>
 
               {/* 總評 */}
               <div>
-                <div className="text-sm text-gray-600 mb-2">總評</div>
+                <div className="text-sm text-gray-600 mb-2">
+                  {t("studentAssignmentDetail.scoring.overallFeedback")}
+                </div>
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    {assignment.feedback || "尚無總評"}
+                    {assignment.feedback ||
+                      t("studentAssignmentDetail.scoring.noFeedbackYet")}
                   </p>
                 </div>
               </div>
