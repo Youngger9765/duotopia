@@ -85,7 +85,7 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
       setState((prev) => ({ ...prev, loading: true }));
 
       const response = (await apiClient.get(
-        `/api/students/assignments/${assignmentId}/practice-words`
+        `/api/students/assignments/${assignmentId}/practice-words`,
       )) as {
         session_id: number;
         answer_mode: "listening" | "writing";
@@ -117,7 +117,7 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
     try {
       await apiClient.post(
         `/api/students/practice-sessions/${state.sessionId}/submit-answer`,
-        answer
+        answer,
       );
 
       // 記錄答案
@@ -145,10 +145,14 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
       setState((prev) => ({ ...prev, completing: true }));
 
       const status = (await apiClient.get(
-        `/api/students/assignments/${assignmentId}/mastery-status`
+        `/api/students/assignments/${assignmentId}/mastery-status`,
       )) as MasteryStatus;
 
-      setState((prev) => ({ ...prev, masteryStatus: status, completing: false }));
+      setState((prev) => ({
+        ...prev,
+        masteryStatus: status,
+        completing: false,
+      }));
 
       if (status.achieved) {
         toast.success("🎉 恭喜！您已達成目標熟悉度！");
@@ -161,7 +165,7 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
       } else {
         const masteryPercent = (status.current_mastery * 100).toFixed(0);
         toast.info(
-          `當前熟悉度：${masteryPercent}%，繼續加油！已掌握 ${status.words_mastered}/${status.total_words} 個單字`
+          `當前熟悉度：${masteryPercent}%，繼續加油！已掌握 ${status.words_mastered}/${status.total_words} 個單字`,
         );
         // 重新載入下一輪題目
         setTimeout(() => {

@@ -347,7 +347,10 @@ export function AssignmentDialog({
   // Helper function: Handle answer mode change
   const handleAnswerModeChange = (mode: "listening" | "writing") => {
     // Only check audio for listening mode in sentence_making
-    if (mode === "listening" && getSelectedContentType() === "sentence_making") {
+    if (
+      mode === "listening" &&
+      getSelectedContentType() === "sentence_making"
+    ) {
       const hasAudio = checkAllContentsHaveAudio();
       if (!hasAudio) {
         toast.error("所選內容缺少音檔，請先在內容管理中為所有項目添加音檔");
@@ -377,7 +380,7 @@ export function AssignmentDialog({
 
     // Filter out disabled contents (different type)
     const selectableContents = lesson.contents.filter(
-      (c) => selectedType === null || selectedType === c.type
+      (c) => selectedType === null || selectedType === c.type,
     );
 
     if (selectableContents.length === 0) return;
@@ -846,14 +849,18 @@ export function AssignmentDialog({
                                     lesson.contents && (
                                       <div className="ml-6 space-y-1 pb-2 bg-white">
                                         {lesson.contents.map((content) => {
-                                          const disabled = isContentDisabled(content);
-                                          const selected = selectedContents.has(content.id);
+                                          const disabled =
+                                            isContentDisabled(content);
+                                          const selected = selectedContents.has(
+                                            content.id,
+                                          );
 
                                           return (
                                             <button
                                               key={content.id}
                                               onClick={() =>
-                                                !disabled && toggleContent(content.id)
+                                                !disabled &&
+                                                toggleContent(content.id)
                                               }
                                               disabled={disabled}
                                               className={cn(
@@ -861,23 +868,30 @@ export function AssignmentDialog({
                                                 disabled
                                                   ? "opacity-50 cursor-not-allowed bg-gray-100"
                                                   : "hover:bg-gray-50 cursor-pointer",
-                                                selected && !disabled &&
+                                                selected &&
+                                                  !disabled &&
                                                   "bg-blue-50 hover:bg-blue-100",
                                               )}
                                             >
                                               {selected ? (
                                                 <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
                                               ) : (
-                                                <Circle className={cn(
-                                                  "h-4 w-4 flex-shrink-0",
-                                                  disabled ? "text-gray-300" : "text-gray-400"
-                                                )} />
+                                                <Circle
+                                                  className={cn(
+                                                    "h-4 w-4 flex-shrink-0",
+                                                    disabled
+                                                      ? "text-gray-300"
+                                                      : "text-gray-400",
+                                                  )}
+                                                />
                                               )}
                                               <div className="flex-1">
-                                                <div className={cn(
-                                                  "text-sm font-medium",
-                                                  disabled && "text-gray-400"
-                                                )}>
+                                                <div
+                                                  className={cn(
+                                                    "text-sm font-medium",
+                                                    disabled && "text-gray-400",
+                                                  )}
+                                                >
                                                   {content.title}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -885,7 +899,7 @@ export function AssignmentDialog({
                                                     variant="outline"
                                                     className={cn(
                                                       "px-1 py-0",
-                                                      disabled && "opacity-50"
+                                                      disabled && "opacity-50",
                                                     )}
                                                   >
                                                     {contentTypeLabels[
@@ -893,7 +907,13 @@ export function AssignmentDialog({
                                                     ] || content.type}
                                                   </Badge>
                                                   {content.items_count && (
-                                                    <span className={disabled ? "text-gray-400" : ""}>
+                                                    <span
+                                                      className={
+                                                        disabled
+                                                          ? "text-gray-400"
+                                                          : ""
+                                                      }
+                                                    >
                                                       {content.items_count} 題
                                                     </span>
                                                   )}
@@ -1202,7 +1222,8 @@ export function AssignmentDialog({
                           <Layers className="h-3 w-3 text-blue-600" />
                           <span className="text-gray-700">作業類型：</span>
                           <span className="font-medium text-blue-900">
-                            {contentTypeLabels[getSelectedContentType()!] || getSelectedContentType()}
+                            {contentTypeLabels[getSelectedContentType()!] ||
+                              getSelectedContentType()}
                           </span>
                         </div>
                       )}
@@ -1218,10 +1239,16 @@ export function AssignmentDialog({
                                 name="answer_mode"
                                 value="writing"
                                 checked={formData.answer_mode === "writing"}
-                                onChange={(e) => handleAnswerModeChange(e.target.value as "writing" | "listening")}
+                                onChange={(e) =>
+                                  handleAnswerModeChange(
+                                    e.target.value as "writing" | "listening",
+                                  )
+                                }
                                 className="w-3 h-3 text-blue-600"
                               />
-                              <span className="text-xs text-gray-700">寫作模式作答（不播放音檔）</span>
+                              <span className="text-xs text-gray-700">
+                                寫作模式作答（不播放音檔）
+                              </span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -1229,10 +1256,16 @@ export function AssignmentDialog({
                                 name="answer_mode"
                                 value="listening"
                                 checked={formData.answer_mode === "listening"}
-                                onChange={(e) => handleAnswerModeChange(e.target.value as "writing" | "listening")}
+                                onChange={(e) =>
+                                  handleAnswerModeChange(
+                                    e.target.value as "writing" | "listening",
+                                  )
+                                }
                                 className="w-3 h-3 text-blue-600"
                               />
-                              <span className="text-xs text-gray-700">聽力模式作答（播放音檔）</span>
+                              <span className="text-xs text-gray-700">
+                                聽力模式作答（播放音檔）
+                              </span>
                             </label>
                           </div>
                         </div>

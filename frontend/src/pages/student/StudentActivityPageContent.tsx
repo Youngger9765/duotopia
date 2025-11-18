@@ -1053,12 +1053,12 @@ export default function StudentActivityPageContent({
           />
         );
 
-        // 舊版造句練習（向後兼容）：使用錄音方式
-        // 如果以後需要支援舊版，可以檢查 activity.items 是否存在
-        // if (activity.items && activity.items.length > 0) {
-        //   const smAnswer = answers.get(activity.id);
-        //   ...使用 SentenceMakingTemplate
-        // }
+      // 舊版造句練習（向後兼容）：使用錄音方式
+      // 如果以後需要支援舊版，可以檢查 activity.items 是否存在
+      // if (activity.items && activity.items.length > 0) {
+      //   const smAnswer = answers.get(activity.id);
+      //   ...使用 SentenceMakingTemplate
+      // }
 
       case "listening_cloze":
         return (

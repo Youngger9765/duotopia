@@ -207,13 +207,21 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
       <div className="word-info mb-6 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-4">
           <div>
-            <span className="text-sm font-medium text-gray-600">本題單字：</span>
-            <span className="text-xl font-bold text-purple-600 ml-2">{word.text}</span>
+            <span className="text-sm font-medium text-gray-600">
+              本題單字：
+            </span>
+            <span className="text-xl font-bold text-purple-600 ml-2">
+              {word.text}
+            </span>
           </div>
           <div className="h-6 w-px bg-gray-300"></div>
           <div>
-            <span className="text-sm font-medium text-gray-600">中文意思：</span>
-            <span className="text-lg text-gray-800 ml-2">{word.translation}</span>
+            <span className="text-sm font-medium text-gray-600">
+              中文意思：
+            </span>
+            <span className="text-lg text-gray-800 ml-2">
+              {word.translation}
+            </span>
           </div>
         </div>
       </div>
@@ -234,14 +242,14 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
             </button>
           ))}
           {/* 空白框提示 */}
-          {Array.from({ length: correctWords.length - selectedWords.length }).map(
-            (_, idx) => (
-              <div
-                key={`empty-${idx}`}
-                className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg w-20"
-              />
-            )
-          )}
+          {Array.from({
+            length: correctWords.length - selectedWords.length,
+          }).map((_, idx) => (
+            <div
+              key={`empty-${idx}`}
+              className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg w-20"
+            />
+          ))}
         </div>
       </div>
 
@@ -270,7 +278,9 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
                 <div className="text-sm text-green-700">
                   正確句子：{word.example_sentence}
                 </div>
-                <div className="text-sm text-green-600 mt-1">正在準備下一題...</div>
+                <div className="text-sm text-green-600 mt-1">
+                  正在準備下一題...
+                </div>
               </div>
             </>
           ) : (

@@ -974,13 +974,17 @@ function SortableRowInner({
 
         {/* Example sentence fields */}
         <div className="space-y-2 pt-2 border-t border-gray-200">
-          <div className="text-xs font-medium text-gray-500 mb-1">例句（選填）</div>
+          <div className="text-xs font-medium text-gray-500 mb-1">
+            例句（選填）
+          </div>
 
           {/* Example sentence input */}
           <input
             type="text"
             value={row.example_sentence || ""}
-            onChange={(e) => handleUpdateRow(index, "example_sentence", e.target.value)}
+            onChange={(e) =>
+              handleUpdateRow(index, "example_sentence", e.target.value)
+            }
             className="w-full px-3 py-2 border rounded-md text-sm"
             placeholder="輸入例句（英文）"
             maxLength={200}
@@ -991,7 +995,13 @@ function SortableRowInner({
             <input
               type="text"
               value={row.example_sentence_translation || ""}
-              onChange={(e) => handleUpdateRow(index, "example_sentence_translation", e.target.value)}
+              onChange={(e) =>
+                handleUpdateRow(
+                  index,
+                  "example_sentence_translation",
+                  e.target.value,
+                )
+              }
               className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
               placeholder="例句中文翻譯"
               maxLength={200}
@@ -1157,7 +1167,8 @@ export default function SentenceMakingPanel({
             audioUrl: item.audio_url || "",
             selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
             example_sentence: item.example_sentence || "",
-            example_sentence_translation: item.example_sentence_translation || "",
+            example_sentence_translation:
+              item.example_sentence_translation || "",
           }),
         );
         setRows(convertedRows);
@@ -2086,7 +2097,8 @@ export default function SentenceMakingPanel({
                   selectedLanguage: row.selectedLanguage || "chinese",
                   audio_url: row.audioUrl || row.audio_url || "",
                   example_sentence: row.example_sentence || "",
-                  example_sentence_translation: row.example_sentence_translation || "",
+                  example_sentence_translation:
+                    row.example_sentence_translation || "",
                 })),
                 target_wpm: 60,
                 target_accuracy: 0.8,

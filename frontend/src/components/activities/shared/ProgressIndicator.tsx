@@ -11,7 +11,10 @@ interface ProgressIndicatorProps {
   total: number;
 }
 
-const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ current, total }) => {
+const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
+  current,
+  total,
+}) => {
   const percentage = Math.round((current / total) * 100);
 
   return (
