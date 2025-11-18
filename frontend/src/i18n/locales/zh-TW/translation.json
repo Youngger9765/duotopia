@@ -773,6 +773,32 @@
       "loginFailed": "密碼錯誤，請重新輸入"
     }
   },
+  "studentLayout": {
+    "nav": {
+      "home": "首頁",
+      "assignments": "作業",
+      "progress": "進度",
+      "achievements": "成就",
+      "calendar": "行事曆",
+      "messages": "訊息",
+      "profile": "個人資料",
+      "settings": "設定",
+      "logout": "登出"
+    },
+    "header": {
+      "defaultTitle": "學生專區",
+      "welcome": "嗨，{{name}}！"
+    },
+    "stats": {
+      "streak": "連續天數",
+      "days": "{{count}} 天",
+      "weekProgress": "本週進度"
+    },
+    "userInfo": {
+      "defaultStudent": "學生",
+      "defaultClass": "未分配班級"
+    }
+  },
   "studentDashboard": {
     "welcome": {
       "greeting": "你好，{{name}}！歡迎回到 Duotopia 🚀",

@@ -773,6 +773,32 @@
       "loginFailed": "Incorrect password, please try again"
     }
   },
+  "studentLayout": {
+    "nav": {
+      "home": "Home",
+      "assignments": "Assignments",
+      "progress": "Progress",
+      "achievements": "Achievements",
+      "calendar": "Calendar",
+      "messages": "Messages",
+      "profile": "Profile",
+      "settings": "Settings",
+      "logout": "Logout"
+    },
+    "header": {
+      "defaultTitle": "Student Area",
+      "welcome": "Hi, {{name}}!"
+    },
+    "stats": {
+      "streak": "Day Streak",
+      "days": "{{count}} days",
+      "weekProgress": "Week Progress"
+    },
+    "userInfo": {
+      "defaultStudent": "Student",
+      "defaultClass": "No class assigned"
+    }
+  },
   "studentDashboard": {
     "welcome": {
       "greeting": "Hello, {{name}}! Welcome back to Duotopia 🚀",
