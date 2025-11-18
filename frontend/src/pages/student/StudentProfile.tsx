@@ -17,7 +17,6 @@ import {
   Edit2,
   Trash2,
   ArrowLeft,
-  Shield,
   Loader2,
   Lock,
   Save,
@@ -40,7 +39,7 @@ interface StudentInfo {
 export default function StudentProfile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, token, logout } = useStudentAuthStore();
+  const { user, token } = useStudentAuthStore();
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEmailEdit, setShowEmailEdit] = useState(false);
@@ -659,46 +658,6 @@ export default function StudentProfile() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Account Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              {t("studentProfile.account.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-500">
-                  {t("studentProfile.account.id")}
-                </label>
-                <p className="font-medium">#{studentInfo.id}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">
-                  {t("studentProfile.account.registeredAt")}
-                </label>
-                <p className="font-medium">
-                  {formatDate(studentInfo.created_at)}
-                </p>
-              </div>
-            </div>
-            <div className="pt-4 border-t">
-              <Button
-                variant="outline"
-                className="text-red-600 hover:text-red-700"
-                onClick={() => {
-                  logout();
-                  navigate("/student/login");
-                }}
-              >
-                {t("studentProfile.account.logout")}
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
