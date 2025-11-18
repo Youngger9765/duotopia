@@ -645,6 +645,11 @@
       "minutes": "分鐘",
       "overallScore": "總評",
       "noScoreYet": "尚無總評"
+    },
+    "status": {
+      "completed": "已完成",
+      "inProgress": "進行中",
+      "notStarted": "未開始"
     }
   },
   "studentProfile": {

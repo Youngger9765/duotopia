@@ -645,6 +645,11 @@
       "minutes": "minutes",
       "overallScore": "Overall Score",
       "noScoreYet": "No score yet"
+    },
+    "status": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started"
     }
   },
   "studentProfile": {
