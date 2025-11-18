@@ -19,6 +19,9 @@ import {
   ArrowLeft,
   Shield,
   Loader2,
+  Lock,
+  Save,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -45,6 +48,18 @@ export default function StudentProfile() {
   const [showUnbindConfirm, setShowUnbindConfirm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUnbinding, setIsUnbinding] = useState(false);
+
+  // Name update states
+  const [showNameEdit, setShowNameEdit] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  // Password update states
+  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     if (!user || !token) {
@@ -143,6 +158,87 @@ export default function StudentProfile() {
     }
   };
 
+  const handleUpdateName = async () => {
+    if (!newName || newName.trim().length === 0) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    setIsUpdatingName(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${apiUrl}/api/students/me`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (response.ok) {
+        toast.success("Name updated successfully");
+        setShowNameEdit(false);
+        loadStudentInfo();
+      } else {
+        const error = await response.text();
+        toast.error(`Failed to update name: ${error}`);
+      }
+    } catch {
+      toast.error("Error updating name");
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("All password fields are required");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${apiUrl}/api/students/me/password`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Password updated successfully");
+        setShowPasswordEdit(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || "Failed to update password");
+      }
+    } catch {
+      toast.error("Error updating password");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return t("studentProfile.basicInfo.notSet");
     const date = new Date(dateString);
@@ -213,7 +309,55 @@ export default function StudentProfile() {
                 <label className="text-sm text-gray-500">
                   {t("studentProfile.basicInfo.name")}
                 </label>
-                <p className="font-medium">{studentInfo.name}</p>
+                {!showNameEdit ? (
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{studentInfo.name}</p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setNewName(studentInfo.name);
+                        setShowNameEdit(true);
+                      }}
+                      className="h-6 px-2"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="h-9"
+                      placeholder="Enter new name"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleUpdateName}
+                      disabled={isUpdatingName || !newName.trim()}
+                      className="h-9 px-3"
+                    >
+                      {isUpdatingName ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowNameEdit(false);
+                        setNewName("");
+                      }}
+                      disabled={isUpdatingName}
+                      className="h-9 px-3"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-sm text-gray-500">
@@ -405,6 +549,105 @@ export default function StudentProfile() {
                       </Button>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Password Settings Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!showPasswordEdit ? (
+              <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  Update your password to keep your account secure
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowPasswordEdit(true)}
+                  className="hover:bg-gray-200 transition-colors"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Change Password
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Current Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (at least 6 characters)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Confirm New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleUpdatePassword}
+                    disabled={
+                      isUpdatingPassword ||
+                      !currentPassword ||
+                      !newPassword ||
+                      !confirmPassword
+                    }
+                    className="min-w-[100px]"
+                  >
+                    {isUpdatingPassword ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowPasswordEdit(false);
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    }}
+                    disabled={isUpdatingPassword}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </div>
             )}

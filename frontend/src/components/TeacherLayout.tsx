@@ -12,6 +12,7 @@ import {
   CreditCard,
   Menu,
   Crown,
+  User,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -119,6 +120,12 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       label: t("teacherLayout.nav.subscription"),
       icon: CreditCard,
       path: "/teacher/subscription",
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      icon: User,
+      path: "/teacher/profile",
     },
   ];
 

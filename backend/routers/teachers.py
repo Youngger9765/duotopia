@@ -20,7 +20,7 @@ from models import (
     StudentContentProgress,
     ProgramLevel,
 )
-from auth import verify_token, get_password_hash
+from auth import verify_token, get_password_hash, verify_password
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
@@ -85,6 +85,16 @@ class TeacherProfile(BaseModel):
         from_attributes = True
 
 
+class UpdateTeacherProfileRequest(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class UpdatePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class ClassroomSummary(BaseModel):
     id: int
     name: str
@@ -119,6 +129,51 @@ class TeacherDashboard(BaseModel):
 async def get_teacher_profile(current_teacher: Teacher = Depends(get_current_teacher)):
     """取得教師個人資料"""
     return current_teacher
+
+
+@router.put("/me", response_model=TeacherProfile)
+async def update_teacher_profile(
+    request: UpdateTeacherProfileRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """更新教師個人資料"""
+    if request.name is not None:
+        current_teacher.name = request.name
+    if request.phone is not None:
+        current_teacher.phone = request.phone
+
+    db.commit()
+    db.refresh(current_teacher)
+    return current_teacher
+
+
+@router.put("/me/password")
+async def update_teacher_password(
+    request: UpdatePasswordRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """更新教師密碼"""
+    # Verify current password
+    if not verify_password(request.current_password, current_teacher.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    # Validate new password
+    if len(request.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters",
+        )
+
+    # Update password
+    current_teacher.password_hash = get_password_hash(request.new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully"}
 
 
 @router.get("/dashboard", response_model=TeacherDashboard)
