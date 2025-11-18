@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, Info } from "lucide-react";
@@ -28,6 +29,7 @@ interface ActivityResponse {
 }
 
 export default function TeacherAssignmentPreviewPage() {
+  const { t } = useTranslation();
   const { classroomId, assignmentId } = useParams<{
     classroomId: string;
     assignmentId: string;
@@ -66,7 +68,9 @@ export default function TeacherAssignmentPreviewPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入預覽中...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t("previewPage.loading")}
+          </p>
         </div>
       </div>
     );
@@ -77,9 +81,9 @@ export default function TeacherAssignmentPreviewPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            無法載入預覽資料
+            {t("previewPage.messages.loadError")}
           </p>
-          <Button onClick={() => navigate(-1)}>返回</Button>
+          <Button onClick={() => navigate(-1)}>{t("common.back")}</Button>
         </div>
       </div>
     );
@@ -100,7 +104,7 @@ export default function TeacherAssignmentPreviewPage() {
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              返回作業列表
+              {t("previewPage.buttons.backToList")}
             </Button>
 
             <Badge
@@ -108,7 +112,7 @@ export default function TeacherAssignmentPreviewPage() {
               className="gap-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 px-4 py-2"
             >
               <Eye className="h-4 w-4" />
-              預覽示範模式
+              {t("previewPage.badge.previewMode")}
             </Badge>
           </div>
 
@@ -116,7 +120,7 @@ export default function TeacherAssignmentPreviewPage() {
           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。
+              {t("previewPage.info.description")}
             </p>
           </div>
         </div>

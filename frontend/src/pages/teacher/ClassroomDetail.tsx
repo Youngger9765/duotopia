@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -75,6 +76,7 @@ interface ClassroomDetailProps {
 export default function ClassroomDetail({
   isTemplateMode = false,
 }: ClassroomDetailProps) {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -880,7 +882,7 @@ export default function ClassroomDetail({
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -891,12 +893,14 @@ export default function ClassroomDetail({
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到班級資料</p>
+          <p className="text-gray-500">
+            {t("classroomDetail.messages.notFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() => navigate("/teacher/classrooms")}
           >
-            返回班級列表
+            {t("classroomDetail.buttons.backToList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -907,12 +911,14 @@ export default function ClassroomDetail({
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到模板課程資料</p>
+          <p className="text-gray-500">
+            {t("classroomDetail.messages.templateNotFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() => navigate("/teacher/programs")}
           >
-            返回模板課程列表
+            {t("classroomDetail.buttons.backToProgramList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -941,7 +947,7 @@ export default function ClassroomDetail({
                 className="flex-shrink-0"
               >
                 <ArrowLeft className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">返回</span>
+                <span className="hidden sm:inline">{t("common.back")}</span>
               </Button>
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
@@ -966,7 +972,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">學生數</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.studentCount")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {classroom?.student_count || 0}
                     </p>
@@ -977,7 +985,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">課程數</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.programCount")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {programs.length}
                     </p>
@@ -988,7 +998,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">等級</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.level")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {classroom?.level || "A1"}
                     </p>
@@ -1021,16 +1033,24 @@ export default function ClassroomDetail({
                       className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                     >
                       <Users className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">學生列表</span>
-                      <span className="sm:hidden text-[10px]">學生</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.studentList")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.students")}
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="programs"
                       className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                     >
                       <BookOpen className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">課程列表</span>
-                      <span className="sm:hidden text-[10px]">課程</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.programList")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.programs")}
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="assignments"
@@ -1050,8 +1070,12 @@ export default function ClassroomDetail({
                       }}
                     >
                       <FileText className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">作業管理</span>
-                      <span className="sm:hidden text-[10px]">作業</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.assignmentManagement")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.assignments")}
+                      </span>
                     </TabsTrigger>
                   </TabsList>
                 )}
@@ -1062,7 +1086,7 @@ export default function ClassroomDetail({
                 <TabsContent value="students" className="p-3 sm:p-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
                     <h3 className="text-base sm:text-lg font-semibold">
-                      班級學生
+                      {t("classroomDetail.sections.classStudents")}
                     </h3>
                     <Button
                       size="sm"
@@ -1070,7 +1094,7 @@ export default function ClassroomDetail({
                       className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      新增學生
+                      {t("classroomDetail.buttons.addStudent")}
                     </Button>
                   </div>
 
@@ -1081,7 +1105,7 @@ export default function ClassroomDetail({
                     onViewStudent={handleViewStudent}
                     onEditStudent={handleEditStudent}
                     onResetPassword={handleResetPassword}
-                    emptyMessage="此班級尚無學生"
+                    emptyMessage={t("classroomDetail.messages.noStudents")}
                   />
                 </TabsContent>
               )}
@@ -1090,7 +1114,9 @@ export default function ClassroomDetail({
               <TabsContent value="programs" className="p-3 sm:p-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
                   <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                    {isTemplateMode ? "模板課程內容" : "班級課程"}
+                    {isTemplateMode
+                      ? t("classroomDetail.sections.templateContent")
+                      : t("classroomDetail.sections.classPrograms")}
                   </h3>
                   {!isTemplateMode && (
                     <Button
@@ -1099,7 +1125,7 @@ export default function ClassroomDetail({
                       className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      建立課程
+                      {t("classroomDetail.buttons.createProgram")}
                     </Button>
                   )}
                 </div>
@@ -1178,7 +1204,7 @@ export default function ClassroomDetail({
                     {/* Header with Create Button */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                        作業列表
+                        {t("classroomDetail.sections.assignmentList")}
                       </h3>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                         {!canAssignHomework && teacherData && (
@@ -1209,7 +1235,7 @@ export default function ClassroomDetail({
                           }`}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          指派新作業
+                          {t("classroomDetail.buttons.assignNewHomework")}
                         </Button>
                       </div>
                     </div>

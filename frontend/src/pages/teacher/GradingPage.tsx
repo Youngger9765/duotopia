@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,7 @@ interface StudentListItem {
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export default function GradingPage() {
+  const { t } = useTranslation();
   const { classroomId, assignmentId } = useParams<{
     classroomId: string;
     assignmentId: string;
@@ -720,7 +722,7 @@ export default function GradingPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -744,7 +746,7 @@ export default function GradingPage() {
                 className="flex-shrink-0"
               >
                 <ArrowLeft className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">返回</span>
+                <span className="hidden sm:inline">{t("common.back")}</span>
               </Button>
               <div className="border-l h-8 mx-1 hidden md:block"></div>
               <div className="flex flex-col min-w-0 flex-1">
@@ -859,7 +861,7 @@ export default function GradingPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              學生
+              {t("gradingPage.tabs.students")}
             </button>
             <button
               onClick={() => setActiveTab("content")}
@@ -869,7 +871,7 @@ export default function GradingPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              題組
+              {t("gradingPage.tabs.questions")}
             </button>
             <button
               onClick={() => setActiveTab("grading")}
@@ -879,7 +881,7 @@ export default function GradingPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              總評
+              {t("gradingPage.tabs.overallReview")}
             </button>
           </div>
         </div>
@@ -996,7 +998,7 @@ export default function GradingPage() {
                     className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Search className="h-4 w-4" />
-                    檢查錄音
+                    {t("gradingPage.buttons.checkRecording")}
                   </Button>
                   <Button
                     size="sm"
@@ -1004,7 +1006,7 @@ export default function GradingPage() {
                     className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Sparkles className="h-4 w-4" />
-                    套用 AI 建議
+                    {t("gradingPage.buttons.applyAISuggestions")}
                   </Button>
                   {/* 題組選擇器 */}
                   {submission.content_groups &&
@@ -1509,7 +1511,7 @@ export default function GradingPage() {
                       }`}
                     >
                       <X className="h-4 w-4 mr-2" />
-                      要求訂正
+                      {t("gradingPage.buttons.requestRevision")}
                     </Button>
 
                     {/* 已完成 */}
@@ -1526,7 +1528,7 @@ export default function GradingPage() {
                       }`}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      完成批改
+                      {t("gradingPage.buttons.completeGrading")}
                     </Button>
                   </div>
                 </div>

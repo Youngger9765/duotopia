@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ interface StudentProgress {
 }
 
 export default function TeacherAssignmentDetailPage() {
+  const { t } = useTranslation();
   const { classroomId, assignmentId } = useParams<{
     classroomId: string;
     assignmentId: string;
@@ -561,7 +563,7 @@ export default function TeacherAssignmentDetailPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -572,14 +574,16 @@ export default function TeacherAssignmentDetailPage() {
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到作業資料</p>
+          <p className="text-gray-500">
+            {t("assignmentDetail.messages.notFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() =>
               navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
             }
           >
-            返回作業列表
+            {t("assignmentDetail.buttons.backToList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -601,7 +605,7 @@ export default function TeacherAssignmentDetailPage() {
               className="h-12 min-h-12 w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              返回作業列表
+              {t("assignmentDetail.buttons.backToList")}
             </Button>
             <div className="flex-1">
               {isEditing ? (
@@ -633,7 +637,7 @@ export default function TeacherAssignmentDetailPage() {
               className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 h-12 min-h-12 w-full sm:w-auto"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              批改作業
+              {t("assignmentDetail.buttons.gradeAssignment")}
             </Button>
             {isEditing ? (
               <>

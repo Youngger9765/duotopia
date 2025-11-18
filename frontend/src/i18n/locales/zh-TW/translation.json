@@ -615,44 +615,17 @@
     }
   },
   "studentActivityPage": {
-    "buttons": {
-      "back": "返回作業",
-      "backShort": "返回",
-      "submit": "提交作業",
-      "submitShort": "提交",
-      "submitting": "提交中...",
-      "submittingShort": "提交中",
-      "previous": "上一題",
-      "next": "下一題",
-      "confirm": "確認提交",
-      "cancel": "再檢查一次"
+    "loading": {
+      "title": "載入作業中...",
+      "subtitle": "請稍候，正在準備您的學習內容"
     },
-    "status": {
-      "saving": "自動儲存中...",
-      "savingShort": "儲存中",
-      "completed": "已完成",
-      "inProgress": "進行中",
-      "notStarted": "未開始"
+    "messages": {
+      "noActivities": "此作業尚無題目",
+      "submitSuccess": "作業提交成功！"
     },
-    "activityTypes": {
-      "reading": "朗讀錄音",
-      "listening": "聽力填空",
-      "speaking": "口說練習"
-    },
-    "warnings": {
-      "previewNoRecord": "預覽模式下無法錄音",
-      "readonlyNoRecord": "檢視模式下無法錄音",
-      "previewNoUpload": "預覽模式下無法上傳",
-      "readonlyNoUpload": "檢視模式下無法上傳",
-      "recordingLimit": "錄音已達 45 秒上限，自動停止"
-    },
-    "validation": {
-      "title": "請先完成以下項目",
-      "incompleteItems": "以下項目尚未完成："
-    },
-    "feedback": {
-      "passed": "通過",
-      "failed": "未通過"
+    "errors": {
+      "loadFailed": "無法載入題目，請稍後再試",
+      "submitFailed": "提交失敗，請稍後再試"
     }
   },
   "studentProfile": {
@@ -1776,6 +1749,327 @@
       "createFailed": "創建內容失敗",
       "loadFailed": "載入內容失敗",
       "updateFailed": "更新失敗，但音檔已生成"
+    }
+  },
+  "classroomDetail": {
+    "title": "班級詳情",
+    "messages": {
+      "notFound": "找不到班級資料",
+      "templateNotFound": "找不到模板課程資料",
+      "noStudents": "此班級尚無學生",
+      "subscriptionExpired": "您的訂閱已過期，無法指派作業。請先充值續訂。"
+    },
+    "buttons": {
+      "backToList": "返回班級列表",
+      "backToProgramList": "返回模板課程列表",
+      "addStudent": "新增學生",
+      "createProgram": "建立課程",
+      "assignNewHomework": "指派新作業"
+    },
+    "stats": {
+      "studentCount": "學生數",
+      "programCount": "課程數",
+      "level": "等級"
+    },
+    "tabs": {
+      "students": "學生",
+      "studentList": "學生列表",
+      "programs": "課程",
+      "programList": "課程列表",
+      "assignments": "作業",
+      "assignmentManagement": "作業管理"
+    },
+    "sections": {
+      "classStudents": "班級學生",
+      "templateContent": "模板課程內容",
+      "classPrograms": "班級課程",
+      "assignmentList": "作業列表"
+    }
+  },
+  "gradingPage": {
+    "title": "批改作業",
+    "tabs": {
+      "students": "學生",
+      "questions": "題組",
+      "overallReview": "總評"
+    },
+    "buttons": {
+      "checkRecording": "檢查錄音",
+      "applyAISuggestions": "套用 AI 建議",
+      "requestRevision": "要求訂正",
+      "completeGrading": "完成批改"
+    },
+    "labels": {
+      "questionGroup": "題組",
+      "overallFeedback": "總評語回饋",
+      "score": "分數",
+      "status": "狀態"
+    }
+  },
+  "assignmentDetail": {
+    "title": "作業詳情",
+    "messages": {
+      "notFound": "找不到作業資料"
+    },
+    "buttons": {
+      "backToList": "返回作業列表",
+      "gradeAssignment": "批改作業"
+    },
+    "labels": {
+      "contentType": "內容類型",
+      "assignedDate": "指派日期",
+      "dueDate": "截止日期",
+      "assignedStudents": "指派學生數",
+      "instructions": "作業說明",
+      "completionRate": "完成進度"
+    }
+  },
+  "previewPage": {
+    "loading": "載入預覽中...",
+    "messages": {
+      "loadError": "無法載入預覽資料"
+    },
+    "buttons": {
+      "backToList": "返回作業列表"
+    },
+    "badge": {
+      "previewMode": "預覽示範模式"
+    },
+    "info": {
+      "description": "這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。"
+    }
+  },
+  "teacherClassrooms": {
+    "title": "我的班級",
+    "buttons": {
+      "reload": "重新載入",
+      "addClassroom": "新增班級",
+      "add": "新增",
+      "edit": "編輯",
+      "delete": "刪除",
+      "confirmDelete": "確認刪除",
+      "create": "建立",
+      "createFirst": "建立第一個班級"
+    },
+    "stats": {
+      "totalClassrooms": "總班級數",
+      "totalStudents": "總學生數",
+      "activeClassrooms": "活躍班級"
+    },
+    "labels": {
+      "classroomName": "班級名稱",
+      "description": "描述",
+      "level": "等級",
+      "students": "學生",
+      "programs": "課程",
+      "studentCount": "學生數",
+      "programCount": "課程數",
+      "createdAt": "建立時間",
+      "actions": "操作",
+      "grade": "級別"
+    },
+    "messages": {
+      "totalCount": "共 {{count}} 個班級",
+      "noDescription": "暫無描述",
+      "noClassrooms": "尚未建立班級",
+      "createFirstDescription": "建立您的第一個班級，開始管理學生和課程",
+      "updateFailed": "更新班級失敗，請稍後再試",
+      "deleteFailed": "刪除班級失敗，請稍後再試",
+      "nameRequired": "請輸入班級名稱",
+      "createFailed": "建立班級失敗",
+      "error": "錯誤"
+    },
+    "dialogs": {
+      "editTitle": "編輯班級",
+      "editDescription": "修改班級資訊",
+      "deleteTitle": "確認刪除班級",
+      "deleteDescription": "確定要刪除這個班級嗎？此操作無法復原。班級內的學生和課程資料將會保留，但不再與此班級關聯。",
+      "createTitle": "新增班級",
+      "createDescription": "建立新的班級"
+    },
+    "placeholders": {
+      "classroomName": "例如：五年級A班",
+      "description": "班級描述（選填）"
+    }
+  },
+  "teacherStudents": {
+    "title": "所有學生",
+    "buttons": {
+      "reload": "重新載入",
+      "load": "載入",
+      "exportList": "匯出名單",
+      "export": "匯出",
+      "batchImport": "批次匯入",
+      "import": "匯入",
+      "addStudent": "新增學生",
+      "bulkAssign": "批量分配",
+      "bulkDelete": "批量刪除"
+    },
+    "stats": {
+      "totalStudents": "總學生數",
+      "activeStudents": "活躍學生",
+      "inactive": "未活躍",
+      "suspended": "已停權"
+    },
+    "filters": {
+      "allClassrooms": "所有班級",
+      "unassigned": "未分配"
+    },
+    "labels": {
+      "unassigned": "未分配"
+    },
+    "placeholders": {
+      "search": "搜尋學生姓名或 Email..."
+    },
+    "messages": {
+      "selectedCount": "已選擇 {{count}} 位學生",
+      "confirmResetPassword": "確定要將 {{name}} 的密碼重設為預設密碼嗎？",
+      "passwordReset": "已重設 {{name}} 的密碼為預設密碼",
+      "resetPasswordFailed": "重設密碼失敗，請稍後再試",
+      "studentDeleted": "已刪除學生：{{name}}",
+      "deleteStudentFailed": "刪除學生失敗，請稍後再試",
+      "exportSuccess": "已匯出 {{count}} 位學生資料",
+      "confirmBulkDelete": "確定要刪除 {{count}} 位學生嗎？",
+      "bulkDeleteSuccess": "成功刪除 {{count}} 位學生",
+      "deleteFailed": "刪除失敗，請稍後再試",
+      "bulkAssignSuccess": "成功分配 {{count}} 位學生到「{{classroom}}」",
+      "assignFailed": "分配失敗，請稍後再試",
+      "noStudentsFound": "找不到符合條件的學生",
+      "noStudentsInClassroom": "此班級暫無學生",
+      "noStudents": "尚未建立學生"
+    }
+  },
+  "teacherTemplatePrograms": {
+    "title": "公版課程",
+    "buttons": {
+      "addProgram": "新增課程"
+    },
+    "messages": {
+      "loadFailed": "載入公版課程失敗",
+      "programDeleted": "課程已刪除",
+      "lessonAdded": "單元「{{name}}」已新增",
+      "lessonUpdated": "單元「{{name}}」已更新",
+      "lessonDeleted": "單元已刪除",
+      "lessonDeleteFailed": "刪除單元失敗",
+      "confirmDeleteContent": "確定要刪除內容「{{title}}」嗎？此操作無法復原。",
+      "contentDeleted": "內容已刪除",
+      "contentDeleteFailed": "刪除內容失敗",
+      "reordering": "正在排序中，請稍候...",
+      "reorderSuccess": "排序成功",
+      "reorderFailed": "排序失敗",
+      "contentSaved": "內容已成功儲存",
+      "featureInDevelopment": "{{type}} 功能開發中"
+    },
+    "dialogs": {
+      "addReadingTitle": "新增朗讀內容",
+      "editContentTitle": "編輯內容"
+    }
+  },
+  "teacherSubscription": {
+    "title": "訂閱管理",
+    "description": "管理您的訂閱方案與付款記錄",
+    "tabs": {
+      "overview": "訂閱總覽",
+      "analytics": "使用統計",
+      "paymentHistory": "付款歷史"
+    },
+    "status": {
+      "success": "成功",
+      "failed": "失敗",
+      "pending": "處理中"
+    },
+    "subscription": {
+      "currentStatus": "當前訂閱狀態",
+      "unknownPlan": "未知方案",
+      "trial": "試用中",
+      "active": "有效",
+      "trialDescription": "試用期間，剩餘點數可帶入付費方案",
+      "statusGood": "訂閱狀態良好",
+      "quotaSchool": "25000 點 AI 評估配額/月 (約 416 分鐘口說評估)",
+      "quotaTrial": "10000 點 AI 評估配額 (試用期 30 天)",
+      "quotaTutor": "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)",
+      "noSubscription": "尚未訂閱",
+      "choosePlan": "選擇適合您的訂閱方案"
+    },
+    "labels": {
+      "expiryDate": "到期日",
+      "daysRemaining": "{{days}} 天",
+      "quotaUsage": "配額使用",
+      "points": "點",
+      "autoRenew": "自動續訂",
+      "enabled": "已啟用",
+      "cancelled": "已取消"
+    },
+    "buttons": {
+      "upgradeToPaid": "升級至付費方案",
+      "viewPlans": "查看訂閱方案",
+      "cancelRenewal": "取消續訂",
+      "enableRenewal": "啟用續訂",
+      "goBack": "返回",
+      "confirmCancel": "確認取消",
+      "selectPlan": "選擇此方案"
+    },
+    "messages": {
+      "pleaseLogin": "請先登入教師帳號",
+      "permissionDenied": "權限不足",
+      "loadSubscriptionFailed": "載入訂閱資料失敗",
+      "loadAnalyticsFailed": "載入使用統計失敗",
+      "subscriptionSuccess": "訂閱成功！交易編號：{{transactionId}}",
+      "subscriptionFailed": "訂閱失敗：{{error}}",
+      "cancelSuccess": "已成功取消自動續訂",
+      "cancelFailed": "取消失敗",
+      "reactivateSuccess": "已重新啟用自動續訂",
+      "reactivateFailed": "啟用失敗",
+      "pleaseBindCard": "請先在下方「付款方式管理」綁定信用卡",
+      "pleaseBindCardIcon": "💳 請先在下方「付款方式管理」綁定信用卡"
+    },
+    "warnings": {
+      "renewalCancelled": "⚠️ 您已取消自動續訂，訂閱將於 {{date}} 到期後失效",
+      "subscriptionExpiring": "⚠️ 您的訂閱即將到期"
+    },
+    "analytics": {
+      "quotaSummary": "配額使用摘要",
+      "totalQuota": "總配額",
+      "used": "已使用",
+      "usageRate": "使用率",
+      "remaining": "剩餘 {{points}} 點",
+      "dailyTrend": "每日使用趨勢",
+      "usageSeconds": "使用秒數",
+      "topStudents": "學生使用排行",
+      "topAssignments": "作業使用排行",
+      "noData": "暫無使用統計資料"
+    },
+    "history": {
+      "title": "付款歷史",
+      "description": "最近 10 筆交易記錄",
+      "noTransactions": "目前沒有交易記錄",
+      "subscriptionMonths": "訂閱 {{months}} 個月"
+    },
+    "dialogs": {
+      "cancelTitle": "確認取消自動續訂？",
+      "cancelDescription": "取消後您的訂閱將繼續有效至到期日，之後將不會自動續訂",
+      "whatHappens": "取消後會發生什麼？",
+      "remainsValidUntil": "訂閱繼續有效至 {{date}}",
+      "loseAccess": "到期後將無法使用進階功能",
+      "canReactivate": "您可以隨時重新啟用自動續訂"
+    },
+    "plans": {
+      "title": "選擇訂閱方案",
+      "description": "選擇最適合您的訂閱方案開始使用",
+      "recommended": "推薦",
+      "tutorDescription": "適合家教老師",
+      "schoolDescription": "適合學校老師",
+      "perMonth": " / 月",
+      "firstMonth": "首月: NT$ {{amount}}",
+      "prorated": "(按剩餘天數比例)",
+      "tutorFeature1": "10000 點 AI 評估/月 (約 166 分鐘口說評估)",
+      "tutorFeature2": "無限制學生數量",
+      "tutorFeature3": "完整作業功能",
+      "tutorFeature4": "語音評估功能",
+      "schoolFeature1": "25000 點 AI 評估/月 (約 416 分鐘口說評估)",
+      "schoolFeature2": "所有 Tutor Teachers 功能",
+      "schoolFeature3": "進階班級管理",
+      "schoolFeature4": "批次作業功能"
     }
   }
 }

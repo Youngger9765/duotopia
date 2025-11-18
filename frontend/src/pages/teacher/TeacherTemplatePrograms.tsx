@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import TeacherLayout from "@/components/TeacherLayout";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
@@ -11,6 +12,7 @@ import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
 
 export default function TeacherTemplateProgramsNew() {
+  const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReordering, setIsReordering] = useState(false);
@@ -56,7 +58,7 @@ export default function TeacherTemplateProgramsNew() {
       setPrograms(response as Program[]);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);
-      toast.error("載入公版課程失敗");
+      toast.error(t("teacherTemplatePrograms.messages.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -92,7 +94,7 @@ export default function TeacherTemplateProgramsNew() {
   const handleDeleteProgramConfirm = (programId: number) => {
     // 只更新 UI - 實際刪除由 ProgramDialog 處理
     setPrograms(programs.filter((p) => p.id !== programId));
-    toast.success("課程已刪除");
+    toast.success(t("teacherTemplatePrograms.messages.programDeleted"));
   };
 
   // Lesson handlers
@@ -136,7 +138,9 @@ export default function TeacherTemplateProgramsNew() {
           return program;
         }),
       );
-      toast.success(`單元「${lesson.name}」已新增`);
+      toast.success(
+        `${t("teacherTemplatePrograms.messages.lessonAdded", { name: lesson.name })}`,
+      );
     } else if (lessonDialogType === "edit") {
       setPrograms((prevPrograms) =>
         prevPrograms.map((program) => ({
@@ -146,7 +150,9 @@ export default function TeacherTemplateProgramsNew() {
             [],
         })),
       );
-      toast.success(`單元「${lesson.name}」已更新`);
+      toast.success(
+        `${t("teacherTemplatePrograms.messages.lessonUpdated", { name: lesson.name })}`,
+      );
     }
   };
 
@@ -163,10 +169,10 @@ export default function TeacherTemplateProgramsNew() {
         return program;
       });
       setPrograms(updatedPrograms);
-      toast.success("單元已刪除");
+      toast.success(t("teacherTemplatePrograms.messages.lessonDeleted"));
     } catch (err) {
       console.error("Failed to delete lesson:", err);
-      toast.error("刪除單元失敗");
+      toast.error(t("teacherTemplatePrograms.messages.lessonDeleteFailed"));
     }
   };
 
@@ -204,7 +210,13 @@ export default function TeacherTemplateProgramsNew() {
     contentId: number,
     contentTitle: string,
   ) => {
-    if (!confirm(`確定要刪除內容「${contentTitle}」嗎？此操作無法復原。`)) {
+    if (
+      !confirm(
+        t("teacherTemplatePrograms.messages.confirmDeleteContent", {
+          title: contentTitle,
+        }),
+      )
+    ) {
       return;
     }
 
@@ -223,17 +235,17 @@ export default function TeacherTemplateProgramsNew() {
         }),
       }));
       setPrograms(updatedPrograms);
-      toast.success("內容已刪除");
+      toast.success(t("teacherTemplatePrograms.messages.contentDeleted"));
     } catch (err) {
       console.error("Failed to delete content:", err);
-      toast.error("刪除內容失敗");
+      toast.error(t("teacherTemplatePrograms.messages.contentDeleteFailed"));
     }
   };
 
   // Reorder handlers
   const handleReorderPrograms = async (fromIndex: number, toIndex: number) => {
     if (isReordering) {
-      toast.warning("正在排序中，請稍候...");
+      toast.warning(t("teacherTemplatePrograms.messages.reordering"));
       return;
     }
 
@@ -257,11 +269,11 @@ export default function TeacherTemplateProgramsNew() {
       await apiClient.reorderPrograms(orderData);
       console.log("[Programs Reorder] API call succeeded");
 
-      toast.success("排序成功");
+      toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
     } catch (err) {
       console.error("[Programs Reorder] Failed to reorder programs:", err);
-      toast.error("排序失敗");
+      toast.error(t("teacherTemplatePrograms.messages.reorderFailed"));
       // Revert on error
       setPrograms(originalPrograms);
       setIsReordering(false);
@@ -274,7 +286,7 @@ export default function TeacherTemplateProgramsNew() {
     toIndex: number,
   ) => {
     if (isReordering) {
-      toast.warning("正在排序中，請稍候...");
+      toast.warning(t("teacherTemplatePrograms.messages.reordering"));
       return;
     }
 
@@ -310,11 +322,11 @@ export default function TeacherTemplateProgramsNew() {
       await apiClient.reorderLessons(programId, orderData);
       console.log(`[Lessons Reorder] API call succeeded`);
 
-      toast.success("排序成功");
+      toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
     } catch (err) {
       console.error(`[Lessons Reorder] Failed to reorder lessons:`, err);
-      toast.error("排序失敗");
+      toast.error(t("teacherTemplatePrograms.messages.reorderFailed"));
       // Revert on error
       setPrograms(originalPrograms);
       setIsReordering(false);
@@ -327,7 +339,7 @@ export default function TeacherTemplateProgramsNew() {
     toIndex: number,
   ) => {
     if (isReordering) {
-      toast.warning("正在排序中，請稍候...");
+      toast.warning(t("teacherTemplatePrograms.messages.reordering"));
       return;
     }
 
@@ -382,11 +394,11 @@ export default function TeacherTemplateProgramsNew() {
       await apiClient.reorderContents(lessonId, orderData);
       console.log(`[Contents Reorder] API call succeeded`);
 
-      toast.success("排序成功");
+      toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
     } catch (err) {
       console.error(`[Contents Reorder] Failed to reorder contents:`, err);
-      toast.error("排序失敗");
+      toast.error(t("teacherTemplatePrograms.messages.reorderFailed"));
       // Revert on error
       setPrograms(originalPrograms);
       setIsReordering(false);
@@ -399,7 +411,7 @@ export default function TeacherTemplateProgramsNew() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -419,9 +431,9 @@ export default function TeacherTemplateProgramsNew() {
           <RecursiveTreeAccordion
             data={programs}
             config={programTreeConfig}
-            title="公版課程"
+            title={t("teacherTemplatePrograms.title")}
             showCreateButton
-            createButtonText="新增課程"
+            createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
             onCreateClick={handleCreateProgram}
             onEdit={(item, level, parentId) => {
               if (level === 0) handleEditProgram(item.id);
@@ -478,7 +490,9 @@ export default function TeacherTemplateProgramsNew() {
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">新增朗讀內容</h2>
+                <h2 className="text-2xl font-bold">
+                  {t("teacherTemplatePrograms.dialogs.addReadingTitle")}
+                </h2>
                 <button
                   onClick={() => {
                     setShowReadingEditor(false);
@@ -536,7 +550,9 @@ export default function TeacherTemplateProgramsNew() {
                     setEditorLessonId(null);
                     setEditorContentId(null);
                     setSelectedContent(null);
-                    toast.success("內容已成功儲存");
+                    toast.success(
+                      t("teacherTemplatePrograms.messages.contentSaved"),
+                    );
                   }}
                   onCancel={() => {
                     setShowReadingEditor(false);
@@ -571,7 +587,7 @@ export default function TeacherTemplateProgramsNew() {
               <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    編輯內容
+                    {t("teacherTemplatePrograms.dialogs.editContentTitle")}
                   </h2>
                   <button
                     onClick={() => {
@@ -629,7 +645,9 @@ export default function TeacherTemplateProgramsNew() {
                           })),
                         );
                       }
-                      toast.success("內容已成功儲存");
+                      toast.success(
+                        t("teacherTemplatePrograms.messages.contentSaved"),
+                      );
                     }}
                     onCancel={() => {
                       setShowReadingEditor(false);
@@ -689,7 +707,9 @@ export default function TeacherTemplateProgramsNew() {
                 setSelectedContent(null); // No existing content
                 setShowReadingEditor(true);
               } else {
-                toast.info(`${selection.type} 功能開發中`);
+                toast.info(
+                  `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
+                );
               }
             }}
           />

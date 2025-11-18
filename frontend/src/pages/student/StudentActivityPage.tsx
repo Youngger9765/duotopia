@@ -9,6 +9,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { toast } from "sonner";
 import { Loader2, BookOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   setErrorLoggingContext,
   clearErrorLoggingContext,
@@ -87,6 +88,7 @@ export default function StudentActivityPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
   const { token, user } = useStudentAuthStore();
+  const { t } = useTranslation();
 
   // State management
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -141,7 +143,7 @@ export default function StudentActivityPage() {
       setAssignmentStatus(data.status || "");
     } catch (error) {
       console.error("Failed to load activities:", error);
-      toast.error("無法載入題目，請稍後再試");
+      toast.error(t("studentActivityPage.errors.loadFailed"));
       navigate(`/student/assignment/${assignmentId}/detail`);
     } finally {
       setLoading(false);
@@ -167,13 +169,13 @@ export default function StudentActivityPage() {
         throw new Error("Failed to submit assignment");
       }
 
-      toast.success("作業提交成功！");
+      toast.success(t("studentActivityPage.messages.submitSuccess"));
       setTimeout(() => {
         window.location.href = `/student/assignment/${assignmentId}/detail`;
       }, 500);
     } catch (error) {
       console.error("Failed to submit:", error);
-      toast.error("提交失敗，請稍後再試");
+      toast.error(t("studentActivityPage.errors.submitFailed"));
     }
   };
 
@@ -188,10 +190,10 @@ export default function StudentActivityPage() {
             <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
           </div>
           <p className="mt-6 text-lg font-medium text-gray-700">
-            載入作業中...
+            {t("studentActivityPage.loading.title")}
           </p>
           <p className="mt-2 text-sm text-gray-500">
-            請稍候，正在準備您的學習內容
+            {t("studentActivityPage.loading.subtitle")}
           </p>
         </div>
       </div>
@@ -203,7 +205,9 @@ export default function StudentActivityPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">此作業尚無題目</p>
+          <p className="text-gray-600 mb-4">
+            {t("studentActivityPage.messages.noActivities")}
+          </p>
         </div>
       </div>
     );
