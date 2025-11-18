@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +41,7 @@ export function LessonDialog({
   onSave,
   onDelete,
 }: LessonDialogProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Lesson>({
     name: "",
     description: "",
@@ -71,7 +73,7 @@ export function LessonDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = "單元名稱為必填";
+      newErrors.name = t("dialogs.lessonDialog.form.nameError");
     }
 
     setErrors(newErrors);
@@ -89,7 +91,9 @@ export function LessonDialog({
           description: formData.description,
           order_index: formData.order_index,
         });
-        toast.success(`單元「${formData.name}」已新增`);
+        toast.success(
+          t("dialogs.lessonDialog.success.created", { name: formData.name }),
+        );
         onSave(newLesson as Lesson);
       } else if (dialogType === "edit" && lesson?.id && programId) {
         await apiClient.updateLesson(lesson.id, {
@@ -97,14 +101,16 @@ export function LessonDialog({
           description: formData.description,
           order_index: formData.order_index,
         });
-        toast.success(`單元「${formData.name}」已更新`);
+        toast.success(
+          t("dialogs.lessonDialog.success.updated", { name: formData.name }),
+        );
         onSave({ ...lesson, ...formData });
       }
       onClose();
     } catch (error) {
       console.error("Failed to save lesson:", error);
-      toast.error("儲存失敗，請稍後再試");
-      setErrors({ submit: "儲存失敗，請稍後再試" });
+      toast.error(t("dialogs.lessonDialog.errors.saveFailed"));
+      setErrors({ submit: t("dialogs.lessonDialog.errors.saveFailed") });
     } finally {
       setLoading(false);
     }
@@ -131,17 +137,24 @@ export function LessonDialog({
         >
           <DialogHeader>
             <DialogTitle>
-              {dialogType === "create" ? "新增單元" : "編輯單元"}
+              {dialogType === "create"
+                ? t("dialogs.lessonDialog.create.title")
+                : t("dialogs.lessonDialog.edit.title")}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === "create" ? "為課程新增學習單元" : "修改單元資訊"}
+              {dialogType === "create"
+                ? t("dialogs.lessonDialog.create.description")
+                : t("dialogs.lessonDialog.edit.description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium">
-                單元名稱 <span className="text-red-500">*</span>
+                {t("dialogs.lessonDialog.form.nameLabel")}{" "}
+                <span className="text-red-500">
+                  {t("dialogs.lessonDialog.form.nameRequired")}
+                </span>
               </label>
               <input
                 id="name"
@@ -151,7 +164,7 @@ export function LessonDialog({
                   setFormData({ ...formData, name: e.target.value })
                 }
                 className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
-                placeholder="例：Unit 1: Greetings 打招呼"
+                placeholder={t("dialogs.lessonDialog.form.namePlaceholder")}
               />
               {errors.name && (
                 <p className="text-xs text-red-500 mt-1">{errors.name}</p>
@@ -160,7 +173,7 @@ export function LessonDialog({
 
             <div>
               <label htmlFor="description" className="text-sm font-medium">
-                單元描述
+                {t("dialogs.lessonDialog.form.descLabel")}
               </label>
               <textarea
                 id="description"
@@ -169,14 +182,14 @@ export function LessonDialog({
                   setFormData({ ...formData, description: e.target.value })
                 }
                 className="w-full mt-1 px-3 py-2 border rounded-md"
-                placeholder="學習目標與內容簡述..."
+                placeholder={t("dialogs.lessonDialog.form.descPlaceholder")}
                 rows={3}
               />
             </div>
 
             {dialogType === "create" && (
               <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
-                ℹ️ 單元將自動排在課程最後
+                {t("dialogs.lessonDialog.form.autoOrderNote")}
               </div>
             )}
 
@@ -189,14 +202,14 @@ export function LessonDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("dialogs.lessonDialog.buttons.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
               {loading
-                ? "處理中..."
+                ? t("dialogs.lessonDialog.buttons.processing")
                 : dialogType === "create"
-                  ? "新增"
-                  : "儲存"}
+                  ? t("dialogs.lessonDialog.buttons.create")
+                  : t("dialogs.lessonDialog.buttons.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -215,16 +228,20 @@ export function LessonDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              <span>確認刪除單元</span>
+              <span>{t("dialogs.lessonDialog.delete.title")}</span>
             </DialogTitle>
             <DialogDescription>
-              確定要刪除單元「{lesson.name}」嗎？此操作無法復原。
+              {t("dialogs.lessonDialog.delete.description", {
+                name: lesson.name,
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">單元資料：</p>
+              <p className="text-sm text-gray-600">
+                {t("dialogs.lessonDialog.delete.dataLabel")}
+              </p>
               <p className="font-medium mt-1">{lesson.name}</p>
               {lesson.description && (
                 <p className="text-sm text-gray-500 mt-1">
@@ -236,14 +253,16 @@ export function LessonDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("dialogs.lessonDialog.buttons.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={loading}
             >
-              {loading ? "刪除中..." : "確認刪除"}
+              {loading
+                ? t("dialogs.lessonDialog.buttons.deleting")
+                : t("dialogs.lessonDialog.buttons.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -145,7 +145,9 @@ export default function TeacherDashboard() {
                     : 0}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {t("teacherDashboard.subscription.remainingDays")}
+                  {t("teacherDashboard.subscription.remainingDays", {
+                    days: dashboardData.days_remaining ?? 0,
+                  })}
                 </div>
               </div>
             </div>
@@ -234,7 +236,7 @@ export default function TeacherDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        {t("teacherDashboard.classrooms.studentCount", {
+                        {t("teacherDashboard.classrooms.studentsCount", {
                           count: classroom.student_count,
                         })}
                       </p>
