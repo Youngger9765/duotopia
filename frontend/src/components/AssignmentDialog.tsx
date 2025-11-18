@@ -84,15 +84,9 @@ interface AssignmentDialogProps {
   onSuccess?: () => void;
 }
 
-// Content type labels in Chinese
-const contentTypeLabels: Record<string, string> = {
-  reading_assessment: "朗讀評測",
-  READING_ASSESSMENT: "朗讀評測",
-  speaking_practice: "口說練習",
-  speaking_scenario: "情境對話",
-  listening_cloze: "聽力填空",
-  sentence_making: "造句練習",
-  speaking_quiz: "口說測驗",
+// Content type labels - using i18n
+const useContentTypeLabel = (type: string, t: (key: string) => string) => {
+  return t(`dialogs.assignmentDialog.contentTypes.${type}`) || type;
 };
 
 interface QuotaInfo {
@@ -527,7 +521,7 @@ export function AssignmentDialog({
               <DialogTitle className="text-lg font-semibold">
                 {t("dialogs.assignmentDialog.title")}
               </DialogTitle>
-              {/* 配額顯示 */}
+              {/* Quota display */}
               {quotaInfo && (
                 <div className="mt-1 flex items-center gap-2 text-xs">
                   <Gauge
@@ -539,7 +533,7 @@ export function AssignmentDialog({
                     )}
                   />
                   <span className="text-gray-600">
-                    {t("dialogs.assignmentDialog.quota.remaining")}：
+                    {t("dialogs.assignmentDialog.quota.remainingColon")}
                     <span
                       className={cn(
                         "font-semibold ml-1",
@@ -556,7 +550,8 @@ export function AssignmentDialog({
                     </span>
                     <span className="text-gray-500">
                       {" "}
-                      / {quotaInfo.quota_total} 秒
+                      / {quotaInfo.quota_total}{" "}
+                      {t("dialogs.assignmentDialog.quota.seconds")}
                     </span>
                   </span>
                   {quotaInfo.quota_remaining <= 0 ? (
@@ -572,7 +567,7 @@ export function AssignmentDialog({
                         variant="destructive"
                         className="text-xs py-0 px-1.5"
                       >
-                        配額不足
+                        {t("dialogs.assignmentDialog.quota.low")}
                       </Badge>
                     )
                   )}
@@ -646,14 +641,16 @@ export function AssignmentDialog({
             <div className="h-full flex flex-col">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
-                  選擇要指派的課程內容（可多選）
+                  {t("dialogs.assignmentDialog.selectContent.description")}
                 </p>
                 {selectedContents.size > 0 && (
                   <Badge
                     variant="secondary"
                     className="bg-blue-50 text-blue-700"
                   >
-                    已選擇 {selectedContents.size} 個
+                    {t("dialogs.assignmentDialog.selectContent.selected", {
+                      count: selectedContents.size,
+                    })}
                   </Badge>
                 )}
               </div>
@@ -670,18 +667,20 @@ export function AssignmentDialog({
                       <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
                     </div>
                     <p className="mt-6 text-lg font-medium text-gray-700">
-                      載入課程內容中...
+                      {t("dialogs.assignmentDialog.selectContent.loading")}
                     </p>
                     <p className="mt-2 text-sm text-gray-500">
-                      請稍候，正在準備可指派的課程
+                      {t("dialogs.assignmentDialog.selectContent.loadingDesc")}
                     </p>
                   </div>
                 ) : programs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-96">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
-                    <p className="text-gray-500">尚無可用的課程內容</p>
+                    <p className="text-gray-500">
+                      {t("dialogs.assignmentDialog.selectContent.empty")}
+                    </p>
                     <p className="text-sm text-gray-400 mt-2">
-                      請先建立課程計畫和內容
+                      {t("dialogs.assignmentDialog.selectContent.emptyDesc")}
                     </p>
                   </div>
                 ) : (
@@ -710,11 +709,16 @@ export function AssignmentDialog({
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">
-                              {program.lessons?.length || 0} 個單元
+                              {t(
+                                "dialogs.assignmentDialog.selectContent.units",
+                                { count: program.lessons?.length || 0 },
+                              )}
                             </span>
                             {loadingLessons[program.id] && (
                               <span className="text-xs text-blue-600">
-                                載入中...
+                                {t(
+                                  "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                )}
                               </span>
                             )}
                           </div>
@@ -744,11 +748,18 @@ export function AssignmentDialog({
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs text-gray-500">
-                                        {lesson.contents?.length || 0} 個內容
+                                        {t(
+                                          "dialogs.assignmentDialog.selectContent.contents",
+                                          {
+                                            count: lesson.contents?.length || 0,
+                                          },
+                                        )}
                                       </span>
                                       {loadingLessons[lesson.id] && (
                                         <span className="text-xs text-blue-600">
-                                          載入中...
+                                          {t(
+                                            "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                          )}
                                         </span>
                                       )}
                                       {lesson.contents &&
@@ -764,8 +775,12 @@ export function AssignmentDialog({
                                             {lesson.contents.every((c) =>
                                               selectedContents.has(c.id),
                                             )
-                                              ? "取消全選"
-                                              : "全選"}
+                                              ? t(
+                                                  "dialogs.assignmentDialog.selectContent.deselectAll",
+                                                )
+                                              : t(
+                                                  "dialogs.assignmentDialog.selectContent.selectAll",
+                                                )}
                                           </span>
                                         )}
                                     </div>
@@ -804,13 +819,17 @@ export function AssignmentDialog({
                                                   variant="outline"
                                                   className="px-1 py-0"
                                                 >
-                                                  {contentTypeLabels[
-                                                    content.type
-                                                  ] || content.type}
+                                                  {useContentTypeLabel(
+                                                    content.type,
+                                                    t,
+                                                  )}
                                                 </Badge>
                                                 {content.items_count && (
                                                   <span>
-                                                    {content.items_count} 題
+                                                    {content.items_count}{" "}
+                                                    {t(
+                                                      "dialogs.assignmentDialog.selectContent.items",
+                                                    )}
                                                   </span>
                                                 )}
                                               </div>
@@ -862,9 +881,14 @@ export function AssignmentDialog({
           {currentStep === 2 && (
             <div className="h-full flex flex-col">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm text-gray-600">選擇要接收作業的學生</p>
+                <p className="text-sm text-gray-600">
+                  {t("dialogs.assignmentDialog.selectStudents.description")}
+                </p>
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                  {formData.student_ids.length}/{students.length} 已選
+                  {t("dialogs.assignmentDialog.selectStudents.selected", {
+                    selected: formData.student_ids.length,
+                    total: students.length,
+                  })}
                 </Badge>
               </div>
 
@@ -880,14 +904,19 @@ export function AssignmentDialog({
                   />
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold text-blue-900">
-                      指派給全班所有學生
+                      {t("dialogs.assignmentDialog.selectStudents.assignAll")}
                     </p>
                     <p className="text-xs text-blue-700">
-                      共 {students.length} 位學生
+                      {t(
+                        "dialogs.assignmentDialog.selectStudents.totalStudents",
+                        { count: students.length },
+                      )}
                     </p>
                   </div>
                   {formData.assign_to_all && (
-                    <Badge className="bg-blue-600 text-white">全選</Badge>
+                    <Badge className="bg-blue-600 text-white">
+                      {t("dialogs.assignmentDialog.selectStudents.allSelected")}
+                    </Badge>
                   )}
                 </div>
               </Card>
@@ -947,7 +976,7 @@ export function AssignmentDialog({
                   className="flex-1"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-1" />
-                  全選
+                  {t("dialogs.assignmentDialog.selectStudents.selectAllBtn")}
                 </Button>
                 <Button
                   variant="outline"
@@ -962,7 +991,7 @@ export function AssignmentDialog({
                   className="flex-1"
                 >
                   <Circle className="h-4 w-4 mr-1" />
-                  取消全選
+                  {t("dialogs.assignmentDialog.selectStudents.deselectAllBtn")}
                 </Button>
                 <Button
                   variant="outline"
@@ -982,7 +1011,7 @@ export function AssignmentDialog({
                   className="flex-1"
                 >
                   <ArrowRight className="h-4 w-4 mr-1" />
-                  反選
+                  {t("dialogs.assignmentDialog.selectStudents.invertSelection")}
                 </Button>
               </div>
             </div>
@@ -992,7 +1021,9 @@ export function AssignmentDialog({
           {currentStep === 3 && (
             <div className="h-full flex flex-col">
               <div className="mb-2">
-                <p className="text-sm text-gray-600">填寫作業標題和詳細資訊</p>
+                <p className="text-sm text-gray-600">
+                  {t("dialogs.assignmentDialog.details.description")}
+                </p>
               </div>
 
               <ScrollArea className="flex-1">
@@ -1003,7 +1034,8 @@ export function AssignmentDialog({
                       className="flex items-center gap-1 text-sm"
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      作業標題 *
+                      {t("dialogs.assignmentDialog.details.title")}{" "}
+                      {t("dialogs.assignmentDialog.details.titleRequired")}
                     </Label>
                     <Input
                       id="title"
@@ -1014,7 +1046,9 @@ export function AssignmentDialog({
                           title: e.target.value,
                         }))
                       }
-                      placeholder="例：Unit 1-3 綜合練習"
+                      placeholder={t(
+                        "dialogs.assignmentDialog.details.titlePlaceholder",
+                      )}
                     />
                   </div>
 
@@ -1024,7 +1058,7 @@ export function AssignmentDialog({
                       className="flex items-center gap-1 text-sm"
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
-                      作業說明
+                      {t("dialogs.assignmentDialog.details.instructions")}
                     </Label>
                     <Textarea
                       id="instructions"
@@ -1035,7 +1069,9 @@ export function AssignmentDialog({
                           instructions: e.target.value,
                         }))
                       }
-                      placeholder="請提供作業相關說明或要求..."
+                      placeholder={t(
+                        "dialogs.assignmentDialog.details.instructionsPlaceholder",
+                      )}
                       rows={2}
                     />
                   </div>
@@ -1044,7 +1080,7 @@ export function AssignmentDialog({
                     <div className="space-y-1.5">
                       <Label className="flex items-center gap-1 text-sm">
                         <CalendarIconAlt className="h-3.5 w-3.5" />
-                        開始日期
+                        {t("dialogs.assignmentDialog.details.startDate")}
                       </Label>
                       <Input
                         type="date"
@@ -1055,7 +1091,7 @@ export function AssignmentDialog({
                     <div className="space-y-1.5">
                       <Label className="flex items-center gap-1 text-sm">
                         <Clock className="h-3.5 w-3.5" />
-                        截止日期
+                        {t("dialogs.assignmentDialog.details.dueDate")}
                       </Label>
                       <Popover>
                         <PopoverTrigger asChild>
@@ -1069,7 +1105,11 @@ export function AssignmentDialog({
                             {formData.due_date ? (
                               format(formData.due_date, "yyyy/MM/dd")
                             ) : (
-                              <span>選擇日期</span>
+                              <span>
+                                {t(
+                                  "dialogs.assignmentDialog.details.selectDate",
+                                )}
+                              </span>
                             )}
                           </Button>
                         </PopoverTrigger>
@@ -1093,29 +1133,41 @@ export function AssignmentDialog({
                   {/* Assignment Summary */}
                   <Card className="p-3 bg-blue-50 border-blue-200">
                     <h4 className="text-xs font-medium mb-2 text-blue-900">
-                      作業摘要
+                      {t("dialogs.assignmentDialog.details.summary")}
                     </h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-3 w-3 text-blue-600" />
-                        <span className="text-gray-700">課程內容：</span>
+                        <span className="text-gray-700">
+                          {t("dialogs.assignmentDialog.details.contentCount")}
+                        </span>
                         <span className="font-medium text-blue-900">
-                          {selectedContents.size} 個
+                          {t(
+                            "dialogs.assignmentDialog.details.contentCountValue",
+                            { count: selectedContents.size },
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="h-3 w-3 text-blue-600" />
-                        <span className="text-gray-700">指派對象：</span>
+                        <span className="text-gray-700">
+                          {t("dialogs.assignmentDialog.details.assignTo")}
+                        </span>
                         <span className="font-medium text-blue-900">
                           {formData.assign_to_all
-                            ? "全班學生"
-                            : `${formData.student_ids.length} 位學生`}
+                            ? t("dialogs.assignmentDialog.details.assignToAll")
+                            : t(
+                                "dialogs.assignmentDialog.details.assignToSelected",
+                                { count: formData.student_ids.length },
+                              )}
                         </span>
                       </div>
                       {formData.due_date && (
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3 text-blue-600" />
-                          <span className="text-gray-700">截止日期：</span>
+                          <span className="text-gray-700">
+                            {t("dialogs.assignmentDialog.details.dueDateLabel")}
+                          </span>
                           <span className="font-medium text-blue-900">
                             {format(formData.due_date, "yyyy年MM月dd日", {
                               locale: zhTW,
@@ -1144,11 +1196,11 @@ export function AssignmentDialog({
               disabled={loading}
             >
               {currentStep === 1 ? (
-                <>取消</>
+                <>{t("dialogs.assignmentDialog.buttons.cancel")}</>
               ) : (
                 <>
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  上一步
+                  {t("dialogs.assignmentDialog.buttons.previous")}
                 </>
               )}
             </Button>
@@ -1159,7 +1211,7 @@ export function AssignmentDialog({
                   onClick={() => setCurrentStep(currentStep + 1)}
                   disabled={!canProceed()}
                 >
-                  下一步
+                  {t("dialogs.assignmentDialog.buttons.next")}
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
@@ -1178,21 +1230,21 @@ export function AssignmentDialog({
                   )}
                   title={
                     quotaInfo !== null && quotaInfo.quota_remaining <= 0
-                      ? "配額已用完，無法創建作業"
+                      ? t("dialogs.assignmentDialog.quota.cannotCreate")
                       : ""
                   }
                 >
                   {loading ? (
-                    <>創建中...</>
+                    <>{t("dialogs.assignmentDialog.buttons.creating")}</>
                   ) : quotaInfo !== null && quotaInfo.quota_remaining <= 0 ? (
                     <>
                       <Gauge className="h-4 w-4 mr-1" />
-                      配額已用完
+                      {t("dialogs.assignmentDialog.buttons.quotaDepleted")}
                     </>
                   ) : (
                     <>
                       <Check className="h-4 w-4 mr-1" />
-                      創建作業
+                      {t("dialogs.assignmentDialog.buttons.create")}
                     </>
                   )}
                 </Button>

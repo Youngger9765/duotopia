@@ -57,7 +57,7 @@ export default function TeacherAssignmentPreviewPage() {
       setActivityData(response);
     } catch (error) {
       console.error("Failed to fetch preview data:", error);
-      toast.error("載入預覽失敗");
+      toast.error(t("previewPage.messages.loadError"));
     } finally {
       setLoading(false);
     }

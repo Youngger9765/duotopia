@@ -208,15 +208,14 @@ export default function TeacherStudents() {
   };
 
   const handleExportStudents = () => {
-    // 準備 CSV 資料
     const headers = [
-      "姓名",
-      "Email",
-      "學號",
-      "生日",
-      "班級",
-      "密碼狀態",
-      "最後登入",
+      t("teacherStudents.csvHeaders.name"),
+      t("teacherStudents.csvHeaders.email"),
+      t("teacherStudents.csvHeaders.studentNumber"),
+      t("teacherStudents.csvHeaders.birthdate"),
+      t("teacherStudents.csvHeaders.classroom"),
+      t("teacherStudents.csvHeaders.passwordStatus"),
+      t("teacherStudents.csvHeaders.lastLogin"),
     ];
     const rows = filteredStudents.map((student) => [
       student.name,
@@ -224,17 +223,17 @@ export default function TeacherStudents() {
       student.student_number || "-",
       student.birthdate || "-",
       student.classroom_name || t("teacherStudents.filters.unassigned"),
-      student.password_changed ? "已更改" : "預設密碼",
-      student.last_login || "從未登入",
+      student.password_changed
+        ? t("teacherStudents.csvHeaders.passwordChanged")
+        : t("teacherStudents.csvHeaders.defaultPassword"),
+      student.last_login || t("teacherStudents.csvHeaders.neverLoggedIn"),
     ]);
 
-    // 建立 CSV 內容
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
 
-    // 建立下載連結
     const blob = new Blob(["\uFEFF" + csvContent], {
       type: "text/csv;charset=utf-8;",
     });
@@ -243,7 +242,7 @@ export default function TeacherStudents() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `學生名單_${new Date().toISOString().split("T")[0]}.csv`,
+      `${t("teacherStudents.csvHeaders.name")}_${new Date().toISOString().split("T")[0]}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);

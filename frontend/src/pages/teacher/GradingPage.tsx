@@ -167,7 +167,9 @@ export default function GradingPage() {
       const response = (await apiClient.get(
         `/api/teachers/assignments/${assignmentId}`,
       )) as AssignmentInfo;
-      setAssignmentTitle(response.title || `作業 #${assignmentId}`);
+      setAssignmentTitle(
+        response.title || `${t("gradingPage.labels.grading")} #${assignmentId}`,
+      );
     } catch (error) {
       console.error("Failed to load assignment info:", error);
     }
@@ -268,7 +270,7 @@ export default function GradingPage() {
       setExpandedRows(new Set());
     } catch (error) {
       console.error("Failed to load submission:", error);
-      toast.error("無法載入學生作業");
+      toast.error(t("gradingPage.messages.loadError"));
     } finally {
       setLoading(false);
     }
@@ -344,7 +346,7 @@ export default function GradingPage() {
               passed: false,
               feedback:
                 newFeedbacks[globalIndex]?.feedback ||
-                "你尚未上傳錄音，請補交作業",
+                t("gradingPage.messages.noRecordingPleaseResubmit"),
             };
             noRecordingCount++;
           } else {
@@ -370,7 +372,8 @@ export default function GradingPage() {
           newFeedbacks[index] = {
             passed: false,
             feedback:
-              newFeedbacks[index]?.feedback || "你尚未上傳錄音，請補交作業",
+              newFeedbacks[index]?.feedback ||
+              t("gradingPage.messages.noRecordingPleaseResubmit"),
           };
           noRecordingCount++;
         } else {
@@ -393,13 +396,21 @@ export default function GradingPage() {
 
     // 顯示結果
     if (noRecordingCount === 0) {
-      toast.success(`✅ 全部都有錄音 (${totalQuestions}題)`, {
-        duration: 3000,
-      });
+      toast.success(
+        t("gradingPage.messages.allRecorded", { count: totalQuestions }),
+        {
+          duration: 3000,
+        },
+      );
     } else {
-      toast.warning(`⚠️ ${noRecordingCount}題缺少錄音`, {
-        duration: 3000,
-      });
+      toast.warning(
+        t("gradingPage.messages.missingRecordings", {
+          count: noRecordingCount,
+        }),
+        {
+          duration: 3000,
+        },
+      );
     }
   };
 
@@ -427,26 +438,26 @@ export default function GradingPage() {
                 aiScores?.pronunciation_score &&
                 aiScores.pronunciation_score >= 80
               ) {
-                strengths.push("發音清晰");
+                strengths.push(t("gradingPage.messages.pronunciationClear"));
               }
               if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
-                strengths.push("流暢度佳");
+                strengths.push(t("gradingPage.messages.fluencyGood"));
               }
               if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
-                strengths.push("準確度高");
+                strengths.push(t("gradingPage.messages.accuracyHigh"));
               }
               if (
                 aiScores?.completeness_score &&
                 aiScores.completeness_score >= 80
               ) {
-                strengths.push("完整度好");
+                strengths.push(t("gradingPage.messages.completenessGood"));
               }
 
               let feedback = "";
               if (strengths.length > 0) {
-                feedback = `表現優秀！${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
+                feedback = `${t("gradingPage.messages.excellentPerformance")}${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
               } else {
-                feedback = `表現不錯！整體達標。(AI 評分: ${Math.round(aiScore)})`;
+                feedback = `${t("gradingPage.messages.goodPerformance")} (AI 評分: ${Math.round(aiScore)})`;
               }
 
               newFeedbacks[globalIndex] = {
@@ -456,7 +467,7 @@ export default function GradingPage() {
               appliedCount++;
             } else {
               newFeedbacks[globalIndex] = {
-                feedback: "請多練習發音和流暢度",
+                feedback: t("gradingPage.messages.needsMorePractice"),
                 passed: false,
               };
               appliedCount++;
@@ -478,26 +489,26 @@ export default function GradingPage() {
               aiScores?.pronunciation_score &&
               aiScores.pronunciation_score >= 80
             ) {
-              strengths.push("發音清晰");
+              strengths.push(t("gradingPage.messages.pronunciationClear"));
             }
             if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
-              strengths.push("流暢度佳");
+              strengths.push(t("gradingPage.messages.fluencyGood"));
             }
             if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
-              strengths.push("準確度高");
+              strengths.push(t("gradingPage.messages.accuracyHigh"));
             }
             if (
               aiScores?.completeness_score &&
               aiScores.completeness_score >= 80
             ) {
-              strengths.push("完整度好");
+              strengths.push(t("gradingPage.messages.completenessGood"));
             }
 
             let feedback = "";
             if (strengths.length > 0) {
-              feedback = `表現優秀！${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
+              feedback = `${t("gradingPage.messages.excellentPerformance")}${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
             } else {
-              feedback = `表現不錯！整體達標。(AI 評分: ${Math.round(aiScore)})`;
+              feedback = `${t("gradingPage.messages.goodPerformance")} (AI 評分: ${Math.round(aiScore)})`;
             }
 
             newFeedbacks[index] = {
@@ -507,7 +518,7 @@ export default function GradingPage() {
             appliedCount++;
           } else {
             newFeedbacks[index] = {
-              feedback: "請多練習發音和流暢度",
+              feedback: t("gradingPage.messages.needsMorePractice"),
               passed: false,
             };
             appliedCount++;
@@ -521,7 +532,10 @@ export default function GradingPage() {
     // 立即儲存 - 傳入最新的 feedbacks
     await performAutoSave(newFeedbacks);
 
-    toast.success(`已批改 ${appliedCount} 題`, { duration: 3000 });
+    toast.success(
+      t("gradingPage.messages.aiApplied", { count: appliedCount }),
+      { duration: 3000 },
+    );
   };
 
   const handleCompleteGrading = async () => {
@@ -553,7 +567,7 @@ export default function GradingPage() {
         update_status: true,
       });
 
-      toast.success("批改完成！");
+      toast.success(t("gradingPage.messages.gradingSuccess"));
 
       if (submission) {
         submission.status = "GRADED";
@@ -579,7 +593,7 @@ export default function GradingPage() {
       }
     } catch (error) {
       console.error("Failed to complete grading:", error);
-      toast.error("批改失敗，請稍後再試");
+      toast.error(t("gradingPage.messages.gradingFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -595,11 +609,11 @@ export default function GradingPage() {
         `/api/teachers/assignments/${assignmentId}/return-for-revision`,
         {
           student_id: parseInt(studentId!),
-          message: "請依照評語修改後重新提交",
+          message: t("gradingPage.messages.pleaseRevise"),
         },
       );
 
-      toast.success("已要求學生訂正");
+      toast.success(t("gradingPage.messages.revisionRequested"));
 
       if (submission) {
         submission.status = "RETURNED";
@@ -616,7 +630,7 @@ export default function GradingPage() {
       await loadSubmission();
     } catch (error) {
       console.error("Failed to request revision:", error);
-      toast.error("要求訂正失敗，請稍後再試");
+      toast.error(t("gradingPage.messages.revisionFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -751,7 +765,9 @@ export default function GradingPage() {
               <div className="border-l h-8 mx-1 hidden md:block"></div>
               <div className="flex flex-col min-w-0 flex-1">
                 <h1 className="text-sm sm:text-lg md:text-xl font-semibold truncate">
-                  <span className="hidden sm:inline">批改作業: </span>
+                  <span className="hidden sm:inline">
+                    {t("gradingPage.labels.gradingAssignment")}{" "}
+                  </span>
                   {assignmentTitle}
                 </h1>
                 {submission && (
@@ -773,19 +789,20 @@ export default function GradingPage() {
                   {saveStatus === "saving" && (
                     <span className="text-xs text-gray-500 flex items-center gap-1">
                       <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-500"></div>
-                      儲存中...
+                      {t("gradingPage.messages.saving")}
                     </span>
                   )}
                   {saveStatus === "saved" && lastSavedTime && (
                     <span className="text-xs text-green-600 flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
-                      已儲存 {lastSavedTime.toLocaleTimeString("zh-TW")}
+                      {t("gradingPage.messages.saved")}{" "}
+                      {lastSavedTime.toLocaleTimeString("zh-TW")}
                     </span>
                   )}
                   {saveStatus === "error" && (
                     <span className="text-xs text-red-600 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
-                      儲存失敗
+                      {t("gradingPage.messages.saveFailed")}
                     </span>
                   )}
                 </div>
@@ -897,7 +914,7 @@ export default function GradingPage() {
               <h3 className="text-sm font-medium mb-3 flex items-center justify-between text-gray-700">
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  <span>學生</span>
+                  <span>{t("gradingPage.labels.students")}</span>
                 </div>
                 <span className="text-xs text-gray-500">
                   (
@@ -916,13 +933,13 @@ export default function GradingPage() {
 
                   const getStatusLabel = (status: string) => {
                     const statusLabelMap: Record<string, string> = {
-                      NOT_STARTED: "未開始",
-                      IN_PROGRESS: "進行中",
-                      SUBMITTED: "已提交",
-                      GRADED: "已批改",
-                      RETURNED: "待訂正",
-                      RESUBMITTED: "重交",
-                      NOT_ASSIGNED: "未指派",
+                      NOT_STARTED: t("gradingPage.status.notStarted"),
+                      IN_PROGRESS: t("gradingPage.status.inProgress"),
+                      SUBMITTED: t("gradingPage.status.submitted"),
+                      GRADED: t("gradingPage.status.graded"),
+                      RETURNED: t("gradingPage.status.returned"),
+                      RESUBMITTED: t("gradingPage.status.resubmittedShort"),
+                      NOT_ASSIGNED: t("gradingPage.status.notAssigned"),
                     };
                     return statusLabelMap[status] || "";
                   };
@@ -1013,7 +1030,7 @@ export default function GradingPage() {
                     submission.content_groups.length > 1 && (
                       <>
                         <span className="text-sm font-medium whitespace-nowrap">
-                          題組:
+                          {t("gradingPage.labels.groupTitle")}
                         </span>
                         <select
                           value={selectedGroupIndex}
@@ -1045,7 +1062,7 @@ export default function GradingPage() {
                           className="flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           <Search className="h-4 w-4" />
-                          檢查錄音
+                          {t("gradingPage.labels.examineRecording")}
                         </Button>
                         <Button
                           size="sm"
@@ -1053,14 +1070,14 @@ export default function GradingPage() {
                           className="flex-1 flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
                         >
                           <Sparkles className="h-4 w-4" />
-                          套用 AI 建議
+                          {t("gradingPage.buttons.applyAISuggestions")}
                         </Button>
                       </div>
                       {submission.content_groups &&
                         submission.content_groups.length > 1 && (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium whitespace-nowrap">
-                              題組:
+                              {t("gradingPage.labels.groupTitle")}
                             </span>
                             <select
                               value={selectedGroupIndex}
@@ -1203,7 +1220,9 @@ export default function GradingPage() {
                                 ) : (
                                   <div className="flex items-center gap-2 text-xs text-gray-400">
                                     <Mic className="h-4 w-4" />
-                                    <span>未錄音</span>
+                                    <span>
+                                      {t("gradingPage.labels.noRecording")}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -1231,7 +1250,9 @@ export default function GradingPage() {
                                     // 離開輸入框時立即儲存
                                     await performAutoSave();
                                   }}
-                                  placeholder="評語..."
+                                  placeholder={t(
+                                    "gradingPage.labels.feedbackPlaceholder",
+                                  )}
                                   className="min-h-[60px] resize-none text-xs bg-white dark:bg-white"
                                   readOnly={submission?.status === "GRADED"}
                                   disabled={submission?.status === "GRADED"}
@@ -1265,7 +1286,7 @@ export default function GradingPage() {
                                 {item.question_audio_url && (
                                   <div>
                                     <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                                      參考音檔
+                                      {t("gradingPage.labels.referenceAudio")}
                                     </label>
                                     <Button
                                       variant="outline"
@@ -1279,12 +1300,18 @@ export default function GradingPage() {
                                             "Failed to play audio:",
                                             err,
                                           );
-                                          toast.error("無法播放參考音檔");
+                                          toast.error(
+                                            t(
+                                              "gradingPage.messages.audioPlayError",
+                                            ),
+                                          );
                                         });
                                       }}
                                     >
                                       <Volume2 className="h-3 w-3 mr-1" />
-                                      播放參考音檔
+                                      {t(
+                                        "gradingPage.labels.playReferenceAudio",
+                                      )}
                                     </Button>
                                   </div>
                                 )}
@@ -1293,7 +1320,7 @@ export default function GradingPage() {
                                 {item.transcript && (
                                   <div>
                                     <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                                      語音辨識結果
+                                      {t("gradingPage.labels.transcription")}
                                     </label>
                                     <div className="p-2 bg-green-50 border border-green-200 rounded text-xs">
                                       {item.transcript}
@@ -1304,7 +1331,7 @@ export default function GradingPage() {
                                 {/* AI 評分 */}
                                 <div>
                                   <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                                    AI 自動評分
+                                    {t("gradingPage.labels.aiAutoScoring")}
                                   </label>
                                   {item.ai_scores ? (
                                     <AIScoreDisplay
@@ -1314,8 +1341,9 @@ export default function GradingPage() {
                                     />
                                   ) : (
                                     <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-500 text-center">
-                                      尚無 AI 評分資料
-                                      {!item.audio_url && " (缺少錄音檔案)"}
+                                      {t("gradingPage.messages.noAIScore")}
+                                      {!item.audio_url &&
+                                        ` ${t("gradingPage.messages.missingRecordingFile")}`}
                                     </div>
                                   )}
                                 </div>
@@ -1329,7 +1357,9 @@ export default function GradingPage() {
                 )}
               </div>
             ) : (
-              <div className="text-center text-gray-500">找不到學生作業</div>
+              <div className="text-center text-gray-500">
+                {t("gradingPage.messages.notFound")}
+              </div>
             )}
           </div>
 
@@ -1350,14 +1380,16 @@ export default function GradingPage() {
                   </div>
                 </div>
               )}
-              <h4 className="font-medium text-sm mb-3">總評</h4>
+              <h4 className="font-medium text-sm mb-3">
+                {t("gradingPage.labels.overallFeedback")}
+              </h4>
 
               <div className="space-y-3">
                 {/* 逐題燈號（分題組） */}
                 {submission && submission.content_groups && (
                   <div className="pb-3 border-b space-y-3">
                     <label className="text-xs font-medium block">
-                      逐題狀態 ({totalQuestions} 題)
+                      {t("gradingPage.labels.itemStatus")} ({totalQuestions} 題)
                     </label>
                     {submission.content_groups.map((group, groupIndex) => {
                       // Calculate base index for this group
@@ -1397,7 +1429,7 @@ export default function GradingPage() {
                                             : "bg-gray-100 text-gray-400 border border-dashed border-gray-300"
                                     }
                                   `}
-                                  title={`題目 ${localIndex + 1}: ${isPassed ? "通過" : isFailed ? "需訂正" : hasRecording ? "有錄音" : "無錄音"}`}
+                                  title={`題目 ${localIndex + 1}: ${isPassed ? t("gradingPage.labels.passed") : isFailed ? t("gradingPage.labels.needsRevision") : hasRecording ? t("gradingPage.labels.hasRecording") : t("gradingPage.labels.noRecording")}`}
                                 >
                                   {isPassed
                                     ? "✓"
@@ -1428,7 +1460,9 @@ export default function GradingPage() {
                       }}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
-                    <label className="text-sm font-medium">給分</label>
+                    <label className="text-sm font-medium">
+                      {t("gradingPage.labels.giveScore")}
+                    </label>
                   </div>
                   <div className="mt-2">
                     <input
@@ -1453,7 +1487,7 @@ export default function GradingPage() {
                         }
                       }}
                       disabled={score === null}
-                      placeholder="輸入分數"
+                      placeholder={t("gradingPage.labels.enterScore")}
                       className={`w-full px-3 py-2 text-lg font-bold border-2 rounded focus:outline-none focus:ring-2 text-center ${
                         score === null
                           ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed"
@@ -1461,7 +1495,7 @@ export default function GradingPage() {
                       }`}
                     />
                     <div className="text-xs text-gray-500 text-center mt-1">
-                      0-100 分
+                      {t("gradingPage.labels.scoreRange")}
                     </div>
                   </div>
                 </div>
@@ -1469,7 +1503,7 @@ export default function GradingPage() {
                 {/* 總評語回饋 */}
                 <div>
                   <label className="text-xs font-medium mb-2 block">
-                    總評語回饋
+                    {t("gradingPage.labels.overallFeedback")}
                   </label>
                   <Textarea
                     value={feedback}
@@ -1480,7 +1514,7 @@ export default function GradingPage() {
                       // 離開輸入框時立即儲存
                       await performAutoSave();
                     }}
-                    placeholder="給學生的總體鼓勵和建議..."
+                    placeholder={t("gradingPage.labels.overallEncouragement")}
                     rows={4}
                     className="resize-none text-sm bg-white dark:bg-white"
                   />
@@ -1490,7 +1524,7 @@ export default function GradingPage() {
                 <div className="space-y-4 pt-4 border-t">
                   {/* 狀態流程提示 */}
                   <div className="text-center text-xs text-gray-500">
-                    選擇批改狀態
+                    {t("gradingPage.labels.selectGradingStatus")}
                   </div>
 
                   {/* 狀態選擇按鈕 */}

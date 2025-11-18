@@ -119,8 +119,8 @@ export function LessonDialog({
   const handleDelete = async () => {
     if (!lesson?.id || !onDelete) return;
 
-    // 直接呼叫 callback，讓父組件處理實際的刪除邏輯
-    // 父組件會根據是否為模板模式使用不同的 API
+    // Directly call the callback, letting the parent component handle the actual deletion logic
+    // Parent component will use different APIs depending on whether it's in template mode
     onDelete(lesson.id);
     onClose();
   };

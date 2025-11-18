@@ -144,13 +144,17 @@ export function StudentDialogs({
         if (response.warning) {
           toast.warning(
             <div>
-              <p>學生「{formData.name}」已成功新增</p>
+              <p>
+                {t("studentDialogs.success.created", { name: formData.name })}
+              </p>
               <p className="text-sm mt-1 text-orange-600">
                 ⚠️ {response.warning as string}
               </p>
               {formData.birthdate ? (
                 <p className="text-sm mt-1">
-                  預設密碼：
+                  {t("studentDialogs.success.createdWithPassword", {
+                    password: "",
+                  })}
                   <code className="bg-gray-100 px-1 rounded">
                     {formData.birthdate.replace(/-/g, "")}
                   </code>
@@ -160,14 +164,18 @@ export function StudentDialogs({
             { duration: 8000 },
           );
         } else {
-          // 如果有生日，顯示預設密碼
+          // Show default password if birthdate is provided
           if (formData.birthdate) {
             const defaultPassword = formData.birthdate.replace(/-/g, "");
             toast.success(
               <div>
-                <p>學生「{formData.name}」已成功新增</p>
+                <p>
+                  {t("studentDialogs.success.created", { name: formData.name })}
+                </p>
                 <p className="text-sm mt-1">
-                  預設密碼：
+                  {t("studentDialogs.success.createdWithPassword", {
+                    password: "",
+                  })}
                   <code className="bg-gray-100 px-1 rounded">
                     {defaultPassword}
                   </code>
@@ -176,7 +184,9 @@ export function StudentDialogs({
               { duration: 5000 },
             );
           } else {
-            toast.success(`學生「${formData.name}」已成功新增`);
+            toast.success(
+              t("studentDialogs.success.created", { name: formData.name }),
+            );
           }
         }
         // 只傳遞 Student interface 需要的字段
@@ -207,7 +217,7 @@ export function StudentDialogs({
       console.error("Error saving student:", error);
 
       // Parse error message
-      let errorMessage = "儲存失敗，請稍後再試";
+      let errorMessage = t("studentDialogs.errors.saveFailed");
 
       if (error && typeof error === "object" && "message" in error) {
         try {
@@ -227,19 +237,23 @@ export function StudentDialogs({
                 // classroom_id is optional, skip this error
                 return;
               } else if (field === "name") {
-                fieldErrors.name = "姓名為必填";
+                fieldErrors.name = t("studentDialogs.errors.nameRequired");
               } else if (field === "birthdate") {
-                fieldErrors.birthdate = "生日為必填（用作預設密碼）";
+                fieldErrors.birthdate = t(
+                  "studentDialogs.errors.birthdateRequired",
+                );
               } else if (field === "email") {
-                fieldErrors.email = err.msg || "Email格式錯誤";
+                fieldErrors.email =
+                  err.msg || t("studentDialogs.form.emailError");
               } else {
-                errorMessage = msg || "資料驗證失敗";
+                errorMessage =
+                  msg || t("studentDialogs.errors.validationFailed");
               }
             });
 
             if (Object.keys(fieldErrors).length > 0) {
               setErrors(fieldErrors);
-              errorMessage = "請修正標示的欄位";
+              errorMessage = t("studentDialogs.errors.fixErrors");
             }
           } else if (typeof errorData.detail === "string") {
             errorMessage = errorData.detail;
@@ -255,13 +269,13 @@ export function StudentDialogs({
       // Handle specific error cases
       if (typeof errorMessage === "string") {
         if (errorMessage.includes("already registered")) {
-          errorMessage = "Email已被使用，請使用其他Email";
+          errorMessage = t("studentDialogs.errors.emailInUse");
           setErrors({ email: errorMessage });
         } else if (errorMessage.includes("Invalid birthdate format")) {
-          errorMessage = "生日格式錯誤，請使用YYYY-MM-DD格式";
+          errorMessage = t("studentDialogs.errors.invalidBirthdate");
           setErrors({ birthdate: errorMessage });
         } else if (errorMessage.includes("Field required")) {
-          errorMessage = "請填寫所有必填欄位";
+          errorMessage = t("studentDialogs.errors.requiredFields");
         }
       }
 
@@ -269,7 +283,7 @@ export function StudentDialogs({
       if (typeof errorMessage === "string") {
         toast.error(errorMessage);
       } else {
-        toast.error("儲存失敗，請稍後再試");
+        toast.error(t("studentDialogs.errors.saveFailed"));
       }
     } finally {
       setLoading(false);
@@ -289,8 +303,8 @@ export function StudentDialogs({
       onClose();
     } catch (error) {
       console.error("Error deleting student:", error);
-      toast.error(t("dialogs.studentDialogs.errors.deleteFailed"));
-      setErrors({ submit: "刪除失敗，請稍後再試" });
+      toast.error(t("studentDialogs.errors.deleteFailed"));
+      setErrors({ submit: t("studentDialogs.errors.deleteRetry") });
     } finally {
       setLoading(false);
     }
@@ -311,25 +325,25 @@ export function StudentDialogs({
       case "active":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            活躍
+            {t("studentDialogs.view.badges.active")}
           </span>
         );
       case "inactive":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            未活躍
+            {t("studentDialogs.view.badges.inactive")}
           </span>
         );
       case "suspended":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            已停權
+            {t("studentDialogs.view.badges.suspended")}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            未知
+            {t("studentDialogs.view.badges.unknown")}
           </span>
         );
     }
@@ -346,7 +360,7 @@ export function StudentDialogs({
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Eye className="h-5 w-5" />
-              <span>學生詳細資料</span>
+              <span>{t("studentDialogs.view.title")}</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -360,10 +374,13 @@ export function StudentDialogs({
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{student.name}</h3>
-                <p className="text-sm text-gray-500">ID: {student.id}</p>
+                <p className="text-sm text-gray-500">
+                  {t("studentDialogs.view.fields.id")}: {student.id}
+                </p>
                 {student.student_number && (
                   <p className="text-sm text-gray-500">
-                    學號: {student.student_number}
+                    {t("studentDialogs.view.fields.studentNumber")}:{" "}
+                    {student.student_number}
                   </p>
                 )}
               </div>
@@ -376,7 +393,9 @@ export function StudentDialogs({
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-xs text-gray-500">
+                      {t("studentDialogs.view.fields.email")}
+                    </p>
                     <p className="text-sm font-medium">{student.email}</p>
                   </div>
                 </div>
@@ -384,7 +403,9 @@ export function StudentDialogs({
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">電話</p>
+                    <p className="text-xs text-gray-500">
+                      {t("studentDialogs.view.fields.phone")}
+                    </p>
                     <p className="text-sm font-medium">
                       {student.phone || "-"}
                     </p>
@@ -394,7 +415,9 @@ export function StudentDialogs({
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">生日</p>
+                    <p className="text-xs text-gray-500">
+                      {t("studentDialogs.view.fields.birthdate")}
+                    </p>
                     <p className="text-sm font-medium">
                       {formatDate(student.birthdate)}
                     </p>
@@ -406,7 +429,9 @@ export function StudentDialogs({
                 <div className="flex items-center space-x-2">
                   <School className="h-4 w-4 text-gray-400" />
                   <div>
-                    <p className="text-xs text-gray-500">班級</p>
+                    <p className="text-xs text-gray-500">
+                      {t("studentDialogs.view.fields.classroom")}
+                    </p>
                     <p className="text-sm font-medium">
                       {student.classroom_name || "-"}
                     </p>
@@ -414,24 +439,32 @@ export function StudentDialogs({
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">密碼狀態</p>
+                  <p className="text-xs text-gray-500">
+                    {t("studentDialogs.view.fields.passwordStatus")}
+                  </p>
                   <p className="text-sm font-medium">
                     {student.password_changed ? (
-                      <span className="text-green-600">已更改</span>
+                      <span className="text-green-600">
+                        {t("studentDialogs.view.status.changed")}
+                      </span>
                     ) : (
                       <span className="text-yellow-600">
-                        預設密碼 ({student.birthdate?.replace(/-/g, "")})
+                        {t("studentDialogs.view.status.default", {
+                          password: student.birthdate?.replace(/-/g, ""),
+                        })}
                       </span>
                     )}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">最後登入</p>
+                  <p className="text-xs text-gray-500">
+                    {t("studentDialogs.view.fields.lastLogin")}
+                  </p>
                   <p className="text-sm font-medium">
                     {student.last_login
                       ? formatDate(student.last_login)
-                      : "從未登入"}
+                      : t("studentDialogs.view.status.neverLoggedIn")}
                   </p>
                 </div>
               </div>
@@ -440,7 +473,7 @@ export function StudentDialogs({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
-              關閉
+              {t("studentDialogs.view.buttons.close")}
             </Button>
             <Button
               onClick={() => {
@@ -450,7 +483,7 @@ export function StudentDialogs({
               }}
             >
               <Edit className="h-4 w-4 mr-2" />
-              編輯
+              {t("studentDialogs.view.buttons.edit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -471,19 +504,19 @@ export function StudentDialogs({
               {dialogType === "create" ? (
                 <>
                   <Plus className="h-5 w-5" />
-                  <span>新增學生</span>
+                  <span>{t("studentDialogs.create.title")}</span>
                 </>
               ) : (
                 <>
                   <Edit className="h-5 w-5" />
-                  <span>編輯學生資料</span>
+                  <span>{t("studentDialogs.edit.title")}</span>
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
               {dialogType === "create"
-                ? "填寫學生資料以新增學生。生日將作為預設密碼。"
-                : "更新學生資料"}
+                ? t("studentDialogs.create.description")
+                : t("studentDialogs.edit.description")}
             </DialogDescription>
           </DialogHeader>
 
@@ -491,7 +524,8 @@ export function StudentDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="name" className="text-sm font-medium">
-                  姓名 <span className="text-red-500">*</span>
+                  {t("studentDialogs.form.nameLabel")}{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="name"
@@ -500,7 +534,7 @@ export function StudentDialogs({
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
-                  placeholder="請輸入學生姓名"
+                  placeholder={t("studentDialogs.form.namePlaceholder")}
                 />
                 {errors.name && (
                   <p className="text-xs text-red-500 mt-1">{errors.name}</p>
@@ -509,7 +543,7 @@ export function StudentDialogs({
 
               <div>
                 <label htmlFor="student_id" className="text-sm font-medium">
-                  學號
+                  {t("studentDialogs.form.studentNumberLabel")}
                 </label>
                 <input
                   id="student_id"
@@ -518,7 +552,9 @@ export function StudentDialogs({
                     setFormData({ ...formData, student_number: e.target.value })
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
-                  placeholder="請輸入學號（選填）"
+                  placeholder={t(
+                    "studentDialogs.form.studentNumberPlaceholder",
+                  )}
                 />
               </div>
             </div>
@@ -526,7 +562,10 @@ export function StudentDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email <span className="text-gray-400">(選填)</span>
+                  {t("studentDialogs.form.emailLabel")}{" "}
+                  <span className="text-gray-400">
+                    {t("studentDialogs.form.emailOptional")}
+                  </span>
                 </label>
                 <input
                   id="email"
@@ -536,7 +575,7 @@ export function StudentDialogs({
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.email ? "border-red-500" : ""}`}
-                  placeholder="student@example.com (選填)"
+                  placeholder={t("studentDialogs.form.emailPlaceholder")}
                 />
                 {errors.email && (
                   <p className="text-xs text-red-500 mt-1">{errors.email}</p>
@@ -545,7 +584,7 @@ export function StudentDialogs({
 
               <div>
                 <label htmlFor="phone" className="text-sm font-medium">
-                  電話
+                  {t("studentDialogs.form.phoneLabel")}
                 </label>
                 <input
                   id="phone"
@@ -555,7 +594,7 @@ export function StudentDialogs({
                     setFormData({ ...formData, phone: e.target.value })
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
-                  placeholder="0912345678"
+                  placeholder={t("studentDialogs.form.phonePlaceholder")}
                 />
               </div>
             </div>
@@ -563,9 +602,10 @@ export function StudentDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="birthdate" className="text-sm font-medium">
-                  學生生日 <span className="text-red-500">*</span>
+                  {t("studentDialogs.form.birthdateLabel")}{" "}
+                  <span className="text-red-500">*</span>
                   <span className="text-xs text-gray-500 font-normal ml-1">
-                    (請填寫學生的真實生日)
+                    {t("studentDialogs.form.birthdateNote")}
                   </span>
                 </label>
                 <input
@@ -585,17 +625,16 @@ export function StudentDialogs({
                 )}
                 {formData.birthdate && (
                   <p className="text-xs text-amber-600 mt-1 font-medium">
-                    ⚠️ 學生登入密碼將設為:{" "}
-                    <code className="bg-amber-50 px-1 rounded">
-                      {formData.birthdate.replace(/-/g, "")}
-                    </code>
+                    {t("studentDialogs.form.birthdatePassword", {
+                      password: formData.birthdate.replace(/-/g, ""),
+                    })}
                   </p>
                 )}
               </div>
 
               <div>
                 <label htmlFor="classroom" className="text-sm font-medium">
-                  班級
+                  {t("studentDialogs.form.classroomLabel")}
                 </label>
                 <select
                   id="classroom"
@@ -610,7 +649,9 @@ export function StudentDialogs({
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
-                  <option value="">未分配班級</option>
+                  <option value="">
+                    {t("studentDialogs.form.classroomUnassigned")}
+                  </option>
                   {classrooms.map((classroom) => (
                     <option key={classroom.id} value={classroom.id}>
                       {classroom.name}
@@ -623,7 +664,7 @@ export function StudentDialogs({
             {dialogType === "edit" && (
               <div>
                 <label htmlFor="status" className="text-sm font-medium">
-                  狀態
+                  {t("studentDialogs.form.statusLabel")}
                 </label>
                 <select
                   id="status"
@@ -633,9 +674,15 @@ export function StudentDialogs({
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 >
-                  <option value="active">活躍</option>
-                  <option value="inactive">未活躍</option>
-                  <option value="suspended">已停權</option>
+                  <option value="active">
+                    {t("studentDialogs.form.statusActive")}
+                  </option>
+                  <option value="inactive">
+                    {t("studentDialogs.form.statusInactive")}
+                  </option>
+                  <option value="suspended">
+                    {t("studentDialogs.form.statusSuspended")}
+                  </option>
                 </select>
               </div>
             )}
@@ -649,14 +696,14 @@ export function StudentDialogs({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("studentDialogs.buttons.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
               {loading
-                ? "處理中..."
+                ? t("studentDialogs.buttons.processing")
                 : dialogType === "create"
-                  ? "新增"
-                  : "儲存"}
+                  ? t("studentDialogs.buttons.create")
+                  : t("studentDialogs.buttons.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -675,21 +722,25 @@ export function StudentDialogs({
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              <span>確認刪除學生</span>
+              <span>{t("studentDialogs.delete.title")}</span>
             </DialogTitle>
             <DialogDescription>
-              確定要刪除學生「{student.name}」嗎？此操作無法復原。
+              {t("studentDialogs.delete.description", { name: student.name })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">學生資料：</p>
+              <p className="text-sm text-gray-600">
+                {t("studentDialogs.delete.info")}
+              </p>
               <p className="font-medium">{student.name}</p>
               <p className="text-sm text-gray-500">{student.email}</p>
               {student.classroom_name && (
                 <p className="text-sm text-gray-500">
-                  班級：{student.classroom_name}
+                  {t("studentDialogs.delete.classroom", {
+                    classroom: student.classroom_name,
+                  })}
                 </p>
               )}
             </div>
@@ -701,7 +752,7 @@ export function StudentDialogs({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("studentDialogs.buttons.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -709,7 +760,9 @@ export function StudentDialogs({
               disabled={loading}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {loading ? "刪除中..." : "確認刪除"}
+              {loading
+                ? t("studentDialogs.buttons.deleting")
+                : t("studentDialogs.buttons.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
