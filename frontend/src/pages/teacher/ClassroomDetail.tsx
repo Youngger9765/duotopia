@@ -136,9 +136,14 @@ export default function ClassroomDetail({
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
 
   // Sentence Making Editor state
-  const [showSentenceMakingEditor, setShowSentenceMakingEditor] = useState(false);
-  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<number | null>(null);
-  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<number | null>(null);
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+    useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+    number | null
+  >(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+    number | null
+  >(null);
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);

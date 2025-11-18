@@ -1204,7 +1204,8 @@ export default function ReadingAssessmentPanel({
             audioUrl: item.audio_url || "",
             selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
             example_sentence: item.example_sentence || "",
-            example_sentence_translation: item.example_sentence_translation || "",
+            example_sentence_translation:
+              item.example_sentence_translation || "",
             example_sentence_definition: item.example_sentence_definition || "",
           }),
         );

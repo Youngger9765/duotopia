@@ -138,7 +138,9 @@ const WritingModeTemplate: React.FC<WritingModeTemplateProps> = ({
           {word.example_sentence}
         </div>
         <div className="text-lg text-gray-700">
-          <span className="text-sm font-medium text-gray-600 mr-2">中文翻譯：</span>
+          <span className="text-sm font-medium text-gray-600 mr-2">
+            中文翻譯：
+          </span>
           {word.example_sentence_translation}
         </div>
       </div>
@@ -147,13 +149,21 @@ const WritingModeTemplate: React.FC<WritingModeTemplateProps> = ({
       <div className="word-info mb-6 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-4">
           <div>
-            <span className="text-sm font-medium text-gray-600">本題單字：</span>
-            <span className="text-xl font-bold text-blue-600 ml-2">{word.text}</span>
+            <span className="text-sm font-medium text-gray-600">
+              本題單字：
+            </span>
+            <span className="text-xl font-bold text-blue-600 ml-2">
+              {word.text}
+            </span>
           </div>
           <div className="h-6 w-px bg-gray-300"></div>
           <div>
-            <span className="text-sm font-medium text-gray-600">中文意思：</span>
-            <span className="text-lg text-gray-800 ml-2">{word.translation}</span>
+            <span className="text-sm font-medium text-gray-600">
+              中文意思：
+            </span>
+            <span className="text-lg text-gray-800 ml-2">
+              {word.translation}
+            </span>
           </div>
         </div>
       </div>
@@ -174,14 +184,14 @@ const WritingModeTemplate: React.FC<WritingModeTemplateProps> = ({
             </button>
           ))}
           {/* 空白框提示 */}
-          {Array.from({ length: correctWords.length - selectedWords.length }).map(
-            (_, idx) => (
-              <div
-                key={`empty-${idx}`}
-                className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg w-20"
-              />
-            )
-          )}
+          {Array.from({
+            length: correctWords.length - selectedWords.length,
+          }).map((_, idx) => (
+            <div
+              key={`empty-${idx}`}
+              className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg w-20"
+            />
+          ))}
         </div>
       </div>
 

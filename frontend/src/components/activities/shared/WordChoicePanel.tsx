@@ -36,8 +36,8 @@ const WordChoicePanel: React.FC<WordChoicePanelProps> = ({
               disabled
                 ? "opacity-50 cursor-not-allowed border-gray-300 text-gray-500"
                 : baseColor === "purple"
-                ? "border-purple-300 text-purple-900 hover:bg-purple-50 hover:border-purple-400 active:scale-95"
-                : "border-blue-300 text-blue-900 hover:bg-blue-50 hover:border-blue-400 active:scale-95"
+                  ? "border-purple-300 text-purple-900 hover:bg-purple-50 hover:border-purple-400 active:scale-95"
+                  : "border-blue-300 text-blue-900 hover:bg-blue-50 hover:border-blue-400 active:scale-95",
             )}
           >
             {word}

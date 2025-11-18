@@ -781,7 +781,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             {/* 例句顯示 */}
             {currentQuestion?.example_sentence && (
               <div className="space-y-2 border-t border-gray-200 pt-3 mt-3">
-                <div className="text-xs font-medium text-gray-500">參考例句</div>
+                <div className="text-xs font-medium text-gray-500">
+                  參考例句
+                </div>
                 <div className="text-sm text-gray-800 bg-blue-50 rounded px-3 py-2">
                   💡 {currentQuestion.example_sentence}
                 </div>
