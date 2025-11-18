@@ -633,6 +633,18 @@
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",
       "submitFailed": "提交失敗，請稍後再試"
+    },
+    "buttons": {
+      "back": "返回",
+      "submit": "提交作業"
+    },
+    "activityTypes": {
+      "reading": "朗讀練習"
+    },
+    "stats": {
+      "minutes": "分鐘",
+      "overallScore": "總評",
+      "noScoreYet": "尚無總評"
     }
   },
   "studentProfile": {

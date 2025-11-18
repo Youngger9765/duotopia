@@ -633,6 +633,18 @@
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
       "submitFailed": "Failed to submit. Please try again later"
+    },
+    "buttons": {
+      "back": "Back",
+      "submit": "Submit Assignment"
+    },
+    "activityTypes": {
+      "reading": "Reading Practice"
+    },
+    "stats": {
+      "minutes": "minutes",
+      "overallScore": "Overall Score",
+      "noScoreYet": "No score yet"
     }
   },
   "studentProfile": {
