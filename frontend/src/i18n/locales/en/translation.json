@@ -2137,6 +2137,64 @@
       "schoolFeature4": "Batch assignment features"
     }
   },
+  "subscriptionCardManagement": {
+    "title": "Payment Method Management",
+    "description": "Manage your auto-renewal payment method",
+    "loading": "Loading...",
+    "currentCard": {
+      "title": "Current Credit Card",
+      "cardNumber": "Card: •••• {{lastFour}}"
+    },
+    "noCard": {
+      "warning": "You haven't saved a payment method yet. After saving your credit card, the system will auto-renew on the 1st of each month."
+    },
+    "security": {
+      "title": "Security Guarantee:",
+      "description": "Your complete card number is not stored on our servers. All sensitive information is securely encrypted and processed by TapPay."
+    },
+    "buttons": {
+      "updateCard": "Update Card",
+      "deleteCard": "Delete Card",
+      "addCard": "Add Card",
+      "cancel": "Cancel",
+      "confirmDelete": "Confirm Delete",
+      "yes": "Yes, Auto-Renew",
+      "no": "No, Manual Renewal",
+      "deleting": "Deleting..."
+    },
+    "dialogs": {
+      "update": {
+        "title": "Update Credit Card",
+        "titleNew": "Add Credit Card",
+        "description": "The system will perform a $1 authorization test to verify your credit card, which will be immediately refunded."
+      },
+      "delete": {
+        "title": "Confirm Delete Credit Card",
+        "description": "After deleting the credit card, auto-renewal will be unavailable.",
+        "cardInfo": "Card: •••• {{lastFour}}",
+        "warning": "⚠️ You will need to manually pay for the next renewal"
+      },
+      "autoRenew": {
+        "title": "Enable Auto-Renewal?",
+        "description": "✅ Credit card successfully linked! Would you like to enable auto-renewal?",
+        "benefits": {
+          "title": "💡 Benefits of Auto-Renewal:",
+          "monthly": "• Automatic billing on the 1st of each month, no need to worry about forgetting to renew",
+          "continuous": "• Ensures uninterrupted service",
+          "flexible": "• Cancel anytime with no commitment"
+        },
+        "note": "ℹ️ You can change this setting anytime on the subscription management page"
+      }
+    },
+    "messages": {
+      "loadFailed": "Failed to load credit card information",
+      "deleteSuccess": "Credit card unlinked, auto-renewal disabled",
+      "deleteFailed": "Failed to delete credit card",
+      "cardBound": "Credit card linked, auto-renewal enabled",
+      "cardBoundManual": "Credit card linked, manual renewal available",
+      "settingFailed": "Setting failed, please try again later"
+    }
+  },
   "adminSubscription": {
     "loading": "Loading...",
     "title": "Admin Subscription Dashboard",

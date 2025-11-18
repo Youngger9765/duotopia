@@ -2137,6 +2137,64 @@
       "schoolFeature4": "批次作業功能"
     }
   },
+  "subscriptionCardManagement": {
+    "title": "付款方式管理",
+    "description": "管理您的自動續訂付款方式",
+    "loading": "載入中...",
+    "currentCard": {
+      "title": "目前使用的信用卡",
+      "cardNumber": "卡號：•••• {{lastFour}}"
+    },
+    "noCard": {
+      "warning": "您尚未儲存付款方式。儲存信用卡後，系統將在每月 1 號自動續訂。"
+    },
+    "security": {
+      "title": "安全保障：",
+      "description": "您的完整卡號不會儲存在我們的伺服器， 所有敏感資訊都由 TapPay 金流安全加密處理。"
+    },
+    "buttons": {
+      "updateCard": "更換信用卡",
+      "deleteCard": "刪除信用卡",
+      "addCard": "新增信用卡",
+      "cancel": "取消",
+      "confirmDelete": "確認刪除",
+      "yes": "是，自動續訂",
+      "no": "否，手動續訂",
+      "deleting": "刪除中..."
+    },
+    "dialogs": {
+      "update": {
+        "title": "更換信用卡",
+        "titleNew": "新增信用卡",
+        "description": "系統將進行 1 元授權測試以驗證信用卡，測試完成後會立即退款。"
+      },
+      "delete": {
+        "title": "確認刪除信用卡",
+        "description": "刪除信用卡後，自動續訂功能將無法使用。",
+        "cardInfo": "卡號：•••• {{lastFour}}",
+        "warning": "⚠️ 下次續訂時需要手動付款"
+      },
+      "autoRenew": {
+        "title": "啟用自動續訂？",
+        "description": "✅ 信用卡已成功綁定！是否要啟用自動續訂功能？",
+        "benefits": {
+          "title": "💡 自動續訂的好處：",
+          "monthly": "• 每月 1 號自動扣款，不用擔心忘記續訂",
+          "continuous": "• 確保服務不中斷",
+          "flexible": "• 隨時可以取消，沒有綁約限制"
+        },
+        "note": "ℹ️ 您隨時可以在訂閱管理頁面變更此設定"
+      }
+    },
+    "messages": {
+      "loadFailed": "無法載入信用卡資訊",
+      "deleteSuccess": "信用卡已解綁，自動續訂已關閉",
+      "deleteFailed": "刪除信用卡失敗",
+      "cardBound": "信用卡已綁定，自動續訂已啟用",
+      "cardBoundManual": "信用卡已綁定，可手動續訂",
+      "settingFailed": "設定失敗，請稍後再試"
+    }
+  },
   "adminSubscription": {
     "loading": "載入中...",
     "title": "後台訂閱管理",

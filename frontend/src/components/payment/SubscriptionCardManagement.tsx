@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -47,6 +48,7 @@ interface SavedCardResponse {
 }
 
 export const SubscriptionCardManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -72,7 +74,7 @@ export const SubscriptionCardManagement: React.FC = () => {
       }
     } catch (error: unknown) {
       console.error("Failed to fetch saved card:", error);
-      toast.error("無法載入信用卡資訊");
+      toast.error(t("subscriptionCardManagement.messages.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -89,7 +91,10 @@ export const SubscriptionCardManagement: React.FC = () => {
       }>("/api/payment/saved-card");
 
       // 🔴 PRD Rule 2: 刪除綁卡後，自動續訂已被關閉
-      toast.success(response.message || "信用卡已解綁，自動續訂已關閉");
+      toast.success(
+        response.message ||
+          t("subscriptionCardManagement.messages.deleteSuccess"),
+      );
       setSavedCard(null);
       setShowDeleteDialog(false);
 
@@ -98,7 +103,10 @@ export const SubscriptionCardManagement: React.FC = () => {
     } catch (error: unknown) {
       console.error("Failed to delete card:", error);
       const apiError = error as { response?: { data?: { detail?: string } } };
-      toast.error(apiError.response?.data?.detail || "刪除信用卡失敗");
+      toast.error(
+        apiError.response?.data?.detail ||
+          t("subscriptionCardManagement.messages.deleteFailed"),
+      );
     } finally {
       setDeleting(false);
     }
@@ -136,16 +144,19 @@ export const SubscriptionCardManagement: React.FC = () => {
       window.dispatchEvent(new CustomEvent("subscriptionStatusChanged"));
 
       if (enableAutoRenew) {
-        toast.success("信用卡已綁定，自動續訂已啟用");
+        toast.success(t("subscriptionCardManagement.messages.cardBound"));
       } else {
-        toast.success("信用卡已綁定，可手動續訂");
+        toast.success(t("subscriptionCardManagement.messages.cardBoundManual"));
       }
 
       setPendingCardUpdate(false);
     } catch (error) {
       console.error("Failed to set auto-renew:", error);
       const apiError = error as { response?: { data?: { detail?: string } } };
-      toast.error(apiError.response?.data?.detail || "設定失敗，請稍後再試");
+      toast.error(
+        apiError.response?.data?.detail ||
+          t("subscriptionCardManagement.messages.settingFailed"),
+      );
       setPendingCardUpdate(false);
     }
   };
@@ -156,11 +167,13 @@ export const SubscriptionCardManagement: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            付款方式管理
+            {t("subscriptionCardManagement.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">載入中...</div>
+          <div className="text-center py-8 text-gray-500">
+            {t("subscriptionCardManagement.loading")}
+          </div>
         </CardContent>
       </Card>
     );
@@ -172,16 +185,20 @@ export const SubscriptionCardManagement: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            付款方式管理
+            {t("subscriptionCardManagement.title")}
           </CardTitle>
-          <CardDescription>管理您的自動續訂付款方式</CardDescription>
+          <CardDescription>
+            {t("subscriptionCardManagement.description")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {savedCard ? (
             <>
               {/* 已儲存的卡片 */}
               <div>
-                <h3 className="text-sm font-medium mb-4">目前使用的信用卡</h3>
+                <h3 className="text-sm font-medium mb-4">
+                  {t("subscriptionCardManagement.currentCard.title")}
+                </h3>
                 <CreditCardDisplay card={savedCard} />
               </div>
 
@@ -189,9 +206,10 @@ export const SubscriptionCardManagement: React.FC = () => {
               <Alert>
                 <Shield className="h-4 w-4" />
                 <AlertDescription className="ml-2">
-                  <strong>安全保障：</strong>
-                  您的完整卡號不會儲存在我們的伺服器， 所有敏感資訊都由 TapPay
-                  金流安全加密處理。
+                  <strong>
+                    {t("subscriptionCardManagement.security.title")}
+                  </strong>
+                  {t("subscriptionCardManagement.security.description")}
                 </AlertDescription>
               </Alert>
 
@@ -203,7 +221,7 @@ export const SubscriptionCardManagement: React.FC = () => {
                   className="flex-1"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  更換信用卡
+                  {t("subscriptionCardManagement.buttons.updateCard")}
                 </Button>
                 <Button
                   onClick={() => setShowDeleteDialog(true)}
@@ -211,7 +229,7 @@ export const SubscriptionCardManagement: React.FC = () => {
                   className="flex-1 text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  刪除信用卡
+                  {t("subscriptionCardManagement.buttons.deleteCard")}
                 </Button>
               </div>
             </>
@@ -221,7 +239,7 @@ export const SubscriptionCardManagement: React.FC = () => {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="ml-2">
-                  您尚未儲存付款方式。儲存信用卡後，系統將在每月 1 號自動續訂。
+                  {t("subscriptionCardManagement.noCard.warning")}
                 </AlertDescription>
               </Alert>
 
@@ -230,7 +248,7 @@ export const SubscriptionCardManagement: React.FC = () => {
                 className="w-full"
               >
                 <CreditCard className="w-4 h-4 mr-2" />
-                新增信用卡
+                {t("subscriptionCardManagement.buttons.addCard")}
               </Button>
             </>
           )}
@@ -241,9 +259,13 @@ export const SubscriptionCardManagement: React.FC = () => {
       <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{savedCard ? "更換信用卡" : "新增信用卡"}</DialogTitle>
+            <DialogTitle>
+              {savedCard
+                ? t("subscriptionCardManagement.dialogs.update.title")
+                : t("subscriptionCardManagement.dialogs.update.titleNew")}
+            </DialogTitle>
             <DialogDescription>
-              系統將進行 1 元授權測試以驗證信用卡，測試完成後會立即退款。
+              {t("subscriptionCardManagement.dialogs.update.description")}
             </DialogDescription>
           </DialogHeader>
 
@@ -263,19 +285,21 @@ export const SubscriptionCardManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
-              確認刪除信用卡
+              {t("subscriptionCardManagement.dialogs.delete.title")}
             </DialogTitle>
             <DialogDescription>
-              刪除信用卡後，自動續訂功能將無法使用。
+              {t("subscriptionCardManagement.dialogs.delete.description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 pt-2">
             <div className="text-sm text-gray-600">
-              卡號：•••• {savedCard?.last_four}
+              {t("subscriptionCardManagement.dialogs.delete.cardInfo", {
+                lastFour: savedCard?.last_four,
+              })}
             </div>
             <div className="text-sm font-medium text-orange-600">
-              ⚠️ 下次續訂時需要手動付款
+              {t("subscriptionCardManagement.dialogs.delete.warning")}
             </div>
           </div>
 
@@ -285,14 +309,16 @@ export const SubscriptionCardManagement: React.FC = () => {
               onClick={() => setShowDeleteDialog(false)}
               disabled={deleting}
             >
-              取消
+              {t("subscriptionCardManagement.buttons.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteCard}
               disabled={deleting}
             >
-              {deleting ? "刪除中..." : "確認刪除"}
+              {deleting
+                ? t("subscriptionCardManagement.buttons.deleting")
+                : t("subscriptionCardManagement.buttons.confirmDelete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -307,26 +333,40 @@ export const SubscriptionCardManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600">
               <RefreshCw className="w-5 h-5" />
-              啟用自動續訂？
+              {t("subscriptionCardManagement.dialogs.autoRenew.title")}
             </DialogTitle>
             <DialogDescription>
-              ✅ 信用卡已成功綁定！是否要啟用自動續訂功能？
+              {t("subscriptionCardManagement.dialogs.autoRenew.description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 pt-2">
             <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-2">
               <div className="font-medium text-blue-900">
-                💡 自動續訂的好處：
+                {t(
+                  "subscriptionCardManagement.dialogs.autoRenew.benefits.title",
+                )}
               </div>
               <ul className="space-y-1 text-blue-800 ml-4">
-                <li>• 每月 1 號自動扣款，不用擔心忘記續訂</li>
-                <li>• 確保服務不中斷</li>
-                <li>• 隨時可以取消，沒有綁約限制</li>
+                <li>
+                  {t(
+                    "subscriptionCardManagement.dialogs.autoRenew.benefits.monthly",
+                  )}
+                </li>
+                <li>
+                  {t(
+                    "subscriptionCardManagement.dialogs.autoRenew.benefits.continuous",
+                  )}
+                </li>
+                <li>
+                  {t(
+                    "subscriptionCardManagement.dialogs.autoRenew.benefits.flexible",
+                  )}
+                </li>
               </ul>
             </div>
             <div className="text-sm text-gray-600">
-              ℹ️ 您隨時可以在訂閱管理頁面變更此設定
+              {t("subscriptionCardManagement.dialogs.autoRenew.note")}
             </div>
           </div>
 
@@ -337,14 +377,14 @@ export const SubscriptionCardManagement: React.FC = () => {
               disabled={pendingCardUpdate}
               className="w-full sm:w-auto"
             >
-              否，手動續訂
+              {t("subscriptionCardManagement.buttons.no")}
             </Button>
             <Button
               onClick={() => handleAutoRenewChoice(true)}
               disabled={pendingCardUpdate}
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white dark:text-white"
             >
-              是，自動續訂
+              {t("subscriptionCardManagement.buttons.yes")}
             </Button>
           </DialogFooter>
         </DialogContent>
