@@ -305,7 +305,15 @@
       "trialTitle": "🎉 30天免費試用期",
       "trialDescription": "您的免費試用將在 {{days}} 天後到期",
       "expiryDate": "到期日:",
-      "days": "天"
+      "days": "天",
+      "statusSubscribed": "訂閱中",
+      "statusNotSubscribed": "未訂閱",
+      "willExpireIn": "將在 {{days}} 天後到期",
+      "noActiveSubscription": "目前沒有有效訂閱",
+      "expiryDateLabel": "到期日期：",
+      "remainingDays": "{{days}} 天",
+      "testModeButton": "測試訂閱功能",
+      "testModeDescription": "測試訂閱狀態和自動續訂功能"
     },
     "stats": {
       "classroomCount": "班級數量",
@@ -313,7 +321,10 @@
       "studentCount": "學生總數",
       "allStudents": "所有班級學生",
       "programCount": "課程計畫",
-      "createdPrograms": "建立的課程"
+      "createdPrograms": "建立的課程",
+      "classrooms": "班級數量",
+      "students": "學生總數",
+      "programs": "課程計畫"
     },
     "classrooms": {
       "title": "我的班級",
@@ -332,6 +343,9 @@
       "createProgram": "建立課程",
       "manageStudents": "管理學生",
       "viewStats": "查看統計"
+    },
+    "error": {
+      "loadFailed": "載入失敗"
     }
   },
   "admin": {

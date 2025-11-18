@@ -305,7 +305,15 @@
       "trialTitle": "🎉 30-Day Free Trial",
       "trialDescription": "Your free trial expires in {{days}} days",
       "expiryDate": "Expiry Date:",
-      "days": "days"
+      "days": "days",
+      "statusSubscribed": "Subscribed",
+      "statusNotSubscribed": "Not Subscribed",
+      "willExpireIn": "Will expire in {{days}} days",
+      "noActiveSubscription": "No active subscription",
+      "expiryDateLabel": "Expiry Date:",
+      "remainingDays": "{{days}} days",
+      "testModeButton": "Test Subscription",
+      "testModeDescription": "Test subscription status and auto-renewal"
     },
     "stats": {
       "classroomCount": "Classrooms",
@@ -313,7 +321,10 @@
       "studentCount": "Total Students",
       "allStudents": "Students across all classes",
       "programCount": "Programs",
-      "createdPrograms": "Created programs"
+      "createdPrograms": "Created programs",
+      "classrooms": "Classrooms",
+      "students": "Students",
+      "programs": "Programs"
     },
     "classrooms": {
       "title": "My Classrooms",
@@ -332,6 +343,9 @@
       "createProgram": "Create Program",
       "manageStudents": "Manage Students",
       "viewStats": "View Statistics"
+    },
+    "error": {
+      "loadFailed": "Load failed"
     }
   },
   "admin": {
