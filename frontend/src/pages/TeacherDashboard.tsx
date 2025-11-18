@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -58,6 +59,7 @@ interface DashboardData {
 // Removed unused interfaces - they're in TeacherDashboardWithSidebar.tsx
 
 export default function TeacherDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
@@ -79,7 +81,7 @@ export default function TeacherDashboard() {
       setDashboardData(data as DashboardData);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      setError("載入儀表板失敗，請重新登入");
+      setError(t("teacherDashboard.errors.loadFailed"));
       // If unauthorized, redirect to login
       if (err instanceof Error && err.message.includes("401")) {
         handleLogout();
@@ -101,7 +103,7 @@ export default function TeacherDashboard() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">{t("teacherDashboard.loading")}</p>
         </div>
       </div>
     );
@@ -117,7 +119,7 @@ export default function TeacherDashboard() {
               onClick={() => navigate("/teacher/login")}
               className="w-full"
             >
-              返回登入
+              {t("teacherDashboard.buttons.backToLogin")}
             </Button>
           </CardContent>
         </Card>
@@ -139,19 +141,22 @@ export default function TeacherDashboard() {
                   Duotopia
                 </h1>
                 <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded whitespace-nowrap">
-                  教師後台
+                  {t("teacherDashboard.header.teacherPortal")}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {dashboardData.teacher.is_demo && (
                   <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded whitespace-nowrap">
-                    Demo 帳號
+                    {t("teacherDashboard.header.demoAccount")}
                   </span>
                 )}
                 {dashboardData.subscription_status === "trial" &&
                   dashboardData.days_remaining && (
                     <span className="px-3 py-1 text-xs sm:text-sm bg-green-100 text-green-700 rounded-full font-medium whitespace-nowrap">
-                      🎉 免費試用剩餘 {dashboardData.days_remaining} 天
+                      🎉{" "}
+                      {t("teacherDashboard.header.trialDaysRemaining", {
+                        days: dashboardData.days_remaining,
+                      })}
                     </span>
                   )}
               </div>
@@ -172,7 +177,9 @@ export default function TeacherDashboard() {
                 className="ml-4"
               >
                 <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">登出</span>
+                <span className="hidden sm:inline">
+                  {t("teacherDashboard.buttons.logout")}
+                </span>
               </Button>
             </div>
           </div>
@@ -183,10 +190,12 @@ export default function TeacherDashboard() {
         {/* Welcome Section */}
         <div className="mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            歡迎回來，{dashboardData.teacher.name}！
+            {t("teacherDashboard.welcome.title", {
+              name: dashboardData.teacher.name,
+            })}
           </h2>
           <p className="text-sm sm:text-base text-gray-600">
-            管理您的班級、課程與學生學習進度
+            {t("teacherDashboard.welcome.subtitle")}
           </p>
         </div>
 
@@ -198,14 +207,16 @@ export default function TeacherDashboard() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
                   <div className="flex-1">
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                      🎉 30天免費試用期
+                      {t("teacherDashboard.subscription.trialTitle")}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      您的免費試用將在 {dashboardData.days_remaining} 天後到期
+                      {t("teacherDashboard.subscription.trialDescription", {
+                        days: dashboardData.days_remaining,
+                      })}
                     </p>
                     {dashboardData.subscription_end_date && (
                       <p className="text-xs text-gray-500 mt-2">
-                        到期日:{" "}
+                        {t("teacherDashboard.subscription.expiryDate")}{" "}
                         {new Date(
                           dashboardData.subscription_end_date,
                         ).toLocaleDateString("zh-TW")}
@@ -216,7 +227,9 @@ export default function TeacherDashboard() {
                     <div className="text-2xl sm:text-3xl font-bold text-green-600">
                       {dashboardData.days_remaining}
                     </div>
-                    <div className="text-sm text-gray-600">天</div>
+                    <div className="text-sm text-gray-600">
+                      {t("teacherDashboard.subscription.days")}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -228,7 +241,7 @@ export default function TeacherDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium">
-                班級數量
+                {t("teacherDashboard.stats.classroomCount")}
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -236,14 +249,16 @@ export default function TeacherDashboard() {
               <div className="text-xl sm:text-2xl font-bold">
                 {dashboardData.classroom_count}
               </div>
-              <p className="text-xs text-muted-foreground">管理中的班級</p>
+              <p className="text-xs text-muted-foreground">
+                {t("teacherDashboard.stats.activeClassrooms")}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium">
-                學生總數
+                {t("teacherDashboard.stats.studentCount")}
               </CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -251,14 +266,16 @@ export default function TeacherDashboard() {
               <div className="text-xl sm:text-2xl font-bold">
                 {dashboardData.student_count}
               </div>
-              <p className="text-xs text-muted-foreground">所有班級學生</p>
+              <p className="text-xs text-muted-foreground">
+                {t("teacherDashboard.stats.allStudents")}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium">
-                課程計畫
+                {t("teacherDashboard.stats.programCount")}
               </CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -266,7 +283,9 @@ export default function TeacherDashboard() {
               <div className="text-xl sm:text-2xl font-bold">
                 {dashboardData.program_count}
               </div>
-              <p className="text-xs text-muted-foreground">建立的課程</p>
+              <p className="text-xs text-muted-foreground">
+                {t("teacherDashboard.stats.createdPrograms")}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -277,13 +296,17 @@ export default function TeacherDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <GraduationCap className="h-5 w-5 mr-2" />
-                我的班級
+                {t("teacherDashboard.classrooms.title")}
               </CardTitle>
-              <CardDescription>目前管理的班級列表</CardDescription>
+              <CardDescription>
+                {t("teacherDashboard.classrooms.description")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {dashboardData.classrooms.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">尚未建立班級</p>
+                <p className="text-gray-500 text-center py-8">
+                  {t("teacherDashboard.classrooms.noClassrooms")}
+                </p>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   {dashboardData.classrooms.map((classroom) => (
@@ -301,14 +324,16 @@ export default function TeacherDashboard() {
                       </div>
                       <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto sm:text-right">
                         <p className="text-xs sm:text-sm font-medium">
-                          {classroom.student_count} 位學生
+                          {t("teacherDashboard.classrooms.studentsCount", {
+                            count: classroom.student_count,
+                          })}
                         </p>
                         <Button
                           variant="outline"
                           size="sm"
                           className="ml-4 sm:ml-0 sm:mt-2"
                         >
-                          管理
+                          {t("teacherDashboard.buttons.manage")}
                         </Button>
                       </div>
                     </div>
@@ -317,7 +342,7 @@ export default function TeacherDashboard() {
               )}
               <Button className="w-full mt-4" size="sm">
                 <Users className="h-4 w-4 mr-2" />
-                建立新班級
+                {t("teacherDashboard.buttons.createClassroom")}
               </Button>
             </CardContent>
           </Card>
@@ -327,13 +352,17 @@ export default function TeacherDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
-                最近活動學生
+                {t("teacherDashboard.students.title")}
               </CardTitle>
-              <CardDescription>各班級的學生列表</CardDescription>
+              <CardDescription>
+                {t("teacherDashboard.students.description")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {dashboardData.recent_students.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">尚無學生資料</p>
+                <p className="text-gray-500 text-center py-8">
+                  {t("teacherDashboard.students.noStudents")}
+                </p>
               ) : (
                 <div className="space-y-3">
                   {dashboardData.recent_students.map((student) => (
@@ -368,7 +397,7 @@ export default function TeacherDashboard() {
                 </div>
               )}
               <Button variant="outline" className="w-full mt-4" size="sm">
-                查看所有學生
+                {t("teacherDashboard.buttons.viewAllStudents")}
               </Button>
             </CardContent>
           </Card>
@@ -377,9 +406,11 @@ export default function TeacherDashboard() {
         {/* Quick Actions */}
         <Card className="mt-6 sm:mt-8">
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">快速動作</CardTitle>
+            <CardTitle className="text-base sm:text-lg">
+              {t("teacherDashboard.quickActions.title")}
+            </CardTitle>
             <CardDescription className="text-sm">
-              常用功能快捷入口
+              {t("teacherDashboard.quickActions.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -389,21 +420,21 @@ export default function TeacherDashboard() {
                 className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm"
               >
                 <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                建立課程
+                {t("teacherDashboard.quickActions.createProgram")}
               </Button>
               <Button
                 variant="outline"
                 className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm"
               >
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                管理學生
+                {t("teacherDashboard.quickActions.manageStudents")}
               </Button>
               <Button
                 variant="outline"
                 className="h-16 sm:h-20 flex flex-col text-xs sm:text-sm sm:col-span-2 lg:col-span-1"
               >
                 <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                查看統計
+                {t("teacherDashboard.quickActions.viewStats")}
               </Button>
             </div>
           </CardContent>

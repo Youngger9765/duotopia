@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ interface ErrorLog {
 }
 
 export default function AdminMonitoringPage() {
+  const { t } = useTranslation();
   const [audioStatus, setAudioStatus] = useState<AudioUploadStatus | null>(
     null,
   );
@@ -70,7 +72,7 @@ export default function AdminMonitoringPage() {
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false); // 預設關閉自動更新
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -151,7 +153,7 @@ export default function AdminMonitoringPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>載入監控資料中...</p>
+          <p>{t("adminMonitoring.loading")}</p>
         </div>
       </div>
     );
@@ -163,16 +165,16 @@ export default function AdminMonitoringPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">系統監控面板</h1>
+            <h1 className="text-3xl font-bold">{t("adminMonitoring.title")}</h1>
             <Badge
               variant="secondary"
               className="bg-yellow-100 text-yellow-800 border-yellow-300"
             >
               <AlertCircle className="w-3 h-3 mr-1" />
-              MOCK DATA
+              {t("adminMonitoring.badges.mockData")}
             </Badge>
             <Badge variant="outline" className="bg-gray-50 text-gray-500">
-              TODO: 待實作真實數據
+              {t("adminMonitoring.badges.todoReal")}
             </Badge>
           </div>
           <div className="flex items-center gap-4">
@@ -182,11 +184,14 @@ export default function AdminMonitoringPage() {
               ) : (
                 <WifiOff className="w-4 h-4 mr-1" />
               )}
-              連線狀態: {isOnline ? "正常" : "離線"}
+              {t("adminMonitoring.connectionStatus")}:{" "}
+              {isOnline
+                ? t("adminMonitoring.online")
+                : t("adminMonitoring.offline")}
             </Badge>
             <Button onClick={fetchMonitoringData} size="sm" variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
-              手動重新整理
+              {t("adminMonitoring.buttons.manualRefresh")}
             </Button>
           </div>
         </div>
@@ -201,12 +206,12 @@ export default function AdminMonitoringPage() {
             className="rounded"
           />
           <label htmlFor="auto-refresh" className="cursor-pointer">
-            啟用自動更新 (每 5 秒)
+            {t("adminMonitoring.autoRefresh.label")}
           </label>
           {autoRefreshEnabled && (
             <Badge variant="outline" className="text-xs">
               <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-              自動更新中
+              {t("adminMonitoring.autoRefresh.active")}
             </Badge>
           )}
         </div>
@@ -216,7 +221,7 @@ export default function AdminMonitoringPage() {
       <div className="grid gap-6 mb-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
         <h2 className="text-xl font-semibold flex items-center text-blue-800">
           <Zap className="w-5 h-5 mr-2" />
-          即時測試工具 - 真實錄音與評分
+          {t("adminMonitoring.testTools.title")}
         </h2>
 
         <TestRecordingPanel />
@@ -227,10 +232,10 @@ export default function AdminMonitoringPage() {
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold flex items-center">
             <Activity className="w-5 h-5 mr-2" />
-            即時狀態
+            {t("adminMonitoring.statusOverview.title")}
           </h2>
           <Badge variant="outline" className="text-xs">
-            TODO: 待連接真實數據
+            {t("adminMonitoring.badges.todoConnect")}
           </Badge>
         </div>
 
@@ -241,7 +246,7 @@ export default function AdminMonitoringPage() {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center">
                   <FileAudio className="w-5 h-5 mr-2" />
-                  錄音上傳狀態
+                  {t("adminMonitoring.audioUpload.title")}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -250,13 +255,17 @@ export default function AdminMonitoringPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">總上傳數</p>
+                      <p className="text-gray-500">
+                        {t("adminMonitoring.audioUpload.totalUploads")}
+                      </p>
                       <p className="text-2xl font-bold">
-                        總上傳數: {audioStatus.total_uploads}
+                        {audioStatus.total_uploads}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">成功率</p>
+                      <p className="text-gray-500">
+                        {t("adminMonitoring.audioUpload.successRate")}
+                      </p>
                       <p className="text-2xl font-bold text-green-600">
                         {getSuccessRate(
                           audioStatus.successful,
@@ -271,11 +280,13 @@ export default function AdminMonitoringPage() {
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
                         <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                        成功: {audioStatus.successful}
+                        {t("adminMonitoring.audioUpload.successful")}:{" "}
+                        {audioStatus.successful}
                       </span>
                       <span className="flex items-center">
                         <XCircle className="w-4 h-4 mr-1 text-red-500" />
-                        失敗: {audioStatus.failed}
+                        {t("adminMonitoring.audioUpload.failed")}:{" "}
+                        {audioStatus.failed}
                       </span>
                     </div>
                     <Progress
@@ -288,11 +299,12 @@ export default function AdminMonitoringPage() {
                   </div>
 
                   <div className="pt-2 border-t text-xs text-gray-500">
-                    最後更新: {formatTimestamp(audioStatus.last_updated)}
+                    {t("adminMonitoring.lastUpdated")}:{" "}
+                    {formatTimestamp(audioStatus.last_updated)}
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500">無資料</p>
+                <p className="text-gray-500">{t("adminMonitoring.noData")}</p>
               )}
             </CardContent>
           </Card>
@@ -303,7 +315,7 @@ export default function AdminMonitoringPage() {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center">
                   <Brain className="w-5 h-5 mr-2" />
-                  AI 分析狀態
+                  {t("adminMonitoring.aiAnalysis.title")}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -312,13 +324,17 @@ export default function AdminMonitoringPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">總分析數</p>
+                      <p className="text-gray-500">
+                        {t("adminMonitoring.aiAnalysis.totalAnalyses")}
+                      </p>
                       <p className="text-2xl font-bold">
-                        總分析數: {aiStatus.total_analyses}
+                        {aiStatus.total_analyses}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">成功率</p>
+                      <p className="text-gray-500">
+                        {t("adminMonitoring.aiAnalysis.successRate")}
+                      </p>
                       <p className="text-2xl font-bold text-green-600">
                         {getSuccessRate(
                           aiStatus.successful,
@@ -333,11 +349,13 @@ export default function AdminMonitoringPage() {
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
                         <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                        成功: {aiStatus.successful}
+                        {t("adminMonitoring.aiAnalysis.successful")}:{" "}
+                        {aiStatus.successful}
                       </span>
                       <span className="flex items-center">
                         <XCircle className="w-4 h-4 mr-1 text-red-500" />
-                        失敗: {aiStatus.failed}
+                        {t("adminMonitoring.aiAnalysis.failed")}:{" "}
+                        {aiStatus.failed}
                       </span>
                     </div>
                     <Progress
@@ -351,15 +369,18 @@ export default function AdminMonitoringPage() {
 
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="w-4 h-4 mr-1" />
-                    平均處理時間: {aiStatus.avg_processing_time}秒
+                    {t("adminMonitoring.aiAnalysis.avgProcessingTime")}:{" "}
+                    {aiStatus.avg_processing_time}
+                    {t("adminMonitoring.seconds")}
                   </div>
 
                   <div className="pt-2 border-t text-xs text-gray-500">
-                    最後更新: {formatTimestamp(aiStatus.last_updated)}
+                    {t("adminMonitoring.lastUpdated")}:{" "}
+                    {formatTimestamp(aiStatus.last_updated)}
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500">無資料</p>
+                <p className="text-gray-500">{t("adminMonitoring.noData")}</p>
               )}
             </CardContent>
           </Card>
@@ -371,10 +392,10 @@ export default function AdminMonitoringPage() {
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold flex items-center">
             <BarChart3 className="w-5 h-5 mr-2" />
-            重試統計
+            {t("adminMonitoring.retryStats.title")}
           </h2>
           <Badge variant="outline" className="text-xs">
-            TODO: 待連接真實數據
+            {t("adminMonitoring.badges.todoConnect")}
           </Badge>
         </div>
 
@@ -383,27 +404,33 @@ export default function AdminMonitoringPage() {
             {/* Audio Upload Retry Stats */}
             <Card className="bg-gray-50">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base">錄音上傳重試統計</CardTitle>
+                <CardTitle className="text-base">
+                  {t("adminMonitoring.retryStats.audioUpload")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>
-                      總重試次數: {retryStats.audio_upload.total_retries}
+                      {t("adminMonitoring.retryStats.totalRetries")}:{" "}
+                      {retryStats.audio_upload.total_retries}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600">
-                      重試後成功:{" "}
+                      {t("adminMonitoring.retryStats.successfulAfterRetry")}:{" "}
                       {retryStats.audio_upload.successful_after_retry}
                     </span>
                     <span className="text-red-600">
-                      重試後失敗: {retryStats.audio_upload.failed_after_retry}
+                      {t("adminMonitoring.retryStats.failedAfterRetry")}:{" "}
+                      {retryStats.audio_upload.failed_after_retry}
                     </span>
                   </div>
 
                   <div className="pt-2 border-t">
-                    <p className="text-sm text-gray-500 mb-2">重試分布</p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {t("adminMonitoring.retryStats.retryDistribution")}
+                    </p>
                     <div className="space-y-1">
                       {Object.entries(
                         retryStats.audio_upload.retry_distribution,
@@ -412,7 +439,12 @@ export default function AdminMonitoringPage() {
                           key={attempts}
                           className="flex items-center text-sm"
                         >
-                          <span className="w-20">第 {attempts} 次:</span>
+                          <span className="w-20">
+                            {t("adminMonitoring.retryStats.attempt", {
+                              number: attempts,
+                            })}
+                            :
+                          </span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
                             <div
                               className="bg-blue-500 h-4 rounded-full"
@@ -433,27 +465,33 @@ export default function AdminMonitoringPage() {
             {/* AI Analysis Retry Stats */}
             <Card className="bg-gray-50">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base">AI 分析重試統計</CardTitle>
+                <CardTitle className="text-base">
+                  {t("adminMonitoring.retryStats.aiAnalysis")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>
-                      總重試次數: {retryStats.ai_analysis.total_retries}
+                      {t("adminMonitoring.retryStats.totalRetries")}:{" "}
+                      {retryStats.ai_analysis.total_retries}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600">
-                      重試後成功:{" "}
+                      {t("adminMonitoring.retryStats.successfulAfterRetry")}:{" "}
                       {retryStats.ai_analysis.successful_after_retry}
                     </span>
                     <span className="text-red-600">
-                      重試後失敗: {retryStats.ai_analysis.failed_after_retry}
+                      {t("adminMonitoring.retryStats.failedAfterRetry")}:{" "}
+                      {retryStats.ai_analysis.failed_after_retry}
                     </span>
                   </div>
 
                   <div className="pt-2 border-t">
-                    <p className="text-sm text-gray-500 mb-2">重試分布</p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {t("adminMonitoring.retryStats.retryDistribution")}
+                    </p>
                     <div className="space-y-1">
                       {Object.entries(
                         retryStats.ai_analysis.retry_distribution,
@@ -462,7 +500,12 @@ export default function AdminMonitoringPage() {
                           key={attempts}
                           className="flex items-center text-sm"
                         >
-                          <span className="w-20">第 {attempts} 次:</span>
+                          <span className="w-20">
+                            {t("adminMonitoring.retryStats.attempt", {
+                              number: attempts,
+                            })}
+                            :
+                          </span>
                           <div className="flex-1 bg-gray-200 rounded-full h-4 mr-2">
                             <div
                               className="bg-purple-500 h-4 rounded-full"
@@ -488,10 +531,10 @@ export default function AdminMonitoringPage() {
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold flex items-center">
             <AlertCircle className="w-5 h-5 mr-2" />
-            錯誤日誌
+            {t("adminMonitoring.errorLogs.title")}
           </h2>
           <Badge variant="outline" className="text-xs">
-            TODO: 待連接真實數據
+            {t("adminMonitoring.badges.todoConnect")}
           </Badge>
         </div>
 
@@ -512,16 +555,20 @@ export default function AdminMonitoringPage() {
                             }
                           >
                             {log.type === "audio_upload"
-                              ? "錄音上傳"
-                              : "AI 分析"}
+                              ? t("adminMonitoring.errorLogs.audioUpload")
+                              : t("adminMonitoring.errorLogs.aiAnalysis")}
                           </Badge>
                           <Badge
                             variant={log.resolved ? "outline" : "destructive"}
                           >
-                            {log.resolved ? "已解決" : "未解決"}
+                            {log.resolved
+                              ? t("adminMonitoring.errorLogs.resolved")
+                              : t("adminMonitoring.errorLogs.unresolved")}
                           </Badge>
                           <span className="text-xs text-gray-500">
-                            重試 {log.retry_count} 次
+                            {t("adminMonitoring.errorLogs.retryCount", {
+                              count: log.retry_count,
+                            })}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700">{log.error}</p>
@@ -536,7 +583,7 @@ export default function AdminMonitoringPage() {
             ) : (
               <div className="p-8 text-center text-gray-500">
                 <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                <p>目前沒有錯誤日誌</p>
+                <p>{t("adminMonitoring.errorLogs.noErrors")}</p>
               </div>
             )}
           </CardContent>

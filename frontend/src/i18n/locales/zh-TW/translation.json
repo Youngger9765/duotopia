@@ -281,52 +281,50 @@
     }
   },
   "teacherDashboard": {
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "載入儀表板失敗，請重新登入"
+    },
+    "buttons": {
+      "backToLogin": "返回登入",
+      "logout": "登出",
+      "manage": "管理",
+      "createClassroom": "建立新班級",
+      "viewAllStudents": "查看所有學生"
+    },
     "header": {
-      "title": "Duotopia",
-      "subtitle": "教師後台",
+      "teacherPortal": "教師後台",
       "demoAccount": "Demo 帳號",
-      "logout": "登出"
+      "trialDaysRemaining": "免費試用剩餘 {{days}} 天"
     },
     "welcome": {
       "title": "歡迎回來，{{name}}！",
       "subtitle": "管理您的班級、課程與學生學習進度"
     },
     "subscription": {
-      "trial": "30天免費試用期",
-      "trialRemaining": "您的免費試用將在 {{days}} 天後到期",
-      "expiryDate": "到期日: {{date}}",
-      "daysRemaining": "免費試用剩餘 {{days}} 天",
-      "days": "天",
-      "statusSubscribed": "✅ 訂閱狀態：已訂閱",
-      "statusNotSubscribed": "⚠️ 訂閱狀態：未訂閱",
-      "willExpireIn": "您的訂閱將在 {{days}} 天後到期",
-      "noActiveSubscription": "您目前沒有有效訂閱，部分功能將受限",
-      "expiryDateLabel": "到期日:",
-      "remainingDays": "剩餘天數",
-      "testModeButton": "模擬訂閱充值（測試用）",
-      "testModeDescription": "點擊可模擬充值、過期等不同訂閱狀態"
+      "trialTitle": "🎉 30天免費試用期",
+      "trialDescription": "您的免費試用將在 {{days}} 天後到期",
+      "expiryDate": "到期日:",
+      "days": "天"
     },
     "stats": {
-      "classrooms": "班級數量",
-      "classroomsDesc": "管理中的班級",
-      "students": "學生總數",
-      "studentsDesc": "所有班級學生",
-      "programs": "課程計畫",
-      "programsDesc": "建立的課程"
+      "classroomCount": "班級數量",
+      "activeClassrooms": "管理中的班級",
+      "studentCount": "學生總數",
+      "allStudents": "所有班級學生",
+      "programCount": "課程計畫",
+      "createdPrograms": "建立的課程"
     },
     "classrooms": {
       "title": "我的班級",
       "description": "目前管理的班級列表",
-      "empty": "尚未建立班級",
-      "studentCount": "{{count}} 位學生",
-      "manage": "管理",
-      "createNew": "建立新班級"
+      "noClassrooms": "尚未建立班級",
+      "studentsCount": "{{count}} 位學生"
     },
     "students": {
       "title": "最近活動學生",
       "description": "各班級的學生列表",
-      "empty": "尚無學生資料",
-      "viewAll": "查看所有學生"
+      "noStudents": "尚無學生資料"
     },
     "quickActions": {
       "title": "快速動作",
@@ -334,12 +332,7 @@
       "createProgram": "建立課程",
       "manageStudents": "管理學生",
       "viewStats": "查看統計"
-    },
-    "error": {
-      "loadFailed": "載入儀表板失敗，請重新登入",
-      "backToLogin": "返回登入"
-    },
-    "loading": "載入中..."
+    }
   },
   "admin": {
     "subscription": {
@@ -2070,6 +2063,248 @@
       "schoolFeature2": "所有 Tutor Teachers 功能",
       "schoolFeature3": "進階班級管理",
       "schoolFeature4": "批次作業功能"
+    }
+  },
+  "adminSubscription": {
+    "loading": "載入中...",
+    "title": "後台訂閱管理",
+    "description": "管理用戶訂閱並延長VIP權限",
+    "buttons": {
+      "backToDashboard": "返回儀表板",
+      "downloadCsv": "下載 CSV",
+      "search": "搜尋",
+      "edit": "編輯",
+      "cancel": "取消",
+      "processing": "處理中...",
+      "cancelSubscription": "取消訂閱",
+      "updateSubscription": "更新訂閱"
+    },
+    "stats": {
+      "totalTeachers": "總教師數",
+      "activeSubs": "活躍訂閱",
+      "monthlyRevenue": "月收入",
+      "quotaUsage": "配額使用"
+    },
+    "tabs": {
+      "subscriptions": "訂閱管理",
+      "transactions": "交易記錄",
+      "learning": "學習分析"
+    },
+    "subscriptionsTab": {
+      "title": "所有訂閱",
+      "description": "查看所有教師訂閱狀態",
+      "searchPlaceholder": "搜尋 Email 或姓名..."
+    },
+    "table": {
+      "email": "Email",
+      "name": "姓名",
+      "plan": "方案",
+      "endDate": "到期日",
+      "periods": "期數",
+      "quota": "配額",
+      "status": "狀態",
+      "actions": "操作",
+      "noData": "無資料"
+    },
+    "status": {
+      "active": "啟用",
+      "none": "無"
+    },
+    "periodTable": {
+      "title": "訂閱期數",
+      "plan": "方案",
+      "startDate": "開始日期",
+      "endDate": "結束日期",
+      "quota": "配額",
+      "payment": "付款",
+      "status": "狀態"
+    },
+    "history": {
+      "title": "編輯歷史",
+      "noHistory": "無編輯歷史",
+      "admin": "管理員",
+      "initialValues": "初始值：",
+      "changes": "變更：",
+      "reason": "原因"
+    },
+    "transactionsTab": {
+      "title": "交易分析",
+      "description": "查看所有付款交易和月收入趨勢",
+      "totalRevenue": "總收入",
+      "totalTransactions": "總交易數",
+      "monthlyRevenueTrend": "月收入趨勢",
+      "allTransactions": "所有交易",
+      "date": "日期",
+      "teacher": "教師",
+      "email": "Email",
+      "plan": "方案",
+      "amount": "金額",
+      "method": "方式",
+      "tradeId": "交易編號",
+      "noData": "無交易資料"
+    },
+    "learningTab": {
+      "title": "學習分析",
+      "description": "教師活動和點數使用統計",
+      "totalPointsUsed": "總點數使用",
+      "activeTeachers": "活躍教師",
+      "monthlyPointsUsage": "月點數使用",
+      "teacherStatistics": "教師統計",
+      "teacher": "教師",
+      "email": "Email",
+      "classes": "班級",
+      "students": "學生",
+      "assignments": "作業",
+      "pointsUsed": "點數使用",
+      "noData": "無學習資料"
+    },
+    "modal": {
+      "createTitle": "建立訂閱",
+      "cancelTitle": "取消訂閱",
+      "editTitle": "編輯訂閱",
+      "action": "操作",
+      "createSubscription": "建立訂閱",
+      "editSubscription": "編輯訂閱",
+      "cancelSubscription": "取消訂閱",
+      "planName": "方案名稱",
+      "current": "目前",
+      "selectPlan": "選擇方案",
+      "noChange": "— 不變更 —",
+      "endDate": "到期日",
+      "optional": "（選填）",
+      "endDateOptionalCreate": "（選填，預設使用方案期限）",
+      "endDateHintCreate": "留空則使用預設方案期限",
+      "endDateHintEdit": "留空則保持目前到期日",
+      "customQuota": "自訂配額（選填）",
+      "quotaPlaceholder": "輸入自訂配額（如：50000）",
+      "quotaHint": "留空則保持 VIP 方案的目前配額",
+      "reason": "原因",
+      "reasonPlaceholder": "輸入此操作的原因..."
+    },
+    "errors": {
+      "noPermission": "無管理員權限",
+      "loadFailed": "載入失敗：{{detail}}",
+      "unknown": "未知錯誤",
+      "transactionAnalyticsFailed": "無法載入交易分析",
+      "learningAnalyticsFailed": "無法載入學習分析",
+      "fillRequired": "請填寫所有必填欄位",
+      "selectPlan": "建立訂閱請選擇方案",
+      "operationFailed": "操作失敗：{{detail}}",
+      "searchFailed": "搜尋失敗：{{detail}}",
+      "loadPeriodsFailed": "無法載入訂閱期數",
+      "loadHistoryFailed": "無法載入編輯歷史"
+    },
+    "messages": {
+      "operationSuccess": "成功！{{teacherName}} - {{message}}",
+      "completed": "操作完成"
+    }
+  },
+  "adminMonitoring": {
+    "loading": "載入監控資料中...",
+    "title": "系統監控面板",
+    "badges": {
+      "mockData": "MOCK DATA",
+      "todoReal": "TODO: 待實作真實數據",
+      "todoConnect": "TODO: 待連接真實數據"
+    },
+    "connectionStatus": "連線狀態",
+    "online": "正常",
+    "offline": "離線",
+    "buttons": {
+      "manualRefresh": "手動重新整理"
+    },
+    "autoRefresh": {
+      "label": "啟用自動更新 (每 5 秒)",
+      "active": "自動更新中"
+    },
+    "testTools": {
+      "title": "即時測試工具 - 真實錄音與評分"
+    },
+    "statusOverview": {
+      "title": "即時狀態"
+    },
+    "audioUpload": {
+      "title": "錄音上傳狀態",
+      "totalUploads": "總上傳數",
+      "successRate": "成功率",
+      "successful": "成功",
+      "failed": "失敗"
+    },
+    "aiAnalysis": {
+      "title": "AI 分析狀態",
+      "totalAnalyses": "總分析數",
+      "successRate": "成功率",
+      "successful": "成功",
+      "failed": "失敗",
+      "avgProcessingTime": "平均處理時間"
+    },
+    "lastUpdated": "最後更新",
+    "seconds": "秒",
+    "noData": "無資料",
+    "retryStats": {
+      "title": "重試統計",
+      "audioUpload": "錄音上傳重試統計",
+      "aiAnalysis": "AI 分析重試統計",
+      "totalRetries": "總重試次數",
+      "successfulAfterRetry": "重試後成功",
+      "failedAfterRetry": "重試後失敗",
+      "retryDistribution": "重試分布",
+      "attempt": "第 {{number}} 次"
+    },
+    "errorLogs": {
+      "title": "錯誤日誌",
+      "audioUpload": "錄音上傳",
+      "aiAnalysis": "AI 分析",
+      "resolved": "已解決",
+      "unresolved": "未解決",
+      "retryCount": "重試 {{count}} 次",
+      "noErrors": "目前沒有錯誤日誌"
+    }
+  },
+  "databaseAdmin": {
+    "loading": "載入中...",
+    "title": "資料庫管理",
+    "totalRecords": "總記錄數",
+    "buttons": {
+      "refresh": "重新整理",
+      "rebuildDatabase": "重建資料庫",
+      "rebuilding": "重建中",
+      "close": "關閉"
+    },
+    "entities": {
+      "teacher": "教師",
+      "student": "學生",
+      "classroom": "班級",
+      "classroomStudent": "班級學生",
+      "program": "課程計畫",
+      "lesson": "課程單元",
+      "content": "學習內容",
+      "contentItem": "內容項目",
+      "assignment": "作業",
+      "studentAssignment": "學生作業",
+      "studentItemProgress": "學生項目進度"
+    },
+    "recordCount": "共 {{count}} 筆記錄",
+    "noData": "暫無資料",
+    "noRecordsForEntity": "此 Entity 目前沒有任何記錄",
+    "welcome": {
+      "title": "選擇 Entity 查看詳細資料",
+      "description": "點擊左側任一 Entity 來查看其完整資料",
+      "tipsTitle": "💡 功能提示",
+      "tip1": "點擊左側卡片查看資料",
+      "tip2": "使用「重建資料庫」重新產生所有資料",
+      "tip3": "「重新整理」可更新統計數字"
+    },
+    "confirmRebuild": "確定要重建整個資料庫嗎？這會清除所有現有資料！",
+    "errors": {
+      "loadStatsFailed": "無法載入統計資料",
+      "loadEntityFailed": "無法載入 {{entityType}} 資料",
+      "loadDataFailed": "載入資料失敗",
+      "rebuildFailed": "重建失敗: {{error}}",
+      "unknown": "未知錯誤"
+    },
+    "messages": {
+      "rebuildSuccess": "資料庫重建成功！"
     }
   }
 }

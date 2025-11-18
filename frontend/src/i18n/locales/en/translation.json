@@ -281,52 +281,50 @@
     }
   },
   "teacherDashboard": {
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Failed to load dashboard, please login again"
+    },
+    "buttons": {
+      "backToLogin": "Back to Login",
+      "logout": "Logout",
+      "manage": "Manage",
+      "createClassroom": "Create New Classroom",
+      "viewAllStudents": "View All Students"
+    },
     "header": {
-      "title": "Duotopia",
-      "subtitle": "Teacher Dashboard",
+      "teacherPortal": "Teacher Portal",
       "demoAccount": "Demo Account",
-      "logout": "Logout"
+      "trialDaysRemaining": "Free trial remaining {{days}} days"
     },
     "welcome": {
       "title": "Welcome back, {{name}}!",
       "subtitle": "Manage your classes, courses, and student learning progress"
     },
     "subscription": {
-      "trial": "30-Day Free Trial",
-      "trialRemaining": "Your free trial expires in {{days}} days",
-      "expiryDate": "Expiry Date: {{date}}",
-      "daysRemaining": "{{days}} days remaining in free trial",
-      "days": "days",
-      "statusSubscribed": "✅ Subscription Status: Active",
-      "statusNotSubscribed": "⚠️ Subscription Status: Inactive",
-      "willExpireIn": "Your subscription will expire in {{days}} days",
-      "noActiveSubscription": "You currently have no active subscription, some features may be limited",
-      "expiryDateLabel": "Expiry Date:",
-      "remainingDays": "Days Remaining",
-      "testModeButton": "Simulate Subscription Recharge (Test Only)",
-      "testModeDescription": "Click to simulate recharge, expiry, and other subscription states"
+      "trialTitle": "🎉 30-Day Free Trial",
+      "trialDescription": "Your free trial expires in {{days}} days",
+      "expiryDate": "Expiry Date:",
+      "days": "days"
     },
     "stats": {
-      "classrooms": "Classrooms",
-      "classroomsDesc": "Classrooms you manage",
-      "students": "Total Students",
-      "studentsDesc": "Students across all classes",
-      "programs": "Programs",
-      "programsDesc": "Created programs"
+      "classroomCount": "Classrooms",
+      "activeClassrooms": "Classrooms you manage",
+      "studentCount": "Total Students",
+      "allStudents": "Students across all classes",
+      "programCount": "Programs",
+      "createdPrograms": "Created programs"
     },
     "classrooms": {
       "title": "My Classrooms",
       "description": "List of classrooms you currently manage",
-      "empty": "No classrooms created yet",
-      "studentCount": "{{count}} students",
-      "manage": "Manage",
-      "createNew": "Create New Classroom"
+      "noClassrooms": "No classrooms created yet",
+      "studentsCount": "{{count}} students"
     },
     "students": {
       "title": "Recent Active Students",
       "description": "Student list from all classes",
-      "empty": "No student data yet",
-      "viewAll": "View All Students"
+      "noStudents": "No student data yet"
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -334,12 +332,7 @@
       "createProgram": "Create Program",
       "manageStudents": "Manage Students",
       "viewStats": "View Statistics"
-    },
-    "error": {
-      "loadFailed": "Failed to load dashboard, please login again",
-      "backToLogin": "Back to Login"
-    },
-    "loading": "Loading..."
+    }
   },
   "admin": {
     "subscription": {
@@ -2070,6 +2063,248 @@
       "schoolFeature2": "All Tutor Teachers features",
       "schoolFeature3": "Advanced classroom management",
       "schoolFeature4": "Batch assignment features"
+    }
+  },
+  "adminSubscription": {
+    "loading": "Loading...",
+    "title": "Admin Subscription Dashboard",
+    "description": "Manage user subscriptions and extend VIP access",
+    "buttons": {
+      "backToDashboard": "Back to Dashboard",
+      "downloadCsv": "Download CSV",
+      "search": "Search",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "cancelSubscription": "Cancel Subscription",
+      "updateSubscription": "Update Subscription"
+    },
+    "stats": {
+      "totalTeachers": "Total Teachers",
+      "activeSubs": "Active Subs",
+      "monthlyRevenue": "Monthly Revenue",
+      "quotaUsage": "Quota Usage"
+    },
+    "tabs": {
+      "subscriptions": "Subscriptions",
+      "transactions": "Transactions",
+      "learning": "Learning"
+    },
+    "subscriptionsTab": {
+      "title": "All Subscriptions",
+      "description": "View all teacher subscription status",
+      "searchPlaceholder": "Search email or name..."
+    },
+    "table": {
+      "email": "Email",
+      "name": "Name",
+      "plan": "Plan",
+      "endDate": "End Date",
+      "periods": "Periods",
+      "quota": "Quota",
+      "status": "Status",
+      "actions": "Actions",
+      "noData": "No data"
+    },
+    "status": {
+      "active": "Active",
+      "none": "None"
+    },
+    "periodTable": {
+      "title": "Subscription Periods",
+      "plan": "Plan",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "quota": "Quota",
+      "payment": "Payment",
+      "status": "Status"
+    },
+    "history": {
+      "title": "Edit History",
+      "noHistory": "No edit history",
+      "admin": "Admin",
+      "initialValues": "Initial Values:",
+      "changes": "Changes:",
+      "reason": "Reason"
+    },
+    "transactionsTab": {
+      "title": "Transaction Analytics",
+      "description": "View all payment transactions and monthly revenue trends",
+      "totalRevenue": "Total Revenue",
+      "totalTransactions": "Total Transactions",
+      "monthlyRevenueTrend": "Monthly Revenue Trend",
+      "allTransactions": "All Transactions",
+      "date": "Date",
+      "teacher": "Teacher",
+      "email": "Email",
+      "plan": "Plan",
+      "amount": "Amount",
+      "method": "Method",
+      "tradeId": "Trade ID",
+      "noData": "No transaction data available"
+    },
+    "learningTab": {
+      "title": "Learning Analytics",
+      "description": "Teacher activity and points usage statistics",
+      "totalPointsUsed": "Total Points Used",
+      "activeTeachers": "Active Teachers",
+      "monthlyPointsUsage": "Monthly Points Usage",
+      "teacherStatistics": "Teacher Statistics",
+      "teacher": "Teacher",
+      "email": "Email",
+      "classes": "Classes",
+      "students": "Students",
+      "assignments": "Assignments",
+      "pointsUsed": "Points Used",
+      "noData": "No learning data available"
+    },
+    "modal": {
+      "createTitle": "Create Subscription",
+      "cancelTitle": "Cancel Subscription",
+      "editTitle": "Edit Subscription",
+      "action": "Action",
+      "createSubscription": "Create Subscription",
+      "editSubscription": "Edit Subscription",
+      "cancelSubscription": "Cancel Subscription",
+      "planName": "Plan Name",
+      "current": "Current",
+      "selectPlan": "Select a plan",
+      "noChange": "— No change —",
+      "endDate": "End Date",
+      "optional": "(optional)",
+      "endDateOptionalCreate": "(optional, defaults to plan duration)",
+      "endDateHintCreate": "Leave empty to use default plan duration",
+      "endDateHintEdit": "Leave empty to keep current end date",
+      "customQuota": "Custom Quota (optional)",
+      "quotaPlaceholder": "Enter custom quota (e.g., 50000)",
+      "quotaHint": "Leave empty to keep current quota for VIP plan",
+      "reason": "Reason",
+      "reasonPlaceholder": "Enter reason for this action..."
+    },
+    "errors": {
+      "noPermission": "No admin permission",
+      "loadFailed": "Load failed: {{detail}}",
+      "unknown": "Unknown error",
+      "transactionAnalyticsFailed": "Failed to load transaction analytics",
+      "learningAnalyticsFailed": "Failed to load learning analytics",
+      "fillRequired": "Please fill all required fields",
+      "selectPlan": "Please select a plan for creating subscription",
+      "operationFailed": "Failed: {{detail}}",
+      "searchFailed": "Search failed: {{detail}}",
+      "loadPeriodsFailed": "Failed to load subscription periods",
+      "loadHistoryFailed": "Failed to load edit history"
+    },
+    "messages": {
+      "operationSuccess": "Success! {{teacherName}} - {{message}}",
+      "completed": "Operation completed"
+    }
+  },
+  "adminMonitoring": {
+    "loading": "Loading monitoring data...",
+    "title": "System Monitoring Dashboard",
+    "badges": {
+      "mockData": "MOCK DATA",
+      "todoReal": "TODO: Implement real data",
+      "todoConnect": "TODO: Connect to real data"
+    },
+    "connectionStatus": "Connection Status",
+    "online": "Online",
+    "offline": "Offline",
+    "buttons": {
+      "manualRefresh": "Manual Refresh"
+    },
+    "autoRefresh": {
+      "label": "Enable auto-refresh (every 5s)",
+      "active": "Auto-refreshing"
+    },
+    "testTools": {
+      "title": "Live Test Tools - Real Recording & Scoring"
+    },
+    "statusOverview": {
+      "title": "Live Status"
+    },
+    "audioUpload": {
+      "title": "Audio Upload Status",
+      "totalUploads": "Total Uploads",
+      "successRate": "Success Rate",
+      "successful": "Successful",
+      "failed": "Failed"
+    },
+    "aiAnalysis": {
+      "title": "AI Analysis Status",
+      "totalAnalyses": "Total Analyses",
+      "successRate": "Success Rate",
+      "successful": "Successful",
+      "failed": "Failed",
+      "avgProcessingTime": "Avg Processing Time"
+    },
+    "lastUpdated": "Last Updated",
+    "seconds": "seconds",
+    "noData": "No data",
+    "retryStats": {
+      "title": "Retry Statistics",
+      "audioUpload": "Audio Upload Retry Stats",
+      "aiAnalysis": "AI Analysis Retry Stats",
+      "totalRetries": "Total Retries",
+      "successfulAfterRetry": "Successful After Retry",
+      "failedAfterRetry": "Failed After Retry",
+      "retryDistribution": "Retry Distribution",
+      "attempt": "Attempt {{number}}"
+    },
+    "errorLogs": {
+      "title": "Error Logs",
+      "audioUpload": "Audio Upload",
+      "aiAnalysis": "AI Analysis",
+      "resolved": "Resolved",
+      "unresolved": "Unresolved",
+      "retryCount": "{{count}} retries",
+      "noErrors": "No error logs currently"
+    }
+  },
+  "databaseAdmin": {
+    "loading": "Loading...",
+    "title": "Database Admin",
+    "totalRecords": "Total Records",
+    "buttons": {
+      "refresh": "Refresh",
+      "rebuildDatabase": "Rebuild Database",
+      "rebuilding": "Rebuilding",
+      "close": "Close"
+    },
+    "entities": {
+      "teacher": "Teachers",
+      "student": "Students",
+      "classroom": "Classrooms",
+      "classroomStudent": "Classroom Students",
+      "program": "Programs",
+      "lesson": "Lessons",
+      "content": "Content",
+      "contentItem": "Content Items",
+      "assignment": "Assignments",
+      "studentAssignment": "Student Assignments",
+      "studentItemProgress": "Student Item Progress"
+    },
+    "recordCount": "{{count}} records",
+    "noData": "No data",
+    "noRecordsForEntity": "No records for this entity",
+    "welcome": {
+      "title": "Select Entity to View Details",
+      "description": "Click any entity on the left to view its full data",
+      "tipsTitle": "💡 Tips",
+      "tip1": "Click left cards to view data",
+      "tip2": "Use 'Rebuild Database' to regenerate all data",
+      "tip3": "'Refresh' updates statistics"
+    },
+    "confirmRebuild": "Are you sure you want to rebuild the entire database? This will clear all existing data!",
+    "errors": {
+      "loadStatsFailed": "Failed to load statistics",
+      "loadEntityFailed": "Failed to load {{entityType}} data",
+      "loadDataFailed": "Failed to load data",
+      "rebuildFailed": "Rebuild failed: {{error}}",
+      "unknown": "Unknown error"
+    },
+    "messages": {
+      "rebuildSuccess": "Database rebuilt successfully!"
     }
   }
 }

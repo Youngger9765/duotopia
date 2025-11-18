@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -42,45 +43,76 @@ interface EntityData {
 }
 
 const entityConfig = [
-  { key: "teacher", name: "教師", icon: Users, color: "bg-blue-500" },
-  { key: "student", name: "學生", icon: GraduationCap, color: "bg-green-500" },
-  { key: "classroom", name: "班級", icon: School, color: "bg-purple-500" },
+  {
+    key: "teacher",
+    name: "databaseAdmin.entities.teacher",
+    icon: Users,
+    color: "bg-blue-500",
+  },
+  {
+    key: "student",
+    name: "databaseAdmin.entities.student",
+    icon: GraduationCap,
+    color: "bg-green-500",
+  },
+  {
+    key: "classroom",
+    name: "databaseAdmin.entities.classroom",
+    icon: School,
+    color: "bg-purple-500",
+  },
   {
     key: "classroom_student",
-    name: "班級學生",
+    name: "databaseAdmin.entities.classroomStudent",
     icon: Users,
     color: "bg-orange-500",
   },
-  { key: "program", name: "課程計畫", icon: BookOpen, color: "bg-indigo-500" },
-  { key: "lesson", name: "課程單元", icon: FileText, color: "bg-pink-500" },
-  { key: "content", name: "學習內容", icon: FileText, color: "bg-teal-500" },
+  {
+    key: "program",
+    name: "databaseAdmin.entities.program",
+    icon: BookOpen,
+    color: "bg-indigo-500",
+  },
+  {
+    key: "lesson",
+    name: "databaseAdmin.entities.lesson",
+    icon: FileText,
+    color: "bg-pink-500",
+  },
+  {
+    key: "content",
+    name: "databaseAdmin.entities.content",
+    icon: FileText,
+    color: "bg-teal-500",
+  },
   {
     key: "content_item",
-    name: "內容項目",
+    name: "databaseAdmin.entities.contentItem",
     icon: FileText,
     color: "bg-cyan-500",
   },
   {
     key: "assignment",
-    name: "作業",
+    name: "databaseAdmin.entities.assignment",
     icon: ClipboardCheck,
     color: "bg-red-500",
   },
   {
     key: "student_assignment",
-    name: "學生作業",
+    name: "databaseAdmin.entities.studentAssignment",
     icon: ClipboardCheck,
     color: "bg-yellow-500",
   },
   {
     key: "student_item_progress",
-    name: "學生項目進度",
+    name: "databaseAdmin.entities.studentItemProgress",
     icon: ClipboardCheck,
     color: "bg-emerald-500",
   },
 ];
 
 export default function DatabaseAdminPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
@@ -97,11 +129,11 @@ export default function DatabaseAdminPage() {
         const data = await response.json();
         setStats(data);
       } else {
-        toast.error("無法載入統計資料");
+        toast.error(t("databaseAdmin.errors.loadStatsFailed"));
       }
     } catch (error) {
       console.error("Error fetching stats:", error);
-      toast.error("載入統計資料失敗");
+      toast.error(t("databaseAdmin.errors.loadStatsFailed"));
     } finally {
       setLoading(false);
     }
@@ -118,18 +150,18 @@ export default function DatabaseAdminPage() {
         setEntityData(data);
         setSelectedEntity(entityType);
       } else {
-        toast.error(`無法載入 ${entityType} 資料`);
+        toast.error(t("databaseAdmin.errors.loadEntityFailed", { entityType }));
       }
     } catch (error) {
       console.error("Error fetching entity data:", error);
-      toast.error("載入資料失敗");
+      toast.error(t("databaseAdmin.errors.loadDataFailed"));
     } finally {
       setLoadingEntity(false);
     }
   };
 
   const handleSeedDatabase = async () => {
-    if (!confirm("確定要重建整個資料庫嗎？這會清除所有現有資料！")) {
+    if (!confirm(t("databaseAdmin.confirmRebuild"))) {
       return;
     }
 
@@ -149,20 +181,26 @@ export default function DatabaseAdminPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        toast.success("資料庫重建成功！");
-        fetchStats(); // 重新載入統計
+        toast.success(t("databaseAdmin.messages.rebuildSuccess"));
+        fetchStats();
         if (selectedEntity) {
-          fetchEntityData(selectedEntity); // 重新載入選中的資料
+          fetchEntityData(selectedEntity);
         }
       } else {
-        // 處理 HTTP 錯誤或業務邏輯錯誤
-        const errorMessage = result.detail || result.message || "未知錯誤";
-        toast.error(`重建失敗: ${errorMessage}`);
+        const errorMessage =
+          result.detail || result.message || t("databaseAdmin.errors.unknown");
+        toast.error(
+          t("databaseAdmin.errors.rebuildFailed", { error: errorMessage }),
+        );
         console.error("Seed error:", result);
       }
     } catch (error) {
       console.error("Error seeding database:", error);
-      toast.error("重建資料庫失敗");
+      toast.error(
+        t("databaseAdmin.errors.rebuildFailed", {
+          error: t("databaseAdmin.errors.unknown"),
+        }),
+      );
     } finally {
       setSeeding(false);
     }
@@ -176,7 +214,7 @@ export default function DatabaseAdminPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">載入中...</span>
+        <span className="ml-2">{t("databaseAdmin.loading")}</span>
       </div>
     );
   }
@@ -190,9 +228,9 @@ export default function DatabaseAdminPage() {
           <div className="flex items-center gap-3 mb-4">
             <Database className="h-8 w-8 text-blue-600" />
             <div>
-              <h1 className="text-xl font-bold">資料庫管理</h1>
+              <h1 className="text-xl font-bold">{t("databaseAdmin.title")}</h1>
               <p className="text-sm text-gray-600">
-                總記錄數: {stats?.total_records || 0}
+                {t("databaseAdmin.totalRecords")}: {stats?.total_records || 0}
               </p>
             </div>
           </div>
@@ -208,7 +246,7 @@ export default function DatabaseAdminPage() {
               <RefreshCw
                 className={`h-3 w-3 mr-2 ${loading ? "animate-spin" : ""}`}
               />
-              重新整理
+              {t("databaseAdmin.buttons.refresh")}
             </Button>
 
             <Button
@@ -220,12 +258,12 @@ export default function DatabaseAdminPage() {
               {seeding ? (
                 <>
                   <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                  重建中
+                  {t("databaseAdmin.buttons.rebuilding")}
                 </>
               ) : (
                 <>
                   <RefreshCw className="h-3 w-3 mr-2" />
-                  重建資料庫
+                  {t("databaseAdmin.buttons.rebuildDatabase")}
                 </>
               )}
             </Button>
@@ -256,7 +294,7 @@ export default function DatabaseAdminPage() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-sm">{name}</h3>
+                        <h3 className="font-medium text-sm">{t(name)}</h3>
                         <p className="text-xs text-gray-500">{key}</p>
                       </div>
                     </div>
@@ -297,11 +335,15 @@ export default function DatabaseAdminPage() {
                   })()}
                   <div>
                     <h2 className="text-xl font-bold">
-                      {entityConfig.find((e) => e.key === selectedEntity)
-                        ?.name || selectedEntity}
+                      {t(
+                        entityConfig.find((e) => e.key === selectedEntity)
+                          ?.name || selectedEntity,
+                      )}
                     </h2>
                     <p className="text-gray-600">
-                      共 {entityData.total} 筆記錄
+                      {t("databaseAdmin.recordCount", {
+                        count: entityData.total,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -310,7 +352,7 @@ export default function DatabaseAdminPage() {
                   variant="outline"
                   size="sm"
                 >
-                  關閉
+                  {t("databaseAdmin.buttons.close")}
                 </Button>
               </div>
             </div>
@@ -320,7 +362,7 @@ export default function DatabaseAdminPage() {
               {loadingEntity ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin mr-3" />
-                  <span className="text-lg">載入中...</span>
+                  <span className="text-lg">{t("databaseAdmin.loading")}</span>
                 </div>
               ) : (
                 <div className="h-full overflow-auto p-6">
@@ -367,10 +409,10 @@ export default function DatabaseAdminPage() {
                       <div className="text-center">
                         <Database className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          暫無資料
+                          {t("databaseAdmin.noData")}
                         </h3>
                         <p className="text-gray-500">
-                          此 Entity 目前沒有任何記錄
+                          {t("databaseAdmin.noRecordsForEntity")}
                         </p>
                       </div>
                     </div>
@@ -385,17 +427,19 @@ export default function DatabaseAdminPage() {
             <div className="text-center">
               <Database className="h-24 w-24 text-gray-300 mx-auto mb-6" />
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                選擇 Entity 查看詳細資料
+                {t("databaseAdmin.welcome.title")}
               </h2>
               <p className="text-gray-500 mb-6">
-                點擊左側任一 Entity 來查看其完整資料
+                {t("databaseAdmin.welcome.description")}
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left max-w-md mx-auto">
-                <h3 className="font-medium text-blue-900 mb-2">💡 功能提示</h3>
+                <h3 className="font-medium text-blue-900 mb-2">
+                  {t("databaseAdmin.welcome.tipsTitle")}
+                </h3>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• 點擊左側卡片查看資料</li>
-                  <li>• 使用「重建資料庫」重新產生所有資料</li>
-                  <li>• 「重新整理」可更新統計數字</li>
+                  <li>• {t("databaseAdmin.welcome.tip1")}</li>
+                  <li>• {t("databaseAdmin.welcome.tip2")}</li>
+                  <li>• {t("databaseAdmin.welcome.tip3")}</li>
                 </ul>
               </div>
             </div>
