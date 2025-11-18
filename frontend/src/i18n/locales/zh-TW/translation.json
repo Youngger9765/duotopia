@@ -636,7 +636,21 @@
     },
     "buttons": {
       "back": "返回",
-      "submit": "提交作業"
+      "submit": "提交作業",
+      "cancel": "取消",
+      "confirm": "確認提交"
+    },
+    "validation": {
+      "title": "尚未完成的項目",
+      "incompleteItems": "以下項目尚未錄音，請先完成後再提交：",
+      "notRecorded": "（未錄音）",
+      "notAnalyzed": "（未分析）",
+      "itemNumber": "第 {{number}} 題"
+    },
+    "labels": {
+      "questionNumber": "第 {{number}} 題：",
+      "itemCount": "{{count}}題",
+      "itemCountSingular": "{{count}}題"
     },
     "activityTypes": {
       "reading": "朗讀練習"

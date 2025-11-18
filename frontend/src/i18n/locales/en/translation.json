@@ -636,7 +636,21 @@
     },
     "buttons": {
       "back": "Back",
-      "submit": "Submit Assignment"
+      "submit": "Submit Assignment",
+      "cancel": "Cancel",
+      "confirm": "Confirm Submit"
+    },
+    "validation": {
+      "title": "Incomplete Items",
+      "incompleteItems": "The following items have not been recorded. Please complete them before submitting:",
+      "notRecorded": "(Not Recorded)",
+      "notAnalyzed": "(Not Analyzed)",
+      "itemNumber": "Item {{number}}"
+    },
+    "labels": {
+      "questionNumber": "Question {{number}}:",
+      "itemCount": "{{count}} items",
+      "itemCountSingular": "{{count}} item"
     },
     "activityTypes": {
       "reading": "Reading Practice"

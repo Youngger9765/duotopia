@@ -819,11 +819,15 @@ export default function StudentActivityPageContent({
             (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
 
           if (!hasRecording || !hasAiAssessment) {
-            const itemLabel = `${activity.title} - 第 ${itemIndex + 1} 題`;
+            const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
             if (!hasRecording) {
-              incomplete.push(`${itemLabel}（未錄音）`);
+              incomplete.push(
+                `${itemLabel}${t("studentActivityPage.validation.notRecorded")}`,
+              );
             } else if (!hasAiAssessment) {
-              incomplete.push(`${itemLabel}（未分析）`);
+              incomplete.push(
+                `${itemLabel}${t("studentActivityPage.validation.notAnalyzed")}`,
+              );
             }
           }
         });
@@ -835,9 +839,13 @@ export default function StudentActivityPageContent({
 
         if (!hasRecording || !hasAiAssessment) {
           if (!hasRecording) {
-            incomplete.push(`${activity.title}（未錄音）`);
+            incomplete.push(
+              `${activity.title}${t("studentActivityPage.validation.notRecorded")}`,
+            );
           } else if (!hasAiAssessment) {
-            incomplete.push(`${activity.title}（未分析）`);
+            incomplete.push(
+              `${activity.title}${t("studentActivityPage.validation.notAnalyzed")}`,
+            );
           }
         }
       }
@@ -1251,7 +1259,9 @@ export default function StudentActivityPageContent({
                         variant="outline"
                         className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
                       >
-                        {activity.items.length}題
+                        {t("studentActivityPage.labels.itemCount", {
+                          count: activity.items.length,
+                        })}
                       </Badge>
                     </div>
 
@@ -1365,7 +1375,10 @@ export default function StudentActivityPageContent({
           <CardHeader className="py-2 sm:py-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
               <CardTitle className="text-base sm:text-lg leading-tight">
-                第 {currentActivity.order} 題：{currentActivity.title}
+                {t("studentActivityPage.labels.questionNumber", {
+                  number: currentActivity.order,
+                })}{" "}
+                {currentActivity.title}
               </CardTitle>
               {getActivityTypeBadge(currentActivity.type)}
             </div>
