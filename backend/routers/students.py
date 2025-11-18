@@ -20,6 +20,7 @@ from auth import (
     create_access_token,
     verify_password,
     get_current_user,
+    get_password_hash,
 )
 
 router = APIRouter(prefix="/api/students", tags=["students"])
@@ -27,13 +28,22 @@ router = APIRouter(prefix="/api/students", tags=["students"])
 
 class StudentValidateRequest(BaseModel):
     email: str
-    birthdate: str  # Format: YYYYMMDD
+    password: str  # Can be birthdate (YYYYMMDD) or new password if changed
 
 
 class StudentLoginResponse(BaseModel):
     access_token: str
     token_type: str
     student: dict
+
+
+class UpdateStudentProfileRequest(BaseModel):
+    name: Optional[str] = None
+
+
+class UpdatePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 @router.post("/validate", response_model=StudentLoginResponse)
@@ -49,8 +59,8 @@ async def validate_student(
             status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
         )
 
-    # 驗證生日（作為密碼）
-    if not verify_password(request.birthdate, student.password_hash):
+    # 驗證密碼 - 未改密碼時是生日，改密碼後是新密碼
+    if not verify_password(request.password, student.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password"
         )
@@ -790,6 +800,109 @@ async def get_current_student_info(
         "target_wpm": student.target_wpm,
         "target_accuracy": student.target_accuracy,
     }
+
+
+@router.put("/me")
+async def update_student_profile(
+    request: UpdateStudentProfileRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """更新學生個人資料"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = current_user.get("sub")
+    student = db.query(Student).filter(Student.id == int(student_id)).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        )
+
+    # Update name if provided
+    if request.name is not None:
+        student.name = request.name
+
+    db.commit()
+    db.refresh(student)
+
+    # Get classroom info
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(ClassroomStudent.student_id == student.id)
+        .first()
+    )
+
+    classroom_name = None
+    classroom_id = None
+    if classroom_student:
+        classroom = (
+            db.query(Classroom)
+            .filter(Classroom.id == classroom_student.classroom_id)
+            .first()
+        )
+        if classroom:
+            classroom_name = classroom.name
+            classroom_id = classroom.id
+
+    return {
+        "id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "email_verified": student.email_verified,
+        "student_id": student.student_number,
+        "classroom_id": classroom_id,
+        "classroom_name": classroom_name,
+        "target_wpm": student.target_wpm,
+        "target_accuracy": student.target_accuracy,
+    }
+
+
+@router.put("/me/password")
+async def update_student_password(
+    request: UpdatePasswordRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """更新學生密碼"""
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = current_user.get("sub")
+    student = db.query(Student).filter(Student.id == int(student_id)).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        )
+
+    # Verify current password
+    if not verify_password(request.current_password, student.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    # Validate new password
+    if len(request.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters",
+        )
+
+    # Update password
+    student.password_hash = get_password_hash(request.new_password)
+    student.password_changed = True  # Mark that password has been changed
+    db.commit()
+
+    return {"message": "Password updated successfully"}
 
 
 @router.get("/stats")

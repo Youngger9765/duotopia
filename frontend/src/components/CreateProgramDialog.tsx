@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/tag-input";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface Program {
   id: number;
@@ -67,6 +68,7 @@ export default function CreateProgramDialog({
   classroomId,
   classroomName,
 }: CreateProgramDialogProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("template");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -98,31 +100,35 @@ export default function CreateProgramDialog({
   // 預設的標籤建議
   const tagSuggestions: TagSuggestion[] = [
     // 程度相關
-    { value: "beginner", label: "初級", category: "level" },
-    { value: "intermediate", label: "中級", category: "level" },
-    { value: "advanced", label: "進階", category: "level" },
+    { value: "beginner", label: t("tags.beginner"), category: "level" },
+    { value: "intermediate", label: t("tags.intermediate"), category: "level" },
+    { value: "advanced", label: t("tags.advanced"), category: "level" },
 
     // 技能相關
-    { value: "speaking", label: "口說", category: "skill" },
-    { value: "listening", label: "聽力", category: "skill" },
-    { value: "reading", label: "閱讀", category: "skill" },
-    { value: "writing", label: "寫作", category: "skill" },
-    { value: "grammar", label: "文法", category: "skill" },
-    { value: "vocabulary", label: "詞彙", category: "skill" },
-    { value: "pronunciation", label: "發音", category: "skill" },
+    { value: "speaking", label: t("tags.speaking"), category: "skill" },
+    { value: "listening", label: t("tags.listening"), category: "skill" },
+    { value: "reading", label: t("tags.reading"), category: "skill" },
+    { value: "writing", label: t("tags.writing"), category: "skill" },
+    { value: "grammar", label: t("tags.grammar"), category: "skill" },
+    { value: "vocabulary", label: t("tags.vocabulary"), category: "skill" },
+    {
+      value: "pronunciation",
+      label: t("tags.pronunciation"),
+      category: "skill",
+    },
 
     // 主題相關
-    { value: "daily", label: "日常生活", category: "topic" },
-    { value: "business", label: "商務", category: "topic" },
-    { value: "travel", label: "旅遊", category: "topic" },
-    { value: "academic", label: "學術", category: "topic" },
-    { value: "conversation", label: "會話", category: "topic" },
-    { value: "exam", label: "考試準備", category: "topic" },
+    { value: "daily", label: t("tags.daily"), category: "topic" },
+    { value: "business", label: t("tags.business"), category: "topic" },
+    { value: "travel", label: t("tags.travel"), category: "topic" },
+    { value: "academic", label: t("tags.academic"), category: "topic" },
+    { value: "conversation", label: t("tags.conversation"), category: "topic" },
+    { value: "exam", label: t("tags.exam"), category: "topic" },
 
     // 其他
-    { value: "phonics", label: "自然發音", category: "other" },
-    { value: "interactive", label: "互動式", category: "other" },
-    { value: "game-based", label: "遊戲化", category: "other" },
+    { value: "phonics", label: t("tags.phonics"), category: "other" },
+    { value: "interactive", label: t("tags.interactive"), category: "other" },
+    { value: "game-based", label: t("tags.gameBased"), category: "other" },
   ];
 
   useEffect(() => {
@@ -148,7 +154,7 @@ export default function CreateProgramDialog({
       setCopyablePrograms(otherPrograms);
     } catch (error) {
       console.error("Failed to fetch data:", error);
-      toast.error("載入課程資料失敗");
+      toast.error(t("dialogs.createProgramDialog.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -231,7 +237,9 @@ export default function CreateProgramDialog({
     if (duplicateTemplates.length > 0) {
       const duplicateNames = duplicateTemplates.map((t) => t.name).join("、");
       const confirmed = window.confirm(
-        `⚠️ 警告：以下課程已存在於班級中：\n\n${duplicateNames}\n\n重複建立可能造成混淆，確定要繼續嗎？`,
+        t("createProgramDialog.template.confirmDuplicate", {
+          names: duplicateNames,
+        }),
       );
       if (!confirmed) {
         return;
@@ -253,12 +261,16 @@ export default function CreateProgramDialog({
       );
 
       await Promise.all(promises);
-      toast.success(`成功建立 ${selectedTemplates.length} 個課程！`);
+      toast.success(
+        t("dialogs.createProgramDialog.success.created", {
+          count: selectedTemplates.length,
+        }),
+      );
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to create from template:", error);
-      toast.error("建立失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -272,7 +284,9 @@ export default function CreateProgramDialog({
     if (duplicatePrograms.length > 0) {
       const duplicateNames = duplicatePrograms.map((p) => p.name).join("、");
       const confirmed = window.confirm(
-        `⚠️ 警告：以下課程已存在於班級中：\n\n${duplicateNames}\n\n重複複製可能造成混淆，確定要繼續嗎？`,
+        t("createProgramDialog.classroom.confirmDuplicate", {
+          names: duplicateNames,
+        }),
       );
       if (!confirmed) {
         return;
@@ -292,12 +306,16 @@ export default function CreateProgramDialog({
       );
 
       await Promise.all(promises);
-      toast.success(`成功複製 ${selectedPrograms.length} 個課程！`);
+      toast.success(
+        t("dialogs.createProgramDialog.success.copied", {
+          count: selectedPrograms.length,
+        }),
+      );
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to copy from classroom:", error);
-      toast.error("複製失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.copyFailed"));
     } finally {
       setCreating(false);
     }
@@ -317,12 +335,12 @@ export default function CreateProgramDialog({
           : undefined,
         tags: customForm.tags,
       });
-      toast.success("成功建立自訂課程！");
+      toast.success(t("dialogs.createProgramDialog.success.customCreated"));
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to create custom program:", error);
-      toast.error("建立失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -357,8 +375,14 @@ export default function CreateProgramDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>建立課程到「{classroomName}」</DialogTitle>
-          <DialogDescription>選擇建立課程的方式</DialogDescription>
+          <DialogTitle>
+            {t("dialogs.createProgramDialog.title", {
+              classroom: classroomName,
+            })}
+          </DialogTitle>
+          <DialogDescription>
+            {t("dialogs.createProgramDialog.description")}
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs
@@ -372,21 +396,21 @@ export default function CreateProgramDialog({
               className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
             >
               <Archive className="h-4 w-4" />
-              從公版複製
+              {t("createProgramDialog.tabs.template")}
             </TabsTrigger>
             <TabsTrigger
               value="classroom"
               className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
             >
               <Copy className="h-4 w-4" />
-              從其他班級複製
+              {t("createProgramDialog.tabs.classroom")}
             </TabsTrigger>
             <TabsTrigger
               value="custom"
               className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
             >
               <Plus className="h-4 w-4" />
-              自建課程
+              {t("createProgramDialog.tabs.custom")}
             </TabsTrigger>
           </TabsList>
 
@@ -399,7 +423,7 @@ export default function CreateProgramDialog({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="搜尋公版課程模板..."
+                  placeholder={t("createProgramDialog.template.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -408,8 +432,10 @@ export default function CreateProgramDialog({
               {filteredTemplates.length > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
-                    已選擇 {selectedTemplates.length} /{" "}
-                    {filteredTemplates.length} 個模板
+                    {t("createProgramDialog.template.selected", {
+                      selected: selectedTemplates.length,
+                      total: filteredTemplates.length,
+                    })}
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -420,7 +446,7 @@ export default function CreateProgramDialog({
                       }
                       className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                     >
-                      全選
+                      {t("createProgramDialog.template.selectAll")}
                     </button>
                     <button
                       type="button"
@@ -428,7 +454,7 @@ export default function CreateProgramDialog({
                       disabled={selectedTemplates.length === 0}
                       className="text-xs text-gray-600 hover:text-gray-800 disabled:text-gray-400"
                     >
-                      清除
+                      {t("createProgramDialog.template.clear")}
                     </button>
                   </div>
                 </div>
@@ -437,10 +463,12 @@ export default function CreateProgramDialog({
 
             <div className="flex-1 overflow-y-auto space-y-2 mb-4 max-h-[400px] min-h-[200px]">
               {loading ? (
-                <div className="text-center py-8 text-gray-500">載入中...</div>
+                <div className="text-center py-8 text-gray-500">
+                  {t("createProgramDialog.template.loading")}
+                </div>
               ) : filteredTemplates.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  沒有可用的公版課程模板
+                  {t("createProgramDialog.template.empty")}
                 </div>
               ) : (
                 filteredTemplates.map((template) => (
@@ -476,19 +504,20 @@ export default function CreateProgramDialog({
                         )}
                         {template.is_duplicate && (
                           <p className="text-xs text-yellow-700 mt-1 bg-yellow-100 px-2 py-1 rounded">
-                            ⚠️ 已有此課程，重複建立可能造成混淆
+                            {t("createProgramDialog.template.duplicate")}
                           </p>
                         )}
                         <div className="flex items-center gap-4 mt-2">
                           {template.level && getLevelBadge(template.level)}
                           {template.estimated_hours && (
                             <span className="text-xs text-gray-500">
-                              {template.estimated_hours} 小時
+                              {template.estimated_hours} {t("common.hours")}
                             </span>
                           )}
                           {template.lesson_count && (
                             <span className="text-xs text-gray-500">
-                              {template.lesson_count} 個課程
+                              {template.lesson_count}{" "}
+                              {t("classroomDetail.stats.lessons")}
                             </span>
                           )}
                         </div>
@@ -502,7 +531,7 @@ export default function CreateProgramDialog({
             {selectedTemplates.length === 1 && (
               <div className="border-t pt-4">
                 <Label htmlFor="template-name">
-                  新課程名稱（選填，留空使用原名）
+                  {t("createProgramDialog.template.nameLabel")}
                 </Label>
                 <Input
                   id="template-name"
@@ -516,8 +545,9 @@ export default function CreateProgramDialog({
             {selectedTemplates.length > 1 && (
               <div className="border-t pt-4">
                 <p className="text-sm text-gray-600">
-                  已選擇 {selectedTemplates.length}{" "}
-                  個模板，將使用原始名稱建立課程
+                  {t("createProgramDialog.template.multipleNote", {
+                    count: selectedTemplates.length,
+                  })}
                 </p>
               </div>
             )}
@@ -532,7 +562,9 @@ export default function CreateProgramDialog({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="搜尋其他班級的課程..."
+                  placeholder={t(
+                    "createProgramDialog.classroom.searchPlaceholder",
+                  )}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -541,8 +573,10 @@ export default function CreateProgramDialog({
               {copyablePrograms.length > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
-                    已選擇 {selectedPrograms.length} / {copyablePrograms.length}{" "}
-                    個課程
+                    {t("createProgramDialog.classroom.selected", {
+                      count: selectedPrograms.length,
+                      total: copyablePrograms.length,
+                    })}
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -553,7 +587,7 @@ export default function CreateProgramDialog({
                       }
                       className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                     >
-                      全選
+                      {t("createProgramDialog.classroom.selectAll")}
                     </button>
                     <button
                       type="button"
@@ -561,7 +595,7 @@ export default function CreateProgramDialog({
                       disabled={selectedPrograms.length === 0}
                       className="text-xs text-gray-600 hover:text-gray-800 disabled:text-gray-400"
                     >
-                      清除
+                      {t("createProgramDialog.classroom.clear")}
                     </button>
                   </div>
                 </div>
@@ -570,10 +604,12 @@ export default function CreateProgramDialog({
 
             <div className="flex-1 overflow-y-auto mb-4 max-h-[400px] min-h-[200px]">
               {loading ? (
-                <div className="text-center py-8 text-gray-500">載入中...</div>
+                <div className="text-center py-8 text-gray-500">
+                  {t("createProgramDialog.classroom.loading")}
+                </div>
               ) : Object.keys(groupProgramsByClassroom()).length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  沒有其他班級的課程
+                  {t("createProgramDialog.classroom.noPrograms")}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -627,10 +663,14 @@ export default function CreateProgramDialog({
                                 {classroomName}
                               </span>
                               <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
-                                {searchTerm
-                                  ? filteredClassroomPrograms.length
-                                  : programs.length}{" "}
-                                個課程
+                                {t(
+                                  "createProgramDialog.classroom.courseCount",
+                                  {
+                                    count: searchTerm
+                                      ? filteredClassroomPrograms.length
+                                      : programs.length,
+                                  },
+                                )}
                               </span>
                             </div>
                           </div>
@@ -681,12 +721,14 @@ export default function CreateProgramDialog({
                                           getLevelBadge(program.level)}
                                         {program.estimated_hours && (
                                           <span className="text-xs text-gray-500">
-                                            {program.estimated_hours} 小時
+                                            {program.estimated_hours}{" "}
+                                            {t("common.hours")}
                                           </span>
                                         )}
                                         {program.lesson_count && (
                                           <span className="text-xs text-gray-500">
-                                            {program.lesson_count} 個課程單元
+                                            {program.lesson_count}{" "}
+                                            {t("classroomDetail.stats.lessons")}
                                           </span>
                                         )}
                                       </div>
@@ -707,7 +749,7 @@ export default function CreateProgramDialog({
             {selectedPrograms.length === 1 && (
               <div className="border-t pt-4">
                 <Label htmlFor="copy-name">
-                  新課程名稱（選填，留空使用原名）
+                  {t("createProgramDialog.classroom.nameOptional")}
                 </Label>
                 <Input
                   id="copy-name"
@@ -721,7 +763,9 @@ export default function CreateProgramDialog({
             {selectedPrograms.length > 1 && (
               <div className="border-t pt-4">
                 <p className="text-sm text-gray-600">
-                  已選擇 {selectedPrograms.length} 個課程，將使用原始名稱複製
+                  {t("createProgramDialog.classroom.multipleSelected", {
+                    count: selectedPrograms.length,
+                  })}
                 </p>
               </div>
             )}
@@ -734,19 +778,23 @@ export default function CreateProgramDialog({
           >
             <div className="flex-1 overflow-y-auto space-y-4 pr-2">
               <div>
-                <Label htmlFor="custom-name">課程名稱 *</Label>
+                <Label htmlFor="custom-name">
+                  {t("createProgramDialog.custom.nameRequired")}
+                </Label>
                 <Input
                   id="custom-name"
                   value={customForm.name}
                   onChange={(e) =>
                     setCustomForm({ ...customForm, name: e.target.value })
                   }
-                  placeholder="例如：進階英語會話"
+                  placeholder={t("createProgramDialog.custom.namePlaceholder")}
                 />
               </div>
 
               <div>
-                <Label htmlFor="custom-description">課程描述</Label>
+                <Label htmlFor="custom-description">
+                  {t("createProgramDialog.custom.descLabel")}
+                </Label>
                 <Textarea
                   id="custom-description"
                   value={customForm.description}
@@ -756,14 +804,16 @@ export default function CreateProgramDialog({
                       description: e.target.value,
                     })
                   }
-                  placeholder="描述這個課程的內容和目標"
+                  placeholder={t("createProgramDialog.custom.descPlaceholder")}
                   rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="custom-level">等級</Label>
+                  <Label htmlFor="custom-level">
+                    {t("createProgramDialog.custom.levelLabel")}
+                  </Label>
                   <Select
                     value={customForm.level}
                     onValueChange={(value) =>
@@ -774,18 +824,32 @@ export default function CreateProgramDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A1">A1 - 入門</SelectItem>
-                      <SelectItem value="A2">A2 - 基礎</SelectItem>
-                      <SelectItem value="B1">B1 - 中級</SelectItem>
-                      <SelectItem value="B2">B2 - 中高級</SelectItem>
-                      <SelectItem value="C1">C1 - 高級</SelectItem>
-                      <SelectItem value="C2">C2 - 精通</SelectItem>
+                      <SelectItem value="A1">
+                        {t("createProgramDialog.custom.levels.a1")}
+                      </SelectItem>
+                      <SelectItem value="A2">
+                        {t("createProgramDialog.custom.levels.a2")}
+                      </SelectItem>
+                      <SelectItem value="B1">
+                        {t("createProgramDialog.custom.levels.b1")}
+                      </SelectItem>
+                      <SelectItem value="B2">
+                        {t("createProgramDialog.custom.levels.b2")}
+                      </SelectItem>
+                      <SelectItem value="C1">
+                        {t("createProgramDialog.custom.levels.c1")}
+                      </SelectItem>
+                      <SelectItem value="C2">
+                        {t("createProgramDialog.custom.levels.c2")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="custom-hours">預計時數</Label>
+                  <Label htmlFor="custom-hours">
+                    {t("createProgramDialog.custom.hoursLabel")}
+                  </Label>
                   <Input
                     id="custom-hours"
                     type="number"
@@ -796,17 +860,19 @@ export default function CreateProgramDialog({
                         estimated_hours: e.target.value,
                       })
                     }
-                    placeholder="20"
+                    placeholder={t(
+                      "createProgramDialog.custom.hoursPlaceholder",
+                    )}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>標籤</Label>
+                <Label>{t("createProgramDialog.custom.tagsLabel")}</Label>
                 <TagInputWithSuggestions
                   value={customForm.tags}
                   onChange={(tags) => setCustomForm({ ...customForm, tags })}
-                  placeholder="輸入標籤後按 Enter 新增"
+                  placeholder={t("createProgramDialog.custom.tagsPlaceholder")}
                   maxTags={10}
                   suggestions={tagSuggestions}
                   showSuggestions={true}
@@ -818,7 +884,7 @@ export default function CreateProgramDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={creating}>
-            取消
+            {t("createProgramDialog.buttons.cancel")}
           </Button>
           {activeTab === "template" && (
             <Button
@@ -826,10 +892,12 @@ export default function CreateProgramDialog({
               disabled={selectedTemplates.length === 0 || creating}
             >
               {creating
-                ? "建立中..."
+                ? t("createProgramDialog.buttons.creating")
                 : selectedTemplates.length > 1
-                  ? `建立 ${selectedTemplates.length} 個課程`
-                  : "建立課程"}
+                  ? t("createProgramDialog.buttons.createMultiple", {
+                      count: selectedTemplates.length,
+                    })
+                  : t("createProgramDialog.buttons.create")}
             </Button>
           )}
           {activeTab === "classroom" && (
@@ -838,10 +906,12 @@ export default function CreateProgramDialog({
               disabled={selectedPrograms.length === 0 || creating}
             >
               {creating
-                ? "複製中..."
+                ? t("createProgramDialog.buttons.copying")
                 : selectedPrograms.length > 1
-                  ? `複製 ${selectedPrograms.length} 個課程`
-                  : "複製課程"}
+                  ? t("createProgramDialog.buttons.copyMultiple", {
+                      count: selectedPrograms.length,
+                    })
+                  : t("createProgramDialog.buttons.copy")}
             </Button>
           )}
           {activeTab === "custom" && (
@@ -849,7 +919,9 @@ export default function CreateProgramDialog({
               onClick={handleCreateCustom}
               disabled={!customForm.name || creating}
             >
-              {creating ? "建立中..." : "建立自訂課程"}
+              {creating
+                ? t("createProgramDialog.buttons.creating")
+                : t("createProgramDialog.buttons.createCustom")}
             </Button>
           )}
         </DialogFooter>

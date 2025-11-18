@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { School } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ClassroomAssignDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function ClassroomAssignDialog({
   classrooms,
   studentCount,
 }: ClassroomAssignDialogProps) {
+  const { t } = useTranslation();
   const [selectedClassroomId, setSelectedClassroomId] = React.useState<
     number | null
   >(null);
@@ -45,10 +47,12 @@ export function ClassroomAssignDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <School className="h-5 w-5" />
-            <span>分配班級</span>
+            <span>{t("dialogs.classroomAssignDialog.title")}</span>
           </DialogTitle>
           <DialogDescription>
-            為選中的 {studentCount} 位學生分配班級
+            {t("dialogs.classroomAssignDialog.description", {
+              count: studentCount,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -57,7 +61,7 @@ export function ClassroomAssignDialog({
             htmlFor="classroom-select"
             className="text-sm font-medium mb-2 block"
           >
-            選擇班級
+            {t("dialogs.classroomAssignDialog.selectClassroom")}
           </label>
           <select
             id="classroom-select"
@@ -69,7 +73,9 @@ export function ClassroomAssignDialog({
             }
             className="w-full px-3 py-2 border rounded-md"
           >
-            <option value="">請選擇班級</option>
+            <option value="">
+              {t("dialogs.classroomAssignDialog.selectPlaceholder")}
+            </option>
             {classrooms.map((classroom) => (
               <option key={classroom.id} value={classroom.id}>
                 {classroom.name}
@@ -80,10 +86,10 @@ export function ClassroomAssignDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            取消
+            {t("dialogs.classroomAssignDialog.buttons.cancel")}
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedClassroomId}>
-            確定分配
+            {t("dialogs.classroomAssignDialog.buttons.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -11,6 +11,7 @@ import {
 import { AlertTriangle } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Program } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface ProgramDialogProps {
   program: Program | null;
@@ -42,6 +43,7 @@ export function ProgramDialog({
   onSave,
   onDelete,
 }: ProgramDialogProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ProgramFormData>({
     name: "",
     description: "",
@@ -80,12 +82,15 @@ export function ProgramDialog({
     if (!tagInput) return;
 
     if ((formData.tags?.length || 0) >= 5) {
-      setErrors({ ...errors, tags: "最多只能新增 5 個標籤" });
+      setErrors({ ...errors, tags: t("dialogs.programDialog.form.tagsError") });
       return;
     }
 
     if (formData.tags?.includes(tagInput)) {
-      setErrors({ ...errors, tags: "此標籤已存在" });
+      setErrors({
+        ...errors,
+        tags: t("dialogs.programDialog.form.tagsDuplicate"),
+      });
       return;
     }
 
@@ -111,11 +116,11 @@ export function ProgramDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = "課程名稱為必填";
+      newErrors.name = t("dialogs.programDialog.form.nameError");
     }
 
     if (!formData.level) {
-      newErrors.level = "程度為必填";
+      newErrors.level = t("dialogs.programDialog.form.levelError");
     }
 
     setErrors(newErrors);
@@ -166,7 +171,7 @@ export function ProgramDialog({
       onClose();
     } catch (error) {
       console.error("Failed to save program:", error);
-      setErrors({ submit: "儲存失敗，請稍後再試" });
+      setErrors({ submit: t("dialogs.programDialog.errors.saveFailed") });
     } finally {
       setLoading(false);
     }
@@ -182,7 +187,7 @@ export function ProgramDialog({
       onClose();
     } catch (error) {
       console.error("Failed to delete program:", error);
-      alert("刪除失敗，請稍後再試");
+      alert(t("dialogs.programDialog.errors.deleteFailed"));
     } finally {
       setLoading(false);
     }
@@ -200,19 +205,20 @@ export function ProgramDialog({
         >
           <DialogHeader>
             <DialogTitle>
-              {dialogType === "create" ? "建立新課程" : "編輯課程"}
+              {t(`dialogs.programDialog.${dialogType}.title`)}
             </DialogTitle>
             <DialogDescription>
-              {dialogType === "create"
-                ? "為班級建立新的課程內容"
-                : "修改課程資訊"}
+              {t(`dialogs.programDialog.${dialogType}.description`)}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium">
-                課程名稱 <span className="text-red-500">*</span>
+                {t("dialogs.programDialog.form.nameLabel")}{" "}
+                <span className="text-red-500">
+                  {t("dialogs.programDialog.form.nameRequired")}
+                </span>
               </label>
               <input
                 id="name"
@@ -222,7 +228,7 @@ export function ProgramDialog({
                   setFormData({ ...formData, name: e.target.value })
                 }
                 className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.name ? "border-red-500" : ""}`}
-                placeholder="例：五年級英語基礎課程"
+                placeholder={t("dialogs.programDialog.form.namePlaceholder")}
               />
               {errors.name && (
                 <p className="text-xs text-red-500 mt-1">{errors.name}</p>
@@ -231,7 +237,7 @@ export function ProgramDialog({
 
             <div>
               <label htmlFor="description" className="text-sm font-medium">
-                課程描述
+                {t("dialogs.programDialog.form.descLabel")}
               </label>
               <textarea
                 id="description"
@@ -240,7 +246,7 @@ export function ProgramDialog({
                   setFormData({ ...formData, description: e.target.value })
                 }
                 className="w-full mt-1 px-3 py-2 border rounded-md"
-                placeholder="課程的簡短描述..."
+                placeholder={t("dialogs.programDialog.form.descPlaceholder")}
                 rows={3}
               />
             </div>
@@ -248,7 +254,10 @@ export function ProgramDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="level" className="text-sm font-medium">
-                  程度 <span className="text-red-500">*</span>
+                  {t("dialogs.programDialog.form.levelLabel")}{" "}
+                  <span className="text-red-500">
+                    {t("dialogs.programDialog.form.levelRequired")}
+                  </span>
                 </label>
                 <select
                   id="level"
@@ -258,13 +267,27 @@ export function ProgramDialog({
                   }
                   className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.level ? "border-red-500" : ""}`}
                 >
-                  <option value="PREA">Pre-A</option>
-                  <option value="A1">A1</option>
-                  <option value="A2">A2</option>
-                  <option value="B1">B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                  <option value="C2">C2</option>
+                  <option value="PREA">
+                    {t("dialogs.programDialog.form.levels.PREA")}
+                  </option>
+                  <option value="A1">
+                    {t("dialogs.programDialog.form.levels.A1")}
+                  </option>
+                  <option value="A2">
+                    {t("dialogs.programDialog.form.levels.A2")}
+                  </option>
+                  <option value="B1">
+                    {t("dialogs.programDialog.form.levels.B1")}
+                  </option>
+                  <option value="B2">
+                    {t("dialogs.programDialog.form.levels.B2")}
+                  </option>
+                  <option value="C1">
+                    {t("dialogs.programDialog.form.levels.C1")}
+                  </option>
+                  <option value="C2">
+                    {t("dialogs.programDialog.form.levels.C2")}
+                  </option>
                 </select>
                 {errors.level && (
                   <p className="text-xs text-red-500 mt-1">{errors.level}</p>
@@ -273,7 +296,7 @@ export function ProgramDialog({
 
               <div>
                 <label htmlFor="hours" className="text-sm font-medium">
-                  預估時數
+                  {t("dialogs.programDialog.form.hoursLabel")}
                 </label>
                 <input
                   id="hours"
@@ -286,7 +309,7 @@ export function ProgramDialog({
                     })
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
-                  placeholder="20"
+                  placeholder={t("dialogs.programDialog.form.hoursPlaceholder")}
                   min="1"
                 />
               </div>
@@ -295,7 +318,10 @@ export function ProgramDialog({
             {/* Tags Input */}
             <div>
               <label htmlFor="tags" className="text-sm font-medium">
-                標籤 <span className="text-gray-500 text-xs">(最多 5 個)</span>
+                {t("dialogs.programDialog.form.tagsLabel")}{" "}
+                <span className="text-gray-500 text-xs">
+                  {t("dialogs.programDialog.form.tagsNote")}
+                </span>
               </label>
               <input
                 id="tags"
@@ -314,7 +340,7 @@ export function ProgramDialog({
                   }
                 }}
                 className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.tags ? "border-red-500" : ""}`}
-                placeholder="按 Enter 新增標籤"
+                placeholder={t("dialogs.programDialog.form.tagsPlaceholder")}
                 disabled={(formData.tags?.length || 0) >= 5}
               />
               {errors.tags && (
@@ -351,14 +377,14 @@ export function ProgramDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("dialogs.programDialog.buttons.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
               {loading
-                ? "處理中..."
-                : dialogType === "create"
-                  ? "建立"
-                  : "儲存"}
+                ? t("dialogs.programDialog.buttons.processing")
+                : t(
+                    `dialogs.programDialog.buttons.${dialogType === "create" ? "create" : "save"}`,
+                  )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -377,17 +403,20 @@ export function ProgramDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              <span>確認刪除課程</span>
+              <span>{t("dialogs.programDialog.delete.title")}</span>
             </DialogTitle>
             <DialogDescription>
-              確定要刪除課程「{program.name}
-              」嗎？此操作將同時刪除所有相關的單元。
+              {t("dialogs.programDialog.delete.description", {
+                name: program.name,
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">課程資料：</p>
+              <p className="text-sm text-gray-600">
+                {t("dialogs.programDialog.delete.dataLabel")}
+              </p>
               <p className="font-medium mt-1">{program.name}</p>
               {program.description && (
                 <p className="text-sm text-gray-500 mt-1">
@@ -399,14 +428,16 @@ export function ProgramDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={loading}>
-              取消
+              {t("dialogs.programDialog.buttons.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={loading}
             >
-              {loading ? "刪除中..." : "確認刪除"}
+              {loading
+                ? t("dialogs.programDialog.delete.deleting")
+                : t("dialogs.programDialog.delete.confirmBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>

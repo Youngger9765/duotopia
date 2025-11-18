@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -192,6 +193,7 @@ interface LearningAnalytics {
 
 export default function AdminSubscriptionDashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -255,15 +257,23 @@ export default function AdminSubscriptionDashboard() {
     } catch (error: unknown) {
       console.error("Failed to load dashboard data:", error);
       if (isApiError(error) && error.response?.status === 403) {
-        setErrorMessage("No admin permission");
+        setErrorMessage(t("adminSubscription.errors.noPermission"));
         setTimeout(() => navigate("/teacher/dashboard"), 2000);
       } else if (isApiError(error)) {
         setErrorMessage(
-          "Load failed: " +
-            (error.response?.data?.detail || error.message || "Unknown error"),
+          t("adminSubscription.errors.loadFailed", {
+            detail:
+              error.response?.data?.detail ||
+              error.message ||
+              t("adminSubscription.errors.unknown"),
+          }),
         );
       } else {
-        setErrorMessage("Load failed: Unknown error");
+        setErrorMessage(
+          t("adminSubscription.errors.loadFailed", {
+            detail: t("adminSubscription.errors.unknown"),
+          }),
+        );
       }
     } finally {
       setLoading(false);
@@ -279,7 +289,7 @@ export default function AdminSubscriptionDashboard() {
       setTransactionAnalytics(response as TransactionAnalytics);
     } catch (error: unknown) {
       console.error("Failed to load transaction analytics:", error);
-      setErrorMessage("Failed to load transaction analytics");
+      setErrorMessage(t("adminSubscription.errors.transactionAnalyticsFailed"));
     } finally {
       setLoading(false);
     }
@@ -294,7 +304,7 @@ export default function AdminSubscriptionDashboard() {
       setLearningAnalytics(response as LearningAnalytics);
     } catch (error: unknown) {
       console.error("Failed to load learning analytics:", error);
-      setErrorMessage("Failed to load learning analytics");
+      setErrorMessage(t("adminSubscription.errors.learningAnalyticsFailed"));
     } finally {
       setLoading(false);
     }
@@ -318,13 +328,13 @@ export default function AdminSubscriptionDashboard() {
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTeacher || !editForm.reason) {
-      setErrorMessage("Please fill all required fields");
+      setErrorMessage(t("adminSubscription.errors.fillRequired"));
       return;
     }
 
     // Validation for create action
     if (editForm.action === "create" && !editForm.plan_name) {
-      setErrorMessage("Please select a plan for creating subscription");
+      setErrorMessage(t("adminSubscription.errors.selectPlan"));
       return;
     }
 
@@ -356,9 +366,12 @@ export default function AdminSubscriptionDashboard() {
       }
 
       setSuccessMessage(
-        `Success! ${selectedTeacher.teacher_name} - ${
-          (response as { message?: string })?.message || "Operation completed"
-        }`,
+        t("adminSubscription.messages.operationSuccess", {
+          teacherName: selectedTeacher.teacher_name,
+          message:
+            (response as { message?: string })?.message ||
+            t("adminSubscription.messages.completed"),
+        }),
       );
 
       // Clear cached periods and history to force refresh
@@ -379,10 +392,11 @@ export default function AdminSubscriptionDashboard() {
     } catch (error: unknown) {
       console.error("Failed to process subscription:", error);
       setErrorMessage(
-        "Failed: " +
-          (isApiError(error)
-            ? error.message || "Unknown error"
-            : "Unknown error"),
+        t("adminSubscription.errors.operationFailed", {
+          detail: isApiError(error)
+            ? error.message || t("adminSubscription.errors.unknown")
+            : t("adminSubscription.errors.unknown"),
+        }),
       );
     } finally {
       setLoading(false);
@@ -420,11 +434,19 @@ export default function AdminSubscriptionDashboard() {
       console.error("Search failed:", error);
       if (isApiError(error)) {
         setErrorMessage(
-          "Search failed: " +
-            (error.response?.data?.detail || error.message || "Unknown error"),
+          t("adminSubscription.errors.searchFailed", {
+            detail:
+              error.response?.data?.detail ||
+              error.message ||
+              t("adminSubscription.errors.unknown"),
+          }),
         );
       } else {
-        setErrorMessage("Search failed: Unknown error");
+        setErrorMessage(
+          t("adminSubscription.errors.searchFailed", {
+            detail: t("adminSubscription.errors.unknown"),
+          }),
+        );
       }
     } finally {
       setLoading(false);
@@ -452,7 +474,7 @@ export default function AdminSubscriptionDashboard() {
           }));
         } catch (error) {
           console.error("Failed to load periods:", error);
-          setErrorMessage("Failed to load subscription periods");
+          setErrorMessage(t("adminSubscription.errors.loadPeriodsFailed"));
         }
       }
     }
@@ -484,7 +506,7 @@ export default function AdminSubscriptionDashboard() {
           }));
         } catch (error) {
           console.error("Failed to load period history:", error);
-          setErrorMessage("Failed to load edit history");
+          setErrorMessage(t("adminSubscription.errors.loadHistoryFailed"));
         }
       }
     }
@@ -582,7 +604,7 @@ export default function AdminSubscriptionDashboard() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading...</p>
+          <p>{t("adminSubscription.loading")}</p>
         </div>
       </div>
     );
@@ -594,17 +616,17 @@ export default function AdminSubscriptionDashboard() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Crown className="w-8 h-8 text-yellow-500" />
-            Admin Subscription Dashboard
+            {t("adminSubscription.title")}
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage user subscriptions and extend VIP access
+            {t("adminSubscription.description")}
           </p>
         </div>
         <Button
           variant="outline"
           onClick={() => navigate("/teacher/dashboard")}
         >
-          Back to Dashboard
+          {t("adminSubscription.buttons.backToDashboard")}
         </Button>
       </div>
 
@@ -631,7 +653,7 @@ export default function AdminSubscriptionDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Total Teachers
+                {t("adminSubscription.stats.totalTeachers")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -647,7 +669,7 @@ export default function AdminSubscriptionDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Active Subs
+                {t("adminSubscription.stats.activeSubs")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -663,7 +685,7 @@ export default function AdminSubscriptionDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Monthly Revenue
+                {t("adminSubscription.stats.monthlyRevenue")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -679,7 +701,7 @@ export default function AdminSubscriptionDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Quota Usage
+                {t("adminSubscription.stats.quotaUsage")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -701,15 +723,15 @@ export default function AdminSubscriptionDashboard() {
             className="flex items-center gap-2"
           >
             <Users className="w-4 h-4" />
-            Subscriptions
+            {t("adminSubscription.tabs.subscriptions")}
           </TabsTrigger>
           <TabsTrigger value="transactions" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
-            Transactions
+            {t("adminSubscription.tabs.transactions")}
           </TabsTrigger>
           <TabsTrigger value="learning" className="flex items-center gap-2">
             <GraduationCap className="w-4 h-4" />
-            Learning
+            {t("adminSubscription.tabs.learning")}
           </TabsTrigger>
         </TabsList>
 
@@ -721,10 +743,10 @@ export default function AdminSubscriptionDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    All Subscriptions
+                    {t("adminSubscription.subscriptionsTab.title")}
                   </CardTitle>
                   <CardDescription>
-                    View all teacher subscription status
+                    {t("adminSubscription.subscriptionsTab.description")}
                   </CardDescription>
                 </div>
                 <Button
@@ -734,7 +756,7 @@ export default function AdminSubscriptionDashboard() {
                   disabled={teachers.length === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download CSV
+                  {t("adminSubscription.buttons.downloadCsv")}
                 </Button>
               </div>
             </CardHeader>
@@ -742,7 +764,9 @@ export default function AdminSubscriptionDashboard() {
               <div className="flex gap-2 mb-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Search email or name..."
+                    placeholder={t(
+                      "adminSubscription.subscriptionsTab.searchPlaceholder",
+                    )}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSearch()}
@@ -750,7 +774,7 @@ export default function AdminSubscriptionDashboard() {
                 </div>
                 <Button onClick={handleSearch} disabled={loading}>
                   <Search className="w-4 h-4 mr-2" />
-                  Search
+                  {t("adminSubscription.buttons.search")}
                 </Button>
               </div>
 
@@ -758,14 +782,26 @@ export default function AdminSubscriptionDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Periods</TableHead>
-                      <TableHead>Quota</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.email")}
+                      </TableHead>
+                      <TableHead>{t("adminSubscription.table.name")}</TableHead>
+                      <TableHead>{t("adminSubscription.table.plan")}</TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.endDate")}
+                      </TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.periods")}
+                      </TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.quota")}
+                      </TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.status")}
+                      </TableHead>
+                      <TableHead>
+                        {t("adminSubscription.table.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -775,7 +811,7 @@ export default function AdminSubscriptionDashboard() {
                           colSpan={8}
                           className="text-center text-gray-500"
                         >
-                          No data
+                          {t("adminSubscription.table.noData")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -839,11 +875,11 @@ export default function AdminSubscriptionDashboard() {
                               {teacher.current_subscription?.status ===
                               "active" ? (
                                 <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                                  Active
+                                  {t("adminSubscription.status.active")}
                                 </span>
                               ) : (
                                 <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
-                                  None
+                                  {t("adminSubscription.status.none")}
                                 </span>
                               )}
                             </TableCell>
@@ -855,7 +891,7 @@ export default function AdminSubscriptionDashboard() {
                                 className="h-8"
                               >
                                 <Edit className="w-3 h-3 mr-1" />
-                                Edit
+                                {t("adminSubscription.buttons.edit")}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -872,18 +908,42 @@ export default function AdminSubscriptionDashboard() {
                                 >
                                   <div className="p-4">
                                     <h4 className="font-semibold mb-3 text-sm">
-                                      Subscription Periods
+                                      {t("adminSubscription.periodTable.title")}
                                     </h4>
                                     <Table>
                                       <TableHeader>
                                         <TableRow>
                                           <TableHead className="w-12"></TableHead>
-                                          <TableHead>Plan</TableHead>
-                                          <TableHead>Start Date</TableHead>
-                                          <TableHead>End Date</TableHead>
-                                          <TableHead>Quota</TableHead>
-                                          <TableHead>Payment</TableHead>
-                                          <TableHead>Status</TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.plan",
+                                            )}
+                                          </TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.startDate",
+                                            )}
+                                          </TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.endDate",
+                                            )}
+                                          </TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.quota",
+                                            )}
+                                          </TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.payment",
+                                            )}
+                                          </TableHead>
+                                          <TableHead>
+                                            {t(
+                                              "adminSubscription.periodTable.status",
+                                            )}
+                                          </TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
@@ -958,13 +1018,17 @@ export default function AdminSubscriptionDashboard() {
                                                     >
                                                       <div className="p-4">
                                                         <h5 className="font-semibold mb-3 text-sm">
-                                                          Edit History
+                                                          {t(
+                                                            "adminSubscription.history.title",
+                                                          )}
                                                         </h5>
                                                         {periodHistory[
                                                           period.id
                                                         ].length === 0 ? (
                                                           <p className="text-sm text-gray-500">
-                                                            No edit history
+                                                            {t(
+                                                              "adminSubscription.history.noHistory",
+                                                            )}
                                                           </p>
                                                         ) : (
                                                           <div className="space-y-2">
@@ -1001,7 +1065,10 @@ export default function AdminSubscriptionDashboard() {
                                                                     </span>
                                                                   </div>
                                                                   <div className="text-xs text-gray-600 mb-2">
-                                                                    Admin:{" "}
+                                                                    {t(
+                                                                      "adminSubscription.history.admin",
+                                                                    )}
+                                                                    :{" "}
                                                                     {
                                                                       record.admin_name
                                                                     }{" "}
@@ -1019,8 +1086,12 @@ export default function AdminSubscriptionDashboard() {
                                                                       <div className="font-semibold">
                                                                         {record.action ===
                                                                         "create"
-                                                                          ? "Initial Values:"
-                                                                          : "Changes:"}
+                                                                          ? t(
+                                                                              "adminSubscription.history.initialValues",
+                                                                            )
+                                                                          : t(
+                                                                              "adminSubscription.history.changes",
+                                                                            )}
                                                                       </div>
                                                                       {record.action ===
                                                                       "create" ? (
@@ -1170,7 +1241,10 @@ export default function AdminSubscriptionDashboard() {
                                                                   )}
                                                                   <div className="text-xs text-gray-700 bg-yellow-50 p-2 rounded">
                                                                     <span className="font-semibold">
-                                                                      Reason:
+                                                                      {t(
+                                                                        "adminSubscription.history.reason",
+                                                                      )}
+                                                                      :
                                                                     </span>{" "}
                                                                     {
                                                                       record.reason
@@ -1212,10 +1286,10 @@ export default function AdminSubscriptionDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Receipt className="w-5 h-5" />
-                    Transaction Analytics
+                    {t("adminSubscription.transactionsTab.title")}
                   </CardTitle>
                   <CardDescription>
-                    View all payment transactions and monthly revenue trends
+                    {t("adminSubscription.transactionsTab.description")}
                   </CardDescription>
                 </div>
                 <Button
@@ -1228,7 +1302,7 @@ export default function AdminSubscriptionDashboard() {
                   }
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download CSV
+                  {t("adminSubscription.buttons.downloadCsv")}
                 </Button>
               </div>
             </CardHeader>
@@ -1246,7 +1320,9 @@ export default function AdminSubscriptionDashboard() {
                         <div className="text-2xl font-bold">
                           ${transactionAnalytics.total_revenue.toLocaleString()}
                         </div>
-                        <p className="text-xs text-gray-600">Total Revenue</p>
+                        <p className="text-xs text-gray-600">
+                          {t("adminSubscription.transactionsTab.totalRevenue")}
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -1255,7 +1331,9 @@ export default function AdminSubscriptionDashboard() {
                           {transactionAnalytics.total_count}
                         </div>
                         <p className="text-xs text-gray-600">
-                          Total Transactions
+                          {t(
+                            "adminSubscription.transactionsTab.totalTransactions",
+                          )}
                         </p>
                       </CardContent>
                     </Card>
@@ -1265,7 +1343,9 @@ export default function AdminSubscriptionDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        Monthly Revenue Trend
+                        {t(
+                          "adminSubscription.transactionsTab.monthlyRevenueTrend",
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1291,7 +1371,7 @@ export default function AdminSubscriptionDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        All Transactions
+                        {t("adminSubscription.transactionsTab.allTransactions")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1299,13 +1379,27 @@ export default function AdminSubscriptionDashboard() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Teacher</TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>Plan</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Method</TableHead>
-                              <TableHead>Trade ID</TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.date")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.teacher")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.email")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.plan")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.amount")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.method")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.transactionsTab.tradeId")}
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1338,7 +1432,7 @@ export default function AdminSubscriptionDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No transaction data available
+                  {t("adminSubscription.transactionsTab.noData")}
                 </div>
               )}
             </CardContent>
@@ -1353,10 +1447,10 @@ export default function AdminSubscriptionDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <GraduationCap className="w-5 h-5" />
-                    Learning Analytics
+                    {t("adminSubscription.learningTab.title")}
                   </CardTitle>
                   <CardDescription>
-                    Teacher activity and points usage statistics
+                    {t("adminSubscription.learningTab.description")}
                   </CardDescription>
                 </div>
                 <Button
@@ -1369,7 +1463,7 @@ export default function AdminSubscriptionDashboard() {
                   }
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download CSV
+                  {t("adminSubscription.buttons.downloadCsv")}
                 </Button>
               </div>
             </CardHeader>
@@ -1388,7 +1482,7 @@ export default function AdminSubscriptionDashboard() {
                           {learningAnalytics.total_points_used.toLocaleString()}
                         </div>
                         <p className="text-xs text-gray-600">
-                          Total Points Used
+                          {t("adminSubscription.learningTab.totalPointsUsed")}
                         </p>
                       </CardContent>
                     </Card>
@@ -1397,7 +1491,9 @@ export default function AdminSubscriptionDashboard() {
                         <div className="text-2xl font-bold">
                           {learningAnalytics.total_teachers}
                         </div>
-                        <p className="text-xs text-gray-600">Active Teachers</p>
+                        <p className="text-xs text-gray-600">
+                          {t("adminSubscription.learningTab.activeTeachers")}
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -1406,7 +1502,7 @@ export default function AdminSubscriptionDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        Monthly Points Usage
+                        {t("adminSubscription.learningTab.monthlyPointsUsage")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1466,7 +1562,7 @@ export default function AdminSubscriptionDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        Teacher Statistics
+                        {t("adminSubscription.learningTab.teacherStatistics")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1474,12 +1570,24 @@ export default function AdminSubscriptionDashboard() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Teacher</TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>Classes</TableHead>
-                              <TableHead>Students</TableHead>
-                              <TableHead>Assignments</TableHead>
-                              <TableHead>Points Used</TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.teacher")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.email")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.classes")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.students")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.assignments")}
+                              </TableHead>
+                              <TableHead>
+                                {t("adminSubscription.learningTab.pointsUsed")}
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1509,7 +1617,7 @@ export default function AdminSubscriptionDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No learning data available
+                  {t("adminSubscription.learningTab.noData")}
                 </div>
               )}
             </CardContent>
@@ -1523,10 +1631,10 @@ export default function AdminSubscriptionDashboard() {
           <DialogHeader>
             <DialogTitle>
               {editForm.action === "create"
-                ? "Create Subscription"
+                ? t("adminSubscription.modal.createTitle")
                 : editForm.action === "cancel"
-                  ? "Cancel Subscription"
-                  : "Edit Subscription"}
+                  ? t("adminSubscription.modal.cancelTitle")
+                  : t("adminSubscription.modal.editTitle")}
             </DialogTitle>
             <DialogDescription>
               {selectedTeacher &&
@@ -1537,7 +1645,9 @@ export default function AdminSubscriptionDashboard() {
           <form onSubmit={handleSubmitEdit} className="space-y-4 mt-4">
             {/* Action Selector */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Action</label>
+              <label className="text-sm font-medium">
+                {t("adminSubscription.modal.action")}
+              </label>
               <Select
                 value={editForm.action}
                 onValueChange={(value) =>
@@ -1549,13 +1659,17 @@ export default function AdminSubscriptionDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   {!selectedTeacher?.current_subscription && (
-                    <SelectItem value="create">Create Subscription</SelectItem>
+                    <SelectItem value="create">
+                      {t("adminSubscription.modal.createSubscription")}
+                    </SelectItem>
                   )}
                   {selectedTeacher?.current_subscription && (
                     <>
-                      <SelectItem value="edit">Edit Subscription</SelectItem>
+                      <SelectItem value="edit">
+                        {t("adminSubscription.modal.editSubscription")}
+                      </SelectItem>
                       <SelectItem value="cancel">
-                        Cancel Subscription
+                        {t("adminSubscription.modal.cancelSubscription")}
                       </SelectItem>
                     </>
                   )}
@@ -1567,14 +1681,14 @@ export default function AdminSubscriptionDashboard() {
             {(editForm.action === "create" || editForm.action === "edit") && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Plan Name{" "}
+                  {t("adminSubscription.modal.planName")}{" "}
                   {editForm.action === "create" && (
                     <span className="text-red-500">*</span>
                   )}
                   {editForm.action === "edit" &&
                     selectedTeacher?.current_subscription?.plan_name && (
                       <span className="text-xs text-gray-500 ml-2">
-                        (Current:{" "}
+                        ({t("adminSubscription.modal.current")}:{" "}
                         {selectedTeacher.current_subscription.plan_name})
                       </span>
                     )}
@@ -1595,14 +1709,16 @@ export default function AdminSubscriptionDashboard() {
                     <SelectValue
                       placeholder={
                         editForm.action === "create"
-                          ? "Select a plan"
-                          : "— No change —"
+                          ? t("adminSubscription.modal.selectPlan")
+                          : t("adminSubscription.modal.noChange")
                       }
                     />
                   </SelectTrigger>
                   <SelectContent>
                     {editForm.action === "edit" && (
-                      <SelectItem value="NO_CHANGE">— No change —</SelectItem>
+                      <SelectItem value="NO_CHANGE">
+                        {t("adminSubscription.modal.noChange")}
+                      </SelectItem>
                     )}
                     <SelectItem value="30-Day Trial">30-Day Trial</SelectItem>
                     <SelectItem value="Tutor Teachers">
@@ -1624,13 +1740,13 @@ export default function AdminSubscriptionDashboard() {
             {(editForm.action === "create" || editForm.action === "edit") && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  End Date{" "}
+                  {t("adminSubscription.modal.endDate")}{" "}
                   {editForm.action === "create" ? (
                     <span className="text-xs text-gray-500">
-                      (optional, defaults to plan duration)
+                      {t("adminSubscription.modal.endDateOptionalCreate")}
                     </span>
                   ) : (
-                    "(optional)"
+                    t("adminSubscription.modal.optional")
                   )}
                 </label>
                 <Input
@@ -1643,8 +1759,8 @@ export default function AdminSubscriptionDashboard() {
                 />
                 <p className="text-xs text-gray-500">
                   {editForm.action === "create"
-                    ? "Leave empty to use default plan duration"
-                    : "Leave empty to keep current end date"}
+                    ? t("adminSubscription.modal.endDateHintCreate")
+                    : t("adminSubscription.modal.endDateHintEdit")}
                 </p>
               </div>
             )}
@@ -1654,7 +1770,7 @@ export default function AdminSubscriptionDashboard() {
               editForm.plan_name === "VIP" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Custom Quota (optional)
+                    {t("adminSubscription.modal.customQuota")}
                   </label>
                   <Input
                     type="number"
@@ -1667,24 +1783,26 @@ export default function AdminSubscriptionDashboard() {
                           : undefined,
                       })
                     }
-                    placeholder="Enter custom quota (e.g., 50000)"
+                    placeholder={t("adminSubscription.modal.quotaPlaceholder")}
                     min="1"
                   />
                   <p className="text-xs text-gray-500">
-                    Leave empty to keep current quota for VIP plan
+                    {t("adminSubscription.modal.quotaHint")}
                   </p>
                 </div>
               )}
 
             {/* Reason (always required) */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Reason *</label>
+              <label className="text-sm font-medium">
+                {t("adminSubscription.modal.reason")} *
+              </label>
               <Textarea
                 value={editForm.reason}
                 onChange={(e) =>
                   setEditForm({ ...editForm, reason: e.target.value })
                 }
-                placeholder="Enter reason for this action..."
+                placeholder={t("adminSubscription.modal.reasonPlaceholder")}
                 required
                 rows={3}
               />
@@ -1698,18 +1816,18 @@ export default function AdminSubscriptionDashboard() {
                 onClick={() => setEditModalOpen(false)}
                 disabled={loading}
               >
-                Cancel
+                {t("adminSubscription.buttons.cancel")}
               </Button>
               <Button type="submit" disabled={loading || !editForm.reason}>
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
+                    {t("adminSubscription.buttons.processing")}
                   </>
                 ) : editForm.action === "cancel" ? (
-                  "Cancel Subscription"
+                  t("adminSubscription.buttons.cancelSubscription")
                 ) : (
-                  "Update Subscription"
+                  t("adminSubscription.buttons.updateSubscription")
                 )}
               </Button>
             </div>

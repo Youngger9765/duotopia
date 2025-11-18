@@ -25,8 +25,10 @@ import {
   StudentContentProgress,
   AssignmentStatusEnum,
 } from "@/types";
+import { useTranslation } from "react-i18next";
 
 export default function StudentAssignmentDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { token } = useStudentAuthStore();
@@ -139,7 +141,9 @@ export default function StudentAssignmentDetail() {
                 activity.order_index !== undefined
                   ? activity.order_index
                   : index,
-              estimated_time: activity.estimated_time || "5 分鐘",
+              estimated_time:
+                activity.estimated_time ||
+                `5 ${t("studentActivityPage.stats.minutes")}`,
               items: activity.items || [],
               answers: activity.answers,
               recording_url: activity.recording_url,
@@ -184,7 +188,7 @@ export default function StudentAssignmentDetail() {
       setAssignment(assignmentDetail);
     } catch (error) {
       console.error("Failed to load assignment detail:", error);
-      toast.error("無法載入作業詳情");
+      toast.error(t("studentAssignmentDetail.errors.loadFailed"));
       navigate("/student/assignments");
     } finally {
       setLoading(false);
@@ -195,37 +199,37 @@ export default function StudentAssignmentDetail() {
     switch (status) {
       case "NOT_STARTED":
         return {
-          text: "未開始",
+          text: t("studentAssignmentDetail.status.notStarted"),
           color: "bg-gray-100 text-gray-800",
           icon: <Clock className="h-4 w-4" />,
         };
       case "IN_PROGRESS":
         return {
-          text: "進行中",
+          text: t("studentAssignmentDetail.status.inProgress"),
           color: "bg-blue-100 text-blue-800",
           icon: <Play className="h-4 w-4" />,
         };
       case "SUBMITTED":
         return {
-          text: "已提交",
+          text: t("studentAssignmentDetail.status.submitted"),
           color: "bg-yellow-100 text-yellow-800",
           icon: <CheckCircle className="h-4 w-4" />,
         };
       case "GRADED":
         return {
-          text: "已評分",
+          text: t("studentAssignmentDetail.status.graded"),
           color: "bg-green-100 text-green-800",
           icon: <BarChart3 className="h-4 w-4" />,
         };
       case "RETURNED":
         return {
-          text: "已退回",
+          text: t("studentAssignmentDetail.status.returned"),
           color: "bg-orange-100 text-orange-800",
           icon: <AlertCircle className="h-4 w-4" />,
         };
       case "RESUBMITTED":
         return {
-          text: "重新提交",
+          text: t("studentAssignmentDetail.status.resubmitted"),
           color: "bg-purple-100 text-purple-800",
           icon: <CheckCircle className="h-4 w-4" />,
         };
@@ -258,11 +262,24 @@ export default function StudentAssignmentDetail() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return { text: `已逾期 ${Math.abs(diffDays)} 天`, isOverdue: true };
+      return {
+        text: t("studentAssignmentDetail.dueDate.overdue", {
+          days: Math.abs(diffDays),
+        }),
+        isOverdue: true,
+      };
     } else if (diffDays === 0) {
-      return { text: "今天到期", isOverdue: false };
+      return {
+        text: t("studentAssignmentDetail.dueDate.today"),
+        isOverdue: false,
+      };
     } else if (diffDays <= 3) {
-      return { text: `${diffDays} 天後到期`, isOverdue: false };
+      return {
+        text: t("studentAssignmentDetail.dueDate.remaining", {
+          days: diffDays,
+        }),
+        isOverdue: false,
+      };
     } else {
       return { text: due.toLocaleDateString("zh-TW"), isOverdue: false };
     }
@@ -318,14 +335,19 @@ export default function StudentAssignmentDetail() {
               <div className="flex-1 min-w-0">
                 <h4 className="font-medium text-sm sm:text-base truncate">
                   {progress.content?.title ||
-                    `活動 ${progress.order_index + 1}`}
+                    t("studentAssignmentDetail.progress.activityNumber", {
+                      number: progress.order_index + 1,
+                    })}
                 </h4>
                 <p className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                   {progress.content?.type === "reading_assessment" &&
-                    "朗讀評測"}
-                  {progress.content?.type === "listening" && "聽力練習"}
+                    t(
+                      "studentAssignmentDetail.contentTypes.reading_assessment",
+                    )}
+                  {progress.content?.type === "listening" &&
+                    t("studentAssignmentDetail.contentTypes.listening")}
                   {progress.content?.type === "grouped_questions" &&
-                    "基礎問候語練習"}
+                    t("studentAssignmentDetail.contentTypes.grouped_questions")}
                   {progress.estimated_time && ` • ${progress.estimated_time}`}
                 </p>
               </div>
@@ -363,7 +385,8 @@ export default function StudentAssignmentDetail() {
 
               {progress.score !== undefined && progress.status === "GRADED" && (
                 <div className="text-sm font-medium text-green-600">
-                  {progress.score}分
+                  {progress.score}
+                  {t("studentAssignmentDetail.scoring.scoreUnit")}
                 </div>
               )}
 
@@ -376,11 +399,13 @@ export default function StudentAssignmentDetail() {
                 }
                 className="text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
-                {progress.status === "NOT_STARTED" && "開始"}
-                {progress.status === "IN_PROGRESS" && "繼續"}
+                {progress.status === "NOT_STARTED" &&
+                  t("studentAssignmentDetail.buttons.start")}
+                {progress.status === "IN_PROGRESS" &&
+                  t("studentAssignmentDetail.buttons.continue")}
                 {(progress.status === "SUBMITTED" ||
                   progress.status === "GRADED") &&
-                  "檢視作業"}
+                  t("studentAssignmentDetail.buttons.view")}
               </Button>
             </div>
           </div>
@@ -394,7 +419,9 @@ export default function StudentAssignmentDetail() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">
+            {t("studentAssignmentDetail.loading")}
+          </p>
         </div>
       </div>
     );
@@ -404,9 +431,11 @@ export default function StudentAssignmentDetail() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">找不到作業詳情</p>
+          <p className="text-gray-600 mb-4">
+            {t("studentAssignmentDetail.errors.notFound")}
+          </p>
           <Button onClick={() => navigate("/student/assignments")}>
-            返回作業列表
+            {t("studentAssignmentDetail.buttons.back")}
           </Button>
         </div>
       </div>
@@ -430,7 +459,7 @@ export default function StudentAssignmentDetail() {
           className="mb-6"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          返回作業列表
+          {t("studentAssignmentDetail.buttons.back")}
         </Button>
 
         {/* Assignment Overview */}
@@ -444,7 +473,11 @@ export default function StudentAssignmentDetail() {
                 {assignment.estimated_time && (
                   <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
                     <Clock className="h-4 w-4" />
-                    <span>預估時間: {assignment.estimated_time}</span>
+                    <span>
+                      {t("studentAssignmentDetail.overview.estimatedTime", {
+                        time: assignment.estimated_time,
+                      })}
+                    </span>
                   </div>
                 )}
               </div>
@@ -476,7 +509,9 @@ export default function StudentAssignmentDetail() {
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="h-4 w-4" />
                     <span>
-                      目標語速: {assignment.contents[0].target_wpm} WPM
+                      {t("studentAssignmentDetail.overview.targetWPM", {
+                        wpm: assignment.contents[0].target_wpm,
+                      })}
                     </span>
                   </div>
                 )}
@@ -484,7 +519,9 @@ export default function StudentAssignmentDetail() {
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Target className="h-4 w-4" />
                     <span>
-                      目標準確率: {assignment.contents[0].target_accuracy}%
+                      {t("studentAssignmentDetail.overview.targetAccuracy", {
+                        accuracy: assignment.contents[0].target_accuracy,
+                      })}
                     </span>
                   </div>
                 )}
@@ -496,11 +533,13 @@ export default function StudentAssignmentDetail() {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
-                  活動進度
+                  {t("studentAssignmentDetail.progress.title")}
                 </h3>
                 <span className="text-sm font-medium text-gray-600">
-                  {assignment.completed_count || 0} /{" "}
-                  {assignment.content_count || 0} 完成
+                  {t("studentAssignmentDetail.progress.completed", {
+                    completed: assignment.completed_count || 0,
+                    total: assignment.content_count || 0,
+                  })}
                 </span>
               </div>
               <Progress
@@ -516,7 +555,9 @@ export default function StudentAssignmentDetail() {
                 ) : (
                   <div className="text-center py-4 text-gray-500">
                     <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">此作業尚未包含活動內容</p>
+                    <p className="text-sm">
+                      {t("studentAssignmentDetail.progress.empty")}
+                    </p>
                   </div>
                 )}
               </div>
@@ -532,10 +573,10 @@ export default function StudentAssignmentDetail() {
                 >
                   <Play className="h-4 w-4 mr-2" />
                   {assignment.status === "NOT_STARTED"
-                    ? "開始作業"
+                    ? t("studentAssignmentDetail.buttons.startAssignment")
                     : assignment.status === "IN_PROGRESS"
-                      ? "繼續作業"
-                      : "重新提交"}
+                      ? t("studentAssignmentDetail.buttons.continueAssignment")
+                      : t("studentAssignmentDetail.buttons.resubmit")}
                 </Button>
               </div>
             )}
@@ -547,14 +588,16 @@ export default function StudentAssignmentDetail() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              總評
+              {t("studentAssignmentDetail.scoring.title")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* 分數顯示 */}
               <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">分數</div>
+                <div className="text-sm text-gray-600 mb-2">
+                  {t("studentAssignmentDetail.scoring.score")}
+                </div>
                 <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-600">
                   {assignment.score !== undefined ? assignment.score : "--"}
                 </div>
@@ -562,7 +605,9 @@ export default function StudentAssignmentDetail() {
 
               {/* 詳實記錄 */}
               <div>
-                <div className="text-sm text-gray-600 mb-2">詳實記錄</div>
+                <div className="text-sm text-gray-600 mb-2">
+                  {t("studentAssignmentDetail.scoring.detailRecord")}
+                </div>
                 {assignment.content_progress &&
                 assignment.content_progress.length > 0 ? (
                   <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -588,7 +633,11 @@ export default function StudentAssignmentDetail() {
                             </span>
                             <div className="flex-1">
                               <div className="text-xs text-gray-500 truncate">
-                                {item.text || `題目 ${questionNumber}`}
+                                {item.text ||
+                                  t(
+                                    "studentAssignmentDetail.scoring.questionNumber",
+                                    { number: questionNumber },
+                                  )}
                               </div>
                               <div className="text-xs text-gray-700">
                                 {item.teacher_feedback}
@@ -600,16 +649,21 @@ export default function StudentAssignmentDetail() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500">尚無評分記錄</div>
+                  <div className="text-sm text-gray-500">
+                    {t("studentAssignmentDetail.scoring.noRecordsYet")}
+                  </div>
                 )}
               </div>
 
               {/* 總評 */}
               <div>
-                <div className="text-sm text-gray-600 mb-2">總評</div>
+                <div className="text-sm text-gray-600 mb-2">
+                  {t("studentAssignmentDetail.scoring.overallFeedback")}
+                </div>
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    {assignment.feedback || "尚無總評"}
+                    {assignment.feedback ||
+                      t("studentAssignmentDetail.scoring.noFeedbackYet")}
                   </p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ interface StudentProgress {
 }
 
 export default function TeacherAssignmentDetailPage() {
+  const { t } = useTranslation();
   const { classroomId, assignmentId } = useParams<{
     classroomId: string;
     assignmentId: string;
@@ -181,7 +183,7 @@ export default function TeacherAssignmentDetailPage() {
       });
     } catch (error) {
       console.error("Failed to fetch assignment detail:", error);
-      toast.error("無法載入作業詳情");
+      toast.error(t("assignmentDetail.messages.loadError"));
       // Set mock data for development
       const mockAssignment: AssignmentDetail = {
         id: Number(assignmentId),
@@ -340,7 +342,7 @@ export default function TeacherAssignmentDetailPage() {
 
   const handleSave = async () => {
     if (!editingData.title) {
-      toast.error("請輸入作業標題");
+      toast.error(t("assignmentDetail.messages.titleRequired"));
       return;
     }
 
@@ -358,7 +360,7 @@ export default function TeacherAssignmentDetailPage() {
         `/api/teachers/assignments/${assignmentId}`,
         updateData,
       );
-      toast.success("作業資訊已更新");
+      toast.success(t("assignmentDetail.messages.updateSuccess"));
       setIsEditing(false);
 
       // Update local state immediately
@@ -375,7 +377,7 @@ export default function TeacherAssignmentDetailPage() {
       fetchAssignmentDetail();
     } catch (error) {
       console.error("Failed to update assignment:", error);
-      toast.error("更新失敗，請稍後再試");
+      toast.error(t("assignmentDetail.messages.updateFailed"));
     }
   };
 
@@ -422,10 +424,10 @@ export default function TeacherAssignmentDetailPage() {
       // Refresh progress data to ensure sync
       await fetchStudentProgress();
 
-      toast.success("已成功指派給學生");
+      toast.success(t("assignmentDetail.messages.assignSuccess"));
     } catch (error) {
       console.error("Failed to assign student:", error);
-      toast.error("指派失敗，請稍後再試");
+      toast.error(t("assignmentDetail.messages.assignFailed"));
     }
   };
 
@@ -439,8 +441,7 @@ export default function TeacherAssignmentDetailPage() {
       // Check if student has started
       if (status === "in_progress") {
         const confirmed = window.confirm(
-          `學生「${studentName}」已開始作業，確定要取消指派嗎？\n\n` +
-            "注意：學生的進度將會被保留，但無法繼續作業。",
+          t("assignmentDetail.messages.unassignConfirm", { name: studentName }),
         );
         if (!confirmed) return;
       } else if (
@@ -448,7 +449,11 @@ export default function TeacherAssignmentDetailPage() {
         status === "completed" ||
         status === "graded"
       ) {
-        toast.error(`學生「${studentName}」已完成作業，無法取消指派`);
+        toast.error(
+          t("assignmentDetail.messages.cannotUnassignCompleted", {
+            name: studentName,
+          }),
+        );
         return;
       }
 
@@ -505,23 +510,18 @@ export default function TeacherAssignmentDetailPage() {
       // Refresh progress data to ensure sync
       await fetchStudentProgress();
 
-      toast.success(`已取消指派學生「${studentName}」`);
+      toast.success(
+        t("assignmentDetail.messages.unassignSuccess", { name: studentName }),
+      );
     } catch (error) {
       console.error("Failed to unassign student:", error);
-      toast.error("取消指派失敗");
+      toast.error(t("assignmentDetail.messages.unassignFailed"));
     }
   };
 
   const getContentTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      READING_ASSESSMENT: "朗讀評測",
-      SPEAKING_PRACTICE: "口說練習",
-      SPEAKING_SCENARIO: "情境對話",
-      LISTENING_CLOZE: "聽力填空",
-      SENTENCE_MAKING: "造句練習",
-      SPEAKING_QUIZ: "口說測驗",
-    };
-    return labels[type] || type;
+    const typeKey = `assignmentDetail.contentTypes.${type}`;
+    return t(typeKey, type);
   };
 
   // Calculate statistics (only for assigned students)
@@ -561,7 +561,7 @@ export default function TeacherAssignmentDetailPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -572,14 +572,16 @@ export default function TeacherAssignmentDetailPage() {
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到作業資料</p>
+          <p className="text-gray-500">
+            {t("assignmentDetail.messages.notFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() =>
               navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
             }
           >
-            返回作業列表
+            {t("assignmentDetail.buttons.backToList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -601,7 +603,7 @@ export default function TeacherAssignmentDetailPage() {
               className="h-12 min-h-12 w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              返回作業列表
+              {t("assignmentDetail.buttons.backToList")}
             </Button>
             <div className="flex-1">
               {isEditing ? (
@@ -611,7 +613,7 @@ export default function TeacherAssignmentDetailPage() {
                     setEditingData({ ...editingData, title: e.target.value })
                   }
                   className="text-xl sm:text-2xl font-bold h-12"
-                  placeholder="作業標題"
+                  placeholder={t("assignmentDetail.labels.assignmentTitle")}
                 />
               ) : (
                 <h1 className="text-2xl sm:text-3xl font-bold dark:text-gray-100">
@@ -633,7 +635,7 @@ export default function TeacherAssignmentDetailPage() {
               className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 h-12 min-h-12 w-full sm:w-auto"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              批改作業
+              {t("assignmentDetail.buttons.gradeAssignment")}
             </Button>
             {isEditing ? (
               <>
@@ -643,14 +645,14 @@ export default function TeacherAssignmentDetailPage() {
                   className="h-12 min-h-12 w-full sm:w-auto"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  取消
+                  {t("assignmentDetail.buttons.cancel")}
                 </Button>
                 <Button
                   onClick={handleSave}
                   className="h-12 min-h-12 w-full sm:w-auto"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  儲存
+                  {t("assignmentDetail.buttons.save")}
                 </Button>
               </>
             ) : (
@@ -660,7 +662,7 @@ export default function TeacherAssignmentDetailPage() {
                 className="h-12 min-h-12 w-full sm:w-auto"
               >
                 <Edit2 className="h-4 w-4 mr-2" />
-                編輯
+                {t("assignmentDetail.buttons.edit")}
               </Button>
             )}
           </div>
@@ -671,7 +673,7 @@ export default function TeacherAssignmentDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
-                內容類型
+                {t("assignmentDetail.labels.contentType")}
               </label>
               <Badge
                 variant="outline"
@@ -679,12 +681,12 @@ export default function TeacherAssignmentDetailPage() {
               >
                 {assignment.content_type
                   ? getContentTypeLabel(assignment.content_type)
-                  : "未設定"}
+                  : t("assignmentDetail.labels.notSet")}
               </Badge>
             </div>
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
-                指派日期
+                {t("assignmentDetail.labels.assignedDate")}
               </label>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -693,13 +695,13 @@ export default function TeacherAssignmentDetailPage() {
                     ? new Date(
                         assignment.assigned_at || assignment.created_at || "",
                       ).toLocaleDateString("zh-TW")
-                    : "未設定"}
+                    : t("assignmentDetail.labels.notSet")}
                 </span>
               </div>
             </div>
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
-                截止日期
+                {t("assignmentDetail.labels.dueDate")}
               </label>
               {isEditing ? (
                 <Input
@@ -722,14 +724,14 @@ export default function TeacherAssignmentDetailPage() {
                       ? new Date(assignment.due_date).toLocaleDateString(
                           "zh-TW",
                         )
-                      : "未設定"}
+                      : t("assignmentDetail.labels.notSet")}
                   </span>
                 </div>
               )}
             </div>
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
-                指派學生數
+                {t("assignmentDetail.labels.assignedStudents")}
               </label>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -742,7 +744,7 @@ export default function TeacherAssignmentDetailPage() {
 
                     // Progress stats updated
 
-                    return `${assignedCount} 人`;
+                    return `${assignedCount} ${t("assignmentDetail.labels.people")}`;
                   })()}
                 </span>
               </div>
@@ -752,7 +754,7 @@ export default function TeacherAssignmentDetailPage() {
           {/* Instructions */}
           <div className="mt-6">
             <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
-              作業說明
+              {t("assignmentDetail.labels.instructions")}
             </label>
             {isEditing ? (
               <Textarea
@@ -763,13 +765,16 @@ export default function TeacherAssignmentDetailPage() {
                     instructions: e.target.value,
                   })
                 }
-                placeholder="輸入作業說明..."
+                placeholder={t(
+                  "assignmentDetail.labels.instructionsPlaceholder",
+                )}
                 rows={3}
                 className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             ) : (
               <p className="text-gray-700 dark:text-gray-200">
-                {assignment.instructions || "無說明"}
+                {assignment.instructions ||
+                  t("assignmentDetail.labels.noInstructions")}
               </p>
             )}
           </div>
@@ -785,7 +790,7 @@ export default function TeacherAssignmentDetailPage() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-lg font-semibold dark:text-gray-100">
-                  內容詳情
+                  {t("assignmentDetail.labels.contentDetails")}
                 </h3>
               </div>
               {expandedContent ? (
@@ -799,7 +804,7 @@ export default function TeacherAssignmentDetailPage() {
               <div className="mt-4 space-y-3">
                 <div>
                   <span className="text-sm text-gray-600 dark:text-gray-300">
-                    內容標題：
+                    {t("assignmentDetail.labels.contentTitle")}
                   </span>
                   <span className="font-medium ml-2 dark:text-gray-100">
                     {assignment.content.title}
@@ -809,17 +814,18 @@ export default function TeacherAssignmentDetailPage() {
                   assignment.content.items.length > 0 && (
                     <div>
                       <span className="text-sm text-gray-600 dark:text-gray-300">
-                        項目數量：
+                        {t("assignmentDetail.labels.itemCount")}
                       </span>
                       <span className="font-medium ml-2 dark:text-gray-100">
-                        {assignment.content.items.length} 個項目
+                        {assignment.content.items.length}{" "}
+                        {t("assignmentDetail.labels.items")}
                       </span>
                     </div>
                   )}
                 {assignment.content.target_wpm && (
                   <div>
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                      目標速度：
+                      {t("assignmentDetail.labels.targetSpeed")}
                     </span>
                     <span className="font-medium ml-2 dark:text-gray-100">
                       {assignment.content.target_wpm} WPM
@@ -829,7 +835,7 @@ export default function TeacherAssignmentDetailPage() {
                 {assignment.content.target_accuracy && (
                   <div>
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                      目標準確度：
+                      {t("assignmentDetail.labels.targetAccuracy")}
                     </span>
                     <span className="font-medium ml-2 dark:text-gray-100">
                       {Math.round(assignment.content.target_accuracy * 100)}%
@@ -844,14 +850,14 @@ export default function TeacherAssignmentDetailPage() {
         {/* Progress Overview */}
         <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
           <h3 className="text-base sm:text-lg font-semibold mb-4 dark:text-gray-100">
-            完成進度
+            {t("assignmentDetail.labels.completionRate")}
           </h3>
 
           {/* Completion Rate */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                整體完成率
+                {t("assignmentDetail.labels.overallCompletionRate")}
               </span>
               <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {completionRate}%
@@ -889,9 +895,11 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    已指派
+                    {t("assignmentDetail.labels.assigned")}
                   </div>
-                  <div className="text-xs text-gray-400">{stats.total} 人</div>
+                  <div className="text-xs text-gray-400">
+                    {stats.total} {t("assignmentDetail.labels.people")}
+                  </div>
                 </div>
 
                 {/* Arrow */}
@@ -911,7 +919,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    未開始
+                    {t("assignmentDetail.labels.notStarted")}
                   </div>
                 </div>
 
@@ -932,7 +940,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    進行中
+                    {t("assignmentDetail.labels.inProgress")}
                   </div>
                 </div>
 
@@ -953,7 +961,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    已提交
+                    {t("assignmentDetail.labels.submitted")}
                   </div>
                 </div>
 
@@ -974,7 +982,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    待訂正
+                    {t("assignmentDetail.labels.returned")}
                   </div>
                 </div>
 
@@ -995,7 +1003,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    重新提交
+                    {t("assignmentDetail.labels.resubmitted")}
                   </div>
                 </div>
 
@@ -1016,7 +1024,7 @@ export default function TeacherAssignmentDetailPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-600 mt-2 font-medium">
-                    已完成
+                    {t("assignmentDetail.labels.graded")}
                   </div>
                 </div>
               </div>
@@ -1029,7 +1037,7 @@ export default function TeacherAssignmentDetailPage() {
           <div className="space-y-4 mb-4">
             <div>
               <h3 className="text-base sm:text-lg font-semibold mb-2 dark:text-gray-100">
-                學生列表
+                {t("assignmentDetail.labels.studentList")}
               </h3>
               {/* Legend */}
               <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
@@ -1061,7 +1069,7 @@ export default function TeacherAssignmentDetailPage() {
               <div className="relative flex-1 sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="搜尋學生姓名..."
+                  placeholder={t("assignmentDetail.labels.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 w-full h-12 min-h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
@@ -1074,14 +1082,30 @@ export default function TeacherAssignmentDetailPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 border rounded-md h-12 min-h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
-                <option value="all">全部狀態</option>
-                <option value="unassigned">未指派</option>
-                <option value="NOT_STARTED">未開始</option>
-                <option value="IN_PROGRESS">進行中</option>
-                <option value="SUBMITTED">已提交</option>
-                <option value="RETURNED">待訂正</option>
-                <option value="RESUBMITTED">重新提交</option>
-                <option value="GRADED">已完成</option>
+                <option value="all">
+                  {t("assignmentDetail.labels.allStatuses")}
+                </option>
+                <option value="unassigned">
+                  {t("assignmentDetail.labels.unassigned")}
+                </option>
+                <option value="NOT_STARTED">
+                  {t("assignmentDetail.labels.notStarted")}
+                </option>
+                <option value="IN_PROGRESS">
+                  {t("assignmentDetail.labels.inProgress")}
+                </option>
+                <option value="SUBMITTED">
+                  {t("assignmentDetail.labels.submitted")}
+                </option>
+                <option value="RETURNED">
+                  {t("assignmentDetail.labels.returned")}
+                </option>
+                <option value="RESUBMITTED">
+                  {t("assignmentDetail.labels.resubmitted")}
+                </option>
+                <option value="GRADED">
+                  {t("assignmentDetail.labels.graded")}
+                </option>
               </select>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,6 +87,7 @@ const TTSModal = ({
   itemIndex,
   isCreating = false,
 }: TTSModalProps) => {
+  const { t } = useTranslation();
   const [text, setText] = useState(row.text);
   const [accent, setAccent] = useState(
     row.audioSettings?.accent || "American English",
@@ -167,11 +169,13 @@ const TTSModal = ({
           // 如果自動播放失敗（瀏覽器限制），仍顯示成功訊息
         });
 
-        toast.success("音檔生成成功！點擊播放按鈕試聽");
+        toast.success(
+          t("readingAssessmentPanel.ttsModal.generate.generateSuccess"),
+        );
       }
     } catch (err) {
       console.error("TTS generation failed:", err);
-      toast.error("生成失敗，請重試");
+      toast.error(t("readingAssessmentPanel.ttsModal.generate.generateFailed"));
     } finally {
       setIsGenerating(false);
     }
@@ -219,7 +223,9 @@ const TTSModal = ({
           // 30秒自動停止
           if (newDuration >= 30) {
             handleStopRecording();
-            toast.info("已達到最長錄音時間 30 秒");
+            toast.info(
+              t("readingAssessmentPanel.ttsModal.record.maxDurationReached"),
+            );
           }
           return newDuration;
         });
@@ -250,14 +256,16 @@ const TTSModal = ({
 
         // 檢查檔案大小 (2MB 限制)
         if (audioBlob.size > 2 * 1024 * 1024) {
-          toast.error("錄音檔案太大，請縮短錄音時間");
+          toast.error(t("readingAssessmentPanel.ttsModal.record.fileTooLarge"));
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
         // 確保有錄音資料
         if (audioBlob.size === 0) {
-          toast.error("錄音失敗，請檢查麥克風權限");
+          toast.error(
+            t("readingAssessmentPanel.ttsModal.record.recordingFailed"),
+          );
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
@@ -269,7 +277,9 @@ const TTSModal = ({
         // 創建本地 URL 供預覽播放
         const localUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio(localUrl);
-        toast.success("錄音完成！可以試聽或重新錄製");
+        toast.success(
+          t("readingAssessmentPanel.ttsModal.record.recordingComplete"),
+        );
 
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -277,9 +287,13 @@ const TTSModal = ({
       // 使用 timeslice 參數，每100ms收集一次數據
       mediaRecorder.start(100);
       setIsRecording(true);
-      toast.success("開始錄音");
+      toast.success(
+        t("readingAssessmentPanel.ttsModal.record.recordingStarted"),
+      );
     } catch {
-      toast.error("無法啟動錄音，請檢查麥克風權限");
+      toast.error(
+        t("readingAssessmentPanel.ttsModal.record.micPermissionDenied"),
+      );
     }
   };
 
@@ -303,7 +317,9 @@ const TTSModal = ({
     // 如果兩種音源都有，需要用戶選擇
     if (audioUrl && recordedAudio) {
       if (!selectedSource) {
-        toast.warning("請選擇要使用的音源（TTS 或錄音）");
+        toast.warning(
+          t("readingAssessmentPanel.ttsModal.sourceSelection.pleaseSelect"),
+        );
         return;
       }
 
@@ -339,7 +355,11 @@ const TTSModal = ({
                 Number(itemIndex),
               ),
             (attempt, error) => {
-              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              toast.warning(
+                t("readingAssessmentPanel.ttsModal.messages.uploadRetrying", {
+                  attempt,
+                }),
+              );
               console.error(`Upload attempt ${attempt} failed:`, error);
             },
           );
@@ -357,7 +377,9 @@ const TTSModal = ({
           }
         } catch (err) {
           console.error("Upload failed after retries:", err);
-          toast.error("上傳失敗，請檢查網路連線後重試");
+          toast.error(
+            t("readingAssessmentPanel.ttsModal.messages.uploadFailed"),
+          );
         } finally {
           setIsUploading(false);
         }
@@ -370,7 +392,9 @@ const TTSModal = ({
       // 只有一種音源
       const finalAudioUrl = recordedAudio || audioUrl;
       if (!finalAudioUrl) {
-        toast.error("請先生成或錄製音檔");
+        toast.error(
+          t("readingAssessmentPanel.ttsModal.messages.noAudioGenerated"),
+        );
         return;
       }
 
@@ -405,7 +429,11 @@ const TTSModal = ({
                 Number(itemIndex),
               ),
             (attempt, error) => {
-              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              toast.warning(
+                t("readingAssessmentPanel.ttsModal.messages.uploadRetrying", {
+                  attempt,
+                }),
+              );
               console.error(`Upload attempt ${attempt} failed:`, error);
             },
           );
@@ -423,7 +451,9 @@ const TTSModal = ({
           }
         } catch (err) {
           console.error("Upload failed after retries:", err);
-          toast.error("上傳失敗，請檢查網路連線後重試");
+          toast.error(
+            t("readingAssessmentPanel.ttsModal.messages.uploadFailed"),
+          );
         } finally {
           setIsUploading(false);
         }
@@ -440,7 +470,9 @@ const TTSModal = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>音檔設定</DialogTitle>
+          <DialogTitle>
+            {t("readingAssessmentPanel.ttsModal.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -580,8 +612,12 @@ const TTSModal = ({
                     <Volume2 className="h-4 w-4 text-gray-600" />
                     <span className="text-sm font-medium">
                       {showAudioAnimation
-                        ? "音檔已生成！點擊播放按鈕試聽"
-                        : "TTS 音檔已準備"}
+                        ? t(
+                            "readingAssessmentPanel.ttsModal.generate.audioGenerated",
+                          )
+                        : t(
+                            "readingAssessmentPanel.ttsModal.generate.audioReady",
+                          )}
                     </span>
                   </div>
                   <Button
@@ -590,7 +626,11 @@ const TTSModal = ({
                     onClick={() => {
                       setAudioUrl("");
                       setSelectedSource(null);
-                      toast.info("已刪除 TTS 音檔");
+                      toast.info(
+                        t(
+                          "readingAssessmentPanel.ttsModal.generate.ttsDeleted",
+                        ),
+                      );
                     }}
                     className="text-red-600 hover:bg-red-50"
                   >
@@ -630,7 +670,7 @@ const TTSModal = ({
                     00:30
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    最長錄音時間 30 秒
+                    {t("readingAssessmentPanel.ttsModal.record.maxDuration")}
                   </div>
                 </div>
               )}
@@ -639,7 +679,7 @@ const TTSModal = ({
               {isUploading && (
                 <div className="mb-4 text-center">
                   <div className="text-sm text-blue-600">
-                    正在上傳錄音檔案...
+                    {t("readingAssessmentPanel.ttsModal.record.uploading")}
                   </div>
                 </div>
               )}
@@ -647,7 +687,7 @@ const TTSModal = ({
               {!isRecording && !recordedAudio && !isUploading && (
                 <Button onClick={handleStartRecording} size="lg">
                   <Mic className="h-5 w-5 mr-2" />
-                  開始錄音
+                  {t("readingAssessmentPanel.ttsModal.record.startRecording")}
                 </Button>
               )}
 
@@ -658,7 +698,7 @@ const TTSModal = ({
                   size="lg"
                 >
                   <Square className="h-5 w-5 mr-2" />
-                  停止錄音
+                  {t("readingAssessmentPanel.ttsModal.record.stopRecording")}
                 </Button>
               )}
 
@@ -673,14 +713,22 @@ const TTSModal = ({
                           size="icon"
                           onClick={() => {
                             if (!recordedAudio) {
-                              toast.error("沒有錄音可播放");
+                              toast.error(
+                                t(
+                                  "readingAssessmentPanel.ttsModal.record.playFailed",
+                                ),
+                              );
                               return;
                             }
 
                             const audio = new Audio(recordedAudio);
                             audio.play().catch((err) => {
                               console.error("Play failed:", err);
-                              toast.error("無法播放錄音");
+                              toast.error(
+                                t(
+                                  "readingAssessmentPanel.ttsModal.record.playFailed",
+                                ),
+                              );
                             });
                           }}
                         >
@@ -689,7 +737,10 @@ const TTSModal = ({
                         <div className="flex items-center gap-2">
                           <Mic className="h-4 w-4 text-red-600" />
                           <span className="text-sm text-gray-700 font-medium">
-                            錄音檔案已準備 ({recordingDuration}秒)
+                            {t(
+                              "readingAssessmentPanel.ttsModal.record.recordingReady",
+                              { duration: recordingDuration },
+                            )}
                           </span>
                         </div>
                       </div>
@@ -702,7 +753,11 @@ const TTSModal = ({
                           audioBlobRef.current = null;
                           setRecordingDuration(0);
                           recordingDurationRef.current = 0;
-                          toast.info("已刪除錄音檔案");
+                          toast.info(
+                            t(
+                              "readingAssessmentPanel.ttsModal.record.recordingDeleted",
+                            ),
+                          );
                         }}
                         className="text-red-600 hover:bg-red-50"
                       >
@@ -713,7 +768,7 @@ const TTSModal = ({
                   <div className="flex gap-2">
                     <Button onClick={handleStartRecording} variant="outline">
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      重新錄製
+                      {t("readingAssessmentPanel.ttsModal.record.reRecord")}
                     </Button>
                   </div>
                 </div>
@@ -726,7 +781,7 @@ const TTSModal = ({
         {audioUrl && recordedAudio && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm font-medium text-yellow-800 mb-3">
-              🎵 您有兩種音源可選擇，請選擇要使用的音檔：
+              🎵 {t("readingAssessmentPanel.ttsModal.sourceSelection.title")}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -742,8 +797,14 @@ const TTSModal = ({
                     selectedSource === "tts" ? "text-blue-600" : "text-gray-600"
                   }`}
                 />
-                <div className="text-sm font-medium">TTS 語音</div>
-                <div className="text-xs text-gray-500">AI 生成</div>
+                <div className="text-sm font-medium">
+                  {t("readingAssessmentPanel.ttsModal.sourceSelection.tts")}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {t(
+                    "readingAssessmentPanel.ttsModal.sourceSelection.ttsSubtitle",
+                  )}
+                </div>
               </button>
 
               <button
@@ -761,8 +822,16 @@ const TTSModal = ({
                       : "text-gray-600"
                   }`}
                 />
-                <div className="text-sm font-medium">錄音檔案</div>
-                <div className="text-xs text-gray-500">教師錄製</div>
+                <div className="text-sm font-medium">
+                  {t(
+                    "readingAssessmentPanel.ttsModal.sourceSelection.recording",
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {t(
+                    "readingAssessmentPanel.ttsModal.sourceSelection.recordingSubtitle",
+                  )}
+                </div>
               </button>
             </div>
           </div>
@@ -812,6 +881,7 @@ function SortableRowInner({
   handleGenerateSingleDefinitionWithLang,
   rowsLength,
 }: SortableRowInnerProps) {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -839,7 +909,7 @@ function SortableRowInner({
           {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing touch-none"
-          title="拖曳以重新排序"
+          title={t("readingAssessmentPanel.row.dragToReorder")}
         >
           <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
         </div>
@@ -856,7 +926,7 @@ function SortableRowInner({
             value={row.text}
             onChange={(e) => handleUpdateRow(index, "text", e.target.value)}
             className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
-            placeholder="輸入文本"
+            placeholder={t("readingAssessmentPanel.row.textPlaceholder")}
             maxLength={200}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -864,21 +934,21 @@ function SortableRowInner({
               <button
                 onClick={() => {
                   if (!row.audioUrl) {
-                    toast.error("沒有音檔可播放");
+                    toast.error(t("readingAssessmentPanel.row.noAudio"));
                     return;
                   }
                   const audio = new Audio(row.audioUrl);
                   audio.onerror = (e) => {
                     console.error("Audio playback error:", e);
-                    toast.error("音檔播放失敗，請檢查音檔格式");
+                    toast.error(t("readingAssessmentPanel.row.playbackError"));
                   };
                   audio.play().catch((error) => {
                     console.error("Play failed:", error);
-                    toast.error("無法播放音檔");
+                    toast.error(t("readingAssessmentPanel.row.playbackFailed"));
                   });
                 }}
                 className="p-1 rounded text-green-600 hover:bg-green-100"
-                title="播放音檔"
+                title={t("readingAssessmentPanel.row.playAudio")}
               >
                 <Play className="h-4 w-4" />
               </button>
@@ -890,7 +960,11 @@ function SortableRowInner({
                   ? "text-blue-600 hover:bg-blue-100"
                   : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
               }`}
-              title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
+              title={
+                row.audioUrl
+                  ? t("readingAssessmentPanel.row.rerecordGenerate")
+                  : t("readingAssessmentPanel.row.openTTSRecording")
+              }
             >
               <Mic className="h-4 w-4" />
             </button>
@@ -898,7 +972,7 @@ function SortableRowInner({
               <button
                 onClick={() => handleRemoveAudio(index)}
                 className="p-1 rounded text-red-600 hover:bg-red-100"
-                title="移除音檔"
+                title={t("readingAssessmentPanel.row.removeAudio")}
               >
                 <Trash2 className="h-3 w-3" />
               </button>
@@ -927,8 +1001,8 @@ function SortableRowInner({
               className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
               placeholder={
                 (row.selectedLanguage || "chinese") === "chinese"
-                  ? "中文翻譯"
-                  : "English translation"
+                  ? t("readingAssessmentPanel.row.chineseTranslation")
+                  : t("readingAssessmentPanel.row.englishDefinition")
               }
               rows={2}
               maxLength={500}
@@ -948,13 +1022,21 @@ function SortableRowInner({
                 }}
                 className="px-1 py-0.5 border rounded text-xs bg-white"
               >
-                <option value="chinese">中文翻譯</option>
-                <option value="english">英文釋義</option>
+                <option value="chinese">
+                  {t("readingAssessmentPanel.row.chineseTranslation")}
+                </option>
+                <option value="english">
+                  {t("readingAssessmentPanel.row.englishDefinition")}
+                </option>
               </select>
               <button
                 onClick={() => handleGenerateSingleDefinition(index)}
                 className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                title={`生成${(row.selectedLanguage || "chinese") === "chinese" ? "中文翻譯" : "英文釋義"}`}
+                title={
+                  (row.selectedLanguage || "chinese") === "chinese"
+                    ? t("readingAssessmentPanel.row.generateChinese")
+                    : t("readingAssessmentPanel.row.generateEnglish")
+                }
               >
                 <Globe className="h-4 w-4" />
                 <span className="text-xs">
@@ -973,14 +1055,14 @@ function SortableRowInner({
         <button
           onClick={() => handleDuplicateRow(index)}
           className="p-1 rounded hover:bg-gray-200"
-          title="複製"
+          title={t("readingAssessmentPanel.row.duplicate")}
         >
           <Copy className="h-4 w-4 text-gray-600" />
         </button>
         <button
           onClick={() => handleRemoveRow(index)}
           className="p-1 rounded hover:bg-gray-200"
-          title="刪除"
+          title={t("readingAssessmentPanel.row.delete")}
           disabled={rowsLength <= 1}
         >
           <Trash2
@@ -1013,7 +1095,8 @@ export default function ReadingAssessmentPanel({
   lessonId,
   isCreating = false,
 }: ReadingAssessmentPanelProps) {
-  const [title, setTitle] = useState("朗讀評測內容");
+  const { t } = useTranslation();
+  const [title, setTitle] = useState(t("readingAssessmentPanel.defaultTitle"));
   const [rows, setRows] = useState<ContentRow[]>([
     {
       id: "1",
@@ -1110,7 +1193,7 @@ export default function ReadingAssessmentPanel({
       }
     } catch (error) {
       console.error("Failed to load content:", error);
-      toast.error("載入內容失敗");
+      toast.error(t("readingAssessmentPanel.save.loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -1150,7 +1233,7 @@ export default function ReadingAssessmentPanel({
 
   const handleAddRow = () => {
     if (rows.length >= 15) {
-      toast.error("最多只能新增 15 列");
+      toast.error(t("readingAssessmentPanel.row.maxRowsReached"));
       return;
     }
     // 找出最大的 ID 數字，然後加 1
@@ -1167,7 +1250,7 @@ export default function ReadingAssessmentPanel({
 
   const handleDeleteRow = (index: number) => {
     if (rows.length <= 1) {
-      toast.error("至少需要保留 1 列");
+      toast.error(t("readingAssessmentPanel.row.minRowsRequired"));
       return;
     }
     const newRows = rows.filter((_, i) => i !== index);
@@ -1176,7 +1259,7 @@ export default function ReadingAssessmentPanel({
 
   const handleCopyRow = (index: number) => {
     if (rows.length >= 15) {
-      toast.error("最多只能新增 15 列");
+      toast.error(t("readingAssessmentPanel.row.maxRowsReached"));
       return;
     }
     const rowToCopy = rows[index];
@@ -1222,16 +1305,20 @@ export default function ReadingAssessmentPanel({
           items,
         });
 
-        toast.success("已移除音檔");
+        toast.success(
+          t("readingAssessmentPanel.ttsModal.messages.audioRemoved"),
+        );
       } catch (error) {
         console.error("Failed to remove audio:", error);
-        toast.error("移除音檔失敗");
+        toast.error(
+          t("readingAssessmentPanel.ttsModal.messages.removeAudioFailed"),
+        );
         // 恢復原始狀態
         const originalRows = [...rows];
         setRows(originalRows);
       }
     } else {
-      toast.info("已移除音檔");
+      toast.info(t("readingAssessmentPanel.ttsModal.messages.audioRemoved"));
     }
   };
 
@@ -1335,7 +1422,7 @@ export default function ReadingAssessmentPanel({
             }
           } catch (error) {
             console.error("Failed to update content:", error);
-            toast.error("更新失敗，但音檔已生成");
+            toast.error(t("readingAssessmentPanel.save.updateFailed"));
           }
         } else {
           // 沒有 content ID，音檔將在儲存時上傳
@@ -1360,11 +1447,15 @@ export default function ReadingAssessmentPanel({
         .map((row) => row.text);
 
       if (textsToGenerate.length === 0) {
-        toast.info("所有項目都已有音檔");
+        toast.info(t("readingAssessmentPanel.tts.noItemsToGenerate"));
         return;
       }
 
-      toast.info(`正在生成 ${textsToGenerate.length} 個音檔...`);
+      toast.info(
+        t("readingAssessmentPanel.tts.batchGenerating", {
+          count: textsToGenerate.length,
+        }),
+      );
 
       // 批次生成 TTS
       const result = await apiClient.batchGenerateTTS(
@@ -1420,7 +1511,9 @@ export default function ReadingAssessmentPanel({
           }
 
           toast.success(
-            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+            t("readingAssessmentPanel.tts.batchSuccess", {
+              count: textsToGenerate.length,
+            }),
           );
         } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
@@ -1441,21 +1534,27 @@ export default function ReadingAssessmentPanel({
               });
             }
 
-            toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
+            toast.success(
+              t("readingAssessmentPanel.tts.batchSuccessAndSaved", {
+                count: textsToGenerate.length,
+              }),
+            );
           } catch (error) {
             console.error("Failed to save TTS:", error);
-            toast.error("儲存失敗，但音檔已生成");
+            toast.error(t("readingAssessmentPanel.tts.saveFailed"));
           }
         } else {
           // 沒有 content ID，只是本地更新
           toast.success(
-            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+            t("readingAssessmentPanel.tts.batchSuccess", {
+              count: textsToGenerate.length,
+            }),
           );
         }
       }
     } catch (error) {
       console.error("Batch TTS generation failed:", error);
-      toast.error("批次生成失敗，請重試");
+      toast.error(t("readingAssessmentPanel.tts.batchFailed"));
     }
   };
 
@@ -1471,11 +1570,11 @@ export default function ReadingAssessmentPanel({
   ) => {
     const newRows = [...rows];
     if (!newRows[index].text) {
-      toast.error("請先輸入文本");
+      toast.error(t("readingAssessmentPanel.translation.enterTextFirst"));
       return;
     }
 
-    toast.info(`生成翻譯中...`);
+    toast.info(t("readingAssessmentPanel.translation.translating"));
     try {
       const response = (await apiClient.translateText(
         newRows[index].text,
@@ -1493,11 +1592,13 @@ export default function ReadingAssessmentPanel({
 
       setRows(newRows);
       toast.success(
-        `${targetLang === "chinese" ? "中文翻譯" : "英文釋義"}生成完成`,
+        targetLang === "chinese"
+          ? t("readingAssessmentPanel.translation.chineseComplete")
+          : t("readingAssessmentPanel.translation.englishComplete"),
       );
     } catch (error) {
       console.error("Translation error:", error);
-      toast.error("翻譯失敗，請稍後再試");
+      toast.error(t("readingAssessmentPanel.translation.translationFailed"));
     }
   };
 
@@ -1512,11 +1613,11 @@ export default function ReadingAssessmentPanel({
     });
 
     if (itemsToTranslate.length === 0) {
-      toast.info("沒有需要翻譯的項目");
+      toast.info(t("readingAssessmentPanel.translation.noItemsToTranslate"));
       return;
     }
 
-    toast.info(`開始批次生成翻譯...`);
+    toast.info(t("readingAssessmentPanel.translation.batchTranslating"));
     const newRows = [...rows];
 
     try {
@@ -1571,10 +1672,14 @@ export default function ReadingAssessmentPanel({
       });
 
       setRows(newRows);
-      toast.success(`批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目`);
+      toast.success(
+        t("readingAssessmentPanel.translation.batchComplete", {
+          count: itemsToTranslate.length,
+        }),
+      );
     } catch (error) {
       console.error("Batch translation error:", error);
-      toast.error("批次翻譯失敗，請稍後再試");
+      toast.error(t("readingAssessmentPanel.translation.batchFailed"));
     }
   };
 
@@ -1586,11 +1691,17 @@ export default function ReadingAssessmentPanel({
       .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
-      toast.error("請輸入內容");
+      toast.error(
+        t("readingAssessmentPanel.batchPasteDialog.messages.noContent"),
+      );
       return;
     }
 
-    toast.info(`正在處理 ${lines.length} 個項目...`);
+    toast.info(
+      t("readingAssessmentPanel.batchPasteDialog.messages.processing", {
+        count: lines.length,
+      }),
+    );
 
     // 清除空白 items
     const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
@@ -1646,7 +1757,11 @@ export default function ReadingAssessmentPanel({
         }
       } catch (error) {
         console.error("Batch processing error:", error);
-        toast.error("批次處理失敗");
+        toast.error(
+          t(
+            "readingAssessmentPanel.batchPasteDialog.messages.batchProcessingFailed",
+          ),
+        );
         return;
       }
     }
@@ -1660,7 +1775,7 @@ export default function ReadingAssessmentPanel({
     // 🔥 重點：直接儲存到資料庫
     try {
       const saveData = {
-        title: title || "朗讀評測內容",
+        title: title || t("readingAssessmentPanel.defaultTitle"),
         items: updatedRows.map((row) => ({
           text: row.text.trim(),
           definition: row.definition || "",
@@ -1680,7 +1795,10 @@ export default function ReadingAssessmentPanel({
         // 編輯模式：更新現有內容
         await apiClient.updateContent(existingContentId, saveData);
         toast.success(
-          `已新增 ${lines.length} 個項目並儲存（共 ${updatedRows.length} 個）`,
+          t("readingAssessmentPanel.batchPasteDialog.messages.addedAndSaved", {
+            count: lines.length,
+            total: updatedRows.length,
+          }),
         );
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
@@ -1688,17 +1806,27 @@ export default function ReadingAssessmentPanel({
           type: "reading_assessment",
           ...saveData,
         });
-        toast.success(`已新增 ${lines.length} 個項目並創建內容`);
+        toast.success(
+          t(
+            "readingAssessmentPanel.batchPasteDialog.messages.addedAndCreated",
+            { count: lines.length },
+          ),
+        );
         // 🔥 不要呼叫 onSave 避免重新載入，直接顯示結果
       } else {
         // 沒有 contentId 也沒有 lessonId，只更新前端
         toast.success(
-          `已新增 ${lines.length} 個項目（共 ${updatedRows.length} 個）`,
+          t("readingAssessmentPanel.batchPasteDialog.messages.added", {
+            count: lines.length,
+            total: updatedRows.length,
+          }),
         );
       }
     } catch (error) {
       console.error("Failed to save batch paste:", error);
-      toast.error("儲存失敗，請稍後再試");
+      toast.error(
+        t("readingAssessmentPanel.batchPasteDialog.messages.saveFailed"),
+      );
       return;
     }
 
@@ -1711,7 +1839,9 @@ export default function ReadingAssessmentPanel({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">
+            {t("readingAssessmentPanel.save.loading")}
+          </p>
         </div>
       </div>
     );
@@ -1724,13 +1854,14 @@ export default function ReadingAssessmentPanel({
         {/* Title Input - Show in both create and edit mode */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">
-            標題 <span className="text-red-500">*</span>
+            {t("readingAssessmentPanel.title")}{" "}
+            <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="請輸入內容標題"
+            placeholder={t("readingAssessmentPanel.titleRequired")}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -1742,30 +1873,34 @@ export default function ReadingAssessmentPanel({
             size="sm"
             onClick={() => setBatchPasteDialogOpen(true)}
             className="bg-blue-100 hover:bg-blue-200 border-blue-300"
-            title="批次貼上素材，每行一個項目"
+            title={t("readingAssessmentPanel.batchActions.batchPasteTooltip")}
           >
             <Clipboard className="h-4 w-4 mr-1" />
-            批次貼上
+            {t("readingAssessmentPanel.batchActions.batchPaste")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleBatchGenerateTTS}
             className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
-            title="使用免費的 Microsoft Edge TTS 生成語音"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTTSTooltip",
+            )}
           >
             <Volume2 className="h-4 w-4 mr-1" />
-            批次生成TTS
+            {t("readingAssessmentPanel.batchActions.batchGenerateTTS")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleBatchGenerateDefinitions()}
             className="bg-green-100 hover:bg-green-200 border-green-300"
-            title="批次生成翻譯（根據各行語言設定）"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTranslationTooltip",
+            )}
           >
             <Globe className="h-4 w-4 mr-1" />
-            批次生成翻譯
+            {t("readingAssessmentPanel.batchActions.batchGenerateTranslation")}
           </Button>
         </div>
       </div>
@@ -1812,7 +1947,7 @@ export default function ReadingAssessmentPanel({
               disabled={rows.length >= 15}
             >
               <Plus className="h-5 w-5" />
-              新增項目
+              {t("readingAssessmentPanel.row.addItem")}
             </button>
           </div>
         </SortableContext>
@@ -1839,16 +1974,16 @@ export default function ReadingAssessmentPanel({
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="pb-4 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900">
-              批次貼上素材
+              {t("readingAssessmentPanel.batchPasteDialog.title")}
             </DialogTitle>
             <p className="text-sm text-gray-500 mt-2">
-              每行一個項目，支援自動生成 TTS 與翻譯
+              {t("readingAssessmentPanel.batchPasteDialog.description")}
             </p>
           </DialogHeader>
           <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
-                請貼上內容：
+                {t("readingAssessmentPanel.batchPasteDialog.inputLabel")}
               </label>
               <textarea
                 value={batchPasteText}
@@ -1857,9 +1992,11 @@ export default function ReadingAssessmentPanel({
                 className="w-full min-h-80 max-h-[60vh] px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-y overflow-y-auto"
               />
               <div className="text-xs text-gray-500 mt-2">
-                {batchPasteText.split("\n").filter((line) => line.trim())
-                  .length || 0}{" "}
-                個項目
+                {t("readingAssessmentPanel.batchPasteDialog.itemCount", {
+                  count:
+                    batchPasteText.split("\n").filter((line) => line.trim())
+                      .length || 0,
+                })}
               </div>
             </div>
             <div className="flex gap-6 p-4 bg-gray-50 rounded-lg">
@@ -1871,7 +2008,7 @@ export default function ReadingAssessmentPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動生成 TTS
+                  {t("readingAssessmentPanel.batchPasteDialog.autoGenerateTTS")}
                 </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -1882,7 +2019,7 @@ export default function ReadingAssessmentPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動翻譯
+                  {t("readingAssessmentPanel.batchPasteDialog.autoTranslate")}
                 </span>
               </label>
             </div>
@@ -1893,7 +2030,7 @@ export default function ReadingAssessmentPanel({
               onClick={() => setBatchPasteDialogOpen(false)}
               className="px-6 py-2 text-base"
             >
-              取消
+              {t("readingAssessmentPanel.batchPasteDialog.cancel")}
             </Button>
             <Button
               onClick={() =>
@@ -1901,7 +2038,7 @@ export default function ReadingAssessmentPanel({
               }
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              確認貼上
+              {t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1920,12 +2057,12 @@ export default function ReadingAssessmentPanel({
               );
 
               if (validRows.length === 0) {
-                toast.error("請至少新增一個內容項目");
+                toast.error(t("readingAssessmentPanel.save.atLeastOneItem"));
                 return;
               }
 
               if (!title || title.trim() === "") {
-                toast.error("請輸入標題");
+                toast.error(t("readingAssessmentPanel.save.titleRequired"));
                 return;
               }
 
@@ -1953,7 +2090,7 @@ export default function ReadingAssessmentPanel({
                 // 編輯模式：更新現有內容
                 try {
                   await apiClient.updateContent(existingContentId, saveData);
-                  toast.success("儲存成功");
+                  toast.success(t("readingAssessmentPanel.save.saveSuccess"));
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)({
@@ -1964,7 +2101,7 @@ export default function ReadingAssessmentPanel({
                   }
                 } catch (error) {
                   console.error("Failed to update content:", error);
-                  toast.error("儲存失敗");
+                  toast.error(t("readingAssessmentPanel.save.saveFailed"));
                 }
               } else if (isCreating && lessonId) {
                 // 創建模式：新增內容
@@ -1973,7 +2110,7 @@ export default function ReadingAssessmentPanel({
                     type: "reading_assessment",
                     ...saveData,
                   });
-                  toast.success("內容已成功創建");
+                  toast.success(t("readingAssessmentPanel.save.createSuccess"));
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)(
@@ -1982,12 +2119,12 @@ export default function ReadingAssessmentPanel({
                   }
                 } catch (error) {
                   console.error("Failed to create content:", error);
-                  toast.error("創建內容失敗");
+                  toast.error(t("readingAssessmentPanel.save.createFailed"));
                 }
               }
             }}
           >
-            儲存
+            {t("readingAssessmentPanel.save.button")}
           </Button>
         </div>
       )}

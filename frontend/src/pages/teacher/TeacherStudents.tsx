@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import TeacherLayout from "@/components/TeacherLayout";
 import StudentTable, { Student } from "@/components/StudentTable";
@@ -27,6 +28,7 @@ import { Classroom } from "@/types";
 // }
 
 export default function TeacherStudents() {
+  const { t } = useTranslation();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -97,7 +99,8 @@ export default function TeacherStudents() {
             status: student.status || ("active" as const),
             last_login: student.last_login || null,
             classroom_id: student.classroom_id,
-            classroom_name: student.classroom_name || "未分配",
+            classroom_name:
+              student.classroom_name || t("teacherStudents.filters.unassigned"),
           };
         },
       );
@@ -152,18 +155,26 @@ export default function TeacherStudents() {
   };
 
   const handleResetPassword = async (student: Student) => {
-    if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
+    if (
+      !confirm(
+        t("teacherStudents.messages.confirmResetPassword", {
+          name: student.name,
+        }),
+      )
+    ) {
       return;
     }
 
     try {
       await apiClient.resetStudentPassword(student.id);
-      toast.success(`已重設 ${student.name} 的密碼為預設密碼`);
+      toast.success(
+        `${t("teacherStudents.messages.passwordReset", { name: student.name })}`,
+      );
       // Refresh data
       fetchClassrooms();
     } catch (error) {
       console.error("Failed to reset password:", error);
-      toast.error("重設密碼失敗，請稍後再試");
+      toast.error(t("teacherStudents.messages.resetPasswordFailed"));
     }
   };
 
@@ -175,12 +186,14 @@ export default function TeacherStudents() {
   const handleDeleteStudent = async (student: Student) => {
     try {
       await apiClient.deleteStudent(student.id);
-      toast.success(`已刪除學生：${student.name}`);
+      toast.success(
+        `${t("teacherStudents.messages.studentDeleted", { name: student.name })}`,
+      );
       // Refresh data after delete
       fetchClassrooms();
     } catch (error) {
       console.error("Failed to delete student:", error);
-      toast.error("刪除學生失敗，請稍後再試");
+      toast.error(t("teacherStudents.messages.deleteStudentFailed"));
     }
   };
 
@@ -195,33 +208,32 @@ export default function TeacherStudents() {
   };
 
   const handleExportStudents = () => {
-    // 準備 CSV 資料
     const headers = [
-      "姓名",
-      "Email",
-      "學號",
-      "生日",
-      "班級",
-      "密碼狀態",
-      "最後登入",
+      t("teacherStudents.csvHeaders.name"),
+      t("teacherStudents.csvHeaders.email"),
+      t("teacherStudents.csvHeaders.studentNumber"),
+      t("teacherStudents.csvHeaders.birthdate"),
+      t("teacherStudents.csvHeaders.classroom"),
+      t("teacherStudents.csvHeaders.passwordStatus"),
+      t("teacherStudents.csvHeaders.lastLogin"),
     ];
     const rows = filteredStudents.map((student) => [
       student.name,
       student.email || "-",
       student.student_number || "-",
       student.birthdate || "-",
-      student.classroom_name || "未分配",
-      student.password_changed ? "已更改" : "預設密碼",
-      student.last_login || "從未登入",
+      student.classroom_name || t("teacherStudents.filters.unassigned"),
+      student.password_changed
+        ? t("teacherStudents.csvHeaders.passwordChanged")
+        : t("teacherStudents.csvHeaders.defaultPassword"),
+      student.last_login || t("teacherStudents.csvHeaders.neverLoggedIn"),
     ]);
 
-    // 建立 CSV 內容
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
 
-    // 建立下載連結
     const blob = new Blob(["\uFEFF" + csvContent], {
       type: "text/csv;charset=utf-8;",
     });
@@ -230,14 +242,16 @@ export default function TeacherStudents() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `學生名單_${new Date().toISOString().split("T")[0]}.csv`,
+      `${t("teacherStudents.csvHeaders.name")}_${new Date().toISOString().split("T")[0]}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success(`已匯出 ${filteredStudents.length} 位學生資料`);
+    toast.success(
+      `${t("teacherStudents.messages.exportSuccess", { count: filteredStudents.length })}`,
+    );
   };
 
   const handleBulkAction = async (action: string, studentIds: number[]) => {
@@ -253,16 +267,24 @@ export default function TeacherStudents() {
       // Show classroom selection dialog
       setShowAssignDialog(true);
     } else if (action === "delete") {
-      if (confirm(`確定要刪除 ${studentIds.length} 位學生嗎？`)) {
+      if (
+        confirm(
+          t("teacherStudents.messages.confirmBulkDelete", {
+            count: studentIds.length,
+          }),
+        )
+      ) {
         try {
           for (const studentId of studentIds) {
             await apiClient.deleteStudent(studentId);
           }
-          toast.success(`成功刪除 ${studentIds.length} 位學生`);
+          toast.success(
+            `${t("teacherStudents.messages.bulkDeleteSuccess", { count: studentIds.length })}`,
+          );
           fetchClassrooms();
         } catch (error) {
           console.error("Failed to delete students:", error);
-          toast.error("刪除失敗，請稍後再試");
+          toast.error(t("teacherStudents.messages.deleteFailed"));
         }
       }
     }
@@ -274,7 +296,7 @@ export default function TeacherStudents() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -287,14 +309,16 @@ export default function TeacherStudents() {
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            所有學生
+            {t("teacherStudents.title")}
           </h2>
 
           {/* Bulk Actions Bar */}
           {selectedStudentIds.length > 0 && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                已選擇 {selectedStudentIds.length} 位學生
+                {t("teacherStudents.messages.selectedCount", {
+                  count: selectedStudentIds.length,
+                })}
               </span>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button
@@ -304,7 +328,7 @@ export default function TeacherStudents() {
                   className="flex-1 sm:flex-none"
                 >
                   <School className="h-4 w-4 mr-2" />
-                  批量分配
+                  {t("teacherStudents.buttons.bulkAssign")}
                 </Button>
                 <Button
                   size="sm"
@@ -313,7 +337,7 @@ export default function TeacherStudents() {
                   onClick={() => handleBulkAction("delete", selectedStudentIds)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  批量刪除
+                  {t("teacherStudents.buttons.bulkDelete")}
                 </Button>
               </div>
             </div>
@@ -325,7 +349,7 @@ export default function TeacherStudents() {
             <div className="flex flex-col sm:flex-row gap-2 flex-1">
               <input
                 type="text"
-                placeholder="搜尋學生姓名或 Email..."
+                placeholder={t("teacherStudents.placeholders.search")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="px-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm flex-1 sm:max-w-xs"
@@ -351,8 +375,12 @@ export default function TeacherStudents() {
                   }}
                   className="px-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm flex-1 sm:flex-none"
                 >
-                  <option value="">所有班級</option>
-                  <option value="0">未分配</option>
+                  <option value="">
+                    {t("teacherStudents.filters.allClassrooms")}
+                  </option>
+                  <option value="0">
+                    {t("teacherStudents.filters.unassigned")}
+                  </option>
                   {classrooms.map((classroom) => (
                     <option key={classroom.id} value={classroom.id}>
                       {classroom.name}
@@ -371,8 +399,12 @@ export default function TeacherStudents() {
                 className="flex-1 sm:flex-none"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">重新載入</span>
-                <span className="sm:hidden">載入</span>
+                <span className="hidden sm:inline">
+                  {t("teacherStudents.buttons.reload")}
+                </span>
+                <span className="sm:hidden">
+                  {t("teacherStudents.buttons.load")}
+                </span>
               </Button>
               <Button
                 variant="outline"
@@ -381,8 +413,12 @@ export default function TeacherStudents() {
                 className="flex-1 sm:flex-none"
               >
                 <Download className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">匯出名單</span>
-                <span className="sm:hidden">匯出</span>
+                <span className="hidden sm:inline">
+                  {t("teacherStudents.buttons.exportList")}
+                </span>
+                <span className="sm:hidden">
+                  {t("teacherStudents.buttons.export")}
+                </span>
               </Button>
               <Button
                 variant="outline"
@@ -391,8 +427,12 @@ export default function TeacherStudents() {
                 className="flex-1 sm:flex-none"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">批次匯入</span>
-                <span className="sm:hidden">匯入</span>
+                <span className="hidden sm:inline">
+                  {t("teacherStudents.buttons.batchImport")}
+                </span>
+                <span className="sm:hidden">
+                  {t("teacherStudents.buttons.import")}
+                </span>
               </Button>
               <Button
                 size="sm"
@@ -400,7 +440,7 @@ export default function TeacherStudents() {
                 className="flex-1 sm:flex-none"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                新增學生
+                {t("teacherStudents.buttons.addStudent")}
               </Button>
             </div>
           </div>
@@ -412,7 +452,7 @@ export default function TeacherStudents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  總學生數
+                  {t("teacherStudents.stats.totalStudents")}
                 </p>
                 <p className="text-2xl font-bold dark:text-gray-100">
                   {filteredStudents.length}
@@ -425,7 +465,7 @@ export default function TeacherStudents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  活躍學生
+                  {t("teacherStudents.stats.activeStudents")}
                 </p>
                 <p className="text-2xl font-bold dark:text-gray-100">
                   {filteredStudents.filter((s) => s.status === "active").length}
@@ -438,7 +478,7 @@ export default function TeacherStudents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  未活躍
+                  {t("teacherStudents.stats.inactive")}
                 </p>
                 <p className="text-2xl font-bold dark:text-gray-100">
                   {
@@ -454,7 +494,7 @@ export default function TeacherStudents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  已停權
+                  {t("teacherStudents.stats.suspended")}
                 </p>
                 <p className="text-2xl font-bold dark:text-gray-100">
                   {
@@ -485,10 +525,10 @@ export default function TeacherStudents() {
             onBulkAction={handleBulkAction}
             emptyMessage={
               searchTerm
-                ? "找不到符合條件的學生"
+                ? t("teacherStudents.messages.noStudentsFound")
                 : selectedClassroom
-                  ? "此班級暫無學生"
-                  : "尚未建立學生"
+                  ? t("teacherStudents.messages.noStudentsInClassroom")
+                  : t("teacherStudents.messages.noStudents")
             }
           />
         </div>
@@ -520,14 +560,14 @@ export default function TeacherStudents() {
               }
               const classroom = classrooms.find((c) => c.id === classroomId);
               toast.success(
-                `成功分配 ${selectedStudentIds.length} 位學生到「${classroom?.name}」`,
+                `${t("teacherStudents.messages.bulkAssignSuccess", { count: selectedStudentIds.length, classroom: classroom?.name })}`,
               );
               setSelectedStudentIds([]);
               setShowAssignDialog(false);
               fetchClassrooms();
             } catch (error) {
               console.error("Failed to assign students:", error);
-              toast.error("分配失敗，請稍後再試");
+              toast.error(t("teacherStudents.messages.assignFailed"));
             }
           })();
         }}

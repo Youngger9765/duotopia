@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -75,6 +76,7 @@ interface ClassroomDetailProps {
 export default function ClassroomDetail({
   isTemplateMode = false,
 }: ClassroomDetailProps) {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -320,7 +322,11 @@ export default function ClassroomDetail({
 
   const handleEditAssignment = (assignment: Assignment) => {
     // TODO: Open edit dialog with assignment data
-    toast.info(`準備編輯作業: ${assignment.title}`);
+    toast.info(
+      t("classroomDetail.messages.prepareEditAssignment", {
+        title: assignment.title,
+      }),
+    );
     setShowAssignmentDetails(false);
     // In production: open edit dialog
     // setEditingAssignment(assignment);
@@ -330,17 +336,23 @@ export default function ClassroomDetail({
   const handleDeleteAssignment = async (assignment: Assignment) => {
     if (
       confirm(
-        `確定要刪除作業「${assignment.title}」嗎？此操作將進行軟刪除，資料仍會保留。`,
+        t("classroomDetail.messages.confirmDeleteAssignment", {
+          title: assignment.title,
+        }),
       )
     ) {
       try {
         await apiClient.delete(`/api/teachers/assignments/${assignment.id}`);
-        toast.success(`作業「${assignment.title}」已刪除`);
+        toast.success(
+          t("classroomDetail.messages.assignmentDeleted", {
+            title: assignment.title,
+          }),
+        );
         setShowAssignmentDetails(false);
         fetchAssignments(); // Refresh the list
       } catch (error) {
         console.error("Failed to delete assignment:", error);
-        toast.error("刪除作業失敗，請稍後再試");
+        toast.error(t("classroomDetail.messages.deleteAssignmentFailed"));
       }
     }
   };
@@ -463,12 +475,12 @@ export default function ClassroomDetail({
         ),
       });
 
-      toast.success("內容已更新成功");
+      toast.success(t("classroomDetail.messages.contentUpdated"));
       await refreshPrograms();
       closePanel();
     } catch (error) {
       console.error("Failed to update content:", error);
-      toast.error("更新內容失敗，請稍後再試");
+      toast.error(t("classroomDetail.messages.updateContentFailed"));
     }
   };
 
@@ -489,7 +501,13 @@ export default function ClassroomDetail({
   };
 
   const handleResetPassword = async (student: Student) => {
-    if (!confirm(`確定要將 ${student.name} 的密碼重設為預設密碼嗎？`)) {
+    if (
+      !confirm(
+        t("classroomDetail.errors.confirmResetPassword", {
+          name: student.name,
+        }),
+      )
+    ) {
       return;
     }
 
@@ -499,7 +517,7 @@ export default function ClassroomDetail({
       fetchClassroomDetail();
     } catch (error) {
       console.error("Failed to reset password:", error);
-      alert("重設密碼失敗，請稍後再試");
+      alert(t("classroomDetail.messages.resetPasswordFailed"));
     }
   };
 
@@ -602,7 +620,11 @@ export default function ClassroomDetail({
           return program;
         }),
       );
-      toast.success(`單元「${savedLesson.name}」已新增`);
+      toast.success(
+        t("teacherTemplatePrograms.messages.lessonAdded", {
+          name: savedLesson.name,
+        }),
+      );
     } else if (lessonDialogType === "edit") {
       // 編輯單元：更新對應的單元
       setPrograms((prevPrograms) =>
@@ -614,7 +636,11 @@ export default function ClassroomDetail({
             ) || [],
         })),
       );
-      toast.success(`單元「${savedLesson.name}」已更新`);
+      toast.success(
+        t("teacherTemplatePrograms.messages.lessonUpdated", {
+          name: savedLesson.name,
+        }),
+      );
     }
   };
 
@@ -623,7 +649,13 @@ export default function ClassroomDetail({
     contentId: number,
     contentTitle: string,
   ) => {
-    if (!confirm(`確定要刪除內容「${contentTitle}」嗎？此操作無法復原。`)) {
+    if (
+      !confirm(
+        t("classroomDetail.messages.confirmDeleteContent", {
+          title: contentTitle,
+        }),
+      )
+    ) {
       return;
     }
 
@@ -647,10 +679,12 @@ export default function ClassroomDetail({
         })),
       );
 
-      toast.success(`內容「${contentTitle}」已刪除`);
+      toast.success(
+        t("classroomDetail.messages.contentDeleted", { title: contentTitle }),
+      );
     } catch (error) {
       console.error("Failed to delete content:", error);
-      toast.error("刪除內容失敗，請稍後再試");
+      toast.error(t("classroomDetail.messages.deleteContentFailed"));
     }
   };
 
@@ -662,7 +696,7 @@ export default function ClassroomDetail({
       );
 
       if (!programWithLesson) {
-        toast.error("找不到單元所屬的課程");
+        toast.error(t("classroomDetail.messages.lessonNotFoundInProgram"));
         return;
       }
 
@@ -687,10 +721,10 @@ export default function ClassroomDetail({
       });
       setPrograms(updatedPrograms);
 
-      toast.success("單元已刪除");
+      toast.success(t("classroomDetail.messages.lessonDeleted"));
     } catch (error) {
       console.error("Failed to delete lesson:", error);
-      toast.error("刪除單元失敗，請稍後再試");
+      toast.error(t("classroomDetail.messages.deleteLessonFailed"));
     }
   };
 
@@ -813,10 +847,10 @@ export default function ClassroomDetail({
       }));
 
       await apiClient.reorderContents(lessonId, orderData);
-      toast.success("排序成功");
+      toast.success(t("classroomDetail.messages.reorderSuccess"));
     } catch (err) {
       console.error("Failed to reorder contents:", err);
-      toast.error("排序失敗");
+      toast.error(t("classroomDetail.messages.reorderFailed"));
       // Revert on error
       setPrograms(originalPrograms);
     }
@@ -851,10 +885,14 @@ export default function ClassroomDetail({
       // For other content types, create directly
       try {
         const contentTypeNames: Record<string, string> = {
-          reading_assessment: "朗讀錄音練習",
+          reading_assessment: t(
+            "classroomDetail.contentTypes.readingRecordingPractice",
+          ),
         };
 
-        const title = contentTypeNames[selection.type] || "新內容";
+        const title =
+          contentTypeNames[selection.type] ||
+          t("classroomDetail.contentTypes.newContent");
         const items: Array<{ text: string; translation?: string }> = [];
 
         await apiClient.createContent(selection.lessonId, {
@@ -865,11 +903,11 @@ export default function ClassroomDetail({
           target_accuracy: 0.8,
         });
 
-        toast.success("內容已創建成功");
+        toast.success(t("classroomDetail.messages.contentCreated"));
         await refreshPrograms();
       } catch (error) {
         console.error("Failed to create content:", error);
-        toast.error("創建內容失敗，請稍後再試");
+        toast.error(t("classroomDetail.messages.createContentFailed"));
       }
     }
   };
@@ -880,7 +918,7 @@ export default function ClassroomDetail({
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
       </TeacherLayout>
@@ -891,12 +929,14 @@ export default function ClassroomDetail({
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到班級資料</p>
+          <p className="text-gray-500">
+            {t("classroomDetail.messages.notFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() => navigate("/teacher/classrooms")}
           >
-            返回班級列表
+            {t("classroomDetail.buttons.backToList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -907,12 +947,14 @@ export default function ClassroomDetail({
     return (
       <TeacherLayout>
         <div className="text-center py-12">
-          <p className="text-gray-500">找不到模板課程資料</p>
+          <p className="text-gray-500">
+            {t("classroomDetail.messages.templateNotFound")}
+          </p>
           <Button
             className="mt-4"
             onClick={() => navigate("/teacher/programs")}
           >
-            返回模板課程列表
+            {t("classroomDetail.buttons.backToProgramList")}
           </Button>
         </div>
       </TeacherLayout>
@@ -941,7 +983,7 @@ export default function ClassroomDetail({
                 className="flex-shrink-0"
               >
                 <ArrowLeft className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">返回</span>
+                <span className="hidden sm:inline">{t("common.back")}</span>
               </Button>
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
@@ -966,7 +1008,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">學生數</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.studentCount")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {classroom?.student_count || 0}
                     </p>
@@ -977,7 +1021,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">課程數</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.programCount")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {programs.length}
                     </p>
@@ -988,7 +1034,9 @@ export default function ClassroomDetail({
               <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600">等級</p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {t("classroomDetail.stats.level")}
+                    </p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {classroom?.level || "A1"}
                     </p>
@@ -1021,16 +1069,24 @@ export default function ClassroomDetail({
                       className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                     >
                       <Users className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">學生列表</span>
-                      <span className="sm:hidden text-[10px]">學生</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.studentList")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.students")}
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="programs"
                       className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                     >
                       <BookOpen className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">課程列表</span>
-                      <span className="sm:hidden text-[10px]">課程</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.programList")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.programs")}
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="assignments"
@@ -1044,14 +1100,20 @@ export default function ClassroomDetail({
                         if (!canAssignHomework) {
                           e.preventDefault();
                           toast.error(
-                            "您的訂閱已過期，無法使用作業管理功能。請先充值續訂。",
+                            t(
+                              "classroomDetail.messages.subscriptionExpiredFeature",
+                            ),
                           );
                         }
                       }}
                     >
                       <FileText className="h-5 w-5 sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">作業管理</span>
-                      <span className="sm:hidden text-[10px]">作業</span>
+                      <span className="hidden sm:inline">
+                        {t("classroomDetail.tabs.assignmentManagement")}
+                      </span>
+                      <span className="sm:hidden text-[10px]">
+                        {t("classroomDetail.tabs.assignments")}
+                      </span>
                     </TabsTrigger>
                   </TabsList>
                 )}
@@ -1062,7 +1124,7 @@ export default function ClassroomDetail({
                 <TabsContent value="students" className="p-3 sm:p-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
                     <h3 className="text-base sm:text-lg font-semibold">
-                      班級學生
+                      {t("classroomDetail.sections.classStudents")}
                     </h3>
                     <Button
                       size="sm"
@@ -1070,7 +1132,7 @@ export default function ClassroomDetail({
                       className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      新增學生
+                      {t("classroomDetail.buttons.addStudent")}
                     </Button>
                   </div>
 
@@ -1081,7 +1143,7 @@ export default function ClassroomDetail({
                     onViewStudent={handleViewStudent}
                     onEditStudent={handleEditStudent}
                     onResetPassword={handleResetPassword}
-                    emptyMessage="此班級尚無學生"
+                    emptyMessage={t("classroomDetail.messages.noStudents")}
                   />
                 </TabsContent>
               )}
@@ -1090,7 +1152,9 @@ export default function ClassroomDetail({
               <TabsContent value="programs" className="p-3 sm:p-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
                   <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                    {isTemplateMode ? "模板課程內容" : "班級課程"}
+                    {isTemplateMode
+                      ? t("classroomDetail.sections.templateContent")
+                      : t("classroomDetail.sections.classPrograms")}
                   </h3>
                   {!isTemplateMode && (
                     <Button
@@ -1099,7 +1163,7 @@ export default function ClassroomDetail({
                       className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      建立課程
+                      {t("classroomDetail.buttons.createProgram")}
                     </Button>
                   )}
                 </div>
@@ -1178,16 +1242,24 @@ export default function ClassroomDetail({
                     {/* Header with Create Button */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                        作業列表
+                        {t("classroomDetail.sections.assignmentList")}
                       </h3>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                         {!canAssignHomework && teacherData && (
                           <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                            <span className="font-medium">⚠️ 訂閱已過期</span>
+                            <span className="font-medium">
+                              {t(
+                                "classroomDetail.labels.subscriptionExpiredWarning",
+                              )}
+                            </span>
                             <span className="text-xs ml-2">
                               {teacherData.subscription_status === "subscribed"
-                                ? `剩餘 ${teacherData.days_remaining || 0} 天`
-                                : "需要訂閱才能指派作業"}
+                                ? t("classroomDetail.labels.daysRemaining", {
+                                    days: teacherData.days_remaining || 0,
+                                  })
+                                : t(
+                                    "classroomDetail.labels.requiresSubscription",
+                                  )}
                             </span>
                           </div>
                         )}
@@ -1195,7 +1267,9 @@ export default function ClassroomDetail({
                           onClick={() => {
                             if (!canAssignHomework) {
                               toast.error(
-                                "您的訂閱已過期，無法指派作業。請先充值續訂。",
+                                t(
+                                  "classroomDetail.messages.subscriptionExpired",
+                                ),
                               );
                               return;
                             }
@@ -1209,7 +1283,7 @@ export default function ClassroomDetail({
                           }`}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          指派新作業
+                          {t("classroomDetail.buttons.assignNewHomework")}
                         </Button>
                       </div>
                     </div>
@@ -1218,7 +1292,7 @@ export default function ClassroomDetail({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          總作業數
+                          {t("classroomDetail.stats.totalAssignments")}
                         </div>
                         <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
                           {assignments.length}
@@ -1226,7 +1300,7 @@ export default function ClassroomDetail({
                       </div>
                       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          已完成
+                          {t("classroomDetail.stats.completedAssignments")}
                         </div>
                         <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                           {
@@ -1237,7 +1311,7 @@ export default function ClassroomDetail({
                       </div>
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          進行中
+                          {t("classroomDetail.stats.inProgressAssignments")}
                         </div>
                         <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                           {
@@ -1251,7 +1325,7 @@ export default function ClassroomDetail({
                       </div>
                       <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          已逾期
+                          {t("classroomDetail.stats.overdueAssignments")}
                         </div>
                         <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                           {
@@ -1275,32 +1349,44 @@ export default function ClassroomDetail({
                               { label: string; color: string }
                             > = {
                               READING_ASSESSMENT: {
-                                label: "朗讀評測",
+                                label: t(
+                                  "classroomDetail.contentTypes.readingAssessment",
+                                ),
                                 color:
                                   "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                               },
                               SPEAKING_PRACTICE: {
-                                label: "口說練習",
+                                label: t(
+                                  "classroomDetail.contentTypes.speakingPractice",
+                                ),
                                 color:
                                   "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                               },
                               SPEAKING_SCENARIO: {
-                                label: "情境對話",
+                                label: t(
+                                  "classroomDetail.contentTypes.speakingScenario",
+                                ),
                                 color:
                                   "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
                               },
                               LISTENING_CLOZE: {
-                                label: "聽力填空",
+                                label: t(
+                                  "classroomDetail.contentTypes.listeningCloze",
+                                ),
                                 color:
                                   "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
                               },
                               SENTENCE_MAKING: {
-                                label: "造句練習",
+                                label: t(
+                                  "classroomDetail.contentTypes.sentenceMaking",
+                                ),
                                 color:
                                   "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
                               },
                               SPEAKING_QUIZ: {
-                                label: "口說測驗",
+                                label: t(
+                                  "classroomDetail.contentTypes.speakingQuiz",
+                                ),
                                 color:
                                   "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
                               },
@@ -1308,7 +1394,9 @@ export default function ClassroomDetail({
                             const typeInfo = contentTypeLabels[
                               assignment.content_type || ""
                             ] || {
-                              label: assignment.content_type || "未知類型",
+                              label:
+                                assignment.content_type ||
+                                t("classroomDetail.labels.unknownType"),
                               color:
                                 "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
                             };
@@ -1325,7 +1413,10 @@ export default function ClassroomDetail({
                                       {assignment.title}
                                     </h4>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">
-                                      {assignment.instructions || "無說明"}
+                                      {assignment.instructions ||
+                                        t(
+                                          "classroomDetail.labels.noDescription",
+                                        )}
                                     </p>
                                   </div>
                                   <span
@@ -1339,24 +1430,26 @@ export default function ClassroomDetail({
                                 <div className="grid grid-cols-2 gap-3 text-sm">
                                   <div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      指派對象
+                                      {t("classroomDetail.labels.assignedTo")}
                                     </div>
                                     <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
                                       {assignment.student_count
                                         ? `${assignment.student_count} 人`
-                                        : "全班"}
+                                        : t("classroomDetail.labels.allClass")}
                                     </div>
                                   </div>
                                   <div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      截止日期
+                                      {t("classroomDetail.labels.dueDate")}
                                     </div>
                                     <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
                                       {assignment.due_date
                                         ? new Date(
                                             assignment.due_date,
                                           ).toLocaleDateString("zh-TW")
-                                        : "無期限"}
+                                        : t(
+                                            "classroomDetail.labels.noDeadline",
+                                          )}
                                     </div>
                                   </div>
                                 </div>
@@ -1365,7 +1458,9 @@ export default function ClassroomDetail({
                                 <div>
                                   <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                                      完成進度
+                                      {t(
+                                        "classroomDetail.labels.completionProgress",
+                                      )}
                                     </span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                       {completionRate}%
@@ -1391,7 +1486,7 @@ export default function ClassroomDetail({
                                       );
                                     }}
                                   >
-                                    查看詳情
+                                    {t("classroomDetail.buttons.viewDetails")}
                                   </Button>
                                   <Button
                                     variant="outline"
@@ -1403,7 +1498,7 @@ export default function ClassroomDetail({
                                       );
                                     }}
                                   >
-                                    預覽示範
+                                    {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
                                 </div>
                               </div>
@@ -1417,22 +1512,24 @@ export default function ClassroomDetail({
                             <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                               <tr>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  作業標題
+                                  {t("classroomDetail.labels.assignmentTitle")}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  內容類型
+                                  {t("classroomDetail.labels.contentType")}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  指派對象
+                                  {t("classroomDetail.labels.assignedTo")}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  截止日期
+                                  {t("classroomDetail.labels.dueDate")}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  完成狀態
+                                  {t(
+                                    "classroomDetail.labels.completionProgress",
+                                  )}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                  操作
+                                  {t("common.actions", "操作")}
                                 </th>
                               </tr>
                             </thead>
@@ -1445,32 +1542,44 @@ export default function ClassroomDetail({
                                   { label: string; color: string }
                                 > = {
                                   READING_ASSESSMENT: {
-                                    label: "朗讀評測",
+                                    label: t(
+                                      "classroomDetail.contentTypes.readingAssessment",
+                                    ),
                                     color:
                                       "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                                   },
                                   SPEAKING_PRACTICE: {
-                                    label: "口說練習",
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingPractice",
+                                    ),
                                     color:
                                       "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                   },
                                   SPEAKING_SCENARIO: {
-                                    label: "情境對話",
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingScenario",
+                                    ),
                                     color:
                                       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
                                   },
                                   LISTENING_CLOZE: {
-                                    label: "聽力填空",
+                                    label: t(
+                                      "classroomDetail.contentTypes.listeningCloze",
+                                    ),
                                     color:
                                       "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
                                   },
                                   SENTENCE_MAKING: {
-                                    label: "造句練習",
+                                    label: t(
+                                      "classroomDetail.contentTypes.sentenceMaking",
+                                    ),
                                     color:
                                       "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
                                   },
                                   SPEAKING_QUIZ: {
-                                    label: "口說測驗",
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingQuiz",
+                                    ),
                                     color:
                                       "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
                                   },
@@ -1478,7 +1587,9 @@ export default function ClassroomDetail({
                                 const typeInfo = contentTypeLabels[
                                   assignment.content_type || ""
                                 ] || {
-                                  label: assignment.content_type || "未知類型",
+                                  label:
+                                    assignment.content_type ||
+                                    t("classroomDetail.labels.unknownType"),
                                   color:
                                     "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
                                 };
@@ -1493,7 +1604,10 @@ export default function ClassroomDetail({
                                         {assignment.title}
                                       </div>
                                       <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
-                                        {assignment.instructions || "無說明"}
+                                        {assignment.instructions ||
+                                          t(
+                                            "classroomDetail.labels.noDescription",
+                                          )}
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
@@ -1506,14 +1620,16 @@ export default function ClassroomDetail({
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
                                       {assignment.student_count
                                         ? `${assignment.student_count} 人`
-                                        : "全班"}
+                                        : t("classroomDetail.labels.allClass")}
                                     </td>
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
                                       {assignment.due_date
                                         ? new Date(
                                             assignment.due_date,
                                           ).toLocaleDateString("zh-TW")
-                                        : "無期限"}
+                                        : t(
+                                            "classroomDetail.labels.noDeadline",
+                                          )}
                                     </td>
                                     <td className="px-4 py-3">
                                       <div className="flex items-center gap-2">
@@ -1542,7 +1658,9 @@ export default function ClassroomDetail({
                                             );
                                           }}
                                         >
-                                          查看詳情
+                                          {t(
+                                            "classroomDetail.buttons.viewDetails",
+                                          )}
                                         </Button>
                                         <Button
                                           variant="ghost"
@@ -1554,7 +1672,9 @@ export default function ClassroomDetail({
                                             );
                                           }}
                                         >
-                                          預覽示範
+                                          {t(
+                                            "classroomDetail.buttons.previewDemo",
+                                          )}
                                         </Button>
                                       </div>
                                     </td>
@@ -1567,7 +1687,7 @@ export default function ClassroomDetail({
                       </>
                     ) : (
                       <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
-                        尚未指派任何作業
+                        {t("classroomDetail.messages.noAssignments")}
                       </div>
                     )}
                   </div>
@@ -1589,7 +1709,7 @@ export default function ClassroomDetail({
               <div className="flex items-center justify-between p-4 border-b bg-gray-50">
                 <div className="flex-1 mr-4">
                   <h3 className="font-semibold text-sm text-gray-600 mb-2">
-                    內容編輯器
+                    {t("classroomDetail.labels.contentEditor")}
                   </h3>
                   <input
                     type="text"
@@ -1603,7 +1723,7 @@ export default function ClassroomDetail({
                       }
                     }}
                     className="w-full px-3 py-1.5 border rounded-md text-lg font-medium"
-                    placeholder="輸入標題"
+                    placeholder={t("classroomDetail.labels.enterTitle")}
                   />
                 </div>
                 <Button
@@ -1653,17 +1773,24 @@ export default function ClassroomDetail({
                       <div>
                         <p className="font-medium">{selectedContent.type}</p>
                         <p className="text-sm text-gray-500">
-                          {Array.isArray(selectedContent.items)
-                            ? selectedContent.items.length
-                            : selectedContent.items_count || 0}{" "}
-                          個項目 • {selectedContent.estimated_time || "10 分鐘"}
+                          {t("classroomDetail.labels.itemsCount", {
+                            count: Array.isArray(selectedContent.items)
+                              ? selectedContent.items.length
+                              : selectedContent.items_count || 0,
+                          })}{" "}
+                          •{" "}
+                          {t("classroomDetail.labels.estimatedTime", {
+                            time: selectedContent.estimated_time || "10",
+                          })}
                         </p>
                       </div>
                     </div>
 
                     {/* Content Items - 真實內容編輯介面 */}
                     <div className="space-y-3">
-                      <h4 className="font-medium text-sm">內容項目</h4>
+                      <h4 className="font-medium text-sm">
+                        {t("classroomDetail.labels.contentItems")}
+                      </h4>
                       {editingContent &&
                       editingContent.items &&
                       editingContent.items.length > 0 ? (
@@ -1684,7 +1811,7 @@ export default function ClassroomDetail({
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">
-                                  項目 {index + 1}
+                                  {t("classroomDetail.labels.item")} {index + 1}
                                 </span>
                                 <Button
                                   size="sm"
@@ -1697,7 +1824,9 @@ export default function ClassroomDetail({
                               <input
                                 type="text"
                                 className="w-full px-3 py-2 border rounded-md text-sm"
-                                placeholder="英文內容"
+                                placeholder={t(
+                                  "classroomDetail.labels.englishContent",
+                                )}
                                 value={item.text || ""}
                                 onChange={(e) =>
                                   handleUpdateContentItem(
@@ -1710,7 +1839,9 @@ export default function ClassroomDetail({
                               <input
                                 type="text"
                                 className="w-full px-3 py-2 border rounded-md text-sm"
-                                placeholder="中文翻譯"
+                                placeholder={t(
+                                  "classroomDetail.labels.chineseTranslation",
+                                )}
                                 value={item.translation || ""}
                                 onChange={(e) =>
                                   handleUpdateContentItem(
@@ -1727,7 +1858,7 @@ export default function ClassroomDetail({
                                   className="flex-1"
                                 >
                                   <Mic className="h-4 w-4 mr-1" />
-                                  錄音
+                                  {t("classroomDetail.buttons.record")}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -1735,7 +1866,7 @@ export default function ClassroomDetail({
                                   className="text-red-600"
                                   onClick={() => handleDeleteContentItem(index)}
                                 >
-                                  刪除
+                                  {t("common.delete")}
                                 </Button>
                               </div>
                             </div>
@@ -1743,7 +1874,7 @@ export default function ClassroomDetail({
                         )
                       ) : (
                         <div className="text-center py-8 text-gray-500">
-                          <p>尚無內容項目</p>
+                          <p>{t("classroomDetail.labels.noContentItems")}</p>
                           <Button
                             size="sm"
                             variant="outline"
@@ -1751,7 +1882,7 @@ export default function ClassroomDetail({
                             onClick={handleAddContentItem}
                           >
                             <Plus className="h-4 w-4 mr-1" />
-                            新增項目
+                            {t("classroomDetail.buttons.addItem")}
                           </Button>
                         </div>
                       )}
@@ -1767,7 +1898,7 @@ export default function ClassroomDetail({
                           onClick={handleAddContentItem}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          新增項目
+                          {t("classroomDetail.buttons.addItem")}
                         </Button>
                       )}
                   </div>
@@ -1783,11 +1914,11 @@ export default function ClassroomDetail({
                       className="flex-1"
                       onClick={closePanel}
                     >
-                      取消
+                      {t("classroomDetail.buttons.cancel")}
                     </Button>
                     <Button className="flex-1" onClick={handleSaveContent}>
                       <Save className="h-4 w-4 mr-2" />
-                      儲存變更
+                      {t("classroomDetail.buttons.saveChanges")}
                     </Button>
                   </div>
                 </div>
@@ -1872,7 +2003,9 @@ export default function ClassroomDetail({
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">
-                作業詳情：{selectedAssignment.title}
+                {t("classroomDetail.dialogs.assignmentDetailTitle", {
+                  title: selectedAssignment.title,
+                })}
               </DialogTitle>
             </DialogHeader>
 
@@ -1880,49 +2013,69 @@ export default function ClassroomDetail({
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-gray-600">內容類型</Label>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.contentType")}
+                  </Label>
                   <p className="font-medium">
                     {(() => {
                       const contentTypeLabels: Record<string, string> = {
-                        READING_ASSESSMENT: "朗讀評測",
-                        SPEAKING_PRACTICE: "口說練習",
-                        SPEAKING_SCENARIO: "情境對話",
-                        LISTENING_CLOZE: "聽力填空",
-                        SENTENCE_MAKING: "造句練習",
-                        SPEAKING_QUIZ: "口說測驗",
+                        READING_ASSESSMENT: t(
+                          "classroomDetail.contentTypes.readingAssessment",
+                        ),
+                        SPEAKING_PRACTICE: t(
+                          "classroomDetail.contentTypes.speakingPractice",
+                        ),
+                        SPEAKING_SCENARIO: t(
+                          "classroomDetail.contentTypes.speakingScenario",
+                        ),
+                        LISTENING_CLOZE: t(
+                          "classroomDetail.contentTypes.listeningCloze",
+                        ),
+                        SENTENCE_MAKING: t(
+                          "classroomDetail.contentTypes.sentenceMaking",
+                        ),
+                        SPEAKING_QUIZ: t(
+                          "classroomDetail.contentTypes.speakingQuiz",
+                        ),
                       };
                       return (
                         contentTypeLabels[
                           selectedAssignment.content_type || ""
                         ] ||
                         selectedAssignment.content_type ||
-                        "未知類型"
+                        t("classroomDetail.labels.unknownType")
                       );
                     })()}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-600">指派日期</Label>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.assignedDate")}
+                  </Label>
                   <p className="font-medium">
                     {selectedAssignment.assigned_at
                       ? new Date(
                           selectedAssignment.assigned_at,
                         ).toLocaleDateString("zh-TW")
-                      : "未設定"}
+                      : t("classroomDetail.labels.notSet")}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-600">截止日期</Label>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.dueDate")}
+                  </Label>
                   <p className="font-medium">
                     {selectedAssignment.due_date
                       ? new Date(
                           selectedAssignment.due_date,
                         ).toLocaleDateString("zh-TW")
-                      : "無期限"}
+                      : t("classroomDetail.labels.noDeadline")}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-600">指派學生數</Label>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.assignedStudents")}
+                  </Label>
                   <p className="font-medium">
                     {selectedAssignment.student_count || 0} 人
                   </p>
@@ -1932,7 +2085,9 @@ export default function ClassroomDetail({
               {/* Instructions */}
               {selectedAssignment.instructions && (
                 <div>
-                  <Label className="text-sm text-gray-600">作業說明</Label>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.instructions")}
+                  </Label>
                   <Card className="p-4 mt-2 bg-gray-50">
                     <p className="text-sm">{selectedAssignment.instructions}</p>
                   </Card>
@@ -1942,11 +2097,13 @@ export default function ClassroomDetail({
               {/* Progress */}
               <div>
                 <Label className="text-sm text-gray-600 mb-3 block">
-                  完成進度
+                  {t("classroomDetail.labels.completionProgress")}
                 </Label>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">整體完成率</span>
+                    <span className="text-sm font-medium">
+                      {t("classroomDetail.labels.overallCompletionRate")}
+                    </span>
                     <span className="text-2xl font-bold text-blue-600">
                       {selectedAssignment.completion_rate || 0}%
                     </span>
@@ -1965,7 +2122,7 @@ export default function ClassroomDetail({
               {/* Student Completion Dashboard */}
               <div>
                 <Label className="text-sm text-gray-600 mb-3 block">
-                  學生列表
+                  {t("classroomDetail.labels.studentList")}
                 </Label>
                 <StudentCompletionDashboard
                   assignmentId={selectedAssignment.id}
@@ -1980,25 +2137,29 @@ export default function ClassroomDetail({
                   variant="outline"
                   onClick={() => {
                     // TODO: Implement view student submissions
-                    toast.info("查看學生提交功能尚在開發中");
+                    toast.info(
+                      t(
+                        "classroomDetail.messages.viewSubmissionsInDevelopment",
+                      ),
+                    );
                   }}
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  查看學生提交
+                  {t("classroomDetail.buttons.viewSubmissions")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleEditAssignment(selectedAssignment)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
-                  編輯作業
+                  {t("classroomDetail.buttons.editAssignment")}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDeleteAssignment(selectedAssignment)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  刪除作業
+                  {t("classroomDetail.buttons.deleteAssignment")}
                 </Button>
               </div>
             </div>
@@ -2024,7 +2185,9 @@ export default function ClassroomDetail({
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">朗讀評測設定</h2>
+              <h2 className="text-2xl font-bold">
+                {t("classroomDetail.labels.readingAssessmentSettings")}
+              </h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -2053,7 +2216,7 @@ export default function ClassroomDetail({
                   setEditorLessonId(null);
                   setEditorContentId(null);
                   await refreshPrograms();
-                  toast.success("內容已成功儲存");
+                  toast.success(t("classroomDetail.messages.contentSaved"));
                 }}
                 onCancel={() => {
                   setShowReadingEditor(false);

@@ -15,6 +15,7 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import SubscriptionProgressBanner from "./SubscriptionProgressBanner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useTranslation } from "react-i18next";
 
 interface SelectedPlan {
   id: string;
@@ -43,6 +44,7 @@ export default function TeacherLoginModal({
   onLoginSuccess,
   selectedPlan,
 }: TeacherLoginModalProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +78,7 @@ export default function TeacherLoginModal({
         );
       }
 
-      toast.success("登入成功！");
+      toast.success(t("dialogs.teacherLoginModal.success.loggedIn"));
       onLoginSuccess(response.user);
       onClose();
     } catch (err: unknown) {
@@ -86,14 +88,19 @@ export default function TeacherLoginModal({
       };
       console.error("Login error:", err);
       if (error.response?.status === 401) {
-        setError("電子郵件或密碼錯誤，請檢查您的登入資訊");
+        setError(t("dialogs.teacherLoginModal.errors.invalidCredentials"));
       } else if (error.response?.status === 500) {
-        setError("伺服器錯誤，請稍後再試");
+        setError(t("dialogs.teacherLoginModal.errors.serverError"));
       } else if (error.message?.includes("Network")) {
-        setError("網路連線錯誤，請檢查網路連線");
+        setError(t("dialogs.teacherLoginModal.errors.networkError"));
       } else {
         setError(
-          `登入失敗：${error.response?.data?.detail || error.message || "請稍後再試"}`,
+          t("dialogs.teacherLoginModal.errors.loginFailed", {
+            detail:
+              error.response?.data?.detail ||
+              error.message ||
+              t("dialogs.teacherLoginModal.errors.tryAgain"),
+          }),
         );
       }
     } finally {
@@ -130,14 +137,16 @@ export default function TeacherLoginModal({
         )}
 
         <DialogHeader>
-          <DialogTitle>教師登入</DialogTitle>
+          <DialogTitle>{t("dialogs.teacherLoginModal.title")}</DialogTitle>
           <DialogDescription>
             {selectedPlan ? (
               <span className="text-blue-600">
-                登入後即可訂閱 {selectedPlan.name} 方案
+                {t("dialogs.teacherLoginModal.subscriptionPrompt", {
+                  plan: selectedPlan.name,
+                })}
               </span>
             ) : (
-              "請輸入您的教師帳號資訊"
+              t("dialogs.teacherLoginModal.description")
             )}
           </DialogDescription>
         </DialogHeader>

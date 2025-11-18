@@ -292,6 +292,23 @@ class ApiClient {
     return this.request("/api/teachers/me");
   }
 
+  async updateTeacherProfile(data: { name?: string; phone?: string }) {
+    return this.request("/api/teachers/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTeacherPassword(data: {
+    current_password: string;
+    new_password: string;
+  }) {
+    return this.request("/api/teachers/me/password", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getTeacherDashboard() {
     return this.request("/api/teachers/dashboard");
   }
@@ -807,6 +824,28 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // ============ Student Methods ============
+  async getStudentProfile() {
+    return this.request("/api/students/me");
+  }
+
+  async updateStudentProfile(data: { name?: string }) {
+    return this.request("/api/students/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStudentPassword(data: {
+    current_password: string;
+    new_password: string;
+  }) {
+    return this.request("/api/students/me/password", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   }
 
   // ============ Assignment & Submission Methods ============

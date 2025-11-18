@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,10 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Mail, Phone } from "lucide-react";
 import { apiClient } from "../lib/api";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TeacherRegister() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -33,13 +36,13 @@ export default function TeacherRegister() {
 
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
-      setError("密碼不一致");
+      setError(t("teacherRegister.errors.passwordMismatch"));
       return;
     }
 
     // Validate password strength
     if (formData.password.length < 6) {
-      setError("密碼至少需要 6 個字元");
+      setError(t("teacherRegister.errors.passwordTooShort"));
       return;
     }
 
@@ -74,7 +77,11 @@ export default function TeacherRegister() {
         navigate("/teacher/dashboard");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "註冊失敗，請稍後再試");
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("teacherRegister.errors.registerFailed"),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -82,30 +89,42 @@ export default function TeacherRegister() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Duotopia</h1>
-          <p className="text-gray-600">AI 驅動的英語學習平台</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            {t("teacherRegister.header.title")}
+          </h1>
+          <p className="text-gray-600">
+            {t("teacherRegister.header.subtitle")}
+          </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>教師註冊</CardTitle>
+            <CardTitle>{t("teacherRegister.header.cardTitle")}</CardTitle>
             <CardDescription>
-              建立您的教師帳號，開始管理班級與課程
+              {t("teacherRegister.header.cardDescription")}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">姓名 *</Label>
+                <Label htmlFor="name">
+                  {t("teacherRegister.form.name")}{" "}
+                  {t("teacherRegister.form.nameRequired")}
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="name"
                     type="text"
-                    placeholder="王老師"
+                    placeholder={t("teacherRegister.form.namePlaceholder")}
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -118,13 +137,16 @@ export default function TeacherRegister() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">
+                  {t("teacherRegister.form.email")}{" "}
+                  {t("teacherRegister.form.emailRequired")}
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="teacher@example.com"
+                    placeholder={t("teacherRegister.form.emailPlaceholder")}
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -137,13 +159,13 @@ export default function TeacherRegister() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">電話（選填）</Label>
+                <Label htmlFor="phone">{t("teacherRegister.form.phone")}</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="0912-345-678"
+                    placeholder={t("teacherRegister.form.phonePlaceholder")}
                     value={formData.phone}
                     onChange={(e) =>
                       setFormData({ ...formData, phone: e.target.value })
@@ -155,13 +177,16 @@ export default function TeacherRegister() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">密碼 *</Label>
+                <Label htmlFor="password">
+                  {t("teacherRegister.form.password")}{" "}
+                  {t("teacherRegister.form.passwordRequired")}
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("teacherRegister.form.passwordPlaceholder")}
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
@@ -171,17 +196,22 @@ export default function TeacherRegister() {
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-gray-500">至少 6 個字元</p>
+                <p className="text-xs text-gray-500">
+                  {t("teacherRegister.form.passwordHint")}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">確認密碼 *</Label>
+                <Label htmlFor="confirmPassword">
+                  {t("teacherRegister.form.confirmPassword")}{" "}
+                  {t("teacherRegister.form.confirmPasswordRequired")}
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("teacherRegister.form.passwordPlaceholder")}
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
@@ -206,10 +236,10 @@ export default function TeacherRegister() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    註冊中...
+                    {t("teacherRegister.form.registering")}
                   </>
                 ) : (
-                  "註冊"
+                  t("teacherRegister.form.register")
                 )}
               </Button>
             </form>
@@ -217,12 +247,12 @@ export default function TeacherRegister() {
 
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-gray-600">
-              已有帳號？
+              {t("teacherRegister.footer.hasAccount")}
               <Link
                 to="/teacher/login"
                 className="text-blue-600 hover:underline ml-1"
               >
-                立即登入
+                {t("teacherRegister.footer.login")}
               </Link>
             </div>
             <div className="text-sm text-center text-gray-600">
@@ -230,7 +260,7 @@ export default function TeacherRegister() {
                 to="/student/login"
                 className="text-blue-600 hover:underline"
               >
-                學生登入入口
+                {t("teacherRegister.footer.studentLogin")}
               </Link>
             </div>
           </CardFooter>

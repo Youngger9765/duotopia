@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import TeacherLoginModal from "@/components/TeacherLoginModal";
 import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface PricingPlan {
   id: string;
@@ -38,6 +40,7 @@ interface PricingPlan {
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [userInfo, setUserInfo] = useState<{
@@ -95,13 +98,13 @@ export default function PricingPage() {
       // Store the plan and open login modal
       setPendingPlan(plan);
       setShowLoginModal(true);
-      toast.info("請先登入才能訂閱方案");
+      toast.info(t("pricing.actions.loginRequired"));
       return;
     }
 
     // Check if a student is logged in instead
     if (studentAuth.isAuthenticated) {
-      toast.error("學生帳號無法訂閱教師方案，請使用教師帳號");
+      toast.error(t("pricing.actions.studentAccountWarning"));
       return;
     }
 
@@ -113,7 +116,9 @@ export default function PricingPage() {
     try {
       // Mock API call - will be replaced with real API
       console.log("Payment successful, transaction ID:", transactionId);
-      toast.success(`成功訂閱 ${selectedPlan?.name} 方案！`);
+      toast.success(
+        t("pricing.payment.success", { planName: selectedPlan?.name }),
+      );
       setShowPaymentDialog(false);
       // Navigate to dashboard after successful payment
       setTimeout(() => {
@@ -121,7 +126,7 @@ export default function PricingPage() {
       }, 2000);
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("訂閱處理發生錯誤，請聯繫客服");
+      toast.error(t("pricing.payment.error"));
     }
   };
 
@@ -134,7 +139,7 @@ export default function PricingPage() {
       // 關閉付款對話框
       setShowPaymentDialog(false);
     } else {
-      toast.error(`付款失敗: ${error}`);
+      toast.error(t("pricing.payment.failed", { error }));
     }
   };
 
@@ -189,7 +194,7 @@ export default function PricingPage() {
         const data = await response.json();
         // If user has active subscription, redirect to subscription management
         if (data.is_active) {
-          toast.info("您已有訂閱方案，導向訂閱管理頁面");
+          toast.info(t("pricing.payment.hasSubscription"));
           setTimeout(() => {
             navigate("/teacher/subscription");
           }, 1000);
@@ -214,7 +219,7 @@ export default function PricingPage() {
     localStorage.removeItem("selectedPlan");
 
     setUserInfo({ isLoggedIn: false });
-    toast.success("已成功登出");
+    toast.success(t("common.success"));
   };
 
   // Check if user came back from login with a selected plan
@@ -231,7 +236,7 @@ export default function PricingPage() {
           setShowPaymentDialog(true);
           // Clear the saved plan
           localStorage.removeItem("selectedPlan");
-          toast.success("已為您自動開啟付款頁面");
+          toast.success(t("pricing.payment.redirecting"));
         }
       } catch (error) {
         console.error("Error parsing saved plan:", error);
@@ -241,6 +246,11 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
+
       {/* User Status Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="container mx-auto px-4 py-4">
@@ -251,13 +261,13 @@ export default function PricingPage() {
                 to="/"
                 className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400"
               >
-                Duotopia
+                {t("pricing.header.logo")}
               </Link>
               <span className="text-gray-400 dark:text-gray-500 hidden sm:inline">
                 |
               </span>
               <span className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                訂閱方案
+                {t("pricing.title")}
               </span>
             </div>
 
@@ -273,7 +283,9 @@ export default function PricingPage() {
                         {userInfo.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {userInfo.role === "teacher" ? "教師帳號" : "學生帳號"}
+                        {userInfo.role === "teacher"
+                          ? t("pricing.header.teacherAccount")
+                          : t("pricing.header.studentAccount")}
                       </div>
                     </div>
                   </div>
@@ -287,7 +299,7 @@ export default function PricingPage() {
                         onClick={() => navigate("/teacher/dashboard")}
                         className="flex-1 sm:flex-none"
                       >
-                        返回後台
+                        {t("pricing.header.backToDashboard")}
                       </Button>
                     ) : (
                       <Button
@@ -296,7 +308,7 @@ export default function PricingPage() {
                         onClick={() => navigate("/student/dashboard")}
                         className="flex-1 sm:flex-none"
                       >
-                        返回學習區
+                        {t("pricing.header.backToStudentArea")}
                       </Button>
                     )}
 
@@ -307,7 +319,7 @@ export default function PricingPage() {
                       className="flex-1 sm:flex-none"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      登出
+                      {t("nav.logout")}
                     </Button>
                   </div>
                 </>
@@ -320,7 +332,7 @@ export default function PricingPage() {
                     className="w-full sm:w-auto"
                   >
                     <LogIn className="w-4 h-4 mr-2" />
-                    教師登入
+                    {t("pricing.header.teacherLogin")}
                   </Button>
                 </>
               )}
@@ -333,16 +345,16 @@ export default function PricingPage() {
         {/* Header Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            選擇適合您的方案
+            {t("pricing.subtitle")}
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            專為ESL教師設計的教學管理平台
+            {t("pricing.description")}
           </p>
 
           {userInfo?.isLoggedIn && userInfo.role === "student" && (
             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 max-w-md mx-auto">
               <p className="text-sm text-yellow-800">
-                ⚠️ 學生帳號無法訂閱教師方案，請使用教師帳號登入
+                ⚠️ {t("pricing.actions.studentAccountWarning")}
               </p>
             </div>
           )}
@@ -362,7 +374,7 @@ export default function PricingPage() {
                   {plan.popular && (
                     <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white">
                       <Star className="w-3 h-3 mr-1" />
-                      熱門選擇
+                      {t("pricing.schoolPlan.popular")}
                     </Badge>
                   )}
 
@@ -373,7 +385,7 @@ export default function PricingPage() {
                     <p className="text-gray-600">{plan.description}</p>
                     <div className="flex items-center justify-center mt-3 text-gray-500">
                       <Users className="w-4 h-4 mr-2" />
-                      <span>學生人數: {plan.studentRange}</span>
+                      <span>{plan.studentRange}</span>
                     </div>
                   </div>
 
@@ -381,12 +393,16 @@ export default function PricingPage() {
                   <div className="mb-8">
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-600">月付方案</span>
+                        <span className="text-gray-600">
+                          {t("pricing.billing.monthly")}
+                        </span>
                         <div className="text-right">
                           <span className="text-3xl font-bold text-gray-900">
                             NT$ {plan.monthlyPrice}
                           </span>
-                          <span className="text-gray-600 ml-1">/月</span>
+                          <span className="text-gray-600 ml-1">
+                            {t("pricing.billing.perMonth")}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -413,12 +429,14 @@ export default function PricingPage() {
                     }`}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    {userInfo?.role === "student" ? "學生無法訂閱" : "立即訂閱"}
+                    {userInfo?.role === "student"
+                      ? t("pricing.actions.studentCannotSubscribe")
+                      : t("pricing.actions.subscribe")}
                   </Button>
 
                   {userInfo?.role === "student" && (
                     <p className="text-xs text-red-500 mt-2 text-center">
-                      請先登出，使用教師帳號登入才能訂閱
+                      {t("pricing.actions.logoutFirst")}
                     </p>
                   )}
                 </Card>
@@ -430,17 +448,21 @@ export default function PricingPage() {
         {/* Bottom Info */}
         <div className="mt-16 text-center">
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-auto shadow-md">
-            <h3 className="font-semibold text-gray-900 mb-3">付費方案說明</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              {t("pricing.billing.monthly")}
+            </h3>
             <div className="text-sm text-gray-600">
-              <p className="font-medium text-gray-900 mb-1">月付方案</p>
-              <p>按月計費，彈性調整，隨時升級或調整您的方案</p>
+              <p className="font-medium text-gray-900 mb-1">
+                {t("pricing.billing.monthly")}
+              </p>
+              <p>{t("pricing.billing.description")}</p>
             </div>
           </div>
 
           <div className="mt-8">
-            <p className="text-gray-600 mb-4">需要更多學生數量或自訂方案？</p>
+            <p className="text-gray-600 mb-4">{t("pricing.needMore")}</p>
             <p className="text-gray-900 font-medium">
-              請聯絡：
+              {t("pricing.contactUs")}
               <a
                 href="mailto:myduotopia@gmail.com"
                 className="text-blue-600 hover:text-blue-700 underline"
@@ -456,10 +478,13 @@ export default function PricingPage() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>完成付款</DialogTitle>
+            <DialogTitle>{t("pricing.payment.title")}</DialogTitle>
             <DialogDescription className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-600" />
-              安全的付款流程 - 您選擇了 {selectedPlan?.name} 方案
+              {t("pricing.payment.securePayment")} -{" "}
+              {t("pricing.payment.selectedPlan", {
+                planName: selectedPlan?.name,
+              })}
             </DialogDescription>
           </DialogHeader>
 

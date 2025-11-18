@@ -19,8 +19,10 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { StudentAssignmentCard, AssignmentStatusEnum } from "@/types";
+import { useTranslation } from "react-i18next";
 
 export default function StudentAssignmentList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { token, user } = useStudentAuthStore();
 
@@ -156,7 +158,7 @@ export default function StudentAssignmentList() {
         message: (error as Error).message,
         stack: (error as Error).stack,
       });
-      toast.error("無法載入作業列表");
+      toast.error(t("studentAssignmentList.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -165,17 +167,35 @@ export default function StudentAssignmentList() {
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return { text: "未開始", color: "bg-gray-100 text-gray-800" };
+        return {
+          text: t("studentAssignmentList.status.notStarted"),
+          color: "bg-gray-100 text-gray-800",
+        };
       case "IN_PROGRESS":
-        return { text: "進行中", color: "bg-blue-100 text-blue-800" };
+        return {
+          text: t("studentAssignmentList.status.inProgress"),
+          color: "bg-blue-100 text-blue-800",
+        };
       case "SUBMITTED":
-        return { text: "已提交", color: "bg-yellow-100 text-yellow-800" };
+        return {
+          text: t("studentAssignmentList.status.submitted"),
+          color: "bg-yellow-100 text-yellow-800",
+        };
       case "GRADED":
-        return { text: "已評分", color: "bg-green-100 text-green-800" };
+        return {
+          text: t("studentAssignmentList.status.graded"),
+          color: "bg-green-100 text-green-800",
+        };
       case "RETURNED":
-        return { text: "已退回", color: "bg-orange-100 text-orange-800" };
+        return {
+          text: t("studentAssignmentList.status.returned"),
+          color: "bg-orange-100 text-orange-800",
+        };
       case "RESUBMITTED":
-        return { text: "重新提交", color: "bg-purple-100 text-purple-800" };
+        return {
+          text: t("studentAssignmentList.status.resubmitted"),
+          color: "bg-purple-100 text-purple-800",
+        };
       default:
         return { text: status, color: "bg-gray-100 text-gray-800" };
     }
@@ -208,11 +228,22 @@ export default function StudentAssignmentList() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return { text: `已逾期 ${Math.abs(diffDays)} 天`, isOverdue: true };
+      return {
+        text: t("studentAssignmentList.dueDate.overdue", {
+          days: Math.abs(diffDays),
+        }),
+        isOverdue: true,
+      };
     } else if (diffDays === 0) {
-      return { text: "今天到期", isOverdue: false };
+      return {
+        text: t("studentAssignmentList.dueDate.today"),
+        isOverdue: false,
+      };
     } else if (diffDays <= 3) {
-      return { text: `${diffDays} 天後到期`, isOverdue: false };
+      return {
+        text: t("studentAssignmentList.dueDate.remaining", { days: diffDays }),
+        isOverdue: false,
+      };
     } else {
       return { text: due.toLocaleDateString("zh-TW"), isOverdue: false };
     }
@@ -266,11 +297,13 @@ export default function StudentAssignmentList() {
             <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                 <span className="text-sm sm:text-base text-gray-600 font-medium">
-                  完成進度
+                  {t("studentAssignmentList.progress.title")}
                 </span>
                 <span className="text-sm sm:text-base font-semibold text-gray-900">
-                  {assignment.completed_count || 0} /{" "}
-                  {assignment.content_count || 1} 個活動
+                  {t("studentAssignmentList.progress.activities", {
+                    completed: assignment.completed_count || 0,
+                    total: assignment.content_count || 1,
+                  })}
                 </span>
               </div>
               <Progress
@@ -284,7 +317,10 @@ export default function StudentAssignmentList() {
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
-              <span>{assignment.content_type || "朗讀練習"}</span>
+              <span>
+                {assignment.content_type ||
+                  t("studentAssignmentList.contentType.default")}
+              </span>
             </div>
             {assignment.estimated_time && (
               <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
@@ -311,7 +347,9 @@ export default function StudentAssignmentList() {
             <div className="flex items-center gap-2 pt-2">
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
               <span className="text-sm sm:text-base font-medium text-green-600">
-                分數: {assignment.score}
+                {t("studentAssignmentList.score.label", {
+                  score: assignment.score,
+                })}
               </span>
             </div>
           )}
@@ -335,22 +373,28 @@ export default function StudentAssignmentList() {
             >
               {assignment.status === "NOT_STARTED" && (
                 <>
-                  開始作業 <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  {t("studentAssignmentList.buttons.start")}{" "}
+                  <ChevronRight className="ml-1 h-4 w-4 inline" />
                 </>
               )}
               {assignment.status === "IN_PROGRESS" && (
                 <>
-                  繼續作業 <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  {t("studentAssignmentList.buttons.continue")}{" "}
+                  <ChevronRight className="ml-1 h-4 w-4 inline" />
                 </>
               )}
-              {assignment.status === "SUBMITTED" && "檢視作業"}
-              {assignment.status === "GRADED" && "查看結果"}
+              {assignment.status === "SUBMITTED" &&
+                t("studentAssignmentList.buttons.view")}
+              {assignment.status === "GRADED" &&
+                t("studentAssignmentList.buttons.viewResults")}
               {assignment.status === "RETURNED" && (
                 <>
-                  重新提交 <AlertCircle className="ml-1 h-4 w-4 inline" />
+                  {t("studentAssignmentList.buttons.resubmit")}{" "}
+                  <AlertCircle className="ml-1 h-4 w-4 inline" />
                 </>
               )}
-              {assignment.status === "RESUBMITTED" && "檢視作業"}
+              {assignment.status === "RESUBMITTED" &&
+                t("studentAssignmentList.buttons.view")}
             </Button>
           </div>
         </CardContent>
@@ -363,7 +407,9 @@ export default function StudentAssignmentList() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">
+            {t("studentAssignmentList.loading")}
+          </p>
         </div>
       </div>
     );
@@ -375,7 +421,9 @@ export default function StudentAssignmentList() {
         {/* Assignment Flow Status */}
         <Card className="mb-8 overflow-visible">
           <CardContent className="p-4 sm:p-6 overflow-visible">
-            <h3 className="text-lg font-semibold mb-4">作業進度流程</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {t("studentAssignmentList.flowStatus.title")}
+            </h3>
             <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 pt-2 justify-start sm:justify-center flex-nowrap">
               {/* 未開始 */}
               <button
@@ -409,7 +457,7 @@ export default function StudentAssignmentList() {
                       : "text-gray-600"
                   }`}
                 >
-                  未開始
+                  {t("studentAssignmentList.flowStatus.notStarted")}
                 </span>
               </button>
 
@@ -447,7 +495,7 @@ export default function StudentAssignmentList() {
                       : "text-gray-600"
                   }`}
                 >
-                  進行中
+                  {t("studentAssignmentList.flowStatus.inProgress")}
                 </span>
               </button>
 
@@ -485,7 +533,7 @@ export default function StudentAssignmentList() {
                       : "text-gray-600"
                   }`}
                 >
-                  已提交
+                  {t("studentAssignmentList.flowStatus.submitted")}
                 </span>
               </button>
 
@@ -521,7 +569,7 @@ export default function StudentAssignmentList() {
                     activeTab === "returned" ? "text-gray-900" : "text-gray-600"
                   }`}
                 >
-                  退回訂正
+                  {t("studentAssignmentList.flowStatus.returned")}
                 </span>
               </button>
 
@@ -559,7 +607,7 @@ export default function StudentAssignmentList() {
                       : "text-gray-600"
                   }`}
                 >
-                  重新提交
+                  {t("studentAssignmentList.flowStatus.resubmitted")}
                 </span>
               </button>
 
@@ -595,7 +643,7 @@ export default function StudentAssignmentList() {
                     activeTab === "graded" ? "text-gray-900" : "text-gray-600"
                   }`}
                 >
-                  已完成
+                  {t("studentAssignmentList.flowStatus.graded")}
                 </span>
               </button>
             </div>
@@ -628,9 +676,13 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有未開始的作業
+                      {t("studentAssignmentList.emptyStates.notStarted.title")}
                     </h3>
-                    <p className="text-gray-500">所有作業都已經開始了！</p>
+                    <p className="text-gray-500">
+                      {t(
+                        "studentAssignmentList.emptyStates.notStarted.description",
+                      )}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -652,9 +704,13 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有進行中的作業
+                      {t("studentAssignmentList.emptyStates.inProgress.title")}
                     </h3>
-                    <p className="text-gray-500">開始練習作業吧！</p>
+                    <p className="text-gray-500">
+                      {t(
+                        "studentAssignmentList.emptyStates.inProgress.description",
+                      )}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -676,9 +732,13 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有待批改的作業
+                      {t("studentAssignmentList.emptyStates.submitted.title")}
                     </h3>
-                    <p className="text-gray-500">提交的作業會顯示在這裡。</p>
+                    <p className="text-gray-500">
+                      {t(
+                        "studentAssignmentList.emptyStates.submitted.description",
+                      )}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -700,10 +760,12 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有已完成的作業
+                      {t("studentAssignmentList.emptyStates.graded.title")}
                     </h3>
                     <p className="text-gray-500">
-                      完成並評分的作業會顯示在這裡，可以查看詳細成績。
+                      {t(
+                        "studentAssignmentList.emptyStates.graded.description",
+                      )}
                     </p>
                   </CardContent>
                 </Card>
@@ -726,10 +788,12 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有需要訂正的作業
+                      {t("studentAssignmentList.emptyStates.returned.title")}
                     </h3>
                     <p className="text-gray-500">
-                      需要重做的作業會顯示在這裡。
+                      {t(
+                        "studentAssignmentList.emptyStates.returned.description",
+                      )}
                     </p>
                   </CardContent>
                 </Card>
@@ -752,10 +816,12 @@ export default function StudentAssignmentList() {
                   <CardContent className="text-center py-12">
                     <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      沒有重新提交的作業
+                      {t("studentAssignmentList.emptyStates.resubmitted.title")}
                     </h3>
                     <p className="text-gray-500">
-                      重新提交的作業會顯示在這裡。
+                      {t(
+                        "studentAssignmentList.emptyStates.resubmitted.description",
+                      )}
                     </p>
                   </CardContent>
                 </Card>

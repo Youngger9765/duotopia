@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export interface Program {
   id: number;
@@ -55,6 +56,7 @@ export function ProgramDialogs({
   onSwitchToEdit,
   classrooms = [],
 }: ProgramDialogsProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Partial<Program>>({
     name: "",
     description: "",
@@ -116,17 +118,21 @@ export function ProgramDialogs({
           level: formData.level || "beginner",
           estimated_hours: formData.estimated_hours || 10,
         });
-        toast.success(`課程「${formData.name}」已成功新增`);
+        toast.success(
+          t("dialogs.programDialogs.success.created", { name: formData.name }),
+        );
         onSave();
       } else if (dialogType === "edit" && program) {
         await apiClient.updateProgram(program.id, formData);
-        toast.success(`課程「${formData.name}」已更新`);
+        toast.success(
+          t("dialogs.programDialogs.success.updated", { name: formData.name }),
+        );
         onSave();
       }
       onClose();
     } catch (error) {
       console.error("Error saving program:", error);
-      toast.error("儲存失敗，請稍後再試");
+      toast.error(t("dialogs.programDialogs.errors.saveFailed"));
       setErrors({ submit: "儲存失敗，請稍後再試" });
     } finally {
       setLoading(false);
@@ -139,12 +145,14 @@ export function ProgramDialogs({
     setLoading(true);
     try {
       await apiClient.deleteProgram(program.id);
-      toast.success(`課程「${program.name}」已刪除`);
+      toast.success(
+        t("dialogs.programDialogs.success.deleted", { name: program.name }),
+      );
       onDelete();
       onClose();
     } catch (error) {
       console.error("Error deleting program:", error);
-      toast.error("刪除失敗，請稍後再試");
+      toast.error(t("dialogs.programDialogs.errors.deleteFailed"));
       setErrors({ submit: "刪除失敗，請稍後再試" });
     } finally {
       setLoading(false);

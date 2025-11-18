@@ -21,6 +21,7 @@ import { saveAs } from "file-saver";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Classroom } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface StudentImportDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function StudentImportDialog({
   onSuccess,
   classrooms,
 }: StudentImportDialogProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<ImportStudent[]>([]);
@@ -57,15 +59,35 @@ export function StudentImportDialog({
   // 下載範本
   const downloadTemplate = () => {
     const template = [
-      ["學生姓名", "班級", "生日"],
-      ["王小明", "A班", "2012-01-01"],
-      ["李小華", "A班", "2012-02-15"],
-      ["張小美", "B班", "2012-03-20"],
+      [
+        t("studentImportDialog.template.columnName"),
+        t("studentImportDialog.template.columnClassroom"),
+        t("studentImportDialog.template.columnBirthdate"),
+      ],
+      [
+        t("studentImportDialog.template.sampleName1"),
+        t("studentImportDialog.template.sampleClassroom1"),
+        "2012-01-01",
+      ],
+      [
+        t("studentImportDialog.template.sampleName2"),
+        t("studentImportDialog.template.sampleClassroom1"),
+        "2012-02-15",
+      ],
+      [
+        t("studentImportDialog.template.sampleName3"),
+        t("studentImportDialog.template.sampleClassroom2"),
+        "2012-03-20",
+      ],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "學生名單");
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      t("studentImportDialog.template.sheetName"),
+    );
 
     // 設定欄寬
     ws["!cols"] = [
@@ -78,9 +100,9 @@ export function StudentImportDialog({
     const blob = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    saveAs(blob, "學生批次匯入範本.xlsx");
+    saveAs(blob, t("studentImportDialog.template.fileName"));
 
-    toast.success("已下載範本檔案");
+    toast.success(t("studentImportDialog.success.templateDownloaded"));
   };
 
   // 解析檔案
@@ -111,14 +133,14 @@ export function StudentImportDialog({
       };
       reader.readAsArrayBuffer(file);
     } else {
-      toast.error("請上傳 CSV 或 Excel 檔案");
+      toast.error(t("studentImportDialog.errors.invalidFileType"));
     }
   };
 
   // 處理資料
   const processData = (data: string[][]) => {
     if (data.length < 2) {
-      toast.error("檔案沒有資料");
+      toast.error(t("studentImportDialog.errors.noData"));
       return;
     }
 
@@ -138,7 +160,7 @@ export function StudentImportDialog({
     );
 
     if (nameIndex === -1) {
-      toast.error("找不到「姓名」欄位");
+      toast.error(t("studentImportDialog.errors.noName"));
       return;
     }
 
@@ -163,7 +185,7 @@ export function StudentImportDialog({
 
       // 驗證姓名
       if (name.length < 2) {
-        studentErrors.push("姓名太短");
+        studentErrors.push(t("studentImportDialog.errors.nameTooShort"));
       }
 
       // 驗證生日格式
@@ -211,7 +233,7 @@ export function StudentImportDialog({
             formattedBirthdate = `${year}-${month}-${day}`;
           } else {
             studentErrors.push(
-              "生日格式錯誤（請使用 YYYYMMDD、YYYY-MM-DD 或 YYYY/MM/DD）",
+              t("studentImportDialog.errors.invalidBirthdate"),
             );
           }
         }
@@ -221,7 +243,9 @@ export function StudentImportDialog({
           const date = new Date(formattedBirthdate);
           const year = parseInt(formattedBirthdate.slice(0, 4));
           if (isNaN(date.getTime()) || year < 2000 || year > 2020) {
-            studentErrors.push("生日日期不合理（應為 2000-2020 年）");
+            studentErrors.push(
+              t("studentImportDialog.errors.unreasonableBirthdate"),
+            );
             formattedBirthdate = "";
           }
         }
@@ -232,7 +256,11 @@ export function StudentImportDialog({
         const classExists = classrooms.some((c) => c.name === className);
         if (!classExists) {
           uniqueNewClassrooms.add(className);
-          studentErrors.push(`班級「${className}」不存在`);
+          studentErrors.push(
+            t("studentImportDialog.errors.classroomNotFound", {
+              name: className,
+            }),
+          );
         }
       }
 
@@ -246,7 +274,7 @@ export function StudentImportDialog({
     }
 
     if (students.length === 0) {
-      toast.error("沒有找到有效的學生資料");
+      toast.error(t("studentImportDialog.errors.noValidData"));
       return;
     }
 
@@ -262,7 +290,7 @@ export function StudentImportDialog({
     const validStudents = preview.filter((s) => s.isValid);
 
     if (validStudents.length === 0) {
-      toast.error("沒有有效的學生資料可以匯入");
+      toast.error(t("studentImportDialog.errors.noValidData"));
       return;
     }
 
@@ -292,19 +320,30 @@ export function StudentImportDialog({
       // Handle any errors from the API
       if (response.errors && response.errors.length > 0) {
         const errorMessages = response.errors
-          .map((err) => `第${err.row}行 - ${err.name}: ${err.error}`)
+          .map(
+            (err) =>
+              `${t("studentImportDialog.validation.row")}${err.row} - ${err.name}: ${err.error}`,
+          )
           .join("\n");
-        toast.error(`部分學生匯入失敗:\n${errorMessages}`);
+        toast.error(
+          t("studentImportDialog.errors.importPartialFailed", {
+            errors: errorMessages,
+          }),
+        );
       }
 
       if (successCount > 0) {
-        toast.success(`成功匯入 ${successCount} 位學生`);
+        toast.success(
+          t("studentImportDialog.success.imported", {
+            count: successCount,
+          }),
+        );
         onSuccess(); // 更新父組件的資料
         // 不自動關閉，讓用戶查看結果
       }
     } catch (error) {
       console.error("Import failed:", error);
-      toast.error("匯入失敗");
+      toast.error(t("studentImportDialog.errors.importFailed"));
     } finally {
       setImporting(false);
     }
@@ -329,25 +368,29 @@ export function StudentImportDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            批次匯入學生
+            {t("studentImportDialog.title")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* 步驟說明 */}
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-medium mb-2">匯入步驟：</h3>
+            <h3 className="font-medium mb-2">
+              {t("studentImportDialog.steps.title")}
+            </h3>
             <ol className="list-decimal list-inside space-y-1 text-sm">
-              <li>下載範本檔案</li>
-              <li>填寫學生資料（姓名、班級、生日）</li>
-              <li>上傳填寫好的檔案</li>
-              <li>確認資料無誤後執行匯入</li>
+              <li>{t("studentImportDialog.steps.step1")}</li>
+              <li>{t("studentImportDialog.steps.step2")}</li>
+              <li>{t("studentImportDialog.steps.step3")}</li>
+              <li>{t("studentImportDialog.steps.step4")}</li>
             </ol>
           </div>
 
           {/* 重複處理選項 */}
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium mb-2">重複學生處理方式：</h3>
+            <h3 className="font-medium mb-2">
+              {t("studentImportDialog.duplicateAction.title")}
+            </h3>
             <div className="space-y-2">
               <label className="flex items-center gap-2">
                 <input
@@ -358,7 +401,7 @@ export function StudentImportDialog({
                   onChange={(e) => setDuplicateAction(e.target.value as "skip")}
                   className="text-blue-600"
                 />
-                <span>跳過重複（預設）- 保留現有學生，跳過重複的資料</span>
+                <span>{t("studentImportDialog.duplicateAction.skip")}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -371,9 +414,7 @@ export function StudentImportDialog({
                   }
                   className="text-blue-600"
                 />
-                <span>
-                  更新資料 - 用新資料更新現有學生的生日（如密碼未改過也會更新）
-                </span>
+                <span>{t("studentImportDialog.duplicateAction.update")}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -386,7 +427,9 @@ export function StudentImportDialog({
                   }
                   className="text-blue-600"
                 />
-                <span>加上編號 - 在重複的姓名後加上編號（如：王小明-2）</span>
+                <span>
+                  {t("studentImportDialog.duplicateAction.addSuffix")}
+                </span>
               </label>
             </div>
           </div>
@@ -399,7 +442,7 @@ export function StudentImportDialog({
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
-              下載範本
+              {t("studentImportDialog.buttons.downloadTemplate")}
             </Button>
 
             <Button
@@ -409,7 +452,7 @@ export function StudentImportDialog({
               disabled={importing}
             >
               <Upload className="h-4 w-4 mr-2" />
-              選擇檔案
+              {t("studentImportDialog.buttons.selectFile")}
             </Button>
 
             <input
@@ -442,7 +485,7 @@ export function StudentImportDialog({
               <AlertDescription>
                 <div className="space-y-2">
                   <p className="font-medium text-yellow-800">
-                    發現以下班級尚未建立：
+                    {t("studentImportDialog.missingClassrooms.title")}
                   </p>
                   <ul className="list-disc list-inside text-sm">
                     {missingClassrooms.map((name, index) => (
@@ -450,7 +493,7 @@ export function StudentImportDialog({
                     ))}
                   </ul>
                   <p className="text-sm text-yellow-700 mt-2">
-                    請先到「我的班級」頁面建立這些班級後，再重新上傳檔案。
+                    {t("studentImportDialog.missingClassrooms.instruction")}
                   </p>
                   <Button
                     variant="outline"
@@ -458,7 +501,7 @@ export function StudentImportDialog({
                     onClick={() => window.open("/teacher/classrooms", "_blank")}
                     className="mt-2"
                   >
-                    前往「我的班級」
+                    {t("studentImportDialog.buttons.goToClassrooms")}
                   </Button>
                 </div>
               </AlertDescription>
@@ -469,10 +512,13 @@ export function StudentImportDialog({
           {preview.length > 0 && (
             <div>
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium">預覽資料</h3>
+                <h3 className="font-medium">
+                  {t("studentImportDialog.preview.title")}
+                </h3>
                 <div className="text-sm text-gray-600">
-                  有效: {preview.filter((s) => s.isValid).length} / 總計:{" "}
-                  {preview.length}
+                  {t("studentImportDialog.preview.valid")}:{" "}
+                  {preview.filter((s) => s.isValid).length} /{" "}
+                  {t("studentImportDialog.preview.total")}: {preview.length}
                 </div>
               </div>
 
@@ -480,11 +526,21 @@ export function StudentImportDialog({
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-4 py-2 text-left">狀態</th>
-                      <th className="px-4 py-2 text-left">姓名</th>
-                      <th className="px-4 py-2 text-left">班級</th>
-                      <th className="px-4 py-2 text-left">生日</th>
-                      <th className="px-4 py-2 text-left">錯誤訊息</th>
+                      <th className="px-4 py-2 text-left">
+                        {t("studentImportDialog.preview.status")}
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        {t("studentImportDialog.preview.name")}
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        {t("studentImportDialog.preview.classroom")}
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        {t("studentImportDialog.preview.birthdate")}
+                      </th>
+                      <th className="px-4 py-2 text-left">
+                        {t("studentImportDialog.preview.errors")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -535,36 +591,42 @@ export function StudentImportDialog({
                 )}
                 <AlertDescription>
                   <div className="space-y-2">
-                    <p className="font-semibold text-lg">匯入完成</p>
+                    <p className="font-semibold text-lg">
+                      {t("studentImportDialog.result.title")}
+                    </p>
                     <div className="flex gap-4">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                         <span>
-                          成功匯入: <strong>{successCount}</strong> 位學生
+                          {t("studentImportDialog.result.success", {
+                            count: successCount,
+                          })}
                         </span>
                       </div>
                       {failCount > 0 && (
                         <div className="flex items-center gap-2">
                           <X className="h-4 w-4 text-red-600" />
                           <span>
-                            匯入失敗: <strong>{failCount}</strong> 位學生
+                            {t("studentImportDialog.result.failed", {
+                              count: failCount,
+                            })}
                           </span>
                         </div>
                       )}
                     </div>
                     {duplicateAction === "skip" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
-                        已跳過重複的學生資料
+                        {t("studentImportDialog.result.skipped")}
                       </p>
                     )}
                     {duplicateAction === "update" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
-                        已更新重複學生的資料
+                        {t("studentImportDialog.result.updated")}
                       </p>
                     )}
                     {duplicateAction === "add_suffix" && successCount > 0 && (
                       <p className="text-sm text-gray-600">
-                        重複的學生已加上編號區分
+                        {t("studentImportDialog.result.numbered")}
                       </p>
                     )}
                   </div>
@@ -576,11 +638,13 @@ export function StudentImportDialog({
                 <AlertCircle className="h-4 w-4 text-blue-600" />
                 <AlertDescription>
                   <div className="space-y-2">
-                    <p className="font-medium">下一步：</p>
+                    <p className="font-medium">
+                      {t("studentImportDialog.nextSteps.title")}
+                    </p>
                     <ul className="list-disc list-inside text-sm space-y-1">
-                      <li>學生預設密碼為生日（格式：YYYYMMDD）</li>
-                      <li>請提醒學生首次登入後修改密碼</li>
-                      <li>可以到「我的學生」頁面查看匯入的學生</li>
+                      <li>{t("studentImportDialog.nextSteps.step1")}</li>
+                      <li>{t("studentImportDialog.nextSteps.step2")}</li>
+                      <li>{t("studentImportDialog.nextSteps.step3")}</li>
                     </ul>
                   </div>
                 </AlertDescription>
@@ -595,11 +659,11 @@ export function StudentImportDialog({
               onClick={handleClose}
               disabled={importing}
             >
-              取消
+              {t("studentImportDialog.buttons.cancel")}
             </Button>
             {successCount > 0 || failCount > 0 ? (
               <Button onClick={handleClose} variant="default">
-                完成
+                {t("studentImportDialog.buttons.done")}
               </Button>
             ) : (
               <Button
@@ -609,8 +673,10 @@ export function StudentImportDialog({
                 }
               >
                 {importing
-                  ? "匯入中..."
-                  : `匯入 ${preview.filter((s) => s.isValid).length} 位學生`}
+                  ? t("studentImportDialog.buttons.importing")
+                  : t("studentImportDialog.buttons.import", {
+                      count: preview.filter((s) => s.isValid).length,
+                    })}
               </Button>
             )}
           </div>
