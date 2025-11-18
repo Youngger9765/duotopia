@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 // Staging environment URLs
 const STAGING_URL = 'https://duotopia-staging-frontend-b2ovkkgl6a-de.a.run.app';
