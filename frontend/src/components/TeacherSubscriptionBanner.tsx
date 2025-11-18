@@ -1,6 +1,7 @@
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface TeacherSubscriptionBannerProps {
   isActive: boolean;
@@ -15,6 +16,7 @@ export default function TeacherSubscriptionBanner({
   daysRemaining,
 }: TeacherSubscriptionBannerProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // 已訂閱且有效
   if (isActive && endDate) {
@@ -42,21 +44,25 @@ export default function TeacherSubscriptionBanner({
                     isExpiringSoon ? "text-yellow-800" : "text-green-800"
                   }`}
                 >
-                  訂閱狀態：已訂閱
+                  {t("teacherSubscriptionBanner.status.subscribed")}
                 </div>
                 <div
                   className={`text-sm ${
                     isExpiringSoon ? "text-yellow-700" : "text-green-700"
                   }`}
                 >
-                  您的訂閱在 {daysRemaining} 天後到期
+                  {t("teacherSubscriptionBanner.expiry.expiresIn", {
+                    days: daysRemaining,
+                  })}
                 </div>
                 <div
                   className={`text-xs mt-1 ${
                     isExpiringSoon ? "text-yellow-600" : "text-green-600"
                   }`}
                 >
-                  到期日: {new Date(endDate).toLocaleDateString("zh-TW")}
+                  {t("teacherSubscriptionBanner.expiry.expiryDate", {
+                    date: new Date(endDate).toLocaleDateString("zh-TW"),
+                  })}
                 </div>
               </div>
             </div>
@@ -75,7 +81,7 @@ export default function TeacherSubscriptionBanner({
                     isExpiringSoon ? "text-yellow-700" : "text-green-700"
                   }`}
                 >
-                  剩餘天數
+                  {t("teacherSubscriptionBanner.expiry.daysRemaining")}
                 </div>
               </div>
 
@@ -84,7 +90,7 @@ export default function TeacherSubscriptionBanner({
                   onClick={() => navigate("/pricing")}
                   className="bg-yellow-600 hover:bg-yellow-700"
                 >
-                  立即續訂
+                  {t("teacherSubscriptionBanner.actions.renewNow")}
                 </Button>
               )}
             </div>
@@ -102,9 +108,11 @@ export default function TeacherSubscriptionBanner({
           <div className="flex items-center gap-3">
             <XCircle className="w-5 h-5 text-red-600" />
             <div>
-              <div className="font-semibold text-red-800">訂閱狀態：未訂閱</div>
+              <div className="font-semibold text-red-800">
+                {t("teacherSubscriptionBanner.status.notSubscribed")}
+              </div>
               <div className="text-sm text-red-700">
-                您目前沒有有效的訂閱方案
+                {t("teacherSubscriptionBanner.noSubscription")}
               </div>
             </div>
           </div>
@@ -113,7 +121,7 @@ export default function TeacherSubscriptionBanner({
             onClick={() => navigate("/pricing")}
             className="bg-red-600 hover:bg-red-700"
           >
-            查看訂閱方案
+            {t("teacherSubscriptionBanner.actions.viewPlans")}
           </Button>
         </div>
       </div>

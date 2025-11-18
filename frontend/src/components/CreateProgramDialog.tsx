@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/tag-input";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface Program {
   id: number;
@@ -67,6 +68,7 @@ export default function CreateProgramDialog({
   classroomId,
   classroomName,
 }: CreateProgramDialogProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("template");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -148,7 +150,7 @@ export default function CreateProgramDialog({
       setCopyablePrograms(otherPrograms);
     } catch (error) {
       console.error("Failed to fetch data:", error);
-      toast.error("載入課程資料失敗");
+      toast.error(t("dialogs.createProgramDialog.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -253,12 +255,16 @@ export default function CreateProgramDialog({
       );
 
       await Promise.all(promises);
-      toast.success(`成功建立 ${selectedTemplates.length} 個課程！`);
+      toast.success(
+        t("dialogs.createProgramDialog.success.created", {
+          count: selectedTemplates.length,
+        }),
+      );
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to create from template:", error);
-      toast.error("建立失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -292,12 +298,16 @@ export default function CreateProgramDialog({
       );
 
       await Promise.all(promises);
-      toast.success(`成功複製 ${selectedPrograms.length} 個課程！`);
+      toast.success(
+        t("dialogs.createProgramDialog.success.copied", {
+          count: selectedPrograms.length,
+        }),
+      );
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to copy from classroom:", error);
-      toast.error("複製失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.copyFailed"));
     } finally {
       setCreating(false);
     }
@@ -317,12 +327,12 @@ export default function CreateProgramDialog({
           : undefined,
         tags: customForm.tags,
       });
-      toast.success("成功建立自訂課程！");
+      toast.success(t("dialogs.createProgramDialog.success.customCreated"));
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to create custom program:", error);
-      toast.error("建立失敗，請稍後再試");
+      toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -357,8 +367,14 @@ export default function CreateProgramDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>建立課程到「{classroomName}」</DialogTitle>
-          <DialogDescription>選擇建立課程的方式</DialogDescription>
+          <DialogTitle>
+            {t("dialogs.createProgramDialog.title", {
+              classroom: classroomName,
+            })}
+          </DialogTitle>
+          <DialogDescription>
+            {t("dialogs.createProgramDialog.description")}
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs

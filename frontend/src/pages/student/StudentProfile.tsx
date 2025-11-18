@@ -20,6 +20,7 @@ import {
   Shield,
   Loader2,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface StudentInfo {
   id: number;
@@ -34,6 +35,7 @@ interface StudentInfo {
 }
 
 export default function StudentProfile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, token, logout } = useStudentAuthStore();
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
@@ -67,10 +69,10 @@ export default function StudentProfile() {
         setStudentInfo(data);
         setNewEmail(data.email || "");
       } else {
-        toast.error("無法載入個人資料");
+        toast.error(t("studentProfile.errors.loadFailed"));
       }
     } catch {
-      toast.error("載入個人資料失敗");
+      toast.error(t("studentProfile.errors.loadError"));
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ export default function StudentProfile() {
 
   const handleUpdateEmail = async () => {
     if (!newEmail || !newEmail.includes("@")) {
-      toast.error("請輸入有效的 Email 地址");
+      toast.error(t("studentProfile.errors.invalidEmail"));
       return;
     }
 
@@ -97,18 +99,18 @@ export default function StudentProfile() {
       if (response.ok) {
         const data = await response.json();
         if (data.verification_sent) {
-          toast.success("驗證信已發送到新的 Email 地址");
+          toast.success(t("studentProfile.success.verificationSent"));
         } else {
-          toast.success("Email 已更新");
+          toast.success(t("studentProfile.success.emailUpdated"));
         }
         setShowEmailEdit(false);
         loadStudentInfo();
       } else {
         const error = await response.text();
-        toast.error(`更新失敗：${error}`);
+        toast.error(t("studentProfile.errors.updateFailed", { error }));
       }
     } catch {
-      toast.error("更新 Email 失敗");
+      toast.error(t("studentProfile.errors.updateError"));
     } finally {
       setIsUpdating(false);
     }
@@ -127,22 +129,22 @@ export default function StudentProfile() {
       });
 
       if (response.ok) {
-        toast.success("Email 綁定已解除");
+        toast.success(t("studentProfile.success.emailUnbound"));
         setShowUnbindConfirm(false);
         loadStudentInfo();
       } else {
         const error = await response.text();
-        toast.error(`解除綁定失敗：${error}`);
+        toast.error(t("studentProfile.errors.unbindFailed", { error }));
       }
     } catch {
-      toast.error("解除綁定失敗");
+      toast.error(t("studentProfile.errors.unbindError"));
     } finally {
       setIsUnbinding(false);
     }
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "未設定";
+    if (!dateString) return t("studentProfile.basicInfo.notSet");
     const date = new Date(dateString);
     return date.toLocaleDateString("zh-TW");
   };
@@ -153,7 +155,7 @@ export default function StudentProfile() {
         <div className="max-w-full mx-auto">
           <Card>
             <CardContent className="p-6 sm:p-8 text-center dark:bg-gray-800">
-              載入中...
+              {t("studentProfile.loading")}
             </CardContent>
           </Card>
         </div>
@@ -167,7 +169,7 @@ export default function StudentProfile() {
         <div className="max-w-full mx-auto">
           <Card>
             <CardContent className="p-6 sm:p-8 text-center dark:bg-gray-800">
-              無法載入個人資料
+              {t("studentProfile.errors.loadFailed")}
             </CardContent>
           </Card>
         </div>
@@ -187,10 +189,12 @@ export default function StudentProfile() {
               className="gap-2 h-12 min-h-12 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">返回</span>
+              <span className="hidden sm:inline">
+                {t("studentProfile.header.back")}
+              </span>
             </Button>
             <h1 className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-              個人資料
+              {t("studentProfile.header.title")}
             </h1>
           </div>
         </div>
@@ -200,33 +204,43 @@ export default function StudentProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              基本資訊
+              {t("studentProfile.basicInfo.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">姓名</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.basicInfo.name")}
+                </label>
                 <p className="font-medium">{studentInfo.name}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">生日</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.basicInfo.birthday")}
+                </label>
                 <p className="font-medium flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   {formatDate(studentInfo.birthday)}
                 </p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">班級</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.basicInfo.classroom")}
+                </label>
                 <p className="font-medium">
-                  {studentInfo.classroom_name || "未分配班級"}
+                  {studentInfo.classroom_name ||
+                    t("studentProfile.basicInfo.classroomNone")}
                 </p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">學校</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.basicInfo.school")}
+                </label>
                 <p className="font-medium flex items-center gap-2">
                   <School className="h-4 w-4 text-gray-400" />
-                  {studentInfo.school_name || "未設定學校"}
+                  {studentInfo.school_name ||
+                    t("studentProfile.basicInfo.schoolNone")}
                 </p>
               </div>
             </div>
@@ -238,7 +252,7 @@ export default function StudentProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              Email 設定
+              {t("studentProfile.email.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -248,14 +262,16 @@ export default function StudentProfile() {
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="font-medium">
-                        {studentInfo.email || "未設定 Email"}
+                        {studentInfo.email || t("studentProfile.email.noEmail")}
                       </p>
                       {studentInfo.email && (
                         <p className="text-xs text-gray-500 mt-1">
                           {studentInfo.email_verified &&
                           studentInfo.email_verified_at
-                            ? `已於 ${formatDate(studentInfo.email_verified_at)} 驗證`
-                            : "尚未驗證"}
+                            ? t("studentProfile.email.verifiedAt", {
+                                date: formatDate(studentInfo.email_verified_at),
+                              })
+                            : t("studentProfile.email.unverified")}
                         </p>
                       )}
                     </div>
@@ -264,7 +280,7 @@ export default function StudentProfile() {
                         {studentInfo.email_verified ? (
                           <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
                             <CheckCircle className="h-3 w-3" />
-                            已驗證
+                            {t("studentProfile.email.verified")}
                           </Badge>
                         ) : (
                           <Badge
@@ -272,7 +288,7 @@ export default function StudentProfile() {
                             className="text-orange-600 border-orange-300 flex items-center gap-1"
                           >
                             <AlertCircle className="h-3 w-3" />
-                            待驗證
+                            {t("studentProfile.email.pending")}
                           </Badge>
                         )}
                       </div>
@@ -286,7 +302,9 @@ export default function StudentProfile() {
                       className="hover:bg-gray-200 transition-colors"
                     >
                       <Edit2 className="h-4 w-4 mr-1" />
-                      {studentInfo.email ? "修改" : "設定"}
+                      {studentInfo.email
+                        ? t("studentProfile.email.update")
+                        : t("studentProfile.email.setup")}
                     </Button>
                     {studentInfo.email && (
                       <Button
@@ -296,7 +314,7 @@ export default function StudentProfile() {
                         onClick={() => setShowUnbindConfirm(true)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        解除綁定
+                        {t("studentProfile.email.unbind")}
                       </Button>
                     )}
                   </div>
@@ -306,13 +324,13 @@ export default function StudentProfile() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    新的 Email 地址
+                    {t("studentProfile.email.newEmail")}
                   </label>
                   <Input
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="請輸入新的 Email 地址"
+                    placeholder={t("studentProfile.email.placeholder")}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -327,10 +345,10 @@ export default function StudentProfile() {
                     {isUpdating ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        更新中...
+                        {t("studentProfile.email.updating")}
                       </>
                     ) : (
-                      "確認更新"
+                      t("studentProfile.email.confirm")
                     )}
                   </Button>
                   <Button
@@ -342,7 +360,7 @@ export default function StudentProfile() {
                     }}
                     disabled={isUpdating}
                   >
-                    取消
+                    {t("studentProfile.email.cancel")}
                   </Button>
                 </div>
               </div>
@@ -355,10 +373,10 @@ export default function StudentProfile() {
                   <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-red-900">
-                      確定要解除 Email 綁定嗎？
+                      {t("studentProfile.unbindDialog.title")}
                     </p>
                     <p className="text-xs text-red-700 mt-1">
-                      解除綁定後，您將無法收到學習提醒和重要通知。
+                      {t("studentProfile.unbindDialog.description")}
                     </p>
                     <div className="flex gap-2 mt-3">
                       <Button
@@ -371,10 +389,10 @@ export default function StudentProfile() {
                         {isUnbinding ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            解除中...
+                            {t("studentProfile.unbindDialog.unbinding")}
                           </>
                         ) : (
-                          "確定解除"
+                          t("studentProfile.unbindDialog.confirm")
                         )}
                       </Button>
                       <Button
@@ -383,7 +401,7 @@ export default function StudentProfile() {
                         onClick={() => setShowUnbindConfirm(false)}
                         disabled={isUnbinding}
                       >
-                        取消
+                        {t("studentProfile.unbindDialog.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -398,17 +416,21 @@ export default function StudentProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              帳號資訊
+              {t("studentProfile.account.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">帳號 ID</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.account.id")}
+                </label>
                 <p className="font-medium">#{studentInfo.id}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">註冊時間</label>
+                <label className="text-sm text-gray-500">
+                  {t("studentProfile.account.registeredAt")}
+                </label>
                 <p className="font-medium">
                   {formatDate(studentInfo.created_at)}
                 </p>
@@ -423,7 +445,7 @@ export default function StudentProfile() {
                   navigate("/student/login");
                 }}
               >
-                登出帳號
+                {t("studentProfile.account.logout")}
               </Button>
             </div>
           </CardContent>

@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -66,6 +67,7 @@ export default function StudentTable({
   selectedIds: externalSelectedIds,
   onSelectionChange,
 }: StudentTableProps) {
+  const { t } = useTranslation();
   const [internalSelectedIds, setInternalSelectedIds] = React.useState<
     Set<number>
   >(new Set());
@@ -115,25 +117,25 @@ export default function StudentTable({
       case "active":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            活躍
+            {t("studentTable.status.active")}
           </span>
         );
       case "inactive":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            未活躍
+            {t("studentTable.status.inactive")}
           </span>
         );
       case "suspended":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            已停權
+            {t("studentTable.status.suspended")}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            未知
+            {t("studentTable.status.unknown")}
           </span>
         );
     }
@@ -152,7 +154,7 @@ export default function StudentTable({
         {onAddStudent && (
           <Button className="mt-4" size="sm" onClick={onAddStudent}>
             <Plus className="h-4 w-4 mr-2" />
-            新增第一位學生
+            {t("studentTable.addFirstStudent")}
           </Button>
         )}
       </div>
@@ -339,19 +341,23 @@ export default function StudentTable({
               )}
               <TableHead className="w-[50px] text-left">ID</TableHead>
               <TableHead className="text-left min-w-[120px]">
-                學生姓名
+                {t("studentTable.headers.studentName")}
               </TableHead>
               <TableHead className="text-left min-w-[250px]">
-                聯絡資訊
+                {t("studentTable.headers.contactInfo")}
               </TableHead>
               <TableHead className="text-left min-w-[100px] whitespace-nowrap">
-                密碼狀態
+                {t("studentTable.headers.passwordStatus")}
               </TableHead>
-              <TableHead className="text-left w-[80px]">狀態</TableHead>
+              <TableHead className="text-left w-[80px]">
+                {t("studentTable.headers.status")}
+              </TableHead>
               <TableHead className="text-left min-w-[100px] whitespace-nowrap">
-                最後登入
+                {t("studentTable.headers.lastLogin")}
               </TableHead>
-              <TableHead className="text-left w-[120px]">操作</TableHead>
+              <TableHead className="text-left w-[120px]">
+                {t("studentTable.headers.actions")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -400,7 +406,7 @@ export default function StudentTable({
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                            未分配
+                            {t("studentTable.unassigned")}
                           </span>
                         ))}
                       {student.student_number && (
@@ -415,7 +421,7 @@ export default function StudentTable({
                   <div className="inline-flex items-center space-x-1">
                     {student.password_changed ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 whitespace-nowrap">
-                        已更改
+                        {t("studentTable.passwordChanged")}
                       </span>
                     ) : (
                       <>
@@ -427,12 +433,19 @@ export default function StudentTable({
                             <Button
                               variant="ghost"
                               size="sm"
-                              title={`複製密碼: ${student.birthdate?.replace(/-/g, "") || ""}`}
+                              title={t("studentTable.copyPassword", {
+                                password:
+                                  student.birthdate?.replace(/-/g, "") || "",
+                              })}
                               onClick={() => {
                                 const password =
                                   student.birthdate?.replace(/-/g, "") || "";
                                 navigator.clipboard.writeText(password);
-                                toast.success(`密碼已複製: ${password}`);
+                                toast.success(
+                                  t("studentTable.passwordCopied", {
+                                    password,
+                                  }),
+                                );
                               }}
                               className="h-6 w-6 p-0"
                             >
@@ -441,7 +454,7 @@ export default function StudentTable({
                           </>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-700 whitespace-nowrap">
-                            未設定生日
+                            {t("studentTable.noBirthdate")}
                           </span>
                         )}
                       </>
@@ -450,7 +463,7 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="重設為預設密碼"
+                        title={t("studentTable.resetPassword")}
                         onClick={() => onResetPassword(student)}
                         className="h-7 px-2"
                       >
@@ -469,12 +482,13 @@ export default function StudentTable({
                         {formatDate(student.last_login)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {Math.floor(
-                          (Date.now() -
-                            new Date(student.last_login).getTime()) /
-                            (1000 * 60 * 60 * 24),
-                        )}{" "}
-                        天前
+                        {t("studentTable.daysAgo", {
+                          count: Math.floor(
+                            (Date.now() -
+                              new Date(student.last_login).getTime()) /
+                              (1000 * 60 * 60 * 24),
+                          ),
+                        })}
                       </div>
                     </div>
                   ) : (
@@ -487,7 +501,7 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="查看詳情"
+                        title={t("studentTable.view")}
                         onClick={() => onViewStudent(student)}
                       >
                         <Eye className="h-4 w-4" />
@@ -497,7 +511,7 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="編輯"
+                        title={t("studentTable.edit")}
                         onClick={() => onEditStudent(student)}
                       >
                         <Edit className="h-4 w-4" />
@@ -507,11 +521,13 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="刪除"
+                        title={t("studentTable.delete")}
                         onClick={() => {
                           if (
                             confirm(
-                              `確定要刪除學生「${student.name}」嗎？此操作無法復原。`,
+                              t("studentTable.confirmDelete", {
+                                name: student.name,
+                              }),
                             )
                           ) {
                             onDeleteStudent(student);
@@ -528,6 +544,9 @@ export default function StudentTable({
             ))}
           </TableBody>
         </Table>
+        <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
+          {t("studentTable.totalStudents", { count: students.length })}
+        </div>
       </div>
     </>
   );

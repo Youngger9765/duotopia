@@ -16,6 +16,7 @@ import {
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTranslation } from "react-i18next";
 
 interface TeacherProfile {
   id: number;
@@ -47,6 +48,7 @@ interface TeacherLayoutProps {
 export default function TeacherLayout({ children }: TeacherLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(
     null,
@@ -89,31 +91,31 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   const allSidebarItems: SidebarItem[] = [
     {
       id: "dashboard",
-      label: "儀表板",
+      label: t("teacherLayout.nav.dashboard"),
       icon: Home,
       path: "/teacher/dashboard",
     },
     {
       id: "classrooms",
-      label: "我的班級",
+      label: t("teacherLayout.nav.myClassrooms"),
       icon: GraduationCap,
       path: "/teacher/classrooms",
     },
     {
       id: "students",
-      label: "所有學生",
+      label: t("teacherLayout.nav.allStudents"),
       icon: Users,
       path: "/teacher/students",
     },
     {
       id: "programs",
-      label: "公版課程",
+      label: t("teacherLayout.nav.publicPrograms"),
       icon: BookOpen,
       path: "/teacher/programs",
     },
     {
       id: "subscription",
-      label: "訂閱管理",
+      label: t("teacherLayout.nav.subscription"),
       icon: CreditCard,
       path: "/teacher/subscription",
     },
@@ -142,9 +144,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         {!sidebarCollapsed && (
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Duotopia
+              {t("teacherLayout.title")}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">教師後台</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t("teacherLayout.subtitle")}
+            </p>
           </div>
         )}
         <Button
@@ -231,7 +235,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
               className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
             >
               <Crown className="h-4 w-4 text-yellow-500" />
-              {!sidebarCollapsed && <span className="ml-2">系統管理</span>}
+              {!sidebarCollapsed && (
+                <span className="ml-2">
+                  {t("teacherLayout.nav.systemAdmin")}
+                </span>
+              )}
             </Button>
           </Link>
         )}
@@ -242,7 +250,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
-          {!sidebarCollapsed && <span className="ml-2">登出</span>}
+          {!sidebarCollapsed && <span className="ml-2">{t("nav.logout")}</span>}
         </Button>
       </div>
     </>
@@ -255,9 +263,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         <div className="flex items-center justify-between p-4">
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Duotopia
+              {t("teacherLayout.title")}
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">教師後台</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t("teacherLayout.subtitle")}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Sheet>

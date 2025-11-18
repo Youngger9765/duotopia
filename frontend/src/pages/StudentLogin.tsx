@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronRight, Home } from "lucide-react";
 import { useStudentAuthStore, StudentUser } from "@/stores/studentAuthStore";
 import { authService } from "@/services/authService";
 import { teacherService } from "@/services/teacherService";
+import { useTranslation } from "react-i18next";
 
 interface TeacherHistory {
   email: string;
@@ -30,6 +31,7 @@ interface Student {
 export default function StudentLogin() {
   const navigate = useNavigate();
   const { login } = useStudentAuthStore();
+  const { t } = useTranslation();
 
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);
@@ -92,10 +94,10 @@ export default function StudentLogin() {
         setClassrooms(classroomsData);
         setStep(2);
       } else {
-        setError("找不到此教師帳號");
+        setError(t("studentLogin.errors.teacherNotFound"));
       }
     } catch {
-      setError("無法驗證教師帳號，請稍後再試");
+      setError(t("studentLogin.errors.teacherValidationFailed"));
     } finally {
       setLoading(false);
     }
@@ -116,7 +118,7 @@ export default function StudentLogin() {
       setStudents(sortedStudents);
       setStep(3);
     } catch {
-      setError("無法載入班級學生資料");
+      setError(t("studentLogin.errors.loadClassroomFailed"));
     } finally {
       setLoading(false);
     }
@@ -153,7 +155,7 @@ export default function StudentLogin() {
         navigate("/student/dashboard");
       }
     } catch {
-      setError("密碼錯誤，請重新輸入");
+      setError(t("studentLogin.errors.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -204,7 +206,7 @@ export default function StudentLogin() {
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <Home className="h-4 w-4" />
-            <span>返回首頁</span>
+            <span>{t("studentLogin.header.home")}</span>
           </Button>
         </Link>
       </div>
@@ -212,7 +214,7 @@ export default function StudentLogin() {
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-blue-600 flex items-center justify-center gap-2">
           <span className="text-4xl">🚀</span>
-          嗨，歡迎來到 Duotopia！
+          {t("studentLogin.header.welcome")}
         </h1>
       </div>
 
@@ -226,7 +228,7 @@ export default function StudentLogin() {
               className="mb-2 w-fit"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              返回
+              {t("studentLogin.buttons.back")}
             </Button>
           )}
         </CardHeader>
@@ -235,13 +237,13 @@ export default function StudentLogin() {
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-center">
-                請輸入老師 Email
+                {t("studentLogin.step1.title")}
               </h2>
 
               <div className="space-y-4">
                 <Input
                   type="email"
-                  placeholder="teacher@example.com"
+                  placeholder={t("studentLogin.step1.placeholder")}
                   value={teacherEmail}
                   onChange={(e) => setTeacherEmail(e.target.value)}
                   className="text-lg py-6"
@@ -253,14 +255,16 @@ export default function StudentLogin() {
                   disabled={!teacherEmail || loading}
                   className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
-                  下一步
+                  {t("studentLogin.step1.next")}
                 </Button>
               </div>
 
               {/* Demo 教師快捷鍵 - 只在非 production 或有 ?is_demo=true 時顯示 */}
               {showDemoBlocks && (
                 <div className="mt-6 pt-6 border-t">
-                  <p className="text-sm text-gray-600 mb-3">快速測試：</p>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {t("studentLogin.step1.quickTest")}
+                  </p>
                   <Button
                     variant="outline"
                     className="w-full py-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200"
@@ -269,7 +273,7 @@ export default function StudentLogin() {
                     }}
                   >
                     <span className="text-purple-600 font-medium">
-                      🎯 使用 Demo 教師 (demo@duotopia.com)
+                      {t("studentLogin.step1.demoTeacher")}
                     </span>
                   </Button>
                 </div>
@@ -278,7 +282,7 @@ export default function StudentLogin() {
               {teacherHistory.length > 0 && (
                 <div className="space-y-3 mt-6">
                   <p className="text-sm text-gray-600">
-                    或選擇最近使用過的老師：
+                    {t("studentLogin.step1.recentTeachers")}
                   </p>
                   <div className="space-y-2">
                     {teacherHistory
@@ -308,7 +312,7 @@ export default function StudentLogin() {
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-center">
-                請選擇你的班級和名字
+                {t("studentLogin.step2.title")}
               </h2>
 
               <div className="space-y-3">
@@ -338,7 +342,9 @@ export default function StudentLogin() {
                 <h2 className="text-xl font-semibold">
                   {selectedClassroom.name}
                 </h2>
-                <p className="text-gray-600 mt-1">請選擇你的名字</p>
+                <p className="text-gray-600 mt-1">
+                  {t("studentLogin.step3.title")}
+                </p>
               </div>
 
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
@@ -363,14 +369,16 @@ export default function StudentLogin() {
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-2xl font-semibold">
-                  你好，{selectedStudent.name}！
+                  {t("studentLogin.step4.greeting", {
+                    name: selectedStudent.name,
+                  })}
                 </h2>
               </div>
 
               <div className="space-y-4">
                 <Input
                   type="password"
-                  placeholder="請輸入你的密碼"
+                  placeholder={t("studentLogin.step4.placeholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="text-lg py-6"
@@ -382,7 +390,7 @@ export default function StudentLogin() {
                   disabled={!password || loading}
                   className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
-                  登入
+                  {t("studentLogin.step4.login")}
                 </Button>
 
                 <Button
@@ -396,7 +404,7 @@ export default function StudentLogin() {
                   }}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  選擇其他學生
+                  {t("studentLogin.step4.selectOther")}
                 </Button>
               </div>
 
@@ -406,14 +414,14 @@ export default function StudentLogin() {
               {showDemoBlocks && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800 font-medium mb-1">
-                    💡 測試提示
+                    {t("studentLogin.step4.demoHint")}
                   </p>
                   <p className="text-xs text-yellow-700">
-                    Demo 學生預設密碼：
+                    {t("studentLogin.step4.demoPassword")}
                     <span className="font-mono font-bold">20120101</span>
                   </p>
                   <p className="text-xs text-gray-600 mt-2">
-                    正式使用時，密碼為學生的生日 (格式：YYYYMMDD)
+                    {t("studentLogin.step4.passwordFormat")}
                   </p>
                 </div>
               )}

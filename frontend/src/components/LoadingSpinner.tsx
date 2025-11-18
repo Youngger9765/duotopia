@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -7,10 +8,11 @@ interface LoadingSpinnerProps {
 }
 
 export default function LoadingSpinner({
-  message = "載入中...",
+  message,
   size = "md",
   fullPage = false,
 }: LoadingSpinnerProps) {
+  const { t } = useTranslation();
   const sizeClasses = {
     sm: "h-8 w-8",
     md: "h-12 w-12",
@@ -45,7 +47,7 @@ export default function LoadingSpinner({
         {/* Loading text with animation */}
         <div className="space-y-2">
           <p className={`${textSizeClasses[size]} font-medium text-gray-700`}>
-            {message}
+            {message || t("common.loading")}
           </p>
           <div className="flex justify-center space-x-1">
             <span
