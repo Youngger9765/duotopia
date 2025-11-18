@@ -18,7 +18,7 @@ import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPrevi
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
-// TeacherProfile is now integrated in TeacherLayout sidebar
+import TeacherProfile from "./pages/teacher/TeacherProfile";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentAssignmentList from "./pages/student/StudentAssignmentList";
@@ -156,6 +156,14 @@ function App() {
           element={
             <ProtectedRoute>
               <TeacherSubscription />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/profile"
+          element={
+            <ProtectedRoute>
+              <TeacherProfile />
             </ProtectedRoute>
           }
         />

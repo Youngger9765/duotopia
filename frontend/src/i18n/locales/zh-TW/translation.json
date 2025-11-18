@@ -729,6 +729,30 @@
       "updating": "更新中...",
       "cancel": "取消"
     },
+    "password": {
+      "title": "變更密碼",
+      "description": "更新您的密碼以保護帳號安全",
+      "changeButton": "變更密碼",
+      "currentPassword": "目前密碼",
+      "currentPasswordPlaceholder": "請輸入目前密碼",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "請輸入新密碼（至少 6 個字元）",
+      "confirmPassword": "確認新密碼",
+      "confirmPasswordPlaceholder": "請再次輸入新密碼",
+      "updateButton": "更新密碼",
+      "updating": "更新中...",
+      "cancel": "取消",
+      "errors": {
+        "allFieldsRequired": "所有密碼欄位皆為必填",
+        "passwordMismatch": "新密碼與確認密碼不相符",
+        "passwordTooShort": "新密碼至少需要 6 個字元",
+        "updateFailed": "更新密碼失敗",
+        "updateError": "更新密碼時發生錯誤"
+      },
+      "success": {
+        "passwordUpdated": "密碼已成功更新"
+      }
+    },
     "unbindDialog": {
       "title": "確定要解除 Email 綁定嗎？",
       "description": "解除綁定後，您將無法收到學習提醒和重要通知。",
@@ -1695,7 +1719,67 @@
       "allStudents": "所有學生",
       "publicPrograms": "公版課程",
       "subscription": "訂閱管理",
-      "systemAdmin": "系統管理"
+      "systemAdmin": "系統管理",
+      "profile": "個人資料"
+    }
+  },
+  "teacherProfile": {
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "無法載入個人資料",
+      "nameEmpty": "姓名不可為空",
+      "updateFailed": "更新資料失敗"
+    },
+    "success": {
+      "nameUpdated": "姓名已更新",
+      "phoneUpdated": "電話已更新"
+    },
+    "header": {
+      "back": "返回",
+      "title": "個人資料"
+    },
+    "basicInfo": {
+      "title": "基本資訊",
+      "name": "姓名",
+      "namePlaceholder": "請輸入姓名",
+      "email": "電子郵件",
+      "phone": "電話",
+      "phoneNone": "未設定電話",
+      "phonePlaceholder": "請輸入電話號碼",
+      "accountType": "帳號類型",
+      "accountId": "帳號 ID",
+      "admin": "管理員",
+      "teacher": "教師"
+    },
+    "password": {
+      "title": "變更密碼",
+      "description": "更新您的密碼以保護帳號安全",
+      "changeButton": "變更密碼",
+      "currentPassword": "目前密碼",
+      "currentPasswordPlaceholder": "請輸入目前密碼",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "請輸入新密碼（至少 6 個字元）",
+      "confirmPassword": "確認新密碼",
+      "confirmPasswordPlaceholder": "請再次輸入新密碼",
+      "updateButton": "更新密碼",
+      "updating": "更新中...",
+      "cancel": "取消",
+      "errors": {
+        "allFieldsRequired": "所有密碼欄位皆為必填",
+        "passwordMismatch": "新密碼與確認密碼不相符",
+        "passwordTooShort": "新密碼至少需要 6 個字元",
+        "updateFailed": "更新密碼失敗"
+      },
+      "success": {
+        "passwordUpdated": "密碼已成功更新"
+      }
+    },
+    "account": {
+      "title": "帳號資訊",
+      "id": "帳號 ID",
+      "accountType": "帳號類型",
+      "admin": "管理員",
+      "teacher": "教師"
     }
   },
   "teacherSubscriptionBanner": {

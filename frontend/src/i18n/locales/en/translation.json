@@ -729,6 +729,30 @@
       "updating": "Updating...",
       "cancel": "Cancel"
     },
+    "password": {
+      "title": "Change Password",
+      "description": "Update your password to keep your account secure",
+      "changeButton": "Change Password",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password (at least 6 characters)",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "updateButton": "Update Password",
+      "updating": "Updating...",
+      "cancel": "Cancel",
+      "errors": {
+        "allFieldsRequired": "All password fields are required",
+        "passwordMismatch": "New password and confirmation do not match",
+        "passwordTooShort": "New password must be at least 6 characters",
+        "updateFailed": "Failed to update password",
+        "updateError": "Error updating password"
+      },
+      "success": {
+        "passwordUpdated": "Password updated successfully"
+      }
+    },
     "unbindDialog": {
       "title": "Are you sure you want to unbind email?",
       "description": "You will not receive learning reminders and important notifications after unbinding.",
@@ -1695,7 +1719,67 @@
       "allStudents": "All Students",
       "publicPrograms": "Public Programs",
       "subscription": "Subscription",
-      "systemAdmin": "System Admin"
+      "systemAdmin": "System Admin",
+      "profile": "Profile"
+    }
+  },
+  "teacherProfile": {
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Unable to load profile",
+      "nameEmpty": "Name cannot be empty",
+      "updateFailed": "Failed to update profile"
+    },
+    "success": {
+      "nameUpdated": "Name updated successfully",
+      "phoneUpdated": "Phone updated successfully"
+    },
+    "header": {
+      "back": "Back",
+      "title": "Profile"
+    },
+    "basicInfo": {
+      "title": "Basic Information",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "email": "Email",
+      "phone": "Phone",
+      "phoneNone": "No phone set",
+      "phonePlaceholder": "Enter phone number",
+      "accountType": "Account Type",
+      "accountId": "Account ID",
+      "admin": "Administrator",
+      "teacher": "Teacher"
+    },
+    "password": {
+      "title": "Change Password",
+      "description": "Update your password to keep your account secure",
+      "changeButton": "Change Password",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password (at least 6 characters)",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "updateButton": "Update Password",
+      "updating": "Updating...",
+      "cancel": "Cancel",
+      "errors": {
+        "allFieldsRequired": "All password fields are required",
+        "passwordMismatch": "New password and confirmation do not match",
+        "passwordTooShort": "New password must be at least 6 characters",
+        "updateFailed": "Failed to update password"
+      },
+      "success": {
+        "passwordUpdated": "Password updated successfully"
+      }
+    },
+    "account": {
+      "title": "Account Information",
+      "id": "Account ID",
+      "accountType": "Account Type",
+      "admin": "Administrator",
+      "teacher": "Teacher"
     }
   },
   "teacherSubscriptionBanner": {

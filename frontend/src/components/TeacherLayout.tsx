@@ -121,12 +121,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       icon: CreditCard,
       path: "/teacher/subscription",
     },
-    {
-      id: "profile",
-      label: "Profile",
-      icon: User,
-      path: "/teacher/profile",
-    },
   ];
 
   // 根據系統配置過濾選單項目
@@ -149,9 +143,9 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     <>
       {/* Header */}
       <div className="p-4 border-b">
-        {!sidebarCollapsed && (
-          <>
-            <div className="mb-3">
+        <div className="flex items-start justify-between mb-3">
+          {!sidebarCollapsed ? (
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 {t("teacherLayout.title")}
               </h1>
@@ -159,23 +153,27 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                 {t("teacherLayout.subtitle")}
               </p>
             </div>
-            <div className="mb-3">
-              <LanguageSwitcher />
-            </div>
-          </>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="w-full md:block hidden h-10 min-h-10"
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
           ) : (
-            <ChevronLeft className="h-4 w-4" />
+            <div className="flex-1" />
           )}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="md:flex hidden h-8 w-8 p-0 items-center justify-center flex-shrink-0"
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        {!sidebarCollapsed && (
+          <div>
+            <LanguageSwitcher />
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -256,6 +254,18 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             </Button>
           </Link>
         )}
+        <Link to="/teacher/profile" className="block mb-2" onClick={onNavigate}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
+          >
+            <User className="h-4 w-4" />
+            {!sidebarCollapsed && (
+              <span className="ml-2">{t("teacherLayout.nav.profile")}</span>
+            )}
+          </Button>
+        </Link>
         <Button
           variant="ghost"
           size="sm"

@@ -193,17 +193,17 @@ export default function StudentProfile() {
 
   const handleUpdatePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error("All password fields are required");
+      toast.error(t("studentProfile.password.errors.allFieldsRequired"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("New password and confirmation do not match");
+      toast.error(t("studentProfile.password.errors.passwordMismatch"));
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters");
+      toast.error(t("studentProfile.password.errors.passwordTooShort"));
       return;
     }
 
@@ -223,17 +223,19 @@ export default function StudentProfile() {
       });
 
       if (response.ok) {
-        toast.success("Password updated successfully");
+        toast.success(t("studentProfile.password.success.passwordUpdated"));
         setShowPasswordEdit(false);
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
         const error = await response.json();
-        toast.error(error.detail || "Failed to update password");
+        toast.error(
+          error.detail || t("studentProfile.password.errors.updateFailed"),
+        );
       }
     } catch {
-      toast.error("Error updating password");
+      toast.error(t("studentProfile.password.errors.updateError"));
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -560,14 +562,14 @@ export default function StudentProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              Change Password
+              {t("studentProfile.password.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {!showPasswordEdit ? (
               <div>
                 <p className="text-sm text-gray-600 mb-3">
-                  Update your password to keep your account secure
+                  {t("studentProfile.password.description")}
                 </p>
                 <Button
                   size="sm"
@@ -576,42 +578,48 @@ export default function StudentProfile() {
                   className="hover:bg-gray-200 transition-colors"
                 >
                   <Lock className="h-4 w-4 mr-2" />
-                  Change Password
+                  {t("studentProfile.password.changeButton")}
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Current Password
+                    {t("studentProfile.password.currentPassword")}
                   </label>
                   <Input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
+                    placeholder={t(
+                      "studentProfile.password.currentPasswordPlaceholder",
+                    )}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    New Password
+                    {t("studentProfile.password.newPassword")}
                   </label>
                   <Input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (at least 6 characters)"
+                    placeholder={t(
+                      "studentProfile.password.newPasswordPlaceholder",
+                    )}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Confirm New Password
+                    {t("studentProfile.password.confirmPassword")}
                   </label>
                   <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
+                    placeholder={t(
+                      "studentProfile.password.confirmPasswordPlaceholder",
+                    )}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -629,10 +637,10 @@ export default function StudentProfile() {
                     {isUpdatingPassword ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Updating...
+                        {t("studentProfile.password.updating")}
                       </>
                     ) : (
-                      "Update Password"
+                      t("studentProfile.password.updateButton")
                     )}
                   </Button>
                   <Button
@@ -646,7 +654,7 @@ export default function StudentProfile() {
                     }}
                     disabled={isUpdatingPassword}
                   >
-                    Cancel
+                    {t("studentProfile.password.cancel")}
                   </Button>
                 </div>
               </div>
