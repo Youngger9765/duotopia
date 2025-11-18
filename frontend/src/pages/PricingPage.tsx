@@ -26,6 +26,7 @@ import TeacherLoginModal from "@/components/TeacherLoginModal";
 import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface PricingPlan {
   id: string;
@@ -245,6 +246,11 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
+
       {/* User Status Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="container mx-auto px-4 py-4">

@@ -8,6 +8,7 @@ import { useStudentAuthStore, StudentUser } from "@/stores/studentAuthStore";
 import { authService } from "@/services/authService";
 import { teacherService } from "@/services/teacherService";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface TeacherHistory {
   email: string;
@@ -209,6 +210,11 @@ export default function StudentLogin() {
             <span>{t("studentLogin.header.home")}</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
       </div>
 
       <div className="mb-8 text-center">

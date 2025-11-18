@@ -1,12 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TermsOfService() {
   const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card className="p-8">
           <h1 className="text-3xl font-bold mb-4 text-center">

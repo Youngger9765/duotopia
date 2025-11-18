@@ -15,6 +15,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Mail, Phone } from "lucide-react";
 import { apiClient } from "../lib/api";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TeacherRegister() {
   const { t } = useTranslation();
@@ -88,6 +89,11 @@ export default function TeacherRegister() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">

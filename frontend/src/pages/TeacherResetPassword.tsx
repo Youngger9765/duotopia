@@ -13,6 +13,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 import { apiClient } from "../lib/api";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TeacherResetPassword() {
   const [searchParams] = useSearchParams();
@@ -127,6 +128,11 @@ export default function TeacherResetPassword() {
   if (isVerifying) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        {/* Language Switcher */}
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
+
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
@@ -141,6 +147,11 @@ export default function TeacherResetPassword() {
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        {/* Language Switcher */}
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
@@ -176,6 +187,11 @@ export default function TeacherResetPassword() {
   if (!tokenValid) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        {/* Language Switcher */}
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
@@ -219,6 +235,11 @@ export default function TeacherResetPassword() {
   // 重設密碼表單
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Duotopia</h1>

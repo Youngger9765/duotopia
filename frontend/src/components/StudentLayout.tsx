@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   BookOpen,
   Home,
@@ -119,6 +120,11 @@ export default function StudentLayout() {
             >
               <X className="h-5 w-5" />
             </Button>
+          </div>
+
+          {/* Language Switcher */}
+          <div className="mt-4">
+            <LanguageSwitcher />
           </div>
 
           {/* User Info */}
@@ -267,22 +273,27 @@ export default function StudentLayout() {
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="hidden sm:flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">
-                    {t("studentLayout.stats.streak")}
-                  </p>
-                  <p className="text-lg font-semibold text-green-600">
-                    {t("studentLayout.stats.days", { count: 7 })}
-                  </p>
+              {/* Quick Stats and Language Switcher */}
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">
+                      {t("studentLayout.stats.streak")}
+                    </p>
+                    <p className="text-lg font-semibold text-green-600">
+                      {t("studentLayout.stats.days", { count: 7 })}
+                    </p>
+                  </div>
+                  <div className="h-10 w-px bg-gray-200" />
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">
+                      {t("studentLayout.stats.weekProgress")}
+                    </p>
+                    <p className="text-lg font-semibold text-blue-600">85%</p>
+                  </div>
                 </div>
-                <div className="h-10 w-px bg-gray-200" />
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">
-                    {t("studentLayout.stats.weekProgress")}
-                  </p>
-                  <p className="text-lg font-semibold text-blue-600">85%</p>
+                <div className="lg:hidden">
+                  <LanguageSwitcher />
                 </div>
               </div>
             </div>

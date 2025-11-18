@@ -17,6 +17,7 @@ import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface TeacherProfile {
   id: number;
@@ -140,22 +141,27 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
     <>
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-4 border-b">
         {!sidebarCollapsed && (
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              {t("teacherLayout.title")}
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("teacherLayout.subtitle")}
-            </p>
-          </div>
+          <>
+            <div className="mb-3">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {t("teacherLayout.title")}
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t("teacherLayout.subtitle")}
+              </p>
+            </div>
+            <div className="mb-3">
+              <LanguageSwitcher />
+            </div>
+          </>
         )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="ml-auto md:block hidden h-10 min-h-10 w-10"
+          className="w-full md:block hidden h-10 min-h-10"
         >
           {sidebarCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -270,6 +276,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <Sheet>
               <SheetTrigger asChild>
                 <Button

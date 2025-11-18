@@ -16,6 +16,7 @@ import { Loader2, User, Lock, Zap, Home } from "lucide-react";
 import { apiClient } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
@@ -104,6 +105,11 @@ export default function TeacherLogin() {
             <span>{t("teacherLogin.header.home")}</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
       </div>
 
       <div className="w-full max-w-md">
