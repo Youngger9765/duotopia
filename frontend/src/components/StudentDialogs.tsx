@@ -100,7 +100,7 @@ export function StudentDialogs({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = "姓名為必填";
+      newErrors.name = t("dialogs.studentDialogs.form.nameError");
     }
 
     // Email 是選填，但如果有填寫則檢查格式
@@ -108,11 +108,11 @@ export function StudentDialogs({
       formData.email?.trim() &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
     ) {
-      newErrors.email = "Email 格式不正確";
+      newErrors.email = t("dialogs.studentDialogs.form.emailError");
     }
 
     if (!formData.birthdate) {
-      newErrors.birthdate = "生日為必填（用作預設密碼）";
+      newErrors.birthdate = t("dialogs.studentDialogs.form.birthdateError");
     }
 
     setErrors(newErrors);

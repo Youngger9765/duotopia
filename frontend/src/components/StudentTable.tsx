@@ -62,7 +62,7 @@ export default function StudentTable({
   onResetPassword,
   onDeleteStudent,
   onBulkAction,
-  emptyMessage = "尚無學生",
+  emptyMessage,
   emptyDescription,
   selectedIds: externalSelectedIds,
   onSelectionChange,
@@ -218,7 +218,7 @@ export default function StudentTable({
                 {student.phone && (
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">
-                      電話:{" "}
+                      {t("studentTable.info.phone")}{" "}
                     </span>
                     <span className="dark:text-gray-200">{student.phone}</span>
                   </div>
@@ -226,7 +226,7 @@ export default function StudentTable({
                 {showClassroom && (
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">
-                      班級:{" "}
+                      {t("studentTable.info.classroom")}{" "}
                     </span>
                     {student.classroom_name ? (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
@@ -234,18 +234,18 @@ export default function StudentTable({
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        未分配
+                        {t("studentTable.classroom.unassigned")}
                       </span>
                     )}
                   </div>
                 )}
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">
-                    密碼:{" "}
+                    {t("studentTable.info.password")}{" "}
                   </span>
                   {student.password_changed ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                      已更改
+                      {t("studentTable.passwordStatus.changed")}
                     </span>
                   ) : student.birthdate ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 font-mono">
@@ -253,18 +253,18 @@ export default function StudentTable({
                     </span>
                   ) : (
                     <span className="text-gray-500 dark:text-gray-400">
-                      未設定
+                      {t("studentTable.passwordStatus.notSet")}
                     </span>
                   )}
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">
-                    最後登入:{" "}
+                    {t("studentTable.info.lastLogin")}{" "}
                   </span>
                   <span className="dark:text-gray-200">
                     {student.last_login
                       ? formatDate(student.last_login)
-                      : "從未登入"}
+                      : t("studentTable.lastLogin.never")}
                   </span>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function StudentTable({
                     className="flex-1"
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    查看
+                    {t("studentTable.actions.view")}
                   </Button>
                 )}
                 {onEditStudent && (
@@ -290,7 +290,7 @@ export default function StudentTable({
                     className="flex-1"
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    編輯
+                    {t("studentTable.actions.edit")}
                   </Button>
                 )}
                 {onDeleteStudent && (
@@ -298,7 +298,13 @@ export default function StudentTable({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      if (confirm(`確定要刪除學生「${student.name}」嗎？`)) {
+                      if (
+                        confirm(
+                          t("studentTable.actions.deleteConfirm", {
+                            name: student.name,
+                          }),
+                        )
+                      ) {
                         onDeleteStudent(student);
                       }
                     }}
@@ -312,14 +318,16 @@ export default function StudentTable({
           ))}
         </div>
         <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
-          共 {students.length} 位學生
+          {t("studentTable.total", { count: students.length })}
         </div>
       </div>
 
       {/* Desktop Table View */}
       <div className="hidden md:block">
         <Table>
-          <TableCaption>共 {students.length} 位學生</TableCaption>
+          <TableCaption>
+            {t("studentTable.total", { count: students.length })}
+          </TableCaption>
           <TableHeader>
             <TableRow>
               {onBulkAction && (
@@ -341,22 +349,22 @@ export default function StudentTable({
               )}
               <TableHead className="w-[50px] text-left">ID</TableHead>
               <TableHead className="text-left min-w-[120px]">
-                {t("studentTable.headers.studentName")}
+                {t("studentTable.columns.studentName")}
               </TableHead>
               <TableHead className="text-left min-w-[250px]">
-                {t("studentTable.headers.contactInfo")}
+                {t("studentTable.columns.contactInfo")}
               </TableHead>
               <TableHead className="text-left min-w-[100px] whitespace-nowrap">
-                {t("studentTable.headers.passwordStatus")}
+                {t("studentTable.columns.passwordStatus")}
               </TableHead>
               <TableHead className="text-left w-[80px]">
-                {t("studentTable.headers.status")}
+                {t("studentTable.columns.status")}
               </TableHead>
               <TableHead className="text-left min-w-[100px] whitespace-nowrap">
-                {t("studentTable.headers.lastLogin")}
+                {t("studentTable.columns.lastLogin")}
               </TableHead>
               <TableHead className="text-left w-[120px]">
-                {t("studentTable.headers.actions")}
+                {t("studentTable.columns.actions")}
               </TableHead>
             </TableRow>
           </TableHeader>

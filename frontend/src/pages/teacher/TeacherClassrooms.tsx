@@ -702,12 +702,24 @@ export default function TeacherClassrooms() {
                     })
                   }
                 >
-                  <option value="A1">A1 - 初級</option>
-                  <option value="A2">A2 - 基礎</option>
-                  <option value="B1">B1 - 中級</option>
-                  <option value="B2">B2 - 中高級</option>
-                  <option value="C1">C1 - 高級</option>
-                  <option value="C2">C2 - 精通</option>
+                  <option value="A1">
+                    {t("dialogs.createProgramDialog.custom.levels.A1")}
+                  </option>
+                  <option value="A2">
+                    {t("dialogs.createProgramDialog.custom.levels.A2")}
+                  </option>
+                  <option value="B1">
+                    {t("dialogs.createProgramDialog.custom.levels.B1")}
+                  </option>
+                  <option value="B2">
+                    {t("dialogs.createProgramDialog.custom.levels.B2")}
+                  </option>
+                  <option value="C1">
+                    {t("dialogs.createProgramDialog.custom.levels.C1")}
+                  </option>
+                  <option value="C2">
+                    {t("dialogs.createProgramDialog.custom.levels.C2")}
+                  </option>
                 </select>
               </div>
             </div>
