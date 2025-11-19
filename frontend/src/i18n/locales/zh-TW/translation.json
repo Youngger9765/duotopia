@@ -640,7 +640,13 @@
     },
     "buttons": {
       "back": "返回",
+      "backShort": "返回",
       "submit": "提交作業",
+      "submitShort": "提交",
+      "submitting": "提交中...",
+      "submittingShort": "提交中",
+      "next": "下一題",
+      "previous": "上一題",
       "cancel": "取消",
       "confirm": "確認提交"
     },
@@ -667,7 +673,9 @@
     "status": {
       "completed": "已完成",
       "inProgress": "進行中",
-      "notStarted": "未開始"
+      "notStarted": "未開始",
+      "saving": "儲存中...",
+      "savingShort": "儲存中"
     },
     "recording": {
       "failed": "錄音失敗",

@@ -640,7 +640,13 @@
     },
     "buttons": {
       "back": "Back",
+      "backShort": "Back",
       "submit": "Submit Assignment",
+      "submitShort": "Submit",
+      "submitting": "Submitting...",
+      "submittingShort": "Submitting",
+      "next": "Next",
+      "previous": "Previous",
       "cancel": "Cancel",
       "confirm": "Confirm Submit"
     },
@@ -667,7 +673,9 @@
     "status": {
       "completed": "Completed",
       "inProgress": "In Progress",
-      "notStarted": "Not Started"
+      "notStarted": "Not Started",
+      "saving": "Saving...",
+      "savingShort": "Saving"
     },
     "recording": {
       "failed": "Recording Failed",
