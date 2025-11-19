@@ -14,6 +14,7 @@ import {
   type RecordingStrategy,
 } from "@/utils/audioRecordingStrategy";
 import { detectDevice } from "@/utils/deviceDetector";
+import { useTranslation } from "react-i18next";
 
 interface AudioRecorderProps {
   // Core props
@@ -65,6 +66,8 @@ export default function AudioRecorder({
   showTimer = true,
   autoStop,
 }: AudioRecorderProps) {
+  const { t } = useTranslation();
+
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -229,8 +232,8 @@ export default function AudioRecorder({
             `(min: ${strategy.minFileSize})`,
           );
 
-          toast.error("錄音失敗", {
-            description: "錄音檔案異常，請重新錄音",
+          toast.error(t("audioRecorder.toast.recordingFailed"), {
+            description: t("audioRecorder.toast.recordingAbnormal"),
           });
 
           if (onError) {
@@ -260,8 +263,8 @@ export default function AudioRecorder({
           if (!validationResult.valid) {
             console.error("Recording validation failed");
 
-            toast.error("錄音驗證失敗", {
-              description: "錄音檔案異常，請重新錄音",
+            toast.error(t("audioRecorder.toast.validationFailed"), {
+              description: t("audioRecorder.toast.recordingAbnormal"),
             });
 
             if (onError) {
@@ -285,8 +288,10 @@ export default function AudioRecorder({
             `Recording validation passed (${validationResult.method}): ${validationResult.duration.toFixed(1)}s`,
           );
 
-          toast.success("錄音完成", {
-            description: `錄音時長 ${validationResult.duration.toFixed(1)} 秒`,
+          toast.success(t("audioRecorder.toast.recordingComplete"), {
+            description: t("audioRecorder.toast.recordingDuration", {
+              duration: validationResult.duration.toFixed(1),
+            }),
           });
 
           setLocalAudioUrl(audioUrl);
@@ -306,8 +311,8 @@ export default function AudioRecorder({
           console.error("Recording validation error:", error);
 
           // 顯示錯誤訊息給使用者
-          toast.error("錄音處理失敗", {
-            description: "無法驗證錄音，請重新錄音",
+          toast.error(t("audioRecorder.toast.processingFailed"), {
+            description: t("audioRecorder.toast.cannotVerify"),
           });
 
           // 通知父元件處理錯誤
@@ -352,8 +357,8 @@ export default function AudioRecorder({
       console.error("Failed to start recording:", error);
 
       // 顯示錯誤訊息
-      toast.error("無法開始錄音", {
-        description: "請檢查麥克風權限，或嘗試重新整理頁面",
+      toast.error(t("audioRecorder.toast.cannotStart"), {
+        description: t("audioRecorder.toast.checkMicrophone"),
       });
 
       setStatus("error");
@@ -464,7 +469,9 @@ export default function AudioRecorder({
               disabled={readOnly || disabled}
             >
               <Mic className="w-4 h-4 mr-2" />
-              {readOnly ? "檢視模式" : "開始錄音"}
+              {readOnly
+                ? t("audioRecorder.ui.viewMode")
+                : t("audioRecorder.ui.startRecording")}
             </Button>
           )}
 
@@ -523,11 +530,15 @@ export default function AudioRecorder({
               className="px-8"
             >
               <Mic className="w-5 h-5 mr-2" />
-              {readOnly ? "檢視模式" : "開始錄音"}
+              {readOnly
+                ? t("audioRecorder.ui.viewMode")
+                : t("audioRecorder.ui.startRecording")}
             </Button>
             {description && (
               <p className="text-sm text-gray-600">
-                {readOnly ? "檢視模式中無法錄音" : description}
+                {readOnly
+                  ? t("audioRecorder.ui.viewModeNoRecording")
+                  : description}
               </p>
             )}
           </div>
@@ -580,7 +591,7 @@ export default function AudioRecorder({
           <div className="space-y-4">
             <AudioPlayer
               audioUrl={localAudioUrl}
-              title="已錄製音檔"
+              title={t("audioRecorder.ui.recordedAudio")}
               onError={onError}
             />
             {!readOnly && (
@@ -603,7 +614,7 @@ export default function AudioRecorder({
           <div className="flex items-center gap-2 text-red-600 justify-center">
             <AlertCircle className="w-5 h-5" />
             <span className="text-sm">
-              {errorMessage || "錄音失敗，請檢查麥克風權限"}
+              {errorMessage || t("audioRecorder.ui.recordingFailedCheckMic")}
             </span>
           </div>
         )}

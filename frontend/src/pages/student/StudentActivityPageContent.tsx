@@ -520,7 +520,7 @@ export default function StudentActivityPageContent({
       }, 1000);
     } catch (error) {
       console.error("Failed to start recording:", error);
-      toast.error("無法啟動錄音，請檢查麥克風權限");
+      toast.error(t("studentActivity.toast.cannotStartRecording"));
     }
   };
 
@@ -603,8 +603,8 @@ export default function StudentActivityPageContent({
 
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      toast.error("檔案過大", {
-        description: `檔案大小不能超過 10MB，目前 ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      toast.error(t("studentActivity.toast.fileTooLarge"), {
+        description: t("studentActivity.toast.fileSizeLimit"),
       });
       return;
     }
@@ -624,8 +624,8 @@ export default function StudentActivityPageContent({
       "audio/aac",
     ];
     if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error("不支援的檔案格式", {
-        description: `檔案類型：${file.type}。僅支援 MP3、MP4、M4A、WebM、WAV、OGG 格式`,
+      toast.error(t("studentActivity.toast.unsupportedFormat"), {
+        description: t("studentActivity.toast.supportedFormats"),
       });
       return;
     }
@@ -652,15 +652,15 @@ export default function StudentActivityPageContent({
       URL.revokeObjectURL(tempUrl);
 
       if (duration < 1) {
-        toast.error("錄音時長過短", {
-          description: `時長 ${duration.toFixed(1)} 秒，必須至少 1 秒`,
+        toast.error(t("studentActivity.toast.recordingTooShort"), {
+          description: t("studentActivity.toast.minDuration", { duration: 1 }),
         });
         return;
       }
 
       if (duration > 45) {
-        toast.error("錄音時長過長", {
-          description: `時長 ${duration.toFixed(1)} 秒，不能超過 45 秒`,
+        toast.error(t("studentActivity.toast.recordingTooLong"), {
+          description: t("studentActivity.toast.maxDuration", { duration: 45 }),
         });
         return;
       }
@@ -716,14 +716,14 @@ export default function StudentActivityPageContent({
         });
       }
 
-      toast.success("檔案上傳成功", {
+      toast.success(t("studentActivity.toast.uploadSuccess"), {
         description: `${file.name}（${duration.toFixed(1)} 秒）`,
       });
 
       console.log("✅ File uploaded successfully");
     } catch (error) {
       console.error("❌ File upload failed:", error);
-      toast.error("檔案驗證失敗", {
+      toast.error(t("studentActivity.toast.validationFailed"), {
         description: error instanceof Error ? error.message : "未知錯誤",
       });
     }

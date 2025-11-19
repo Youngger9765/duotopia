@@ -1,5 +1,6 @@
 import * as React from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface TagInputProps {
   value: string[];
@@ -13,11 +14,13 @@ interface TagInputProps {
 export function TagInput({
   value = [],
   onChange,
-  placeholder = "輸入後按 Enter 新增標籤",
+  placeholder,
   maxTags = 10,
   disabled = false,
   className = "",
 }: TagInputProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = placeholder || t("tagInput.placeholder");
   const [inputValue, setInputValue] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -41,7 +44,7 @@ export function TagInput({
       return; // Don't add duplicate tags
     }
     if (value.length >= maxTags) {
-      alert(`最多只能新增 ${maxTags} 個標籤`);
+      alert(t("tagInput.alert.maxTags", { maxTags }));
       return;
     }
 
@@ -91,7 +94,7 @@ export function TagInput({
                   removeTag(index);
                 }}
                 className="ml-1 hover:bg-blue-300 rounded-full p-0.5 transition-colors"
-                aria-label={`移除標籤 ${tag}`}
+                aria-label={t("tagInput.aria.removeTag", { tag })}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -105,14 +108,14 @@ export function TagInput({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onBlur={handleInputBlur}
-          placeholder={value.length === 0 ? placeholder : ""}
+          placeholder={value.length === 0 ? defaultPlaceholder : ""}
           disabled={disabled}
           className="flex-1 min-w-[120px] outline-none bg-transparent text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
       </div>
       {value.length > 0 && (
         <p className="text-xs text-muted-foreground mt-1">
-          {value.length} 個標籤 {maxTags && `(最多 ${maxTags} 個)`}
+          {t("tagInput.info.tagCount", { count: value.length, max: maxTags })}
         </p>
       )}
     </div>
@@ -138,6 +141,7 @@ export function TagInputWithSuggestions({
   showSuggestions = true,
   ...props
 }: TagInputWithSuggestionsProps) {
+  const { t } = useTranslation();
   const availableSuggestions = suggestions.filter(
     (s) => !value.includes(s.value),
   );
@@ -155,7 +159,7 @@ export function TagInputWithSuggestions({
       {showSuggestions && availableSuggestions.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">
-            建議標籤（點擊新增）：
+            {t("tagInput.info.suggestedTags")}
           </p>
           <div className="flex flex-wrap gap-1">
             {availableSuggestions.slice(0, 8).map((suggestion) => (

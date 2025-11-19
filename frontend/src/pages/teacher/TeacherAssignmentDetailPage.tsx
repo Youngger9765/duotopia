@@ -1122,44 +1122,44 @@ export default function TeacherAssignmentDetailPage() {
                 const getStatusInfo = () => {
                   if (!isAssigned)
                     return {
-                      label: "未指派",
+                      label: t("assignmentDetail.labels.unassigned"),
                       color:
                         "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400",
                     };
                   switch (currentStatus) {
                     case "NOT_STARTED":
                       return {
-                        label: "未開始",
+                        label: t("assignmentDetail.labels.notStarted"),
                         color:
                           "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
                       };
                     case "IN_PROGRESS":
                       return {
-                        label: "進行中",
+                        label: t("assignmentDetail.labels.inProgress"),
                         color:
                           "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
                       };
                     case "SUBMITTED":
                       return {
-                        label: "已提交",
+                        label: t("assignmentDetail.labels.submitted"),
                         color:
                           "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300",
                       };
                     case "RETURNED":
                       return {
-                        label: "待訂正",
+                        label: t("assignmentDetail.labels.returned"),
                         color:
                           "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
                       };
                     case "RESUBMITTED":
                       return {
-                        label: "重新提交",
+                        label: t("assignmentDetail.labels.resubmitted"),
                         color:
                           "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300",
                       };
                     case "GRADED":
                       return {
-                        label: "已完成",
+                        label: t("assignmentDetail.labels.graded"),
                         color:
                           "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
                       };

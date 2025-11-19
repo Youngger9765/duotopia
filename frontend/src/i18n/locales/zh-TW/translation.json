@@ -3227,5 +3227,115 @@
     "labels": {
       "accuracyLabel": "準確度: {{score}}"
     }
+  },
+  "audioRecorder": {
+    "toast": {
+      "recordingFailed": "錄音失敗",
+      "recordingAbnormal": "錄音檔案異常，請重新錄音",
+      "validationFailed": "錄音驗證失敗",
+      "recordingComplete": "錄音完成",
+      "recordingDuration": "錄音時長 {{duration}} 秒",
+      "processingFailed": "錄音處理失敗",
+      "cannotVerify": "無法驗證錄音，請重新錄音",
+      "cannotStart": "無法開始錄音",
+      "checkMicrophone": "請檢查麥克風權限，或嘗試重新整理頁面"
+    },
+    "ui": {
+      "viewMode": "檢視模式",
+      "startRecording": "開始錄音",
+      "viewModeNoRecording": "檢視模式中無法錄音",
+      "recordedAudio": "已錄製音檔",
+      "recordingFailedCheckMic": "錄音失敗，請檢查麥克風權限",
+      "suggestedDuration": "建議錄音時長"
+    }
+  },
+  "studentActivity": {
+    "toast": {
+      "cannotStartRecording": "無法啟動錄音，請檢查麥克風權限",
+      "fileTooLarge": "檔案過大",
+      "fileSizeLimit": "檔案大小不能超過 10MB",
+      "unsupportedFormat": "不支援的檔案格式",
+      "supportedFormats": "僅支援 MP3、MP4、M4A、AAC、WAV、WEBM、OGG 格式",
+      "recordingTooShort": "錄音時長過短",
+      "minDuration": "錄音至少需要 {{duration}} 秒",
+      "recordingTooLong": "錄音時長過長",
+      "maxDuration": "錄音不能超過 {{duration}} 秒",
+      "uploadSuccess": "檔案上傳成功",
+      "validationFailed": "檔案驗證失敗"
+    }
+  },
+  "readingAssessment": {
+    "toast": {
+      "missingData": "錄音檔案或進度ID不存在",
+      "reloginRequired": "請重新登入",
+      "aiRetrying": "AI 分析失敗，正在重試... (第 {{attempt}}/3 次)",
+      "aiComplete": "AI 發音評估完成！"
+    }
+  },
+  "payment": {
+    "toast": {
+      "systemLoadFailed": "付款系統載入失敗，請重新整理頁面",
+      "checkCardInfo": "請檢查信用卡資訊是否完整",
+      "paymentFailed": "付款失敗",
+      "cannotGetToken": "無法取得付款憑證",
+      "loginRequired": "請先登入",
+      "cardUpdateSuccess": "信用卡更新成功！",
+      "paymentSuccess": "付款成功！"
+    }
+  },
+  "tagInput": {
+    "placeholder": "輸入後按 Enter 新增標籤",
+    "alert": {
+      "maxTags": "最多只能新增 {{maxTags}} 個標籤"
+    },
+    "info": {
+      "tagCount": "{{count}} 個標籤 (最多 {{max}} 個)",
+      "suggestedTags": "建議標籤（點擊新增）："
+    },
+    "aria": {
+      "removeTag": "移除標籤 {{tag}}"
+    }
+  },
+  "passwordReset": {
+    "title": "設定新密碼",
+    "subtitle": "重設您的密碼",
+    "labels": {
+      "newPassword": "新密碼",
+      "confirmPassword": "確認新密碼",
+      "account": "帳號：{{email}}",
+      "name": "姓名：{{name}}"
+    },
+    "placeholders": {
+      "newPassword": "請輸入新密碼",
+      "confirmPassword": "請再次輸入新密碼"
+    },
+    "errors": {
+      "invalidLink": "無效的重設連結",
+      "passwordMismatch": "密碼不一致",
+      "passwordTooShort": "密碼至少需要6個字元",
+      "resetFailed": "重設失敗，請稍後再試",
+      "linkExpired": "連結無效或已過期"
+    },
+    "status": {
+      "verifying": "驗證連結中...",
+      "resetSuccess": "密碼重設成功！",
+      "successDescription": "您的密碼已成功更新",
+      "canLoginNow": "您現在可以使用新密碼登入系統",
+      "linkInvalidTitle": "連結無效或已過期",
+      "linkInvalidDescription": "此密碼重設連結無效或已過期"
+    },
+    "buttons": {
+      "goToLogin": "前往登入",
+      "requestNew": "重新申請密碼重設",
+      "backToLogin": "返回登入頁面",
+      "resetting": "重設中...",
+      "resetPassword": "重設密碼"
+    },
+    "hints": {
+      "minLength": "• 密碼至少需要 6 個字元"
+    },
+    "messages": {
+      "linkExpiredDetail": "密碼重設連結已過期或無效，請重新申請"
+    }
   }
 }

@@ -671,13 +671,28 @@ export default function GradingPage() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      NOT_STARTED: { label: "未開始", className: "bg-gray-100 text-gray-600" },
-      IN_PROGRESS: { label: "進行中", className: "bg-blue-100 text-blue-600" },
-      SUBMITTED: { label: "已提交", className: "bg-green-100 text-green-600" },
-      GRADED: { label: "已批改", className: "bg-purple-100 text-purple-600" },
-      RETURNED: { label: "已發還", className: "bg-yellow-100 text-yellow-600" },
+      NOT_STARTED: {
+        label: t("gradingPage.status.notStarted"),
+        className: "bg-gray-100 text-gray-600",
+      },
+      IN_PROGRESS: {
+        label: t("gradingPage.status.inProgress"),
+        className: "bg-blue-100 text-blue-600",
+      },
+      SUBMITTED: {
+        label: t("gradingPage.status.submitted"),
+        className: "bg-green-100 text-green-600",
+      },
+      GRADED: {
+        label: t("gradingPage.status.graded"),
+        className: "bg-purple-100 text-purple-600",
+      },
+      RETURNED: {
+        label: t("gradingPage.status.returned"),
+        className: "bg-yellow-100 text-yellow-600",
+      },
       RESUBMITTED: {
-        label: "重新提交",
+        label: t("gradingPage.status.resubmitted"),
         className: "bg-orange-100 text-orange-600",
       },
     };

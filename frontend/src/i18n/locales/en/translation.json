@@ -3227,5 +3227,115 @@
     "labels": {
       "accuracyLabel": "Accuracy: {{score}}"
     }
+  },
+  "audioRecorder": {
+    "toast": {
+      "recordingFailed": "Recording Failed",
+      "recordingAbnormal": "Recording file is abnormal, please record again",
+      "validationFailed": "Recording Validation Failed",
+      "recordingComplete": "Recording Complete",
+      "recordingDuration": "Recording duration {{duration}} seconds",
+      "processingFailed": "Recording Processing Failed",
+      "cannotVerify": "Cannot verify recording, please record again",
+      "cannotStart": "Cannot Start Recording",
+      "checkMicrophone": "Please check microphone permissions or try refreshing the page"
+    },
+    "ui": {
+      "viewMode": "View Mode",
+      "startRecording": "Start Recording",
+      "viewModeNoRecording": "Cannot record in view mode",
+      "recordedAudio": "Recorded Audio",
+      "recordingFailedCheckMic": "Recording failed, please check microphone permissions",
+      "suggestedDuration": "Suggested Recording Duration"
+    }
+  },
+  "studentActivity": {
+    "toast": {
+      "cannotStartRecording": "Cannot start recording, please check microphone permissions",
+      "fileTooLarge": "File Too Large",
+      "fileSizeLimit": "File size cannot exceed 10MB",
+      "unsupportedFormat": "Unsupported File Format",
+      "supportedFormats": "Only MP3, MP4, M4A, AAC, WAV, WEBM, OGG formats are supported",
+      "recordingTooShort": "Recording Too Short",
+      "minDuration": "Recording must be at least {{duration}} seconds",
+      "recordingTooLong": "Recording Too Long",
+      "maxDuration": "Recording cannot exceed {{duration}} seconds",
+      "uploadSuccess": "File Uploaded Successfully",
+      "validationFailed": "File Validation Failed"
+    }
+  },
+  "readingAssessment": {
+    "toast": {
+      "missingData": "Recording file or progress ID does not exist",
+      "reloginRequired": "Please log in again",
+      "aiRetrying": "AI analysis failed, retrying... (Attempt {{attempt}}/3)",
+      "aiComplete": "AI pronunciation assessment complete!"
+    }
+  },
+  "payment": {
+    "toast": {
+      "systemLoadFailed": "Payment system failed to load, please refresh the page",
+      "checkCardInfo": "Please check if credit card information is complete",
+      "paymentFailed": "Payment Failed",
+      "cannotGetToken": "Cannot obtain payment token",
+      "loginRequired": "Please log in first",
+      "cardUpdateSuccess": "Credit card updated successfully!",
+      "paymentSuccess": "Payment Successful!"
+    }
+  },
+  "tagInput": {
+    "placeholder": "Press Enter to add tag",
+    "alert": {
+      "maxTags": "Maximum {{maxTags}} tags allowed"
+    },
+    "info": {
+      "tagCount": "{{count}} tags (max {{max}})",
+      "suggestedTags": "Suggested Tags (click to add):"
+    },
+    "aria": {
+      "removeTag": "Remove tag {{tag}}"
+    }
+  },
+  "passwordReset": {
+    "title": "Set New Password",
+    "subtitle": "Reset Your Password",
+    "labels": {
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "account": "Account: {{email}}",
+      "name": "Name: {{name}}"
+    },
+    "placeholders": {
+      "newPassword": "Enter new password",
+      "confirmPassword": "Re-enter new password"
+    },
+    "errors": {
+      "invalidLink": "Invalid reset link",
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "resetFailed": "Reset failed, please try again later",
+      "linkExpired": "Link is invalid or expired"
+    },
+    "status": {
+      "verifying": "Verifying link...",
+      "resetSuccess": "Password Reset Successful!",
+      "successDescription": "Your password has been successfully updated",
+      "canLoginNow": "You can now log in with your new password",
+      "linkInvalidTitle": "Link Invalid or Expired",
+      "linkInvalidDescription": "This password reset link is invalid or has expired"
+    },
+    "buttons": {
+      "goToLogin": "Go to Login",
+      "requestNew": "Request New Password Reset",
+      "backToLogin": "Back to Login",
+      "resetting": "Resetting...",
+      "resetPassword": "Reset Password"
+    },
+    "hints": {
+      "minLength": "• Password must be at least 6 characters"
+    },
+    "messages": {
+      "linkExpiredDetail": "The password reset link has expired or is invalid, please request a new one"
+    }
   }
 }

@@ -5,6 +5,7 @@ import { Loader2, CreditCard, Shield } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionProgressBanner from "../SubscriptionProgressBanner";
 import { analyticsService } from "@/services/analyticsService";
+import { useTranslation } from "react-i18next";
 
 interface TapPayPaymentProps {
   amount: number;
@@ -26,6 +27,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   onSuccess,
   isCardUpdate = false,
 }) => {
+  const { t } = useTranslation();
   const [canSubmit, setCanSubmit] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -56,7 +58,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
     if (!window.TPDirect) {
       console.error("TapPay SDK not loaded");
-      toast.error("付款系統載入失敗，請重新整理頁面");
+      toast.error(t("payment.toast.systemLoadFailed"));
 
       // 📊 記錄 TapPay SDK 載入失敗
       analyticsService.logTapPayInitError("TapPay SDK not loaded");
@@ -216,7 +218,7 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
 
   const handleSubmit = async () => {
     if (!canSubmit) {
-      toast.error("請檢查信用卡資訊是否完整");
+      toast.error(t("payment.toast.checkCardInfo"));
       return;
     }
 
@@ -239,8 +241,9 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           undefined, // cardStatus
         );
 
-        if (onPaymentError) onPaymentError(result.msg || "無法取得付款憑證");
-        toast.error(result.msg || "付款失敗");
+        if (onPaymentError)
+          onPaymentError(result.msg || t("payment.toast.cannotGetToken"));
+        toast.error(result.msg || t("payment.toast.paymentFailed"));
         setIsProcessing(false);
         return;
       }
@@ -252,8 +255,10 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
       if (!prime) {
         console.error("Prime token 不存在於 result.card.prime 或 result.prime");
         if (onPaymentError)
-          onPaymentError("無法取得付款憑證 (prime token 為空)");
-        toast.error("無法取得付款憑證");
+          onPaymentError(
+            t("payment.toast.cannotGetToken") + " (prime token 為空)",
+          );
+        toast.error(t("payment.toast.cannotGetToken"));
         setIsProcessing(false);
         return;
       }
@@ -262,8 +267,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
         // 🔧 修復：取得正確的 auth token 和用戶資料
         const authToken = getAuthToken();
         if (!authToken) {
-          if (onPaymentError) onPaymentError("請先登入");
-          toast.error("請先登入");
+          if (onPaymentError) onPaymentError(t("payment.toast.loginRequired"));
+          toast.error(t("payment.toast.loginRequired"));
           setIsProcessing(false);
           return;
         }
@@ -321,11 +326,11 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
           if (isCardUpdate) {
             // 卡片更新成功
             if (onSuccess) onSuccess();
-            toast.success("信用卡更新成功！");
+            toast.success(t("payment.toast.cardUpdateSuccess"));
           } else {
             // 付款成功
             if (onPaymentSuccess) onPaymentSuccess(data.transaction_id);
-            toast.success("付款成功！");
+            toast.success(t("payment.toast.paymentSuccess"));
           }
         } else {
           // 📊 記錄付款 API 失敗

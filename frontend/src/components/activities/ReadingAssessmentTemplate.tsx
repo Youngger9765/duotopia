@@ -6,6 +6,7 @@ import { Brain, Star, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { retryAIAnalysis } from "@/utils/retryHelper";
 import AudioRecorder from "@/components/shared/AudioRecorder";
+import { useTranslation } from "react-i18next";
 
 interface AssessmentResult {
   overallScore: number;
@@ -35,6 +36,7 @@ export default function ReadingAssessmentTemplate({
   progressId,
   readOnly = false,
 }: ReadingAssessmentProps) {
+  const { t } = useTranslation();
   const [audioUrl, setAudioUrl] = useState<string | undefined>(
     existingAudioUrl || undefined,
   );
@@ -57,7 +59,7 @@ export default function ReadingAssessmentTemplate({
 
   const handleAssessment = async () => {
     if (!audioUrl || !progressId) {
-      toast.error("錄音檔案或進度ID不存在");
+      toast.error(t("readingAssessment.toast.missingData"));
       return;
     }
 
@@ -82,7 +84,7 @@ export default function ReadingAssessmentTemplate({
       // Get authentication token from store
       const { token } = useStudentAuthStore();
       if (!token) {
-        toast.error("請重新登入");
+        toast.error(t("readingAssessment.toast.reloginRequired"));
         return;
       }
 
@@ -116,7 +118,7 @@ export default function ReadingAssessmentTemplate({
         },
         (attempt, error) => {
           console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
-          toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+          toast.warning(t("readingAssessment.toast.aiRetrying", { attempt }));
         },
       );
       setAssessmentResult({
@@ -128,7 +130,7 @@ export default function ReadingAssessmentTemplate({
         feedback: result.feedback,
       });
 
-      toast.success("AI 發音評估完成！");
+      toast.success(t("readingAssessment.toast.aiComplete"));
     } catch (error) {
       console.error("Assessment error:", error);
       toast.error(
