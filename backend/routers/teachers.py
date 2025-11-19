@@ -20,7 +20,12 @@ from models import (
     StudentContentProgress,
     ProgramLevel,
 )
-from auth import verify_token, get_password_hash, verify_password
+from auth import (
+    verify_token,
+    get_password_hash,
+    verify_password,
+    validate_password_strength,
+)
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
@@ -162,12 +167,17 @@ async def update_teacher_password(
             detail="Current password is incorrect",
         )
 
-    # Validate new password
-    if len(request.new_password) < 6:
+    # Check if new password is same as current password
+    if verify_password(request.new_password, current_teacher.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 6 characters",
+            detail="New password must be different from current password",
         )
+
+    # Validate new password strength (same as registration)
+    is_valid, error_msg = validate_password_strength(request.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
 
     # Update password
     current_teacher.password_hash = get_password_hash(request.new_password)

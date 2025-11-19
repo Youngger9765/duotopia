@@ -62,10 +62,14 @@ async def teacher_login(
 
     # 🔐 Security: 統一錯誤訊息，不洩漏帳號是否存在
     if not teacher:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
     if not verify_password(login_req.password, teacher.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
     if not teacher.is_active:
         # 檢查是否是因為 email 未驗證
@@ -241,11 +245,15 @@ async def student_login(
 
     # 🔐 Security: 統一錯誤訊息，不洩漏帳號是否存在
     if not student:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
     # 驗證密碼
     if not verify_password(login_req.password, student.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
     # 創建 JWT token
     access_token = create_access_token(

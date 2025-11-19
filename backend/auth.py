@@ -56,24 +56,27 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     Returns: (is_valid, error_message)
     """
     if len(password) < 8:
-        return False, "密碼至少需要 8 個字元"
+        return False, "Password must be at least 8 characters"
 
     # 檢查是否包含大寫字母
     if not any(c.isupper() for c in password):
-        return False, "密碼必須包含至少一個大寫字母"
+        return False, "Password must contain at least one uppercase letter"
 
     # 檢查是否包含小寫字母
     if not any(c.islower() for c in password):
-        return False, "密碼必須包含至少一個小寫字母"
+        return False, "Password must contain at least one lowercase letter"
 
     # 檢查是否包含數字
     if not any(c.isdigit() for c in password):
-        return False, "密碼必須包含至少一個數字"
+        return False, "Password must contain at least one number"
 
     # 檢查是否包含特殊字元
     special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
     if not any(c in special_chars for c in password):
-        return False, "密碼必須包含至少一個特殊字元 (!@#$%^&* 等)"
+        return (
+            False,
+            "Password must contain at least one special character (!@#$%^&* etc.)",
+        )
 
     return True, ""
 

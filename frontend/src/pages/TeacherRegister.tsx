@@ -40,8 +40,8 @@ export default function TeacherRegister() {
       return;
     }
 
-    // Validate password strength
-    if (formData.password.length < 6) {
+    // Validate password strength (frontend validation only, backend will also validate)
+    if (formData.password.length < 8) {
       setError(t("teacherRegister.errors.passwordTooShort"));
       return;
     }

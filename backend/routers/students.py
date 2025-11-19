@@ -21,6 +21,7 @@ from auth import (
     verify_password,
     get_current_user,
     get_password_hash,
+    validate_password_strength,
 )
 
 router = APIRouter(prefix="/api/students", tags=["students"])
@@ -890,12 +891,17 @@ async def update_student_password(
             detail="Current password is incorrect",
         )
 
-    # Validate new password
-    if len(request.new_password) < 6:
+    # Check if new password is same as current password
+    if verify_password(request.new_password, student.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 6 characters",
+            detail="New password must be different from current password",
         )
+
+    # Validate new password strength (same as registration)
+    is_valid, error_msg = validate_password_strength(request.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
 
     # Update password
     student.password_hash = get_password_hash(request.new_password)
