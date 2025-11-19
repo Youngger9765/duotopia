@@ -8,17 +8,15 @@
 
 ## 📋 功能交付總覽
 
-### ✅ 已完成功能 (6項)
+### ✅ 已完成功能 (8項)
 1. ✅ 後台顯示試用方案資訊
 2. ✅ 試用點數自動轉移
 3. ✅ 後台帳款資料下載
 4. ✅ 每月自動續訂機制
 5. ✅ 信用卡綁定流程
 6. ✅ 個人資料管理（老師和學生）
-
-### 🚧 進行中功能 (2項)
-7. 🚧 退款機制（後台管理介面）
-8. 🚧 多語言介面（全站 i18n）
+7. ✅ 退款機制（後台管理介面）- **NEW!**
+8. ✅ 多語言介面（全站 i18n）
 
 ---
 
@@ -216,10 +214,10 @@
 
 ### 7️⃣ 退款機制
 
-**🚧 進行中**
+**✅ 已完成**
 
 #### 功能說明
-完整的退款處理系統，支援全額退款和部分退款。
+完整的退款處理系統，支援全額退款和部分退款，包含後台管理介面。
 
 #### 具體內容
 
@@ -244,29 +242,57 @@
 - Email 通知 - 自動發送退款通知郵件
 - 獨立退款交易記錄 (TransactionType.REFUND)
 - 關聯原始交易 (original_transaction_id)
+- 退款歷史追蹤 - 在訂閱詳情頁顯示完整退款記錄
 
 **4. 安全機制**
 - 冪等性保證（避免重複處理）
 - 完整稽核日誌
 - 錯誤處理不影響主流程
+- Try-except 保護確保 TapPay/DB 資料同步
 
-#### 已完成部分
-- ✅ Webhook 退款處理（自動）
-- ✅ BigQuery Logging
-- ✅ Email 通知
-- ✅ 全額/部分退款邏輯
+**5. 後台管理介面** (2025-11-19 完成)
+- ✅ 退款按鈕 - 僅顯示於 active + paid 的訂閱期間
+- ✅ 退款 Modal - 支援全額/部分退款、退款原因、備註
+- ✅ 退款成功/失敗訊息呈現
+- ✅ 退款歷史顯示 - 詳細顯示退款金額、TapPay 退款編號、備註
+- ✅ Period 狀態同步更新 - 退款後自動標記為 cancelled
+- ✅ Payment status 追蹤 - paid → refunded
 
-#### 待完成部分
-- ⏳ **後台管理介面** - 管理者手動執行退款的 UI
-- ⏳ **退款 Admin API** - POST /api/admin/refund
-- ⏳ **退款成功/失敗訊息呈現**
+**6. 測試覆蓋** (2025-11-19)
+- ✅ 退款 API 整合測試 (`test_admin_refund.py`)
+  - ✅ 全額退款測試
+  - ✅ 部分退款測試
+  - ✅ TapPay API 整合測試
+  - ✅ REFUND 交易記錄創建測試
+  - ✅ 訂閱期間狀態更新測試
+  - ✅ 錯誤處理測試（無效交易、重複退款等）
+- ✅ Rate Limiter 單元測試 (`test_rate_limiter.py`)
+  - ✅ Email-based 識別測試
+  - ✅ Student ID 識別測試
+  - ✅ IP Fallback 測試
+  - ✅ 優先順序測試
+
+**7. Rate Limiting 改進** (2025-11-19)
+- ✅ 從 IP-based 改為 Email/Student ID-based
+- ✅ 測試環境自動停用 rate limit
+- ✅ 避免測試時 429 錯誤
 
 #### 相關 API
 - ✅ Webhook: POST /api/payment/webhook
 - ✅ 取消續訂: POST /api/subscription/cancel
 - ✅ 恢復續訂: POST /api/subscription/resume
 - ✅ 訂閱狀態: GET /api/subscription/status
-- ⏳ 管理者退款: POST /api/admin/refund (待實作)
+- ✅ 管理者退款: POST /api/admin/refund
+- ✅ 訂閱期間歷史: GET /api/admin/subscription/period/{period_id}/history
+
+#### 資料庫 Migrations (2025-11-19)
+- ✅ `20251119_1859_62dc946ce341` - 新增退款追蹤欄位
+  - `refund_reason` - 退款原因
+  - `refund_notes` - 退款備註
+  - `refund_initiated_by` - 退款操作者
+  - `refund_initiated_at` - 退款時間
+  - `refunded_amount` - 退款金額
+- ✅ `20251119_1901_289edf7e0aa8` - 修正 refunded_amount 型別為 Integer
 
 ---
 
@@ -387,28 +413,22 @@ const { t } = useTranslation();
 
 ## ✅ 完成度總結
 
-### 核心業務功能：88% 完成
-**已完成 (7/8)**：
+### 核心業務功能：100% 完成 🎉
+**已完成 (8/8)**：
 1. ✅ 後台試用方案顯示
 2. ✅ 試用點數轉移
 3. ✅ 後台資料下載
 4. ✅ 自動續訂機制
 5. ✅ 信用卡綁定流程
-6. ✅ 個人資料管理（老師和學生）- **NEW!**
-7. ✅ 多語言介面 (i18n) - **100% 完成！**
-
-**進行中 (1/8)**：
-8. 🚧 退款機制
+6. ✅ 個人資料管理（老師和學生）
+7. ✅ 多語言介面 (i18n) - 全站完成
+8. ✅ 退款機制 - **完整實作！** (2025-11-19)
    - ✅ Webhook 自動處理
-   - ⏳ 後台管理介面（待實作）
+   - ✅ 後台管理介面
+   - ✅ 退款歷史追蹤
+   - ✅ 完整測試覆蓋
 
 ### 待完成事項
-
-**退款功能：**
-- [ ] POST /api/admin/refund API 端點
-- [ ] AdminSubscriptionDashboard 加入退款按鈕
-- [ ] 退款成功/失敗訊息 UI
-- [ ] 退款功能測試
 
 **運維：**
 - [ ] 設定每月自動續訂排程（需 GCP Cloud Scheduler）
@@ -416,6 +436,6 @@ const { t } = useTranslation();
 
 ---
 
-**文件版本**: 5.0（真實狀態）
-**最後更新**: 2025-11-19
-**狀態**: ✅ 核心功能 88% 完成，i18n 全站完成，個人資料管理完成，僅退款後台 UI 待實作
+**文件版本**: 6.0（完整交付）
+**最後更新**: 2025-11-20
+**狀態**: 🎉 核心功能 100% 完成！所有 11 月交付功能已完整實作並測試
