@@ -41,7 +41,7 @@ class TestTeacherLogin:
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] == "帳號或密碼錯誤"
+        assert response.json()["detail"] == "Invalid credentials"
 
     def test_login_with_nonexistent_email(self, test_client):
         """Test login fails with non-existent email"""
@@ -51,7 +51,7 @@ class TestTeacherLogin:
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] == "帳號或密碼錯誤"
+        assert response.json()["detail"] == "Invalid credentials"
 
     def test_login_with_invalid_email_format(self, test_client):
         """Test login fails with invalid email format"""

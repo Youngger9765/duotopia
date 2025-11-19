@@ -1,5 +1,8 @@
 version: 2
 
+# Ignore ALL secrets in test files and directories
+# This prevents false positives from test fixtures/mock data
+# while keeping strict detection for production code
 paths-ignore:
   - "backend/tests/**"
   - "frontend/tests/**"
@@ -8,8 +11,7 @@ paths-ignore:
   - "**/*.test.tsx"
   - "**/*.spec.ts"
   - "**/conftest.py"
+  - "backend/seed_data.py"  # Demo/seed data only
 
-# Ignore test fixtures and mock data
-matches-ignore:
-  - name: Test passwords
-    match: Pass123!
+# DO NOT add matches-ignore here
+# We want strict detection everywhere except test paths

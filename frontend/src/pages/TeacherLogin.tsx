@@ -55,11 +55,7 @@ export default function TeacherLogin() {
       navigate("/teacher/dashboard");
     } catch (err) {
       console.error("🔑 [ERROR] 登入失敗:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("teacherLogin.errors.loginFailed"),
-      );
+      setError(t("teacherLogin.errors.loginFailed"));
     } finally {
       setIsLoading(false);
     }
