@@ -673,7 +673,9 @@
     "status": {
       "completed": "已完成",
       "inProgress": "進行中",
-      "notStarted": "未開始"
+      "notStarted": "未開始",
+      "saving": "儲存中...",
+      "savingShort": "儲存中"
     },
     "recording": {
       "failed": "錄音失敗",

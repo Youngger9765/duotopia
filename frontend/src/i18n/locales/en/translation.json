@@ -673,7 +673,9 @@
     "status": {
       "completed": "Completed",
       "inProgress": "In Progress",
-      "notStarted": "Not Started"
+      "notStarted": "Not Started",
+      "saving": "Saving...",
+      "savingShort": "Saving"
     },
     "recording": {
       "failed": "Recording Failed",
