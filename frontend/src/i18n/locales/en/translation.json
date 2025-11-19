@@ -3194,5 +3194,38 @@
       "aiRetrying": "AI analysis failed, retrying... (Attempt {{attempt}}/3)",
       "autoplayFailed": "Autoplay failed, user interaction may be required"
     }
+  },
+  "aiScoreDisplay": {
+    "scores": {
+      "overall": "Overall",
+      "accuracy": "Accuracy",
+      "fluency": "Fluency",
+      "completeness": "Completeness",
+      "pronunciation": "Pronunciation"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "phonemeLevel": "Phoneme Level"
+    },
+    "sections": {
+      "wordDetails": "Word Pronunciation Details:",
+      "phonemesNeedImprovement": "Phonemes Need Improvement:",
+      "allPhonemeScores": "All Phoneme Scores:",
+      "inWord": "in \"{{word}}\""
+    },
+    "feedback": {
+      "excellent": "Excellent! Keep up this pronunciation level.",
+      "excellentPerfect": "All words pronounced correctly!",
+      "good": "Good! Balance accuracy and fluency.",
+      "goodFocus": "Focus on: {{words}}",
+      "needsPractice": "Needs more practice, pay attention to marked words.",
+      "focusPhonemes": "Focus on phonemes: {{phonemes}}"
+    },
+    "hints": {
+      "aiReference": "💡 Tip: AI scoring is for reference only, please grade based on actual performance"
+    },
+    "labels": {
+      "accuracyLabel": "Accuracy: {{score}}"
+    }
   }
 }

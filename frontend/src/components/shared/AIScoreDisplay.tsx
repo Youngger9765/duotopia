@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "react-i18next";
 
 interface PhonemeDetail {
   index: number;
@@ -65,6 +66,7 @@ export default function AIScoreDisplay({
   // title = "AI 自動評分結果", // 暫時未使用
   showDetailed = true,
 }: AIScoreDisplayEnhancedProps) {
+  const { t } = useTranslation();
   const [selectedTab, setSelectedTab] = useState<"overview" | "phoneme">(
     "overview",
   );
@@ -128,7 +130,9 @@ export default function AIScoreDisplay({
           <div className="text-2xl font-bold text-purple-600">
             {Math.round(overallScore || 0)}
           </div>
-          <div className="text-xs text-gray-600 mt-1">總體發音</div>
+          <div className="text-xs text-gray-600 mt-1">
+            {t("aiScoreDisplay.scores.overall")}
+          </div>
         </div>
 
         {/* 準確度 */}
@@ -136,7 +140,9 @@ export default function AIScoreDisplay({
           <div className="text-2xl font-bold text-blue-600">
             {Math.round(scores.accuracy_score || 0)}
           </div>
-          <div className="text-xs text-gray-600 mt-1">準確度</div>
+          <div className="text-xs text-gray-600 mt-1">
+            {t("aiScoreDisplay.scores.accuracy")}
+          </div>
         </div>
 
         {/* 流暢度 */}
@@ -144,7 +150,9 @@ export default function AIScoreDisplay({
           <div className="text-2xl font-bold text-green-600">
             {Math.round(scores.fluency_score || 0)}
           </div>
-          <div className="text-xs text-gray-600 mt-1">流暢度</div>
+          <div className="text-xs text-gray-600 mt-1">
+            {t("aiScoreDisplay.scores.fluency")}
+          </div>
         </div>
 
         {/* 完整度 */}
@@ -154,7 +162,9 @@ export default function AIScoreDisplay({
               scores.completeness_score || scores.pronunciation_score || 0,
             )}
           </div>
-          <div className="text-xs text-gray-600 mt-1">完整度</div>
+          <div className="text-xs text-gray-600 mt-1">
+            {t("aiScoreDisplay.scores.completeness")}
+          </div>
         </div>
       </div>
 
@@ -170,13 +180,13 @@ export default function AIScoreDisplay({
               value="overview"
               className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
             >
-              總覽
+              {t("aiScoreDisplay.tabs.overview")}
             </TabsTrigger>
             <TabsTrigger
               value="phoneme"
               className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
             >
-              音素層級
+              {t("aiScoreDisplay.tabs.phonemeLevel")}
             </TabsTrigger>
           </TabsList>
 
@@ -184,7 +194,7 @@ export default function AIScoreDisplay({
             {/* 單字總覽 */}
             <div className="space-y-2">
               <h5 className="text-sm font-semibold text-gray-700">
-                單字發音詳情：
+                {t("aiScoreDisplay.sections.wordDetails")}
               </h5>
               <div className="flex flex-wrap gap-2">
                 {wordsToDisplay.map((word, index) => {
@@ -200,7 +210,10 @@ export default function AIScoreDisplay({
                         colors.border,
                         colors.text,
                       )}
-                      title={word.error_type || `準確度: ${score}`}
+                      title={
+                        word.error_type ||
+                        t("aiScoreDisplay.labels.accuracyLabel", { score })
+                      }
                     >
                       <span className="font-semibold">{word.word}</span>
                       <span className="ml-2 text-xs opacity-80">
@@ -227,7 +240,7 @@ export default function AIScoreDisplay({
                       <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5" />
                       <div className="space-y-2 flex-1">
                         <div className="text-sm font-medium text-orange-800">
-                          需要加強的音素：
+                          {t("aiScoreDisplay.sections.phonemesNeedImprovement")}
                         </div>
                         <div className="space-y-1">
                           {scores.analysis_summary.low_score_phonemes.map(
@@ -240,7 +253,9 @@ export default function AIScoreDisplay({
                                   /{item.phoneme}/
                                 </span>
                                 <span className="text-gray-600">
-                                  在 "{item.in_word}" 中
+                                  {t("aiScoreDisplay.sections.inWord", {
+                                    word: item.in_word,
+                                  })}
                                 </span>
                                 <Badge
                                   variant="destructive"
@@ -260,7 +275,7 @@ export default function AIScoreDisplay({
               {/* 所有音素列表 */}
               <div>
                 <h5 className="text-sm font-semibold text-gray-700 mb-2">
-                  所有音素評分：
+                  {t("aiScoreDisplay.sections.allPhonemeScores")}
                 </h5>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {scores.detailed_words
@@ -301,7 +316,7 @@ export default function AIScoreDisplay({
       {(!showDetailed || !hasDetailedData) && wordsToDisplay.length > 0 && (
         <div className="space-y-2">
           <h5 className="text-sm font-semibold text-gray-700">
-            單字發音詳情：
+            {t("aiScoreDisplay.sections.wordDetails")}
           </h5>
           <div className="flex flex-wrap gap-2">
             {wordsToDisplay.map((word, index) => {
@@ -317,7 +332,10 @@ export default function AIScoreDisplay({
                     colors.border,
                     colors.text,
                   )}
-                  title={word.error_type || `準確度: ${score}`}
+                  title={
+                    word.error_type ||
+                    t("aiScoreDisplay.labels.accuracyLabel", { score })
+                  }
                 >
                   <span className="font-semibold">{word.word}</span>
                   <span className="ml-2 text-xs opacity-80">
@@ -340,34 +358,37 @@ export default function AIScoreDisplay({
           <div className="text-sm text-gray-700">
             {overallScore >= 80 ? (
               <span className="font-medium text-green-700">
-                表現優秀！繼續保持這樣的發音水準。
+                {t("aiScoreDisplay.feedback.excellent")}
                 {scores.analysis_summary?.problematic_words?.length === 0 &&
-                  " 所有單字都發音正確！"}
+                  ` ${t("aiScoreDisplay.feedback.excellentPerfect")}`}
               </span>
             ) : overallScore >= 60 ? (
               <span className="font-medium text-yellow-700">
-                不錯！注意準確度和流暢度的平衡。
+                {t("aiScoreDisplay.feedback.good")}
                 {scores.analysis_summary?.problematic_words &&
                   scores.analysis_summary.problematic_words.length > 0 && (
                     <span>
                       {" "}
-                      特別注意：
-                      {scores.analysis_summary.problematic_words.join("、")}
+                      {t("aiScoreDisplay.feedback.goodFocus", {
+                        words:
+                          scores.analysis_summary.problematic_words.join("、"),
+                      })}
                     </span>
                   )}
               </span>
             ) : (
               <span className="font-medium text-red-700">
-                需要更多練習，特別注意標示的單字發音。
+                {t("aiScoreDisplay.feedback.needsPractice")}
                 {scores.analysis_summary?.low_score_phonemes &&
                   scores.analysis_summary.low_score_phonemes.length > 0 && (
                     <span>
                       {" "}
-                      重點加強音素：
-                      {scores.analysis_summary.low_score_phonemes
-                        .slice(0, 3)
-                        .map((p) => `/${p.phoneme}/`)
-                        .join("、")}
+                      {t("aiScoreDisplay.feedback.focusPhonemes", {
+                        phonemes: scores.analysis_summary.low_score_phonemes
+                          .slice(0, 3)
+                          .map((p) => `/${p.phoneme}/`)
+                          .join("、"),
+                      })}
                     </span>
                   )}
               </span>
@@ -378,7 +399,7 @@ export default function AIScoreDisplay({
 
       {/* AI 評語提示 */}
       <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
-        💡 提示：AI 評分僅供參考，請根據學生實際表現進行最終評分
+        {t("aiScoreDisplay.hints.aiReference")}
       </div>
     </div>
   );

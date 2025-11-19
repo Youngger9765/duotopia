@@ -3194,5 +3194,38 @@
       "aiRetrying": "AI 分析失敗，正在重試... (第 {{attempt}}/3 次)",
       "autoplayFailed": "自動播放失敗，可能需要用戶互動"
     }
+  },
+  "aiScoreDisplay": {
+    "scores": {
+      "overall": "總體發音",
+      "accuracy": "準確度",
+      "fluency": "流暢度",
+      "completeness": "完整度",
+      "pronunciation": "發音"
+    },
+    "tabs": {
+      "overview": "總覽",
+      "phonemeLevel": "音素層級"
+    },
+    "sections": {
+      "wordDetails": "單字發音詳情：",
+      "phonemesNeedImprovement": "需要加強的音素：",
+      "allPhonemeScores": "所有音素評分：",
+      "inWord": "在 \"{{word}}\" 中"
+    },
+    "feedback": {
+      "excellent": "表現優秀！繼續保持這樣的發音水準。",
+      "excellentPerfect": "所有單字都發音正確！",
+      "good": "不錯！注意準確度和流暢度的平衡。",
+      "goodFocus": "特別注意：{{words}}",
+      "needsPractice": "需要更多練習，特別注意標示的單字發音。",
+      "focusPhonemes": "重點加強音素：{{phonemes}}"
+    },
+    "hints": {
+      "aiReference": "💡 提示：AI 評分僅供參考，請根據學生實際表現進行最終評分"
+    },
+    "labels": {
+      "accuracyLabel": "準確度: {{score}}"
+    }
   }
 }
