@@ -577,26 +577,56 @@ async def admin_refund(
             detail=f"退款失敗：{error_msg}",
         )
 
-    # 5. 更新交易狀態（標記為已退款）
-    transaction.refund_status = "processing"  # 等待 webhook 確認
+    # 5. 更新交易狀態（TapPay 退款 API 是同步的，成功即完成）
+    transaction.refund_status = "completed"  # 同步完成，不需等 webhook
     transaction.refund_amount = refund_request.amount or int(transaction.amount)
     transaction.refund_reason = refund_request.reason
     transaction.refund_notes = refund_request.notes
     transaction.refund_initiated_by = admin.id
     transaction.refund_initiated_at = datetime.now(timezone.utc)
 
+    # 6. 同步更新對應的 SubscriptionPeriod（如果存在）
+    period = (
+        db.query(SubscriptionPeriod)
+        .filter_by(payment_id=refund_request.rec_trade_id)
+        .first()
+    )
+
+    if period:
+        period.payment_status = "refunded"
+        period.status = "cancelled"
+        period.cancel_reason = f"Admin refund: {refund_request.reason}"
+        period.cancelled_at = datetime.now(timezone.utc)
+        period.admin_id = admin.id
+
+        # 記錄退款到 metadata
+        if period.admin_metadata is None:
+            period.admin_metadata = {}
+        period.admin_metadata["refund"] = {
+            "amount": refund_request.amount or int(transaction.amount),
+            "reason": refund_request.reason,
+            "refunded_by": admin.email,
+            "refunded_at": datetime.now(timezone.utc).isoformat(),
+            "refund_rec_trade_id": refund_result.get("refund_rec_trade_id"),
+        }
+
+        logger.info(
+            f"Period {period.id} marked as refunded and cancelled for teacher {transaction.teacher_email}"
+        )
+
     db.commit()
 
     logger.info(
-        f"Refund initiated for {refund_request.rec_trade_id}, "
+        f"Refund completed for {refund_request.rec_trade_id}, "
         f"amount: {refund_request.amount or 'full'}, "
         f"reason: {refund_request.reason}"
     )
 
     return {
         "status": "success",
-        "message": "退款請求已送出，等待 TapPay webhook 確認",
+        "message": "退款已完成",
         "rec_trade_id": refund_request.rec_trade_id,
         "refund_rec_trade_id": refund_result.get("refund_rec_trade_id"),
         "amount": refund_request.amount or transaction.amount,
+        "period_updated": period is not None,
     }
