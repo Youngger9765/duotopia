@@ -18,6 +18,7 @@ from models import (
     Teacher,
     SubscriptionPeriod,
     TeacherSubscriptionTransaction,
+    TransactionType,
     Classroom,
     Student,
     Assignment,
@@ -498,6 +499,9 @@ async def get_teacher_periods(
                 "end_date": period.end_date.isoformat() if period.end_date else None,
                 "status": period.status,
                 "payment_method": period.payment_method,
+                "payment_id": period.payment_id,
+                "payment_status": period.payment_status,
+                "amount_paid": period.amount_paid,
                 "admin_name": admin_teacher.name if admin_teacher else None,
                 "admin_email": admin_teacher.email if admin_teacher else None,
                 "admin_reason": period.admin_reason,
@@ -523,17 +527,67 @@ async def get_period_edit_history(
     admin: Teacher = Depends(get_current_admin),
 ):
     """
-    第3層：獲取指定 period 的編輯歷史（從 admin_metadata）
+    第3層：獲取指定 period 的編輯歷史（從 admin_metadata + REFUND transactions）
     """
     period = db.query(SubscriptionPeriod).filter_by(id=period_id).first()
     if not period:
         raise HTTPException(status_code=404, detail="Subscription period not found")
 
-    # 解析 admin_metadata
+    # 解析 admin_metadata 中的 operations
     edit_history = []
     if period.admin_metadata and isinstance(period.admin_metadata, dict):
         operations = period.admin_metadata.get("operations", [])
         edit_history = operations
+
+    # 🆕 查詢 REFUND transactions（透過 payment_id 關聯）
+    if period.payment_id:
+        # 先找出原始 RECHARGE transaction
+        original_transaction = (
+            db.query(TeacherSubscriptionTransaction)
+            .filter_by(external_transaction_id=period.payment_id)
+            .first()
+        )
+
+        if original_transaction:
+            # 查詢所有關聯的 REFUND transactions
+            refund_transactions = (
+                db.query(TeacherSubscriptionTransaction)
+                .filter_by(
+                    original_transaction_id=original_transaction.id,
+                    transaction_type=TransactionType.REFUND,
+                )
+                .order_by(TeacherSubscriptionTransaction.created_at)
+                .all()
+            )
+
+            # 加入 REFUND 記錄到歷史中
+            for refund_txn in refund_transactions:
+                # 查詢操作者（admin）
+                admin_user = (
+                    db.query(Teacher)
+                    .filter_by(id=refund_txn.refund_initiated_by)
+                    .first()
+                )
+
+                edit_history.append(
+                    {
+                        "action": "refund",
+                        "timestamp": refund_txn.created_at.isoformat(),
+                        "admin_name": admin_user.name if admin_user else "Unknown",
+                        "admin_email": admin_user.email if admin_user else "unknown",
+                        "reason": refund_txn.refund_reason or "",
+                        "notes": refund_txn.refund_notes or "",
+                        "amount": abs(float(refund_txn.amount)),
+                        "refund_id": refund_txn.external_transaction_id,
+                        "changes": {
+                            "status": {"from": "active", "to": "cancelled"},
+                            "payment_status": {"from": "paid", "to": "refunded"},
+                        },
+                    }
+                )
+
+    # 按時間排序（最新的在前）
+    edit_history.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
     return {
         "period_id": period.id,

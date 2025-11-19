@@ -24,6 +24,8 @@ from models import (
     StudentItemProgress,
     TeacherSubscriptionTransaction,
     SubscriptionPeriod,
+    TransactionType,
+    TransactionStatus,
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
@@ -585,6 +587,47 @@ async def admin_refund(
     transaction.refund_initiated_by = admin.id
     transaction.refund_initiated_at = datetime.now(timezone.utc)
 
+    # 5.5 創建 REFUND transaction 記錄
+    # ⚠️ 用 try-except 保護，即使失敗也要 commit 原始 transaction 更新
+    try:
+        refund_transaction = TeacherSubscriptionTransaction(
+            teacher_id=transaction.teacher_id,
+            teacher_email=transaction.teacher_email,
+            transaction_type=TransactionType.REFUND,
+            subscription_type=transaction.subscription_type,
+            amount=-abs(refund_request.amount or int(transaction.amount)),  # 負數表示退款
+            currency=transaction.currency or "TWD",
+            status=TransactionStatus.SUCCESS,
+            months=transaction.months or 0,  # 複製原交易的月數
+            period_start=transaction.period_start,  # 複製原交易的時間
+            period_end=transaction.period_end,
+            previous_end_date=transaction.previous_end_date,
+            new_end_date=transaction.new_end_date or datetime.now(timezone.utc),  # 必填欄位
+            payment_provider="tappay",
+            payment_method=transaction.payment_method,
+            external_transaction_id=refund_result.get(
+                "refund_id"
+            ),  # 退款交易編號（TapPay 返回 refund_id）
+            original_transaction_id=transaction.id,  # 關聯原始交易
+            refund_reason=refund_request.reason,
+            refund_notes=refund_request.notes,
+            refund_initiated_by=admin.id,
+            refund_initiated_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+        )
+        db.add(refund_transaction)
+        db.flush()  # 先 flush 取得 ID
+
+        logger.info(
+            f"✅ Created REFUND transaction {refund_transaction.id} for original transaction {transaction.id}"
+        )
+    except Exception as e:
+        logger.error(f"❌ Failed to create REFUND transaction for {transaction.id}: {e}")
+        logger.error(
+            "⚠️  TapPay refund succeeded but REFUND transaction creation failed! "
+            "Manual intervention may be required."
+        )
+
     # 6. 同步更新對應的 SubscriptionPeriod（如果存在）
     period = (
         db.query(SubscriptionPeriod)
@@ -607,7 +650,7 @@ async def admin_refund(
             "reason": refund_request.reason,
             "refunded_by": admin.email,
             "refunded_at": datetime.now(timezone.utc).isoformat(),
-            "refund_rec_trade_id": refund_result.get("refund_rec_trade_id"),
+            "refund_id": refund_result.get("refund_id"),  # TapPay 退款交易編號
         }
 
         logger.info(

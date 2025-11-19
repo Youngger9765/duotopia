@@ -50,6 +50,7 @@ import {
   Receipt,
   GraduationCap,
   Download,
+  RefreshCcw,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import {
@@ -94,6 +95,7 @@ interface SubscriptionPeriod {
   end_date: string;
   status: string;
   payment_method: string;
+  payment_id?: string;
   payment_status: string;
   amount_paid?: number;
 }
@@ -111,7 +113,12 @@ interface EditHistoryRecord {
     quota_total?: number | { from: number; to: number };
     end_date?: string | { from: string; to: string };
     status?: string | { from: string; to: string };
+    payment_status?: { from: string; to: string };
   };
+  // Refund-specific fields
+  amount?: number;
+  refund_id?: string;
+  notes?: string;
 }
 
 interface AdminStats {
@@ -230,6 +237,16 @@ export default function AdminSubscriptionDashboard() {
     reason: "",
   });
 
+  // Refund modal state
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<SubscriptionPeriod | null>(null);
+  const [refundForm, setRefundForm] = useState({
+    amount: undefined as number | undefined,
+    reason: "",
+    notes: "",
+  });
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -323,6 +340,80 @@ export default function AdminSubscriptionDashboard() {
       reason: "",
     });
     setEditModalOpen(true);
+  };
+
+  const handleOpenRefundModal = (period: SubscriptionPeriod) => {
+    setSelectedPeriod(period);
+    setRefundForm({
+      amount: undefined, // undefined = 全額退款
+      reason: "",
+      notes: "",
+    });
+    setRefundModalOpen(true);
+  };
+
+  const handleSubmitRefund = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 詳細驗證
+    if (!selectedPeriod) {
+      setErrorMessage("未選擇訂閱期間");
+      return;
+    }
+
+    if (!selectedPeriod.payment_id) {
+      setErrorMessage(
+        "此訂閱沒有 TapPay 交易記錄（payment_id 為空），無法退款",
+      );
+      console.error("Period data:", selectedPeriod);
+      return;
+    }
+
+    if (!refundForm.reason) {
+      setErrorMessage("請填寫退款原因");
+      return;
+    }
+
+    console.log("🔄 Sending refund request:", {
+      rec_trade_id: selectedPeriod.payment_id,
+      amount: refundForm.amount,
+      reason: refundForm.reason,
+    });
+
+    try {
+      setLoading(true);
+      await apiClient.post("/api/admin/refund", {
+        rec_trade_id: selectedPeriod.payment_id,
+        amount: refundForm.amount,
+        reason: refundForm.reason,
+        notes: refundForm.notes,
+      });
+
+      setSuccessMessage(
+        `退款成功：${selectedPeriod.plan_name} - ${refundForm.amount ? `NT$ ${refundForm.amount}` : "全額退款"}`,
+      );
+
+      // Clear cached periods and history to force refresh
+      setTeacherPeriods({});
+      setPeriodHistory({});
+      setExpandedTeacherId(null);
+      setExpandedPeriodId(null);
+
+      await loadDashboardData();
+      setRefundModalOpen(false);
+      setRefundForm({ amount: undefined, reason: "", notes: "" });
+    } catch (error: unknown) {
+      console.error("Refund failed:", error);
+      setErrorMessage(
+        isApiError(error)
+          ? error.response?.data?.detail ||
+              error.message ||
+              "退款失敗，請稍後再試"
+          : "退款失敗，請稍後再試",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
@@ -467,10 +558,20 @@ export default function AdminSubscriptionDashboard() {
           const response = await apiClient.get(
             `/api/admin/subscription/teacher/${teacherId}/periods`,
           );
+          const periods = (response as { periods: SubscriptionPeriod[] })
+            .periods;
+
+          // Debug: 檢查第一個 period 的資料
+          if (periods.length > 0) {
+            console.log("🔍 Period data:", periods[0]);
+            console.log("payment_id:", periods[0].payment_id);
+            console.log("payment_status:", periods[0].payment_status);
+            console.log("status:", periods[0].status);
+          }
+
           setTeacherPeriods((prev) => ({
             ...prev,
-            [teacherId]: (response as { periods: SubscriptionPeriod[] })
-              .periods,
+            [teacherId]: periods,
           }));
         } catch (error) {
           console.error("Failed to load periods:", error);
@@ -944,6 +1045,7 @@ export default function AdminSubscriptionDashboard() {
                                               "adminSubscription.periodTable.status",
                                             )}
                                           </TableHead>
+                                          <TableHead>Actions</TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
@@ -1003,6 +1105,31 @@ export default function AdminSubscriptionDashboard() {
                                                   >
                                                     {period.status}
                                                   </span>
+                                                </TableCell>
+                                                <TableCell
+                                                  onClick={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                >
+                                                  {period.payment_id &&
+                                                    period.payment_status ===
+                                                      "paid" &&
+                                                    period.status ===
+                                                      "active" && (
+                                                      <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() =>
+                                                          handleOpenRefundModal(
+                                                            period,
+                                                          )
+                                                        }
+                                                        className="h-8"
+                                                      >
+                                                        <RefreshCcw className="w-3 h-3 mr-1" />
+                                                        Refund
+                                                      </Button>
+                                                    )}
                                                 </TableCell>
                                               </TableRow>
 
@@ -1235,10 +1362,81 @@ export default function AdminSubscriptionDashboard() {
                                                                                 }
                                                                               </div>
                                                                             )}
+                                                                          {record
+                                                                            .changes
+                                                                            .payment_status &&
+                                                                            typeof record
+                                                                              .changes
+                                                                              .payment_status ===
+                                                                              "object" && (
+                                                                              <div>
+                                                                                Payment
+                                                                                Status:{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .payment_status
+                                                                                    .from
+                                                                                }{" "}
+                                                                                →{" "}
+                                                                                {
+                                                                                  record
+                                                                                    .changes
+                                                                                    .payment_status
+                                                                                    .to
+                                                                                }
+                                                                              </div>
+                                                                            )}
                                                                         </>
                                                                       )}
                                                                     </div>
                                                                   )}
+
+                                                                  {/* 🆕 退款詳細資訊 */}
+                                                                  {record.action ===
+                                                                    "refund" && (
+                                                                    <div className="text-xs bg-red-50 p-2 rounded mb-2 space-y-1 border border-red-200">
+                                                                      <div className="font-semibold text-red-700 mb-1">
+                                                                        💰
+                                                                        退款詳情
+                                                                      </div>
+                                                                      {typeof record.amount ===
+                                                                        "number" && (
+                                                                        <div>
+                                                                          <span className="font-semibold">
+                                                                            退款金額:
+                                                                          </span>{" "}
+                                                                          <span className="text-red-600 font-bold">
+                                                                            $
+                                                                            {record.amount.toLocaleString()}
+                                                                          </span>
+                                                                        </div>
+                                                                      )}
+                                                                      {record.refund_id && (
+                                                                        <div>
+                                                                          <span className="font-semibold">
+                                                                            TapPay
+                                                                            退款編號:
+                                                                          </span>{" "}
+                                                                          <code className="text-xs bg-white px-1 py-0.5 rounded">
+                                                                            {record.refund_id ||
+                                                                              "N/A"}
+                                                                          </code>
+                                                                        </div>
+                                                                      )}
+                                                                      {record.notes && (
+                                                                        <div>
+                                                                          <span className="font-semibold">
+                                                                            備註:
+                                                                          </span>{" "}
+                                                                          {
+                                                                            record.notes
+                                                                          }
+                                                                        </div>
+                                                                      )}
+                                                                    </div>
+                                                                  )}
+
                                                                   <div className="text-xs text-gray-700 bg-yellow-50 p-2 rounded">
                                                                     <span className="font-semibold">
                                                                       {t(
@@ -1828,6 +2026,112 @@ export default function AdminSubscriptionDashboard() {
                   t("adminSubscription.buttons.cancelSubscription")
                 ) : (
                   t("adminSubscription.buttons.updateSubscription")
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refund Modal */}
+      <Dialog open={refundModalOpen} onOpenChange={setRefundModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Refund Subscription</DialogTitle>
+            <DialogDescription>
+              {selectedPeriod &&
+                `${selectedPeriod.plan_name} - NT$ ${selectedPeriod.amount_paid?.toLocaleString() || "0"}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmitRefund} className="space-y-4 mt-4">
+            {/* Amount (optional - full refund if not specified) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Refund Amount (optional)
+              </label>
+              <Input
+                type="number"
+                value={refundForm.amount || ""}
+                onChange={(e) =>
+                  setRefundForm({
+                    ...refundForm,
+                    amount: e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined,
+                  })
+                }
+                placeholder={`Full refund: NT$ ${selectedPeriod?.amount_paid?.toLocaleString() || "0"}`}
+                min="1"
+                max={selectedPeriod?.amount_paid || undefined}
+              />
+              <p className="text-xs text-gray-500">
+                Leave empty for full refund, or enter partial amount
+              </p>
+            </div>
+
+            {/* Reason (required) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Refund Reason <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                value={refundForm.reason}
+                onChange={(e) =>
+                  setRefundForm({ ...refundForm, reason: e.target.value })
+                }
+                placeholder="Why is this refund being issued?"
+                required
+                rows={3}
+              />
+            </div>
+
+            {/* Notes (optional) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes (optional)</label>
+              <Textarea
+                value={refundForm.notes}
+                onChange={(e) =>
+                  setRefundForm({ ...refundForm, notes: e.target.value })
+                }
+                placeholder="Additional notes or context"
+                rows={2}
+              />
+            </div>
+
+            {/* Warning */}
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertDescription className="text-yellow-800 text-sm">
+                ⚠️ This action will process a refund via TapPay and cannot be
+                undone. The subscription period will be cancelled.
+              </AlertDescription>
+            </Alert>
+
+            {/* Buttons */}
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRefundModalOpen(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={loading || !refundForm.reason}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing Refund...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    Confirm Refund
+                  </>
                 )}
               </Button>
             </div>
