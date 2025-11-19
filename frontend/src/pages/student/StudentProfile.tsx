@@ -23,6 +23,8 @@ import {
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { validatePasswordStrength } from "@/utils/passwordValidation";
+import { apiClient } from "@/lib/api";
 
 interface StudentInfo {
   id: number;
@@ -196,45 +198,39 @@ export default function StudentProfile() {
       return;
     }
 
+    // Bug3 Fix: Check if new password is same as current password FIRST
+    // This prevents confusing UX where user thinks they should enter same password
+    if (currentPassword === newPassword) {
+      toast.error(t("studentProfile.password.errors.passwordSameAsCurrent"));
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       toast.error(t("studentProfile.password.errors.passwordMismatch"));
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error(t("studentProfile.password.errors.passwordTooShort"));
+    // Validate password strength (comprehensive check)
+    const validation = validatePasswordStrength(newPassword);
+    if (!validation.valid && validation.errorKey) {
+      toast.error(t(`studentProfile.password.errors.${validation.errorKey}`));
       return;
     }
 
     setIsUpdatingPassword(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const response = await fetch(`${apiUrl}/api/students/me/password`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
+      await apiClient.updateStudentPassword({
+        current_password: currentPassword,
+        new_password: newPassword,
       });
-
-      if (response.ok) {
-        toast.success(t("studentProfile.password.success.passwordUpdated"));
-        setShowPasswordEdit(false);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        const error = await response.json();
-        toast.error(
-          error.detail || t("studentProfile.password.errors.updateFailed"),
-        );
-      }
-    } catch {
-      toast.error(t("studentProfile.password.errors.updateError"));
+      toast.success(t("studentProfile.password.success.passwordUpdated"));
+      setShowPasswordEdit(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error("Failed to update password:", err);
+      toast.error(t("studentProfile.password.errors.updateFailed"));
     } finally {
       setIsUpdatingPassword(false);
     }

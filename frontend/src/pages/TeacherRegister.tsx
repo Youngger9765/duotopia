@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Mail, Phone } from "lucide-react";
 import { apiClient } from "../lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { validatePasswordStrength } from "@/utils/passwordValidation";
 
 export default function TeacherRegister() {
   const { t } = useTranslation();
@@ -41,8 +42,9 @@ export default function TeacherRegister() {
     }
 
     // Validate password strength (frontend validation only, backend will also validate)
-    if (formData.password.length < 8) {
-      setError(t("teacherRegister.errors.passwordTooShort"));
+    const validation = validatePasswordStrength(formData.password);
+    if (!validation.valid && validation.errorKey) {
+      setError(t(`teacherRegister.errors.${validation.errorKey}`));
       return;
     }
 
@@ -77,11 +79,9 @@ export default function TeacherRegister() {
         navigate("/teacher/dashboard");
       }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("teacherRegister.errors.registerFailed"),
-      );
+      console.error("Registration error:", err);
+      // Bug1 Fix: Always use i18n translation, don't show backend error message directly
+      setError(t("teacherRegister.errors.registerFailed"));
     } finally {
       setIsLoading(false);
     }

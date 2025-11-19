@@ -956,6 +956,10 @@
     "errors": {
       "passwordMismatch": "Passwords do not match",
       "passwordTooShort": "Password must be at least 8 characters",
+      "missingUppercase": "Password must contain at least one uppercase letter",
+      "missingLowercase": "Password must contain at least one lowercase letter",
+      "missingNumber": "Password must contain at least one number",
+      "missingSpecialChar": "Password must contain at least one special character (!@#$%^&* etc.)",
       "registerFailed": "Registration failed, please try again later"
     },
     "footer": {

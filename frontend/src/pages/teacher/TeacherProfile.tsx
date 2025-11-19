@@ -18,6 +18,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { validatePasswordStrength } from "@/utils/passwordValidation";
 
 interface TeacherInfo {
   id: number;
@@ -115,13 +116,22 @@ export default function TeacherProfile() {
       return;
     }
 
+    // Bug3 Fix: Check if new password is same as current password FIRST
+    // This prevents confusing UX where user thinks they should enter same password
+    if (currentPassword === newPassword) {
+      toast.error(t("teacherProfile.password.errors.passwordSameAsCurrent"));
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       toast.error(t("teacherProfile.password.errors.passwordMismatch"));
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error(t("teacherProfile.password.errors.passwordTooShort"));
+    // Validate password strength (comprehensive check)
+    const validation = validatePasswordStrength(newPassword);
+    if (!validation.valid && validation.errorKey) {
+      toast.error(t(`teacherProfile.password.errors.${validation.errorKey}`));
       return;
     }
 
