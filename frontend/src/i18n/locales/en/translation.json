@@ -640,7 +640,13 @@
     },
     "buttons": {
       "back": "Back",
+      "backShort": "Back",
       "submit": "Submit Assignment",
+      "submitShort": "Submit",
+      "submitting": "Submitting...",
+      "submittingShort": "Submitting",
+      "next": "Next",
+      "previous": "Previous",
       "cancel": "Cancel",
       "confirm": "Confirm Submit"
     },
