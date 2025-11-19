@@ -70,3 +70,24 @@ def override_get_db(test_db_session):
     # 這裡不實際覆寫，而是在測試中手動傳入 test_db_session
     # 因為我們的測試直接呼叫函數而不是透過 FastAPI dependency injection
     pass
+
+
+@pytest.fixture(autouse=True, scope="session")
+def disable_rate_limit():
+    """
+    測試環境自動停用 rate limit
+
+    靈活方式：透過 fixture 動態控制，而非硬編碼環境變數
+    - autouse=True: 自動套用到所有測試
+    - scope="session": 整個測試 session 只執行一次
+    """
+    from core.limiter import limiter
+
+    # 停用 rate limiter
+    original_enabled = limiter.enabled
+    limiter.enabled = False
+
+    yield
+
+    # 恢復原狀（雖然測試結束後不重要，但保持良好習慣）
+    limiter.enabled = original_enabled

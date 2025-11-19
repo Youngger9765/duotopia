@@ -24,8 +24,12 @@ from models import (
     StudentItemProgress,
     TeacherSubscriptionTransaction,
     SubscriptionPeriod,
+    TransactionType,
+    TransactionStatus,
 )
 from routers.teachers import get_current_teacher
+from services.tappay_service import TapPayService
+from schemas import RefundRequest
 import os
 import subprocess
 import sys
@@ -517,3 +521,155 @@ async def get_admin_stats(
 
 # ⚠️ DEPRECATED: Old cancel/edit subscription APIs removed
 # Use /api/admin/subscription/cancel and /api/admin/subscription/edit from admin_subscriptions.py instead
+
+
+# ============ Admin Refund API ============
+@router.post("/refund")
+async def admin_refund(
+    refund_request: RefundRequest,
+    admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin 執行退款操作
+
+    - 全額退款：不提供 amount
+    - 部分退款：提供 amount
+    - 退款會立即調用 TapPay API
+    - 退款成功後會記錄在交易中
+    - 實際的 period 和 webhook 更新由 TapPay webhook 自動處理
+    """
+    logger.info(
+        f"Admin {admin.email} requesting refund for {refund_request.rec_trade_id}"
+    )
+
+    # 1. 查詢原始交易
+    transaction = (
+        db.query(TeacherSubscriptionTransaction)
+        .filter_by(external_transaction_id=refund_request.rec_trade_id)
+        .first()
+    )
+
+    if not transaction:
+        raise HTTPException(
+            status_code=404,
+            detail=f"找不到交易編號 {refund_request.rec_trade_id}",
+        )
+
+    # 2. 檢查是否已退款
+    if transaction.refund_status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"交易 {refund_request.rec_trade_id} 已退款，無法重複退款",
+        )
+
+    # 3. 調用 TapPay 退款 API
+    tappay_service = TapPayService()
+    refund_result = tappay_service.refund(
+        rec_trade_id=refund_request.rec_trade_id,
+        amount=refund_request.amount,  # None = 全額退款
+    )
+
+    # 4. 檢查 TapPay 退款結果
+    if refund_result.get("status") != 0:
+        error_msg = refund_result.get("msg", "Unknown error")
+        logger.error(f"TapPay refund failed: {error_msg}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"退款失敗：{error_msg}",
+        )
+
+    # 5. 更新交易狀態（TapPay 退款 API 是同步的，成功即完成）
+    transaction.refund_status = "completed"  # 同步完成，不需等 webhook
+    transaction.refund_amount = refund_request.amount or int(transaction.amount)
+    transaction.refund_reason = refund_request.reason
+    transaction.refund_notes = refund_request.notes
+    transaction.refund_initiated_by = admin.id
+    transaction.refund_initiated_at = datetime.now(timezone.utc)
+
+    # 5.5 創建 REFUND transaction 記錄
+    # ⚠️ 用 try-except 保護，即使失敗也要 commit 原始 transaction 更新
+    try:
+        refund_transaction = TeacherSubscriptionTransaction(
+            teacher_id=transaction.teacher_id,
+            teacher_email=transaction.teacher_email,
+            transaction_type=TransactionType.REFUND,
+            subscription_type=transaction.subscription_type,
+            amount=-abs(refund_request.amount or int(transaction.amount)),  # 負數表示退款
+            currency=transaction.currency or "TWD",
+            status=TransactionStatus.SUCCESS,
+            months=transaction.months or 0,  # 複製原交易的月數
+            period_start=transaction.period_start,  # 複製原交易的時間
+            period_end=transaction.period_end,
+            previous_end_date=transaction.previous_end_date,
+            new_end_date=transaction.new_end_date or datetime.now(timezone.utc),  # 必填欄位
+            payment_provider="tappay",
+            payment_method=transaction.payment_method,
+            external_transaction_id=refund_result.get(
+                "refund_id"
+            ),  # 退款交易編號（TapPay 返回 refund_id）
+            original_transaction_id=transaction.id,  # 關聯原始交易
+            refund_reason=refund_request.reason,
+            refund_notes=refund_request.notes,
+            refund_initiated_by=admin.id,
+            refund_initiated_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+        )
+        db.add(refund_transaction)
+        db.flush()  # 先 flush 取得 ID
+
+        logger.info(
+            f"✅ Created REFUND transaction {refund_transaction.id} for original transaction {transaction.id}"
+        )
+    except Exception as e:
+        logger.error(f"❌ Failed to create REFUND transaction for {transaction.id}: {e}")
+        logger.error(
+            "⚠️  TapPay refund succeeded but REFUND transaction creation failed! "
+            "Manual intervention may be required."
+        )
+
+    # 6. 同步更新對應的 SubscriptionPeriod（如果存在）
+    period = (
+        db.query(SubscriptionPeriod)
+        .filter_by(payment_id=refund_request.rec_trade_id)
+        .first()
+    )
+
+    if period:
+        period.payment_status = "refunded"
+        period.status = "cancelled"
+        period.cancel_reason = f"Admin refund: {refund_request.reason}"
+        period.cancelled_at = datetime.now(timezone.utc)
+        period.admin_id = admin.id
+
+        # 記錄退款到 metadata
+        if period.admin_metadata is None:
+            period.admin_metadata = {}
+        period.admin_metadata["refund"] = {
+            "amount": refund_request.amount or int(transaction.amount),
+            "reason": refund_request.reason,
+            "refunded_by": admin.email,
+            "refunded_at": datetime.now(timezone.utc).isoformat(),
+            "refund_id": refund_result.get("refund_id"),  # TapPay 退款交易編號
+        }
+
+        logger.info(
+            f"Period {period.id} marked as refunded and cancelled for teacher {transaction.teacher_email}"
+        )
+
+    db.commit()
+
+    logger.info(
+        f"Refund completed for {refund_request.rec_trade_id}, "
+        f"amount: {refund_request.amount or 'full'}, "
+        f"reason: {refund_request.reason}"
+    )
+
+    return {
+        "status": "success",
+        "message": "退款已完成",
+        "rec_trade_id": refund_request.rec_trade_id,
+        "refund_rec_trade_id": refund_result.get("refund_rec_trade_id"),
+        "amount": refund_request.amount or transaction.amount,
+        "period_updated": period is not None,
+    }

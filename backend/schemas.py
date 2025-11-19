@@ -332,3 +332,13 @@ class TeacherReviewBatchCreate(BaseModel):
     """Schema for batch reviewing multiple items"""
 
     item_reviews: List[Dict[str, Any]] = Field(..., description="List of item reviews")
+
+
+# Admin Refund schemas
+class RefundRequest(BaseModel):
+    """Admin 退款請求"""
+
+    rec_trade_id: str = Field(..., description="TapPay 交易編號")
+    amount: Optional[int] = Field(None, description="退款金額（None = 全額退款）")
+    reason: str = Field(..., min_length=1, description="退款原因（必填）")
+    notes: Optional[str] = Field(None, description="備註")

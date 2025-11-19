@@ -327,6 +327,7 @@ class Teacher(Base):
     assignments = relationship("Assignment", back_populates="teacher")
     subscription_transactions = relationship(
         "TeacherSubscriptionTransaction",
+        foreign_keys="TeacherSubscriptionTransaction.teacher_id",
         back_populates="teacher",
         cascade="all, delete-orphan",
     )
@@ -1074,8 +1075,15 @@ class TeacherSubscriptionTransaction(Base):
     gateway_response = Column(JSON, nullable=True)  # 金流商完整回應
 
     # 8. 退款相關
-    refunded_amount = Column(Numeric(10, 2), nullable=True, default=0)  # 已退款金額
+    refunded_amount = Column(Integer, nullable=True, default=0)  # 已退款金額（TWD 分）
     refund_status = Column(String(20), nullable=True)  # 退款狀態
+    refund_amount = Column(Integer, nullable=True)  # 本次退款金額（TWD 元）
+    refund_reason = Column(Text, nullable=True)  # 退款原因
+    refund_notes = Column(Text, nullable=True)  # 退款備註
+    refund_initiated_by = Column(
+        Integer, ForeignKey("teachers.id"), nullable=True
+    )  # 退款操作者
+    refund_initiated_at = Column(DateTime(timezone=True), nullable=True)  # 退款發起時間
     original_transaction_id = Column(
         Integer, ForeignKey("teacher_subscription_transactions.id"), nullable=True
     )  # 原始交易（退款時參照）
@@ -1108,7 +1116,9 @@ class TeacherSubscriptionTransaction(Base):
     )  # 更新時間（與 DB 一致）
 
     # 關聯
-    teacher = relationship("Teacher", back_populates="subscription_transactions")
+    teacher = relationship(
+        "Teacher", foreign_keys=[teacher_id], back_populates="subscription_transactions"
+    )
 
     def __repr__(self):
         return (

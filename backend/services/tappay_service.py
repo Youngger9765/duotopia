@@ -245,7 +245,11 @@ class TapPayService:
         Returns:
             Transaction details
         """
-        query_url = f"{self.api_url.replace('pay-by-prime', 'transaction/query')}"
+        # 正確的 query URL 不含 /payment/ 路徑
+        if self.environment == "production":
+            query_url = "https://prod.tappaysdk.com/tpc/transaction/query"
+        else:
+            query_url = "https://sandbox.tappaysdk.com/tpc/transaction/query"
 
         payload = {"partner_key": self.partner_key, "rec_trade_id": rec_trade_id}
 
@@ -253,7 +257,10 @@ class TapPayService:
             response = requests.post(
                 query_url,
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": self.partner_key,
+                },
                 timeout=30,
             )
 
@@ -275,31 +282,52 @@ class TapPayService:
         Returns:
             Refund result
         """
-        refund_url = f"{self.api_url.replace('pay-by-prime', 'transaction/refund')}"
+        # 正確的 refund URL 不含 /payment/ 路徑
+        if self.environment == "production":
+            refund_url = "https://prod.tappaysdk.com/tpc/transaction/refund"
+        else:
+            refund_url = "https://sandbox.tappaysdk.com/tpc/transaction/refund"
 
         payload = {"partner_key": self.partner_key, "rec_trade_id": rec_trade_id}
 
         if amount is not None:
             payload["amount"] = amount  # 部分退款
 
+        logger.info("🔄 Sending refund request:")
+        logger.info(f"  URL: {refund_url}")
+        logger.info(f"  rec_trade_id: {rec_trade_id}")
+        logger.info(f"  amount: {amount or 'Full refund'}")
+
         try:
             response = requests.post(
                 refund_url,
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": self.partner_key,
+                },
                 timeout=30,
             )
+
+            logger.info(f"📥 TapPay refund response: {response.status_code}")
+            logger.info(f"📥 Response body: {response.text}")
 
             response.raise_for_status()
             result = response.json()
 
             logger.info(
-                f"Refund processed for {rec_trade_id}: status={result.get('status')}"
+                f"✅ Refund processed for {rec_trade_id}: status={result.get('status')}"
             )
             return result
 
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"❌ HTTP Error: {e}")
+            logger.error(
+                f"❌ Response: {e.response.text if hasattr(e, 'response') else 'N/A'}"
+            )
+            return {"status": -1, "msg": str(e)}
         except Exception as e:
-            logger.error(f"Refund error: {str(e)}")
+            logger.error(f"❌ Refund error: {str(e)}")
             return {"status": -1, "msg": str(e)}
 
     def capture(self, rec_trade_id: str, amount: int = None) -> Dict:
@@ -313,7 +341,11 @@ class TapPayService:
         Returns:
             Capture result
         """
-        capture_url = f"{self.api_url.replace('pay-by-prime', 'transaction/capture')}"
+        # 正確的 capture URL 不含 /payment/ 路徑
+        if self.environment == "production":
+            capture_url = "https://prod.tappaysdk.com/tpc/transaction/capture"
+        else:
+            capture_url = "https://sandbox.tappaysdk.com/tpc/transaction/capture"
 
         payload = {"partner_key": self.partner_key, "rec_trade_id": rec_trade_id}
 
