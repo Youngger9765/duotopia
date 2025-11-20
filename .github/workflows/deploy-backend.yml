@@ -233,11 +233,11 @@ jobs:
             AND tablename != 'alembic_version'
             AND tablename NOT IN (
               'teachers', 'students', 'classrooms', 'classroom_students',
-              'programs', 'lessons', 'contents', 'content_items',
-              'assignments', 'assignment_contents', 'student_assignments',
+              'programs', 'lessons', 'content', 'content_item', 'contents', 'content_items',
+              'assignments', 'assignment_content', 'assignment_contents', 'student_assignments',
               'student_content_progress', 'student_item_progress',
               'subscription_periods', 'point_usage_logs',
-              'teacher_subscription_transactions', 'invoice_status_history',
+              'teacher_subscription_transaction', 'teacher_subscription_transactions', 'invoice_status_history',
               'user_word_progress', 'practice_sessions', 'practice_answers'
             )
           ORDER BY tablename;
