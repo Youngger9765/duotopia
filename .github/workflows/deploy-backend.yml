@@ -59,9 +59,16 @@ jobs:
 
     - name: Run pytest (Parallel)
       working-directory: ./backend
+      env:
+        DATABASE_URL: ${{ github.ref == 'refs/heads/staging' && secrets.STAGING_DATABASE_URL || '' }}
       run: |
-        echo "Running backend tests in parallel..."
-        pytest -n 2 -v --tb=short || echo "Tests completed with some failures"
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "🚀 Production: Running unit tests only (no database required)..."
+          pytest tests/unit/ -n 2 -v --tb=short || echo "Tests completed with some failures"
+        else
+          echo "🧪 Staging: Running full test suite with database..."
+          pytest -n 2 -v --tb=short || echo "Tests completed with some failures"
+        fi
 
     - name: Test backend import
       working-directory: ./backend
