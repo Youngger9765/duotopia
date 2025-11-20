@@ -140,14 +140,14 @@ jobs:
           echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "🔥 Using Production Database"
         elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-          # Develop 使用 Staging 資料庫（共用）
-          echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> $GITHUB_OUTPUT
-          echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+          # Develop 使用獨立資料庫
+          echo "DATABASE_URL=${{ secrets.DEVELOP_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.DEVELOP_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.DEVELOP_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_KEY=${{ secrets.DEVELOP_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.DEVELOP_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.DEVELOP_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          echo "🔧 Using Staging Database (shared with develop)"
+          echo "🔧 Using Develop Database (independent)"
         else
           echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
           echo "ALEMBIC_DATABASE_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
