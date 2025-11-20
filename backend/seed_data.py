@@ -7,7 +7,7 @@ Seed data for Duotopia - 新作業系統架構
 from datetime import datetime, date, timedelta  # noqa: F401
 import random
 from sqlalchemy.orm import Session
-from database import engine, Base
+from database import get_engine, Base
 from models import (
     Teacher,
     Student,
@@ -2440,6 +2440,8 @@ def seed_template_programs(db: Session):
 def reset_database():
     """重置資料庫並建立 seed data"""
     print("⚠️  正在重置資料庫...")
+
+    engine = get_engine()
 
     # Drop all tables using SQLAlchemy
     Base.metadata.drop_all(bind=engine)

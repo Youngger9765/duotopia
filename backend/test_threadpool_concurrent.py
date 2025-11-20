@@ -8,13 +8,13 @@ import time
 import aiohttp
 import statistics
 
-# Production URL
-BASE_URL = "https://duotopia-production-backend-316409492201.asia-east1.run.app"
+# Staging URL
+BASE_URL = "https://duotopia-staging-backend-316409492201.asia-east1.run.app"
 
 
 async def simulate_blocking_request(session, user_id, request_id):
     """模擬需要 thread pool 處理的阻塞請求"""
-    url = f"{BASE_URL}/api/speech-assessment/test-concurrent"
+    url = f"{BASE_URL}/api/speech/test-concurrent"
 
     start = time.time()
     try:

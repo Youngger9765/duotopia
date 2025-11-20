@@ -4,7 +4,7 @@ QuotaService 單元測試
 import pytest
 from services.quota_service import QuotaService
 from models import Teacher
-from database import SessionLocal
+from database import get_session_local
 from fastapi import HTTPException
 
 
@@ -42,6 +42,7 @@ class TestQuotaCheck:
 
     def test_check_quota_sufficient(self):
         """測試配額足夠"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -60,6 +61,7 @@ class TestQuotaCheck:
 
     def test_check_quota_insufficient(self):
         """測試配額不足"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -82,6 +84,7 @@ class TestQuotaDeduction:
 
     def test_deduct_quota_success(self):
         """測試成功扣除配額"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -119,6 +122,7 @@ class TestQuotaDeduction:
 
     def test_deduct_quota_exceeded(self):
         """測試配額不足時拋出錯誤"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -150,6 +154,7 @@ class TestQuotaDeduction:
 
     def test_deduct_quota_different_units(self):
         """測試扣除不同單位的配額"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -196,6 +201,7 @@ class TestQuotaInfo:
 
     def test_get_quota_info(self):
         """測試取得配額資訊"""
+        SessionLocal = get_session_local()
         db = SessionLocal()
 
         teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()

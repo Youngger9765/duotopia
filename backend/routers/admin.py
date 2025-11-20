@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 import logging
 
-from database import get_db, engine, Base
+from database import get_db, get_engine, Base
 from models import (
     Teacher,
     Student,
@@ -102,6 +102,7 @@ async def rebuild_database(seed: bool = True, db: Session = Depends(get_db)):
         db.close()
 
         # Drop all tables
+        engine = get_engine()
         Base.metadata.drop_all(bind=engine)
 
         # Recreate all tables

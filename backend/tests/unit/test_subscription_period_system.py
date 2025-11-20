@@ -10,12 +10,13 @@
 """
 
 from datetime import datetime, timezone
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher, SubscriptionPeriod
 
 
 def test_1_data_migration():
     """測試 1: 驗證資料遷移正確性"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 有訂閱的老師應該都有對應的 subscription_period
@@ -47,6 +48,7 @@ def test_1_data_migration():
 
 def test_2_current_period_property():
     """測試 2: current_period property 正確運作"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
@@ -78,6 +80,7 @@ def test_2_current_period_property():
 
 def test_3_quota_update():
     """測試 3: 配額更新邏輯"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
@@ -105,6 +108,7 @@ def test_3_quota_update():
 
 def test_4_historical_records():
     """測試 4: 歷史記錄保存"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
@@ -134,6 +138,7 @@ def test_4_historical_records():
 
 def test_5_payment_method_tracking():
     """測試 5: 付款方式追蹤"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 查詢所有訂閱週期
@@ -159,6 +164,7 @@ def test_5_payment_method_tracking():
 
 def test_6_helper_properties():
     """測試 6: Helper properties (quota_total, quota_remaining)"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()

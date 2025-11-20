@@ -9,24 +9,46 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia"
 )
 
-# 🔧 資料庫連線池優化 - 防止 SSL SYSCALL EOF 錯誤
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,  # 每次取得連線前先測試，防止使用斷線的連線
-    pool_recycle=3600,  # 1小時回收連線，避免長時間閒置被關閉
-    pool_size=5,  # 連線池大小
-    max_overflow=10,  # 最大溢出連線數
-    connect_args={
-        "connect_timeout": 10,  # 連線超時 10 秒
-        "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
-    },
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 🔧 延遲載入：只在實際使用時才建立資料庫連線
+# 這樣 conftest.py 可以在沒有 DATABASE_URL 的情況下被載入（單元測試）
+_engine = None
+_SessionLocal = None
+
+
+def get_engine():
+    """延遲建立資料庫引擎"""
+    global _engine
+    if _engine is None:
+        _engine = create_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,  # 每次取得連線前先測試，防止使用斷線的連線
+            pool_recycle=3600,  # 1小時回收連線，避免長時間閒置被關閉
+            pool_size=5,  # 連線池大小
+            max_overflow=10,  # 最大溢出連線數
+            connect_args={
+                "connect_timeout": 10,  # 連線超時 10 秒
+                "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
+            },
+        )
+    return _engine
+
+
+def get_session_local():
+    """延遲建立 Session maker"""
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=get_engine()
+        )
+    return _SessionLocal
+
 
 Base = declarative_base()
 
 
 def get_db():
+    """取得資料庫 session"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         yield db
