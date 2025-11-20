@@ -906,3 +906,33 @@ async def delete_item_recording_and_assessment(
         "deleted": True,
         "progress_id": progress.id,
     }
+
+
+# ===== 測試 Endpoint：驗證 Thread Pool 並發 =====
+
+
+@router.get("/test-concurrent")
+async def test_thread_pool_concurrent():
+    """
+    測試 Thread Pool 並發處理能力
+    模擬 Azure Speech API 的阻塞操作（1 秒）
+    """
+    import time
+
+    loop = asyncio.get_event_loop()
+    pool = get_speech_thread_pool()
+
+    def simulate_azure_call():
+        """模擬 Azure Speech API 呼叫（阻塞 1 秒）"""
+        time.sleep(1)
+        return {"simulation": True, "duration": 1.0, "worker": "speech_pool"}
+
+    start = time.time()
+    result = await loop.run_in_executor(pool, simulate_azure_call)
+    elapsed = time.time() - start
+
+    return {
+        "result": result,
+        "elapsed_seconds": round(elapsed, 2),
+        "thread_pool": {"max_workers": 20, "type": "speech_pool"},
+    }
