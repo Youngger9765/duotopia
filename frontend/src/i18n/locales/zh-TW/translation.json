@@ -632,7 +632,10 @@
     },
     "messages": {
       "noActivities": "此作業尚無題目",
-      "submitSuccess": "作業提交成功！"
+      "submitSuccess": "作業提交成功！",
+      "analyzingRecording": "正在分析錄音",
+      "pleaseWait": "請稍候...",
+      "doNotSwitchQuestions": "請勿切換題目"
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",
