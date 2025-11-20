@@ -5,6 +5,7 @@ Azure Speech Assessment Router
 
 import os
 import logging
+import asyncio
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from io import BytesIO
@@ -16,6 +17,8 @@ from pydub import AudioSegment
 
 from database import get_db
 from auth import get_current_user
+from performance_monitoring import trace_function, start_span, PerformanceSnapshot
+from core.thread_pool import get_speech_thread_pool, get_audio_thread_pool
 from models import (
     Student,
     StudentContentProgress,
@@ -144,6 +147,7 @@ def convert_audio_to_wav(audio_data: bytes, content_type: str) -> bytes:
         )
 
 
+@trace_function("Azure Speech Assessment")
 def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, Any]:
     """
     呼叫 Azure Speech API 進行發音評估
@@ -475,6 +479,7 @@ def save_assessment_result(
 
 
 @router.post("/assess", response_model=AssessmentResponse)
+@trace_function("Speech Assessment API")
 async def assess_pronunciation_endpoint(
     audio_file: UploadFile = File(...),
     reference_text: str = Form(...),
@@ -491,6 +496,8 @@ async def assess_pronunciation_endpoint(
     - **reference_text**: 參考文本
     - **progress_id**: StudentContentProgress 記錄的 ID
     """
+    perf = PerformanceSnapshot(f"Speech_Assessment_Student_{current_student.id}")
+
     # 檢查檔案格式
     if audio_file.content_type not in ALLOWED_AUDIO_FORMATS:
         raise HTTPException(
@@ -499,15 +506,24 @@ async def assess_pronunciation_endpoint(
         )
 
     # 檢查檔案大小
-    audio_data = await audio_file.read()
-    if len(audio_data) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB",
-        )
+    with start_span("Read Audio File"):
+        audio_data = await audio_file.read()
+        if len(audio_data) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB",
+            )
+        perf.checkpoint("Audio File Read")
 
     # 轉換音檔格式為 WAV（Azure Speech SDK 需要）
-    wav_audio_data = convert_audio_to_wav(audio_data, audio_file.content_type)
+    # ⚡ 音檔轉換也可能耗時，使用自訂線程池避免阻塞
+    with start_span("Convert Audio to WAV"):
+        loop = asyncio.get_event_loop()
+        audio_pool = get_audio_thread_pool()
+        wav_audio_data = await loop.run_in_executor(
+            audio_pool, convert_audio_to_wav, audio_data, audio_file.content_type
+        )
+        perf.checkpoint("Audio Conversion Complete")
 
     # 🎯 找到學生的 assignment 與老師（配額檢查）
     student_assignment_id = None
@@ -584,8 +600,17 @@ async def assess_pronunciation_endpoint(
             logger.error(f"❌ Quota check failed: {e}")
             # 計算時長失敗，允許繼續評分
 
-    # 進行發音評估
-    assessment_result = assess_pronunciation(wav_audio_data, reference_text)
+    # 進行發音評估（Azure Speech SDK）
+    # ⚡ 使用自訂語音線程池避免阻塞 event loop
+    with start_span(
+        "Azure Speech API Call", {"reference_text_length": len(reference_text)}
+    ):
+        loop = asyncio.get_event_loop()
+        speech_pool = get_speech_thread_pool()
+        assessment_result = await loop.run_in_executor(
+            speech_pool, assess_pronunciation, wav_audio_data, reference_text
+        )
+        perf.checkpoint("Azure Speech Assessment Complete")
 
     # 📊 評分成功後扣除配額
     if teacher and assignment:
@@ -637,14 +662,19 @@ async def assess_pronunciation_endpoint(
             # 其他錯誤只記錄，不影響評分結果
 
     # 儲存結果到資料庫
-    updated_progress = save_assessment_result(
-        db=db,
-        progress_id=progress_id,
-        assessment_result=assessment_result,
-        reference_text=reference_text,
-        item_index=item_index,
-        student_assignment_id=student_assignment_id,
-    )
+    with start_span("Save Assessment Result to Database"):
+        updated_progress = save_assessment_result(
+            db=db,
+            progress_id=progress_id,
+            assessment_result=assessment_result,
+            reference_text=reference_text,
+            item_index=item_index,
+            student_assignment_id=student_assignment_id,
+        )
+        perf.checkpoint("Database Save Complete")
+
+    # 完成效能追蹤
+    perf.finish()
 
     # 回傳結果 - 包含完整的詳細資料
     return AssessmentResponse(

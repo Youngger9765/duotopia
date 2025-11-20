@@ -11,6 +11,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from database import get_db
+from performance_monitoring import trace_function, start_span, PerformanceSnapshot
 from models import (
     Teacher,
     Student,
@@ -1331,6 +1332,7 @@ async def submit_assignment(
 
 
 @router.post("/assignments/{assignment_id}/ai-grade", response_model=AIGradingResponse)
+@trace_function("AI Grade Assignment")
 async def ai_grade_assignment(
     assignment_id: int,
     request: AIGradingRequest,
@@ -1342,37 +1344,45 @@ async def ai_grade_assignment(
     只有教師可以觸發批改
     """
     start_time = datetime.now()
+    perf = PerformanceSnapshot(f"AI_Grade_Assignment_{assignment_id}")
 
     # 0. 驗證是教師身份
-    if not isinstance(current_user, Teacher):
-        raise HTTPException(
-            status_code=403, detail="Only teachers can trigger AI grading"
-        )
-    current_teacher = current_user
+    with start_span("Verify Teacher Permission"):
+        if not isinstance(current_user, Teacher):
+            raise HTTPException(
+                status_code=403, detail="Only teachers can trigger AI grading"
+            )
+        current_teacher = current_user
+        perf.checkpoint("Permission Check")
 
     # 1. 取得作業並驗證權限
-    assignment = (
-        db.query(StudentAssignment)
-        .join(Classroom)
-        .filter(
-            and_(
-                StudentAssignment.id == assignment_id,
-                Classroom.teacher_id == current_teacher.id,
+    with start_span("Database Query - Get Assignment"):
+        assignment = (
+            db.query(StudentAssignment)
+            .join(Classroom)
+            .filter(
+                and_(
+                    StudentAssignment.id == assignment_id,
+                    Classroom.teacher_id == current_teacher.id,
+                )
             )
+            .first()
         )
-        .first()
-    )
 
-    if not assignment:
-        raise HTTPException(
-            status_code=404, detail="Assignment not found or you don't have permission"
-        )
+        if not assignment:
+            raise HTTPException(
+                status_code=404,
+                detail="Assignment not found or you don't have permission",
+            )
+        perf.checkpoint("Assignment Query")
 
     # 2. 檢查作業狀態
-    if assignment.status != AssignmentStatus.SUBMITTED:
-        raise HTTPException(
-            status_code=400, detail="Assignment must be submitted before grading"
-        )
+    with start_span("Validate Assignment Status"):
+        if assignment.status != AssignmentStatus.SUBMITTED:
+            raise HTTPException(
+                status_code=400, detail="Assignment must be submitted before grading"
+            )
+        perf.checkpoint("Status Validation")
 
     # 3. 簡化版 - 不查詢 Content
     content = None
@@ -1384,109 +1394,127 @@ async def ai_grade_assignment(
         # 5. 處理批改邏輯
         if request.mock_mode and request.mock_data:
             # 使用模擬資料（測試模式）
-            whisper_result = request.mock_data
+            with start_span("Mock Mode - Load Test Data"):
+                whisper_result = request.mock_data
+                perf.checkpoint("Mock Data Loaded")
         else:
             # 準備預期文字
-            expected_texts = []
-            if hasattr(content, "content_items"):
-                for item in content.content_items:
-                    expected_texts.append(item.text if hasattr(item, "text") else "")
+            with start_span("Prepare Expected Texts"):
+                expected_texts = []
+                if hasattr(content, "content_items"):
+                    for item in content.content_items:
+                        expected_texts.append(
+                            item.text if hasattr(item, "text") else ""
+                        )
+                perf.checkpoint("Text Preparation")
 
-            # 呼叫 Whisper API
-            whisper_result = await process_audio_with_whisper(
-                request.audio_urls or [], expected_texts
-            )
+            # 呼叫 Whisper API（這裡最可能慢）
+            with start_span(
+                "Whisper API Call", {"audio_count": len(request.audio_urls or [])}
+            ):
+                whisper_result = await process_audio_with_whisper(
+                    request.audio_urls or [], expected_texts
+                )
+                perf.checkpoint("Whisper API Complete")
 
         # 6. 分析批改結果
-        transcriptions = whisper_result.get("transcriptions", [])
-        audio_analysis = whisper_result.get("audio_analysis", {})
+        with start_span(
+            "Calculate AI Scores",
+            {"transcription_count": len(whisper_result.get("transcriptions", []))},
+        ):
+            transcriptions = whisper_result.get("transcriptions", [])
+            audio_analysis = whisper_result.get("audio_analysis", {})
 
-        # 計算各項評分
-        total_accuracy = 0
-        total_pronunciation = 0
-        detailed_results = []
+            # 計算各項評分
+            total_accuracy = 0
+            total_pronunciation = 0
+            detailed_results = []
 
-        for transcription in transcriptions:
-            expected = transcription.get("expected_text", "")
-            actual = transcription.get("transcribed_text", "")
-            words = transcription.get("words", [])
+            for transcription in transcriptions:
+                expected = transcription.get("expected_text", "")
+                actual = transcription.get("transcribed_text", "")
+                words = transcription.get("words", [])
 
-            # 計算準確率
-            accuracy = calculate_text_similarity(expected, actual) * 100
+                # 計算準確率
+                accuracy = calculate_text_similarity(expected, actual) * 100
 
-            # 計算發音評分
-            pronunciation = calculate_pronunciation_score(words)
+                # 計算發音評分
+                pronunciation = calculate_pronunciation_score(words)
 
-            total_accuracy += accuracy
-            total_pronunciation += pronunciation
+                total_accuracy += accuracy
+                total_pronunciation += pronunciation
 
-            detailed_results.append(
-                {
-                    "item_id": transcription.get("item_id", 0),
-                    "expected_text": expected,
-                    "transcribed_text": actual,
-                    "accuracy_score": accuracy,
-                    "pronunciation_score": pronunciation,
-                    "word_count": len(expected.split()) if expected else 0,
-                }
+                detailed_results.append(
+                    {
+                        "item_id": transcription.get("item_id", 0),
+                        "expected_text": expected,
+                        "transcribed_text": actual,
+                        "accuracy_score": accuracy,
+                        "pronunciation_score": pronunciation,
+                        "word_count": len(expected.split()) if expected else 0,
+                    }
+                )
+
+            # 計算平均值
+            item_count = len(transcriptions) if transcriptions else 1
+            avg_accuracy = total_accuracy / item_count
+            avg_pronunciation = total_pronunciation / item_count
+
+            # 計算流暢度
+            fluency = calculate_fluency_score(audio_analysis)
+
+            # 計算語速
+            all_transcribed = " ".join(
+                [t.get("transcribed_text", "") for t in transcriptions]
+            )
+            total_duration = audio_analysis.get("total_duration", 10.0)
+            wpm = calculate_wpm(all_transcribed, total_duration)
+
+            # 建立評分物件
+            ai_scores = AIScores(
+                pronunciation=round(avg_pronunciation, 1),
+                fluency=round(fluency, 1),
+                accuracy=round(avg_accuracy, 1),
+                wpm=wpm,
             )
 
-        # 計算平均值
-        item_count = len(transcriptions) if transcriptions else 1
-        avg_accuracy = total_accuracy / item_count
-        avg_pronunciation = total_pronunciation / item_count
+            # 計算整體評分（加權平均）
+            overall_score = round(
+                ai_scores.pronunciation * 0.3
+                + ai_scores.fluency * 0.3
+                + ai_scores.accuracy * 0.4,
+                1,
+            )
 
-        # 計算流暢度
-        fluency = calculate_fluency_score(audio_analysis)
-
-        # 計算語速
-        all_transcribed = " ".join(
-            [t.get("transcribed_text", "") for t in transcriptions]
-        )
-        total_duration = audio_analysis.get("total_duration", 10.0)
-        wpm = calculate_wpm(all_transcribed, total_duration)
-
-        # 建立評分物件
-        ai_scores = AIScores(
-            pronunciation=round(avg_pronunciation, 1),
-            fluency=round(fluency, 1),
-            accuracy=round(avg_accuracy, 1),
-            wpm=wpm,
-        )
-
-        # 計算整體評分（加權平均）
-        overall_score = round(
-            ai_scores.pronunciation * 0.3
-            + ai_scores.fluency * 0.3
-            + ai_scores.accuracy * 0.4,
-            1,
-        )
-
-        # 生成回饋
-        feedback = generate_ai_feedback(ai_scores, detailed_results)
+            # 生成回饋
+            feedback = generate_ai_feedback(ai_scores, detailed_results)
+            perf.checkpoint("Score Calculation Complete")
 
         # 7. 更新資料庫
-        # 更新作業狀態
-        assignment.status = AssignmentStatus.GRADED
-        assignment.score = overall_score
-        assignment.feedback = feedback
-        assignment.graded_at = datetime.now(timezone.utc)
+        with start_span("Database Update - Save Results"):
+            # 更新作業狀態
+            assignment.status = AssignmentStatus.GRADED
+            assignment.score = overall_score
+            assignment.feedback = feedback
+            assignment.graded_at = datetime.now(timezone.utc)
 
-        # 更新提交記錄（新架構應更新 StudentContentProgress）
-        # 暫時註解，後續完善
-        # submission.ai_scores = {
-        #     "pronunciation": ai_scores.pronunciation,
-        #     "fluency": ai_scores.fluency,
-        #     "accuracy": ai_scores.accuracy,
-        #     "wpm": ai_scores.wpm,
-        #     "overall": overall_score,
-        # }
-        # submission.ai_feedback = feedback
+            # 更新提交記錄（新架構應更新 StudentContentProgress）
+            # 暫時註解，後續完善
+            # submission.ai_scores = {
+            #     "pronunciation": ai_scores.pronunciation,
+            #     "fluency": ai_scores.fluency,
+            #     "accuracy": ai_scores.accuracy,
+            #     "wpm": ai_scores.wpm,
+            #     "overall": overall_score,
+            # }
+            # submission.ai_feedback = feedback
 
-        db.commit()
+            db.commit()
+            perf.checkpoint("Database Update Complete")
 
         # 8. 計算處理時間
         processing_time = (datetime.now() - start_time).total_seconds()
+        perf.finish()
 
         return AIGradingResponse(
             assignment_id=assignment_id,

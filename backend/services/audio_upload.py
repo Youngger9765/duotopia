@@ -32,28 +32,33 @@ class AudioUploadService:
     def _get_storage_client(self):
         """延遲初始化 GCS client"""
         if not self.storage_client:
-            try:
-                from google.cloud import storage
+            from google.cloud import storage
 
-                # 明確指定 service account key 檔案路徑 (在 backend 目錄下)
-                backend_dir = os.path.dirname(os.path.dirname(__file__))
-                key_path = os.path.join(backend_dir, "service-account-key.json")
-                print(f"🔍 Looking for GCS key at: {key_path}")
-                print(f"🔍 Key exists: {os.path.exists(key_path)}")
-                if os.path.exists(key_path):
+            # 方法 1: 嘗試使用 service account key (生產環境)
+            backend_dir = os.path.dirname(os.path.dirname(__file__))
+            key_path = os.path.join(backend_dir, "service-account-key.json")
+
+            if os.path.exists(key_path):
+                try:
                     self.storage_client = storage.Client.from_service_account_json(
                         key_path
                     )
-                    print(
-                        f"GCS client initialized with service account from {key_path}"
-                    )
-                else:
-                    # 如果找不到檔案，嘗試使用預設認證（環境變數或 gcloud）
-                    self.storage_client = storage.Client()
-                    print("GCS client initialized with default credentials")
+                    print("✅ GCS client initialized with service account key")
+                    return self.storage_client
+                except Exception as e:
+                    print(f"⚠️  Failed to use service account key: {e}")
+
+            # 方法 2: 使用 Application Default Credentials (本機開發)
+            try:
+                self.storage_client = storage.Client()
+                print("✅ GCS client initialized with Application Default Credentials")
+                print("   (使用 gcloud auth application-default login 認證)")
+                return self.storage_client
             except Exception as e:
-                print(f"GCS client initialization failed: {e}")
+                print(f"❌ GCS client initialization failed: {e}")
+                print("   請執行: gcloud auth application-default login")
                 return None
+
         return self.storage_client
 
     async def upload_audio(

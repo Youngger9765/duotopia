@@ -28,6 +28,12 @@ google-cloud-storage==2.13.0
 google-cloud-bigquery==3.14.1
 azure-cognitiveservices-speech==1.45.0  # Official Azure TTS (replaces edge-tts)
 
+# Performance Monitoring (OpenTelemetry + Cloud Trace)
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-exporter-gcp-trace==1.6.0
+google-cloud-logging==3.5.0
+
 # Audio Processing
 pydub==0.25.1
 

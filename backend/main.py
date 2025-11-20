@@ -9,6 +9,12 @@ import os
 # Import configuration
 from core.config import settings
 from core.limiter import limiter
+from core.thread_pool import (
+    shutdown_thread_pools,
+    get_speech_thread_pool,
+    get_audio_thread_pool,
+    get_thread_pool_stats,
+)
 
 # Import middleware
 # from middleware.rate_limiter import RateLimitMiddleware  # Temporarily disabled due to bug
@@ -89,6 +95,23 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # GCS is used for all file storage - no local storage needed
 
 
+@app.on_event("startup")
+async def startup_event():
+    """應用程式啟動時初始化資源"""
+    # 初始化線程池
+    get_speech_thread_pool()
+    get_audio_thread_pool()
+    print("🚀 Application startup complete - Thread pools initialized")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """應用程式關閉時清理資源"""
+    # 關閉線程池
+    shutdown_thread_pools(wait=True)
+    print("👋 Application shutdown complete - Thread pools closed")
+
+
 @app.get("/")
 async def root():
     return {"message": "Duotopia API is running", "version": "1.0.0"}
@@ -125,6 +148,7 @@ async def health_check():
             "latency_ms": db_latency,
             "info": settings.get_database_info(),
         },
+        "thread_pools": get_thread_pool_stats(),
     }
 
 
