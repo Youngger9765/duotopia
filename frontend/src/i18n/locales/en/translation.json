@@ -634,8 +634,12 @@
       "noActivities": "This assignment has no activities yet",
       "submitSuccess": "Assignment submitted successfully!",
       "analyzingRecording": "Analyzing Recording",
+      "batchAnalyzing": "Analyzing {{current}}/{{total}} items",
       "pleaseWait": "Please wait...",
-      "doNotSwitchQuestions": "Please do not switch questions"
+      "doNotSwitchQuestions": "Please do not switch questions",
+      "doNotLeave": "Please do not leave this page",
+      "batchAnalysisComplete": "Completed {{count}} analyses",
+      "batchAnalysisFailed": "Auto-analysis failed, please try again later"
     },
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
