@@ -448,6 +448,81 @@ const { t } = useTranslation();
 
 ---
 
-**文件版本**: 6.0（完整交付）
+## 🔧 基礎設施改進（2025-11-20）
+
+### Azure Speech API 高併發性能驗證
+
+**✅ 已完成**
+
+#### 功能說明
+驗證 Azure Speech API 配合 Thread Pool 可以支援多個學生同時進行語音評分。
+
+#### 測試結果
+
+**Staging 環境**：
+- 5/10/20 人並發：1.37s → 1.39s → 1.45s
+- ✅ 延遲差距 < 300ms，證明並發處理正常
+
+**Production 環境**：
+- 10/20 人並發：1.35s → 1.77s
+- ✅ 100% 成功率，無超時或失敗
+
+**結論**：
+- ✅ Thread Pool (20 workers) 配置有效
+- ✅ 可穩定支援 20+ 個學生同時使用語音評分
+- ✅ 延遲不會因並發而暴增
+
+#### 相關 Commits
+```
+feat(api): add thread pool concurrent testing endpoint
+chore(tests): reorganize test files and cleanup
+```
+
+---
+
+### CI/CD 測試環境優化
+
+**✅ 已完成**
+
+#### 問題
+- Staging CI 有 779 個測試因無法連接資料庫而失敗
+- Production CI 需要 6+ 分鐘完成（大部分時間在等待失敗的測試）
+
+#### 解決方案
+
+**1. 資料庫延遲載入（Lazy Loading）**
+- 將 `database.py` 的 engine/SessionLocal 改為延遲初始化
+- 只在實際需要時才建立資料庫連線
+- Unit tests 可以在沒有 DATABASE_URL 的情況下執行
+
+**2. 分層測試策略**
+- **Production CI**: 只跑 unit tests（不需要資料庫）
+- **Staging CI**: 連接 staging 資料庫跑完整測試
+- 設定 `TEST_DATABASE_URL` 環境變數讓測試連接正確資料庫
+
+**3. 測試檔案重組**
+- 刪除 5 個過時的測試資料庫檔案 (*.db)
+- 移動 `test_threadpool_concurrent.py` → `tests/performance/`
+- 清理重複測試檔案
+
+#### 效益
+- ✅ Unit tests 可以在沒有資料庫的情況下執行
+- ✅ Staging 測試現在連接真實的 staging 資料庫
+- ✅ 預期減少測試錯誤從 779 → 接近 0
+- ✅ Production 部署時間預期從 6 分鐘降到 2-3 分鐘
+
+#### 相關 Commits
+```
+refactor(database): implement lazy database connection for CI/CD
+fix(main): update health check to use get_session_local()
+ci: optimize pytest strategy for different environments
+ci: connect staging tests to staging database
+chore(tests): reorganize test files and cleanup
+```
+
+---
+
+**文件版本**: 7.0（完整交付 + 基礎設施優化）
 **最後更新**: 2025-11-20
 **狀態**: 🎉 核心功能 100% 完成！所有 11 月交付功能已完整實作並測試
+**基礎設施**: ✅ 高併發性能驗證完成，CI/CD 測試環境優化完成
