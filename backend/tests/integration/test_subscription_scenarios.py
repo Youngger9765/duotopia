@@ -12,7 +12,7 @@
 """
 
 from datetime import datetime, timedelta, timezone
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher, SubscriptionPeriod
 
 
@@ -29,6 +29,7 @@ def test_scenario_1_new_user_first_payment():
     print("情境 1: 新用戶首次付款")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 模擬新用戶
@@ -95,6 +96,7 @@ def test_scenario_2_use_quota_then_renew():
     print("情境 2: 用戶使用配額後續約")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 創建用戶
@@ -193,6 +195,7 @@ def test_scenario_3_quota_exhausted_then_renew():
     print("情境 3: 配額用完後續約")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = Teacher(
@@ -279,6 +282,7 @@ def test_scenario_4_change_plan():
     print("情境 4: 更換方案 (Tutor → School)")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = Teacher(
@@ -364,6 +368,7 @@ def test_scenario_5_expired_then_renew():
     print("情境 5: 訂閱過期後重新付款")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = Teacher(
@@ -448,6 +453,7 @@ def test_scenario_6_no_period_legacy_user():
     print("情境 6: 舊用戶遷移（沒有 subscription_period）")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 模擬舊用戶（只有 subscription_end_date，沒有 period）
@@ -492,6 +498,7 @@ def test_scenario_7_multiple_renewals_history():
     print("情境 7: 多次續約歷史記錄")
     print("=" * 60)
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = Teacher(

@@ -9,7 +9,7 @@
 
 import time
 from sqlalchemy import text
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher
 from services.quota_service import QuotaService
 
@@ -20,6 +20,7 @@ def test_current_period_performance():
 
     目標：1000 次查詢應在 1 秒內完成
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 取得測試 teacher
@@ -69,6 +70,7 @@ def test_quota_check_performance():
 
     目標：1000 次檢查應在 2 秒內完成
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()
@@ -111,6 +113,7 @@ def test_index_coverage():
     """
     驗證 Index 已正確建立
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 檢查 subscription_periods indexes
@@ -158,6 +161,7 @@ def test_explain_query():
     """
     使用 EXPLAIN ANALYZE 分析查詢計畫
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter(Teacher.email == "demo@duotopia.com").first()

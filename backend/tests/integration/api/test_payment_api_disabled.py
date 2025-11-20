@@ -11,13 +11,14 @@ from fastapi.testclient import TestClient  # noqa: E402
 from main import app  # noqa: E402
 from models import Teacher  # noqa: E402
 from auth import get_password_hash  # noqa: E402
-from database import SessionLocal  # noqa: E402
+from database import get_session_local  # noqa: E402
 
 client = TestClient(app)
 
 
 def setup_test_teacher():
     """創建測試教師帳號"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # 清理舊的測試帳號

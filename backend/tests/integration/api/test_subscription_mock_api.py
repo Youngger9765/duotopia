@@ -5,7 +5,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher
 
 client = TestClient(app)
@@ -21,6 +21,7 @@ TEST_EMAILS = [
 @pytest.fixture(scope="function")
 def setup_test_accounts():
     """確保測試帳號存在"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         for email in TEST_EMAILS:

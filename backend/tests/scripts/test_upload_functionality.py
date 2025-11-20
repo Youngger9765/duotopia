@@ -4,7 +4,7 @@ Test recording upload functionality with new StudentItemProgress structure
 """
 
 import requests
-from database import SessionLocal
+from database import get_session_local
 from models import StudentAssignment, ContentItem, StudentItemProgress
 
 
@@ -12,6 +12,7 @@ def test_upload_endpoint_structure():
     """Test the upload endpoint without actual file upload"""
     print("🧪 Testing Upload Endpoint Structure")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Get test data
@@ -57,6 +58,7 @@ def test_contentitem_progress_mapping():
     """Test that ContentItems can be properly mapped to StudentItemProgress"""
     print("\n🧪 Testing ContentItem ↔ StudentItemProgress Mapping")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Find assignment with both ContentItems and StudentItemProgress
@@ -113,6 +115,7 @@ def test_ai_score_structure():
     """Test AI score storage in StudentItemProgress"""
     print("\n🧪 Testing AI Score Storage Structure")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Find progress records with AI scores

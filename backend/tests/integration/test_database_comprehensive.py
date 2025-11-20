@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from database import SessionLocal, engine, get_db
+from database import get_session_local, get_engine, get_db
 
 
 class TestDatabaseConnection:
@@ -14,12 +14,14 @@ class TestDatabaseConnection:
 
     def test_sessionlocal_creation(self):
         """Test SessionLocal can create sessions"""
+        SessionLocal = get_session_local()
         session = SessionLocal()
         assert session is not None
         session.close()
 
     def test_engine_connection(self):
         """Test engine can connect to database"""
+        engine = get_engine()
         with engine.connect() as connection:
             result = connection.execute(text("SELECT 1"))
             assert result.fetchone()[0] == 1
@@ -138,12 +140,15 @@ class TestDatabaseConfiguration:
     def test_database_url_handling(self):
         """Test DATABASE_URL environment variable handling"""
         # The database module should handle URL configuration
+        engine = get_engine()
+        SessionLocal = get_session_local()
         assert engine is not None
         assert SessionLocal is not None
 
     def test_connection_pooling(self):
         """Test connection pooling behavior"""
         # Create multiple connections quickly
+        engine = get_engine()
         connections = []
         try:
             for i in range(3):

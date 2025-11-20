@@ -3,11 +3,12 @@
 測試 CASCADE DELETE 功能
 """
 from sqlalchemy import text
-from database import SessionLocal
+from database import get_session_local
 from models import Program, Lesson, Content
 
 
 def test_cascade_delete():
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     try:

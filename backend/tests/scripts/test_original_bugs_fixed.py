@@ -7,7 +7,7 @@ Original issues:
 3. Hardcoded content_id = 1 causing wrong StudentContentProgress records
 """
 
-from database import SessionLocal
+from database import get_session_local
 from models import (
     StudentAssignment,
     ContentItem,
@@ -19,6 +19,7 @@ def test_hardcoded_content_id_bug_fixed():
     """Test that hardcoded content_id = 1 bug is fixed"""
     print("🐛 Testing: Hardcoded content_id = 1 bug")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Check that we have assignments with different content_ids
@@ -48,6 +49,7 @@ def test_individual_question_tracking():
     """Test that individual questions can be tracked separately"""
     print("\n🎯 Testing: Individual question tracking")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Find content with multiple items
@@ -98,6 +100,7 @@ def test_navigation_data_structure():
     """Test that navigation data structure supports jumping to specific questions"""
     print("\n🧭 Testing: Navigation data structure")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Get content items with proper order_index
@@ -135,6 +138,7 @@ def test_ai_score_separation():
     """Test that AI scores are stored per individual question"""
     print("\n🤖 Testing: AI score separation per question")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Check that StudentItemProgress supports individual AI scores
@@ -173,6 +177,7 @@ def test_no_array_synchronization_issues():
     """Test that we no longer have JSONB array synchronization problems"""
     print("\n🔄 Testing: No more JSONB array sync issues")
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         # Check that we're using relational structure, not JSONB arrays

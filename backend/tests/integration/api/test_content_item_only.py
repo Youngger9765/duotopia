@@ -257,8 +257,9 @@ if __name__ == "__main__":
     import sys
 
     sys.path.append("../../..")
-    from database import SessionLocal
+    from database import get_session_local
 
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         print("🧪 執行 ContentItem-only 測試...")

@@ -11,7 +11,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher
 from main import app
 
@@ -21,6 +21,7 @@ client = TestClient(app)
 @pytest.fixture
 def setup_teacher_with_quota():
     """準備有配額的老師"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 使用測試帳號
@@ -51,6 +52,7 @@ def test_speech_assessment_deducts_quota(setup_teacher_with_quota):
     4. ✅ 扣除老師 30 秒配額
     5. ✅ 記錄 PointUsageLog
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
     teacher = setup_teacher_with_quota
 
@@ -83,6 +85,7 @@ def test_speech_assessment_quota_exceeded():
     4. ✅ 不扣除配額
     5. ✅ 不記錄 PointUsageLog
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     teacher = db.query(Teacher).filter_by(email="demo@duotopia.com").first()
@@ -113,6 +116,7 @@ def test_quota_log_records_student_usage():
     - unit_type = "秒"
     - points_used = 30
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # TODO: 執行評分後
@@ -135,6 +139,7 @@ def test_multiple_assessments_accumulate_quota():
     2. 學生再評分 40 秒 → quota_used = 70
     3. 學生再評分 20 秒 → quota_used = 90
     """
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # TODO: 實作多次評分測試

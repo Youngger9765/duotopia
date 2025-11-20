@@ -13,7 +13,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta, timezone
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher, Student, Assignment, SubscriptionPeriod, PointUsageLog
 from main import app
 
@@ -23,6 +23,7 @@ client = TestClient(app)
 @pytest.fixture
 def setup_test_data():
     """準備測試資料"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
 
     # 建立測試 teacher
