@@ -61,12 +61,14 @@ jobs:
       working-directory: ./backend
       env:
         DATABASE_URL: ${{ github.ref == 'refs/heads/staging' && secrets.STAGING_DATABASE_URL || '' }}
+        TEST_DATABASE_URL: ${{ github.ref == 'refs/heads/staging' && secrets.STAGING_DATABASE_URL || 'sqlite:///./test.db' }}
       run: |
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           echo "🚀 Production: Running unit tests only (no database required)..."
           pytest tests/unit/ -n 2 -v --tb=short || echo "Tests completed with some failures"
         else
-          echo "🧪 Staging: Running full test suite with database..."
+          echo "🧪 Staging: Running full test suite with staging database..."
+          echo "   TEST_DATABASE_URL is set: $TEST_DATABASE_URL"
           pytest -n 2 -v --tb=short || echo "Tests completed with some failures"
         fi
 
