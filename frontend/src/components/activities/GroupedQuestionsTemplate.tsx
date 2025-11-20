@@ -103,6 +103,7 @@ interface GroupedQuestionsTemplateProps {
     index: number,
     assessmentResult: AssessmentResult | null,
   ) => void; // AI 評估完成回調
+  onAnalyzingStateChange?: (isAnalyzing: boolean) => void; // 🔒 分析狀態變化回調
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -126,6 +127,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   authToken, // 認證 token
   onUploadSuccess,
   onAssessmentComplete,
+  onAnalyzingStateChange, // 🔒 分析狀態變化回調
 }: GroupedQuestionsTemplateProps) {
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
@@ -400,6 +402,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
 
     setIsAssessing(true);
+    onAnalyzingStateChange?.(true); // 🔒 通知父元件開始分析
     try {
       let gcsAudioUrl = audioUrl as string;
       let currentProgressId =
@@ -673,6 +676,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       toast.error(t("groupedQuestionsTemplate.messages.assessmentFailed"));
     } finally {
       setIsAssessing(false);
+      onAnalyzingStateChange?.(false); // 🔓 通知父元件分析結束
     }
   };
 

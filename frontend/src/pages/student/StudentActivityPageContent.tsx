@@ -146,6 +146,7 @@ export default function StudentActivityPageContent({
   const [submitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState<string[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // 🔒 錄音分析中狀態
 
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
@@ -1068,6 +1069,7 @@ export default function StudentActivityPageContent({
               return newActivities;
             });
           }}
+          onAnalyzingStateChange={setIsAnalyzing} // 🔒 接收分析狀態變化
         />
       );
     }
@@ -1299,12 +1301,14 @@ export default function StudentActivityPageContent({
                           <button
                             key={itemIndex}
                             onClick={() => {
+                              if (isAnalyzing) return; // 🔒 分析中禁止切換
                               if (activityIndex !== currentActivityIndex) {
                                 handleActivitySelect(activityIndex, itemIndex);
                               } else {
                                 setCurrentSubQuestionIndex(itemIndex);
                               }
                             }}
+                            disabled={isAnalyzing} // 🔒 分析中禁用
                             className={cn(
                               "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
                               "flex items-center justify-center text-sm sm:text-xs font-medium",
@@ -1358,6 +1362,7 @@ export default function StudentActivityPageContent({
                   variant={isActiveActivity ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleActivitySelect(activityIndex)}
+                  disabled={isAnalyzing} // 🔒 分析中禁用
                   className="flex-shrink-0 h-8"
                 >
                   <div className="flex items-center gap-2">
@@ -1420,8 +1425,9 @@ export default function StudentActivityPageContent({
                     size="sm"
                     onClick={handlePreviousActivity}
                     disabled={
-                      currentActivityIndex === 0 &&
-                      currentSubQuestionIndex === 0
+                      isAnalyzing || // 🔒 分析中禁用
+                      (currentActivityIndex === 0 &&
+                        currentSubQuestionIndex === 0)
                     }
                     className="flex-1 sm:flex-none min-w-0"
                   >
@@ -1448,7 +1454,7 @@ export default function StudentActivityPageContent({
                           variant="default"
                           size="sm"
                           onClick={handleSubmit}
-                          disabled={submitting}
+                          disabled={isAnalyzing || submitting} // 🔒 分析中禁用
                           className="flex-1 sm:flex-none min-w-0"
                         >
                           <span className="hidden sm:inline">
@@ -1471,6 +1477,7 @@ export default function StudentActivityPageContent({
                         variant="outline"
                         size="sm"
                         onClick={handleNextActivity}
+                        disabled={isAnalyzing} // 🔒 分析中禁用
                         className="flex-1 sm:flex-none min-w-0"
                       >
                         <span className="hidden sm:inline">
@@ -1577,6 +1584,34 @@ export default function StudentActivityPageContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 🔒 全屏分析遮罩 */}
+      {isAnalyzing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              {/* 外圈脈動動畫 */}
+              <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-75"></div>
+              {/* 中圈脈動動畫 */}
+              <div className="absolute inset-2 rounded-full bg-purple-200 animate-pulse"></div>
+              {/* 大腦圖示 - 旋轉動畫 */}
+              <Loader2
+                className="w-24 h-24 absolute inset-0 animate-spin text-purple-600"
+                style={{ animationDuration: "2s" }}
+              />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {t("studentActivityPage.messages.analyzingRecording")}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {t("studentActivityPage.messages.pleaseWait")}
+            </p>
+            <p className="text-sm text-gray-500">
+              {t("studentActivityPage.messages.doNotSwitchQuestions")}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
