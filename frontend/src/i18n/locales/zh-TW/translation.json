@@ -632,7 +632,14 @@
     },
     "messages": {
       "noActivities": "此作業尚無題目",
-      "submitSuccess": "作業提交成功！"
+      "submitSuccess": "作業提交成功！",
+      "analyzingRecording": "正在分析錄音",
+      "batchAnalyzing": "正在分析第 {{current}}/{{total}} 題",
+      "pleaseWait": "請稍候...",
+      "doNotSwitchQuestions": "請勿切換題目",
+      "doNotLeave": "請勿離開此頁面",
+      "batchAnalysisComplete": "已完成 {{count}} 題分析",
+      "batchAnalysisFailed": "自動分析失敗，請稍後再試"
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",

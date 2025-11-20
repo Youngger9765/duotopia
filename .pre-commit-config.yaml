@@ -44,6 +44,14 @@ repos:
   # ==========================================
   # 🔒 CRITICAL: 安全檢查
   # ==========================================
+  # Gitleaks - 業界標準 secret 掃描工具
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.29.1
+    hooks:
+      - id: gitleaks
+        name: 🔒 Gitleaks - Scan for secrets
+        stages: [commit]
+
   - repo: local
     hooks:
       # 🔥 超嚴格 TapPay Credentials 檢查（第一道防線）
@@ -54,42 +62,6 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [commit]
-
-      - id: check-credentials
-        name: Check for hardcoded credentials
-        entry: ./.github/hooks/security/check-credentials.sh
-        language: script
-        pass_filenames: false
-
-      - id: check-database-urls
-        name: Check for exposed database URLs
-        entry: ./.github/hooks/security/check-database-urls.sh
-        language: script
-        pass_filenames: false
-
-      - id: check-api-keys
-        name: Check for exposed API keys
-        entry: ./.github/hooks/security/check-api-keys.sh
-        language: script
-        pass_filenames: false
-
-      - id: check-jwt-secrets
-        name: Check for exposed JWT secrets
-        entry: ./.github/hooks/security/check-jwt-secrets.sh
-        language: script
-        pass_filenames: false
-
-      - id: check-env-files
-        name: Prevent .env files from being committed
-        entry: ./.github/hooks/security/check-env-files.sh
-        language: script
-        pass_filenames: false
-
-      - id: security-audit
-        name: Comprehensive security audit (Enhanced)
-        entry: ./.github/hooks/security/security-audit.sh
-        language: script
-        pass_filenames: false
 
   # ==========================================
   # ⚠️ IMPORTANT: 防止常見低級錯誤
