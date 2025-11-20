@@ -1,0 +1,44 @@
+# Gitleaks configuration for Duotopia
+# https://github.com/gitleaks/gitleaks
+
+title = "Duotopia Secret Scanning Configuration"
+
+# 允許的路徑（排除誤報）
+[allowlist]
+  description = "Allowlist for test files and localhost development"
+
+  # 允許的路徑
+  paths = [
+    '''backend/tests/''',           # 測試檔案中的假密碼
+    '''backend/.env.example''',      # 範例環境變數檔案
+    '''frontend/.env.example''',
+    '''.env.example''',
+    '''scripts/manage-secrets.sh''', # secret 管理腳本本身
+    '''.github/hooks/security/''',   # security check 腳本
+  ]
+
+  # 允許的 commits（如果有需要）
+  commits = []
+
+  # 允許的正則表達式（排除 localhost 開發用密碼）
+  regexes = [
+    '''localhost:5432''',                      # localhost DB
+    '''127\.0\.0\.1''',                        # localhost IP
+    '''duotopia_user:duotopia_pass''',         # 本地開發 DB 密碼
+    '''token\.substring\(0''',                  # Debug log 只印前幾個字元
+    '''secret\[:10\]''',                       # Python debug log
+    '''secret\[:20\]''',
+    '''your-.*-here''',                        # 佔位符
+    '''YOUR_.*_HERE''',
+    '''PLACEHOLDER''',
+    '''example''',
+    '''REDACTED''',
+    '''測試''',
+  ]
+
+# 自訂規則（可選，gitleaks 已經有很好的預設規則）
+# [[rules]]
+#   description = "Custom TapPay Key Detection"
+#   id = "tappay-key"
+#   regex = '''(app|partner)_[a-zA-Z0-9]{60,70}'''
+#   keywords = ["app_", "partner_"]
