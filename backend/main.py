@@ -121,7 +121,7 @@ async def root():
 async def health_check():
     """健康檢查端點 - 檢查服務和資料庫狀態"""
     from sqlalchemy import text
-    from database import SessionLocal
+    from database import get_session_local
 
     db_status = "unknown"
     db_latency = None
@@ -131,6 +131,7 @@ async def health_check():
         import time
 
         start = time.time()
+        SessionLocal = get_session_local()
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
