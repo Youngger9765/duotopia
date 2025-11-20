@@ -8,8 +8,8 @@ import time
 import aiohttp
 import statistics
 
-# Staging URL
-BASE_URL = "https://duotopia-staging-backend-316409492201.asia-east1.run.app"
+# Production URL
+BASE_URL = "https://duotopia-production-backend-316409492201.asia-east1.run.app"
 
 
 async def simulate_blocking_request(session, user_id, request_id):
