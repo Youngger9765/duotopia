@@ -383,6 +383,9 @@ async def get_assignment_activities(
                         if item_progress:
                             item_data["recording_url"] = item_progress.recording_url
                             item_data["status"] = item_progress.status
+                            item_data[
+                                "progress_id"
+                            ] = item_progress.id  # 🔥 返回 progress_id 給前端用於批次分析
 
                             # 加入老師評語相關資料
                             item_data[

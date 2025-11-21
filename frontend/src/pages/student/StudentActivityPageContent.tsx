@@ -982,7 +982,7 @@ export default function StudentActivityPageContent({
           let currentProgressId =
             answer?.progressIds && answer.progressIds[itemIndex]
               ? answer.progressIds[itemIndex]
-              : null;
+              : item.progress_id || null;
 
           if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
             const response = await fetch(audioUrl);
@@ -1031,9 +1031,14 @@ export default function StudentActivityPageContent({
             }
           }
 
-          // 🔥 如果還沒有 progress_id，使用 fallback（與 GroupedQuestionsTemplate 相同邏輯）
+          // 🔥 如果還沒有 progress_id，無法分析（不應該發生，因為已從 item.progress_id 初始化）
           if (!currentProgressId) {
-            currentProgressId = activity.id || 1;
+            console.error("❌ 無法取得 progress_id，跳過此題目", {
+              itemIndex,
+              item,
+              answer,
+            });
+            continue;
           }
 
           console.log("🔍 AI評估使用 progress_id:", {
@@ -1249,8 +1254,13 @@ export default function StudentActivityPageContent({
           }
           onFileUpload={handleFileUpload}
           formatTime={formatTime}
-          progressId={activity.id}
-          progressIds={answer?.progressIds}
+          progressIds={
+            answer?.progressIds ||
+            activity.items
+              ?.map((item) => item.progress_id)
+              .filter((id): id is number => typeof id === "number") ||
+            []
+          }
           initialAssessmentResults={assessmentResults}
           readOnly={isReadOnly}
           assignmentId={assignmentId.toString()}
