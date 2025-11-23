@@ -37,7 +37,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users,
-  Crown,
   Search,
   TrendingUp,
   DollarSign,
@@ -712,23 +711,14 @@ export default function AdminSubscriptionDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Crown className="w-8 h-8 text-yellow-500" />
-            {t("adminSubscription.title")}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {t("adminSubscription.description")}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => navigate("/teacher/dashboard")}
-        >
-          {t("adminSubscription.buttons.backToDashboard")}
-        </Button>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {t("adminSubscription.title")}
+        </h2>
+        <p className="text-muted-foreground">
+          {t("adminSubscription.description")}
+        </p>
       </div>
 
       {successMessage && (
@@ -818,20 +808,26 @@ export default function AdminSubscriptionDashboard() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-14 bg-white border-2 border-gray-200 p-1">
           <TabsTrigger
             value="subscriptions"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-5 h-5" />
             {t("adminSubscription.tabs.subscriptions")}
           </TabsTrigger>
-          <TabsTrigger value="transactions" className="flex items-center gap-2">
-            <Receipt className="w-4 h-4" />
+          <TabsTrigger
+            value="transactions"
+            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+          >
+            <Receipt className="w-5 h-5" />
             {t("adminSubscription.tabs.transactions")}
           </TabsTrigger>
-          <TabsTrigger value="learning" className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4" />
+          <TabsTrigger
+            value="learning"
+            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+          >
+            <GraduationCap className="w-5 h-5" />
             {t("adminSubscription.tabs.learning")}
           </TabsTrigger>
         </TabsList>

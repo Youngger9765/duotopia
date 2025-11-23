@@ -235,11 +235,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           </div>
         )}
         {teacherProfile?.is_admin && (
-          <Link
-            to="/admin/subscription"
-            className="block mb-2"
-            onClick={onNavigate}
-          >
+          <Link to="/admin" className="block mb-2" onClick={onNavigate}>
             <Button
               variant="ghost"
               size="sm"
