@@ -121,6 +121,8 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          # Audio error monitoring always connects to production Supabase
+          echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "🔥 Using Production Database"
         else
           echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
@@ -129,6 +131,8 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          # Audio error monitoring always connects to production Supabase (even in staging)
+          echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "🆓 Using Staging Database"
         fi
 
@@ -243,6 +247,8 @@ jobs:
         ENV_VARS="DATABASE_URL=${{ steps.db_env.outputs.DATABASE_URL }}"
         ENV_VARS="$ENV_VARS,DATABASE_POOLER_URL=${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}"
         ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
+        # Audio error monitoring always connects to production Supabase
+        ENV_VARS="$ENV_VARS,PROD_DATABASE_POOLER_URL=${{ steps.db_env.outputs.PROD_DATABASE_POOLER_URL }}"
         ENV_VARS="$ENV_VARS,JWT_SECRET=${{ steps.db_env.outputs.JWT_SECRET }}"
         ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
         ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=1440"
