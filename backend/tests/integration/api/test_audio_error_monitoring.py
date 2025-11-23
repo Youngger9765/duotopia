@@ -1,8 +1,7 @@
 """Integration tests for Audio Error Monitoring API"""
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, Mock, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import patch
 
 
 class TestAudioErrorStatsAPI:
@@ -227,10 +226,11 @@ class TestAudioErrorEnvironmentConfiguration:
     """測試環境變數配置"""
 
     @pytest.mark.asyncio
-    @patch("services.audio_error_query_service.AudioErrorQueryService._fetch_student_info")
+    @patch(
+        "services.audio_error_query_service.AudioErrorQueryService._fetch_student_info"
+    )
     async def test_fetch_student_info_uses_prod_db_url(self, mock_fetch):
         """應該使用 PROD_DATABASE_POOLER_URL 環境變數"""
-        from services.audio_error_query_service import AudioErrorQueryService
         import os
 
         # 確認環境變數存在
@@ -241,9 +241,6 @@ class TestAudioErrorEnvironmentConfiguration:
     def test_service_connects_to_production_supabase(self):
         """所有環境都應該連接到生產環境 Supabase"""
         import os
-        from services.audio_error_query_service import AudioErrorQueryService
-
-        service = AudioErrorQueryService()
 
         # 驗證環境變數
         prod_url = os.getenv("PROD_DATABASE_POOLER_URL")

@@ -129,7 +129,7 @@ export default function AdminAudioErrorDashboard() {
   const fetchHealth = async () => {
     try {
       const healthResponse = await apiClient.get<AudioErrorHealth>(
-        "/api/admin/audio-errors/health"
+        "/api/admin/audio-errors/health",
       );
       setHealth(healthResponse);
     } catch (error) {
@@ -140,7 +140,7 @@ export default function AdminAudioErrorDashboard() {
   const fetchStats = async () => {
     try {
       const statsResponse = await apiClient.get<AudioErrorStats>(
-        `/api/admin/audio-errors/stats?days=${days}`
+        `/api/admin/audio-errors/stats?days=${days}`,
       );
       setStats(statsResponse);
     } catch (error) {
@@ -154,7 +154,7 @@ export default function AdminAudioErrorDashboard() {
       const listResponse = await apiClient.get<AudioErrorList>(
         `/api/admin/audio-errors/list?days=${days}&limit=${pageSize}&offset=${offset}${
           searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ""
-        }`
+        }`,
       );
       setErrorList(listResponse);
     } catch (error) {
@@ -202,7 +202,6 @@ export default function AdminAudioErrorDashboard() {
     const headers = [
       "時間",
       "錯誤類型",
-      "錯誤訊息",
       "學生姓名",
       "學生ID",
       "班級名稱",
@@ -210,45 +209,58 @@ export default function AdminAudioErrorDashboard() {
       "老師姓名",
       "老師ID",
       "作業ID",
-      "瀏覽器",
-      "平台",
-      "是否手機",
-      "音檔URL"
+      "瀏覽器/平台",
+      "錯誤訊息",
+      "音檔URL",
     ];
 
     // CSV 資料行
-    const rows = errorList.data.map((error) => [
-      formatDateTime(error.timestamp),
-      error.error_type || "",
-      `"${(error.error_message || "").replace(/"/g, '""')}"`, // 處理引號
-      error.student_name || "N/A",
-      error.student_id?.toString() || "N/A",
-      error.classroom_name || "N/A",
-      error.classroom_id?.toString() || "N/A",
-      error.teacher_name || "N/A",
-      error.teacher_id?.toString() || "N/A",
-      error.assignment_id?.toString() || "N/A",
-      error.browser || "",
-      error.platform || "",
-      error.is_mobile ? "是" : "否",
-      error.audio_url || ""
-    ]);
+    const rows = errorList.data.map((error) => {
+      // 組合瀏覽器/平台資訊
+      let browserPlatform = error.browser || "";
+      if (error.platform) {
+        browserPlatform += ` (${error.platform})`;
+      }
+      if (error.is_mobile) {
+        browserPlatform += " 📱";
+      }
+
+      return [
+        formatDateTime(error.timestamp),
+        error.error_type || "",
+        error.student_name || "N/A",
+        error.student_id?.toString() || "N/A",
+        error.classroom_name || "N/A",
+        error.classroom_id?.toString() || "N/A",
+        error.teacher_name || "N/A",
+        error.teacher_id?.toString() || "N/A",
+        error.assignment_id?.toString() || "N/A",
+        browserPlatform,
+        `"${(error.error_message || "").replace(/"/g, '""')}"`, // 處理引號
+        error.audio_url || "",
+      ];
+    });
 
     // 組合 CSV 內容
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map((row) => row.join(",")),
     ].join("\n");
 
     // 加上 BOM 讓 Excel 正確識別 UTF-8
     const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
 
     // 下載
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `audio_errors_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `audio_errors_${new Date().toISOString().split("T")[0]}.csv`,
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -302,7 +314,11 @@ export default function AdminAudioErrorDashboard() {
             onClick={() => setDays(7)}
             variant={days === 7 ? "default" : "ghost"}
             size="sm"
-            className={days === 7 ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600" : "dark:text-gray-200 dark:hover:bg-gray-700"}
+            className={
+              days === 7
+                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+                : "dark:text-gray-200 dark:hover:bg-gray-700"
+            }
           >
             最近 7 天
           </Button>
@@ -310,7 +326,11 @@ export default function AdminAudioErrorDashboard() {
             onClick={() => setDays(14)}
             variant={days === 14 ? "default" : "ghost"}
             size="sm"
-            className={days === 14 ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600" : "dark:text-gray-200 dark:hover:bg-gray-700"}
+            className={
+              days === 14
+                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+                : "dark:text-gray-200 dark:hover:bg-gray-700"
+            }
           >
             最近 14 天
           </Button>
@@ -318,7 +338,11 @@ export default function AdminAudioErrorDashboard() {
             onClick={() => setDays(30)}
             variant={days === 30 ? "default" : "ghost"}
             size="sm"
-            className={days === 30 ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600" : "dark:text-gray-200 dark:hover:bg-gray-700"}
+            className={
+              days === 30
+                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+                : "dark:text-gray-200 dark:hover:bg-gray-700"
+            }
           >
             最近 30 天
           </Button>
@@ -326,7 +350,11 @@ export default function AdminAudioErrorDashboard() {
             onClick={() => setDays(90)}
             variant={days === 90 ? "default" : "ghost"}
             size="sm"
-            className={days === 90 ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600" : "dark:text-gray-200 dark:hover:bg-gray-700"}
+            className={
+              days === 90
+                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+                : "dark:text-gray-200 dark:hover:bg-gray-700"
+            }
           >
             最近三個月
           </Button>
@@ -336,9 +364,15 @@ export default function AdminAudioErrorDashboard() {
                 onClick={() => setShowCustomDays(true)}
                 variant={![7, 14, 30, 90].includes(days) ? "default" : "ghost"}
                 size="sm"
-                className={![7, 14, 30, 90].includes(days) ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600" : "dark:text-gray-200 dark:hover:bg-gray-700"}
+                className={
+                  ![7, 14, 30, 90].includes(days)
+                    ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+                    : "dark:text-gray-200 dark:hover:bg-gray-700"
+                }
               >
-                {![7, 14, 30, 90].includes(days) ? `最近 ${days} 天` : "自訂天數"}
+                {![7, 14, 30, 90].includes(days)
+                  ? `最近 ${days} 天`
+                  : "自訂天數"}
               </Button>
               {![7, 14, 30, 90].includes(days) && (
                 <Button
@@ -371,7 +405,12 @@ export default function AdminAudioErrorDashboard() {
                 min="1"
                 max="365"
               />
-              <Button onClick={handleCustomDays} size="sm" variant="ghost" className="h-8 px-2 dark:text-gray-200">
+              <Button
+                onClick={handleCustomDays}
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 dark:text-gray-200"
+              >
                 ✓
               </Button>
               <Button
@@ -388,7 +427,12 @@ export default function AdminAudioErrorDashboard() {
             </div>
           )}
         </div>
-        <Button onClick={handleRefresh} disabled={refreshing} variant="outline" size="sm">
+        <Button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+        >
           <RefreshCcw
             className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
           />
@@ -401,20 +445,25 @@ export default function AdminAudioErrorDashboard() {
         <div className="grid gap-3 md:grid-cols-3">
           <Card className="border-l-4 border-l-red-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
-              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">總錯誤數</CardTitle>
+              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                總錯誤數
+              </CardTitle>
               <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
             </CardHeader>
             <CardContent className="pb-3">
               <div className="text-xl font-bold">{stats.total_errors}</div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {formatDate(stats.period.start)} - {formatDate(stats.period.end)}
+                {formatDate(stats.period.start)} -{" "}
+                {formatDate(stats.period.end)}
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-l-4 border-l-orange-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
-              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">最常見錯誤</CardTitle>
+              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                最常見錯誤
+              </CardTitle>
               <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
             </CardHeader>
             <CardContent className="pb-3">
@@ -429,7 +478,9 @@ export default function AdminAudioErrorDashboard() {
 
           <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
-              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">主要瀏覽器</CardTitle>
+              <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                主要瀏覽器
+              </CardTitle>
               <Chrome className="h-3.5 w-3.5 text-blue-500" />
             </CardHeader>
             <CardContent className="pb-3">
@@ -497,7 +548,12 @@ export default function AdminAudioErrorDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={stats.error_by_type.slice(0, 10)}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="error_type" angle={-45} textAnchor="end" height={100} />
+                  <XAxis
+                    dataKey="error_type"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Legend />
@@ -532,7 +588,9 @@ export default function AdminAudioErrorDashboard() {
               <Button
                 onClick={downloadCSV}
                 variant="outline"
-                disabled={!errorList || !errorList.data || errorList.data.length === 0}
+                disabled={
+                  !errorList || !errorList.data || errorList.data.length === 0
+                }
               >
                 <Download className="h-4 w-4 mr-2" />
                 下載 CSV
@@ -547,14 +605,39 @@ export default function AdminAudioErrorDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">時間</TableHead>
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">錯誤類型</TableHead>
-                      <TableHead className="h-9 py-2 text-xs">錯誤訊息</TableHead>
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">學生 (ID)</TableHead>
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">班級 (ID)</TableHead>
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">老師 (ID)</TableHead>
-                      <TableHead className="h-9 py-2 text-xs text-center whitespace-nowrap">作業ID</TableHead>
-                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">瀏覽器</TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        時間
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        錯誤類型
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        學生姓名
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs text-center whitespace-nowrap">
+                        學生ID
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        班級名稱
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs text-center whitespace-nowrap">
+                        班級ID
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        老師姓名
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs text-center whitespace-nowrap">
+                        老師ID
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs text-center whitespace-nowrap">
+                        作業ID
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs whitespace-nowrap">
+                        瀏覽器/平台
+                      </TableHead>
+                      <TableHead className="h-9 py-2 text-xs">
+                        錯誤訊息
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -568,43 +651,54 @@ export default function AdminAudioErrorDashboard() {
                             {error.error_type}
                           </span>
                         </TableCell>
-                        <TableCell className="py-1.5 max-w-[200px] truncate text-xs" title={error.error_message}>
-                          {error.error_message}
-                        </TableCell>
                         <TableCell className="py-1.5 text-xs whitespace-nowrap">
-                          {error.student_name ? (
-                            <span>
-                              {error.student_name}
-                              <span className="text-gray-500 ml-1">({error.student_id})</span>
-                            </span>
-                          ) : (
+                          {error.student_name || (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-xs text-center font-mono">
+                          {error.student_id || (
                             <span className="text-gray-400">—</span>
                           )}
                         </TableCell>
                         <TableCell className="py-1.5 text-xs whitespace-nowrap">
-                          {error.classroom_name ? (
-                            <span>
-                              {error.classroom_name}
-                              {error.classroom_id && <span className="text-gray-500 ml-1">({error.classroom_id})</span>}
-                            </span>
-                          ) : (
+                          {error.classroom_name || (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-xs text-center font-mono">
+                          {error.classroom_id || (
                             <span className="text-gray-400">—</span>
                           )}
                         </TableCell>
                         <TableCell className="py-1.5 text-xs whitespace-nowrap">
-                          {error.teacher_name ? (
-                            <span>
-                              {error.teacher_name}
-                              {error.teacher_id && <span className="text-gray-500 ml-1">({error.teacher_id})</span>}
-                            </span>
-                          ) : (
+                          {error.teacher_name || (
                             <span className="text-gray-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-1.5 text-xs text-center font-mono">{error.assignment_id || "—"}</TableCell>
+                        <TableCell className="py-1.5 text-xs text-center font-mono">
+                          {error.teacher_id || (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-xs text-center font-mono">
+                          {error.assignment_id || "—"}
+                        </TableCell>
                         <TableCell className="py-1.5 text-xs whitespace-nowrap">
                           {error.browser}
-                          {error.is_mobile && <span className="ml-1 text-gray-500">📱</span>}
+                          {error.platform && (
+                            <span className="text-gray-500">
+                              {" "}
+                              ({error.platform})
+                            </span>
+                          )}
+                          {error.is_mobile && <span className="ml-1">📱</span>}
+                        </TableCell>
+                        <TableCell
+                          className="py-1.5 max-w-[200px] truncate text-xs"
+                          title={error.error_message}
+                        >
+                          {error.error_message}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -616,8 +710,8 @@ export default function AdminAudioErrorDashboard() {
               <div className="flex items-center justify-between mt-4">
                 <div className="text-sm text-muted-foreground">
                   顯示 {currentPage * pageSize + 1} -{" "}
-                  {Math.min((currentPage + 1) * pageSize, errorList.total || 0)} 筆，
-                  共 {errorList.total || 0} 筆
+                  {Math.min((currentPage + 1) * pageSize, errorList.total || 0)}{" "}
+                  筆， 共 {errorList.total || 0} 筆
                 </div>
                 <div className="flex gap-2">
                   <Button

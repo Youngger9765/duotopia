@@ -96,15 +96,10 @@ class AudioErrorQueryService:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
 
-            # Teacher filter (如果提供)
-            teacher_filter = ""
+            # 查詢參數設定
             params = [
-                bigquery.ScalarQueryParameter(
-                    "start_date", "TIMESTAMP", start_date
-                ),
-                bigquery.ScalarQueryParameter(
-                    "end_date", "TIMESTAMP", end_date
-                ),
+                bigquery.ScalarQueryParameter("start_date", "TIMESTAMP", start_date),
+                bigquery.ScalarQueryParameter("end_date", "TIMESTAMP", end_date),
             ]
 
             if teacher_id:
@@ -249,12 +244,8 @@ class AudioErrorQueryService:
                 "CAST(timestamp AS TIMESTAMP) BETWEEN @start_date AND @end_date"
             ]
             params = [
-                bigquery.ScalarQueryParameter(
-                    "start_date", "TIMESTAMP", start_date
-                ),
-                bigquery.ScalarQueryParameter(
-                    "end_date", "TIMESTAMP", end_date
-                ),
+                bigquery.ScalarQueryParameter("start_date", "TIMESTAMP", start_date),
+                bigquery.ScalarQueryParameter("end_date", "TIMESTAMP", end_date),
             ]
 
             if error_type:
@@ -438,8 +429,16 @@ class AudioErrorQueryService:
                         Teacher.id.label("teacher_id"),
                         Teacher.name.label("teacher_name"),
                     )
-                    .join(ClassroomStudent, Student.id == ClassroomStudent.student_id, isouter=True)
-                    .join(Classroom, ClassroomStudent.classroom_id == Classroom.id, isouter=True)
+                    .join(
+                        ClassroomStudent,
+                        Student.id == ClassroomStudent.student_id,
+                        isouter=True,
+                    )
+                    .join(
+                        Classroom,
+                        ClassroomStudent.classroom_id == Classroom.id,
+                        isouter=True,
+                    )
                     .join(Teacher, Classroom.teacher_id == Teacher.id, isouter=True)
                     .where(Student.id.in_(student_ids))
                 )

@@ -17,7 +17,9 @@ export default function AdminDashboard() {
             <Crown className="h-8 w-8 text-yellow-600" />
             管理員控制台
           </h1>
-          <p className="text-muted-foreground mt-1">訂閱管理、費用監控、錯誤追蹤</p>
+          <p className="text-muted-foreground mt-1">
+            訂閱管理、費用監控、錯誤追蹤
+          </p>
         </div>
 
         {/* Tabs */}

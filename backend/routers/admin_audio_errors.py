@@ -121,5 +121,7 @@ async def audio_error_health_check(
         "bigquery_connected": service.client is not None,
         "table_available": table_exists,
         "table_id": service.table_id,
-        "message": "OK" if service.client is not None else "BigQuery client not available",
+        "message": "OK"
+        if service.client is not None
+        else "BigQuery client not available",
     }
