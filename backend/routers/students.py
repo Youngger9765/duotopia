@@ -19,7 +19,6 @@ from models import (
     PracticeSession,
     PracticeAnswer,
     Assignment,
-    AnswerMode,
 )
 from auth import (
     create_access_token,
