@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta  # noqa: F401
@@ -310,6 +310,32 @@ async def get_assignment_activities(
         contents = db.query(Content).filter(Content.id.in_(content_ids)).all()
         content_dict = {content.id: content for content in contents}
 
+        # 🔥 優化：預先批次查詢所有 ContentItems 和 StudentItemProgress
+        # 避免在循環中對每個 content 都查詢一次（N+1 問題）
+        all_content_items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(content_ids))
+            .order_by(ContentItem.content_id, ContentItem.order_index)
+            .all()
+        )
+
+        # 建立 content_id -> [items] 的索引
+        content_items_map = {}
+        for ci in all_content_items:
+            if ci.content_id not in content_items_map:
+                content_items_map[ci.content_id] = []
+            content_items_map[ci.content_id].append(ci)
+
+        # 批次查詢所有 StudentItemProgress
+        all_item_progress = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.student_assignment_id == student_assignment.id)
+            .all()
+        )
+
+        # 建立 content_item_id -> progress 的索引
+        progress_by_item = {p.content_item_id: p for p in all_item_progress}
+
         for progress in progress_records:
             content = content_dict.get(progress.content_id)
 
@@ -341,30 +367,8 @@ async def get_assignment_activities(
                     # AI 評估結果現在統一在 activity_data["ai_assessments"] 陣列中處理
                 }
 
-                # 獲取 ContentItem 記錄（有 ID）而不是 Content.items（沒有 ID）
-                content_items = (
-                    db.query(ContentItem)
-                    .filter(ContentItem.content_id == content.id)
-                    .order_by(ContentItem.order_index)
-                    .all()
-                )
-
-                # 獲取 StudentItemProgress 記錄（包含 AI 評估資料）
-                item_progress_list = []
-                if content_items:
-                    item_ids = [ci.id for ci in content_items]
-                    item_progress_list = (
-                        db.query(StudentItemProgress)
-                        .filter(
-                            StudentItemProgress.student_assignment_id
-                            == student_assignment.id,
-                            StudentItemProgress.content_item_id.in_(item_ids),
-                        )
-                        .all()
-                    )
-
-                # 建立 progress 索引
-                progress_by_item = {p.content_item_id: p for p in item_progress_list}
+                # 🔥 優化：從預先載入的 map 取得 ContentItems（不再查詢資料庫）
+                content_items = content_items_map.get(content.id, [])
 
                 if content_items:
                     # 使用 ContentItem 記錄（每個都有 ID）
@@ -1332,34 +1336,51 @@ async def get_linked_accounts(
         .all()
     )
 
+    # 🔥 優化：批次查詢所有 linked students 的 classroom 資訊（避免 N+1）
+    linked_student_ids = [s.id for s in linked_students]
+
+    # 批次查詢所有 ClassroomStudent 關係
+    classroom_enrollments = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.student_id.in_(linked_student_ids),
+            ClassroomStudent.is_active is True,
+        )
+        .all()
+    )
+
+    # 建立 student_id -> classroom_id 的索引
+    student_classroom_map = {
+        ce.student_id: ce.classroom_id for ce in classroom_enrollments
+    }
+
+    # 批次查詢所有 Classroom（包含 teacher 關係）
+    classroom_ids = list(set(student_classroom_map.values()))
+
+    classrooms = (
+        db.query(Classroom)
+        .options(joinedload(Classroom.teacher))  # 🔥 eager load teacher
+        .filter(Classroom.id.in_(classroom_ids))
+        .all()
+    )
+
+    # 建立 classroom_id -> classroom 的索引
+    classroom_map = {c.id: c for c in classrooms}
+
     # 建立回應，包含班級資訊
     linked_accounts = []
     for linked_student in linked_students:
-        # 取得班級資訊
-        classroom_enrollment = (
-            db.query(ClassroomStudent)
-            .filter(
-                ClassroomStudent.student_id == linked_student.id,
-                ClassroomStudent.is_active is True,
-            )
-            .first()
-        )
+        # 🔥 從預先載入的 map 取得 classroom 資訊（不再查詢資料庫）
+        classroom_id = student_classroom_map.get(linked_student.id)
+        classroom = classroom_map.get(classroom_id) if classroom_id else None
 
         classroom_info = None
-        if classroom_enrollment:
-            classroom = (
-                db.query(Classroom)
-                .filter(Classroom.id == classroom_enrollment.classroom_id)
-                .first()
-            )
-            if classroom:
-                classroom_info = {
-                    "id": classroom.id,
-                    "name": classroom.name,
-                    "teacher_name": (
-                        classroom.teacher.name if classroom.teacher else None
-                    ),
-                }
+        if classroom:
+            classroom_info = {
+                "id": classroom.id,
+                "name": classroom.name,
+                "teacher_name": (classroom.teacher.name if classroom.teacher else None),
+            }
 
         linked_accounts.append(
             {
