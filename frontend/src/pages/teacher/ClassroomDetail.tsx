@@ -395,6 +395,24 @@ export default function ClassroomDetail({
         lessonName: content.lessonName,
       });
       setIsPanelOpen(true);
+    } else if (content.type === "SENTENCE_MAKING") {
+      // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
+      setSelectedContent(content);
+      setEditingContent({
+        id: content.id,
+        title: content.title,
+        items_count: content.items_count,
+        items: content.items || [],
+        lesson_id: content.lesson_id,
+        type: content.type,
+        estimated_time: content.estimated_time,
+        target_wpm: content.target_wpm,
+        target_accuracy: content.target_accuracy,
+        time_limit_seconds: content.time_limit_seconds,
+        programName: content.programName,
+        lessonName: content.lessonName,
+      });
+      setIsPanelOpen(true);
     } else {
       // For other content types, use the existing panel
       setSelectedContent(content);
@@ -892,7 +910,10 @@ export default function ClassroomDetail({
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
       setShowContentTypeDialog(false);
-    } else if (selection.type === "sentence_making") {
+    } else if (
+      selection.type === "SENTENCE_MAKING" ||
+      selection.type === "sentence_making"
+    ) {
       // For sentence_making, use popup for new content creation
       setSentenceMakingLessonId(selection.lessonId);
       setSentenceMakingContentId(null); // null for new content
@@ -1769,7 +1790,7 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
-                ) : selectedContent.type === "sentence_making" ? (
+                ) : selectedContent.type === "SENTENCE_MAKING" ? (
                   /* SentenceMakingPanel has its own save button */
                   <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
@@ -1936,24 +1957,25 @@ export default function ClassroomDetail({
                 )}
               </div>
 
-              {/* Panel Footer - Only show for non-reading_assessment types */}
-              {selectedContent.type !== "reading_assessment" && (
-                <div className="p-4 border-t bg-gray-50">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={closePanel}
-                    >
-                      {t("classroomDetail.buttons.cancel")}
-                    </Button>
-                    <Button className="flex-1" onClick={handleSaveContent}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {t("classroomDetail.buttons.saveChanges")}
-                    </Button>
+              {/* Panel Footer - Only show for types that don't have their own save button */}
+              {selectedContent.type?.toLowerCase() !== "reading_assessment" &&
+                selectedContent.type?.toLowerCase() !== "sentence_making" && (
+                  <div className="p-4 border-t bg-gray-50">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={closePanel}
+                      >
+                        {t("classroomDetail.buttons.cancel")}
+                      </Button>
+                      <Button className="flex-1" onClick={handleSaveContent}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {t("classroomDetail.buttons.saveChanges")}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
         </div>
@@ -2266,7 +2288,7 @@ export default function ClassroomDetail({
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">造句練習設定</h2>
+              <h2 className="text-2xl font-bold">句子模組設定</h2>
               <Button
                 variant="ghost"
                 size="icon"

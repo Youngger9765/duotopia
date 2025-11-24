@@ -1067,7 +1067,7 @@ export default function SentenceMakingPanel({
   lessonId,
   isCreating = false,
 }: SentenceMakingPanelProps) {
-  const [title, setTitle] = useState("造句練習內容");
+  const [title, setTitle] = useState("句子模組內容");
   const [rows, setRows] = useState<ContentRow[]>([
     {
       id: "1",
@@ -1423,17 +1423,17 @@ export default function SentenceMakingPanel({
 
   const handleBatchGenerateTTS = async () => {
     try {
-      // 收集需要生成 TTS 的文字
+      // 收集需要生成 TTS 的例句（而非單字）
       const textsToGenerate = rows
-        .filter((row) => row.text && !row.audioUrl)
-        .map((row) => row.text);
+        .filter((row) => row.example_sentence && !row.audioUrl)
+        .map((row) => row.example_sentence || "");
 
       if (textsToGenerate.length === 0) {
-        toast.info("所有項目都已有音檔");
+        toast.info("所有項目都已有音檔，或例句為空");
         return;
       }
 
-      toast.info(`正在生成 ${textsToGenerate.length} 個音檔...`);
+      toast.info(`正在生成 ${textsToGenerate.length} 個例句音檔...`);
 
       // 批次生成 TTS
       const result = await apiClient.batchGenerateTTS(
@@ -1449,12 +1449,12 @@ export default function SentenceMakingPanel({
         "audio_urls" in result &&
         Array.isArray(result.audio_urls)
       ) {
-        // 更新 rows 的 audioUrl
+        // 更新 rows 的 audioUrl（例句音檔）
         const newRows = [...rows];
         let audioIndex = 0;
 
         for (let i = 0; i < newRows.length; i++) {
-          if (newRows[i].text && !newRows[i].audioUrl) {
+          if (newRows[i].example_sentence && !newRows[i].audioUrl) {
             const audioUrl = (result as { audio_urls: string[] }).audio_urls[
               audioIndex
             ];

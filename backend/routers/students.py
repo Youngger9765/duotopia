@@ -19,6 +19,7 @@ from models import (
     PracticeSession,
     PracticeAnswer,
     Assignment,
+    AnswerMode,
 )
 from auth import (
     create_access_token,
@@ -26,6 +27,8 @@ from auth import (
     get_current_user,
     get_password_hash,
     validate_password_strength,
+    get_current_student,
+    get_current_student_or_teacher,
 )
 
 router = APIRouter(prefix="/api/students", tags=["students"])
@@ -1604,82 +1607,145 @@ class MasteryStatusResponse(BaseModel):
 
 
 @router.get(
-    "/assignments/{assignment_id}/practice-words", response_model=PracticeWordsResponse
+    "/assignments/{student_assignment_id}/practice-words", response_model=PracticeWordsResponse
 )
 async def get_practice_words(
-    assignment_id: int,
-    current_student: Student = Depends(get_current_user),
+    student_assignment_id: int,
+    user = Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """
     獲取練習題目（10個單字）
     - 根據艾賓浩斯記憶曲線智能選擇單字
     - 優先選擇即將遺忘或從未練習的單字
+    - 支援老師預覽模式
+
+    參數：student_assignment_id（不是 assignment_id）
     """
-    # 驗證是學生身份
-    if not isinstance(current_student, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can access this endpoint"
+
+    # 檢查是學生還是老師（user 現在總是 dict）
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # 老師預覽時，student_assignment_id 其實是 assignment_id（從預覽 URL 來的）
+        # 1. 驗證 assignment 存在
+        assignment = db.query(Assignment).filter(Assignment.id == student_assignment_id).first()
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # 2. 獲取 assignment 的 content_items（不使用記憶曲線，直接返回所有單字）
+        result = db.execute(
+            text("""
+                SELECT DISTINCT
+                    ci.id as content_item_id,
+                    ci.text,
+                    ci.translation,
+                    ci.example_sentence,
+                    ci.example_sentence_translation,
+                    ci.audio_url
+                FROM assignment_contents ac
+                JOIN contents c ON c.id = ac.content_id
+                JOIN content_items ci ON ci.content_id = c.id
+                WHERE ac.assignment_id = :assignment_id
+                AND c.type = 'SENTENCE_MAKING'
+                LIMIT 10
+            """),
+            {"assignment_id": student_assignment_id}
         )
 
-    # 1. 取得學生作業實例
-    student_assignment = (
-        db.query(StudentAssignment)
-        .join(Assignment)
-        .filter(
-            StudentAssignment.assignment_id == assignment_id,
-            StudentAssignment.student_id == current_student.id,
+        words = []
+        for row in result:
+            words.append(
+                PracticeWord(
+                    content_item_id=row[0],
+                    text=row[1] or "",
+                    translation=row[2] or "",
+                    example_sentence=row[3] or "",
+                    example_sentence_translation=row[4] or "",
+                    audio_url=row[5] or "",
+                    memory_strength=0.0,  # 老師預覽不需要記憶強度
+                    priority_score=0.0,
+                )
+            )
+
+        return PracticeWordsResponse(
+            session_id=-1,  # -1 表示老師預覽模式，不創建真實 session
+            answer_mode=assignment.answer_mode,
+            words=words,
         )
-        .first()
-    )
 
-    if not student_assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+    else:
+        # === 學生模式 ===
+        student_id = user["student_id"]  # user 是 dict
 
-    # 2. 創建新的練習 session
-    assignment = student_assignment.assignment
-    practice_session = PracticeSession(
-        student_id=current_student.id,
-        student_assignment_id=student_assignment.id,
-        practice_mode=assignment.answer_mode,
-    )
-    db.add(practice_session)
-    db.commit()
-    db.refresh(practice_session)
+        # 1. 取得學生作業實例（使用 student_assignment_id）
+        student_assignment = (
+            db.query(StudentAssignment)
+            .join(Assignment)
+            .filter(
+                StudentAssignment.id == student_assignment_id,
+                StudentAssignment.student_id == student_id,
+            )
+            .first()
+        )
 
-    # 3. 使用 SQL function 選擇 10 個單字
-    result = db.execute(
-        text(
+        if not student_assignment:
+            raise HTTPException(status_code=404, detail="Student assignment not found")
+
+        # 2. 創建新的練習 session
+        assignment = student_assignment.assignment
+        # 確保 practice_mode 是正確的字串值 ('listening' 或 'writing')
+        answer_mode_value = assignment.answer_mode
+        if isinstance(answer_mode_value, str):
+            # 如果是字串，確保是小寫
+            practice_mode_str = answer_mode_value.lower()
+        else:
+            # 如果是 enum，取其值（.value）
+            practice_mode_str = answer_mode_value.value
+
+        practice_session = PracticeSession(
+            student_id=student_id,
+            student_assignment_id=student_assignment.id,
+            practice_mode=practice_mode_str,  # 直接使用字串值
+        )
+        db.add(practice_session)
+        db.commit()
+        db.refresh(practice_session)
+
+        # 3. 使用 SQL function 選擇 10 個單字
+        result = db.execute(
+            text(
+                """
+                SELECT * FROM get_words_for_practice(
+                    :student_assignment_id,
+                    :limit_count
+                )
             """
-            SELECT * FROM get_words_for_practice(
-                :student_assignment_id,
-                :limit_count
-            )
-        """
-        ),
-        {"student_assignment_id": student_assignment.id, "limit_count": 10},
-    )
-
-    words = []
-    for row in result:
-        words.append(
-            PracticeWord(
-                content_item_id=row[0],
-                text=row[1],
-                translation=row[2],
-                example_sentence=row[3],
-                example_sentence_translation=row[4],
-                audio_url=row[5],
-                memory_strength=float(row[6]),
-                priority_score=float(row[7]),
-            )
+            ),
+            {"student_assignment_id": student_assignment.id, "limit_count": 10},
         )
 
-    return PracticeWordsResponse(
-        session_id=practice_session.id,
-        answer_mode=assignment.answer_mode,
-        words=words,
-    )
+        words = []
+        for row in result:
+            words.append(
+                PracticeWord(
+                    content_item_id=row[0],
+                    text=row[1],
+                    translation=row[2],
+                    example_sentence=row[3],
+                    example_sentence_translation=row[4],
+                    audio_url=row[5],
+                    memory_strength=float(row[6]),
+                    priority_score=float(row[7]),
+                )
+            )
+
+        return PracticeWordsResponse(
+            session_id=practice_session.id,
+            answer_mode=assignment.answer_mode,
+            words=words,
+        )
 
 
 @router.post(
@@ -1688,7 +1754,7 @@ async def get_practice_words(
 async def submit_answer(
     session_id: int,
     request: SubmitAnswerRequest,
-    current_student: Student = Depends(get_current_user),
+    user = Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """
@@ -1696,19 +1762,38 @@ async def submit_answer(
     - 記錄答題結果
     - 更新記憶強度（使用 SM-2 演算法）
     - 計算下次複習時間
+    - 支援老師預覽模式（session_id = -1 時不記錄）
     """
-    # 驗證是學生身份
-    if not isinstance(current_student, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can access this endpoint"
-        )
+
+    # 檢查是否為老師預覽模式
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # session_id = -1 表示預覽，不實際記錄資料
+        if session_id == -1:
+            # 直接返回成功，不更新資料庫
+            return SubmitAnswerResponse(
+                success=True,
+                new_memory_strength=0.5,  # 假設值
+                next_review_at=None,
+            )
+        else:
+            # 老師不應該提交真實 session 的答案
+            raise HTTPException(
+                status_code=403,
+                detail="Teachers cannot submit answers for student sessions"
+            )
+
+    # === 學生模式 ===
+    student_id = user["student_id"]
 
     # 1. 驗證 session 屬於當前學生
     session = (
         db.query(PracticeSession)
         .filter(
             PracticeSession.id == session_id,
-            PracticeSession.student_id == current_student.id,
+            PracticeSession.student_id == student_id,
         )
         .first()
     )
@@ -1764,11 +1849,11 @@ async def submit_answer(
 
 
 @router.get(
-    "/assignments/{assignment_id}/mastery-status", response_model=MasteryStatusResponse
+    "/assignments/{student_assignment_id}/mastery-status", response_model=MasteryStatusResponse
 )
 async def get_mastery_status(
-    assignment_id: int,
-    current_student: Student = Depends(get_current_user),
+    student_assignment_id: int,
+    user = Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """
@@ -1776,25 +1861,41 @@ async def get_mastery_status(
     - 計算整體熟悉度
     - 判斷是否達成目標（90%）
     - 返回已掌握的單字數
+    - 支援老師預覽模式
+
+    參數：student_assignment_id（學生模式）或 assignment_id（老師預覽模式）
     """
-    # 驗證是學生身份
-    if not isinstance(current_student, Student):
-        raise HTTPException(
-            status_code=403, detail="Only students can access this endpoint"
+
+    # 檢查是否為老師預覽模式
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # 老師預覽時，student_assignment_id 其實是 assignment_id
+        # 返回假的達標狀態（因為沒有真實學生資料）
+        return MasteryStatusResponse(
+            current_mastery=0.0,
+            target_mastery=90.0,
+            achieved=False,
+            words_mastered=0,
+            total_words=10,  # 假設值
         )
 
-    # 1. 取得學生作業實例
+    # === 學生模式 ===
+    student_id = user["student_id"]
+
+    # 1. 取得學生作業實例（使用 student_assignment_id）
     student_assignment = (
         db.query(StudentAssignment)
         .filter(
-            StudentAssignment.assignment_id == assignment_id,
-            StudentAssignment.student_id == current_student.id,
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == student_id,
         )
         .first()
     )
 
     if not student_assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Student assignment not found")
 
     # 2. 使用 SQL function 計算達標狀態
     result = db.execute(

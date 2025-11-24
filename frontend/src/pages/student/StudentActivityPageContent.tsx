@@ -178,7 +178,7 @@ export default function StudentActivityPageContent({
     const initialAnswers = new Map<number, Answer>();
     initialActivities.forEach((activity) => {
       let audioUrl: string | undefined = undefined;
-      if (activity.type === "reading_assessment" && activity.items?.[0]) {
+      if ((activity.type === "READING_ASSESSMENT" || activity.type === "reading_assessment") && activity.items?.[0]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         audioUrl = (activity.items[0] as any).recording_url || "";
       }
@@ -1142,6 +1142,7 @@ export default function StudentActivityPageContent({
 
   const getActivityTypeBadge = (type: string) => {
     switch (type) {
+      case "READING_ASSESSMENT":
       case "reading_assessment":
         return (
           <Badge variant="outline">
@@ -1166,10 +1167,11 @@ export default function StudentActivityPageContent({
             {t("studentActivityPage.activityTypes.speaking")}
           </Badge>
         );
+      case "SENTENCE_MAKING":
       case "sentence_making":
         return (
           <Badge variant="outline">
-            {t("studentActivityPage.activityTypes.speaking")}
+            {t("studentActivityPage.activityTypes.sentence")}
           </Badge>
         );
       case "speaking_quiz":
@@ -1216,7 +1218,13 @@ export default function StudentActivityPageContent({
   const renderActivityContent = (activity: Activity) => {
     const answer = answers.get(activity.id);
 
-    if (activity.items && activity.items.length > 0) {
+    // SENTENCE_MAKING 類型使用新的 SentenceMakingActivity 組件，不要進入舊的 GroupedQuestionsTemplate
+    if (
+      activity.items &&
+      activity.items.length > 0 &&
+      activity.type !== "SENTENCE_MAKING" &&
+      activity.type !== "sentence_making"
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const aiAssessments: Record<number, any> = {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1331,8 +1339,15 @@ export default function StudentActivityPageContent({
       );
     }
 
+    // DEBUG: 檢查 activity.type 的值
+    console.log("🔍 [StudentActivityPageContent] activity.type =", activity.type);
+    console.log("🔍 [StudentActivityPageContent] typeof activity.type =", typeof activity.type);
+    console.log("🔍 [StudentActivityPageContent] activity.type === 'SENTENCE_MAKING' ?", activity.type === "SENTENCE_MAKING");
+
     switch (activity.type) {
+      case "READING_ASSESSMENT":
       case "reading_assessment":
+        console.log("✅ [StudentActivityPageContent] Rendering ReadingAssessmentTemplate");
         return (
           <ReadingAssessmentTemplate
             content={activity.content}
@@ -1345,7 +1360,9 @@ export default function StudentActivityPageContent({
           />
         );
 
+      case "SENTENCE_MAKING":
       case "sentence_making":
+        console.log("✅ [StudentActivityPageContent] Rendering SentenceMakingActivity");
         // 新版造句練習：使用艾賓浩斯記憶曲線系統
         // 直接使用 SentenceMakingActivity 組件，它會從 API 獲取練習題目
         return (
@@ -1403,6 +1420,8 @@ export default function StudentActivityPageContent({
         );
 
       default:
+        console.warn("⚠️ [StudentActivityPageContent] Unknown activity.type, falling back to ReadingAssessmentTemplate");
+        console.warn("⚠️ [StudentActivityPageContent] activity.type =", activity.type);
         return (
           <ReadingAssessmentTemplate
             content={activity.content}
@@ -1682,7 +1701,7 @@ export default function StudentActivityPageContent({
                   currentActivity.items[currentSubQuestionIndex];
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isAssessed = !!(currentItem as any)?.ai_assessment;
-              } else if (currentActivity.type === "reading_assessment") {
+              } else if (currentActivity.type === "READING_ASSESSMENT" || currentActivity.type === "reading_assessment") {
                 isAssessed = !!currentActivity.ai_scores;
               } else if (currentActivity.type === "listening_cloze") {
                 const answer = answers.get(currentActivity.id);

@@ -337,9 +337,10 @@ export function AssignmentDialog({
   // Helper function: Handle answer mode change
   const handleAnswerModeChange = (mode: "listening" | "writing") => {
     // Only check audio for listening mode in sentence_making
+    const selectedType = getSelectedContentType();
     if (
       mode === "listening" &&
-      getSelectedContentType() === "sentence_making"
+      (selectedType === "sentence_making" || selectedType === "SENTENCE_MAKING")
     ) {
       const hasAudio = checkAllContentsHaveAudio();
       if (!hasAudio) {
@@ -1267,7 +1268,8 @@ export function AssignmentDialog({
                           </span>
                         </div>
                       )}
-                      {getSelectedContentType() === "sentence_making" && (
+                      {(getSelectedContentType() === "sentence_making" ||
+                        getSelectedContentType() === "SENTENCE_MAKING") && (
                         <div className="mt-2 pt-2 border-t border-blue-200">
                           <div className="text-xs font-medium text-blue-900 mb-2">
                             答題模式：
