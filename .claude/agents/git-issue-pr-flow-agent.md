@@ -5,8 +5,17 @@ This agent automates the standardized Git Issue PR Flow workflow for Duotopia pr
 ## Workflow Overview
 
 ```
-Feature Branch → Staging (auto-merge, auto-deploy) → Main (PR with issue tracking)
+Feature Branch → Per-Issue Test Environment (per-issue testing) → Staging (approved changes) → Main (PR with issue tracking)
 ```
+
+### Per-Issue Test Environment
+
+每個 issue 自動獲得獨立的測試環境：
+- **獨立 Cloud Run instances** (min=0, max=1)
+- **共用 Staging DB** (節省成本)
+- **智能部署檢測** (文件修改跳過部署)
+- **自動清理** (issue 關閉時刪除)
+- **超低成本** (~$0.02-0.10/issue)
 
 ## Agent Capabilities
 
@@ -14,21 +23,43 @@ Feature Branch → Staging (auto-merge, auto-deploy) → Main (PR with issue tra
 - Create feature branch from staging
 - Naming: `fix/issue-{number}-{description}` or `feat/{description}`
 - Example: `fix/issue-7-student-login-loading`
+- **自動觸發 Per-Issue Test Environment 部署**
 
-### 2. Staging Deployment
+### 2. Per-Issue Test Environment (NEW!)
+- **自動部署**：Push to `fix/issue-*/**` or `feat/issue-*/**` branch
+- **智能檢測**：只有功能性變更才部署（文件修改跳過）
+- **Schema 變更檢查**：自動偵測 DB schema 變更並阻止（需人工審查）
+- **獨立 URL**：每個 issue 獲得專屬測試 URL
+- **自動留言**：在 issue 中自動張貼 test URLs
+- **超低成本**：min-instances=0, ~$0.02-0.10/issue
+
+### 3. Approval Workflow
+- **`mark-issue-approved <issue>`**：偵測 case owner 批准留言
+- **`check-approvals`**：批次檢查所有 issues 的批准狀態
+- **自動加 label**：`✅ tested-in-staging`
+- **進度統計**：顯示幾個已批准/總共幾個
+
+### 4. Staging Deployment
 - Merge feature branch directly to staging (no PR)
 - Trigger CI/CD automatically
 - Comment on related issues with deployment info
 
-### 3. Release PR Management
+### 5. Preview Cleanup
+- **自動觸發**：Issue 關閉時或 PR 合併時
+- **手動清理**：`gh workflow run cleanup-preview.yml`
+- **定期清理**：手動觸發清理 7 天以上舊環境
+- **完整清理**：Cloud Run services + Container images
+
+### 6. Release PR Management
 - Create/update Draft PR: staging → main
 - Track multiple issues in one PR
 - Auto-close issues on merge using "Fixes #N" syntax
 
-### 4. Issue Management
+### 7. Issue Management
 - Update issues with deployment status
-- Link issues to staging deployment
+- Link issues to preview/staging deployment
 - Provide testing URLs
+- Auto-detect approval comments
 
 ## Commands
 
@@ -165,20 +196,41 @@ source /Users/young/project/duotopia/.claude/agents/git-issue-pr-flow.sh
 
 ## Usage Examples
 
-### Example 1: Fix an Issue
+### Example 1: Fix an Issue (with Per-Issue Test Environment)
 ```bash
 # 1. Create feature branch for Issue #7
 create-feature-fix 7 student-login-loading
 
 # 2. Make changes, commit
 git add .
-git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題"
+git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題
 
-# 3. Deploy to staging
+Fixes #7"
+
+# 3. Push to trigger Per-Issue Test Environment deployment
+git push origin fix/issue-7-student-login-loading
+
+# 4. CI/CD 自動部署 Per-Issue Test Environment
+# ✅ 智能檢測：功能性變更 → 自動部署
+# ℹ️ 文件變更 → 跳過部署
+# 🔴 Schema 變更 → 阻止部署，需人工審查
+
+# 5. Test URLs 自動張貼到 Issue #7
+# - Frontend: https://duotopia-preview-issue-7-frontend.run.app
+# - Backend: https://duotopia-preview-issue-7-backend.run.app
+
+# 6. Case owner 測試 Per-Issue Test Environment 後留言「測試通過」
+
+# 7. 檢查批准狀態
+check-approvals
+
+# 8. 批准後 Deploy to Staging
 deploy-feature 7
 
-# 4. Test in staging, then update release PR
+# 9. Update release PR
 update-release-pr
+
+# 10. Issue 關閉時，Per-Issue Test Environment 自動清理
 ```
 
 ### Example 2: Multiple Fixes Before Release

@@ -775,11 +775,11 @@ check-approvals
 
 ---
 
-## 🚀 Preview Environment 架構（Per-Issue 隔離測試）
+## 🚀 Per-Issue Test Environment 架構（每個 Issue 獨立測試環境）
 
 ### 架構說明
 
-每個 issue 獨立部署到專屬的 Preview Environment：
+每個 issue 獨立部署到專屬的 Per-Issue Test Environment：
 - **共用 Staging DB**（預設）
 - **獨立 Cloud Run instances** (min-instances=0, max-instances=1)
 - **獨立測試 URL**
@@ -787,50 +787,91 @@ check-approvals
 
 ### 🔴 Schema 變更限制
 
-**絕對禁止**在 Preview Environment 中處理涉及 DB Schema 變更的 issue：
+**絕對禁止**在 Per-Issue Test Environment 中處理涉及 DB Schema 變更的 issue：
 - ❌ 修改 SQLAlchemy models
 - ❌ 新增/修改 Alembic migrations
 - ❌ 任何 `ALTER TABLE`, `CREATE TABLE` 操作
 
-**原因**：Preview environments 共用 staging DB，schema 變更會影響所有其他 preview instances。
 
-### Preview Environment 流程
+### Per-Issue Test Environment 流程
 
 ```bash
-# 1. 創建 feature branch（同時觸發 Preview Environment 部署）
+# 1. 創建 feature branch（同時觸發 Per-Issue Test Environment 部署）
 create-feature-fix 7 student-login
 
-# 2. CI/CD 自動部署到 Preview Environment
-# Preview URLs:
+# 2. CI/CD 自動智能判斷是否需要部署
+# ✅ 功能性代碼變更 → 自動部署 Per-Issue Test Environment
+# ℹ️ 只修改文件/註解 → 跳過部署，節省成本
+
+# 3. 如果需要部署，自動建立 Per-Issue Test Environment
+# Test URLs:
 # - Frontend: https://duotopia-preview-issue-7-frontend.run.app
 # - Backend: https://duotopia-preview-issue-7-backend.run.app
 
-# 3. 自動在 Issue #7 留言預覽 URLs
-# 4. Case owner 測試 Preview Environment
-# 5. 測試通過後留言「測試通過」
+# 4. 自動在 Issue #7 留言預覽 URLs
+# 5. Case owner 測試 Per-Issue Test Environment
+# 6. 測試通過後留言「測試通過」
 
-# 6. 執行 check-approvals（自動偵測批准並加 label）
+# 7. 執行 check-approvals（自動偵測批准並加 label）
 check-approvals
 
-# 7. 批准後自動 merge to staging + 清理 preview instances
+# 8. 批准後 merge to staging
+deploy-feature 7
+
+# 9. Issue 關閉時自動清理 preview instances
+# ✅ Cloud Run services 自動刪除
+# ✅ Container images 自動清理
+# 💰 立即停止計費
 ```
 
-### Preview Environment 成本
+### 智能部署檢測
 
-```yaml
-每個 Preview Environment:
-- Cloud Run (min=0, max=1): ~$0.12/hr
-- 測試期間 (1-2 小時): ~$0.24
-- 自動清理: 7 天後或 merge 後立即刪除
+Per-Issue Test Environment 會自動判斷是否需要部署：
 
-月成本估算 (20 issues):
-- 20 issues * $0.24 = $4.8/月
-✅ 非常划算！
+**跳過部署（節省成本）**：
+- 只修改 `.md` 文件（文件）
+- 只修改 `.txt` 文件
+- 只修改 `LICENSE`, `.gitignore`
+- 只修改註解
+
+**自動部署**：
+- 修改任何功能性代碼（`.ts`, `.tsx`, `.py` 等）
+- 修改配置檔（`package.json`, `requirements.txt` 等）
+- 修改 Dockerfile 或建置腳本
+
+### 自動清理機制
+
+**觸發條件**：
+1. **Issue 關閉時** - 自動清理該 issue 的 per-issue test environment
+2. **PR 合併時** - 自動清理相關 issue 的 per-issue test environment
+3. **手動清理** - 執行 workflow 手動清理特定 issue
+4. **定期清理** - 手動觸發清理 7 天以上的舊 per-issue test environments
+
+**清理內容**：
+- ✅ Backend Cloud Run service
+- ✅ Frontend Cloud Run service
+- ✅ Container images in Artifact Registry
+- 💰 立即停止所有計費
+
+**手動清理命令**：
+```bash
+# 清理特定 issue 的 per-issue test environment
+gh workflow run cleanup-preview.yml -f issue_number=7
+
+# 清理所有 7 天以上的舊 per-issue test environments
+gh workflow run cleanup-preview.yml
 ```
+
+### Per-Issue Test Environment 規則
+
+- **min-instances=0** - 沒人用時不計費
+- **智能檢測** - 文件修改跳過部署
+- **自動清理** - issue 關閉立即刪除
+- **共用 staging DB** - 不額外開 DB
 
 ---
 
-#### Approval 手動流程（節省 CI/CD 成本）
+#### Approval 手動流程
 
 **當 case owner（如 Kaddy）測試通過後**：
 
@@ -859,10 +900,6 @@ check-approvals
    - 使用 `gh pr ready <PR_NUMBER>` 標記 PR 為 Ready for review（如果需要）
    - 使用 `gh pr merge <PR_NUMBER> --merge` 部署到 production
 
-**為什麼不用 GitHub Actions 自動化？**
-- 避免持續監控 issues 浪費 CI/CD 資源
-- 手動執行更可控，只在需要時才執行
-- Agent 會在執行時才讀取留言並判斷，不會持續消耗資源
 
 #### 重要規則
 - ❌ 不要手動創建 feature → staging 的 PR
@@ -872,7 +909,7 @@ check-approvals
 - ✅ **所有 Git 操作都使用 agent 命令，不要手動執行 git 指令**
 - ⚠️ **Commit message 必須包含 `#issue_number` 或 `Fixes #N`**，否則 PR 無法自動追蹤 issue
 
-#### 固定的 Staging URLs（不需要查詢）
+#### 固定 URLs
 - **Frontend**: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
 - **Backend**: https://duotopia-staging-backend-316409492201.asia-east1.run.app
 

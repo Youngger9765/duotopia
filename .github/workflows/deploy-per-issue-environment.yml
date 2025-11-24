@@ -1,0 +1,474 @@
+name: Deploy Per-Issue Test Environment
+
+on:
+  push:
+    branches:
+      - 'fix/issue-*/**'
+      - 'feat/issue-*/**'
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '!**/*.md'
+      - '!**/tests/**'
+  workflow_dispatch:  # 允許手動觸發
+
+concurrency:
+  group: deploy-issue-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  REPOSITORY: duotopia-repo
+  # Shared staging DB
+  DB_HOST: ${{ secrets.STAGING_DB_HOST }}
+  DB_NAME: ${{ secrets.STAGING_DB_NAME }}
+  DB_USER: ${{ secrets.STAGING_DB_USER }}
+  DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+
+jobs:
+  check-team-member:
+    name: 🔒 Verify Team Member
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check if pusher is team member
+      run: |
+        ACTOR="${{ github.actor }}"
+        TEAM_MEMBERS="Youngger9765 cbtzeng kaddy-eunice"
+
+        if ! echo "$TEAM_MEMBERS" | grep -qw "$ACTOR"; then
+          echo "::error::❌ $ACTOR is not a team member"
+          echo "::error::Only team members can trigger per-issue deployments"
+          exit 1
+        fi
+
+        echo "✅ $ACTOR is authorized to deploy"
+
+  validate-secrets:
+    name: 🔐 Validate Required Secrets
+    runs-on: ubuntu-latest
+    needs: check-team-member
+    steps:
+    - name: Check required secrets
+      run: |
+        missing_secrets=()
+
+        if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+          missing_secrets+=("GCP_SA_KEY")
+        fi
+        if [ -z "${{ secrets.STAGING_DB_HOST }}" ]; then
+          missing_secrets+=("STAGING_DB_HOST")
+        fi
+        if [ -z "${{ secrets.STAGING_DB_NAME }}" ]; then
+          missing_secrets+=("STAGING_DB_NAME")
+        fi
+        if [ -z "${{ secrets.STAGING_DB_USER }}" ]; then
+          missing_secrets+=("STAGING_DB_USER")
+        fi
+        if [ -z "${{ secrets.STAGING_DB_PASSWORD }}" ]; then
+          missing_secrets+=("STAGING_DB_PASSWORD")
+        fi
+        if [ -z "${{ secrets.TAPPAY_PRODUCTION_APP_ID }}" ]; then
+          missing_secrets+=("TAPPAY_PRODUCTION_APP_ID")
+        fi
+        if [ -z "${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}" ]; then
+          missing_secrets+=("TAPPAY_PRODUCTION_APP_KEY")
+        fi
+
+        if [ ${#missing_secrets[@]} -gt 0 ]; then
+          echo "::error::❌ Missing required secrets:"
+          for secret in "${missing_secrets[@]}"; do
+            echo "::error::  - $secret"
+          done
+          exit 1
+        fi
+
+        echo "✅ All required secrets are configured"
+
+  check-if-deployment-needed:
+    name: 🤔 Check if Per-Issue Needed
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    outputs:
+      needs_deployment: ${{ steps.check.outputs.needs_deployment }}
+      reason: ${{ steps.check.outputs.reason }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check changed files
+      id: check
+      run: |
+        echo "🔍 Checking if per-issue deployment is needed..."
+
+        # 獲取變更的檔案
+        CHANGED_FILES=$(git diff --name-only origin/staging...HEAD || echo "")
+
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "⚠️ No files changed"
+          echo "needs_deployment=false" >> $GITHUB_OUTPUT
+          echo "reason=No files changed" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "📁 Changed files:"
+        echo "$CHANGED_FILES"
+
+        # 檢查是否只修改了文件（文件、註解、配置等不影響功能的檔案）
+        # 排除：*.md, *.txt, LICENSE, .gitignore, *.md.j2, comments in code
+        FUNCTIONAL_FILES=$(echo "$CHANGED_FILES" | grep -v -E '\.(md|txt)$|LICENSE|\.gitignore$|CLAUDE\.md$|PRD\.md$|README' || echo "")
+
+        if [ -z "$FUNCTIONAL_FILES" ]; then
+          echo "ℹ️ Only documentation/non-functional files changed, skipping per-issue"
+          echo "needs_deployment=false" >> $GITHUB_OUTPUT
+          echo "reason=Documentation-only changes" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Functional files changed, per-issue deployment needed"
+          echo "$FUNCTIONAL_FILES"
+          echo "needs_deployment=true" >> $GITHUB_OUTPUT
+          echo "reason=Functional code changes detected" >> $GITHUB_OUTPUT
+        fi
+
+  check-schema-changes:
+    name: 🔴 Check for Schema Changes
+    runs-on: ubuntu-latest
+    needs: check-if-deployment-needed
+    if: needs.check-if-deployment-needed.outputs.needs_deployment == 'true'
+    outputs:
+      has_schema_changes: ${{ steps.check.outputs.has_changes }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 需要完整歷史來比較
+
+    - name: Check for schema changes
+      id: check
+      run: |
+        echo "🔍 Checking for DB schema changes..."
+
+        # 檢查是否有 schema 相關的變更
+        SCHEMA_FILES=$(git diff --name-only origin/staging...HEAD | grep -E '(backend/alembic/versions/|backend/app/models/)' || echo "")
+
+        if [ ! -z "$SCHEMA_FILES" ]; then
+          echo "🔴 DETECTED SCHEMA CHANGES:"
+          echo "$SCHEMA_FILES"
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "::error::🚨 Schema changes detected! Cannot use Per-Issue Environment with shared staging DB."
+          echo "::error::Files changed:"
+          echo "$SCHEMA_FILES" | while read file; do
+            echo "::error::  - $file"
+          done
+          exit 1
+        else
+          echo "✅ No schema changes detected"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+
+  extract-issue-number:
+    name: 📋 Extract Issue Number
+    runs-on: ubuntu-latest
+    needs: [check-if-deployment-needed, check-schema-changes]
+    if: needs.check-if-deployment-needed.outputs.needs_deployment == 'true'
+    outputs:
+      issue_number: ${{ steps.extract.outputs.issue_number }}
+      service_suffix: ${{ steps.extract.outputs.service_suffix }}
+    steps:
+    - name: Extract issue number from branch name
+      id: extract
+      run: |
+        BRANCH_NAME="${{ github.ref_name }}"
+        echo "Branch: $BRANCH_NAME"
+
+        # Extract issue number (e.g., fix/issue-7-description -> 7)
+        ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '(?<=issue-)\d+' || echo "")
+
+        if [ -z "$ISSUE_NUM" ]; then
+          echo "⚠️ No issue number found in branch name"
+          echo "Branch pattern should be: fix/issue-N-description or feat/issue-N-description"
+          exit 1
+        fi
+
+        echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+        echo "service_suffix=issue-$ISSUE_NUM" >> $GITHUB_OUTPUT
+        echo "📋 Issue #$ISSUE_NUM detected"
+
+  validate-issue:
+    name: ✅ Validate Issue Exists and Open
+    runs-on: ubuntu-latest
+    needs: extract-issue-number
+    steps:
+    - name: Check if issue exists and is open
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        ISSUE_NUM="${{ needs.extract-issue-number.outputs.issue_number }}"
+
+        echo "🔍 Checking Issue #$ISSUE_NUM..."
+
+        # Check if issue exists
+        if ! gh issue view "$ISSUE_NUM" --repo ${{ github.repository }} &>/dev/null; then
+          echo "::error::❌ Issue #$ISSUE_NUM does not exist"
+          exit 1
+        fi
+
+        # Check issue state
+        STATE=$(gh issue view "$ISSUE_NUM" --repo ${{ github.repository }} --json state --jq '.state')
+        if [ "$STATE" != "OPEN" ]; then
+          echo "::error::❌ Issue #$ISSUE_NUM is not open (state: $STATE)"
+          echo "::error::Cannot deploy for closed issues"
+          exit 1
+        fi
+
+        echo "✅ Issue #$ISSUE_NUM is valid and open"
+
+  check-environment-limit:
+    name: 🔢 Check Environment Limit
+    runs-on: ubuntu-latest
+    needs: validate-issue
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Count existing per-issue environments
+      run: |
+        COUNT=$(gcloud run services list \
+          --platform managed \
+          --region asia-east1 \
+          --filter="metadata.labels.environment=preview" \
+          --format="value(metadata.name)" | wc -l)
+
+        MAX_ENVS=20
+
+        echo "📊 Current per-issue environments: $COUNT/$MAX_ENVS"
+
+        if [ "$COUNT" -ge "$MAX_ENVS" ]; then
+          echo "::error::❌ Too many per-issue environments ($COUNT/$MAX_ENVS)"
+          echo "::error::Please close some issues or wait for automatic cleanup"
+          echo "::error::Run: gh workflow run cleanup-per-issue-environment.yml"
+          exit 1
+        fi
+
+        echo "✅ Environment limit check passed ($COUNT/$MAX_ENVS)"
+
+  deploy-per-issue-backend:
+    name: 🚀 Deploy Per-Issue Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [extract-issue-number, validate-issue, check-environment-limit]
+    outputs:
+      backend_url: ${{ steps.deploy.outputs.backend_url }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker $REGION-docker.pkg.dev
+
+    - name: Build and push backend image
+      working-directory: ./backend
+      run: |
+        SERVICE_NAME="duotopia-preview-issue-${{ needs.extract-issue-number.outputs.service_suffix }}-backend"
+        echo "🔨 Building backend image: $SERVICE_NAME"
+
+        docker build \
+          -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA \
+          .
+
+        docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA
+
+    - name: Deploy backend to Cloud Run
+      id: deploy
+      run: |
+        SERVICE_NAME="duotopia-preview-issue-${{ needs.extract-issue-number.outputs.service_suffix }}-backend"
+        echo "🚀 Deploying backend: $SERVICE_NAME"
+
+        gcloud run deploy $SERVICE_NAME \
+          --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 8000 \
+          --memory 512Mi \
+          --cpu 1 \
+          --max-instances 1 \
+          --min-instances 0 \
+          --cpu-throttling \
+          --concurrency 80 \
+          --timeout 60 \
+          --set-env-vars "DATABASE_URL=postgresql://${{ env.DB_USER }}:${{ env.DB_PASSWORD }}@${{ env.DB_HOST }}/${{ env.DB_NAME }}" \
+          --set-env-vars "ENVIRONMENT=per-issue" \
+          --set-env-vars "ISSUE_NUMBER=${{ needs.extract-issue-number.outputs.issue_number }}" \
+          --labels "environment=preview,issue=${{ needs.extract-issue-number.outputs.issue_number }},branch=${{ github.ref_name }}"
+
+        BACKEND_URL=$(gcloud run services describe $SERVICE_NAME \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)')
+
+        echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
+        echo "✅ Backend deployed: $BACKEND_URL"
+
+  deploy-per-issue-frontend:
+    name: 🚀 Deploy Per-Issue Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [extract-issue-number, deploy-per-issue-backend]
+    outputs:
+      frontend_url: ${{ steps.deploy.outputs.frontend_url }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker $REGION-docker.pkg.dev
+
+    - name: Build and push frontend image
+      working-directory: ./frontend
+      run: |
+        SERVICE_NAME="duotopia-preview-issue-${{ needs.extract-issue-number.outputs.service_suffix }}-frontend"
+        BACKEND_URL="${{ needs.deploy-per-issue-backend.outputs.backend_url }}"
+
+        echo "🔨 Building frontend image: $SERVICE_NAME"
+        echo "🔗 Using backend: $BACKEND_URL"
+
+        docker build \
+          -f Dockerfile.staging \
+          --build-arg VITE_API_URL=$BACKEND_URL \
+          --build-arg VITE_ENVIRONMENT=per-issue \
+          --build-arg VITE_TAPPAY_SERVER_TYPE=production \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }} \
+          -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA \
+          .
+
+        docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA
+
+    - name: Deploy frontend to Cloud Run
+      id: deploy
+      run: |
+        SERVICE_NAME="duotopia-preview-issue-${{ needs.extract-issue-number.outputs.service_suffix }}-frontend"
+        BACKEND_URL="${{ needs.deploy-per-issue-backend.outputs.backend_url }}"
+
+        echo "🚀 Deploying frontend: $SERVICE_NAME"
+
+        gcloud run deploy $SERVICE_NAME \
+          --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 80 \
+          --memory 512Mi \
+          --cpu 1 \
+          --max-instances 1 \
+          --min-instances 0 \
+          --cpu-throttling \
+          --concurrency 50 \
+          --set-env-vars "BACKEND_URL=$BACKEND_URL" \
+          --labels "environment=preview,issue=${{ needs.extract-issue-number.outputs.issue_number }},branch=${{ github.ref_name }}"
+
+        FRONTEND_URL=$(gcloud run services describe $SERVICE_NAME \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)')
+
+        echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+        echo "✅ Frontend deployed: $FRONTEND_URL"
+
+  comment-on-issue:
+    name: 💬 Comment Per-Issue URLs on Issue
+    runs-on: ubuntu-latest
+    needs: [extract-issue-number, deploy-per-issue-frontend, deploy-per-issue-backend]
+    permissions:
+      issues: write
+    steps:
+    - name: Comment on issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue_number = ${{ needs.extract-issue-number.outputs.issue_number }};
+          const frontend_url = '${{ needs.deploy-per-issue-frontend.outputs.frontend_url }}';
+          const backend_url = '${{ needs.deploy-per-issue-backend.outputs.backend_url }}';
+          const branch = '${{ github.ref_name }}';
+          const commit = '${{ github.sha }}';
+
+          const body = `## 🚀 Per-Issue Environment 已部署
+
+**📦 Issue #${issue_number} Per-Issue URLs**
+
+- **Frontend**: ${frontend_url}
+- **Backend**: ${backend_url}
+
+### 📋 部署資訊
+- **Branch**: \`${branch}\`
+- **Commit**: \`${commit.substring(0, 7)}\`
+- **環境**: Per-Issue (使用共用 staging DB)
+
+### 🧪 測試步驟
+1. 開啟 Frontend URL 測試功能
+2. 確認修復是否正常運作
+3. 測試完成後留言「測試通過」
+
+### ⚠️ 注意事項
+- Per-Issue environment 使用共用 staging DB
+- Min instances = 0，沒人訪問時不收費
+- 預計 7 天後或 merge 後自動清理
+
+---
+🤖 Auto-deployed by GitHub Actions`;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue_number,
+            body: body
+          });
+
+  summary:
+    name: 📊 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [check-if-deployment-needed, extract-issue-number, deploy-per-issue-frontend, deploy-per-issue-backend]
+    if: always()
+    steps:
+    - name: Summary
+      run: |
+        if [ "${{ needs.check-if-deployment-needed.outputs.needs_deployment }}" = "false" ]; then
+          echo "ℹ️ Per-Issue deployment skipped"
+          echo "📝 Reason: ${{ needs.check-if-deployment-needed.outputs.reason }}"
+          echo "💰 Cost saved: ~\$0.02-0.10"
+        elif [ "${{ needs.extract-issue-number.result }}" = "skipped" ]; then
+          echo "⏭️ Deployment skipped (documentation-only changes)"
+        elif [ "${{ needs.deploy-per-issue-backend.result }}" = "failure" ] || [ "${{ needs.deploy-per-issue-frontend.result }}" = "failure" ]; then
+          echo "❌ Deployment failed"
+          echo "Check logs for details"
+        else
+          echo "🎉 Per-Issue Environment Deployed Successfully!"
+          echo ""
+          echo "📋 Issue #${{ needs.extract-issue-number.outputs.issue_number }}"
+          echo "🌐 Frontend: ${{ needs.deploy-per-issue-frontend.outputs.frontend_url }}"
+          echo "🌐 Backend: ${{ needs.deploy-per-issue-backend.outputs.backend_url }}"
+          echo "💰 Cost: ~\$0.02-0.10 (測試期間 1-2 小時)"
+          echo ""
+          echo "✅ Per-Issue URLs have been posted to the issue"
+        fi
