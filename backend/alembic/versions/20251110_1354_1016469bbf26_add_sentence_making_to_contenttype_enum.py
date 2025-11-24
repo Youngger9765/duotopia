@@ -20,7 +20,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add SENTENCE_MAKING to contenttype enum
-    op.execute("ALTER TYPE contenttype ADD VALUE 'SENTENCE_MAKING'")
+    # Check if value already exists to support shared database environments (develop/staging)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_enum
+                WHERE enumlabel = 'SENTENCE_MAKING'
+                AND enumtypid = (
+                    SELECT oid FROM pg_type WHERE typname = 'contenttype'
+                )
+            ) THEN
+                ALTER TYPE contenttype ADD VALUE 'SENTENCE_MAKING';
+            END IF;
+        END
+        $$;
+    """
+    )
 
 
 def downgrade() -> None:

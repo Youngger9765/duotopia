@@ -288,9 +288,12 @@ def upgrade() -> None:
     )
 
     # Function 2: get_words_for_practice - Intelligent Word Selection
+    # Drop first to avoid type mismatch errors in shared environments
+    op.execute("DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)")
+
     op.execute(
         """
-        CREATE OR REPLACE FUNCTION get_words_for_practice(
+        CREATE FUNCTION get_words_for_practice(
             p_student_assignment_id INTEGER,
             p_limit_count INTEGER DEFAULT 10
         ) RETURNS TABLE (

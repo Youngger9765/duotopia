@@ -20,17 +20,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add example sentence fields to content_items table
-    op.add_column(
-        "content_items",
-        sa.Column("example_sentence", sa.Text(), nullable=True),
+    # Use IF NOT EXISTS to support shared database environments (develop/staging)
+    op.execute(
+        """
+        ALTER TABLE content_items
+        ADD COLUMN IF NOT EXISTS example_sentence TEXT
+    """
     )
-    op.add_column(
-        "content_items",
-        sa.Column("example_sentence_translation", sa.Text(), nullable=True),
+    op.execute(
+        """
+        ALTER TABLE content_items
+        ADD COLUMN IF NOT EXISTS example_sentence_translation TEXT
+    """
     )
-    op.add_column(
-        "content_items",
-        sa.Column("example_sentence_definition", sa.Text(), nullable=True),
+    op.execute(
+        """
+        ALTER TABLE content_items
+        ADD COLUMN IF NOT EXISTS example_sentence_definition TEXT
+    """
     )
 
 
