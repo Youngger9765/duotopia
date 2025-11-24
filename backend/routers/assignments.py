@@ -6,7 +6,7 @@ Phase 1: 基礎指派功能
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import datetime, timezone  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
@@ -917,9 +917,10 @@ async def get_assignment_detail(
                 }
             )
 
-    # 取得學生進度
+    # 取得學生進度（使用 eager loading 避免 N+1）
     student_assignments = (
         db.query(StudentAssignment)
+        .options(selectinload(StudentAssignment.content_progress))
         .filter(
             StudentAssignment.assignment_id == assignment_id,
             StudentAssignment.is_active.is_(True),
@@ -954,18 +955,14 @@ async def get_assignment_detail(
 
         is_assigned = sa is not None
 
-        # 取得各內容進度
+        # 取得各內容進度（使用預先載入的資料，避免 N+1）
         content_progress = []
         if sa:  # 只有已指派的學生才有進度資料
+            # 建立 content_id -> progress 的映射（從預先載入的資料）
+            progress_map = {p.content_id: p for p in sa.content_progress}
+
             for content in contents:
-                progress = (
-                    db.query(StudentContentProgress)
-                    .filter(
-                        StudentContentProgress.student_assignment_id == sa.id,
-                        StudentContentProgress.content_id == content["id"],
-                    )
-                    .first()
-                )
+                progress = progress_map.get(content["id"])
 
                 if progress:
                     content_progress.append(
