@@ -159,16 +159,17 @@ jobs:
           FRONTEND: ${{ needs.deploy-frontend.outputs.url }}
         with:
           script: |
+            const issue = process.env.ISSUE;
+            const frontend = process.env.FRONTEND;
+            const backend = process.env.BACKEND;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: process.env.ISSUE,
-              body: `## 🚀 Per-Issue Preview Environment Ready
-
-**Issue #${process.env.ISSUE}**
-
-- **Frontend**: ${process.env.FRONTEND}
-- **Backend**: ${process.env.BACKEND}
-
-Min instances = 0 (no cost when idle). Test and comment "測試通過" when done.`
+              issue_number: issue,
+              body: "## 🚀 Per-Issue Preview Environment Ready\n\n" +
+                    "**Issue #" + issue + "**\n\n" +
+                    "- **Frontend**: " + frontend + "\n" +
+                    "- **Backend**: " + backend + "\n\n" +
+                    "Min instances = 0 (no cost when idle). Test and comment \"測試通過\" when done."
             });
