@@ -308,11 +308,13 @@ patrol-issues() {
   local bugs=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "bug")] | length')
   local enhancements=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "enhancement")] | length')
   local unassigned=$(echo "$issues" | jq '[.[] | select(.assignees | length == 0)] | length')
+  local approved=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "✅ tested-in-staging")] | length')
 
   echo -e "${YELLOW}📊 Issue Summary:${NC}"
   echo -e "  Total open: ${YELLOW}$total${NC}"
   echo -e "  🐛 Bugs: ${RED}$bugs${NC}"
   echo -e "  ✨ Enhancements: ${GREEN}$enhancements${NC}"
+  echo -e "  ✅ Tested in staging: ${GREEN}$approved${NC}"
   echo -e "  👤 Unassigned: ${YELLOW}$unassigned${NC}"
   echo ""
 
@@ -329,8 +331,94 @@ patrol-issues() {
   echo ""
   echo -e "${BLUE}💡 Quick Actions:${NC}"
   echo -e "  ${YELLOW}create-feature-fix <issue_number> <description>${NC} - Start working on an issue"
+  echo -e "  ${YELLOW}check-approvals${NC}                                 - Check approval status for release"
   echo -e "  ${YELLOW}gh issue view <issue_number>${NC}                    - View issue details"
   echo -e "  ${YELLOW}gh issue view <issue_number> --web${NC}              - Open in browser"
+}
+
+# Check if all issues in Release PR are approved
+check-approvals() {
+  echo -e "${BLUE}🔍 Checking approval status...${NC}"
+  echo ""
+
+  # Find Release PR
+  local pr_info=$(gh pr list --state open --base main --head staging --json number,title,isDraft,body --limit 1)
+
+  if [ "$pr_info" = "[]" ]; then
+    echo -e "${YELLOW}⚠️  No Release PR found${NC}"
+    echo -e "${BLUE}💡 Run ${YELLOW}update-release-pr${BLUE} to create one${NC}"
+    return 0
+  fi
+
+  local pr_number=$(echo "$pr_info" | jq -r '.[0].number')
+  local pr_title=$(echo "$pr_info" | jq -r '.[0].title')
+  local is_draft=$(echo "$pr_info" | jq -r '.[0].isDraft')
+  local pr_body=$(echo "$pr_info" | jq -r '.[0].body')
+
+  echo -e "${BLUE}📋 Release PR #${pr_number}:${NC} $pr_title"
+  if [ "$is_draft" = "true" ]; then
+    echo -e "  Status: ${YELLOW}Draft${NC}"
+  else
+    echo -e "  Status: ${GREEN}Ready for review${NC}"
+  fi
+  echo ""
+
+  # Extract issue numbers from PR body
+  local issues=$(echo "$pr_body" | grep -oE '#[0-9]+' | sed 's/#//' | sort -u)
+
+  if [ -z "$issues" ]; then
+    echo -e "${YELLOW}⚠️  No issues found in PR body${NC}"
+    return 0
+  fi
+
+  echo -e "${BLUE}📊 Checking approval status for each issue:${NC}"
+  echo ""
+
+  local all_approved=true
+  local approved_count=0
+  local total_count=0
+
+  for issue in $issues; do
+    total_count=$((total_count + 1))
+
+    # Get issue labels
+    local labels=$(gh issue view "$issue" --json labels --jq '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+
+    if echo "$labels" | grep -q "✅ tested-in-staging"; then
+      echo -e "  ✅ Issue #${issue} - ${GREEN}Approved${NC}"
+      approved_count=$((approved_count + 1))
+    else
+      echo -e "  ⏳ Issue #${issue} - ${YELLOW}Waiting for approval${NC}"
+      all_approved=false
+    fi
+  done
+
+  echo ""
+  echo -e "${YELLOW}📈 Progress: ${approved_count}/${total_count} issues approved${NC}"
+  echo ""
+
+  if [ "$all_approved" = true ]; then
+    echo -e "${GREEN}🎉 All issues approved! Ready to deploy to production.${NC}"
+    echo ""
+    echo -e "${BLUE}💡 Next steps:${NC}"
+    if [ "$is_draft" = "true" ]; then
+      echo -e "  1. ${YELLOW}gh pr ready $pr_number${NC} - Mark PR as ready for review"
+    fi
+    echo -e "  2. ${YELLOW}gh pr merge $pr_number --merge${NC} - Merge to main and deploy"
+  else
+    echo -e "${YELLOW}⏳ Waiting for all issues to be tested and approved in staging.${NC}"
+    echo ""
+    echo -e "${BLUE}💡 Approval process:${NC}"
+    echo -e "  1. Test each issue in staging environment"
+    echo -e "  2. Case owner comments \"測試通過\" or \"approved\" on issue"
+    echo -e "  3. GitHub Actions auto-adds \"✅ tested-in-staging\" label"
+    echo -e "  4. When all approved, PR auto-marks as ready for review"
+  fi
+
+  echo ""
+  echo -e "${BLUE}🌐 Staging URLs:${NC}"
+  echo -e "  Frontend: $STAGING_FRONTEND_URL"
+  echo -e "  Backend:  $STAGING_BACKEND_URL"
 }
 
 # Show help
@@ -346,6 +434,7 @@ git-flow-help() {
   echo -e "${GREEN}Release Management:${NC}"
   echo -e "  ${YELLOW}create-release-pr${NC}                  - Create/update release PR"
   echo -e "  ${YELLOW}update-release-pr${NC}                  - Alias for create-release-pr"
+  echo -e "  ${YELLOW}check-approvals${NC}                    - Check approval status for release"
   echo ""
   echo -e "${GREEN}Status & Info:${NC}"
   echo -e "  ${YELLOW}git-flow-status${NC}                    - Show current workflow status"
@@ -358,8 +447,9 @@ git-flow-help() {
   echo -e "  3. ${YELLOW}deploy-feature 7${NC}"
   echo -e "  4. Test in staging"
   echo -e "  5. ${YELLOW}update-release-pr${NC}"
-  echo -e "  6. ${YELLOW}gh pr ready <PR_NUMBER>${NC}"
-  echo -e "  7. ${YELLOW}gh pr merge <PR_NUMBER>${NC}"
+  echo -e "  6. Case owner tests and comments \"測試通過\" (auto-adds label)"
+  echo -e "  7. ${YELLOW}check-approvals${NC} (verify all issues approved)"
+  echo -e "  8. ${YELLOW}gh pr merge <PR_NUMBER>${NC} (auto-ready when all approved)"
 }
 
 # Export functions for use in shell
@@ -371,6 +461,7 @@ export -f create-release-pr
 export -f update-release-pr
 export -f git-flow-status
 export -f patrol-issues
+export -f check-approvals
 export -f git-flow-help
 
 echo -e "${GREEN}✅ Git Issue PR Flow Agent loaded${NC}"

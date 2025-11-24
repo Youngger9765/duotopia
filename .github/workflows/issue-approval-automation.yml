@@ -1,0 +1,152 @@
+name: Issue Approval Automation
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  handle-approval:
+    # 只在 open issues 且有特定 label 時觸發
+    if: |
+      github.event.issue.state == 'open' &&
+      (contains(github.event.comment.body, '測試通過') ||
+       contains(github.event.comment.body, 'approved') ||
+       contains(github.event.comment.body, '✅') ||
+       contains(github.event.comment.body, 'LGTM'))
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if commenter is case owner
+        id: check-owner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 檢查留言者是否為 kaddy-eunice 或其他 case owner
+          COMMENTER="${{ github.event.comment.user.login }}"
+
+          # 可以擴展到從 issue assignee 判斷
+          if [[ "$COMMENTER" == "kaddy-eunice" ]] || \
+             [[ "$COMMENTER" == "Youngger9765" ]]; then
+            echo "is_owner=true" >> $GITHUB_OUTPUT
+            echo "✅ Commenter $COMMENTER is a case owner"
+          else
+            echo "is_owner=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Commenter $COMMENTER is not a case owner"
+          fi
+
+      - name: Add approval label
+        if: steps.check-owner.outputs.is_owner == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+
+          # 加上 "✅ tested-in-staging" label
+          gh issue edit $ISSUE_NUMBER --add-label "✅ tested-in-staging"
+
+          echo "✅ Added 'tested-in-staging' label to Issue #${ISSUE_NUMBER}"
+
+      - name: Find associated Release PR
+        if: steps.check-owner.outputs.is_owner == 'true'
+        id: find-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+
+          # 查找包含此 issue 的 Draft PR (staging → main)
+          PR_NUMBER=$(gh pr list \
+            --state open \
+            --draft \
+            --base main \
+            --head staging \
+            --json number,body \
+            --jq ".[] | select(.body | contains(\"#${ISSUE_NUMBER}\")) | .number" | head -1)
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "✅ Found Release PR #${PR_NUMBER}"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No Release PR found for Issue #${ISSUE_NUMBER}"
+          fi
+
+      - name: Check if all issues are approved
+        if: |
+          steps.check-owner.outputs.is_owner == 'true' &&
+          steps.find-pr.outputs.found == 'true'
+        id: check-all-approved
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.find-pr.outputs.pr_number }}"
+
+          # 從 PR body 抽取所有 issue numbers
+          ISSUES=$(gh pr view $PR_NUMBER --json body --jq '.body' | grep -oE '#[0-9]+' | sed 's/#//' | sort -u)
+
+          echo "📋 Issues in PR #${PR_NUMBER}:"
+          echo "$ISSUES"
+
+          ALL_APPROVED=true
+          for ISSUE in $ISSUES; do
+            # 檢查每個 issue 是否有 "tested-in-staging" label
+            HAS_LABEL=$(gh issue view $ISSUE --json labels --jq '.labels[].name' | grep -c "✅ tested-in-staging" || true)
+
+            if [ "$HAS_LABEL" -eq 0 ]; then
+              echo "❌ Issue #${ISSUE} not yet approved"
+              ALL_APPROVED=false
+            else
+              echo "✅ Issue #${ISSUE} approved"
+            fi
+          done
+
+          if [ "$ALL_APPROVED" = true ]; then
+            echo "all_approved=true" >> $GITHUB_OUTPUT
+            echo "✅ All issues in PR #${PR_NUMBER} are approved!"
+          else
+            echo "all_approved=false" >> $GITHUB_OUTPUT
+            echo "⏳ Some issues still need approval"
+          fi
+
+      - name: Mark Release PR as ready
+        if: |
+          steps.check-owner.outputs.is_owner == 'true' &&
+          steps.find-pr.outputs.found == 'true' &&
+          steps.check-all-approved.outputs.all_approved == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.find-pr.outputs.pr_number }}"
+
+          # 標記 PR 為 Ready for review
+          gh pr ready $PR_NUMBER
+
+          # 加上評論
+          gh pr comment $PR_NUMBER --body "🎉 所有 issues 已在 staging 測試通過！此 PR 已標記為 Ready for review。
+
+**下一步**：請 review 代碼後 merge 到 main 進行生產部署。"
+
+          echo "✅ PR #${PR_NUMBER} marked as ready for review!"
+
+      - name: Add approval comment to issue
+        if: steps.check-owner.outputs.is_owner == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          COMMENTER="${{ github.event.comment.user.login }}"
+
+          gh issue comment $ISSUE_NUMBER --body "✅ **@${COMMENTER} 已批准此修復**
+
+- ✅ Staging 測試通過
+- 🏷️ 已加上 \`tested-in-staging\` label
+- 📦 等待 Release PR 完成其他 issues 測試後部署到 production
+
+感謝測試！🙏"
+
+          echo "✅ Added approval comment to Issue #${ISSUE_NUMBER}"
