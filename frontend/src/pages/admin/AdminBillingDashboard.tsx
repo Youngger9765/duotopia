@@ -8,13 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   DollarSign,
   TrendingUp,
@@ -24,6 +18,7 @@ import {
   Database,
   Clock,
   BarChart3,
+  Edit,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import {
@@ -90,6 +85,8 @@ export default function AdminBillingDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [days, setDays] = useState(30);
+  const [showCustomDays, setShowCustomDays] = useState(false);
+  const [customDaysInput, setCustomDaysInput] = useState("");
 
   useEffect(() => {
     fetchAllData();
@@ -132,6 +129,17 @@ export default function AdminBillingDashboard() {
     setRefreshing(false);
   };
 
+  const handleCustomDays = () => {
+    const customDays = parseInt(customDaysInput);
+    if (customDays && customDays > 0 && customDays <= 365) {
+      setDays(customDays);
+      setShowCustomDays(false);
+      setCustomDaysInput("");
+    } else {
+      alert("請輸入 1-365 之間的天數");
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return `$${amount.toFixed(2)}`;
   };
@@ -152,44 +160,13 @@ export default function AdminBillingDashboard() {
   const dataAvailable = summary?.data_available && health?.bigquery_connected;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">GCP 費用監控</h2>
-          <p className="text-muted-foreground">
-            即時追蹤 Google Cloud Platform 費用
-          </p>
-        </div>
-        <div className="flex gap-3 items-center">
-          <Select
-            value={days.toString()}
-            onValueChange={(value) => setDays(parseInt(value))}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">過去 7 天</SelectItem>
-              <SelectItem value="30">過去 30 天</SelectItem>
-              <SelectItem value="60">過去 60 天</SelectItem>
-              <SelectItem value="90">過去 90 天</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="h-4 w-4" />
-            )}
-            <span className="ml-2">重新整理</span>
-          </Button>
-        </div>
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold tracking-tight">GCP 費用監控</h2>
+        <p className="text-muted-foreground text-sm">
+          即時追蹤 Google Cloud Platform 費用
+        </p>
       </div>
 
       {/* System Status */}
@@ -253,48 +230,152 @@ export default function AdminBillingDashboard() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
+      {/* Controls */}
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setDays(7)}
+            variant={days === 7 ? "default" : "ghost"}
+            size="sm"
+          >
+            過去 7 天
+          </Button>
+          <Button
+            onClick={() => setDays(30)}
+            variant={days === 30 ? "default" : "ghost"}
+            size="sm"
+          >
+            過去 30 天
+          </Button>
+          <Button
+            onClick={() => setDays(60)}
+            variant={days === 60 ? "default" : "ghost"}
+            size="sm"
+          >
+            過去 60 天
+          </Button>
+          <Button
+            onClick={() => setDays(90)}
+            variant={days === 90 ? "default" : "ghost"}
+            size="sm"
+          >
+            過去三個月
+          </Button>
+          {!showCustomDays ? (
+            <div className="flex items-center gap-1">
+              <Button
+                onClick={() => setShowCustomDays(true)}
+                variant={![7, 30, 60, 90].includes(days) ? "default" : "ghost"}
+                size="sm"
+              >
+                {![7, 30, 60, 90].includes(days)
+                  ? `過去 ${days} 天`
+                  : "自訂天數"}
+              </Button>
+              {![7, 30, 60, 90].includes(days) && (
+                <Button
+                  onClick={() => setShowCustomDays(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="修改天數"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                placeholder="天數"
+                value={customDaysInput}
+                onChange={(e) => setCustomDaysInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCustomDays();
+                  if (e.key === "Escape") {
+                    setShowCustomDays(false);
+                    setCustomDaysInput("");
+                  }
+                }}
+                className="w-20 h-8 text-sm"
+                autoFocus
+                min="1"
+                max="365"
+              />
+              <Button
+                onClick={handleCustomDays}
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2"
+              >
+                ✓
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowCustomDays(false);
+                  setCustomDaysInput("");
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2"
+              >
+                ✕
+              </Button>
+            </div>
+          )}
+        </div>
+        <Button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCcw
+            className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+          />
+          刷新
+        </Button>
+      </div>
+
+      {/* Summary Cards - Compact */}
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               總費用
             </CardTitle>
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-blue-600" />
-            </div>
+            <DollarSign className="h-3.5 w-3.5 text-blue-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+          <CardContent className="pb-3">
+            <div className="text-xl font-bold">
               {formatCurrency(summary?.total_cost || 0)}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {summary?.period.start} ~ {summary?.period.end}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               Top 服務
             </CardTitle>
-            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-            </div>
+            <BarChart3 className="h-3.5 w-3.5 text-purple-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600 truncate">
+          <CardContent className="pb-3">
+            <div className="text-xl font-bold truncate">
               {summary?.top_services?.[0]?.service || "N/A"}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {formatCurrency(summary?.top_services?.[0]?.cost || 0)}
             </p>
           </CardContent>
         </Card>
 
         <Card
-          className={`border-l-4 shadow-lg hover:shadow-xl transition-shadow ${
+          className={`border-l-4 ${
             anomalies?.increase_percent && anomalies.increase_percent > 50
               ? "border-l-red-500"
               : anomalies?.increase_percent && anomalies.increase_percent > 0
@@ -302,86 +383,58 @@ export default function AdminBillingDashboard() {
                 : "border-l-green-500"
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               費用增長
             </CardTitle>
-            <div
-              className={`h-10 w-10 rounded-full flex items-center justify-center ${
+            <TrendingUp
+              className={`h-3.5 w-3.5 ${
                 anomalies?.increase_percent && anomalies.increase_percent > 50
-                  ? "bg-red-100"
+                  ? "text-red-500"
                   : anomalies?.increase_percent &&
                       anomalies.increase_percent > 0
-                    ? "bg-orange-100"
-                    : "bg-green-100"
+                    ? "text-orange-500"
+                    : "text-green-500"
               }`}
-            >
-              <TrendingUp
-                className={`h-5 w-5 ${
-                  anomalies?.increase_percent && anomalies.increase_percent > 50
-                    ? "text-red-600"
-                    : anomalies?.increase_percent &&
-                        anomalies.increase_percent > 0
-                      ? "text-orange-600"
-                      : "text-green-600"
-                }`}
-              />
-            </div>
+            />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-3xl font-bold ${
-                anomalies?.increase_percent && anomalies.increase_percent > 50
-                  ? "text-red-600"
-                  : anomalies?.increase_percent &&
-                      anomalies.increase_percent > 0
-                    ? "text-orange-600"
-                    : "text-green-600"
-              }`}
-            >
+          <CardContent className="pb-3">
+            <div className="text-xl font-bold">
               {anomalies?.increase_percent !== undefined
                 ? `${anomalies.increase_percent > 0 ? "+" : ""}${anomalies.increase_percent.toFixed(1)}%`
                 : "N/A"}
             </div>
-            <p className="text-xs text-gray-500 mt-2">相較前期 {days} 天</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              相較前期 {days} 天
+            </p>
           </CardContent>
         </Card>
 
         <Card
-          className={`border-l-4 shadow-lg hover:shadow-xl transition-shadow ${
+          className={`border-l-4 ${
             anomalies?.has_anomaly
               ? "border-l-red-500 bg-red-50"
               : "border-l-green-500"
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               異常警報
             </CardTitle>
-            <div
-              className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                anomalies?.has_anomaly ? "bg-red-100" : "bg-green-100"
+            <AlertTriangle
+              className={`h-3.5 w-3.5 ${
+                anomalies?.has_anomaly
+                  ? "text-red-500 animate-pulse"
+                  : "text-green-500"
               }`}
-            >
-              <AlertTriangle
-                className={`h-5 w-5 ${
-                  anomalies?.has_anomaly
-                    ? "text-red-600 animate-pulse"
-                    : "text-green-600"
-                }`}
-              />
-            </div>
+            />
           </CardHeader>
-          <CardContent>
-            <div
-              className={`text-3xl font-bold ${
-                anomalies?.has_anomaly ? "text-red-600" : "text-green-600"
-              }`}
-            >
+          <CardContent className="pb-3">
+            <div className="text-xl font-bold">
               {anomalies?.anomalies?.length || 0}
             </div>
             <p
-              className={`text-xs mt-2 font-medium ${
+              className={`text-xs mt-0.5 font-medium ${
                 anomalies?.has_anomaly ? "text-red-700" : "text-green-700"
               }`}
             >
@@ -414,12 +467,16 @@ export default function AdminBillingDashboard() {
         </Alert>
       )}
 
+      {/* Charts */}
       {dataAvailable && (
-        <>
+        <div className="grid gap-4 md:grid-cols-2">
           {/* Daily Cost Trend */}
           <Card>
             <CardHeader>
-              <CardTitle>每日費用趨勢</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                每日費用趨勢
+              </CardTitle>
               <CardDescription>過去 {days} 天的 GCP 費用變化</CardDescription>
             </CardHeader>
             <CardContent>
@@ -452,11 +509,14 @@ export default function AdminBillingDashboard() {
           {/* Top Services */}
           <Card>
             <CardHeader>
-              <CardTitle>服務費用排行</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                服務費用排行
+              </CardTitle>
               <CardDescription>過去 {days} 天的 Top 10 服務</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={summary?.top_services?.slice(0, 10) || []}
                   layout="vertical"
@@ -478,7 +538,7 @@ export default function AdminBillingDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       {!dataAvailable && (
