@@ -1,0 +1,14 @@
+name: Test Per-Issue Minimal
+
+on:
+  push:
+    branches:
+      - 'fix/issue-*'
+
+jobs:
+  test:
+    name: Test Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo test
+        run: echo "Workflow triggered successfully"
