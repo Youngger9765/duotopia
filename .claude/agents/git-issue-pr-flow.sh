@@ -69,6 +69,23 @@ deploy-feature() {
     return 1
   fi
 
+  # Check if last commit contains issue number
+  local last_commit=$(git log -1 --pretty=%B)
+  if ! echo "$last_commit" | grep -qE "#$issue_num|Fixes #$issue_num"; then
+    echo -e "${YELLOW}⚠️  Warning: Last commit message doesn't contain #${issue_num}${NC}"
+    echo -e "${YELLOW}   This issue won't be automatically tracked in Release PR${NC}"
+    echo -e "${YELLOW}   Last commit: $(git log -1 --oneline)${NC}"
+    echo ""
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo -e "${RED}❌ Deployment cancelled${NC}"
+      echo -e "${BLUE}💡 Amend your commit to include 'Fixes #${issue_num}':${NC}"
+      echo -e "   git commit --amend"
+      return 1
+    fi
+  fi
+
   echo -e "${YELLOW}🔄 Deploying $branch to staging...${NC}"
 
   # Merge to staging
