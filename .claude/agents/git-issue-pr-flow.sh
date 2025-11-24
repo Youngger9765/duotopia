@@ -336,6 +336,66 @@ patrol-issues() {
   echo -e "  ${YELLOW}gh issue view <issue_number> --web${NC}              - Open in browser"
 }
 
+# Check issue comments and auto-label if approved
+mark-issue-approved() {
+  local issue_num=$1
+
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: mark-issue-approved <issue_number>${NC}"
+    return 1
+  fi
+
+  echo -e "${BLUE}🔍 Checking comments for Issue #${issue_num}...${NC}"
+  echo ""
+
+  # Get issue comments
+  local comments=$(gh issue view "$issue_num" --json comments --jq '.comments[] | "\(.author.login): \(.body)"')
+
+  if [ -z "$comments" ]; then
+    echo -e "${YELLOW}⚠️  No comments found on Issue #${issue_num}${NC}"
+    return 0
+  fi
+
+  # Check for approval keywords
+  local approval_keywords="測試通過|approved|✅|LGTM"
+  local has_approval=false
+  local approver=""
+
+  while IFS= read -r comment; do
+    local author=$(echo "$comment" | cut -d: -f1)
+    local body=$(echo "$comment" | cut -d: -f2-)
+
+    # Check if comment contains approval keywords
+    if echo "$body" | grep -qiE "$approval_keywords"; then
+      # Check if author is case owner (kaddy-eunice or Youngger9765)
+      if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+        has_approval=true
+        approver="$author"
+        echo -e "${GREEN}✅ Found approval from @${approver}${NC}"
+        echo -e "${BLUE}   Comment: ${body:0:100}...${NC}"
+        break
+      fi
+    fi
+  done <<< "$comments"
+
+  if [ "$has_approval" = true ]; then
+    # Check if already has the label
+    local has_label=$(gh issue view "$issue_num" --json labels --jq '.labels[].name' | grep -c "✅ tested-in-staging" || true)
+
+    if [ "$has_label" -eq 0 ]; then
+      echo ""
+      echo -e "${YELLOW}📝 Adding 'tested-in-staging' label...${NC}"
+      gh issue edit "$issue_num" --add-label "✅ tested-in-staging"
+      echo -e "${GREEN}✅ Label added to Issue #${issue_num}${NC}"
+    else
+      echo -e "${GREEN}✅ Issue #${issue_num} already has 'tested-in-staging' label${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⏳ No approval found from case owner yet${NC}"
+    echo -e "${BLUE}💡 Case owner should comment: \"測試通過\" or \"approved\"${NC}"
+  fi
+}
+
 # Check if all issues in Release PR are approved
 check-approvals() {
   echo -e "${BLUE}🔍 Checking approval status...${NC}"
@@ -381,7 +441,12 @@ check-approvals() {
   for issue in $issues; do
     total_count=$((total_count + 1))
 
-    # Get issue labels
+    # Auto-check comments and mark as approved if found
+    echo -e "${YELLOW}Checking Issue #${issue}...${NC}"
+    mark-issue-approved "$issue" | sed 's/^/  /'
+    echo ""
+
+    # Get issue labels after auto-marking
     local labels=$(gh issue view "$issue" --json labels --jq '.labels[].name' | tr '\n' ',' | sed 's/,$//')
 
     if echo "$labels" | grep -q "✅ tested-in-staging"; then
@@ -391,6 +456,7 @@ check-approvals() {
       echo -e "  ⏳ Issue #${issue} - ${YELLOW}Waiting for approval${NC}"
       all_approved=false
     fi
+    echo ""
   done
 
   echo ""
@@ -434,7 +500,8 @@ git-flow-help() {
   echo -e "${GREEN}Release Management:${NC}"
   echo -e "  ${YELLOW}create-release-pr${NC}                  - Create/update release PR"
   echo -e "  ${YELLOW}update-release-pr${NC}                  - Alias for create-release-pr"
-  echo -e "  ${YELLOW}check-approvals${NC}                    - Check approval status for release"
+  echo -e "  ${YELLOW}mark-issue-approved <issue>${NC}        - Check comments & auto-label if approved"
+  echo -e "  ${YELLOW}check-approvals${NC}                    - Check all issues & mark approved ones"
   echo ""
   echo -e "${GREEN}Status & Info:${NC}"
   echo -e "  ${YELLOW}git-flow-status${NC}                    - Show current workflow status"
@@ -447,9 +514,9 @@ git-flow-help() {
   echo -e "  3. ${YELLOW}deploy-feature 7${NC}"
   echo -e "  4. Test in staging"
   echo -e "  5. ${YELLOW}update-release-pr${NC}"
-  echo -e "  6. Case owner tests and comments \"測試通過\" (auto-adds label)"
-  echo -e "  7. ${YELLOW}check-approvals${NC} (verify all issues approved)"
-  echo -e "  8. ${YELLOW}gh pr merge <PR_NUMBER>${NC} (auto-ready when all approved)"
+  echo -e "  6. Case owner comments \"測試通過\" on issue"
+  echo -e "  7. ${YELLOW}check-approvals${NC} (auto-detects approval & adds label)"
+  echo -e "  8. ${YELLOW}gh pr merge <PR_NUMBER>${NC} (when all approved)"
 }
 
 # Export functions for use in shell
@@ -461,6 +528,7 @@ export -f create-release-pr
 export -f update-release-pr
 export -f git-flow-status
 export -f patrol-issues
+export -f mark-issue-approved
 export -f check-approvals
 export -f git-flow-help
 

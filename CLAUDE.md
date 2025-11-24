@@ -600,27 +600,35 @@ check-approvals
 
 **當 case owner（如 Kaddy）測試通過後**：
 
-1. **手動加上批准標籤**
-   ```bash
-   gh issue edit <issue_number> --add-label "✅ tested-in-staging"
-   ```
+1. **Case owner 在 issue 留言「測試通過」**
+   - 不需要手動加 label，agent 會自動偵測
 
-2. **檢查所有 issues 的批准狀態**
+2. **執行 `check-approvals` 檢查批准狀態**
    ```bash
    check-approvals
    ```
-   - 顯示每個 issue 的批准狀態
+   - **自動讀取所有 issues 的留言**
+   - **自動偵測批准關鍵字**（測試通過、approved、✅、LGTM）
+   - **自動加上 `✅ tested-in-staging` label**（如果 case owner 已批准）
    - 顯示進度統計（幾個已批准/總共幾個）
    - 提供下一步建議（是否可以 deploy to production）
 
-3. **全部批准後**
+3. **單獨檢查某個 issue**（可選）
+   ```bash
+   mark-issue-approved <issue_number>
+   ```
+   - 讀取該 issue 的所有留言
+   - 如果找到 case owner 的批准留言，自動加 label
+
+4. **全部批准後**
    - 執行 `check-approvals` 確認全部通過
-   - 使用 `gh pr ready <PR_NUMBER>` 標記 PR 為 Ready for review
+   - 使用 `gh pr ready <PR_NUMBER>` 標記 PR 為 Ready for review（如果需要）
    - 使用 `gh pr merge <PR_NUMBER> --merge` 部署到 production
 
 **為什麼不用 GitHub Actions 自動化？**
 - 避免持續監控 issues 浪費 CI/CD 資源
 - 手動執行更可控，只在需要時才執行
+- Agent 會在執行時才讀取留言並判斷，不會持續消耗資源
 
 #### 重要規則
 - ❌ 不要手動創建 feature → staging 的 PR
