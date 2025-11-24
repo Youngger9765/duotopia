@@ -51,6 +51,9 @@ environment = os.getenv("ENVIRONMENT", "development")
 if environment == "development":
     # 開發環境可以使用較寬鬆的設定
     allowed_origins = ["*"]
+elif environment == "develop":
+    # Develop 環境允許所有來源（測試用）
+    allowed_origins = ["*"]
 elif environment == "staging":
     # Staging 環境暫時允許所有來源（方便測試）
     allowed_origins = ["*"]
