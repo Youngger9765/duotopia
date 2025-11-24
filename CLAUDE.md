@@ -4,6 +4,152 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 最高指導原則：修完要自己去測試過！
 
+## 🧠 AI Issue 處理 PDCA 流程（強制執行）
+
+**在開始修復任何 issue 之前，必須在該 issue 下留言完整的 PDCA 分析報告**
+
+### 📋 強制分析報告格式
+
+```markdown
+## 🔍 P (Plan) - 問題分析與規劃
+
+### 1. 問題理解
+- **Issue 描述**：[簡述問題]
+- **影響範圍**：[前端/後端/資料庫/全棧]
+- **嚴重程度**：[Critical/High/Medium/Low]
+
+### 2. 技術分析
+- **涉及檔案**：
+  - `path/to/file1.ts` - [說明]
+  - `path/to/file2.py` - [說明]
+- **涉及技術**：[React/FastAPI/PostgreSQL/etc]
+- **相關功能**：[列出相關功能模組]
+
+### 3. 🔴 Schema 變更檢查（強制）
+- [ ] **是否需要修改 DB Schema？**
+  - ✅ 否 - 可以使用共用 staging DB
+  - ❌ 是 - **禁止自動化處理，需要人工審查**
+    - 需要修改的 tables：
+    - 需要新增的 columns/tables：
+    - Migration 計畫：
+
+### 4. 根因分析
+- **問題根本原因**：[詳細說明]
+- **為何會發生**：[分析原因]
+- **相關 logs/錯誤訊息**：
+  ```
+  [貼上相關錯誤訊息]
+  ```
+
+### 5. 解決方案設計
+- **方案 A**：[描述] - 優點：[] 缺點：[]
+- **方案 B**：[描述] - 優點：[] 缺點：[]
+- **✅ 選擇方案**：[A/B] - 原因：[]
+
+### 6. 實作計畫
+1. [ ] 步驟 1：[具體動作]
+2. [ ] 步驟 2：[具體動作]
+3. [ ] 步驟 3：[具體動作]
+
+### 7. 測試計畫
+- **單元測試**：[需要寫哪些測試]
+- **整合測試**：[測試哪些流程]
+- **手動測試步驟**：
+  1. [步驟 1]
+  2. [步驟 2]
+
+### 8. 風險評估
+- **潛在風險**：
+  - 風險 1：[描述] - 機率：[High/Med/Low] - 緩解措施：[]
+  - 風險 2：[描述] - 機率：[High/Med/Low] - 緩解措施：[]
+- **Rollback 計畫**：[如果出問題怎麼回復]
+
+### 9. 信心評估
+- **修復把握度**：[0-100%]
+- **預估時間**：[X 小時]
+- **需要額外協助**：[是/否] - [說明]
+
+---
+
+## 🚀 D (Do) - 執行修復
+
+[實作完成後更新此區塊]
+
+### 修改內容
+- 修改檔案 1：`path/to/file` - [做了什麼]
+- 修改檔案 2：`path/to/file` - [做了什麼]
+
+### Commit 資訊
+- Commit hash: `abc123`
+- Branch: `fix/issue-X-description`
+
+---
+
+## ✅ C (Check) - 驗證結果
+
+[測試完成後更新此區塊]
+
+### 測試結果
+- [ ] 單元測試：PASSED
+- [ ] 整合測試：PASSED
+- [ ] 手動測試：PASSED
+- [ ] Code review：PASSED
+
+### 測試證據
+- Screenshot: [連結或描述]
+- 測試 URL: [staging URL]
+
+---
+
+## 🔄 A (Act) - 檢討與改進
+
+[完成後更新此區塊]
+
+### 實際 vs 預期
+- **預估時間** vs **實際時間**：
+- **預期難度** vs **實際難度**：
+
+### 遇到的問題
+1. [問題 1] - 如何解決：[]
+2. [問題 2] - 如何解決：[]
+
+### 學到的教訓
+- [經驗 1]
+- [經驗 2]
+
+### 後續改進建議
+- [建議 1]
+- [建議 2]
+```
+
+---
+
+### 🔴 強制規則
+
+1. **禁止跳過 PDCA 分析**
+   - ❌ 看到 issue 就直接開始寫 code
+   - ✅ 必須先在 issue 下留言完整 PDCA 分析
+   - ✅ 等待用戶確認後才開始實作
+
+2. **Schema 變更紅線**
+   - ❌ **絕對禁止**自動處理涉及 DB schema 變更的 issue
+   - ✅ 必須在 PDCA 分析中明確標示「需要 DB schema 變更」
+   - ✅ 必須等待人工審查和批准
+   - ✅ 提供完整的 migration 計畫
+
+3. **Code Review 要求**
+   - ✅ 每個修復必須附上完整的 Code Review 報告
+   - ✅ 說明修改的邏輯、為何這樣改、考慮了哪些 edge cases
+   - ✅ 提供測試證據（screenshots, logs）
+
+4. **信心評估紅線**
+   - 如果修復把握度 < 70%，必須：
+     - 🔴 在 PDCA 分析中說明原因
+     - 🔴 尋求額外協助或討論
+     - 🔴 考慮其他解決方案
+
+---
+
 ## 🔐 資安鐵則：絕對禁止 Hardcode Secrets！
 
 **絕對不要在任何會被 commit 的檔案中硬編碼 secrets！**
@@ -528,6 +674,37 @@ gh pr merge <PR_NUMBER> --merge
 - 「檢查 approval」、「查看批准狀態」、「check approvals」
 - 任何提到 GitHub Issue 編號（如「處理 #7」）
 
+#### 🚨 修復 Issue 前的強制檢查
+
+**⚠️ 在執行任何修復前，必須先執行以下步驟：**
+
+1. **讀取並理解 Issue**
+   ```bash
+   gh issue view <issue_number>
+   ```
+
+2. **在 Issue 下留言完整 PDCA 分析**（參考上方「AI Issue 處理 PDCA 流程」）
+   - 必須包含 Schema 變更檢查
+   - 必須評估風險和信心度
+   - 必須等待用戶確認
+
+3. **Schema 變更紅線檢查**
+   - 搜尋是否涉及以下檔案：
+     - `backend/alembic/versions/*.py`
+     - `backend/app/models/*.py` (修改 SQLAlchemy models)
+     - 任何包含 `CREATE TABLE`, `ALTER TABLE`, `ADD COLUMN` 的 SQL
+   - 如果涉及 Schema 變更：
+     - ❌ **立即停止自動化處理**
+     - ✅ 在 PDCA 分析中標記「需要 DB Schema 變更」
+     - ✅ 提供詳細的 migration 計畫
+     - ✅ 等待人工審查批准
+
+4. **用戶確認後才開始實作**
+   - 等待用戶回覆「開始實作」或「approved」
+   - 不要自作主張開始寫 code
+
+---
+
 #### 自動化流程
 
 **場景 1: 用戶說「修復 issue #7 學生登入問題」**
@@ -595,6 +772,63 @@ check-approvals
 # - 進度統計（幾個已批准/總共幾個）
 # - 下一步建議（是否可以 deploy to production）
 ```
+
+---
+
+## 🚀 Preview Environment 架構（Per-Issue 隔離測試）
+
+### 架構說明
+
+每個 issue 獨立部署到專屬的 Preview Environment：
+- **共用 Staging DB**（預設）
+- **獨立 Cloud Run instances** (min-instances=0, max-instances=1)
+- **獨立測試 URL**
+- **測試完自動清理**
+
+### 🔴 Schema 變更限制
+
+**絕對禁止**在 Preview Environment 中處理涉及 DB Schema 變更的 issue：
+- ❌ 修改 SQLAlchemy models
+- ❌ 新增/修改 Alembic migrations
+- ❌ 任何 `ALTER TABLE`, `CREATE TABLE` 操作
+
+**原因**：Preview environments 共用 staging DB，schema 變更會影響所有其他 preview instances。
+
+### Preview Environment 流程
+
+```bash
+# 1. 創建 feature branch（同時觸發 Preview Environment 部署）
+create-feature-fix 7 student-login
+
+# 2. CI/CD 自動部署到 Preview Environment
+# Preview URLs:
+# - Frontend: https://duotopia-preview-issue-7-frontend.run.app
+# - Backend: https://duotopia-preview-issue-7-backend.run.app
+
+# 3. 自動在 Issue #7 留言預覽 URLs
+# 4. Case owner 測試 Preview Environment
+# 5. 測試通過後留言「測試通過」
+
+# 6. 執行 check-approvals（自動偵測批准並加 label）
+check-approvals
+
+# 7. 批准後自動 merge to staging + 清理 preview instances
+```
+
+### Preview Environment 成本
+
+```yaml
+每個 Preview Environment:
+- Cloud Run (min=0, max=1): ~$0.12/hr
+- 測試期間 (1-2 小時): ~$0.24
+- 自動清理: 7 天後或 merge 後立即刪除
+
+月成本估算 (20 issues):
+- 20 issues * $0.24 = $4.8/月
+✅ 非常划算！
+```
+
+---
 
 #### Approval 手動流程（節省 CI/CD 成本）
 
