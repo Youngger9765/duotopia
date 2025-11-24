@@ -1699,14 +1699,27 @@ async def get_practice_words(
 
         # 2. 創建新的練習 session
         assignment = student_assignment.assignment
+
         # 確保 practice_mode 是正確的字串值 ('listening' 或 'writing')
         answer_mode_value = assignment.answer_mode
+        if answer_mode_value is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Assignment answer_mode is None. Please set answer_mode when creating assignment.",
+            )
+
         if isinstance(answer_mode_value, str):
             # 如果是字串，確保是小寫
             practice_mode_str = answer_mode_value.lower()
         else:
             # 如果是 enum，取其值（.value）
-            practice_mode_str = answer_mode_value.value
+            try:
+                practice_mode_str = answer_mode_value.value
+            except AttributeError:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Invalid answer_mode type: {type(answer_mode_value)}",
+                )
 
         practice_session = PracticeSession(
             student_id=student_id,
