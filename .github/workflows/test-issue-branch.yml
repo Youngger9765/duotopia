@@ -1,0 +1,12 @@
+name: Test Issue Branch Pattern
+
+on:
+  push:
+    branches:
+      - 'fix/issue-*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Branch ${{ github.ref_name }} matched!"
