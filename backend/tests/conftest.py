@@ -19,6 +19,13 @@ from models import (
     ContentType,
     Lesson,
     Program,
+    Student,
+    ClassroomStudent,
+    StudentAssignment,
+    StudentContentProgress,
+    StudentItemProgress,
+    AssignmentStatus,
+    ContentItem,
 )
 from auth import get_password_hash, create_access_token
 
@@ -272,3 +279,296 @@ def test_assignment(db_session, demo_teacher, test_classroom):
         "teacher_id": demo_teacher.id,
         "classroom_id": test_classroom["id"],
     }
+
+
+# Student Assignment Test Fixtures
+@pytest.fixture
+def demo_student(shared_test_session):
+    """Create a demo student for testing"""
+    from datetime import date
+
+    student = Student(
+        email="teststudent@duotopia.com",
+        password_hash=get_password_hash("test123"),
+        name="Test Student",
+        birthdate=date(2010, 1, 1),
+        email_verified=True,
+    )
+    shared_test_session.add(student)
+    shared_test_session.commit()
+    shared_test_session.refresh(student)
+    return student
+
+
+@pytest.fixture
+def auth_headers_student(test_client, demo_student):
+    """Create authentication headers for student"""
+    access_token = create_access_token(
+        data={"sub": str(demo_student.id), "type": "student"}
+    )
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture
+def test_student_assignment(db_session, demo_teacher, demo_student, test_classroom):
+    """Create a test student assignment with few items"""
+    from datetime import datetime, timedelta
+
+    classroom_student = ClassroomStudent(
+        classroom_id=test_classroom["id"], student_id=demo_student.id
+    )
+    db_session.add(classroom_student)
+    db_session.flush()
+
+    # Create Assignment
+    assignment = Assignment(
+        title="Test Student Assignment",
+        description="Test assignment for N+1 query tests",
+        classroom_id=test_classroom["id"],
+        teacher_id=demo_teacher.id,
+        due_date=datetime.utcnow() + timedelta(days=7),
+    )
+    db_session.add(assignment)
+    db_session.flush()
+
+    # Create Program and Lesson
+    program = Program(
+        name="Test Program",
+        teacher_id=demo_teacher.id,
+        classroom_id=test_classroom["id"],
+    )
+    db_session.add(program)
+    db_session.flush()
+
+    lesson = Lesson(program_id=program.id, name="Test Lesson")
+    db_session.add(lesson)
+    db_session.flush()
+
+    # Create 5 Contents with items
+    for i in range(5):
+        content = Content(
+            lesson_id=lesson.id,
+            type=ContentType.READING_ASSESSMENT,
+            title=f"Content {i+1}",
+        )
+        db_session.add(content)
+        db_session.flush()
+
+        # Create 3 ContentItems for each Content
+        for j in range(3):
+            content_item = ContentItem(
+                content_id=content.id,
+                text=f"Test text {i+1}-{j+1}",
+                translation=f"Translation {i+1}-{j+1}",
+                order_index=j,
+            )
+            db_session.add(content_item)
+        db_session.flush()
+
+        assignment_content = AssignmentContent(
+            assignment_id=assignment.id, content_id=content.id, order_index=i
+        )
+        db_session.add(assignment_content)
+
+    db_session.flush()
+
+    # Create StudentAssignment
+    student_assignment = StudentAssignment(
+        assignment_id=assignment.id,
+        student_id=demo_student.id,
+        classroom_id=test_classroom["id"],
+        title="Test Student Assignment",
+        status=AssignmentStatus.IN_PROGRESS,
+    )
+    db_session.add(student_assignment)
+    db_session.flush()
+
+    # Create StudentContentProgress for each content
+    assignment_contents = (
+        db_session.query(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .all()
+    )
+
+    for ac in assignment_contents:
+        progress = StudentContentProgress(
+            student_assignment_id=student_assignment.id,
+            content_id=ac.content_id,
+            status=AssignmentStatus.IN_PROGRESS,
+            order_index=ac.order_index,
+        )
+        db_session.add(progress)
+        db_session.flush()
+
+        # Create StudentItemProgress for each content item
+        content_items = (
+            db_session.query(ContentItem)
+            .filter(ContentItem.content_id == ac.content_id)
+            .all()
+        )
+        for item in content_items:
+            item_progress = StudentItemProgress(
+                student_assignment_id=student_assignment.id,
+                content_item_id=item.id,
+                status="IN_PROGRESS",
+            )
+            db_session.add(item_progress)
+
+    db_session.commit()
+
+    return {"id": student_assignment.id, "student_id": demo_student.id}
+
+
+@pytest.fixture
+def test_student_assignment_many_items(
+    db_session, demo_teacher, demo_student, test_classroom
+):
+    """Create a test student assignment with many items"""
+    from datetime import datetime, timedelta
+
+    classroom_student = ClassroomStudent(
+        classroom_id=test_classroom["id"], student_id=demo_student.id
+    )
+    db_session.add(classroom_student)
+    db_session.flush()
+
+    # Create Assignment
+    assignment = Assignment(
+        title="Test Student Assignment Many Items",
+        description="Test assignment with many items",
+        classroom_id=test_classroom["id"],
+        teacher_id=demo_teacher.id,
+        due_date=datetime.utcnow() + timedelta(days=7),
+    )
+    db_session.add(assignment)
+    db_session.flush()
+
+    # Create Program and Lesson
+    program = Program(
+        name="Test Program Many",
+        teacher_id=demo_teacher.id,
+        classroom_id=test_classroom["id"],
+    )
+    db_session.add(program)
+    db_session.flush()
+
+    lesson = Lesson(program_id=program.id, name="Test Lesson Many")
+    db_session.add(lesson)
+    db_session.flush()
+
+    # Create 15 Contents with 5 items each = 75 total items
+    for i in range(15):
+        content = Content(
+            lesson_id=lesson.id,
+            type=ContentType.READING_ASSESSMENT,
+            title=f"Content {i+1}",
+        )
+        db_session.add(content)
+        db_session.flush()
+
+        # Create 5 ContentItems for each Content
+        for j in range(5):
+            content_item = ContentItem(
+                content_id=content.id,
+                text=f"Test text {i+1}-{j+1}",
+                translation=f"Translation {i+1}-{j+1}",
+                order_index=j,
+            )
+            db_session.add(content_item)
+        db_session.flush()
+
+        assignment_content = AssignmentContent(
+            assignment_id=assignment.id, content_id=content.id, order_index=i
+        )
+        db_session.add(assignment_content)
+
+    db_session.flush()
+
+    # Create StudentAssignment
+    student_assignment = StudentAssignment(
+        assignment_id=assignment.id,
+        student_id=demo_student.id,
+        classroom_id=test_classroom["id"],
+        title="Test Student Assignment Many Items",
+        status=AssignmentStatus.IN_PROGRESS,
+    )
+    db_session.add(student_assignment)
+    db_session.flush()
+
+    # Create StudentContentProgress and StudentItemProgress
+    assignment_contents = (
+        db_session.query(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .all()
+    )
+
+    for ac in assignment_contents:
+        progress = StudentContentProgress(
+            student_assignment_id=student_assignment.id,
+            content_id=ac.content_id,
+            status=AssignmentStatus.IN_PROGRESS,
+            order_index=ac.order_index,
+        )
+        db_session.add(progress)
+        db_session.flush()
+
+        content_items = (
+            db_session.query(ContentItem)
+            .filter(ContentItem.content_id == ac.content_id)
+            .all()
+        )
+        for item in content_items:
+            item_progress = StudentItemProgress(
+                student_assignment_id=student_assignment.id,
+                content_item_id=item.id,
+                status="IN_PROGRESS",
+            )
+            db_session.add(item_progress)
+
+    db_session.commit()
+
+    return {"id": student_assignment.id, "student_id": demo_student.id}
+
+
+@pytest.fixture
+def test_student_with_linked_accounts(db_session, demo_student, test_classroom):
+    """Create a test student with linked accounts"""
+    from datetime import date
+
+    verified_email = "linked@duotopia.com"
+
+    # Use demo_student as the main student
+    demo_student.email = verified_email
+    demo_student.email_verified = True
+    db_session.flush()
+
+    # Add demo_student to classroom
+    cs1 = ClassroomStudent(
+        classroom_id=test_classroom["id"], student_id=demo_student.id
+    )
+    db_session.add(cs1)
+
+    # Create 5 linked accounts with same verified email
+    for i in range(5):
+        linked_student = Student(
+            email=verified_email,
+            password_hash=get_password_hash("test123"),
+            name=f"Linked Student {i+1}",
+            birthdate=date(2010, 1, 1),
+            email_verified=True,
+            is_active=True,  # 🔥 Ensure active
+        )
+        db_session.add(linked_student)
+        db_session.flush()
+
+        # Add to classroom
+        cs = ClassroomStudent(
+            classroom_id=test_classroom["id"],
+            student_id=linked_student.id,
+            is_active=True,  # 🔥 Ensure active
+        )
+        db_session.add(cs)
+
+    db_session.commit()
+
+    return {"id": demo_student.id, "linked_count": 5}
