@@ -229,20 +229,31 @@ async def get_current_student_or_teacher(
     try:
         if user_type == "student":
             # 驗證學生存在
-            student = temp_db.query(Student).filter(Student.id == int(user_id)).first()
-            if not student:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Student not found",
+            try:
+                student = (
+                    temp_db.query(Student).filter(Student.id == int(user_id)).first()
                 )
-            # 返回學生資訊（不返回 ORM 對象，避免 lazy loading 問題）
-            return {
-                "user_type": "student",
-                "user_id": int(user_id),
-                "student_id": student.id,
-                "name": student.name,
-                "email": student.email,
-            }
+                if not student:
+                    print(f"❌ Student not found: user_id={user_id}")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail=f"Student not found: user_id={user_id}",
+                    )
+                # 返回學生資訊（不返回 ORM 對象，避免 lazy loading 問題）
+                print(f"✅ Student authenticated: id={student.id}, name={student.name}")
+                return {
+                    "user_type": "student",
+                    "user_id": int(user_id),
+                    "student_id": student.id,
+                    "name": student.name,
+                    "email": student.email,
+                }
+            except Exception as e:
+                print(f"❌ Error in get_current_student_or_teacher: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Authentication error: {str(e)}",
+                )
 
         elif user_type == "teacher":
             # 驗證老師存在
