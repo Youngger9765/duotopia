@@ -160,11 +160,11 @@ export default function AdminBillingDashboard() {
   const dataAvailable = summary?.data_available && health?.bigquery_connected;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-4">
+      <div>
         <h2 className="text-2xl font-bold tracking-tight">GCP 費用監控</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground">
           即時追蹤 Google Cloud Platform 費用
         </p>
       </div>
@@ -339,7 +339,7 @@ export default function AdminBillingDashboard() {
       </div>
 
       {/* Summary Cards - Compact */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
             <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">

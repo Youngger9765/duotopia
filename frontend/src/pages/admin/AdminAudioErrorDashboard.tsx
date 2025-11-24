@@ -279,84 +279,100 @@ export default function AdminAudioErrorDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">錄音錯誤監控</h2>
-          <p className="text-muted-foreground text-sm">
-            監控學生錄音播放錯誤，快速定位問題
-          </p>
-        </div>
-
-        {/* System Health - Compact */}
-        {health && (
-          <div className="flex items-center gap-3 text-sm bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
-            <Database className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            <span className="font-medium">系統狀態</span>
-            <span className="text-gray-600 dark:text-gray-400">
-              BigQuery: {health.bigquery_connected ? "✅" : "❌"}
-            </span>
-            {health.table_available !== undefined && (
-              <span className="text-gray-600 dark:text-gray-400">
-                資料表: {health.table_available ? "✅" : "⚠️"}
-              </span>
-            )}
-            <span className="text-blue-600 dark:text-blue-400 text-xs">
-              📊 學生資料：生產環境 Supabase
-            </span>
-          </div>
-        )}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">錄音錯誤監控</h2>
+        <p className="text-muted-foreground">
+          監控學生錄音播放錯誤，快速定位問題
+        </p>
       </div>
 
+      {/* System Health */}
+      {health && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              系統狀態
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    health.bigquery_connected
+                      ? "bg-green-500 animate-pulse"
+                      : "bg-red-500"
+                  }`}
+                />
+                <div>
+                  <p className="text-sm font-medium">BigQuery 連線</p>
+                  <p className="text-xs text-muted-foreground">
+                    {health.bigquery_connected ? "已連線" : "未連線"}
+                  </p>
+                </div>
+              </div>
+              {health.table_available !== undefined && (
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-3 w-3 rounded-full ${
+                      health.table_available
+                        ? "bg-green-500 animate-pulse"
+                        : "bg-yellow-500"
+                    }`}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">資料表可用性</p>
+                    <p className="text-xs text-muted-foreground">
+                      {health.table_available ? "資料表已建立" : "等待建立"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Database className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">學生資料來源</p>
+                  <p className="text-xs text-muted-foreground">
+                    生產環境 Supabase
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Controls - Days Selection & Refresh */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => setDays(7)}
             variant={days === 7 ? "default" : "ghost"}
             size="sm"
-            className={
-              days === 7
-                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-                : "dark:text-gray-200 dark:hover:bg-gray-700"
-            }
           >
-            最近 7 天
+            過去 7 天
           </Button>
           <Button
             onClick={() => setDays(14)}
             variant={days === 14 ? "default" : "ghost"}
             size="sm"
-            className={
-              days === 14
-                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-                : "dark:text-gray-200 dark:hover:bg-gray-700"
-            }
           >
-            最近 14 天
+            過去 14 天
           </Button>
           <Button
             onClick={() => setDays(30)}
             variant={days === 30 ? "default" : "ghost"}
             size="sm"
-            className={
-              days === 30
-                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-                : "dark:text-gray-200 dark:hover:bg-gray-700"
-            }
           >
-            最近 30 天
+            過去 30 天
           </Button>
           <Button
             onClick={() => setDays(90)}
             variant={days === 90 ? "default" : "ghost"}
             size="sm"
-            className={
-              days === 90
-                ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-                : "dark:text-gray-200 dark:hover:bg-gray-700"
-            }
           >
-            最近三個月
+            過去 90 天
           </Button>
           {!showCustomDays ? (
             <div className="flex items-center gap-1">
@@ -364,14 +380,9 @@ export default function AdminAudioErrorDashboard() {
                 onClick={() => setShowCustomDays(true)}
                 variant={![7, 14, 30, 90].includes(days) ? "default" : "ghost"}
                 size="sm"
-                className={
-                  ![7, 14, 30, 90].includes(days)
-                    ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-                    : "dark:text-gray-200 dark:hover:bg-gray-700"
-                }
               >
                 {![7, 14, 30, 90].includes(days)
-                  ? `最近 ${days} 天`
+                  ? `過去 ${days} 天`
                   : "自訂天數"}
               </Button>
               {![7, 14, 30, 90].includes(days) && (
@@ -379,7 +390,7 @@ export default function AdminAudioErrorDashboard() {
                   onClick={() => setShowCustomDays(true)}
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 dark:text-gray-200 dark:hover:bg-gray-700"
+                  className="h-8 w-8 p-0"
                   title="修改天數"
                 >
                   <Edit className="h-3.5 w-3.5" />
@@ -400,7 +411,7 @@ export default function AdminAudioErrorDashboard() {
                     setCustomDaysInput("");
                   }
                 }}
-                className="w-20 h-8 text-sm dark:bg-gray-700 dark:text-white"
+                className="w-20 h-8 text-sm"
                 autoFocus
                 min="1"
                 max="365"
@@ -409,7 +420,7 @@ export default function AdminAudioErrorDashboard() {
                 onClick={handleCustomDays}
                 size="sm"
                 variant="ghost"
-                className="h-8 px-2 dark:text-gray-200"
+                className="h-8 px-2"
               >
                 ✓
               </Button>
@@ -420,7 +431,7 @@ export default function AdminAudioErrorDashboard() {
                 }}
                 size="sm"
                 variant="ghost"
-                className="h-8 px-2 dark:text-gray-200"
+                className="h-8 px-2"
               >
                 ✕
               </Button>
@@ -442,7 +453,7 @@ export default function AdminAudioErrorDashboard() {
 
       {/* Stats Cards - Compact */}
       {stats && stats.data_available && (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-red-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
               <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
