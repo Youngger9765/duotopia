@@ -837,6 +837,7 @@
       "title": "請輸入老師 Email",
       "placeholder": "teacher@example.com",
       "next": "下一步",
+      "validating": "驗證中...",
       "demoTeacher": "🎯 使用 Demo 教師 (demo@duotopia.com)",
       "quickTest": "快速測試：",
       "recentTeachers": "或選擇最近使用過的老師："
