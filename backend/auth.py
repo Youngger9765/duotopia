@@ -154,3 +154,113 @@ async def get_current_user(
         return payload
     except JWTError:
         raise credentials_exception
+
+
+async def get_current_student(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """取得當前登入的學生（返回 Student model 實例）
+
+    注意：這個函數僅允許學生訪問，不允許老師預覽。
+    如果需要允許老師預覽，請使用 get_current_student_or_teacher
+    """
+    from models import Student
+    from database import SessionLocal
+
+    # 驗證必須是學生
+    user_type = current_user.get("type")
+    if user_type != "student":
+        raise HTTPException(
+            status_code=403, detail="Only students can access this endpoint"
+        )
+
+    # 從資料庫查詢 Student 對象
+    user_id = current_user.get("sub")
+    db = SessionLocal()
+    try:
+        student = db.query(Student).filter(Student.id == int(user_id)).first()
+
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Student not found",
+            )
+
+        return student
+    finally:
+        db.close()
+
+
+async def get_current_student_or_teacher(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Any = Depends(lambda: None),  # Will be injected by endpoint's db parameter
+):
+    """取得當前登入的使用者（學生或老師）
+
+    用於支援老師預覽功能的 API endpoint
+    - 如果是學生，返回 Student 實例的資訊 dict
+    - 如果是老師，返回包含 user_type 的 dict
+
+    重要：這個函數需要和 db Session 一起使用
+    使用方式：
+    ```python
+    async def my_endpoint(
+        user = Depends(get_current_student_or_teacher),
+        db: Session = Depends(get_db),
+    ):
+        if user.get("user_type") == "student":
+            student_id = user["user_id"]
+            # 使用 student_id 查詢資料庫
+        else:
+            # 老師預覽邏輯
+    ```
+    """
+    from models import Student, Teacher
+    from database import SessionLocal
+
+    user_type = current_user.get("type")
+    user_id = current_user.get("sub")
+
+    # 使用臨時 session 僅用於驗證
+    temp_db = SessionLocal()
+    try:
+        if user_type == "student":
+            # 驗證學生存在
+            student = temp_db.query(Student).filter(Student.id == int(user_id)).first()
+            if not student:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Student not found",
+                )
+            # 返回學生資訊（不返回 ORM 對象，避免 lazy loading 問題）
+            return {
+                "user_type": "student",
+                "user_id": int(user_id),
+                "student_id": student.id,
+                "name": student.name,
+                "email": student.email,
+            }
+
+        elif user_type == "teacher":
+            # 驗證老師存在
+            teacher = temp_db.query(Teacher).filter(Teacher.id == int(user_id)).first()
+            if not teacher:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Teacher not found",
+                )
+            # 返回老師資訊
+            return {
+                "user_type": "teacher",
+                "user_id": int(user_id),
+                "teacher_id": teacher.id,
+                "name": teacher.name,
+                "email": teacher.email,
+            }
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid user type"
+            )
+    finally:
+        temp_db.close()

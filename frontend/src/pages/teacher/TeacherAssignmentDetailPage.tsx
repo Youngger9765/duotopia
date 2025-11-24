@@ -518,7 +518,7 @@ export default function TeacherAssignmentDetailPage() {
       SPEAKING_PRACTICE: "口說練習",
       SPEAKING_SCENARIO: "情境對話",
       LISTENING_CLOZE: "聽力填空",
-      SENTENCE_MAKING: "造句練習",
+      SENTENCE_MAKING: "句子模組",
       SPEAKING_QUIZ: "口說測驗",
     };
     return labels[type] || type;

@@ -131,13 +131,13 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
-    READING_ASSESSMENT = "reading_assessment"
-    SENTENCE_MAKING = "sentence_making"
+    READING_ASSESSMENT = "READING_ASSESSMENT"
+    SENTENCE_MAKING = "SENTENCE_MAKING"
     # Phase 2 擴展
-    # SPEAKING_PRACTICE = "speaking_practice"
-    # SPEAKING_SCENARIO = "speaking_scenario"
-    # LISTENING_CLOZE = "listening_cloze"
-    # SPEAKING_QUIZ = "speaking_quiz"
+    # SPEAKING_PRACTICE = "SPEAKING_PRACTICE"
+    # SPEAKING_SCENARIO = "SPEAKING_SCENARIO"
+    # LISTENING_CLOZE = "LISTENING_CLOZE"
+    # SPEAKING_QUIZ = "SPEAKING_QUIZ"
 
 
 # ============ 使用者系統 ============
@@ -720,9 +720,10 @@ class Assignment(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # 造句練習答題模式（只對 sentence_making 類型有效）
+    # 使用 String 而非 Enum 以匹配 migration 中的 VARCHAR 定義
     answer_mode = Column(
-        Enum(AnswerMode, name="answermode"),
-        default=AnswerMode.WRITING,
+        String(20),
+        default="writing",
         server_default="writing",
         nullable=False,
     )
@@ -1273,7 +1274,7 @@ class PracticeSession(Base):
 
     # 練習模式
     practice_mode = Column(
-        Enum(AnswerMode, name="practicemode"), nullable=False
+        String(20), nullable=False
     )  # 'listening' or 'writing'
 
     # 本次練習統計

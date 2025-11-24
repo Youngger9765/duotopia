@@ -51,7 +51,7 @@ const contentTypes: ContentType[] = [
   },
   {
     type: "sentence_making",
-    name: "造句練習",
+    name: "句子模組",
     description: "使用指定單字或句型造句",
     icon: "✍️",
     disabled: false,
