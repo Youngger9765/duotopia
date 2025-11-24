@@ -79,18 +79,47 @@ gh issue comment 15 --body "## PDCA Plan..."
 git checkout -b fix/issue-15-xxx
 
 # 3. 實作修復並 commit
-git commit -m "fix: xxx Fixes #15"
+# ⚠️ 重要：Commit message 中絕對不要使用 "Fixes #N" 或 "Closes #N"
+# 原因：會在 push to main 時自動關閉 issue，跳過測試流程
+git commit -m "fix: xxx (related to #15)"
 
 # 4. Push 到 feature branch（觸發 Per-Issue Test Environment）
 git push origin fix/issue-15-xxx
 
 # 5. 創建 PR（重點：不是直接 merge！）
-gh pr create --base staging --head fix/issue-15-xxx
+# ⚠️ PR description 中也不要寫 "Fixes #15"
+gh pr create --base staging --head fix/issue-15-xxx \
+  --title "Fix: xxx" \
+  --body "Related to #15"
 
 # 6. 等待 CI/CD 自動部署並在 Issue 留言 preview URLs
 # 7. 案主在 Per-Issue Test Environment 測試
-# 8. 測試通過後 merge PR
+# 8. 測試通過後，在 Issue 留言「測試通過」
+# 9. 執行 check-approvals 自動偵測批准並加 label
+check-approvals
+# 10. 最後 merge PR 到 staging
 gh pr merge <PR_NUMBER>
+```
+
+### ⚠️ 避免意外關閉 Issue 的規則
+
+**問題**：如果在 commit message 或 PR description 中使用 `Fixes #N`, `Closes #N`, `Resolves #N` 等關鍵字，GitHub 會在該 commit push 到 main 時自動關閉 issue，即使案主還沒測試！
+
+**解決方案**：
+1. **Commit message** - 只使用 `related to #N` 或 `(#N)` 提及 issue
+2. **PR description** - 使用 `Related to #N` 而不是 `Fixes #N`
+3. **只在最後** - 只有在 staging → main 的 Release PR 中才使用 `Fixes #N`
+4. **Release PR 規則** - 只有通過 `check-approvals` 確認所有 issue 都測試通過後，才能 merge Release PR
+
+**正確示例**：
+```bash
+# ✅ 正確：不會自動關閉 issue
+git commit -m "fix: 修復 Admin CSS 統一性問題 (related to #15)"
+gh pr create --body "修復 Admin CSS 問題，詳見 #15"
+
+# ❌ 錯誤：會在 push to main 時自動關閉 issue
+git commit -m "fix: 修復 Admin CSS Fixes #15"
+gh pr create --body "修復 Admin CSS 問題 Fixes #15"
 ```
 
 ### 為什麼針對 Issue 要這樣做？

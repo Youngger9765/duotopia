@@ -25,6 +25,12 @@
 - 改善測試覆蓋率
 - 更新文件和規範
 
+### 4. ⚠️ 避免意外關閉 Issue
+- **Feature branch commit**: 使用 `Related to #N`，**不要用** `Fixes #N`
+- **Feature branch PR**: 使用 `Related to #N`，**不要用** `Fixes #N`
+- **Release PR (staging → main)**: **只有這裡**才使用 `Fixes #N`
+- **原因**: GitHub 會在 commit push to main 時自動關閉 issue，跳過測試流程
+
 ---
 
 ## 📋 完整工作流程
@@ -264,11 +270,12 @@ screencapture -x test_pass_issue_<NUM>.png
 
 ```bash
 git add .
+# ⚠️ 重要：不要使用 "Fixes #N"！會在 push to main 時自動關閉 issue
 git commit -m "fix: [簡短描述]
 
 [詳細說明]
 
-Fixes #<NUM>"
+Related to #<NUM>"
 ```
 
 ### Step 2.6: Push 觸發 Per-Issue Test Environment
@@ -534,7 +541,8 @@ Shell 環境：
 ### 6. Release PR Management
 - Create/update Draft PR: staging → main
 - Track multiple issues in one PR
-- Auto-close issues on merge using "Fixes #N" syntax
+- **只在 Release PR 使用 "Fixes #N"**（staging → main）
+- ⚠️ Feature branch PR 不要用 "Fixes #N"（會提前關閉 issue）
 
 ### 7. Issue Management
 - Update issues with deployment status
@@ -684,9 +692,10 @@ create-feature-fix 7 student-login-loading
 
 # 2. Make changes, commit
 git add .
+# ⚠️ 不要用 "Fixes #7"，會在 push to main 時自動關閉 issue
 git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題
 
-Fixes #7"
+Related to #7"
 
 # 3. Push to trigger Per-Issue Test Environment deployment
 git push origin fix/issue-7-student-login-loading
@@ -733,7 +742,8 @@ deploy-feature 12
 
 # Create/update release PR with all fixes
 update-release-pr
-# PR will include: Fixes #7, #10, #12
+# ✅ Release PR (staging → main) 使用 "Fixes #N" 是正確的
+# PR description 會包含: Fixes #7, #10, #12
 ```
 
 ### Example 3: Deploy to Production

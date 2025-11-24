@@ -70,6 +70,44 @@ jobs:
           docker push "${IMAGE}"
 
           echo "🔍 DEBUG: Deploying to Cloud Run"
+
+          # 計算 frontend URL（待 frontend 部署完成後會更新）
+          FRONTEND_URL="https://duotopia-preview-issue-${ISSUE}-frontend-${PROJECT_ID}.${REGION}.run.app"
+
+          # 環境變數設定（使用 staging 的配置）
+          ENV_VARS="DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}"
+          ENV_VARS="$ENV_VARS,DATABASE_POOLER_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}"
+          ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
+          ENV_VARS="$ENV_VARS,PROD_DATABASE_POOLER_URL=${{ secrets.PROD_DATABASE_POOLER_URL }}"
+          ENV_VARS="$ENV_VARS,JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}"
+          ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
+          ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=1440"
+          ENV_VARS="$ENV_VARS,ENVIRONMENT=preview"
+          ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}"
+          ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_KEY }}"
+          ENV_VARS="$ENV_VARS,FRONTEND_URL=${FRONTEND_URL}"
+          ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+          ENV_VARS="$ENV_VARS,SMTP_HOST=${{ secrets.SMTP_HOST }}"
+          ENV_VARS="$ENV_VARS,SMTP_PORT=${{ secrets.SMTP_PORT }}"
+          ENV_VARS="$ENV_VARS,SMTP_USER=${{ secrets.SMTP_USER }}"
+          ENV_VARS="$ENV_VARS,SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
+          ENV_VARS="$ENV_VARS,FROM_EMAIL=${{ secrets.FROM_EMAIL }}"
+          ENV_VARS="$ENV_VARS,FROM_NAME=${{ secrets.FROM_NAME }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}"
+          ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=${PROJECT_ID}"
+          ENV_VARS="$ENV_VARS,REGION=${REGION}"
+          ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_MERCHANT_ID=${{ secrets.TAPPAY_SANDBOX_MERCHANT_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
+
           gcloud run deploy "${SERVICE}" \
             --image "${IMAGE}" \
             --platform managed \
@@ -79,7 +117,7 @@ jobs:
             --memory 512Mi \
             --max-instances 1 \
             --min-instances 0 \
-            --set-env-vars "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }},ENVIRONMENT=preview" \
+            --set-env-vars "${ENV_VARS}" \
             --labels "environment=preview,issue=${ISSUE}"
 
           echo "🔍 DEBUG: Getting service URL"
