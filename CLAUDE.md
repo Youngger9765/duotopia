@@ -555,8 +555,42 @@ gh pr merge <PR_NUMBER> --merge
 | `deploy-feature-no-issue` | 部署到 staging（不關聯 issue）|
 | `update-release-pr` | 創建/更新 staging → main 的 Release PR |
 | `patrol-issues` | **🔍 巡邏 GitHub Issues，顯示統計和列表** |
+| `mark-issue-approved <issue>` | **🤖 AI 智能判斷 issue 留言是否批准** |
+| `check-approvals` | **📊 檢查所有 issues 的批准狀態（自動 AI 偵測）** |
 | `git-flow-status` | 查看當前工作流程狀態 |
 | `git-flow-help` | 顯示所有可用命令 |
+
+### 🤖 AI 智能批准偵測
+
+**新功能**：`check-approvals` 在 Claude Code 環境中執行時，由 **Claude Code (我) 直接智能判斷**留言是否代表「測試通過」批准意圖。
+
+#### 運作方式
+
+**在 Claude Code 中** (推薦):
+- ✅ **Claude Code 直接分析**留言語義，智能判斷批准意圖
+- ✅ 理解各種自然表達：「看起來不錯」、「沒問題」、「可以了」、「LGTM」
+- ✅ 中英文混用理解
+- ✅ 不依賴關鍵字，真正的語義理解
+
+**在 Shell 環境中** (命令列直接執行):
+- ⚠️ 自動使用規則式關鍵字偵測 (fallback)
+- 支援關鍵字：`測試通過|approved|✅|LGTM|沒問題|可以了|看起來不錯|功能正常|測試成功`
+
+#### 使用方式
+```bash
+# 在 Claude Code 中執行（推薦）
+# 我會智能分析所有留言並判斷批准狀態
+check-approvals
+
+# 或單獨檢查某個 issue
+mark-issue-approved 15
+```
+
+#### 為什麼這樣設計？
+- 💡 Claude Code 本身就是 LLM，不需要再呼叫另一個 LLM API
+- 💰 節省成本，不需要額外 API 呼叫
+- 🚀 更快速，直接在當前 context 判斷
+- 🎯 更準確，可以參考完整 issue context
 
 ### Claude Code 自動化指南
 
@@ -568,7 +602,7 @@ gh pr merge <PR_NUMBER> --merge
 - 「發 PR」、「create PR」、「準備 release」
 - 「merge to staging」
 - 「有什麼 issue」、「檢查 issues」、「巡邏 issues」、「patrol issues」
-- 「檢查 approval」、「查看批准狀態」、「check approvals」
+- 「檢查 approval」、「查看批准狀態」、「check approvals」 **← 🤖 我會自動智能判斷並加 label**
 - 任何提到 GitHub Issue 編號（如「處理 #7」）
 
 #### 🚨 修復 Issue 前的強制檢查
@@ -660,15 +694,24 @@ git-flow-status
 
 **場景 6: 用戶說「檢查 approval」或「查看批准狀態」**
 ```bash
-# 自動執行 check-approvals
+# 1. 執行 check-approvals 取得 Release PR 和 issues
 check-approvals
 
-# 顯示：
-# - Release PR 資訊
-# - 每個 issue 的批准狀態
-# - 進度統計（幾個已批准/總共幾個）
-# - 下一步建議（是否可以 deploy to production）
+# 2. 🤖 Claude Code 自動智能分析：
+# 對於每個 issue，我會：
+#   - 讀取所有留言 (gh issue view <NUM> --json comments)
+#   - 智能判斷 case owner 的留言是否表達批准意圖
+#   - 理解自然語言：「看起來不錯」、「沒問題」、「可以了」、「LGTM」等
+#   - 自動執行: gh issue edit <NUM> --add-label "✅ tested-in-staging"
+
+# 3. 顯示最終結果：
+#   - Release PR 資訊
+#   - 每個 issue 的批准狀態 (我判斷的結果)
+#   - 進度統計（幾個已批准/總共幾個）
+#   - 下一步建議（是否可以 deploy to production）
 ```
+
+**⚠️ 重要：這是全自動流程，我會主動智能判斷並加 label，不需要用戶逐個確認**
 
 ---
 

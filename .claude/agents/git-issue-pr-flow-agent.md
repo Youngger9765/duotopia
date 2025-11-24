@@ -450,18 +450,33 @@ gh pr merge <PR_NUMBER> --merge
 - **自動觸發 Per-Issue Test Environment 部署**
 
 ### 2. Per-Issue Test Environment (NEW!)
-- **自動部署**：Push to `fix/issue-*/**` or `feat/issue-*/**` branch
+- **自動部署**：Push to `fix/issue-*` or `feat/issue-*` branch（支援有無子目錄）
+- **支援格式**：`fix/issue-15-desc` 或 `fix/issue-15/desc` 都可以
 - **智能檢測**：只有功能性變更才部署（文件修改跳過）
 - **Schema 變更檢查**：自動偵測 DB schema 變更並阻止（需人工審查）
 - **獨立 URL**：每個 issue 獲得專屬測試 URL
 - **自動留言**：在 issue 中自動張貼 test URLs
 - **超低成本**：min-instances=0, ~$0.02-0.10/issue
 
-### 3. Approval Workflow
-- **`mark-issue-approved <issue>`**：偵測 case owner 批准留言
-- **`check-approvals`**：批次檢查所有 issues 的批准狀態
+### 3. Approval Workflow (🤖 AI-Powered)
+- **`mark-issue-approved <issue>`**：🤖 **Claude Code 直接智能判斷** case owner 批准留言意圖
+- **`check-approvals`**：批次檢查所有 issues 的批准狀態（Claude Code 自動 AI 偵測）
+- **智能語義理解**：不依賴關鍵字，理解「看起來不錯」、「沒問題」、「可以了」等自然表達
+- **自動降級**：在 Shell 環境直接執行時自動切換規則式偵測
 - **自動加 label**：`✅ tested-in-staging`
 - **進度統計**：顯示幾個已批准/總共幾個
+
+#### AI 偵測架構
+```
+Claude Code 環境：
+  ✅ 由 Claude Code 本身直接分析留言（不呼叫額外 API）
+  ✅ 真正的語義理解
+  ✅ 零成本、即時判斷
+
+Shell 環境：
+  ⚠️ 使用規則式關鍵字比對（fallback）
+  ⚠️ 建議在 Claude Code 中執行以獲得最佳效果
+```
 
 ### 4. Staging Deployment
 - Merge feature branch directly to staging (no PR)

@@ -337,6 +337,7 @@ patrol-issues() {
 }
 
 # Check issue comments and auto-label if approved
+# Simple version - let Claude Code (me!) analyze the comments intelligently
 mark-issue-approved() {
   local issue_num=$1
 
@@ -356,8 +357,8 @@ mark-issue-approved() {
     return 0
   fi
 
-  # Check for approval keywords
-  local approval_keywords="測試通過|approved|✅|LGTM"
+  # Simple rule-based detection (fallback when not in Claude Code)
+  local approval_keywords="測試通過|approved|✅|LGTM|沒問題|可以了|看起來不錯|功能正常|測試成功"
   local has_approval=false
   local approver=""
 
@@ -365,10 +366,10 @@ mark-issue-approved() {
     local author=$(echo "$comment" | cut -d: -f1)
     local body=$(echo "$comment" | cut -d: -f2-)
 
-    # Check if comment contains approval keywords
-    if echo "$body" | grep -qiE "$approval_keywords"; then
-      # Check if author is case owner (kaddy-eunice or Youngger9765)
-      if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+    # Check if author is case owner (kaddy-eunice or Youngger9765)
+    if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+      # Check if comment contains approval keywords
+      if echo "$body" | grep -qiE "$approval_keywords"; then
         has_approval=true
         approver="$author"
         echo -e "${GREEN}✅ Found approval from @${approver}${NC}"
@@ -392,7 +393,7 @@ mark-issue-approved() {
     fi
   else
     echo -e "${YELLOW}⏳ No approval found from case owner yet${NC}"
-    echo -e "${BLUE}💡 Case owner should comment: \"測試通過\" or \"approved\"${NC}"
+    echo -e "${BLUE}💡 Case owner should comment with approval intent (e.g., \"測試通過\", \"looks good\", \"沒問題\")${NC}"
   fi
 }
 

@@ -3,8 +3,10 @@ name: Deploy Per-Issue Test Environment
 on:
   push:
     branches:
-      - 'fix/issue-*/**'
-      - 'feat/issue-*/**'
+      - 'fix/issue-*'       # 支援無子目錄: fix/issue-15-desc
+      - 'fix/issue-*/**'    # 支援有子目錄: fix/issue-15/desc
+      - 'feat/issue-*'      # 支援無子目錄: feat/issue-15-desc
+      - 'feat/issue-*/**'   # 支援有子目錄: feat/issue-15/desc
     paths:
       - 'frontend/**'
       - 'backend/**'
