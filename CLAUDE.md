@@ -525,6 +525,7 @@ gh pr merge <PR_NUMBER> --merge
 - 「發 PR」、「create PR」、「準備 release」
 - 「merge to staging」
 - 「有什麼 issue」、「檢查 issues」、「巡邏 issues」、「patrol issues」
+- 「檢查 approval」、「查看批准狀態」、「check approvals」
 - 任何提到 GitHub Issue 編號（如「處理 #7」）
 
 #### 自動化流程
@@ -582,6 +583,41 @@ patrol-issues
 # 自動執行 git-flow-status
 git-flow-status
 ```
+
+**場景 6: 用戶說「檢查 approval」或「查看批准狀態」**
+```bash
+# 自動執行 check-approvals
+check-approvals
+
+# 顯示：
+# - Release PR 資訊
+# - 每個 issue 的批准狀態
+# - 進度統計（幾個已批准/總共幾個）
+# - 下一步建議（是否可以 deploy to production）
+```
+
+#### Approval 自動化流程
+
+**當 case owner（如 Kaddy）在 issue 留言「測試通過」或「approved」時**：
+
+1. **GitHub Actions 自動觸發**
+   - 檢測關鍵字：「測試通過」、「approved」、「✅」、「LGTM」
+   - 驗證留言者是否為 case owner（kaddy-eunice 或 Youngger9765）
+
+2. **自動加上標籤**
+   - 加上 `✅ tested-in-staging` label 到該 issue
+
+3. **檢查 Release PR**
+   - 找到包含此 issue 的 Release PR
+   - 檢查 PR 中所有 issues 是否都有 `✅ tested-in-staging` label
+
+4. **全部批准後自動動作**
+   - 標記 PR 為 Ready for review（移除 Draft 狀態）
+   - 在 PR 加上評論通知可以 merge
+
+5. **使用 `check-approvals` 手動檢查**
+   - 任何時候想知道批准進度，執行 `check-approvals`
+   - 顯示清楚的進度統計和下一步建議
 
 #### 重要規則
 - ❌ 不要手動創建 feature → staging 的 PR
