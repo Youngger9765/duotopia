@@ -37,3 +37,17 @@ jobs:
           echo "🔍 DEBUG: Testing extract output"
           echo "Issue from extract: ${{ needs.extract.outputs.issue_number }}"
 
+  deploy-backend:
+    runs-on: ubuntu-latest
+    needs: extract
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Mock backend deploy
+        id: deploy
+        run: |
+          echo "🔍 DEBUG: Mock deploying backend"
+          ISSUE=${{ needs.extract.outputs.issue_number }}
+          URL="https://backend-issue-${ISSUE}.example.com"
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "✅ Mock backend URL: ${URL}"
