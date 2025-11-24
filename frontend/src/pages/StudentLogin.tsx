@@ -261,9 +261,20 @@ export default function StudentLogin() {
                   disabled={!teacherEmail || loading}
                   className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
-                  {t("studentLogin.step1.next")}
+                  {loading ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      {t("studentLogin.step1.validating")}
+                    </>
+                  ) : (
+                    t("studentLogin.step1.next")
+                  )}
                 </Button>
               </div>
+
+              {error && (
+                <p className="text-red-500 text-center mt-4">{error}</p>
+              )}
 
               {/* Demo 教師快捷鍵 - 只在非 production 或有 ?is_demo=true 時顯示 */}
               {showDemoBlocks && (
@@ -309,8 +320,6 @@ export default function StudentLogin() {
                   </div>
                 </div>
               )}
-
-              {error && <p className="text-red-500 text-center">{error}</p>}
             </div>
           )}
 

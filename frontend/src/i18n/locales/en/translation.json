@@ -837,6 +837,7 @@
       "title": "Enter Teacher's Email",
       "placeholder": "teacher@example.com",
       "next": "Next",
+      "validating": "Validating...",
       "demoTeacher": "🎯 Use Demo Teacher (demo@duotopia.com)",
       "quickTest": "Quick Test:",
       "recentTeachers": "Or select a recently used teacher:"
