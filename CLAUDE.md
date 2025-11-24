@@ -4,6 +4,103 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 最高指導原則：修完要自己去測試過！
 
+## 🤖 GitHub Issue 處理流程（交給 Agent）
+
+**⚠️ 所有 GitHub Issue 的處理都必須通過 Issue PDCA Agent**
+
+### 強制規則
+
+1. **絕對不要直接修 Issue**
+   - ❌ 看到 issue 就直接開始寫 code
+   - ✅ 必須先呼叫 Issue PDCA Agent
+   - ✅ 讓 Agent 執行完整的 PDCA 分析流程
+
+2. **Agent 負責的事情**
+   - 🔍 問題重現（複製現象，留下證據）
+   - 📊 根因分析（5 Why 分析）
+   - 🧪 TDD 測試計畫（先寫失敗的測試）
+   - ✅ 修復驗證（確認指標達成）
+   - 🛡️ 預防措施（改善測試，避免再發生）
+   - 📝 完整 PDCA 報告（在 issue 下留言）
+
+3. **呼叫 Agent 的指令**
+   ```bash
+   # 讀取 issue
+   gh issue view <issue_number>
+
+   # 呼叫 Issue PDCA Agent 處理
+   # Agent 會自動執行完整的 PDCA 流程
+   # 詳見：.claude/agents/issue-pdca-agent.md
+   ```
+
+4. **Schema 變更紅線**
+   - ❌ **絕對禁止**自動處理涉及 DB schema 變更的 issue
+   - ✅ Agent 會自動偵測並標記「需要 DB schema 變更」
+   - ✅ 必須等待人工審查批准
+   - ✅ 提供完整的 migration 計畫
+
+5. **不涉及 Schema 變更的 issue**
+   - ✅ PDCA Plan 完成後直接開始實作
+   - ✅ 除非沒把握，否則不需要等待批准
+   - ✅ 創建 PR 並自動部署 Per-Issue Test Environment
+
+---
+
+## 🚨 處理 GitHub Issue 的強制規則
+
+**⚠️ 只針對處理 Issue 時：必須透過 GitHub PR 和自動化流程！**
+
+### 📌 適用範圍
+**只有處理 GitHub Issue 時才強制走自動化流程**：
+- ✅ 修復 issue bug
+- ✅ 實作 issue feature request
+- ✅ 任何有 issue number 的工作
+
+**其他情況可以彈性處理**（不需要走 Issue 流程）：
+- ✅ 緊急 hotfix（沒有 issue）
+- ✅ 實驗性功能
+- ✅ 文件更新
+- ✅ 依賴升級
+
+### ❌ 處理 Issue 時禁止的操作
+```bash
+# ❌ 處理 issue 時禁止！會跳過自動化流程
+source git-issue-pr-flow.sh && deploy-feature 15
+git merge fix/issue-15-xxx into staging
+git push origin staging  # 直接 push staging
+```
+
+### ✅ 處理 Issue 的正確流程
+```bash
+# 1. 在 Issue 留言 PDCA Plan
+gh issue comment 15 --body "## PDCA Plan..."
+
+# 2. 創建 feature branch
+git checkout -b fix/issue-15-xxx
+
+# 3. 實作修復並 commit
+git commit -m "fix: xxx Fixes #15"
+
+# 4. Push 到 feature branch（觸發 Per-Issue Test Environment）
+git push origin fix/issue-15-xxx
+
+# 5. 創建 PR（重點：不是直接 merge！）
+gh pr create --base staging --head fix/issue-15-xxx
+
+# 6. 等待 CI/CD 自動部署並在 Issue 留言 preview URLs
+# 7. 案主在 Per-Issue Test Environment 測試
+# 8. 測試通過後 merge PR
+gh pr merge <PR_NUMBER>
+```
+
+### 為什麼針對 Issue 要這樣做？
+1. **Per-Issue Test Environment** - 讓案主在獨立環境測試
+2. **完整 PDCA 紀錄** - 問題分析、修復、驗證、預防都在 GitHub
+3. **案主批准流程** - 測試通過才能 merge
+4. **方便追溯** - 未來查詢問題處理過程
+
+---
+
 ## 🔐 資安鐵則：絕對禁止 Hardcode Secrets！
 
 **絕對不要在任何會被 commit 的檔案中硬編碼 secrets！**
@@ -512,8 +609,42 @@ gh pr merge <PR_NUMBER> --merge
 | `deploy-feature-no-issue` | 部署到 staging（不關聯 issue）|
 | `update-release-pr` | 創建/更新 staging → main 的 Release PR |
 | `patrol-issues` | **🔍 巡邏 GitHub Issues，顯示統計和列表** |
+| `mark-issue-approved <issue>` | **🤖 AI 智能判斷 issue 留言是否批准** |
+| `check-approvals` | **📊 檢查所有 issues 的批准狀態（自動 AI 偵測）** |
 | `git-flow-status` | 查看當前工作流程狀態 |
 | `git-flow-help` | 顯示所有可用命令 |
+
+### 🤖 AI 智能批准偵測
+
+**新功能**：`check-approvals` 在 Claude Code 環境中執行時，由 **Claude Code (我) 直接智能判斷**留言是否代表「測試通過」批准意圖。
+
+#### 運作方式
+
+**在 Claude Code 中** (推薦):
+- ✅ **Claude Code 直接分析**留言語義，智能判斷批准意圖
+- ✅ 理解各種自然表達：「看起來不錯」、「沒問題」、「可以了」、「LGTM」
+- ✅ 中英文混用理解
+- ✅ 不依賴關鍵字，真正的語義理解
+
+**在 Shell 環境中** (命令列直接執行):
+- ⚠️ 自動使用規則式關鍵字偵測 (fallback)
+- 支援關鍵字：`測試通過|approved|✅|LGTM|沒問題|可以了|看起來不錯|功能正常|測試成功`
+
+#### 使用方式
+```bash
+# 在 Claude Code 中執行（推薦）
+# 我會智能分析所有留言並判斷批准狀態
+check-approvals
+
+# 或單獨檢查某個 issue
+mark-issue-approved 15
+```
+
+#### 為什麼這樣設計？
+- 💡 Claude Code 本身就是 LLM，不需要再呼叫另一個 LLM API
+- 💰 節省成本，不需要額外 API 呼叫
+- 🚀 更快速，直接在當前 context 判斷
+- 🎯 更準確，可以參考完整 issue context
 
 ### Claude Code 自動化指南
 
@@ -525,7 +656,39 @@ gh pr merge <PR_NUMBER> --merge
 - 「發 PR」、「create PR」、「準備 release」
 - 「merge to staging」
 - 「有什麼 issue」、「檢查 issues」、「巡邏 issues」、「patrol issues」
+- 「檢查 approval」、「查看批准狀態」、「check approvals」 **← 🤖 我會自動智能判斷並加 label**
 - 任何提到 GitHub Issue 編號（如「處理 #7」）
+
+#### 🚨 修復 Issue 前的強制檢查
+
+**⚠️ 在執行任何修復前，必須先執行以下步驟：**
+
+1. **讀取並理解 Issue**
+   ```bash
+   gh issue view <issue_number>
+   ```
+
+2. **在 Issue 下留言完整 PDCA 分析**（參考上方「AI Issue 處理 PDCA 流程」）
+   - 必須包含 Schema 變更檢查
+   - 必須評估風險和信心度
+   - 必須等待用戶確認
+
+3. **Schema 變更紅線檢查**
+   - 搜尋是否涉及以下檔案：
+     - `backend/alembic/versions/*.py`
+     - `backend/app/models/*.py` (修改 SQLAlchemy models)
+     - 任何包含 `CREATE TABLE`, `ALTER TABLE`, `ADD COLUMN` 的 SQL
+   - 如果涉及 Schema 變更：
+     - ❌ **立即停止自動化處理**
+     - ✅ 在 PDCA 分析中標記「需要 DB Schema 變更」
+     - ✅ 提供詳細的 migration 計畫
+     - ✅ 等待人工審查批准
+
+4. **用戶確認後才開始實作**
+   - 等待用戶回覆「開始實作」或「approved」
+   - 不要自作主張開始寫 code
+
+---
 
 #### 自動化流程
 
@@ -583,6 +746,155 @@ patrol-issues
 git-flow-status
 ```
 
+**場景 6: 用戶說「檢查 approval」或「查看批准狀態」**
+```bash
+# 1. 執行 check-approvals 取得 Release PR 和 issues
+check-approvals
+
+# 2. 🤖 Claude Code 自動智能分析：
+# 對於每個 issue，我會：
+#   - 讀取所有留言 (gh issue view <NUM> --json comments)
+#   - 智能判斷 case owner 的留言是否表達批准意圖
+#   - 理解自然語言：「看起來不錯」、「沒問題」、「可以了」、「LGTM」等
+#   - 自動執行: gh issue edit <NUM> --add-label "✅ tested-in-staging"
+
+# 3. 顯示最終結果：
+#   - Release PR 資訊
+#   - 每個 issue 的批准狀態 (我判斷的結果)
+#   - 進度統計（幾個已批准/總共幾個）
+#   - 下一步建議（是否可以 deploy to production）
+```
+
+**⚠️ 重要：這是全自動流程，我會主動智能判斷並加 label，不需要用戶逐個確認**
+
+---
+
+## 🚀 Per-Issue Test Environment 架構（每個 Issue 獨立測試環境）
+
+### 架構說明
+
+每個 issue 獨立部署到專屬的 Per-Issue Test Environment：
+- **共用 Staging DB**（預設）
+- **獨立 Cloud Run instances** (min-instances=0, max-instances=1)
+- **獨立測試 URL**
+- **測試完自動清理**
+
+### 🔴 Schema 變更限制
+
+**絕對禁止**在 Per-Issue Test Environment 中處理涉及 DB Schema 變更的 issue：
+- ❌ 修改 SQLAlchemy models
+- ❌ 新增/修改 Alembic migrations
+- ❌ 任何 `ALTER TABLE`, `CREATE TABLE` 操作
+
+
+### Per-Issue Test Environment 流程
+
+```bash
+# 1. 創建 feature branch（同時觸發 Per-Issue Test Environment 部署）
+create-feature-fix 7 student-login
+
+# 2. CI/CD 自動智能判斷是否需要部署
+# ✅ 功能性代碼變更 → 自動部署 Per-Issue Test Environment
+# ℹ️ 只修改文件/註解 → 跳過部署，節省成本
+
+# 3. 如果需要部署，自動建立 Per-Issue Test Environment
+# Test URLs:
+# - Frontend: https://duotopia-preview-issue-7-frontend.run.app
+# - Backend: https://duotopia-preview-issue-7-backend.run.app
+
+# 4. 自動在 Issue #7 留言預覽 URLs
+# 5. Case owner 測試 Per-Issue Test Environment
+# 6. 測試通過後留言「測試通過」
+
+# 7. 執行 check-approvals（自動偵測批准並加 label）
+check-approvals
+
+# 8. 批准後 merge to staging
+deploy-feature 7
+
+# 9. Issue 關閉時自動清理 preview instances
+# ✅ Cloud Run services 自動刪除
+# ✅ Container images 自動清理
+# 💰 立即停止計費
+```
+
+### 智能部署檢測
+
+Per-Issue Test Environment 會自動判斷是否需要部署：
+
+**跳過部署（節省成本）**：
+- 只修改 `.md` 文件（文件）
+- 只修改 `.txt` 文件
+- 只修改 `LICENSE`, `.gitignore`
+- 只修改註解
+
+**自動部署**：
+- 修改任何功能性代碼（`.ts`, `.tsx`, `.py` 等）
+- 修改配置檔（`package.json`, `requirements.txt` 等）
+- 修改 Dockerfile 或建置腳本
+
+### 自動清理機制
+
+**觸發條件**：
+1. **Issue 關閉時** - 自動清理該 issue 的 per-issue test environment
+2. **PR 合併時** - 自動清理相關 issue 的 per-issue test environment
+3. **手動清理** - 執行 workflow 手動清理特定 issue
+4. **定期清理** - 手動觸發清理 7 天以上的舊 per-issue test environments
+
+**清理內容**：
+- ✅ Backend Cloud Run service
+- ✅ Frontend Cloud Run service
+- ✅ Container images in Artifact Registry
+- 💰 立即停止所有計費
+
+**手動清理命令**：
+```bash
+# 清理特定 issue 的 per-issue test environment
+gh workflow run cleanup-preview.yml -f issue_number=7
+
+# 清理所有 7 天以上的舊 per-issue test environments
+gh workflow run cleanup-preview.yml
+```
+
+### Per-Issue Test Environment 規則
+
+- **min-instances=0** - 沒人用時不計費
+- **智能檢測** - 文件修改跳過部署
+- **自動清理** - issue 關閉立即刪除
+- **共用 staging DB** - 不額外開 DB
+
+---
+
+#### Approval 手動流程
+
+**當 case owner（如 Kaddy）測試通過後**：
+
+1. **Case owner 在 issue 留言「測試通過」**
+   - 不需要手動加 label，agent 會自動偵測
+
+2. **執行 `check-approvals` 檢查批准狀態**
+   ```bash
+   check-approvals
+   ```
+   - **自動讀取所有 issues 的留言**
+   - **自動偵測批准關鍵字**（測試通過、approved、✅、LGTM）
+   - **自動加上 `✅ tested-in-staging` label**（如果 case owner 已批准）
+   - 顯示進度統計（幾個已批准/總共幾個）
+   - 提供下一步建議（是否可以 deploy to production）
+
+3. **單獨檢查某個 issue**（可選）
+   ```bash
+   mark-issue-approved <issue_number>
+   ```
+   - 讀取該 issue 的所有留言
+   - 如果找到 case owner 的批准留言，自動加 label
+
+4. **全部批准後**
+   - 執行 `check-approvals` 確認全部通過
+   - 使用 `gh pr ready <PR_NUMBER>` 標記 PR 為 Ready for review（如果需要）
+   - 使用 `gh pr merge <PR_NUMBER> --merge` 部署到 production
+
+
 #### 重要規則
 - ❌ 不要手動創建 feature → staging 的 PR
 - ✅ 只為 staging → main 創建 PR
@@ -591,7 +903,7 @@ git-flow-status
 - ✅ **所有 Git 操作都使用 agent 命令，不要手動執行 git 指令**
 - ⚠️ **Commit message 必須包含 `#issue_number` 或 `Fixes #N`**，否則 PR 無法自動追蹤 issue
 
-#### 固定的 Staging URLs（不需要查詢）
+#### 固定 URLs
 - **Frontend**: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
 - **Backend**: https://duotopia-staging-backend-316409492201.asia-east1.run.app
 

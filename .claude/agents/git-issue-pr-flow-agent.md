@@ -1,12 +1,487 @@
 # Git Issue PR Flow Agent
 
-This agent automates the standardized Git Issue PR Flow workflow for Duotopia project.
+**完整的 GitHub Issue 處理自動化 Agent**，包含：
+1. 🔍 PDCA 問題診斷流程（Plan-Do-Check-Act）
+2. 🚀 Git 操作自動化
+3. 🧪 TDD 測試驅動開發
+4. 🌐 Per-Issue Test Environment 部署
+5. ✅ Approval 流程管理
 
-## Workflow Overview
+---
+
+## 🎯 核心原則
+
+### 1. 不能重現 = 不要修
+- 必須先重現問題並留下證據
+- Screenshots, logs, 錄影
+
+### 2. TDD 驅動修復
+- 先寫測試確認問題存在（測試 FAIL）
+- 修復後測試通過（測試 PASS）
+- 分析為何之前測試沒抓到
+
+### 3. 預防勝於治療
+- 每次修復都加預防措施
+- 改善測試覆蓋率
+- 更新文件和規範
+
+---
+
+## 📋 完整工作流程
 
 ```
-Feature Branch → Staging (auto-merge, auto-deploy) → Main (PR with issue tracking)
+Issue 創建 → PDCA 分析 → 用戶批准 → TDD 修復 → Per-Issue Test Environment → Case Owner 測試 → Staging → Production
 ```
+
+### 流程詳解
+
+1. **Issue 創建** - 用戶回報問題
+2. **PDCA Plan** - 在 Issue 留言：分析問題、重現、找根因、寫測試計畫
+3. **用戶批准**（可選） - 不涉及 Schema 變更且有把握，直接開始實作
+4. **創建 PR** - `gh pr create --base staging --head fix/issue-X`
+5. **PDCA Do** - TDD 驅動修復（Red → Green → Refactor）
+6. **Per-Issue Test Environment** - CI/CD 自動部署，自動在 Issue 留言 preview URLs
+7. **PDCA Check** - 在 Issue 留言測試結果
+8. **Case Owner 測試** - 在 Per-Issue Test Environment 驗證
+9. **Merge PR** - 測試通過後 `gh pr merge` → staging
+10. **PDCA Act** - 在 Issue 留言預防措施
+11. **Production 發布** - Release PR merge to main
+
+---
+
+## 🚨 處理 Issue 的強制規則
+
+### 📌 適用範圍
+**只針對處理 GitHub Issue 時才強制走自動化流程**
+
+**其他情況可彈性處理**（緊急 hotfix、實驗功能、文件更新等）
+
+### ❌ 處理 Issue 時禁止
+```bash
+# ❌ 跳過自動化流程！沒有 Per-Issue Test Environment
+source git-issue-pr-flow.sh && deploy-feature X
+git merge fix/issue-X into staging
+git push origin staging  # 直接 push staging
+```
+
+### ✅ 處理 Issue 的正確流程
+```bash
+# 1. 在 Issue 留言 PDCA Plan
+gh issue comment X --body "PDCA Plan..."
+
+# 2. Push feature branch（觸發 Per-Issue Test Environment）
+git push origin fix/issue-X-xxx
+
+# 3. 創建 PR（不是直接 merge！）
+gh pr create --base staging --head fix/issue-X-xxx
+
+# 4. 等待 CI/CD 部署並在 Issue 留言 preview URLs
+# 5. 案主測試 Per-Issue Test Environment
+# 6. 測試通過後 merge PR
+gh pr merge <PR_NUMBER>
+```
+
+### 為什麼針對 Issue？
+1. **Per-Issue Test Environment** - 案主獨立環境測試
+2. **完整 PDCA 紀錄** - 所有決策在 GitHub 可追溯
+3. **案主批准流程** - 確保修復符合預期
+4. **CI/CD 自動化** - PR 觸發測試和部署
+
+---
+
+## 🔍 Phase 1: PDCA Plan（問題分析）
+
+### Step 1.1: 讀取 Issue
+```bash
+gh issue view <issue_number>
+```
+
+### Step 1.2: 🔴 問題重現（強制步驟）
+
+**⚠️ 無法重現 = 不要修復**
+
+#### 收集證據
+```bash
+# 1. Screenshot
+screencapture -x issue_<NUM>_problem.png
+
+# 2. 開啟瀏覽器 DevTools
+# - Console 錯誤
+# - Network 請求
+# - 保存完整錯誤訊息
+
+# 3. Backend logs（如果需要）
+gcloud logging read "resource.type=cloud_run_revision" --limit=50
+```
+
+#### 在 Issue 留言重現證據
+```bash
+gh issue comment <NUM> --body "$(cat <<'EOF'
+## 🔍 問題重現 ✅
+
+### 重現步驟
+1. [步驟]
+2. [步驟]
+
+### 預期 vs 實際
+- 預期：[...]
+- 實際：[...]
+
+### 證據
+- Screenshot: `issue_<NUM>_problem.png`
+- Console 錯誤：
+  \`\`\`
+  [錯誤訊息]
+  \`\`\`
+EOF
+)"
+```
+
+### Step 1.3: 根因分析（5 Why）
+
+```bash
+gh issue comment <NUM> --body "$(cat <<'EOF'
+## 📊 根因分析（5 Why）
+
+1. **為什麼會發生？** → [原因 1]
+2. **為什麼會這樣？** → [原因 2]
+3. **為什麼？** → [原因 3]
+4. **根本原因？** → [原因 4]
+5. **為什麼系統允許？** → **根本原因：[設計缺陷]**
+
+### 程式碼分析
+- 檔案：\`path/to/file.ts:123\`
+- 問題：[說明邏輯錯誤]
+EOF
+)"
+```
+
+### Step 1.4: TDD 測試計畫
+
+```bash
+gh issue comment <NUM> --body "$(cat <<'EOF'
+## 🧪 TDD 測試計畫
+
+### Red Phase（寫失敗測試）
+\`\`\`typescript
+// tests/unit/test_issue_<NUM>.spec.ts
+describe('Issue #<NUM>', () => {
+  it('應該 [預期行為]', () => {
+    // Given, When, Then
+    // 現在應該 FAIL
+  });
+});
+\`\`\`
+
+### 修復驗證指標
+- [ ] 功能指標：[...]
+- [ ] 效能指標：[...]
+- [ ] 錯誤處理：[...]
+- [ ] 邊界條件：[...]
+EOF
+)"
+```
+
+### Step 1.5: Schema 變更檢查（🔴 紅線）
+
+```bash
+# 搜尋是否涉及 schema 變更
+grep -r "ALTER TABLE\|CREATE TABLE\|ADD COLUMN" backend/
+git diff backend/app/models/
+```
+
+**如果涉及 Schema 變更**：
+```bash
+gh issue comment <NUM> --body "🔴 **需要 DB Schema 變更 - 需人工審查**"
+gh issue label <NUM> --add "needs-schema-review"
+# 停止自動化處理
+exit 1
+```
+
+### Step 1.6: 在 Issue 留言完整 Plan，等待批准
+
+```bash
+gh issue comment <NUM> --body "$(cat <<'EOF'
+## 🔍 PDCA Plan 完成
+
+✅ 問題已重現
+✅ 根因分析完成
+✅ TDD 測試計畫準備
+✅ Schema 變更檢查通過
+
+---
+
+**⏳ 請批准後開始實作（回覆「開始實作」或「approved」）**
+EOF
+)"
+```
+
+---
+
+## 🚀 Phase 2: PDCA Do（執行修復）
+
+### Step 2.1: 等待用戶批准
+
+**🔴 不要自作主張開始！**
+
+### Step 2.2: 創建 Feature Branch
+
+```bash
+create-feature-fix <issue_number> <description>
+```
+
+### Step 2.3: TDD Red Phase
+
+```bash
+# 1. 寫測試
+touch tests/unit/test_issue_<NUM>.spec.ts
+# [編輯測試]
+
+# 2. 執行測試（應該 FAIL）
+npm run test:unit -- test_issue_<NUM>
+
+# 3. 截圖
+screencapture -x test_fail_issue_<NUM>.png
+```
+
+### Step 2.4: 實作修復（Green Phase）
+
+```bash
+# 1. 修改程式碼
+# [實作]
+
+# 2. 執行測試（應該 PASS）
+npm run test:unit -- test_issue_<NUM>
+npm run test:api:all
+npm run build
+npm run typecheck
+
+# 3. 截圖
+screencapture -x test_pass_issue_<NUM>.png
+```
+
+### Step 2.5: Commit
+
+```bash
+git add .
+git commit -m "fix: [簡短描述]
+
+[詳細說明]
+
+Fixes #<NUM>"
+```
+
+### Step 2.6: Push 觸發 Per-Issue Test Environment
+
+```bash
+git push origin fix/issue-<NUM>-description
+```
+
+**CI/CD 自動執行**：
+- 智能檢測是否需要部署
+- 部署 Per-Issue Test Environment
+- 在 issue 留言測試 URLs
+
+---
+
+## ✅ Phase 3: PDCA Check（驗證結果）
+
+### Step 3.1: 等待 Per-Issue Test Environment 部署完成
+
+GitHub Actions 會自動：
+1. 部署 Backend + Frontend
+2. 在 Issue 留言測試 URLs
+
+### Step 3.2: 🔴 提供案主測試指引（強制步驟）
+
+**⚠️ 必須提供清楚的測試步驟給案主**
+
+在 Issue 留言中必須包含：
+
+```markdown
+## 🧪 測試指引（給案主）
+
+### 測試環境
+- **URL**: https://duotopia-preview-issue-<NUM>-frontend.run.app
+- **帳號**：[如需要，提供測試帳號]
+
+### 測試步驟
+
+1. **步驟 1**：[具體操作，例如：登入系統]
+2. **步驟 2**：[具體操作，例如：點擊 XXX 按鈕]
+3. **步驟 3**：[具體操作，例如：檢查 YYY 功能]
+
+### 預期結果
+- ✅ **應該看到**：[具體描述]
+- ❌ **不應該看到**：[具體描述]
+
+### Before/After 對比
+- **修復前**：[舊的行為]
+- **修復後**：[新的行為]
+
+### 測試通過標準
+如果：
+- ✅ [條件 1]
+- ✅ [條件 2]
+
+請留言：「測試通過」或「✅」
+
+如果有問題，請回報：
+- ❌ 什麼地方不對
+- 📸 最好附上截圖
+```
+
+**🔴 沒有提供測試指引 = Check 階段不完整**
+
+### Step 3.3: Case Owner 測試
+
+Case owner 根據測試指引在 Per-Issue Test Environment 測試：
+- Frontend: `https://duotopia-preview-issue-<NUM>-frontend.run.app`
+- Backend: `https://duotopia-preview-issue-<NUM>-backend.run.app`
+
+測試通過後留言：「測試通過」或「✅」
+
+### Step 3.4: 檢查批准狀態
+
+```bash
+check-approvals
+```
+
+自動偵測批准留言並加 label。
+
+---
+
+## 🔄 Phase 4: PDCA Act（預防改進）
+
+### Step 4.1: 加入預防性測試
+
+```bash
+# 新增預防測試
+touch tests/unit/test_issue_<NUM>_prevention.spec.ts
+# [編輯測試，覆蓋更多 edge cases]
+
+git add tests/
+git commit -m "test: 新增 issue #<NUM> 預防性測試
+
+為避免同類問題再發生：
+- 加入邊界條件測試
+- 加入錯誤處理測試
+
+Related to #<NUM>"
+```
+
+### Step 4.2: 更新文件（如果需要）
+
+```bash
+# 更新相關文件
+# [編輯 docs/]
+
+git add docs/
+git commit -m "docs: 更新 issue #<NUM> 相關文件"
+```
+
+### Step 4.3: 在 Issue 留言完整 PDCA 報告
+
+```bash
+gh issue comment <NUM> --body "$(cat <<'EOF'
+## 🎉 PDCA 完成
+
+### Plan ✅
+- 問題已重現
+- 根因分析完成
+
+### Do ✅
+- TDD Red → Green → Refactor
+- 所有測試通過
+
+### Check ✅
+- Per-Issue Test Environment 測試通過
+- Case owner 已驗證
+
+### Act ✅
+- 已加入預防性測試
+- 已更新相關文件
+
+---
+
+**🚀 準備 deploy to staging**
+EOF
+)"
+```
+
+---
+
+## 🌐 Phase 5: Staging 部署
+
+### Step 5.1: Deploy to Staging
+
+```bash
+deploy-feature <issue_number>
+```
+
+自動執行：
+1. Merge to staging
+2. Push 觸發 CI/CD
+3. 在 issue 留言 staging URLs
+
+### Step 5.2: Staging 測試
+
+測試 Staging 環境：
+- Frontend: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
+- Backend: https://duotopia-staging-backend-316409492201.asia-east1.run.app
+
+---
+
+## 📦 Phase 6: Production 發布
+
+### Step 6.1: 累積多個 fixes
+
+```bash
+# 修復多個 issues
+create-feature-fix 7 issue-7
+deploy-feature 7
+
+create-feature-fix 10 issue-10
+deploy-feature 10
+```
+
+### Step 6.2: 創建 Release PR
+
+```bash
+update-release-pr
+```
+
+自動創建 staging → main 的 PR，包含所有 issues。
+
+### Step 6.3: 檢查所有 issues 批准狀態
+
+```bash
+check-approvals
+```
+
+確認所有 issues 都測試通過。
+
+### Step 6.4: Merge to Production
+
+```bash
+gh pr ready <PR_NUMBER>
+gh pr merge <PR_NUMBER> --merge
+```
+
+自動關閉所有 issues。
+
+---
+
+## Per-Issue Test Environment
+
+每個 issue 獨立部署到專屬測試環境：
+- **獨立 Cloud Run instances** (min=0, max=1)
+- **共用 Staging DB** (節省成本)
+- **智能部署檢測** (文件修改跳過部署)
+- **自動清理** (issue 關閉時刪除)
+- **超低成本** (~$0.02-0.10/issue)
+
+---
 
 ## Agent Capabilities
 
@@ -14,21 +489,58 @@ Feature Branch → Staging (auto-merge, auto-deploy) → Main (PR with issue tra
 - Create feature branch from staging
 - Naming: `fix/issue-{number}-{description}` or `feat/{description}`
 - Example: `fix/issue-7-student-login-loading`
+- **自動觸發 Per-Issue Test Environment 部署**
 
-### 2. Staging Deployment
+### 2. Per-Issue Test Environment (NEW!)
+- **自動部署**：Push to `fix/issue-*` or `feat/issue-*` branch（支援有無子目錄）
+- **支援格式**：`fix/issue-15-desc` 或 `fix/issue-15/desc` 都可以
+- **智能檢測**：只有功能性變更才部署（文件修改跳過）
+- **Schema 變更檢查**：自動偵測 DB schema 變更並阻止（需人工審查）
+- **獨立 URL**：每個 issue 獲得專屬測試 URL
+- **自動留言**：在 issue 中自動張貼 test URLs
+- **超低成本**：min-instances=0, ~$0.02-0.10/issue
+
+### 3. Approval Workflow (🤖 AI-Powered)
+- **`mark-issue-approved <issue>`**：🤖 **Claude Code 直接智能判斷** case owner 批准留言意圖
+- **`check-approvals`**：批次檢查所有 issues 的批准狀態（Claude Code 自動 AI 偵測）
+- **智能語義理解**：不依賴關鍵字，理解「看起來不錯」、「沒問題」、「可以了」等自然表達
+- **自動降級**：在 Shell 環境直接執行時自動切換規則式偵測
+- **自動加 label**：`✅ tested-in-staging`
+- **進度統計**：顯示幾個已批准/總共幾個
+
+#### AI 偵測架構
+```
+Claude Code 環境：
+  ✅ 由 Claude Code 本身直接分析留言（不呼叫額外 API）
+  ✅ 真正的語義理解
+  ✅ 零成本、即時判斷
+
+Shell 環境：
+  ⚠️ 使用規則式關鍵字比對（fallback）
+  ⚠️ 建議在 Claude Code 中執行以獲得最佳效果
+```
+
+### 4. Staging Deployment
 - Merge feature branch directly to staging (no PR)
 - Trigger CI/CD automatically
 - Comment on related issues with deployment info
 
-### 3. Release PR Management
+### 5. Preview Cleanup
+- **自動觸發**：Issue 關閉時或 PR 合併時
+- **手動清理**：`gh workflow run cleanup-preview.yml`
+- **定期清理**：手動觸發清理 7 天以上舊環境
+- **完整清理**：Cloud Run services + Container images
+
+### 6. Release PR Management
 - Create/update Draft PR: staging → main
 - Track multiple issues in one PR
 - Auto-close issues on merge using "Fixes #N" syntax
 
-### 4. Issue Management
+### 7. Issue Management
 - Update issues with deployment status
-- Link issues to staging deployment
+- Link issues to preview/staging deployment
 - Provide testing URLs
+- Auto-detect approval comments
 
 ## Commands
 
@@ -165,20 +677,41 @@ source /Users/young/project/duotopia/.claude/agents/git-issue-pr-flow.sh
 
 ## Usage Examples
 
-### Example 1: Fix an Issue
+### Example 1: Fix an Issue (with Per-Issue Test Environment)
 ```bash
 # 1. Create feature branch for Issue #7
 create-feature-fix 7 student-login-loading
 
 # 2. Make changes, commit
 git add .
-git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題"
+git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題
 
-# 3. Deploy to staging
+Fixes #7"
+
+# 3. Push to trigger Per-Issue Test Environment deployment
+git push origin fix/issue-7-student-login-loading
+
+# 4. CI/CD 自動部署 Per-Issue Test Environment
+# ✅ 智能檢測：功能性變更 → 自動部署
+# ℹ️ 文件變更 → 跳過部署
+# 🔴 Schema 變更 → 阻止部署，需人工審查
+
+# 5. Test URLs 自動張貼到 Issue #7
+# - Frontend: https://duotopia-preview-issue-7-frontend.run.app
+# - Backend: https://duotopia-preview-issue-7-backend.run.app
+
+# 6. Case owner 測試 Per-Issue Test Environment 後留言「測試通過」
+
+# 7. 檢查批准狀態
+check-approvals
+
+# 8. 批准後 Deploy to Staging
 deploy-feature 7
 
-# 4. Test in staging, then update release PR
+# 9. Update release PR
 update-release-pr
+
+# 10. Issue 關閉時，Per-Issue Test Environment 自動清理
 ```
 
 ### Example 2: Multiple Fixes Before Release

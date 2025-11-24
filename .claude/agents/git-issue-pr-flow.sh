@@ -69,6 +69,23 @@ deploy-feature() {
     return 1
   fi
 
+  # Check if last commit contains issue number
+  local last_commit=$(git log -1 --pretty=%B)
+  if ! echo "$last_commit" | grep -qE "#$issue_num|Fixes #$issue_num"; then
+    echo -e "${YELLOW}⚠️  Warning: Last commit message doesn't contain #${issue_num}${NC}"
+    echo -e "${YELLOW}   This issue won't be automatically tracked in Release PR${NC}"
+    echo -e "${YELLOW}   Last commit: $(git log -1 --oneline)${NC}"
+    echo ""
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo -e "${RED}❌ Deployment cancelled${NC}"
+      echo -e "${BLUE}💡 Amend your commit to include 'Fixes #${issue_num}':${NC}"
+      echo -e "   git commit --amend"
+      return 1
+    fi
+  fi
+
   echo -e "${YELLOW}🔄 Deploying $branch to staging...${NC}"
 
   # Merge to staging
@@ -137,8 +154,8 @@ deploy-feature-no-issue() {
 create-release-pr() {
   echo -e "${YELLOW}📝 Creating/updating release PR...${NC}"
 
-  # Get list of commits between staging and main
-  local commits=$(git log main..staging --oneline)
+  # Get list of commits between staging and main (full message, not just oneline)
+  local commits=$(git log main..staging --format='%B')
   local issue_pattern='#[0-9]+'
   local issues=$(echo "$commits" | grep -oE "$issue_pattern" | sort -u | tr '\n' ' ')
 
@@ -291,11 +308,13 @@ patrol-issues() {
   local bugs=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "bug")] | length')
   local enhancements=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "enhancement")] | length')
   local unassigned=$(echo "$issues" | jq '[.[] | select(.assignees | length == 0)] | length')
+  local approved=$(echo "$issues" | jq '[.[] | select(.labels[]? | .name == "✅ tested-in-staging")] | length')
 
   echo -e "${YELLOW}📊 Issue Summary:${NC}"
   echo -e "  Total open: ${YELLOW}$total${NC}"
   echo -e "  🐛 Bugs: ${RED}$bugs${NC}"
   echo -e "  ✨ Enhancements: ${GREEN}$enhancements${NC}"
+  echo -e "  ✅ Tested in staging: ${GREEN}$approved${NC}"
   echo -e "  👤 Unassigned: ${YELLOW}$unassigned${NC}"
   echo ""
 
@@ -312,8 +331,161 @@ patrol-issues() {
   echo ""
   echo -e "${BLUE}💡 Quick Actions:${NC}"
   echo -e "  ${YELLOW}create-feature-fix <issue_number> <description>${NC} - Start working on an issue"
+  echo -e "  ${YELLOW}check-approvals${NC}                                 - Check approval status for release"
   echo -e "  ${YELLOW}gh issue view <issue_number>${NC}                    - View issue details"
   echo -e "  ${YELLOW}gh issue view <issue_number> --web${NC}              - Open in browser"
+}
+
+# Check issue comments and auto-label if approved
+# Simple version - let Claude Code (me!) analyze the comments intelligently
+mark-issue-approved() {
+  local issue_num=$1
+
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: mark-issue-approved <issue_number>${NC}"
+    return 1
+  fi
+
+  echo -e "${BLUE}🔍 Checking comments for Issue #${issue_num}...${NC}"
+  echo ""
+
+  # Get issue comments
+  local comments=$(gh issue view "$issue_num" --json comments --jq '.comments[] | "\(.author.login): \(.body)"')
+
+  if [ -z "$comments" ]; then
+    echo -e "${YELLOW}⚠️  No comments found on Issue #${issue_num}${NC}"
+    return 0
+  fi
+
+  # Simple rule-based detection (fallback when not in Claude Code)
+  local approval_keywords="測試通過|approved|✅|LGTM|沒問題|可以了|看起來不錯|功能正常|測試成功"
+  local has_approval=false
+  local approver=""
+
+  while IFS= read -r comment; do
+    local author=$(echo "$comment" | cut -d: -f1)
+    local body=$(echo "$comment" | cut -d: -f2-)
+
+    # Check if author is case owner (kaddy-eunice or Youngger9765)
+    if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+      # Check if comment contains approval keywords
+      if echo "$body" | grep -qiE "$approval_keywords"; then
+        has_approval=true
+        approver="$author"
+        echo -e "${GREEN}✅ Found approval from @${approver}${NC}"
+        echo -e "${BLUE}   Comment: ${body:0:100}...${NC}"
+        break
+      fi
+    fi
+  done <<< "$comments"
+
+  if [ "$has_approval" = true ]; then
+    # Check if already has the label
+    local has_label=$(gh issue view "$issue_num" --json labels --jq '.labels[].name' | grep -c "✅ tested-in-staging" || true)
+
+    if [ "$has_label" -eq 0 ]; then
+      echo ""
+      echo -e "${YELLOW}📝 Adding 'tested-in-staging' label...${NC}"
+      gh issue edit "$issue_num" --add-label "✅ tested-in-staging"
+      echo -e "${GREEN}✅ Label added to Issue #${issue_num}${NC}"
+    else
+      echo -e "${GREEN}✅ Issue #${issue_num} already has 'tested-in-staging' label${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⏳ No approval found from case owner yet${NC}"
+    echo -e "${BLUE}💡 Case owner should comment with approval intent (e.g., \"測試通過\", \"looks good\", \"沒問題\")${NC}"
+  fi
+}
+
+# Check if all issues in Release PR are approved
+check-approvals() {
+  echo -e "${BLUE}🔍 Checking approval status...${NC}"
+  echo ""
+
+  # Find Release PR
+  local pr_info=$(gh pr list --state open --base main --head staging --json number,title,isDraft,body --limit 1)
+
+  if [ "$pr_info" = "[]" ]; then
+    echo -e "${YELLOW}⚠️  No Release PR found${NC}"
+    echo -e "${BLUE}💡 Run ${YELLOW}update-release-pr${BLUE} to create one${NC}"
+    return 0
+  fi
+
+  local pr_number=$(echo "$pr_info" | jq -r '.[0].number')
+  local pr_title=$(echo "$pr_info" | jq -r '.[0].title')
+  local is_draft=$(echo "$pr_info" | jq -r '.[0].isDraft')
+  local pr_body=$(echo "$pr_info" | jq -r '.[0].body')
+
+  echo -e "${BLUE}📋 Release PR #${pr_number}:${NC} $pr_title"
+  if [ "$is_draft" = "true" ]; then
+    echo -e "  Status: ${YELLOW}Draft${NC}"
+  else
+    echo -e "  Status: ${GREEN}Ready for review${NC}"
+  fi
+  echo ""
+
+  # Extract issue numbers from PR body
+  local issues=$(echo "$pr_body" | grep -oE '#[0-9]+' | sed 's/#//' | sort -u)
+
+  if [ -z "$issues" ]; then
+    echo -e "${YELLOW}⚠️  No issues found in PR body${NC}"
+    return 0
+  fi
+
+  echo -e "${BLUE}📊 Checking approval status for each issue:${NC}"
+  echo ""
+
+  local all_approved=true
+  local approved_count=0
+  local total_count=0
+
+  for issue in $issues; do
+    total_count=$((total_count + 1))
+
+    # Auto-check comments and mark as approved if found
+    echo -e "${YELLOW}Checking Issue #${issue}...${NC}"
+    mark-issue-approved "$issue" | sed 's/^/  /'
+    echo ""
+
+    # Get issue labels after auto-marking
+    local labels=$(gh issue view "$issue" --json labels --jq '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+
+    if echo "$labels" | grep -q "✅ tested-in-staging"; then
+      echo -e "  ✅ Issue #${issue} - ${GREEN}Approved${NC}"
+      approved_count=$((approved_count + 1))
+    else
+      echo -e "  ⏳ Issue #${issue} - ${YELLOW}Waiting for approval${NC}"
+      all_approved=false
+    fi
+    echo ""
+  done
+
+  echo ""
+  echo -e "${YELLOW}📈 Progress: ${approved_count}/${total_count} issues approved${NC}"
+  echo ""
+
+  if [ "$all_approved" = true ]; then
+    echo -e "${GREEN}🎉 All issues approved! Ready to deploy to production.${NC}"
+    echo ""
+    echo -e "${BLUE}💡 Next steps:${NC}"
+    if [ "$is_draft" = "true" ]; then
+      echo -e "  1. ${YELLOW}gh pr ready $pr_number${NC} - Mark PR as ready for review"
+    fi
+    echo -e "  2. ${YELLOW}gh pr merge $pr_number --merge${NC} - Merge to main and deploy"
+  else
+    echo -e "${YELLOW}⏳ Waiting for all issues to be tested and approved in staging.${NC}"
+    echo ""
+    echo -e "${BLUE}💡 Approval process:${NC}"
+    echo -e "  1. Test each issue in staging environment"
+    echo -e "  2. Case owner comments \"測試通過\" or \"approved\" on issue"
+    echo -e "  3. GitHub Actions auto-adds \"✅ tested-in-staging\" label"
+    echo -e "  4. When all approved, PR auto-marks as ready for review"
+  fi
+
+  echo ""
+  echo -e "${BLUE}🌐 Staging URLs:${NC}"
+  echo -e "  Frontend: $STAGING_FRONTEND_URL"
+  echo -e "  Backend:  $STAGING_BACKEND_URL"
 }
 
 # Show help
@@ -329,6 +501,8 @@ git-flow-help() {
   echo -e "${GREEN}Release Management:${NC}"
   echo -e "  ${YELLOW}create-release-pr${NC}                  - Create/update release PR"
   echo -e "  ${YELLOW}update-release-pr${NC}                  - Alias for create-release-pr"
+  echo -e "  ${YELLOW}mark-issue-approved <issue>${NC}        - Check comments & auto-label if approved"
+  echo -e "  ${YELLOW}check-approvals${NC}                    - Check all issues & mark approved ones"
   echo ""
   echo -e "${GREEN}Status & Info:${NC}"
   echo -e "  ${YELLOW}git-flow-status${NC}                    - Show current workflow status"
@@ -341,8 +515,9 @@ git-flow-help() {
   echo -e "  3. ${YELLOW}deploy-feature 7${NC}"
   echo -e "  4. Test in staging"
   echo -e "  5. ${YELLOW}update-release-pr${NC}"
-  echo -e "  6. ${YELLOW}gh pr ready <PR_NUMBER>${NC}"
-  echo -e "  7. ${YELLOW}gh pr merge <PR_NUMBER>${NC}"
+  echo -e "  6. Case owner comments \"測試通過\" on issue"
+  echo -e "  7. ${YELLOW}check-approvals${NC} (auto-detects approval & adds label)"
+  echo -e "  8. ${YELLOW}gh pr merge <PR_NUMBER>${NC} (when all approved)"
 }
 
 # Export functions for use in shell
@@ -354,6 +529,8 @@ export -f create-release-pr
 export -f update-release-pr
 export -f git-flow-status
 export -f patrol-issues
+export -f mark-issue-approved
+export -f check-approvals
 export -f git-flow-help
 
 echo -e "${GREEN}✅ Git Issue PR Flow Agent loaded${NC}"

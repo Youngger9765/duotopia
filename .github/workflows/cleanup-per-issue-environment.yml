@@ -1,0 +1,265 @@
+name: Cleanup Per-Issue Test Environment
+
+on:
+  issues:
+    types: [closed]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:  # 允許手動觸發清理
+    inputs:
+      issue_number:
+        description: 'Issue number to cleanup (optional)'
+        required: false
+        type: string
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  REPOSITORY: duotopia-repo
+
+jobs:
+  check-team-member:
+    name: 🔒 Verify Team Member
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+    - name: Check if user is team member
+      run: |
+        ACTOR="${{ github.actor }}"
+        TEAM_MEMBERS="Youngger9765 cbtzeng kaddy-eunice"
+
+        if ! echo "$TEAM_MEMBERS" | grep -qw "$ACTOR"; then
+          echo "::error::❌ $ACTOR is not a team member"
+          echo "::error::Only team members can manually trigger cleanup"
+          exit 1
+        fi
+
+        echo "✅ $ACTOR is authorized to cleanup"
+
+  validate-secrets:
+    name: 🔐 Validate Required Secrets
+    runs-on: ubuntu-latest
+    needs: check-team-member
+    if: always() && (needs.check-team-member.result == 'success' || needs.check-team-member.result == 'skipped')
+    steps:
+    - name: Check required secrets
+      run: |
+        if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+          echo "::error::❌ Missing required secret: GCP_SA_KEY"
+          exit 1
+        fi
+        echo "✅ Required secrets are configured"
+
+  cleanup-per-issue-on-issue-close:
+    name: 🧹 Delete Per-Issue Environment for Closed Issue
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Extract issue number from event
+      id: issue
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          ISSUE_NUM="${{ inputs.issue_number }}"
+        elif [ "${{ github.event_name }}" = "issues" ]; then
+          ISSUE_NUM="${{ github.event.issue.number }}"
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          # 從 PR 分支名稱提取 issue number (e.g., fix/issue-7-description)
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          ISSUE_NUM=$(echo "$BRANCH_NAME" | grep -oP '(?<=issue-)\d+' || echo "")
+        fi
+
+        if [ -z "$ISSUE_NUM" ]; then
+          echo "⚠️ No issue number found, skipping cleanup"
+          echo "has_issue=false" >> $GITHUB_OUTPUT
+        else
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "has_issue=true" >> $GITHUB_OUTPUT
+          echo "📋 Cleaning up per-issue for Issue #$ISSUE_NUM"
+        fi
+
+    - name: Delete Cloud Run backend service
+      if: steps.issue.outputs.has_issue == 'true'
+      continue-on-error: true  # 如果服務不存在也不報錯
+      run: |
+        ISSUE_NUM="${{ steps.issue.outputs.issue_number }}"
+        SERVICE_NAME="duotopia-preview-issue-${ISSUE_NUM}-backend"
+
+        echo "🗑️ Deleting backend service: $SERVICE_NAME"
+
+        # 檢查服務是否存在
+        if gcloud run services describe $SERVICE_NAME --platform managed --region $REGION &>/dev/null; then
+          gcloud run services delete $SERVICE_NAME \
+            --platform managed \
+            --region $REGION \
+            --quiet
+          echo "✅ Backend service deleted"
+        else
+          echo "ℹ️ Backend service not found (already deleted or never created)"
+        fi
+
+    - name: Delete Cloud Run frontend service
+      if: steps.issue.outputs.has_issue == 'true'
+      continue-on-error: true
+      run: |
+        ISSUE_NUM="${{ steps.issue.outputs.issue_number }}"
+        SERVICE_NAME="duotopia-preview-issue-${ISSUE_NUM}-frontend"
+
+        echo "🗑️ Deleting frontend service: $SERVICE_NAME"
+
+        # 檢查服務是否存在
+        if gcloud run services describe $SERVICE_NAME --platform managed --region $REGION &>/dev/null; then
+          gcloud run services delete $SERVICE_NAME \
+            --platform managed \
+            --region $REGION \
+            --quiet
+          echo "✅ Frontend service deleted"
+        else
+          echo "ℹ️ Frontend service not found (already deleted or never created)"
+        fi
+
+    - name: Delete container images from Artifact Registry
+      if: steps.issue.outputs.has_issue == 'true'
+      continue-on-error: true
+      run: |
+        ISSUE_NUM="${{ steps.issue.outputs.issue_number }}"
+
+        echo "🧹 Cleaning up container images for issue #${ISSUE_NUM}..."
+
+        # 清理 backend images
+        BACKEND_SERVICE="duotopia-preview-issue-${ISSUE_NUM}-backend"
+        echo "Checking for backend images: $BACKEND_SERVICE"
+        BACKEND_IMAGES=$(gcloud artifacts docker images list \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE \
+          --format="value(version)" 2>/dev/null || echo "")
+
+        if [ ! -z "$BACKEND_IMAGES" ]; then
+          echo "Deleting backend images..."
+          echo "$BACKEND_IMAGES" | while read DIGEST; do
+            gcloud artifacts docker images delete \
+              "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$BACKEND_SERVICE@${DIGEST}" \
+              --quiet --delete-tags 2>/dev/null || echo "  Failed to delete (may be in use)"
+          done
+          echo "✅ Backend images cleaned up"
+        else
+          echo "ℹ️ No backend images found"
+        fi
+
+        # 清理 frontend images
+        FRONTEND_SERVICE="duotopia-preview-issue-${ISSUE_NUM}-frontend"
+        echo "Checking for frontend images: $FRONTEND_SERVICE"
+        FRONTEND_IMAGES=$(gcloud artifacts docker images list \
+          $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE \
+          --format="value(version)" 2>/dev/null || echo "")
+
+        if [ ! -z "$FRONTEND_IMAGES" ]; then
+          echo "Deleting frontend images..."
+          echo "$FRONTEND_IMAGES" | while read DIGEST; do
+            gcloud artifacts docker images delete \
+              "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$FRONTEND_SERVICE@${DIGEST}" \
+              --quiet --delete-tags 2>/dev/null || echo "  Failed to delete (may be in use)"
+          done
+          echo "✅ Frontend images cleaned up"
+        else
+          echo "ℹ️ No frontend images found"
+        fi
+
+    - name: Post cleanup confirmation comment to issue
+      if: steps.issue.outputs.has_issue == 'true' && github.event_name == 'issues'
+      uses: actions/github-script@v7
+      permissions:
+        issues: write
+      with:
+        script: |
+          const issue_number = ${{ steps.issue.outputs.issue_number }};
+
+          const body = `## 🧹 Per-Issue Environment 已清理
+
+**📋 Issue #${issue_number}**
+
+Per-Issue environment 已自動清理：
+- ✅ Backend Cloud Run service 已刪除
+- ✅ Frontend Cloud Run service 已刪除
+- ✅ Container images 已清理
+
+💰 自動停止計費，節省成本。
+
+---
+🤖 Auto-cleaned by GitHub Actions`;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue_number,
+            body: body
+          });
+
+    - name: Display cleanup summary
+      if: steps.issue.outputs.has_issue == 'true'
+      run: |
+        echo "🎉 Per-Issue Environment Cleanup Complete!"
+        echo ""
+        echo "📋 Issue #${{ steps.issue.outputs.issue_number }}"
+        echo "✅ Cloud Run services deleted"
+        echo "✅ Container images cleaned up"
+        echo "💰 Cost savings: ~\$0.02-0.10/day"
+
+  delete-stale-per-issue-environments:
+    name: 🗑️ Delete Per-Issue Environments Older Than 7 Days
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'  # 只在手動觸發時執行
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Find and delete stale Cloud Run services
+      run: |
+        echo "🔍 Finding per-issue services older than 7 days..."
+
+        # 取得所有 per-issue services
+        SERVICES=$(gcloud run services list \
+          --platform managed \
+          --region $REGION \
+          --filter="metadata.labels.environment=preview" \
+          --format="value(metadata.name,metadata.creationTimestamp)")
+
+        if [ -z "$SERVICES" ]; then
+          echo "ℹ️ No per-issue services found"
+          exit 0
+        fi
+
+        # 計算 7 天前的時間戳
+        CUTOFF_DATE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+        echo "Cutoff date: $CUTOFF_DATE"
+        echo ""
+
+        # 檢查每個服務的建立時間
+        echo "$SERVICES" | while IFS=$'\t' read -r SERVICE_NAME CREATED_AT; do
+          # 比較時間
+          if [[ "$CREATED_AT" < "$CUTOFF_DATE" ]]; then
+            echo "🗑️ Deleting old service: $SERVICE_NAME (created: $CREATED_AT)"
+            gcloud run services delete $SERVICE_NAME \
+              --platform managed \
+              --region $REGION \
+              --quiet
+            echo "✅ Deleted: $SERVICE_NAME"
+          else
+            echo "✓ Keeping recent service: $SERVICE_NAME (created: $CREATED_AT)"
+          fi
+        done
+
+        echo ""
+        echo "🎉 Old per-issue environments cleanup complete!"
