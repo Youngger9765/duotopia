@@ -36,14 +36,43 @@ Issue 創建 → PDCA 分析 → 用戶批准 → TDD 修復 → Per-Issue Test 
 ### 流程詳解
 
 1. **Issue 創建** - 用戶回報問題
-2. **PDCA Plan** - Agent 分析問題、重現、找根因、寫測試計畫
-3. **用戶批准** - 確認分析正確才開始實作
-4. **PDCA Do** - TDD 驅動修復（Red → Green → Refactor）
-5. **PDCA Check** - 測試驗證、部署 Per-Issue Test Environment
-6. **Case Owner 測試** - 在 Per-Issue Test Environment 驗證
-7. **PDCA Act** - 加入預防措施、改善測試
-8. **Staging 部署** - Merge to staging
-9. **Production 發布** - Release PR merge to main
+2. **PDCA Plan** - 在 Issue 留言：分析問題、重現、找根因、寫測試計畫
+3. **用戶批准**（可選） - 不涉及 Schema 變更且有把握，直接開始實作
+4. **創建 PR** - `gh pr create --base staging --head fix/issue-X`
+5. **PDCA Do** - TDD 驅動修復（Red → Green → Refactor）
+6. **Per-Issue Test Environment** - CI/CD 自動部署，自動在 Issue 留言 preview URLs
+7. **PDCA Check** - 在 Issue 留言測試結果
+8. **Case Owner 測試** - 在 Per-Issue Test Environment 驗證
+9. **Merge PR** - 測試通過後 `gh pr merge` → staging
+10. **PDCA Act** - 在 Issue 留言預防措施
+11. **Production 發布** - Release PR merge to main
+
+---
+
+## 🚨 絕對禁止
+
+### ❌ 不准用 CLI 直接操作
+```bash
+# ❌ 絕對禁止！沒有留下 GitHub 紀錄
+git merge fix/issue-X
+git push origin staging
+git revert COMMIT_HASH
+source git-issue-pr-flow.sh && deploy-feature X  # 這個也禁止！
+```
+
+### ✅ 必須透過 GitHub PR
+```bash
+# ✅ 正確！所有操作都在 GitHub 留下紀錄
+gh pr create --base staging --head fix/issue-X
+gh issue comment X --body "PDCA Plan..."
+gh pr merge X
+```
+
+### 為什麼？
+1. **GitHub 是唯一真相來源** - 所有決策都要可追溯
+2. **Per-Issue Test Environment 依賴 PR** - 沒有 PR 就沒有 preview
+3. **CI/CD 自動化** - PR 觸發自動測試和部署
+4. **Code Review** - PR 提供 review 機制
 
 ---
 

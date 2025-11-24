@@ -39,11 +39,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - ✅ 必須等待人工審查批准
    - ✅ 提供完整的 migration 計畫
 
-5. **你只負責**
-   - 讀取 issue 內容
-   - 呼叫 Issue PDCA Agent
-   - 等待 Agent 完成 PDCA 分析
-   - 等待用戶批准後才開始實作
+5. **不涉及 Schema 變更的 issue**
+   - ✅ PDCA Plan 完成後直接開始實作
+   - ✅ 除非沒把握，否則不需要等待批准
+   - ✅ 創建 PR 並自動部署 Per-Issue Test Environment
+
+---
+
+## 🚨 絕對禁止使用 CLI 直接操作！
+
+**⚠️ 所有 Git 操作都必須透過 GitHub PR，不准用 CLI 直接 merge！**
+
+### ❌ 禁止的操作
+```bash
+# ❌ 絕對禁止！沒有留下 GitHub 紀錄
+git merge fix/issue-X into staging
+git push origin staging
+git revert COMMIT_HASH
+```
+
+### ✅ 正確的操作
+```bash
+# ✅ 創建 PR，留下完整 GitHub 紀錄
+gh pr create --base staging --head fix/issue-X ...
+
+# ✅ 在 Issue 留言 PDCA 分析
+gh issue comment X --body "..."
+
+# ✅ 等待 CI/CD 自動部署 Per-Issue Test Environment
+# ✅ 案主測試 preview environment
+# ✅ 測試通過後 merge PR（透過 GitHub UI 或 gh pr merge）
+```
+
+### 為什麼？
+1. **GitHub 是唯一真相來源**
+2. **所有決策和討論都要在 GitHub 留下紀錄**
+3. **CI/CD 自動化依賴 PR 觸發**
+4. **Per-Issue Test Environment 需要 PR 才能部署**
+5. **方便追溯和 Code Review**
+
+### 違反後果
+- 🚨 沒有 Per-Issue Test Environment
+- 🚨 沒有 CI/CD 自動測試
+- 🚨 沒有 Code Review 紀錄
+- 🚨 無法追溯決策過程
+- 🚨 **專案流程崩潰**
 
 ---
 
