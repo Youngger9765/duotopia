@@ -29,7 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: extract
     steps:
-      - run: echo "Branch matched! Issue #${{ needs.extract.outputs.issue_number }}"
+      - name: Test output
+        run: |
+          echo "Branch matched! Issue #${{ needs.extract.outputs.issue_number }}"
 
   comment:
     runs-on: ubuntu-latest
