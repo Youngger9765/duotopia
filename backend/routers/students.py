@@ -19,13 +19,11 @@ from models import (
     PracticeSession,
     PracticeAnswer,
     Assignment,
-    AnswerMode,
 )
 from auth import (
     create_access_token,
     verify_password,
     get_current_user,
-    get_current_student,
     get_current_student_or_teacher,
 )
 
