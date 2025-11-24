@@ -250,15 +250,56 @@ GitHub Actions 會自動：
 1. 部署 Backend + Frontend
 2. 在 Issue 留言測試 URLs
 
-### Step 3.2: Case Owner 測試
+### Step 3.2: 🔴 提供案主測試指引（強制步驟）
 
-Case owner 在 Per-Issue Test Environment 測試：
+**⚠️ 必須提供清楚的測試步驟給案主**
+
+在 Issue 留言中必須包含：
+
+```markdown
+## 🧪 測試指引（給案主）
+
+### 測試環境
+- **URL**: https://duotopia-preview-issue-<NUM>-frontend.run.app
+- **帳號**：[如需要，提供測試帳號]
+
+### 測試步驟
+
+1. **步驟 1**：[具體操作，例如：登入系統]
+2. **步驟 2**：[具體操作，例如：點擊 XXX 按鈕]
+3. **步驟 3**：[具體操作，例如：檢查 YYY 功能]
+
+### 預期結果
+- ✅ **應該看到**：[具體描述]
+- ❌ **不應該看到**：[具體描述]
+
+### Before/After 對比
+- **修復前**：[舊的行為]
+- **修復後**：[新的行為]
+
+### 測試通過標準
+如果：
+- ✅ [條件 1]
+- ✅ [條件 2]
+
+請留言：「測試通過」或「✅」
+
+如果有問題，請回報：
+- ❌ 什麼地方不對
+- 📸 最好附上截圖
+```
+
+**🔴 沒有提供測試指引 = Check 階段不完整**
+
+### Step 3.3: Case Owner 測試
+
+Case owner 根據測試指引在 Per-Issue Test Environment 測試：
 - Frontend: `https://duotopia-preview-issue-<NUM>-frontend.run.app`
 - Backend: `https://duotopia-preview-issue-<NUM>-backend.run.app`
 
 測試通過後留言：「測試通過」或「✅」
 
-### Step 3.3: 檢查批准狀態
+### Step 3.4: 檢查批准狀態
 
 ```bash
 check-approvals
