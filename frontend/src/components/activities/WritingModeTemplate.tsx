@@ -132,15 +132,11 @@ const WritingModeTemplate: React.FC<WritingModeTemplateProps> = ({
       {/* 題目區 */}
       <div className="question-section mt-8 mb-8 p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
         <div className="mb-2">
-          <span className="text-sm font-medium text-blue-700">例句：</span>
-        </div>
-        <div className="text-2xl font-semibold text-gray-900 mb-3">
-          {word.example_sentence}
-        </div>
-        <div className="text-lg text-gray-700">
-          <span className="text-sm font-medium text-gray-600 mr-2">
-            中文翻譯：
+          <span className="text-sm font-medium text-blue-700">
+            請根據下面的中文，用單字組成正確的英文句子：
           </span>
+        </div>
+        <div className="text-2xl font-semibold text-gray-900">
           {word.example_sentence_translation}
         </div>
       </div>

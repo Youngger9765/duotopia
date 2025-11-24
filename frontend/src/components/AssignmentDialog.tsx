@@ -91,7 +91,8 @@ const contentTypeLabels: Record<string, string> = {
   speaking_practice: "口說練習",
   speaking_scenario: "情境對話",
   listening_cloze: "聽力填空",
-  sentence_making: "造句練習",
+  sentence_making: "句子模組",
+  SENTENCE_MAKING: "句子模組",
   speaking_quiz: "口說測驗",
 };
 
@@ -347,9 +348,10 @@ export function AssignmentDialog({
   // Helper function: Handle answer mode change
   const handleAnswerModeChange = (mode: "listening" | "writing") => {
     // Only check audio for listening mode in sentence_making
+    const selectedType = getSelectedContentType();
     if (
       mode === "listening" &&
-      getSelectedContentType() === "sentence_making"
+      (selectedType === "sentence_making" || selectedType === "SENTENCE_MAKING")
     ) {
       const hasAudio = checkAllContentsHaveAudio();
       if (!hasAudio) {
@@ -1227,7 +1229,8 @@ export function AssignmentDialog({
                           </span>
                         </div>
                       )}
-                      {getSelectedContentType() === "sentence_making" && (
+                      {(getSelectedContentType() === "sentence_making" ||
+                        getSelectedContentType() === "SENTENCE_MAKING") && (
                         <div className="mt-2 pt-2 border-t border-blue-200">
                           <div className="text-xs font-medium text-blue-900 mb-2">
                             答題模式：
