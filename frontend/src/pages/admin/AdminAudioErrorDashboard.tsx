@@ -296,17 +296,19 @@ export default function AdminAudioErrorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               <div className="flex items-center gap-3">
                 <div
-                  className={`h-3 w-3 rounded-full ${
+                  className={`h-3 w-3 flex-shrink-0 rounded-full ${
                     health.bigquery_connected
                       ? "bg-green-500 animate-pulse"
                       : "bg-red-500"
                   }`}
                 />
                 <div>
-                  <p className="text-sm font-medium">BigQuery 連線</p>
+                  <p className="text-xs md:text-sm font-medium">
+                    BigQuery 連線
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {health.bigquery_connected ? "已連線" : "未連線"}
                   </p>
@@ -315,14 +317,16 @@ export default function AdminAudioErrorDashboard() {
               {health.table_available !== undefined && (
                 <div className="flex items-center gap-3">
                   <div
-                    className={`h-3 w-3 rounded-full ${
+                    className={`h-3 w-3 flex-shrink-0 rounded-full ${
                       health.table_available
                         ? "bg-green-500 animate-pulse"
                         : "bg-yellow-500"
                     }`}
                   />
                   <div>
-                    <p className="text-sm font-medium">資料表可用性</p>
+                    <p className="text-xs md:text-sm font-medium">
+                      資料表可用性
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {health.table_available ? "資料表已建立" : "等待建立"}
                     </p>
@@ -330,9 +334,9 @@ export default function AdminAudioErrorDashboard() {
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <Database className="h-5 w-5 text-muted-foreground" />
+                <Database className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">學生資料來源</p>
+                  <p className="text-xs md:text-sm font-medium">學生資料來源</p>
                   <p className="text-xs text-muted-foreground">
                     生產環境 Supabase
                   </p>
@@ -453,17 +457,19 @@ export default function AdminAudioErrorDashboard() {
 
       {/* Stats Cards - Compact */}
       {stats && stats.data_available && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="border-l-4 border-l-red-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
               <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
                 總錯誤數
               </CardTitle>
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+              <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
             </CardHeader>
-            <CardContent className="pb-3">
-              <div className="text-xl font-bold">{stats.total_errors}</div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+            <CardContent className="pb-2 md:pb-3">
+              <div className="text-lg md:text-xl font-bold">
+                {stats.total_errors}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {formatDate(stats.period.start)} -{" "}
                 {formatDate(stats.period.end)}
               </p>
@@ -471,14 +477,14 @@ export default function AdminAudioErrorDashboard() {
           </Card>
 
           <Card className="border-l-4 border-l-orange-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
               <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
                 最常見錯誤
               </CardTitle>
-              <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+              <AlertCircle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
             </CardHeader>
-            <CardContent className="pb-3">
-              <div className="text-xl font-bold truncate">
+            <CardContent className="pb-2 md:pb-3">
+              <div className="text-lg md:text-xl font-bold truncate">
                 {stats.error_by_type[0]?.error_type || "N/A"}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -488,14 +494,14 @@ export default function AdminAudioErrorDashboard() {
           </Card>
 
           <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
               <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
                 主要瀏覽器
               </CardTitle>
-              <Chrome className="h-3.5 w-3.5 text-blue-500" />
+              <Chrome className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
             </CardHeader>
-            <CardContent className="pb-3">
-              <div className="text-xl font-bold">
+            <CardContent className="pb-2 md:pb-3">
+              <div className="text-lg md:text-xl font-bold truncate">
                 {stats.error_by_browser[0]?.browser || "N/A"}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -519,30 +525,39 @@ export default function AdminAudioErrorDashboard() {
               <CardDescription>每日錯誤數量變化</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={stats.error_by_date}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={formatDate}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis />
-                  <Tooltip
-                    labelFormatter={(label) => formatDate(label as string)}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    name="錯誤數"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="w-full overflow-x-auto">
+                <div className="min-w-[300px]">
+                  <ResponsiveContainer
+                    width="100%"
+                    height={250}
+                    className="md:!h-[300px]"
+                  >
+                    <LineChart data={stats.error_by_date}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatDate}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        labelFormatter={(label) => formatDate(label as string)}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        name="錯誤數"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

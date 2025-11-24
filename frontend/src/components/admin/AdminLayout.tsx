@@ -28,18 +28,20 @@ export default function AdminLayout({
 }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* 統一的 Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <Icon className="h-8 w-8 text-blue-600" />
-            {title}
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-7xl">
+        {/* 統一的 Header - RWD 優化 */}
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
+            <Icon className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+            <span className="break-words">{title}</span>
           </h1>
-          <p className="text-muted-foreground mt-2 text-base">{description}</p>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
+            {description}
+          </p>
         </div>
 
         {/* 內容區域 */}
-        <div className="space-y-6">{children}</div>
+        <div className="space-y-4 md:space-y-6">{children}</div>
       </div>
     </div>
   );

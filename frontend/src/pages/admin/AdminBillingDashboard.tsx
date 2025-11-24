@@ -170,65 +170,70 @@ export default function AdminBillingDashboard() {
       </div>
 
       {/* System Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            系統狀態
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  health?.bigquery_connected
-                    ? "bg-green-500 animate-pulse"
-                    : "bg-red-500"
-                }`}
-              />
-              <div>
-                <p className="text-sm font-medium">BigQuery 連線</p>
-                <p className="text-xs text-muted-foreground">
-                  {health?.bigquery_connected ? "已連線" : "未連線"}
-                </p>
+      {health && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Database className="h-4 w-4 md:h-5 md:w-5" />
+              系統狀態
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 flex-shrink-0 rounded-full ${
+                    health.bigquery_connected
+                      ? "bg-green-500 animate-pulse"
+                      : "bg-red-500"
+                  }`}
+                />
+                <div>
+                  <p className="text-xs md:text-sm font-medium">
+                    BigQuery 連線
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {health.bigquery_connected ? "已連線" : "未連線"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-3 w-3 flex-shrink-0 rounded-full ${
+                    health.tables_available
+                      ? "bg-green-500 animate-pulse"
+                      : "bg-yellow-500"
+                  }`}
+                />
+                <div>
+                  <p className="text-xs md:text-sm font-medium">資料可用性</p>
+                  <p className="text-xs text-muted-foreground">
+                    {health.tables_available ? "資料已匯入" : "等待匯入"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="text-xs md:text-sm font-medium">更新頻率</p>
+                  <p className="text-xs text-muted-foreground">每小時更新</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  health?.tables_available
-                    ? "bg-green-500 animate-pulse"
-                    : "bg-yellow-500"
-                }`}
-              />
-              <div>
-                <p className="text-sm font-medium">資料可用性</p>
-                <p className="text-xs text-muted-foreground">
-                  {health?.tables_available ? "資料已匯入" : "等待匯入"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">更新頻率</p>
-                <p className="text-xs text-muted-foreground">每小時更新</p>
-              </div>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {!dataAvailable && (
-            <Alert className="mt-4">
-              <AlertDescription>
-                {summary?.message ||
-                  health?.message ||
-                  "等待 GCP 匯出資料（啟用後需 24 小時）"}
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+      {/* Data Availability Alert - Only show if no data */}
+      {!dataAvailable && (
+        <Alert>
+          <AlertDescription className="text-sm">
+            {summary?.message ||
+              health?.message ||
+              "等待 GCP 匯出資料（啟用後需 24 小時）"}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Controls */}
       <div className="flex flex-wrap gap-2 items-center justify-between">
@@ -339,33 +344,33 @@ export default function AdminBillingDashboard() {
       </div>
 
       {/* Summary Cards - Compact */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
             <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               總費用
             </CardTitle>
-            <DollarSign className="h-3.5 w-3.5 text-blue-500" />
+            <DollarSign className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl font-bold">
+          <CardContent className="pb-2 md:pb-3">
+            <div className="text-lg md:text-xl font-bold">
               {formatCurrency(summary?.total_cost || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {summary?.period.start} ~ {summary?.period.end}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
             <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               Top 服務
             </CardTitle>
-            <BarChart3 className="h-3.5 w-3.5 text-purple-500" />
+            <BarChart3 className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl font-bold truncate">
+          <CardContent className="pb-2 md:pb-3">
+            <div className="text-lg md:text-xl font-bold truncate">
               {summary?.top_services?.[0]?.service || "N/A"}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -383,12 +388,12 @@ export default function AdminBillingDashboard() {
                 : "border-l-green-500"
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
             <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               費用增長
             </CardTitle>
             <TrendingUp
-              className={`h-3.5 w-3.5 ${
+              className={`h-3.5 w-3.5 flex-shrink-0 ${
                 anomalies?.increase_percent && anomalies.increase_percent > 50
                   ? "text-red-500"
                   : anomalies?.increase_percent &&
@@ -398,8 +403,8 @@ export default function AdminBillingDashboard() {
               }`}
             />
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl font-bold">
+          <CardContent className="pb-2 md:pb-3">
+            <div className="text-lg md:text-xl font-bold">
               {anomalies?.increase_percent !== undefined
                 ? `${anomalies.increase_percent > 0 ? "+" : ""}${anomalies.increase_percent.toFixed(1)}%`
                 : "N/A"}
@@ -417,20 +422,20 @@ export default function AdminBillingDashboard() {
               : "border-l-green-500"
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2 md:pt-3">
             <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400">
               異常警報
             </CardTitle>
             <AlertTriangle
-              className={`h-3.5 w-3.5 ${
+              className={`h-3.5 w-3.5 flex-shrink-0 ${
                 anomalies?.has_anomaly
                   ? "text-red-500 animate-pulse"
                   : "text-green-500"
               }`}
             />
           </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl font-bold">
+          <CardContent className="pb-2 md:pb-3">
+            <div className="text-lg md:text-xl font-bold">
               {anomalies?.anomalies?.length || 0}
             </div>
             <p
@@ -480,29 +485,37 @@ export default function AdminBillingDashboard() {
               <CardDescription>過去 {days} 天的 GCP 費用變化</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={summary?.daily_costs || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={formatDate}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    labelFormatter={(label) => `日期: ${label}`}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="cost"
-                    stroke="#8884d8"
-                    name="費用 (USD)"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="w-full overflow-x-auto">
+                <div className="min-w-[300px]">
+                  <ResponsiveContainer
+                    width="100%"
+                    height={250}
+                    className="md:!h-[300px]"
+                  >
+                    <LineChart data={summary?.daily_costs || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatDate}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        labelFormatter={(label) => `日期: ${label}`}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="cost"
+                        stroke="#8884d8"
+                        name="費用 (USD)"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -516,26 +529,34 @@ export default function AdminBillingDashboard() {
               <CardDescription>過去 {days} 天的 Top 10 服務</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={summary?.top_services?.slice(0, 10) || []}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    dataKey="service"
-                    type="category"
-                    width={150}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
-                  <Legend />
-                  <Bar dataKey="cost" fill="#82ca9d" name="費用 (USD)" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="w-full overflow-x-auto">
+                <div className="min-w-[300px]">
+                  <ResponsiveContainer
+                    width="100%"
+                    height={250}
+                    className="md:!h-[300px]"
+                  >
+                    <BarChart
+                      data={summary?.top_services?.slice(0, 10) || []}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        dataKey="service"
+                        type="category"
+                        width={120}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                      <Bar dataKey="cost" fill="#82ca9d" name="費用 (USD)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

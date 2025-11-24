@@ -740,17 +740,17 @@ export default function AdminSubscriptionDashboard() {
       )}
 
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 {t("adminSubscription.stats.totalTeachers")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3 md:pb-4">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-500" />
-                <span className="text-2xl font-bold">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+                <span className="text-xl md:text-2xl font-bold">
                   {stats.total_teachers}
                 </span>
               </div>
@@ -758,15 +758,15 @@ export default function AdminSubscriptionDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 {t("adminSubscription.stats.activeSubs")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3 md:pb-4">
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-2xl font-bold">
+                <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
+                <span className="text-xl md:text-2xl font-bold">
                   {stats.active_subscriptions}
                 </span>
               </div>
@@ -774,15 +774,15 @@ export default function AdminSubscriptionDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 {t("adminSubscription.stats.monthlyRevenue")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3 md:pb-4">
               <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-yellow-500" />
-                <span className="text-2xl font-bold">
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
+                <span className="text-xl md:text-2xl font-bold">
                   ${stats.monthly_revenue.toLocaleString()}
                 </span>
               </div>
@@ -790,15 +790,15 @@ export default function AdminSubscriptionDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 {t("adminSubscription.stats.quotaUsage")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3 md:pb-4">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-purple-500" />
-                <span className="text-2xl font-bold">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-purple-500" />
+                <span className="text-xl md:text-2xl font-bold">
                   {stats.quota_usage_percentage.toFixed(1)}%
                 </span>
               </div>
@@ -808,27 +808,36 @@ export default function AdminSubscriptionDashboard() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 h-14 bg-white border-2 border-gray-200 p-1">
+        <TabsList className="grid w-full grid-cols-3 mb-4 md:mb-6 h-auto md:h-14 bg-white border-2 border-gray-200 p-1">
           <TabsTrigger
             value="subscriptions"
-            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+            className="flex items-center justify-center gap-1.5 md:gap-2 text-xs md:text-base font-semibold py-2 md:py-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
           >
-            <Users className="w-5 h-5" />
-            {t("adminSubscription.tabs.subscriptions")}
+            <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="hidden sm:inline">
+              {t("adminSubscription.tabs.subscriptions")}
+            </span>
+            <span className="sm:hidden">訂閱</span>
           </TabsTrigger>
           <TabsTrigger
             value="transactions"
-            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+            className="flex items-center justify-center gap-1.5 md:gap-2 text-xs md:text-base font-semibold py-2 md:py-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
           >
-            <Receipt className="w-5 h-5" />
-            {t("adminSubscription.tabs.transactions")}
+            <Receipt className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="hidden sm:inline">
+              {t("adminSubscription.tabs.transactions")}
+            </span>
+            <span className="sm:hidden">交易</span>
           </TabsTrigger>
           <TabsTrigger
             value="learning"
-            className="flex items-center gap-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+            className="flex items-center justify-center gap-1.5 md:gap-2 text-xs md:text-base font-semibold py-2 md:py-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
           >
-            <GraduationCap className="w-5 h-5" />
-            {t("adminSubscription.tabs.learning")}
+            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+            <span className="hidden sm:inline">
+              {t("adminSubscription.tabs.learning")}
+            </span>
+            <span className="sm:hidden">學習</span>
           </TabsTrigger>
         </TabsList>
 
@@ -875,28 +884,32 @@ export default function AdminSubscriptionDashboard() {
                 </Button>
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
+              <div className="border rounded-lg overflow-x-auto">
+                <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.email")}
                       </TableHead>
-                      <TableHead>{t("adminSubscription.table.name")}</TableHead>
-                      <TableHead>{t("adminSubscription.table.plan")}</TableHead>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
+                        {t("adminSubscription.table.name")}
+                      </TableHead>
+                      <TableHead className="text-xs md:text-sm">
+                        {t("adminSubscription.table.plan")}
+                      </TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.endDate")}
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.periods")}
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.quota")}
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.status")}
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="text-xs md:text-sm">
                         {t("adminSubscription.table.actions")}
                       </TableHead>
                     </TableRow>
@@ -1508,23 +1521,23 @@ export default function AdminSubscriptionDashboard() {
               ) : transactionAnalytics ? (
                 <div className="space-y-6">
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">
+                      <CardContent className="pt-4 md:pt-6">
+                        <div className="text-xl md:text-2xl font-bold">
                           ${transactionAnalytics.total_revenue.toLocaleString()}
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 mt-1">
                           {t("adminSubscription.transactionsTab.totalRevenue")}
                         </p>
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">
+                      <CardContent className="pt-4 md:pt-6">
+                        <div className="text-xl md:text-2xl font-bold">
                           {transactionAnalytics.total_count}
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 mt-1">
                           {t(
                             "adminSubscription.transactionsTab.totalTransactions",
                           )}
@@ -1543,21 +1556,31 @@ export default function AdminSubscriptionDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={transactionAnalytics.monthly_stats}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="total"
-                            stroke="#8884d8"
-                            name="Total Revenue"
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                      <div className="w-full overflow-x-auto">
+                        <div className="min-w-[300px]">
+                          <ResponsiveContainer
+                            width="100%"
+                            height={250}
+                            className="md:!h-[300px]"
+                          >
+                            <LineChart
+                              data={transactionAnalytics.monthly_stats}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "12px" }} />
+                              <Line
+                                type="monotone"
+                                dataKey="total"
+                                stroke="#8884d8"
+                                name="Total Revenue"
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1669,23 +1692,23 @@ export default function AdminSubscriptionDashboard() {
               ) : learningAnalytics ? (
                 <div className="space-y-6">
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">
+                      <CardContent className="pt-4 md:pt-6">
+                        <div className="text-xl md:text-2xl font-bold">
                           {learningAnalytics.total_points_used.toLocaleString()}
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 mt-1">
                           {t("adminSubscription.learningTab.totalPointsUsed")}
                         </p>
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">
+                      <CardContent className="pt-4 md:pt-6">
+                        <div className="text-xl md:text-2xl font-bold">
                           {learningAnalytics.total_teachers}
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 mt-1">
                           {t("adminSubscription.learningTab.activeTeachers")}
                         </p>
                       </CardContent>
@@ -1700,55 +1723,64 @@ export default function AdminSubscriptionDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart
-                          data={learningAnalytics.monthly_points_usage.reduce(
-                            (acc, item) => {
-                              const existing = acc.find(
-                                (x) => x.month === item.month,
-                              );
-                              if (existing) {
-                                existing[item.teacher_name] = item.total_points;
-                              } else {
-                                acc.push({
-                                  month: item.month,
-                                  [item.teacher_name]: item.total_points,
-                                });
-                              }
-                              return acc;
-                            },
-                            [] as Record<string, string | number>[],
-                          )}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          {/* Generate bars for each teacher dynamically */}
-                          {Array.from(
-                            new Set(
-                              learningAnalytics.monthly_points_usage.map(
-                                (x) => x.teacher_name,
-                              ),
-                            ),
-                          ).map((teacher, idx) => (
-                            <Bar
-                              key={teacher}
-                              dataKey={teacher}
-                              fill={
-                                [
-                                  "#8884d8",
-                                  "#82ca9d",
-                                  "#ffc658",
-                                  "#ff8042",
-                                  "#a4de6c",
-                                ][idx % 5]
-                              }
-                            />
-                          ))}
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <div className="w-full overflow-x-auto">
+                        <div className="min-w-[300px]">
+                          <ResponsiveContainer
+                            width="100%"
+                            height={250}
+                            className="md:!h-[300px]"
+                          >
+                            <BarChart
+                              data={learningAnalytics.monthly_points_usage.reduce(
+                                (acc, item) => {
+                                  const existing = acc.find(
+                                    (x) => x.month === item.month,
+                                  );
+                                  if (existing) {
+                                    existing[item.teacher_name] =
+                                      item.total_points;
+                                  } else {
+                                    acc.push({
+                                      month: item.month,
+                                      [item.teacher_name]: item.total_points,
+                                    });
+                                  }
+                                  return acc;
+                                },
+                                [] as Record<string, string | number>[],
+                              )}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "12px" }} />
+                              {/* Generate bars for each teacher dynamically */}
+                              {Array.from(
+                                new Set(
+                                  learningAnalytics.monthly_points_usage.map(
+                                    (x) => x.teacher_name,
+                                  ),
+                                ),
+                              ).map((teacher, idx) => (
+                                <Bar
+                                  key={teacher}
+                                  dataKey={teacher}
+                                  fill={
+                                    [
+                                      "#8884d8",
+                                      "#82ca9d",
+                                      "#ffc658",
+                                      "#ff8042",
+                                      "#a4de6c",
+                                    ][idx % 5]
+                                  }
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
