@@ -12,10 +12,10 @@ interface AdminLayoutProps {
  * 統一的 Admin 頁面 Layout Component
  *
  * 確保所有 Admin 頁面有一致的：
- * - Container 寬度
- * - Header 樣式
- * - 間距系統
- * - 背景顏色
+ * - Container 寬度 (max-w-7xl)
+ * - Header 樣式 (text-3xl, blue-600 icon)
+ * - 間距系統 (py-8, mb-8, space-y-6)
+ * - 背景顏色 (bg-gray-50)
  */
 export default function AdminLayout({
   title,
