@@ -1464,11 +1464,12 @@ class MasteryStatusResponse(BaseModel):
 
 
 @router.get(
-    "/assignments/{student_assignment_id}/practice-words", response_model=PracticeWordsResponse
+    "/assignments/{student_assignment_id}/practice-words",
+    response_model=PracticeWordsResponse,
 )
 async def get_practice_words(
     student_assignment_id: int,
-    user = Depends(get_current_student_or_teacher),
+    user=Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """
@@ -1487,13 +1488,16 @@ async def get_practice_words(
         # === 老師預覽模式 ===
         # 老師預覽時，student_assignment_id 其實是 assignment_id（從預覽 URL 來的）
         # 1. 驗證 assignment 存在
-        assignment = db.query(Assignment).filter(Assignment.id == student_assignment_id).first()
+        assignment = (
+            db.query(Assignment).filter(Assignment.id == student_assignment_id).first()
+        )
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
 
         # 2. 獲取 assignment 的 content_items（不使用記憶曲線，直接返回所有單字）
         result = db.execute(
-            text("""
+            text(
+                """
                 SELECT DISTINCT
                     ci.id as content_item_id,
                     ci.text,
@@ -1507,8 +1511,9 @@ async def get_practice_words(
                 WHERE ac.assignment_id = :assignment_id
                 AND c.type = 'SENTENCE_MAKING'
                 LIMIT 10
-            """),
-            {"assignment_id": student_assignment_id}
+            """
+            ),
+            {"assignment_id": student_assignment_id},
         )
 
         words = []
@@ -1611,7 +1616,7 @@ async def get_practice_words(
 async def submit_answer(
     session_id: int,
     request: SubmitAnswerRequest,
-    user = Depends(get_current_student_or_teacher),
+    user=Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """
@@ -1639,7 +1644,7 @@ async def submit_answer(
             # 老師不應該提交真實 session 的答案
             raise HTTPException(
                 status_code=403,
-                detail="Teachers cannot submit answers for student sessions"
+                detail="Teachers cannot submit answers for student sessions",
             )
 
     # === 學生模式 ===
@@ -1706,11 +1711,12 @@ async def submit_answer(
 
 
 @router.get(
-    "/assignments/{student_assignment_id}/mastery-status", response_model=MasteryStatusResponse
+    "/assignments/{student_assignment_id}/mastery-status",
+    response_model=MasteryStatusResponse,
 )
 async def get_mastery_status(
     student_assignment_id: int,
-    user = Depends(get_current_student_or_teacher),
+    user=Depends(get_current_student_or_teacher),
     db: Session = Depends(get_db),
 ):
     """

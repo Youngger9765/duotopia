@@ -38,7 +38,9 @@ class TTSService:
         self.storage_client = None
 
         # 本地儲存目錄（當不使用 GCS 時）
-        self.local_audio_dir = os.path.join(os.path.dirname(__file__), "..", "static", "tts")
+        self.local_audio_dir = os.path.join(
+            os.path.dirname(__file__), "..", "static", "tts"
+        )
         if not self.use_gcs:
             os.makedirs(self.local_audio_dir, exist_ok=True)
 
@@ -125,6 +127,7 @@ class TTSService:
 
                         # 移動檔案到本地目錄
                         import shutil
+
                         shutil.move(tmp_file.name, local_path)
 
                         # 返回本地 URL

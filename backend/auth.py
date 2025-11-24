@@ -258,9 +258,6 @@ async def get_current_student_or_teacher(
                 "email": teacher.email,
             }
         else:
-            raise HTTPException(
-                status_code=403,
-                detail="Invalid user type"
-            )
+            raise HTTPException(status_code=403, detail="Invalid user type")
     finally:
         temp_db.close()

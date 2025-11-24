@@ -1885,9 +1885,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
         ("answer", "答案", "Do you know the answer?", "你知道答案嗎？"),
     ]
 
-    for idx, (word, translation, example, example_trans) in enumerate(
-        words_set1_1, 1
-    ):
+    for idx, (word, translation, example, example_trans) in enumerate(words_set1_1, 1):
         item = ContentItem(
             content_id=content1_1.id,
             order_index=idx,
@@ -1930,7 +1928,12 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
         ("scissors", "剪刀", "I need scissors to cut paper.", "我需要剪刀來剪紙。"),
         ("glue", "膠水", "Use glue to stick the paper.", "用膠水黏貼紙張。"),
         ("crayon", "蠟筆", "Children draw with crayons.", "孩子們用蠟筆畫畫。"),
-        ("calculator", "計算機", "You can use a calculator in math class.", "你可以在數學課使用計算機。"),
+        (
+            "calculator",
+            "計算機",
+            "You can use a calculator in math class.",
+            "你可以在數學課使用計算機。",
+        ),
         ("dictionary", "字典", "Look up new words in a dictionary.", "在字典裡查新單字。"),
         ("folder", "文件夾", "Put your papers in the folder.", "把你的文件放進文件夾。"),
         ("stapler", "釘書機", "Use a stapler to bind papers together.", "用釘書機把紙釘在一起。"),
@@ -1939,9 +1942,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
         ("uniform", "制服", "We wear uniforms to school.", "我們穿制服上學。"),
     ]
 
-    for idx, (word, translation, example, example_trans) in enumerate(
-        words_set1_2, 1
-    ):
+    for idx, (word, translation, example, example_trans) in enumerate(words_set1_2, 1):
         item = ContentItem(
             content_id=content1_2.id,
             order_index=idx,
@@ -2007,9 +2008,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
         ("carpet", "地毯", "There is a carpet on the floor.", "地板上有一塊地毯。"),
     ]
 
-    for idx, (word, translation, example, example_trans) in enumerate(
-        words_set2_1, 1
-    ):
+    for idx, (word, translation, example, example_trans) in enumerate(words_set2_1, 1):
         item = ContentItem(
             content_id=content2_1.id,
             order_index=idx,
@@ -2064,9 +2063,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
         ("happy", "快樂的", "I am happy to see you.", "我很高興見到你。"),
     ]
 
-    for idx, (word, translation, example, example_trans) in enumerate(
-        words_set2_2, 1
-    ):
+    for idx, (word, translation, example, example_trans) in enumerate(words_set2_2, 1):
         item = ContentItem(
             content_id=content2_2.id,
             order_index=idx,
