@@ -41,10 +41,3 @@ export default function AdminLayout({
     </div>
   );
 }
-// test
-// trigger deployment
-// debug test
-// debug minimal
-// test backend mock
-// test real backend
-// trigger real backend deploy
