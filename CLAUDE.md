@@ -596,28 +596,31 @@ check-approvals
 # - 下一步建議（是否可以 deploy to production）
 ```
 
-#### Approval 自動化流程
+#### Approval 手動流程（節省 CI/CD 成本）
 
-**當 case owner（如 Kaddy）在 issue 留言「測試通過」或「approved」時**：
+**當 case owner（如 Kaddy）測試通過後**：
 
-1. **GitHub Actions 自動觸發**
-   - 檢測關鍵字：「測試通過」、「approved」、「✅」、「LGTM」
-   - 驗證留言者是否為 case owner（kaddy-eunice 或 Youngger9765）
+1. **手動加上批准標籤**
+   ```bash
+   gh issue edit <issue_number> --add-label "✅ tested-in-staging"
+   ```
 
-2. **自動加上標籤**
-   - 加上 `✅ tested-in-staging` label 到該 issue
+2. **檢查所有 issues 的批准狀態**
+   ```bash
+   check-approvals
+   ```
+   - 顯示每個 issue 的批准狀態
+   - 顯示進度統計（幾個已批准/總共幾個）
+   - 提供下一步建議（是否可以 deploy to production）
 
-3. **檢查 Release PR**
-   - 找到包含此 issue 的 Release PR
-   - 檢查 PR 中所有 issues 是否都有 `✅ tested-in-staging` label
+3. **全部批准後**
+   - 執行 `check-approvals` 確認全部通過
+   - 使用 `gh pr ready <PR_NUMBER>` 標記 PR 為 Ready for review
+   - 使用 `gh pr merge <PR_NUMBER> --merge` 部署到 production
 
-4. **全部批准後自動動作**
-   - 標記 PR 為 Ready for review（移除 Draft 狀態）
-   - 在 PR 加上評論通知可以 merge
-
-5. **使用 `check-approvals` 手動檢查**
-   - 任何時候想知道批准進度，執行 `check-approvals`
-   - 顯示清楚的進度統計和下一步建議
+**為什麼不用 GitHub Actions 自動化？**
+- 避免持續監控 issues 浪費 CI/CD 資源
+- 手動執行更可控，只在需要時才執行
 
 #### 重要規則
 - ❌ 不要手動創建 feature → staging 的 PR
