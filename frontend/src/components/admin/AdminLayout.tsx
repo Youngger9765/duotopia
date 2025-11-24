@@ -18,6 +18,7 @@ interface AdminLayoutProps {
  * - 背景顏色 (bg-gray-50)
  *
  * Issue #15: Admin CSS 統一性修復
+ * Trigger redeploy with fixed secrets
  */
 export default function AdminLayout({
   title,
