@@ -234,18 +234,22 @@ async def batch_review_items(
 ):
     """Submit reviews for multiple items at once"""
 
+    # 🔥 Preload all StudentItemProgress records (avoid N+1)
+    progress_ids = [r["student_item_progress_id"] for r in batch_review.item_reviews]
+    all_item_progress = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.id.in_(progress_ids))
+        .all()
+    )
+    progress_map = {ip.id: ip for ip in all_item_progress}
+
     success_count = 0
     failed_items = []
 
     for review_data in batch_review.item_reviews:
         try:
-            item_progress = (
-                db.query(StudentItemProgress)
-                .filter(
-                    StudentItemProgress.id == review_data["student_item_progress_id"]
-                )
-                .first()
-            )
+            # 🔥 Get from preloaded map (no query)
+            item_progress = progress_map.get(review_data["student_item_progress_id"])
 
             if item_progress:
                 item_progress.teacher_review_score = review_data["teacher_review_score"]

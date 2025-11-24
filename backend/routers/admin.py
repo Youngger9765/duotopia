@@ -311,31 +311,45 @@ async def list_teachers(
         query.order_by(Teacher.created_at.desc()).offset(offset).limit(limit).all()
     )
 
+    # 🔥 Preload all subscription periods for teachers (avoid N+1)
+    teacher_ids = [t.id for t in teachers]
+    all_periods = (
+        db.query(SubscriptionPeriod)
+        .filter(SubscriptionPeriod.teacher_id.in_(teacher_ids))
+        .all()
+    )
+
+    # Build maps: teacher_id -> [periods] and teacher_id -> latest_period
+    periods_by_teacher = {}
+    latest_period_by_teacher = {}
+    for period in all_periods:
+        if period.teacher_id not in periods_by_teacher:
+            periods_by_teacher[period.teacher_id] = []
+        periods_by_teacher[period.teacher_id].append(period)
+
+        # Track latest period
+        if period.teacher_id not in latest_period_by_teacher:
+            latest_period_by_teacher[period.teacher_id] = period
+        elif period.end_date > latest_period_by_teacher[period.teacher_id].end_date:
+            latest_period_by_teacher[period.teacher_id] = period
+
     # 組裝訂閱資訊
     result = []
     now = datetime.now(timezone.utc)
 
     for teacher in teachers:
-        # 計算總共訂閱過幾期（只計算成功付費的，排除 admin 手動創建、取消的）
-        total_periods = (
-            db.query(SubscriptionPeriod)
-            .filter(
-                SubscriptionPeriod.teacher_id == teacher.id,
-                SubscriptionPeriod.payment_method.notin_(
-                    ["admin_create", "manual_extension", "admin_edit"]
-                ),
-                SubscriptionPeriod.status != "cancelled",
-            )
-            .count()
+        # 🔥 Calculate total periods from preloaded data (no query)
+        teacher_periods = periods_by_teacher.get(teacher.id, [])
+        total_periods = sum(
+            1
+            for p in teacher_periods
+            if p.payment_method
+            not in ["admin_create", "manual_extension", "admin_edit"]
+            and p.status != "cancelled"
         )
 
-        # 獲取最新的訂閱週期（不限 status，包括 active/cancelled/expired）
-        current_period = (
-            db.query(SubscriptionPeriod)
-            .filter_by(teacher_id=teacher.id)
-            .order_by(SubscriptionPeriod.end_date.desc())
-            .first()
-        )
+        # 🔥 Get latest period from preloaded map (no query)
+        current_period = latest_period_by_teacher.get(teacher.id)
 
         # 計算訂閱狀態
         if current_period:

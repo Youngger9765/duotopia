@@ -407,14 +407,24 @@ async def get_teacher_programs(
 
     programs = query.order_by(Program.order_index).all()
 
+    # 🔥 Batch-load student counts for all classrooms (avoid N+1)
+    classroom_ids = [p.classroom_id for p in programs if p.classroom_id]
+
+    student_counts = (
+        db.query(
+            ClassroomStudent.classroom_id,
+            func.count(ClassroomStudent.id).label("count"),
+        )
+        .filter(ClassroomStudent.classroom_id.in_(classroom_ids))
+        .group_by(ClassroomStudent.classroom_id)
+        .all()
+    )
+    student_count_map = {row.classroom_id: row.count for row in student_counts}
+
     result = []
     for program in programs:
-        # Get student count for the classroom through ClassroomStudent relationship
-        student_count = (
-            db.query(ClassroomStudent)
-            .filter(ClassroomStudent.classroom_id == program.classroom_id)
-            .count()
-        )
+        # 🔥 Get student count from preloaded map (no query)
+        student_count = student_count_map.get(program.classroom_id, 0)
 
         # 處理 lessons 和 contents
         lessons_data = []
@@ -1289,6 +1299,25 @@ async def batch_import_students(
     )
     classroom_map = {c.name: c for c in teacher_classrooms}
 
+    # 🔥 Preload all existing enrollments to avoid N+1 queries
+    classroom_ids = [c.id for c in teacher_classrooms]
+    existing_enrollments = (
+        db.query(ClassroomStudent)
+        .join(Student)
+        .filter(
+            ClassroomStudent.classroom_id.in_(classroom_ids),
+            ClassroomStudent.is_active.is_(True),
+        )
+        .options(selectinload(ClassroomStudent.student))
+        .all()
+    )
+    # Build map: (student_name, classroom_id) -> enrollment
+    enrollment_map = {
+        (cs.student.name, cs.classroom_id): cs
+        for cs in existing_enrollments
+        if cs.student
+    }
+
     success_count = 0
     error_count = 0
     errors = []
@@ -1359,17 +1388,8 @@ async def batch_import_students(
                 error_count += 1
                 continue
 
-            # Check if student already exists in this classroom
-            existing_enrollment = (
-                db.query(ClassroomStudent)
-                .join(Student)
-                .filter(
-                    Student.name == student_name,
-                    ClassroomStudent.classroom_id == classroom.id,
-                    ClassroomStudent.is_active.is_(True),
-                )
-                .first()
-            )
+            # 🔥 Check enrollment from preloaded map (no query)
+            existing_enrollment = enrollment_map.get((student_name, classroom.id))
 
             if existing_enrollment:
                 duplicate_action = import_data.duplicate_action or "skip"
@@ -1387,12 +1407,8 @@ async def batch_import_students(
                     continue
 
                 elif duplicate_action == "update":
-                    # Update existing student's birthdate
-                    existing_student = (
-                        db.query(Student)
-                        .filter(Student.id == existing_enrollment.student_id)
-                        .first()
-                    )
+                    # 🔥 Use student from existing_enrollment (already loaded)
+                    existing_student = existing_enrollment.student
 
                     if existing_student:
                         existing_student.birthdate = birthdate
@@ -1419,24 +1435,12 @@ async def batch_import_students(
                         continue
 
                 elif duplicate_action == "add_suffix":
-                    # Add suffix to make name unique
+                    # 🔥 Find next available suffix using preloaded enrollment_map (avoid N+1)
                     suffix_num = 2
                     new_name = f"{student_name}-{suffix_num}"
 
-                    # Find next available suffix
-                    while True:
-                        existing = (
-                            db.query(ClassroomStudent)
-                            .join(Student)
-                            .filter(
-                                Student.name == new_name,
-                                ClassroomStudent.classroom_id == classroom.id,
-                                ClassroomStudent.is_active.is_(True),
-                            )
-                            .first()
-                        )
-                        if not existing:
-                            break
+                    # Find next available suffix (check in memory)
+                    while (new_name, classroom.id) in enrollment_map:
                         suffix_num += 1
                         new_name = f"{student_name}-{suffix_num}"
 
@@ -2096,19 +2100,15 @@ async def get_lesson_contents(
     contents = (
         db.query(Content)
         .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
+        .options(selectinload(Content.content_items))  # 🔥 Eager load items
         .order_by(Content.order_index)
         .all()
     )
 
     result = []
     for content in contents:
-        # 獲取 ContentItem
-        content_items = (
-            db.query(ContentItem)
-            .filter(ContentItem.content_id == content.id)
-            .order_by(ContentItem.order_index)
-            .all()
-        )
+        # 🔥 Use preloaded content_items (no query)
+        content_items = sorted(content.content_items, key=lambda x: x.order_index)
 
         items_data = [
             {
@@ -2737,9 +2737,14 @@ async def get_assignment_preview(
         .all()
     )
 
-    # 優化：批次查詢所有 content
+    # 🔥 Batch-load all contents with items (avoid N+1)
     content_ids = [ac.content_id for ac in assignment_contents]
-    contents = db.query(Content).filter(Content.id.in_(content_ids)).all()
+    contents = (
+        db.query(Content)
+        .filter(Content.id.in_(content_ids))
+        .options(selectinload(Content.content_items))  # Eager load items
+        .all()
+    )
     content_dict = {content.id: content for content in contents}
 
     activities = []
@@ -2764,13 +2769,8 @@ async def get_assignment_preview(
                 "completed_at": None,
             }
 
-            # 獲取 ContentItem 記錄
-            content_items = (
-                db.query(ContentItem)
-                .filter(ContentItem.content_id == content.id)
-                .order_by(ContentItem.order_index)
-                .all()
-            )
+            # 🔥 Use preloaded content_items (no query)
+            content_items = sorted(content.content_items, key=lambda x: x.order_index)
 
             # 構建 items 資料
             items_data = []
