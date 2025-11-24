@@ -10,8 +10,17 @@ from fastapi.testclient import TestClient
 from database import Base, get_db
 from main import app
 import models  # noqa: F401 - Import models to register them
-from models import Teacher
-from auth import get_password_hash
+from models import (
+    Teacher,
+    Classroom,
+    Assignment,
+    AssignmentContent,
+    Content,
+    ContentType,
+    Lesson,
+    Program,
+)
+from auth import get_password_hash, create_access_token
 
 
 # 全域引擎，確保所有測試使用同一個
@@ -177,3 +186,89 @@ def inactive_teacher(shared_test_session):
     shared_test_session.commit()
     shared_test_session.refresh(teacher)
     return teacher
+
+
+# N+1 Query Test Fixtures
+@pytest.fixture
+def auth_headers_teacher(test_client, demo_teacher):
+    """Create authentication headers for teacher"""
+    access_token = create_access_token(
+        data={"sub": str(demo_teacher.id), "type": "teacher"}
+    )
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture
+def test_classroom(db_session, demo_teacher):
+    """Create a test classroom"""
+    classroom = Classroom(
+        name="Test Classroom",
+        teacher_id=demo_teacher.id,
+        description="Test classroom for N+1 query tests",
+    )
+    db_session.add(classroom)
+    db_session.commit()
+    db_session.refresh(classroom)
+    return {"id": classroom.id, "teacher_id": demo_teacher.id}
+
+
+@pytest.fixture
+def test_assignment(db_session, demo_teacher, test_classroom):
+    """Create a test assignment with contents"""
+    from datetime import datetime, timedelta
+
+    # Create Program
+    program = Program(
+        name="Test Program",
+        teacher_id=demo_teacher.id,
+        classroom_id=test_classroom["id"],
+        description="Test program for N+1 tests",
+    )
+    db_session.add(program)
+    db_session.flush()
+
+    # Create Lesson
+    lesson = Lesson(
+        program_id=program.id,
+        name="Test Lesson",
+        description="Test lesson for N+1 tests",
+    )
+    db_session.add(lesson)
+    db_session.flush()
+
+    # Create Assignment
+    assignment = Assignment(
+        title="Test Assignment",
+        description="Test assignment for N+1 query tests",
+        classroom_id=test_classroom["id"],
+        teacher_id=demo_teacher.id,
+        due_date=datetime.utcnow() + timedelta(days=7),
+    )
+    db_session.add(assignment)
+    db_session.flush()
+
+    # Create Contents and link to Assignment
+    for i in range(3):
+        content = Content(
+            lesson_id=lesson.id,
+            type=ContentType.READING_ASSESSMENT,
+            title=f"Test Content {i+1}",
+        )
+        db_session.add(content)
+        db_session.flush()
+
+        assignment_content = AssignmentContent(
+            assignment_id=assignment.id,
+            content_id=content.id,
+            order_index=i,
+        )
+        db_session.add(assignment_content)
+
+    db_session.commit()
+    db_session.refresh(assignment)
+
+    return {
+        "id": assignment.id,
+        "teacher_id": demo_teacher.id,
+        "classroom_id": test_classroom["id"],
+    }
