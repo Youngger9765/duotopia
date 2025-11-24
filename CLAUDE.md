@@ -46,44 +46,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 🚨 絕對禁止使用 CLI 直接操作！
+## 🚨 處理 GitHub Issue 的強制規則
 
-**⚠️ 所有 Git 操作都必須透過 GitHub PR，不准用 CLI 直接 merge！**
+**⚠️ 只針對處理 Issue 時：必須透過 GitHub PR 和自動化流程！**
 
-### ❌ 禁止的操作
+### 📌 適用範圍
+**只有處理 GitHub Issue 時才強制走自動化流程**：
+- ✅ 修復 issue bug
+- ✅ 實作 issue feature request
+- ✅ 任何有 issue number 的工作
+
+**其他情況可以彈性處理**（不需要走 Issue 流程）：
+- ✅ 緊急 hotfix（沒有 issue）
+- ✅ 實驗性功能
+- ✅ 文件更新
+- ✅ 依賴升級
+
+### ❌ 處理 Issue 時禁止的操作
 ```bash
-# ❌ 絕對禁止！沒有留下 GitHub 紀錄
-git merge fix/issue-X into staging
-git push origin staging
-git revert COMMIT_HASH
+# ❌ 處理 issue 時禁止！會跳過自動化流程
+source git-issue-pr-flow.sh && deploy-feature 15
+git merge fix/issue-15-xxx into staging
+git push origin staging  # 直接 push staging
 ```
 
-### ✅ 正確的操作
+### ✅ 處理 Issue 的正確流程
 ```bash
-# ✅ 創建 PR，留下完整 GitHub 紀錄
-gh pr create --base staging --head fix/issue-X ...
+# 1. 在 Issue 留言 PDCA Plan
+gh issue comment 15 --body "## PDCA Plan..."
 
-# ✅ 在 Issue 留言 PDCA 分析
-gh issue comment X --body "..."
+# 2. 創建 feature branch
+git checkout -b fix/issue-15-xxx
 
-# ✅ 等待 CI/CD 自動部署 Per-Issue Test Environment
-# ✅ 案主測試 preview environment
-# ✅ 測試通過後 merge PR（透過 GitHub UI 或 gh pr merge）
+# 3. 實作修復並 commit
+git commit -m "fix: xxx Fixes #15"
+
+# 4. Push 到 feature branch（觸發 Per-Issue Test Environment）
+git push origin fix/issue-15-xxx
+
+# 5. 創建 PR（重點：不是直接 merge！）
+gh pr create --base staging --head fix/issue-15-xxx
+
+# 6. 等待 CI/CD 自動部署並在 Issue 留言 preview URLs
+# 7. 案主在 Per-Issue Test Environment 測試
+# 8. 測試通過後 merge PR
+gh pr merge <PR_NUMBER>
 ```
 
-### 為什麼？
-1. **GitHub 是唯一真相來源**
-2. **所有決策和討論都要在 GitHub 留下紀錄**
-3. **CI/CD 自動化依賴 PR 觸發**
-4. **Per-Issue Test Environment 需要 PR 才能部署**
-5. **方便追溯和 Code Review**
-
-### 違反後果
-- 🚨 沒有 Per-Issue Test Environment
-- 🚨 沒有 CI/CD 自動測試
-- 🚨 沒有 Code Review 紀錄
-- 🚨 無法追溯決策過程
-- 🚨 **專案流程崩潰**
+### 為什麼針對 Issue 要這樣做？
+1. **Per-Issue Test Environment** - 讓案主在獨立環境測試
+2. **完整 PDCA 紀錄** - 問題分析、修復、驗證、預防都在 GitHub
+3. **案主批准流程** - 測試通過才能 merge
+4. **方便追溯** - 未來查詢問題處理過程
 
 ---
 

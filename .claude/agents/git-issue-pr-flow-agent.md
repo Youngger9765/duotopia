@@ -49,30 +49,43 @@ Issue 創建 → PDCA 分析 → 用戶批准 → TDD 修復 → Per-Issue Test 
 
 ---
 
-## 🚨 絕對禁止
+## 🚨 處理 Issue 的強制規則
 
-### ❌ 不准用 CLI 直接操作
+### 📌 適用範圍
+**只針對處理 GitHub Issue 時才強制走自動化流程**
+
+**其他情況可彈性處理**（緊急 hotfix、實驗功能、文件更新等）
+
+### ❌ 處理 Issue 時禁止
 ```bash
-# ❌ 絕對禁止！沒有留下 GitHub 紀錄
-git merge fix/issue-X
-git push origin staging
-git revert COMMIT_HASH
-source git-issue-pr-flow.sh && deploy-feature X  # 這個也禁止！
+# ❌ 跳過自動化流程！沒有 Per-Issue Test Environment
+source git-issue-pr-flow.sh && deploy-feature X
+git merge fix/issue-X into staging
+git push origin staging  # 直接 push staging
 ```
 
-### ✅ 必須透過 GitHub PR
+### ✅ 處理 Issue 的正確流程
 ```bash
-# ✅ 正確！所有操作都在 GitHub 留下紀錄
-gh pr create --base staging --head fix/issue-X
+# 1. 在 Issue 留言 PDCA Plan
 gh issue comment X --body "PDCA Plan..."
-gh pr merge X
+
+# 2. Push feature branch（觸發 Per-Issue Test Environment）
+git push origin fix/issue-X-xxx
+
+# 3. 創建 PR（不是直接 merge！）
+gh pr create --base staging --head fix/issue-X-xxx
+
+# 4. 等待 CI/CD 部署並在 Issue 留言 preview URLs
+# 5. 案主測試 Per-Issue Test Environment
+# 6. 測試通過後 merge PR
+gh pr merge <PR_NUMBER>
 ```
 
-### 為什麼？
-1. **GitHub 是唯一真相來源** - 所有決策都要可追溯
-2. **Per-Issue Test Environment 依賴 PR** - 沒有 PR 就沒有 preview
-3. **CI/CD 自動化** - PR 觸發自動測試和部署
-4. **Code Review** - PR 提供 review 機制
+### 為什麼針對 Issue？
+1. **Per-Issue Test Environment** - 案主獨立環境測試
+2. **完整 PDCA 紀錄** - 所有決策在 GitHub 可追溯
+3. **案主批准流程** - 確保修復符合預期
+4. **CI/CD 自動化** - PR 觸發測試和部署
 
 ---
 
