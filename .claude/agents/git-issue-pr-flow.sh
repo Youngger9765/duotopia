@@ -154,8 +154,8 @@ deploy-feature-no-issue() {
 create-release-pr() {
   echo -e "${YELLOW}📝 Creating/updating release PR...${NC}"
 
-  # Get list of commits between staging and main
-  local commits=$(git log main..staging --oneline)
+  # Get list of commits between staging and main (full message, not just oneline)
+  local commits=$(git log main..staging --format='%B')
   local issue_pattern='#[0-9]+'
   local issues=$(echo "$commits" | grep -oE "$issue_pattern" | sort -u | tr '\n' ' ')
 
