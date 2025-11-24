@@ -1,10 +1,9 @@
-name: Per-Issue Preview Environment
+name: Per-Issue Deploy
 
 on:
   push:
     branches:
       - 'fix/issue-*'
-      - 'feat/issue-*'
     paths:
       - 'frontend/**'
       - 'backend/**'
@@ -26,9 +25,9 @@ jobs:
         run: |
           ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oE '[0-9]+')
           echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
-          echo "Issue number: $ISSUE_NUM"
+          echo "✅ Issue number: $ISSUE_NUM"
 
-  backend:
+  deploy-backend:
     runs-on: ubuntu-latest
     needs: extract
     outputs:
@@ -42,15 +41,15 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and deploy backend
+      - name: Deploy backend
         id: deploy
         working-directory: ./backend
         run: |
           ISSUE=${{ needs.extract.outputs.issue_number }}
           SERVICE="duotopia-preview-issue-${ISSUE}-backend"
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${SERVICE}:${{ github.sha }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
 
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
 
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
@@ -58,7 +57,7 @@ jobs:
           gcloud run deploy "$SERVICE" \
             --image "$IMAGE" \
             --platform managed \
-            --region ${{ env.REGION }} \
+            --region ${REGION} \
             --allow-unauthenticated \
             --port 8000 \
             --memory 512Mi \
@@ -67,12 +66,13 @@ jobs:
             --set-env-vars "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }},ENVIRONMENT=preview" \
             --labels "environment=preview,issue=${ISSUE}"
 
-          URL=$(gcloud run services describe "$SERVICE" --platform managed --region ${{ env.REGION }} --format 'value(status.url)')
+          URL=$(gcloud run services describe "$SERVICE" --platform managed --region ${REGION} --format 'value(status.url)')
           echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Backend deployed: $URL"
 
-  frontend:
+  deploy-frontend:
     runs-on: ubuntu-latest
-    needs: [extract, backend]
+    needs: [extract, deploy-backend]
     outputs:
       url: ${{ steps.deploy.outputs.url }}
     steps:
@@ -84,19 +84,19 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and deploy frontend
+      - name: Deploy frontend
         id: deploy
         working-directory: ./frontend
         run: |
           ISSUE=${{ needs.extract.outputs.issue_number }}
           SERVICE="duotopia-preview-issue-${ISSUE}-frontend"
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${SERVICE}:${{ github.sha }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
 
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
 
           docker build \
             -f Dockerfile.staging \
-            --build-arg VITE_API_URL=${{ needs.backend.outputs.url }} \
+            --build-arg VITE_API_URL=${{ needs.deploy-backend.outputs.url }} \
             --build-arg VITE_ENVIRONMENT=preview \
             --build-arg VITE_TAPPAY_SERVER_TYPE=production \
             --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
@@ -109,7 +109,7 @@ jobs:
           gcloud run deploy "$SERVICE" \
             --image "$IMAGE" \
             --platform managed \
-            --region ${{ env.REGION }} \
+            --region ${REGION} \
             --allow-unauthenticated \
             --port 80 \
             --memory 512Mi \
@@ -117,32 +117,33 @@ jobs:
             --min-instances 0 \
             --labels "environment=preview,issue=${ISSUE}"
 
-          URL=$(gcloud run services describe "$SERVICE" --platform managed --region ${{ env.REGION }} --format 'value(status.url)')
+          URL=$(gcloud run services describe "$SERVICE" --platform managed --region ${REGION} --format 'value(status.url)')
           echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployed: $URL"
 
   comment:
     runs-on: ubuntu-latest
-    needs: [extract, backend, frontend]
+    needs: [extract, deploy-backend, deploy-frontend]
     permissions:
       issues: write
     steps:
       - uses: actions/github-script@v7
         env:
           ISSUE: ${{ needs.extract.outputs.issue_number }}
-          BACKEND: ${{ needs.backend.outputs.url }}
-          FRONTEND: ${{ needs.frontend.outputs.url }}
+          BACKEND: ${{ needs.deploy-backend.outputs.url }}
+          FRONTEND: ${{ needs.deploy-frontend.outputs.url }}
         with:
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: process.env.ISSUE,
-              body: `## 🚀 Preview Environment Ready
+              body: `## 🚀 Per-Issue Preview Environment Ready
 
 **Issue #${process.env.ISSUE}**
 
 - Frontend: ${process.env.FRONTEND}
 - Backend: ${process.env.BACKEND}
 
-Min instances = 0. Test and comment "測試通過" when done.`
+Min instances = 0 (no cost when idle). Test and comment "測試通過" when done.`
             });
