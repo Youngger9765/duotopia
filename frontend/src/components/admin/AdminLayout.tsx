@@ -16,6 +16,8 @@ interface AdminLayoutProps {
  * - Header 樣式 (text-3xl, blue-600 icon)
  * - 間距系統 (py-8, mb-8, space-y-6)
  * - 背景顏色 (bg-gray-50)
+ *
+ * Issue #15: Admin CSS 統一性修復
  */
 export default function AdminLayout({
   title,
