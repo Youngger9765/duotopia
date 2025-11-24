@@ -39,11 +39,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - ✅ 必須等待人工審查批准
    - ✅ 提供完整的 migration 計畫
 
-5. **你只負責**
-   - 讀取 issue 內容
-   - 呼叫 Issue PDCA Agent
-   - 等待 Agent 完成 PDCA 分析
-   - 等待用戶批准後才開始實作
+5. **不涉及 Schema 變更的 issue**
+   - ✅ PDCA Plan 完成後直接開始實作
+   - ✅ 除非沒把握，否則不需要等待批准
+   - ✅ 創建 PR 並自動部署 Per-Issue Test Environment
+
+---
+
+## 🚨 處理 GitHub Issue 的強制規則
+
+**⚠️ 只針對處理 Issue 時：必須透過 GitHub PR 和自動化流程！**
+
+### 📌 適用範圍
+**只有處理 GitHub Issue 時才強制走自動化流程**：
+- ✅ 修復 issue bug
+- ✅ 實作 issue feature request
+- ✅ 任何有 issue number 的工作
+
+**其他情況可以彈性處理**（不需要走 Issue 流程）：
+- ✅ 緊急 hotfix（沒有 issue）
+- ✅ 實驗性功能
+- ✅ 文件更新
+- ✅ 依賴升級
+
+### ❌ 處理 Issue 時禁止的操作
+```bash
+# ❌ 處理 issue 時禁止！會跳過自動化流程
+source git-issue-pr-flow.sh && deploy-feature 15
+git merge fix/issue-15-xxx into staging
+git push origin staging  # 直接 push staging
+```
+
+### ✅ 處理 Issue 的正確流程
+```bash
+# 1. 在 Issue 留言 PDCA Plan
+gh issue comment 15 --body "## PDCA Plan..."
+
+# 2. 創建 feature branch
+git checkout -b fix/issue-15-xxx
+
+# 3. 實作修復並 commit
+git commit -m "fix: xxx Fixes #15"
+
+# 4. Push 到 feature branch（觸發 Per-Issue Test Environment）
+git push origin fix/issue-15-xxx
+
+# 5. 創建 PR（重點：不是直接 merge！）
+gh pr create --base staging --head fix/issue-15-xxx
+
+# 6. 等待 CI/CD 自動部署並在 Issue 留言 preview URLs
+# 7. 案主在 Per-Issue Test Environment 測試
+# 8. 測試通過後 merge PR
+gh pr merge <PR_NUMBER>
+```
+
+### 為什麼針對 Issue 要這樣做？
+1. **Per-Issue Test Environment** - 讓案主在獨立環境測試
+2. **完整 PDCA 紀錄** - 問題分析、修復、驗證、預防都在 GitHub
+3. **案主批准流程** - 測試通過才能 merge
+4. **方便追溯** - 未來查詢問題處理過程
 
 ---
 
