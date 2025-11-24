@@ -438,12 +438,172 @@ pytest --junitxml=test-results.xml
 
 **記住：亂放測試檔案 = 技術債務 = 維護噩夢！**
 
+## 🤖 Git Issue PR Flow 自動化 Agent
+
+專案已配置 Git Issue PR Flow 自動化工具，遵循以下標準流程：
+
+```
+Feature Branch → Staging (auto-deploy) → Main (PR with issue tracking)
+```
+
+### 安裝使用
+
+```bash
+# 載入 Git Issue PR Flow Agent（加到 ~/.zshrc 或 ~/.bashrc）
+source /Users/young/project/duotopia/.claude/agents/git-issue-pr-flow.sh
+
+# 查看可用命令
+git-flow-help
+
+# 查看當前狀態
+git-flow-status
+```
+
+### 標準工作流程
+
+#### 1. 修復 Issue
+```bash
+# 創建 feature branch
+create-feature-fix 7 student-login-loading
+
+# 修改代碼並測試
+npm run build
+# ... 測試 ...
+
+# Commit 修改
+git add .
+git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題"
+
+# 部署到 staging（自動 merge + push + 更新 issue）
+deploy-feature 7
+```
+
+#### 2. 準備 Release
+```bash
+# 累積多個 fixes 後，創建/更新 Release PR
+update-release-pr
+
+# 測試 staging 環境
+# Frontend: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
+# Backend: https://duotopia-staging-backend-316409492201.asia-east1.run.app
+```
+
+#### 3. 發布到 Production
+```bash
+# 標記 PR 為 ready
+gh pr ready <PR_NUMBER>
+
+# Merge PR（自動關閉所有 issues）
+gh pr merge <PR_NUMBER> --merge
+```
+
+### 固定的 Staging URLs
+
+- **Frontend**: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
+- **Backend**: https://duotopia-staging-backend-316409492201.asia-east1.run.app
+
+### 可用命令
+
+| 命令 | 說明 |
+|------|------|
+| `create-feature-fix <issue> <desc>` | 創建修復 issue 的 feature branch |
+| `create-feature <desc>` | 創建新功能的 feature branch |
+| `deploy-feature <issue>` | 部署到 staging 並更新 issue |
+| `deploy-feature-no-issue` | 部署到 staging（不關聯 issue）|
+| `update-release-pr` | 創建/更新 staging → main 的 Release PR |
+| `patrol-issues` | **🔍 巡邏 GitHub Issues，顯示統計和列表** |
+| `git-flow-status` | 查看當前工作流程狀態 |
+| `git-flow-help` | 顯示所有可用命令 |
+
+### Claude Code 自動化指南
+
+**⚠️ 重要：當用戶說以下關鍵字時，自動使用 Git Issue PR Flow Agent**
+
+#### 觸發關鍵字
+- 「修復 issue」、「fix issue」
+- 「部署到 staging」、「deploy to staging」
+- 「發 PR」、「create PR」、「準備 release」
+- 「merge to staging」
+- 「有什麼 issue」、「檢查 issues」、「巡邏 issues」、「patrol issues」
+- 任何提到 GitHub Issue 編號（如「處理 #7」）
+
+#### 自動化流程
+
+**場景 1: 用戶說「修復 issue #7 學生登入問題」**
+```bash
+# 1. 自動執行 create-feature-fix
+create-feature-fix 7 student-login-loading
+
+# 2. 修改代碼並測試
+npm run build
+npm run typecheck
+# ... 實際測試功能 ...
+
+# 3. Commit（⚠️ 必須包含 #issue_number）
+git add .
+git commit -m "fix: 修復學生登入 Step 1 的錯誤訊息閃現和 loading 狀態問題
+
+Fixes #7"
+
+# 4. 自動執行 deploy-feature
+deploy-feature 7
+```
+
+**場景 2: 用戶說「部署到 staging」**
+```bash
+# 檢查當前 branch
+current_branch=$(git branch --show-current)
+
+# 如果在 feature branch，執行 deploy-feature
+deploy-feature <issue_number>
+# 或 deploy-feature-no-issue（如果沒有關聯 issue）
+```
+
+**場景 3: 用戶說「準備 release」或「發 PR」**
+```bash
+# 自動執行 update-release-pr
+update-release-pr
+```
+
+**場景 4: 用戶說「有什麼 issue」或「檢查 issues」**
+```bash
+# 自動執行 patrol-issues
+patrol-issues
+
+# 顯示摘要：
+# - 總共幾個 open issues
+# - 幾個 bugs、enhancements
+# - 幾個未分配的 issues
+# - 列出所有 issues 的標題、標籤、建立時間
+```
+
+**場景 5: 用戶說「查看狀態」**
+```bash
+# 自動執行 git-flow-status
+git-flow-status
+```
+
+#### 重要規則
+- ❌ 不要手動創建 feature → staging 的 PR
+- ✅ 只為 staging → main 創建 PR
+- ✅ PR 會自動追蹤所有相關 issues（`Fixes #N`）
+- ✅ Merge PR 時會自動關閉所有 issues
+- ✅ **所有 Git 操作都使用 agent 命令，不要手動執行 git 指令**
+- ⚠️ **Commit message 必須包含 `#issue_number` 或 `Fixes #N`**，否則 PR 無法自動追蹤 issue
+
+#### 固定的 Staging URLs（不需要查詢）
+- **Frontend**: https://duotopia-staging-frontend-316409492201.asia-east1.run.app
+- **Backend**: https://duotopia-staging-backend-316409492201.asia-east1.run.app
+
+---
+
 ## 📚 相關文件
 
 - **產品需求**: 詳見 [PRD.md](./PRD.md)
 - **部署與 CI/CD**: 詳見 [CICD.md](./CICD.md)
 - **測試指南**: 詳見 [docs/TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)
 - **部署狀態**: 詳見 [docs/DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)
+- **Git Issue PR Flow Agent**: 詳見 [.claude/agents/git-issue-pr-flow-agent.md](./.claude/agents/git-issue-pr-flow-agent.md)
 
 ## 🎯 錄音播放架構重構 TDD (2024-12-27)
 
