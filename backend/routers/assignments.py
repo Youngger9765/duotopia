@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import datetime, timezone  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from database import get_db
@@ -1262,10 +1262,30 @@ async def get_available_contents(
             )
 
         # 篩選該班級的 Content
-        query = query.filter(Program.classroom_id == classroom_id)
+        # 修復 Issue #32: 只顯示公版模板或該班級專屬課程
+        # 1. 公版模板 (is_template=True, classroom_id=NULL)
+        # 2. 該班級專屬課程 (is_template=False, classroom_id=指定班級)
+        query = query.filter(
+            and_(
+                Program.is_active.is_(True),  # 只顯示啟用的課程
+                or_(
+                    Program.is_template.is_(True),  # 公版模板
+                    Program.classroom_id == classroom_id,  # 該班級專屬課程
+                ),
+            )
+        )
     else:
-        # 回傳該教師所有的 Content (透過 classroom)
-        query = query.join(Classroom).filter(Classroom.teacher_id == current_teacher.id)
+        # 回傳該教師所有的 Content (包含公版模板 + 所有班級的專屬課程)
+        # 使用 outerjoin 因為公版模板的 classroom_id 是 NULL
+        query = query.outerjoin(Classroom).filter(
+            and_(
+                Program.is_active.is_(True),  # 只顯示啟用的課程
+                or_(
+                    Program.is_template.is_(True),  # 公版模板
+                    Classroom.teacher_id == current_teacher.id,  # 該教師的班級專屬課程
+                ),
+            )
+        )
 
     contents = query.all()
 
