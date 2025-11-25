@@ -1126,6 +1126,7 @@ export default function ReadingAssessmentPanel({
   const [batchPasteText, setBatchPasteText] = useState("");
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
+  const [isBatchSaving, setIsBatchSaving] = useState(false);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1673,6 +1674,11 @@ export default function ReadingAssessmentPanel({
   };
 
   const handleBatchPaste = async (autoTTS: boolean, autoTranslate: boolean) => {
+    // 防止重複點擊
+    if (isBatchSaving) {
+      return;
+    }
+
     // 分割文字，每行一個項目
     const lines = batchPasteText
       .split("\n")
@@ -1685,6 +1691,9 @@ export default function ReadingAssessmentPanel({
       );
       return;
     }
+
+    // 設定loading狀態
+    setIsBatchSaving(true);
 
     toast.info(
       t("readingAssessmentPanel.batchPasteDialog.messages.processing", {
@@ -1751,6 +1760,7 @@ export default function ReadingAssessmentPanel({
             "readingAssessmentPanel.batchPasteDialog.messages.batchProcessingFailed",
           ),
         );
+        setIsBatchSaving(false);
         return;
       }
     }
@@ -1816,7 +1826,11 @@ export default function ReadingAssessmentPanel({
       toast.error(
         t("readingAssessmentPanel.batchPasteDialog.messages.saveFailed"),
       );
+      setIsBatchSaving(false);
       return;
+    } finally {
+      // 確保無論成功或失敗都清除loading狀態
+      setIsBatchSaving(false);
     }
 
     setBatchPasteDialogOpen(false);
@@ -2018,6 +2032,7 @@ export default function ReadingAssessmentPanel({
               variant="outline"
               onClick={() => setBatchPasteDialogOpen(false)}
               className="px-6 py-2 text-base"
+              disabled={isBatchSaving}
             >
               {t("readingAssessmentPanel.batchPasteDialog.cancel")}
             </Button>
@@ -2026,8 +2041,11 @@ export default function ReadingAssessmentPanel({
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
+              disabled={isBatchSaving}
             >
-              {t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
+              {isBatchSaving
+                ? t("readingAssessmentPanel.batchPasteDialog.saving", "儲存中...")
+                : t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
