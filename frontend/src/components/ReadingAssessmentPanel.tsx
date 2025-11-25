@@ -2044,7 +2044,10 @@ export default function ReadingAssessmentPanel({
               disabled={isBatchSaving}
             >
               {isBatchSaving
-                ? t("readingAssessmentPanel.batchPasteDialog.saving", "儲存中...")
+                ? t(
+                    "readingAssessmentPanel.batchPasteDialog.saving",
+                    "儲存中...",
+                  )
                 : t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
             </Button>
           </DialogFooter>
