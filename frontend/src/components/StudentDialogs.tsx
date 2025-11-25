@@ -375,14 +375,9 @@ export function StudentDialogs({
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{student.name}</h3>
                 <p className="text-sm text-gray-500">
-                  {t("studentDialogs.view.fields.id")}: {student.id}
+                  {t("studentDialogs.view.fields.studentNumber")}:{" "}
+                  {student.student_number || "-"}
                 </p>
-                {student.student_number && (
-                  <p className="text-sm text-gray-500">
-                    {t("studentDialogs.view.fields.studentNumber")}:{" "}
-                    {student.student_number}
-                  </p>
-                )}
               </div>
               <div>{getStatusBadge(student.status)}</div>
             </div>

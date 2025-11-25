@@ -198,7 +198,7 @@ export default function StudentTable({
                       {student.name}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      ID: {student.id}
+                      學號: {student.student_number || "-"}
                     </p>
                   </div>
                 </div>
@@ -347,7 +347,6 @@ export default function StudentTable({
                   </Button>
                 </TableHead>
               )}
-              <TableHead className="w-[50px] text-left">ID</TableHead>
               <TableHead className="text-left min-w-[120px]">
                 {t("studentTable.columns.studentName")}
               </TableHead>
@@ -387,7 +386,6 @@ export default function StudentTable({
                     </Button>
                   </TableCell>
                 )}
-                <TableCell className="font-medium">{student.id}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -397,6 +395,11 @@ export default function StudentTable({
                     </div>
                     <div>
                       <p className="font-medium">{student.name}</p>
+                      {student.student_number && (
+                        <p className="text-xs text-gray-500">
+                          學號: {student.student_number}
+                        </p>
+                      )}
                       {student.phone && (
                         <p className="text-xs text-gray-500">{student.phone}</p>
                       )}
