@@ -207,7 +207,6 @@ const TTSModal = ({
         }
       }
 
-      console.log("Using MIME type:", mimeType);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000, // 設定位元率
@@ -1372,10 +1371,6 @@ export default function ReadingAssessmentPanel({
               items,
             });
           }
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
           try {
@@ -1384,7 +1379,6 @@ export default function ReadingAssessmentPanel({
               items,
             };
 
-            console.log("Updating content with new audio:", audioUrl);
             await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
@@ -1409,7 +1403,6 @@ export default function ReadingAssessmentPanel({
                 }),
               );
               setRows(updatedRows);
-              console.log("Updated rows with new audio URLs:", updatedRows);
             }
 
             // 更新本地狀態
@@ -1426,10 +1419,6 @@ export default function ReadingAssessmentPanel({
           }
         } else {
           // 沒有 content ID，音檔將在儲存時上傳
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         }
 
         // 關閉 modal 但不要關閉 panel
@@ -2081,8 +2070,6 @@ export default function ReadingAssessmentPanel({
                 target_accuracy: 0.8,
                 time_limit_seconds: 180,
               };
-
-              console.log("Saving data:", saveData);
 
               const existingContentId = editingContent?.id || content?.id;
 

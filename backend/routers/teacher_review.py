@@ -1,5 +1,6 @@
 """Teacher review API endpoints for item-level grading"""
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
@@ -19,6 +20,7 @@ from schemas import (
 )
 
 router = APIRouter(prefix="/api/teacher-review", tags=["teacher-review"])
+logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
@@ -266,8 +268,14 @@ async def batch_review_items(
                     }
                 )
         except Exception as e:
+            logger.error(
+                f"Failed to process review for item {review_data.get('student_item_progress_id')}: {str(e)}"
+            )
             failed_items.append(
-                {"id": review_data.get("student_item_progress_id"), "error": str(e)}
+                {
+                    "id": review_data.get("student_item_progress_id"),
+                    "error": "處理失敗，請稍後再試",
+                }
             )
 
     db.commit()
