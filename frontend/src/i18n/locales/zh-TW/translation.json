@@ -1684,6 +1684,7 @@
     "total": "共 {{count}} 位學生",
     "columns": {
       "id": "ID",
+      "studentNumber": "學號",
       "studentName": "學生姓名",
       "contactInfo": "聯絡資訊",
       "passwordStatus": "密碼狀態",

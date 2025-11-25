@@ -1684,6 +1684,7 @@
     "total": "Total {{count}} students",
     "columns": {
       "id": "ID",
+      "studentNumber": "Student Number",
       "studentName": "Student Name",
       "contactInfo": "Contact Info",
       "passwordStatus": "Password Status",

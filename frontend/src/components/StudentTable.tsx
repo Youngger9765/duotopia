@@ -348,6 +348,9 @@ export default function StudentTable({
                   </Button>
                 </TableHead>
               )}
+              <TableHead className="text-left w-[100px]">
+                {t("studentTable.columns.studentNumber")}
+              </TableHead>
               <TableHead className="text-left min-w-[120px]">
                 {t("studentTable.columns.studentName")}
               </TableHead>
@@ -388,6 +391,11 @@ export default function StudentTable({
                   </TableCell>
                 )}
                 <TableCell>
+                  <span className="text-sm">
+                    {student.student_number || "-"}
+                  </span>
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
@@ -396,12 +404,6 @@ export default function StudentTable({
                     </div>
                     <div>
                       <p className="font-medium">{student.name}</p>
-                      {student.student_number && (
-                        <p className="text-xs text-gray-500">
-                          {t("studentTable.info.studentNumber")}{" "}
-                          {student.student_number}
-                        </p>
-                      )}
                       {student.phone && (
                         <p className="text-xs text-gray-500">{student.phone}</p>
                       )}
@@ -411,9 +413,9 @@ export default function StudentTable({
                 <TableCell>
                   <div>
                     <div className="text-sm">{student.email || "-"}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {showClassroom &&
-                        (student.classroom_name ? (
+                    {showClassroom && (
+                      <div className="flex items-center gap-2 mt-1">
+                        {student.classroom_name ? (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
                             {student.classroom_name}
                           </span>
@@ -421,13 +423,9 @@ export default function StudentTable({
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
                             {t("studentTable.unassigned")}
                           </span>
-                        ))}
-                      {student.student_number && (
-                        <span className="text-xs text-gray-500">
-                          #{student.student_number}
-                        </span>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
