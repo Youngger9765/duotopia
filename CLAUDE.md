@@ -4,45 +4,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚨 最高指導原則：修完要自己去測試過！
 
-## 🤖 GitHub Issue 處理流程（交給 Agent）
+## 🎯 Issue vs PR 職責分工（重要）
 
-**⚠️ 所有 GitHub Issue 的處理都必須通過 Issue PDCA Agent**
+### 核心原則：業務層 vs 技術層
 
-### 強制規則
+| 維度 | **Issue（業務層）** | **PR（技術層）** |
+|------|-------------------|-----------------|
+| **受眾** | 👔 案主（非技術） | 💻 工程師（技術） |
+| **目的** | 追蹤業務價值 | 追蹤技術品質 |
+| **內容** | 問題、測試連結、批准 | 完整工程研發測試報告 |
+| **通過標準** | ✅ **業務通過**（案主 OK） | ✅ **系統通過**（CI/CD OK） |
+| **Template** | `.github/ISSUE_TEMPLATE/` | `.github/pull_request_template.md` |
 
-1. **絕對不要直接修 Issue**
-   - ❌ 看到 issue 就直接開始寫 code
-   - ✅ 必須先呼叫 Issue PDCA Agent
-   - ✅ 讓 Agent 執行完整的 PDCA 分析流程
+### Issue 的內容（給案主看）
+- ✅ 問題描述（業務語言）
+- ✅ Per-Issue Test Environment 連結
+- ✅ Staging 測試連結
+- ✅ 案主測試結果和批准
+- ❌ 不要放技術細節（根因分析、code diff 等）
 
-2. **Agent 負責的事情**
-   - 🔍 問題重現（複製現象，留下證據）
-   - 📊 根因分析（5 Why 分析）
-   - 🧪 TDD 測試計畫（先寫失敗的測試）
-   - ✅ 修復驗證（確認指標達成）
-   - 🛡️ 預防措施（改善測試，避免再發生）
-   - 📝 完整 PDCA 報告（在 issue 下留言）
+### PR 的內容（給工程師看）
+- ✅ 完整工程研發測試報告
+- ✅ 根因分析（5 Why）
+- ✅ 技術決策說明
+- ✅ 測試覆蓋率（Unit/Integration/E2E）
+- ✅ CI/CD 狀態檢查
+- ✅ 影響範圍評估
+- ❌ 不要放案主批准（這在 Issue 中）
 
-3. **呼叫 Agent 的指令**
-   ```bash
-   # 讀取 issue
-   gh issue view <issue_number>
+### 為什麼需要 PR？
+1. 💻 **Code Review 平台** - 逐行評論、建議修改
+2. 🤖 **CI/CD 檢查點** - Merge 前必須通過測試
+3. 📝 **技術決策紀錄** - 為什麼這樣實作？
+4. 🔒 **品質保證** - 防止壞代碼進入 staging
+5. 📊 **完整工程報告** - 一個 feature/fix = 一個 PR
 
-   # 呼叫 Issue PDCA Agent 處理
-   # Agent 會自動執行完整的 PDCA 流程
-   # 詳見：.claude/agents/issue-pdca-agent.md
-   ```
+**Per-Issue Test Environment ≠ PR**：
+- Per-Issue Test Environment：給**案主**測試功能（業務驗證）
+- PR：給**工程師** code review 和 CI/CD（技術驗證）
 
-4. **Schema 變更紅線**
-   - ❌ **絕對禁止**自動處理涉及 DB schema 變更的 issue
-   - ✅ Agent 會自動偵測並標記「需要 DB schema 變更」
-   - ✅ 必須等待人工審查批准
-   - ✅ 提供完整的 migration 計畫
-
-5. **不涉及 Schema 變更的 issue**
-   - ✅ PDCA Plan 完成後直接開始實作
-   - ✅ 除非沒把握，否則不需要等待批准
-   - ✅ 創建 PR 並自動部署 Per-Issue Test Environment
+### Schema 變更紅線
+- ❌ **絕對禁止**自動處理涉及 DB schema 變更的 issue
+- ✅ 必須在 PR 中標記「需要 DB schema 變更」
+- ✅ 必須等待人工審查批准
+- ✅ 提供完整的 migration 計畫
 
 ---
 
@@ -72,33 +77,66 @@ git push origin staging  # 直接 push staging
 
 ### ✅ 處理 Issue 的正確流程
 ```bash
-# 1. 在 Issue 留言 PDCA Plan
-gh issue comment 15 --body "## PDCA Plan..."
+# 1. 創建 feature branch
+create-feature-fix 15 student-login-error
 
-# 2. 創建 feature branch
-git checkout -b fix/issue-15-xxx
+# 2. TDD 開發（Red → Green → Refactor）
+# ... 寫測試、修復、重構 ...
 
-# 3. 實作修復並 commit
-# ⚠️ 重要：Commit message 中絕對不要使用 "Fixes #N" 或 "Closes #N"
-# 原因：會在 push to main 時自動關閉 issue，跳過測試流程
-git commit -m "fix: xxx (related to #15)"
+# 3. Commit
+git add .
+# ⚠️ 使用 "Related to #N"，不要用 "Fixes #N"
+git commit -m "fix: 修復學生登入錯誤訊息 (Related to #15)"
 
-# 4. Push 到 feature branch（觸發 Per-Issue Test Environment）
+# 4. Push 觸發 Per-Issue Test Environment
 git push origin fix/issue-15-xxx
+# → CI/CD 自動部署獨立測試環境
 
-# 5. 創建 PR（重點：不是直接 merge！）
-# ⚠️ PR description 中也不要寫 "Fixes #15"
+# 5. 創建 PR (feature → staging) - 完整工程報告
 gh pr create --base staging --head fix/issue-15-xxx \
-  --title "Fix: xxx" \
-  --body "Related to #15"
+  --title "Fix: 學生登入錯誤訊息閃現" \
+  --body "Related to #15
 
-# 6. 等待 CI/CD 自動部署並在 Issue 留言 preview URLs
-# 7. 案主在 Per-Issue Test Environment 測試
-# 8. 測試通過後，在 Issue 留言「測試通過」
-# 9. 執行 check-approvals 自動偵測批准並加 label
-check-approvals
-# 10. 最後 merge PR 到 staging
-gh pr merge <PR_NUMBER>
+## 🎯 Purpose
+修復學生登入 Step 1 閃現錯誤訊息問題
+
+## 🔍 Problem Analysis
+[填寫 5 Why 根因分析]
+
+## ✅ Solution
+[填寫技術方案]
+
+## 🧪 Testing
+[填寫測試覆蓋]
+
+（使用 PR Template 填寫完整技術報告）"
+
+# 6. CI/CD 自動在 PR 中跑測試
+# → pytest, npm test, typecheck, ESLint
+
+# 7. 在 Issue 提供測試指引（給案主，用業務語言）
+gh issue comment 15 --body "## 🧪 測試指引
+測試環境: https://duotopia-preview-issue-15-frontend.run.app
+測試步驟：
+1. 開啟學生登入頁面
+2. 輸入帳號密碼
+3. 確認 Step 1 不會閃現錯誤訊息"
+
+# 8. 案主測試並留言「測試通過」
+
+# 9. 檢查批准狀態
+check-approvals  # → AI 自動偵測並加 ✅ tested-in-staging label
+
+# 10. 雙重批准確認
+# ✅ 系統通過：PR 中 CI/CD 全部綠燈
+# ✅ 業務通過：Issue 中案主批准
+
+# 11. Merge PR to staging
+gh pr merge <PR_NUMBER> --squash
+
+# 12. 在 Issue 通知案主
+gh issue comment 15 --body "✅ 已部署到 Staging
+測試 URL: https://duotopia-staging-frontend-..."
 ```
 
 ### ⚠️ 避免意外關閉 Issue 的規則

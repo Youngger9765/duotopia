@@ -1,0 +1,87 @@
+name: 🐛 Bug Report
+description: 回報系統問題（給案主使用）
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 問題回報
+
+        感謝您回報問題！請填寫以下資訊，幫助我們快速定位和修復問題。
+
+        **注意**：此 Issue 將提供測試環境連結，請在收到通知後協助測試。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 問題描述
+      description: 發生了什麼問題？
+      placeholder: 例如：學生登入時 Step 1 閃現錯誤訊息
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 重現步驟
+      description: 如何重現這個問題？
+      placeholder: |
+        1. 開啟學生登入頁面
+        2. 輸入帳號密碼
+        3. 觀察到錯誤訊息閃現
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期行為
+      description: 應該要怎樣？
+      placeholder: 例如：Step 1 不應該顯示錯誤訊息
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 嚴重程度
+      options:
+        - 🔴 Critical - 系統無法使用
+        - 🟡 Medium - 功能受影響但可繞過
+        - 🟢 Low - UI/UX 問題
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截圖或錯誤訊息
+      description: 上傳截圖或貼上錯誤訊息（可選）
+      placeholder: 拖放截圖到這裡
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 環境
+      options:
+        - Production（正式環境）
+        - Staging（測試環境）
+      default: 0
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## 📋 後續流程
+
+        1. 工程師會在 **Pull Request** 中進行技術分析和修復
+        2. 修復完成後，會在此 Issue 提供 **測試連結**
+        3. 請您在測試環境中驗證修復是否正常
+        4. 測試通過後，請在此 Issue 留言「**測試通過**」或「**✅**」
+        5. 我們會將修復部署到正式環境
+
+        **您只需要關注此 Issue，不需要查看 Pull Request（技術細節）**
