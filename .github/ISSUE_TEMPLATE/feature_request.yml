@@ -1,77 +1,76 @@
 name: ✨ Feature Request
-description: 提出新功能需求（給案主使用）
+description: 提出新功能需求
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## ✨ 功能需求
-
-        感謝您提出新功能建議！請填寫以下資訊，幫助我們了解您的需求。
-
   - type: textarea
     id: feature
     attributes:
       label: 功能描述
-      description: 您希望新增什麼功能？
-      placeholder: 例如：希望能夠批次匯入學生資料
-    validations:
-      required: true
-
-  - type: textarea
-    id: reason
-    attributes:
-      label: 使用場景
-      description: 為什麼需要這個功能？什麼情境下會使用？
+      description: 請描述想要的新功能
       placeholder: |
-        例如：
-        - 每學期開始需要匯入 100+ 學生
-        - 目前一個一個新增太耗時
-        - 希望能用 Excel 批次匯入
+        例如：希望在學生儀表板加入作業進度追蹤功能
+
+        您可以包含：
+        - 想要什麼功能
+        - 為什麼需要這個功能
+        - 預期如何使用
+        - 參考範例或截圖
     validations:
       required: true
-
-  - type: textarea
-    id: expected_behavior
-    attributes:
-      label: 預期功能
-      description: 您期望這個功能如何運作？
-      placeholder: |
-        例如：
-        1. 提供 Excel 範本下載
-        2. 填寫學生資料後上傳
-        3. 系統自動批次建立學生帳號
-    validations:
-      required: true
-
-  - type: dropdown
-    id: priority
-    attributes:
-      label: 優先級
-      options:
-        - 🔴 High - 急需，影響日常作業
-        - 🟡 Medium - 重要，但可以等待
-        - 🟢 Low - Nice to have
-    validations:
-      required: true
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: 其他補充
-      description: 任何其他相關資訊（可選）
 
   - type: markdown
     attributes:
       value: |
         ---
 
-        ## 📋 後續流程
+        ## 📋 處理流程（給 AI/工程師）
 
-        1. 工程師會評估技術可行性
-        2. 確認開發計畫後，會在此 Issue 回覆預計完成時間
-        3. 開發完成後，會在此 Issue 提供 **測試連結**
-        4. 請您在測試環境中驗證功能是否符合需求
-        5. 測試通過後，請在此 Issue 留言「**測試通過**」或「**✅**」
-        6. 我們會將功能部署到正式環境
+        ### ⚠️ 強制規則
+        - **必須創建 PR** (feature → staging)
+        - **不要直接在 staging commit**
+        - 遵循 `.claude/ISSUE_HANDLING_CHECKLIST.md`
+
+        ### 🔄 完整 PDCA 流程
+
+        #### 1️⃣ Plan (計畫)
+        - [ ] 讀取並理解 Issue
+        - [ ] 在 Issue 留言 PDCA Plan 分析
+        - [ ] 功能設計和技術方案評估
+        - [ ] Schema 變更檢查（如涉及 DB schema 變更 → 停止自動處理）
+        - [ ] 等待用戶確認「開始實作」
+
+        #### 2️⃣ Do (執行)
+        - [ ] 創建 feature branch: `git checkout -b fix/issue-N-xxx`
+        - [ ] TDD 開發：Red → Green → Refactor
+        - [ ] **創建 PR** (feature → staging) - 填寫完整工程報告
+        - [ ] Push feature branch → 觸發 Per-Issue Test Environment 部署
+        - [ ] CI/CD 自動執行測試
+
+        #### 3️⃣ Check (驗證)
+        - [ ] 在 Issue 提供測試指引（給案主，用業務語言）
+        - [ ] 提供 Per-Issue Test Environment URLs
+        - [ ] 案主測試並留言「測試通過」或「✅」
+        - [ ] 執行 `check-approvals` 檢查批准狀態
+
+        #### 4️⃣ Act (改進)
+        - [ ] 雙重批准確認：
+          - ✅ 系統通過：PR 中 CI/CD 全部綠燈
+          - ✅ 業務通過：Issue 中案主批准
+        - [ ] Merge PR to staging: `gh pr merge <PR_NUMBER> --squash`
+        - [ ] **Per-Issue Test Environment 自動清理**（issue 關閉時）
+        - [ ] 在 Issue 通知案主已部署到 Staging
+        - [ ] Production 發布：Release PR (staging → main)
+
+        ### 🧹 自動清理機制
+        - Issue 關閉時自動刪除 Per-Issue Test Environment
+        - Cloud Run services 自動刪除
+        - Container images 自動清理
+        - 💰 立即停止計費
+
+        ### 🔴 絕對禁止
+        - ❌ 直接在 staging commit
+        - ❌ 跳過 PR
+        - ❌ 沒有 CI/CD 就 merge
+        - ❌ 沒有案主批准就 merge
+        - ❌ 涉及 DB Schema 變更時自動處理
