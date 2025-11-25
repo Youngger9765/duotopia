@@ -113,9 +113,32 @@ git push origin fix/issue-<NUM>-description
 
 #### Phase 3: PDCA Check (Verification)
 
-**Step 3.1**: Wait for Per-Issue Test Environment deployment
+**Step 3.1**: Wait for Per-Issue Test Environment deployment (CRITICAL)
+
+⚠️ **MUST WAIT FOR CI/CD TO COMPLETE BEFORE POSTING URLs**
+
+1. Monitor GitHub Actions workflow status:
+   ```bash
+   gh run list --branch fix/issue-<NUM>-xxx --limit 5
+   ```
+
+2. Wait for workflow to complete successfully:
+   - ✅ "Deploy Preview Environment" workflow must show status: "completed" and conclusion: "success"
+   - ⏳ Typical deployment time: 5-10 minutes
+   - 🔴 If deployment fails, investigate and fix before proceeding
+
+3. Verify deployment URLs are accessible:
+   ```bash
+   # Check frontend responds
+   curl -I https://duotopia-preview-issue-<NUM>-frontend.run.app
+
+   # Check backend health
+   curl https://duotopia-preview-issue-<NUM>-backend.run.app/api/health
+   ```
 
 **Step 3.2**: Provide testing instructions to case owner (MANDATORY)
+
+⚠️ **ONLY POST AFTER CI/CD COMPLETES SUCCESSFULLY**
 
 Use the testing guidance template generation command:
 ```bash
@@ -457,9 +480,16 @@ git push origin fix/issue-15-student-login-error
 
 ### Phase 3: PDCA Check
 ```bash
-# Step 1: Wait for Per-Issue Test Environment deployment (check GitHub Actions)
+# Step 1: Wait for Per-Issue Test Environment deployment
+# ⚠️ CRITICAL: MUST WAIT FOR CI/CD TO COMPLETE
+gh run list --branch fix/issue-15-student-login-error --limit 5
+# Wait until workflow shows: status=completed, conclusion=success
 
-# Step 2: Generate and post testing instructions for case owner
+# Verify URLs are accessible
+curl -I https://duotopia-preview-issue-15-frontend.run.app
+curl https://duotopia-preview-issue-15-backend.run.app/api/health
+
+# Step 2: ONLY AFTER CI/CD COMPLETES - Generate and post testing instructions
 generate-test-guidance-comment 15
 # [Customize with specific testing steps in business language]
 gh issue comment 15 --body "<customized_test_guidance>"
