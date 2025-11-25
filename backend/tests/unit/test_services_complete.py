@@ -475,7 +475,7 @@ class TestServicesIntegration:
                     )
 
                     result = await tts_service.generate_tts("Test text")
-                    assert "https://storage.googleapis.com" in result
+                    assert result.startswith("https://storage.googleapis.com/")
 
     def test_audio_manager_with_translation(self):
         """測試音頻管理與翻譯整合"""

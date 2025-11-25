@@ -1,9 +1,11 @@
 """Debug endpoints for system testing"""
+import logging
 import os
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/system-check")
@@ -129,8 +131,10 @@ async def test_upload_no_auth(
         }
 
     except Exception as e:
+        logger.error(f"Upload test failed: {str(e)}")
         return JSONResponse(
-            status_code=500, content={"status": "error", "message": str(e)}
+            status_code=500,
+            content={"status": "error", "message": "上傳失敗，請檢查配置"},
         )
 
 
@@ -175,8 +179,10 @@ async def test_azure_speech_no_auth(
                 os.unlink(temp_file_path)
 
     except Exception as e:
+        logger.error(f"Azure Speech test failed: {str(e)}")
         return JSONResponse(
-            status_code=500, content={"status": "error", "message": str(e)}
+            status_code=500,
+            content={"status": "error", "message": "語音評估失敗，請檢查配置"},
         )
 
 
@@ -231,11 +237,17 @@ async def test_gcs_simple_no_auth(
                 }
 
             except Exception as local_error:
-                result["local_storage"] = {"saved": False, "error": str(local_error)}
+                logger.error(f"Local storage failed: {str(local_error)}")
+                result["local_storage"] = {
+                    "saved": False,
+                    "error": "本地儲存失敗",
+                }
 
         return result
 
     except Exception as e:
+        logger.error(f"GCS simple test failed: {str(e)}")
         return JSONResponse(
-            status_code=500, content={"status": "error", "message": str(e)}
+            status_code=500,
+            content={"status": "error", "message": "GCS 上傳失敗，請檢查配置"},
         )
