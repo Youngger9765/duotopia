@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '8a67d41aff56'
-down_revision: Union[str, None] = 'bfc46beaa6a0'
+revision: str = "8a67d41aff56"
+down_revision: Union[str, None] = "bfc46beaa6a0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,7 +23,9 @@ def upgrade() -> None:
     # PostgreSQL cannot distinguish between table columns and PL/pgSQL variables
     # Solution: Use table-qualified column names (user_word_progress.column_name)
 
-    op.execute("DROP FUNCTION IF EXISTS update_memory_strength(INTEGER, INTEGER, BOOLEAN)")
+    op.execute(
+        "DROP FUNCTION IF EXISTS update_memory_strength(INTEGER, INTEGER, BOOLEAN)"
+    )
 
     op.execute(
         """
@@ -178,7 +180,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Revert to original function (with ambiguous column references)
     # Note: This will reintroduce the bug, but included for migration reversibility
-    op.execute("DROP FUNCTION IF EXISTS update_memory_strength(INTEGER, INTEGER, BOOLEAN)")
+    op.execute(
+        "DROP FUNCTION IF EXISTS update_memory_strength(INTEGER, INTEGER, BOOLEAN)"
+    )
 
     op.execute(
         """
