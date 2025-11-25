@@ -2,7 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚨 最高指導原則：修完要自己去測試過！
+## 🚨 最高指導原則
+
+### 1. 修完要自己去測試過！
+
+### 2. **處理 Issue 必須看 Checklist**
+
+⚠️ **強制規則**：每次處理 GitHub Issue 前，必須打開並遵守：
+
+**📋 完整 Checklist**: `.claude/ISSUE_HANDLING_CHECKLIST.md`
+
+**關鍵步驟（絕對不能跳過）**：
+1. ✅ 創建 feature branch（不要在 staging 直接 commit）
+2. ✅ **創建 PR** (feature → staging) ← **強制！**
+3. ✅ 等待 CI/CD 通過
+4. ✅ 等待雙重批准（系統 + 業務）
+5. ✅ **Merge PR** (gh pr merge) ← **強制！**
+
+**❌ 絕對禁止**：
+- 直接在 staging commit
+- 跳過 PR 直接 merge
+- 沒有 CI/CD 就 merge
+- 沒有案主批准就 merge
+
+---
 
 ## 🎯 Issue vs PR 職責分工（重要）
 
