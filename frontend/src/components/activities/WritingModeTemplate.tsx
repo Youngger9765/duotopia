@@ -88,7 +88,15 @@ const WritingModeTemplate: React.FC<WritingModeTemplateProps> = ({
       // 正確：添加到答案區
       const newSelectedWords = [...selectedWords, clickedWord];
       setSelectedWords(newSelectedWords);
-      setAvailableWords((prev) => prev.filter((w) => w !== clickedWord));
+
+      // 只移除一個匹配的單字（處理重複單字情況）
+      setAvailableWords((prev) => {
+        const index = prev.indexOf(clickedWord);
+        if (index > -1) {
+          return [...prev.slice(0, index), ...prev.slice(index + 1)];
+        }
+        return prev;
+      });
 
       // 檢查是否完成
       if (newSelectedWords.length === correctWords.length) {
