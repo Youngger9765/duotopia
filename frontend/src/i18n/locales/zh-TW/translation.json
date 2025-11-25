@@ -853,6 +853,8 @@
       "placeholder": "請輸入你的密碼",
       "login": "登入",
       "selectOther": "選擇其他學生",
+      "passwordHint": "首次登入請輸入西元生日年月日，如: 2012 年 1 月 1 日，密碼為 20120101",
+      "forgotPassword": "若忘記密碼，請聯繫教師恢復預設密碼",
       "demoHint": "💡 測試提示",
       "demoPassword": "Demo 學生預設密碼：",
       "passwordFormat": "正式使用時，密碼為學生的生日 (格式：YYYYMMDD)"
