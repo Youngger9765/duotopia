@@ -79,13 +79,13 @@ export default function StudentDashboard() {
 
       // Calculate assignment stats (merging NOT_STARTED + IN_PROGRESS as "pending")
       const pending = assignmentList.filter(
-        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS"
+        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
       ).length;
       const submitted = assignmentList.filter(
-        (a) => a.status === "SUBMITTED"
+        (a) => a.status === "SUBMITTED",
       ).length;
       const graded = assignmentList.filter(
-        (a) => a.status === "GRADED" || a.status === "RETURNED"
+        (a) => a.status === "GRADED" || a.status === "RETURNED",
       ).length;
 
       setAssignmentStats({ pending, submitted, graded });
@@ -136,11 +136,11 @@ export default function StudentDashboard() {
 
       // Calculate stats for mock data too
       const pending = mockData.filter(
-        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS"
+        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
       ).length;
       const submitted = mockData.filter((a) => a.status === "SUBMITTED").length;
       const graded = mockData.filter(
-        (a) => a.status === "GRADED" || a.status === "RETURNED"
+        (a) => a.status === "GRADED" || a.status === "RETURNED",
       ).length;
       setAssignmentStats({ pending, submitted, graded });
     }
