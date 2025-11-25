@@ -1724,7 +1724,8 @@
       "phone": "電話:",
       "classroom": "班級:",
       "password": "密碼:",
-      "lastLogin": "最後登入:"
+      "lastLogin": "最後登入:",
+      "studentNumber": "學號:"
     }
   },
   "subscriptionProgressBanner": {

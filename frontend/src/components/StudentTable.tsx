@@ -198,7 +198,8 @@ export default function StudentTable({
                       {student.name}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      學號: {student.student_number || "-"}
+                      {t("studentTable.info.studentNumber")}{" "}
+                      {student.student_number || "-"}
                     </p>
                   </div>
                 </div>
@@ -397,7 +398,8 @@ export default function StudentTable({
                       <p className="font-medium">{student.name}</p>
                       {student.student_number && (
                         <p className="text-xs text-gray-500">
-                          學號: {student.student_number}
+                          {t("studentTable.info.studentNumber")}{" "}
+                          {student.student_number}
                         </p>
                       )}
                       {student.phone && (

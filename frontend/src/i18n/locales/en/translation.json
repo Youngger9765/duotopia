@@ -1724,7 +1724,8 @@
       "phone": "Phone:",
       "classroom": "Classroom:",
       "password": "Password:",
-      "lastLogin": "Last Login:"
+      "lastLogin": "Last Login:",
+      "studentNumber": "Student Number:"
     }
   },
   "subscriptionProgressBanner": {
