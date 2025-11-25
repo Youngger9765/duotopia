@@ -19,6 +19,8 @@ import {
   CheckCircle,
   User,
   Loader2,
+  BarChart3,
+  ArrowRight,
 } from "lucide-react";
 import { Assignment } from "@/types";
 
@@ -32,6 +34,11 @@ export default function StudentDashboard() {
     averageScore: 0,
     totalPracticeTime: 0,
     practiceDays: 0,
+  });
+  const [assignmentStats, setAssignmentStats] = useState({
+    pending: 0, // NOT_STARTED + IN_PROGRESS combined
+    submitted: 0,
+    graded: 0,
   });
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
   const [showEmailSetup, setShowEmailSetup] = useState(false);
@@ -67,12 +74,26 @@ export default function StudentDashboard() {
       }
 
       const data = await response.json();
-      setAssignments(data as Assignment[]);
+      const assignmentList = data as Assignment[];
+      setAssignments(assignmentList);
+
+      // Calculate assignment stats (merging NOT_STARTED + IN_PROGRESS as "pending")
+      const pending = assignmentList.filter(
+        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS"
+      ).length;
+      const submitted = assignmentList.filter(
+        (a) => a.status === "SUBMITTED"
+      ).length;
+      const graded = assignmentList.filter(
+        (a) => a.status === "GRADED" || a.status === "RETURNED"
+      ).length;
+
+      setAssignmentStats({ pending, submitted, graded });
     } catch (error) {
       console.error("Failed to load assignments:", error);
       toast.error(t("studentDashboard.errors.loadAssignments"));
       // Use mock data as fallback
-      setAssignments([
+      const mockData = [
         {
           id: 1,
           title: "Unit 1: Greetings 問候語練習",
@@ -110,7 +131,18 @@ export default function StudentDashboard() {
           score: 85,
           created_at: new Date().toISOString(),
         },
-      ]);
+      ];
+      setAssignments(mockData);
+
+      // Calculate stats for mock data too
+      const pending = mockData.filter(
+        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS"
+      ).length;
+      const submitted = mockData.filter((a) => a.status === "SUBMITTED").length;
+      const graded = mockData.filter(
+        (a) => a.status === "GRADED" || a.status === "RETURNED"
+      ).length;
+      setAssignmentStats({ pending, submitted, graded });
     }
   };
 
@@ -257,9 +289,8 @@ export default function StudentDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "NOT_STARTED":
-        return t("studentDashboard.status.notStarted");
       case "IN_PROGRESS":
-        return t("studentDashboard.status.inProgress");
+        return t("studentDashboard.status.notStarted"); // This is "待完成" (Pending)
       case "SUBMITTED":
         return t("studentDashboard.status.submitted");
       case "GRADED":
@@ -457,6 +488,71 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Assignment Flow Status - Simplified with 3 stages */}
+        <Card className="mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-4">
+              作業進度
+            </h3>
+            <div className="flex items-center gap-2 sm:gap-3 justify-center">
+              {/* 待完成 (NOT_STARTED + IN_PROGRESS) */}
+              <div className="flex flex-col items-center min-w-[70px] sm:min-w-[90px]">
+                <div className="relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 bg-gray-600 border-gray-600 text-white">
+                    <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  {assignmentStats.pending > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold z-10">
+                      {assignmentStats.pending}
+                    </div>
+                  )}
+                </div>
+                <span className="mt-1 text-xs sm:text-sm font-medium text-gray-900">
+                  待完成
+                </span>
+              </div>
+
+              <ArrowRight className="text-gray-400 mx-1 flex-shrink-0 h-4 w-4 sm:h-5 sm:w-5" />
+
+              {/* 已提交 */}
+              <div className="flex flex-col items-center min-w-[70px] sm:min-w-[90px]">
+                <div className="relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 bg-white border-gray-300 text-yellow-600">
+                    <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  {assignmentStats.submitted > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold z-10">
+                      {assignmentStats.submitted}
+                    </div>
+                  )}
+                </div>
+                <span className="mt-1 text-xs sm:text-sm font-medium text-gray-600">
+                  已提交
+                </span>
+              </div>
+
+              <ArrowRight className="text-gray-400 mx-1 flex-shrink-0 h-4 w-4 sm:h-5 sm:w-5" />
+
+              {/* 已完成 */}
+              <div className="flex flex-col items-center min-w-[70px] sm:min-w-[90px]">
+                <div className="relative">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 bg-white border-gray-300 text-green-600">
+                    <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  {assignmentStats.graded > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold z-10">
+                      {assignmentStats.graded}
+                    </div>
+                  )}
+                </div>
+                <span className="mt-1 text-xs sm:text-sm font-medium text-gray-600">
+                  已完成
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Assignments Section */}
         <Card>
