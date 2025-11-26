@@ -2132,9 +2132,10 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
 
     # Commit all changes
     db.commit()
-    print(
-        f"✅ 句子模組課程建立完成：2 單元，4 個練習，共 {len(words_set1_1) + len(words_set1_2) + len(words_set2_1) + len(words_set2_2)} 個單字（含詞性資料）"
+    total_words = (
+        len(words_set1_1) + len(words_set1_2) + len(words_set2_1) + len(words_set2_2)
     )
+    print(f"✅ 句子模組課程建立完成：2 單元，4 個練習，共 {total_words} 個單字（含詞性資料）")
 
 
 def seed_template_programs(db: Session):

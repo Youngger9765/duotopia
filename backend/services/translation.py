@@ -102,7 +102,9 @@ class TranslationService:
 請以 JSON 格式回覆，格式如下：
 {{"translation": "中文翻譯", "parts_of_speech": ["n.", "v."]}}
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞), pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞), det. (限定詞), aux. (助動詞)
+詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
+det. (限定詞), aux. (助動詞)
 
 只回覆 JSON，不要其他文字。"""
             else:
@@ -115,7 +117,10 @@ Word: {text}
 Reply in JSON format:
 {{"translation": "definition", "parts_of_speech": ["n.", "v."]}}
 
-Use these abbreviations for parts of speech: n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection), det. (determiner), aux. (auxiliary)
+Use these abbreviations for parts of speech:
+n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
+prep. (preposition), conj. (conjunction), interj. (interjection),
+det. (determiner), aux. (auxiliary)
 
 Only reply with JSON, no other text."""
 
@@ -283,7 +288,9 @@ Required: Return format must be ["translation1", "translation2", ...]"""
 請以 JSON 陣列格式回覆，格式如下：
 [{{"translation": "翻譯1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "翻譯2", "parts_of_speech": ["adj."]}}]
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞), pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞), det. (限定詞), aux. (助動詞)
+詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
+det. (限定詞), aux. (助動詞)
 
 只回覆 JSON 陣列，不要其他文字。"""
             else:
@@ -294,9 +301,13 @@ Required: Return format must be ["translation1", "translation2", ...]"""
 Words: {texts_json}
 
 Reply as JSON array:
-[{{"translation": "definition1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "definition2", "parts_of_speech": ["adj."]}}]
+[{{"translation": "definition1", "parts_of_speech": ["n.", "v."]}}, \
+{{"translation": "definition2", "parts_of_speech": ["adj."]}}]
 
-Use these abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection), det. (determiner), aux. (auxiliary)
+Use these abbreviations:
+n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
+prep. (preposition), conj. (conjunction), interj. (interjection),
+det. (determiner), aux. (auxiliary)
 
 Only reply with JSON array, no other text."""
 
