@@ -74,6 +74,86 @@ class TranslationService:
             # 如果翻譯失敗，返回原文
             return text
 
+    async def translate_with_pos(
+        self, text: str, target_lang: str = "zh-TW"
+    ) -> Dict[str, any]:
+        """
+        翻譯單字並辨識詞性
+
+        Args:
+            text: 要翻譯的單字
+            target_lang: 目標語言（預設為繁體中文）
+
+        Returns:
+            包含 translation 和 parts_of_speech 的字典
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            # 建立 prompt 要求同時翻譯和辨識詞性
+            if target_lang == "zh-TW":
+                prompt = f"""請分析以下英文單字，提供：
+1. 繁體中文翻譯
+2. 詞性（可能有多個）
+
+單字: {text}
+
+請以 JSON 格式回覆，格式如下：
+{{"translation": "中文翻譯", "parts_of_speech": ["n.", "v."]}}
+
+詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞), pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞), det. (限定詞), aux. (助動詞)
+
+只回覆 JSON，不要其他文字。"""
+            else:
+                prompt = f"""Analyze the following English word and provide:
+1. English definition
+2. Parts of speech (may have multiple)
+
+Word: {text}
+
+Reply in JSON format:
+{{"translation": "definition", "parts_of_speech": ["n.", "v."]}}
+
+Use these abbreviations for parts of speech: n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection), det. (determiner), aux. (auxiliary)
+
+Only reply with JSON, no other text."""
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a professional linguist. Always respond with valid JSON only.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=200,
+            )
+
+            # 解析 JSON 回應
+            import re
+
+            content = response.choices[0].message.content.strip()
+            # 移除可能的 markdown 代碼塊標記
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            result = json.loads(content)
+
+            # 確保返回正確的結構
+            return {
+                "translation": result.get("translation", text),
+                "parts_of_speech": result.get("parts_of_speech", []),
+            }
+        except Exception as e:
+            print(f"Translate with POS error: {e}")
+            # Fallback: 只返回翻譯
+            translation = await self.translate_text(text, target_lang)
+            return {"translation": translation, "parts_of_speech": []}
+
     async def batch_translate(
         self, texts: List[str], target_lang: str = "zh-TW"
     ) -> List[str]:
@@ -173,6 +253,208 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             tasks = [self.translate_text(text, target_lang) for text in texts]
             translations = await asyncio.gather(*tasks)
             return translations
+
+    async def batch_translate_with_pos(
+        self, texts: List[str], target_lang: str = "zh-TW"
+    ) -> List[Dict[str, any]]:
+        """
+        批次翻譯多個單字並辨識詞性
+
+        Args:
+            texts: 要翻譯的單字列表
+            target_lang: 目標語言（預設為繁體中文）
+
+        Returns:
+            包含 translation 和 parts_of_speech 的字典列表
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            texts_json = json.dumps(texts, ensure_ascii=False)
+
+            if target_lang == "zh-TW":
+                prompt = f"""請分析以下英文單字列表，為每個單字提供：
+1. 繁體中文翻譯
+2. 詞性（可能有多個）
+
+單字列表: {texts_json}
+
+請以 JSON 陣列格式回覆，格式如下：
+[{{"translation": "翻譯1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "翻譯2", "parts_of_speech": ["adj."]}}]
+
+詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞), pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞), det. (限定詞), aux. (助動詞)
+
+只回覆 JSON 陣列，不要其他文字。"""
+            else:
+                prompt = f"""Analyze the following English words and provide for each:
+1. English definition
+2. Parts of speech (may have multiple)
+
+Words: {texts_json}
+
+Reply as JSON array:
+[{{"translation": "definition1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "definition2", "parts_of_speech": ["adj."]}}]
+
+Use these abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection), det. (determiner), aux. (auxiliary)
+
+Only reply with JSON array, no other text."""
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a professional linguist. Always respond with valid JSON array only.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=2000,
+            )
+
+            # 解析 JSON 回應
+            import re
+
+            content = response.choices[0].message.content.strip()
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            results = json.loads(content)
+
+            # 確保返回數量正確
+            if len(results) != len(texts):
+                print(
+                    f"Warning: Expected {len(texts)} results, got {len(results)}. Falling back."
+                )
+                # Fallback: 逐個處理
+                import asyncio
+
+                tasks = [self.translate_with_pos(text, target_lang) for text in texts]
+                results = await asyncio.gather(*tasks)
+
+            return results
+        except Exception as e:
+            print(f"Batch translate with POS error: {e}. Falling back.")
+            # Fallback: 逐個處理
+            import asyncio
+
+            tasks = [self.translate_with_pos(text, target_lang) for text in texts]
+            results = await asyncio.gather(*tasks)
+            return results
+
+    async def generate_sentences(
+        self,
+        words: List[str],
+        level: str = "A1",
+        prompt: Optional[str] = None,
+        translate_to: Optional[str] = None,
+        parts_of_speech: Optional[List[List[str]]] = None,
+    ) -> List[Dict[str, str]]:
+        """
+        使用 AI 為單字生成例句
+
+        Args:
+            words: 單字列表
+            level: CEFR 等級 (A1, A2, B1, B2, C1, C2)
+            prompt: 使用者自訂 prompt
+            translate_to: 翻譯目標語言 (zh-TW, ja, ko)
+            parts_of_speech: 每個單字的詞性列表
+
+        Returns:
+            包含 sentence 和 translation 的字典列表
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            # 構建單字資訊
+            words_info = []
+            for i, word in enumerate(words):
+                info = {"word": word}
+                if parts_of_speech and i < len(parts_of_speech) and parts_of_speech[i]:
+                    info["pos"] = ", ".join(parts_of_speech[i])
+                words_info.append(info)
+
+            words_json = json.dumps(words_info, ensure_ascii=False)
+
+            # 構建 system prompt
+            system_prompt = f"""You are an English teacher creating example sentences for language learners.
+Generate ONE example sentence for each word at CEFR level {level}.
+The sentences should be natural, educational, and appropriate for the difficulty level.
+
+Level guidelines:
+- A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
+- A2: Simple sentences with common phrases, everyday topics (8-12 words)
+- B1: Compound sentences, wider vocabulary, various tenses (10-15 words)
+- B2: Complex sentences, idiomatic expressions, abstract topics (12-18 words)
+- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register
+- C2: Near-native fluency, literary style, rare vocabulary acceptable"""
+
+            # 構建 user prompt
+            user_prompt = f"""Generate example sentences for the following words:
+{words_json}
+
+"""
+            if prompt:
+                user_prompt += f"Additional instructions: {prompt}\n\n"
+
+            if translate_to:
+                lang_name = {
+                    "zh-TW": "Traditional Chinese",
+                    "ja": "Japanese",
+                    "ko": "Korean",
+                }.get(translate_to, translate_to)
+                user_prompt += f"""Return as JSON array with this format:
+[{{"sentence": "...", "translation": "..."}}]
+Where translation is in {lang_name}."""
+            else:
+                user_prompt += """Return as JSON array with this format:
+[{"sentence": "..."}]"""
+
+            user_prompt += "\n\nOnly return the JSON array, no other text."
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,  # 稍高一點讓例句更有變化
+                max_tokens=2000,
+            )
+
+            # 解析回應
+            import re
+
+            content = response.choices[0].message.content.strip()
+
+            # 移除可能的 markdown 代碼塊標記
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            sentences = json.loads(content)
+
+            # 確保返回數量正確
+            if len(sentences) != len(words):
+                print(
+                    f"Warning: Expected {len(words)} sentences, got {len(sentences)}."
+                )
+                # 補齊或截斷
+                while len(sentences) < len(words):
+                    sentences.append(
+                        {"sentence": f"Example with {words[len(sentences)]}"}
+                    )
+                sentences = sentences[: len(words)]
+
+            return sentences
+
+        except Exception as e:
+            print(f"Generate sentences error: {e}")
+            # Fallback: 返回簡單的預設例句
+            return [{"sentence": f"This is an example with {word}."} for word in words]
 
 
 # 創建全局實例

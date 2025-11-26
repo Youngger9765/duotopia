@@ -2563,6 +2563,25 @@ async def translate_text(
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
+@router.post("/translate-with-pos")
+async def translate_with_pos(
+    request: TranslateRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """翻譯單字並辨識詞性"""
+    try:
+        result = await translation_service.translate_with_pos(
+            request.text, request.target_lang
+        )
+        return {
+            "original": request.text,
+            "translation": result["translation"],
+            "parts_of_speech": result["parts_of_speech"],
+        }
+    except Exception as e:
+        print(f"Translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
 @router.post("/translate/batch")
 async def batch_translate(
     request: BatchTranslateRequest,
@@ -2577,6 +2596,51 @@ async def batch_translate(
     except Exception as e:
         print(f"Batch translation error: {e}")
         raise HTTPException(status_code=500, detail="Translation service error")
+
+
+@router.post("/translate-with-pos/batch")
+async def batch_translate_with_pos(
+    request: BatchTranslateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """批次翻譯多個單字並辨識詞性"""
+    try:
+        results = await translation_service.batch_translate_with_pos(
+            request.texts, request.target_lang
+        )
+        return {"originals": request.texts, "results": results}
+    except Exception as e:
+        print(f"Batch translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
+# ============ AI Generate Sentences ============
+class GenerateSentencesRequest(BaseModel):
+    words: List[str]
+    level: Optional[str] = "A1"
+    prompt: Optional[str] = None
+    translate_to: Optional[str] = None  # zh-TW, ja, ko
+    parts_of_speech: Optional[List[List[str]]] = None
+
+
+@router.post("/generate-sentences")
+async def generate_sentences(
+    request: GenerateSentencesRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """AI 生成例句"""
+    try:
+        sentences = await translation_service.generate_sentences(
+            words=request.words,
+            level=request.level,
+            prompt=request.prompt,
+            translate_to=request.translate_to,
+            parts_of_speech=request.parts_of_speech,
+        )
+        return {"sentences": sentences}
+    except Exception as e:
+        print(f"Generate sentences error: {e}")
+        raise HTTPException(status_code=500, detail="Generate sentences failed")
 
 
 # ============ TTS Endpoints ============

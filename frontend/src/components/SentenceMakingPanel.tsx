@@ -43,6 +43,20 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// 詞性列表
+const PARTS_OF_SPEECH = [
+  { value: "n.", label: "n.", fullName: "noun" },
+  { value: "v.", label: "v.", fullName: "verb" },
+  { value: "adj.", label: "adj.", fullName: "adjective" },
+  { value: "adv.", label: "adv.", fullName: "adverb" },
+  { value: "pron.", label: "pron.", fullName: "pronoun" },
+  { value: "prep.", label: "prep.", fullName: "preposition" },
+  { value: "conj.", label: "conj.", fullName: "conjunction" },
+  { value: "interj.", label: "interj.", fullName: "interjection" },
+  { value: "det.", label: "det.", fullName: "determiner" },
+  { value: "aux.", label: "aux.", fullName: "auxiliary" },
+] as const;
+
 interface ContentRow {
   id: string | number;
   text: string;
@@ -51,6 +65,7 @@ interface ContentRow {
   audio_url?: string;
   translation?: string;
   selectedLanguage?: "chinese" | "english"; // 最後選擇的語言
+  partsOfSpeech?: string[]; // 詞性陣列（可複選）
   audioSettings?: {
     accent: string;
     gender: string;
@@ -789,18 +804,15 @@ interface SortableRowInnerProps {
   handleUpdateRow: (
     index: number,
     field: keyof ContentRow,
-    value: string,
+    value: string | string[],
   ) => void;
   handleRemoveRow: (index: number) => void;
   handleDuplicateRow: (index: number) => void;
   handleOpenTTSModal: (row: ContentRow) => void;
   handleRemoveAudio: (index: number) => void;
   handleGenerateSingleDefinition: (index: number) => Promise<void>;
-  handleGenerateSingleDefinitionWithLang: (
-    index: number,
-    lang: "chinese" | "english",
-  ) => Promise<void>;
   handleGenerateExampleTranslation: (index: number) => Promise<void>;
+  handleOpenAIGenerateModal: (index: number) => void;
   rowsLength: number;
 }
 
@@ -813,8 +825,8 @@ function SortableRowInner({
   handleOpenTTSModal,
   handleRemoveAudio,
   handleGenerateSingleDefinition,
-  handleGenerateSingleDefinitionWithLang,
   handleGenerateExampleTranslation,
+  handleOpenAIGenerateModal,
   rowsLength,
 }: SortableRowInnerProps) {
   const {
@@ -832,215 +844,208 @@ function SortableRowInner({
     opacity: isDragging ? 0.4 : 1,
   };
 
+  // 處理詞性切換
+  const handleTogglePartOfSpeech = (pos: string) => {
+    const currentPOS = row.partsOfSpeech || [];
+    const newPOS = currentPOS.includes(pos)
+      ? currentPOS.filter((p) => p !== pos)
+      : [...currentPOS, pos];
+    handleUpdateRow(index, "partsOfSpeech", newPOS);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-gray-50 rounded-lg"
+      className="p-4 bg-gray-50 rounded-lg"
     >
-      <div className="flex items-center gap-1 w-full sm:w-auto">
-        {/* Drag handle - ONLY this triggers drag */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing touch-none"
-          title="拖曳以重新排序"
-        >
-          <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
+      {/* 頂部：拖曳手把 + 序號 + 動作按鈕 */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {/* Drag handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none"
+            title="拖曳以重新排序"
+          >
+            <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
+          </div>
+          <span className="text-sm font-medium text-gray-600">
+            {index + 1}
+          </span>
         </div>
-        <span className="text-sm font-medium text-gray-600 w-6">
-          {index + 1}
-        </span>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1">
+          {/* Audio controls */}
+          {row.audioUrl && (
+            <button
+              onClick={() => {
+                if (!row.audioUrl) {
+                  toast.error("沒有音檔可播放");
+                  return;
+                }
+                const audio = new Audio(row.audioUrl);
+                audio.onerror = (e) => {
+                  console.error("Audio playback error:", e);
+                  toast.error("音檔播放失敗，請檢查音檔格式");
+                };
+                audio.play().catch((error) => {
+                  console.error("Play failed:", error);
+                  toast.error("無法播放音檔");
+                });
+              }}
+              className="p-1.5 rounded text-green-600 hover:bg-green-100"
+              title="播放音檔"
+            >
+              <Play className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={() => handleOpenTTSModal(row)}
+            className={`p-1.5 rounded ${
+              row.audioUrl
+                ? "text-blue-600 hover:bg-blue-100"
+                : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
+            }`}
+            title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+          {row.audioUrl && (
+            <button
+              onClick={() => handleRemoveAudio(index)}
+              className="p-1.5 rounded text-red-600 hover:bg-red-100"
+              title="移除音檔"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <button
+            onClick={() => handleDuplicateRow(index)}
+            className="p-1.5 rounded hover:bg-gray-200"
+            title="複製"
+          >
+            <Copy className="h-4 w-4 text-gray-600" />
+          </button>
+          <button
+            onClick={() => handleRemoveRow(index)}
+            className="p-1.5 rounded hover:bg-gray-200"
+            title="刪除"
+            disabled={rowsLength <= 1}
+          >
+            <Trash2
+              className={`h-4 w-4 ${rowsLength <= 1 ? "text-gray-300" : "text-gray-600"}`}
+            />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 w-full space-y-2">
-        {/* Text input */}
-        <div className="relative">
+      {/* 第一列：英文單字 + 翻譯（同一列，flex-wrap） */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {/* 英文單字 input - 限制 50 字元 */}
+        <div className="flex-1 min-w-[200px]">
           <input
             type="text"
             value={row.text}
             onChange={(e) => handleUpdateRow(index, "text", e.target.value)}
-            className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
-            placeholder="輸入單字"
-            maxLength={200}
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            placeholder="輸入英文單字"
+            maxLength={50}
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
-            {row.audioUrl && (
-              <button
-                onClick={() => {
-                  if (!row.audioUrl) {
-                    toast.error("沒有音檔可播放");
-                    return;
-                  }
-                  const audio = new Audio(row.audioUrl);
-                  audio.onerror = (e) => {
-                    console.error("Audio playback error:", e);
-                    toast.error("音檔播放失敗，請檢查音檔格式");
-                  };
-                  audio.play().catch((error) => {
-                    console.error("Play failed:", error);
-                    toast.error("無法播放音檔");
-                  });
-                }}
-                className="p-1 rounded text-green-600 hover:bg-green-100"
-                title="播放音檔"
-              >
-                <Play className="h-4 w-4" />
-              </button>
-            )}
-            <button
-              onClick={() => handleOpenTTSModal(row)}
-              className={`p-1 rounded ${
-                row.audioUrl
-                  ? "text-blue-600 hover:bg-blue-100"
-                  : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
-              }`}
-              title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
-            >
-              <Mic className="h-4 w-4" />
-            </button>
-            {row.audioUrl && (
-              <button
-                onClick={() => handleRemoveAudio(index)}
-                className="p-1 rounded text-red-600 hover:bg-red-100"
-                title="移除音檔"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            )}
-          </div>
         </div>
 
-        {/* Translation textarea */}
-        <div className="space-y-2">
-          <div className="relative">
-            <textarea
-              value={
-                (row.selectedLanguage || "chinese") === "chinese"
-                  ? row.definition || ""
-                  : row.translation || ""
-              }
-              onChange={(e) =>
-                handleUpdateRow(
-                  index,
-                  (row.selectedLanguage || "chinese") === "chinese"
-                    ? "definition"
-                    : "translation",
-                  e.target.value,
-                )
-              }
-              className="w-full px-3 py-2 pr-20 border rounded-md text-sm resize-none"
-              placeholder={
-                (row.selectedLanguage || "chinese") === "chinese"
-                  ? "中文翻譯"
-                  : "English translation"
-              }
-              rows={2}
-              maxLength={500}
-            />
-            <div className="absolute right-2 top-2 flex items-center space-x-1">
-              <select
-                value={row.selectedLanguage || "chinese"}
-                onChange={(e) => {
-                  const newLang = e.target.value as "chinese" | "english";
-                  handleUpdateRow(index, "selectedLanguage", newLang);
-                  // Auto-generate when switching language
-                  if (row.text && row.text.trim()) {
-                    setTimeout(() => {
-                      handleGenerateSingleDefinitionWithLang(index, newLang);
-                    }, 100);
-                  }
-                }}
-                className="px-1 py-0.5 border rounded text-xs bg-white"
-              >
-                <option value="chinese">中文翻譯</option>
-                <option value="english">英文釋義</option>
-              </select>
-              <button
-                onClick={() => handleGenerateSingleDefinition(index)}
-                className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                title={`生成${(row.selectedLanguage || "chinese") === "chinese" ? "中文翻譯" : "英文釋義"}`}
-              >
-                <Globe className="h-4 w-4" />
-                <span className="text-xs">
-                  {(row.selectedLanguage || "chinese") === "chinese"
-                    ? "中"
-                    : "EN"}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Example sentence fields */}
-        <div className="space-y-2 pt-2 border-t border-gray-200">
-          <div className="text-xs font-medium text-gray-500 mb-1">
-            例句（選填）
-          </div>
-
-          {/* Example sentence input */}
+        {/* 翻譯 input */}
+        <div className="flex-1 min-w-[200px] relative">
           <input
             type="text"
-            value={row.example_sentence || ""}
+            value={row.definition || ""}
             onChange={(e) =>
-              handleUpdateRow(index, "example_sentence", e.target.value)
+              handleUpdateRow(index, "definition", e.target.value)
             }
-            className="w-full px-3 py-2 border rounded-md text-sm"
-            placeholder="輸入例句（英文）"
+            className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
+            placeholder="輸入單字翻譯(非必填)"
             maxLength={200}
           />
-
-          {/* Example sentence translation (Chinese) with inline button */}
-          <div className="relative">
-            <input
-              type="text"
-              value={row.example_sentence_translation || ""}
-              onChange={(e) =>
-                handleUpdateRow(
-                  index,
-                  "example_sentence_translation",
-                  e.target.value,
-                )
-              }
-              className="w-full px-3 py-2 pr-20 border rounded-md text-sm"
-              placeholder="例句中文翻譯"
-              maxLength={200}
-            />
-            {row.example_sentence && row.example_sentence.trim() && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
-                <button
-                  onClick={() => handleGenerateExampleTranslation(index)}
-                  className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                  title="AI 生成例句中文翻譯"
-                >
-                  <Globe className="h-4 w-4" />
-                  <span className="text-xs">中</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => handleGenerateSingleDefinition(index)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 text-gray-600"
+            title="AI 生成翻譯"
+          >
+            <Globe className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+      {/* 第二列：詞性選擇 Chips */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {PARTS_OF_SPEECH.map((pos) => {
+          const isSelected = (row.partsOfSpeech || []).includes(pos.value);
+          return (
+            <button
+              key={pos.value}
+              onClick={() => handleTogglePartOfSpeech(pos.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                isSelected
+                  ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-white shadow-sm"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+              title={pos.fullName}
+            >
+              {pos.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 第三列：例句輸入（帶 AI 按鈕） */}
+      <div className="relative mb-2">
+        <input
+          type="text"
+          value={row.example_sentence || ""}
+          onChange={(e) =>
+            handleUpdateRow(index, "example_sentence", e.target.value)
+          }
+          className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
+          placeholder="輸入英文例句"
+          maxLength={500}
+        />
         <button
-          onClick={() => handleDuplicateRow(index)}
-          className="p-1 rounded hover:bg-gray-200"
-          title="複製"
+          onClick={() => handleOpenAIGenerateModal(index)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-blue-100 text-blue-600 border border-blue-300"
+          title="AI 生成例句"
         >
-          <Copy className="h-4 w-4 text-gray-600" />
+          <span className="text-xs font-medium">AI</span>
         </button>
-        <button
-          onClick={() => handleRemoveRow(index)}
-          className="p-1 rounded hover:bg-gray-200"
-          title="刪除"
-          disabled={rowsLength <= 1}
-        >
-          <Trash2
-            className={`h-4 w-4 ${rowsLength <= 1 ? "text-gray-300" : "text-gray-600"}`}
-          />
-        </button>
+      </div>
+
+      {/* 第四列：例句翻譯 */}
+      <div className="relative">
+        <input
+          type="text"
+          value={row.example_sentence_translation || ""}
+          onChange={(e) =>
+            handleUpdateRow(
+              index,
+              "example_sentence_translation",
+              e.target.value,
+            )
+          }
+          className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
+          placeholder="例句翻譯(非必須)"
+          maxLength={500}
+        />
+        {row.example_sentence && row.example_sentence.trim() && (
+          <button
+            onClick={() => handleGenerateExampleTranslation(index)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 text-gray-600"
+            title="AI 生成例句翻譯"
+          >
+            <Globe className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1105,6 +1110,15 @@ export default function SentenceMakingPanel({
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
 
+  // AI 生成例句對話框狀態
+  const [aiGenerateModalOpen, setAiGenerateModalOpen] = useState(false);
+  const [aiGenerateTargetIndex, setAiGenerateTargetIndex] = useState<number | null>(null); // null 表示批次生成
+  const [aiGenerateLevel, setAiGenerateLevel] = useState<string>("A1");
+  const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
+  const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
+  const [aiGenerateTranslateLang, setAiGenerateTranslateLang] = useState<string>("中文");
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
   // dnd-kit sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1157,6 +1171,7 @@ export default function SentenceMakingPanel({
               selectedLanguage?: "chinese" | "english";
               example_sentence?: string;
               example_sentence_translation?: string;
+              parts_of_speech?: string[];
             },
             index: number,
           ) => ({
@@ -1169,6 +1184,7 @@ export default function SentenceMakingPanel({
             example_sentence: item.example_sentence || "",
             example_sentence_translation:
               item.example_sentence_translation || "",
+            partsOfSpeech: item.parts_of_speech || [],
           }),
         );
         setRows(convertedRows);
@@ -1193,6 +1209,7 @@ export default function SentenceMakingPanel({
       selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
+      parts_of_speech: row.partsOfSpeech || [],
     }));
 
     onUpdateContent({
@@ -1263,7 +1280,7 @@ export default function SentenceMakingPanel({
   const handleUpdateRow = (
     index: number,
     field: keyof ContentRow,
-    value: string | "chinese" | "english",
+    value: string | string[],
   ) => {
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], [field]: value };
@@ -1530,39 +1547,44 @@ export default function SentenceMakingPanel({
 
   const handleGenerateSingleDefinition = async (index: number) => {
     const newRows = [...rows];
-    const currentLang = newRows[index].selectedLanguage || "chinese";
-    return handleGenerateSingleDefinitionWithLang(index, currentLang);
-  };
-
-  const handleGenerateSingleDefinitionWithLang = async (
-    index: number,
-    targetLang: "chinese" | "english",
-  ) => {
-    const newRows = [...rows];
     if (!newRows[index].text) {
       toast.error("請先輸入文本");
       return;
     }
 
-    toast.info(`生成翻譯中...`);
-    try {
-      const response = (await apiClient.translateText(
-        newRows[index].text,
-        targetLang === "chinese" ? "zh-TW" : "en",
-      )) as { translation: string };
+    // 檢查是否需要自動辨識詞性（詞性陣列為空）
+    const needAutoDetectPOS =
+      !newRows[index].partsOfSpeech ||
+      newRows[index].partsOfSpeech.length === 0;
 
-      // 根據目標語言寫入對應欄位，但不清空另一個欄位
-      if (targetLang === "chinese") {
+    toast.info(`生成翻譯中...`);
+
+    try {
+      if (needAutoDetectPOS) {
+        // 使用新的 API 同時翻譯和辨識詞性
+        const response = await apiClient.translateWithPos(
+          newRows[index].text,
+          "zh-TW",
+        );
+
         newRows[index].definition = response.translation;
+        // 自動填入詞性
+        if (response.parts_of_speech && response.parts_of_speech.length > 0) {
+          newRows[index].partsOfSpeech = response.parts_of_speech;
+        }
       } else {
-        newRows[index].translation = response.translation;
+        // 已有詞性，只翻譯不改變詞性
+        const response = (await apiClient.translateText(
+          newRows[index].text,
+          "zh-TW",
+        )) as { translation: string };
+
+        newRows[index].definition = response.translation;
       }
-      // 記錄最後選擇的語言
-      newRows[index].selectedLanguage = targetLang;
 
       setRows(newRows);
       toast.success(
-        `${targetLang === "chinese" ? "中文翻譯" : "英文釋義"}生成完成`,
+        needAutoDetectPOS ? "翻譯及詞性辨識完成" : "中文翻譯生成完成",
       );
     } catch (error) {
       console.error("Translation error:", error);
@@ -1571,11 +1593,11 @@ export default function SentenceMakingPanel({
   };
 
   const handleBatchGenerateDefinitions = async () => {
-    // 收集需要翻譯的項目（現在同時翻譯兩種語言）
+    // 收集需要翻譯的項目
     const itemsToTranslate: { index: number; text: string }[] = [];
 
     rows.forEach((row, index) => {
-      if (row.text && (!row.definition || !row.translation)) {
+      if (row.text && !row.definition) {
         itemsToTranslate.push({ index, text: row.text });
       }
     });
@@ -1589,58 +1611,62 @@ export default function SentenceMakingPanel({
     const newRows = [...rows];
 
     try {
-      // 收集需要中文翻譯的項目
-      const needsChinese = itemsToTranslate.filter(
-        (item) => !newRows[item.index].definition,
+      // 分類：需要辨識詞性的項目 vs 已有詞性的項目
+      const needsPOS = itemsToTranslate.filter(
+        (item) =>
+          !newRows[item.index].partsOfSpeech ||
+          newRows[item.index].partsOfSpeech!.length === 0,
       );
-      // 收集需要英文翻譯的項目
-      const needsEnglish = itemsToTranslate.filter(
-        (item) => !newRows[item.index].translation,
+      const hasPOS = itemsToTranslate.filter(
+        (item) =>
+          newRows[item.index].partsOfSpeech &&
+          newRows[item.index].partsOfSpeech!.length > 0,
       );
 
-      // 批次處理中文翻譯
-      if (needsChinese.length > 0) {
-        const chineseTexts = needsChinese.map((item) => item.text);
-        const chineseResponse = await apiClient.batchTranslate(
-          chineseTexts,
+      // 對需要辨識詞性的項目使用新 API
+      if (needsPOS.length > 0) {
+        const textsForPOS = needsPOS.map((item) => item.text);
+        const posResponse = await apiClient.batchTranslateWithPos(
+          textsForPOS,
           "zh-TW",
         );
-        const chineseTranslations =
-          (chineseResponse as { translations?: string[] }).translations || [];
+        const results = posResponse.results || [];
 
-        needsChinese.forEach((item, idx) => {
-          newRows[item.index].definition =
-            chineseTranslations[idx] || item.text;
-          // 不清空英文欄位，保留兩種語言
+        needsPOS.forEach((item, idx) => {
+          if (results[idx]) {
+            newRows[item.index].definition = results[idx].translation;
+            // 自動填入詞性
+            if (
+              results[idx].parts_of_speech &&
+              results[idx].parts_of_speech.length > 0
+            ) {
+              newRows[item.index].partsOfSpeech = results[idx].parts_of_speech;
+            }
+          }
         });
       }
 
-      // 批次處理英文釋義
-      if (needsEnglish.length > 0) {
-        const englishTexts = needsEnglish.map((item) => item.text);
-        const englishResponse = await apiClient.batchTranslate(
-          englishTexts,
-          "en",
+      // 對已有詞性的項目只翻譯
+      if (hasPOS.length > 0) {
+        const textsNoPOS = hasPOS.map((item) => item.text);
+        const translateResponse = await apiClient.batchTranslate(
+          textsNoPOS,
+          "zh-TW",
         );
-        const englishTranslations =
-          (englishResponse as { translations?: string[] }).translations || [];
+        const translations =
+          (translateResponse as { translations?: string[] }).translations || [];
 
-        needsEnglish.forEach((item, idx) => {
-          newRows[item.index].translation =
-            englishTranslations[idx] || item.text;
-          // 不清空中文欄位，保留兩種語言
+        hasPOS.forEach((item, idx) => {
+          newRows[item.index].definition = translations[idx] || item.text;
         });
       }
-
-      // 批次翻譯時預設使用中文
-      itemsToTranslate.forEach((item) => {
-        if (!newRows[item.index].selectedLanguage) {
-          newRows[item.index].selectedLanguage = "chinese";
-        }
-      });
 
       setRows(newRows);
-      toast.success(`批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目`);
+      const posCount = needsPOS.length;
+      toast.success(
+        `批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目` +
+          (posCount > 0 ? `，其中 ${posCount} 個自動辨識了詞性` : ""),
+      );
     } catch (error) {
       console.error("Batch translation error:", error);
       toast.error("批次翻譯失敗，請稍後再試");
@@ -1673,50 +1699,98 @@ export default function SentenceMakingPanel({
     }
   };
 
-  const handleBatchGenerateExampleTranslations = async () => {
-    // Collect items that need example sentence translation
-    const itemsNeedTranslation: { index: number; text: string }[] = [];
+  // 打開 AI 生成例句對話框
+  const handleOpenAIGenerateModal = (index: number | null) => {
+    setAiGenerateTargetIndex(index);
+    setAiGenerateModalOpen(true);
+  };
 
-    rows.forEach((row, index) => {
-      if (
-        row.example_sentence &&
-        row.example_sentence.trim() &&
-        !row.example_sentence_translation
-      ) {
-        itemsNeedTranslation.push({ index, text: row.example_sentence });
-      }
-    });
-
-    if (itemsNeedTranslation.length === 0) {
-      toast.info("沒有需要翻譯的例句");
-      return;
-    }
-
-    toast.info(`開始批次生成例句中文翻譯...`);
-    const newRows = [...rows];
+  // AI 生成例句
+  const handleAIGenerateSentences = async () => {
+    setIsGeneratingAI(true);
 
     try {
-      // Batch translate to Chinese
-      const chineseTexts = itemsNeedTranslation.map((item) => item.text);
-      const chineseResponse = await apiClient.batchTranslate(
-        chineseTexts,
-        "zh-TW",
-      );
-      const chineseTranslations =
-        (chineseResponse as { translations?: string[] }).translations || [];
+      // 確定要生成的目標
+      const targetIndices: number[] = [];
+      if (aiGenerateTargetIndex !== null) {
+        // 單個生成：只處理該項目
+        targetIndices.push(aiGenerateTargetIndex);
+      } else {
+        // 批次生成：所有有單字的項目（不管有沒有例句，全部重新生成）
+        rows.forEach((row, index) => {
+          if (row.text && row.text.trim()) {
+            targetIndices.push(index);
+          }
+        });
+      }
 
-      itemsNeedTranslation.forEach((item, idx) => {
-        newRows[item.index].example_sentence_translation =
-          chineseTranslations[idx] || "";
+      if (targetIndices.length === 0) {
+        toast.info("沒有可生成例句的項目（請先輸入單字）");
+        setIsGeneratingAI(false);
+        return;
+      }
+
+      // 收集需要生成的單字和詞性
+      const wordsToGenerate = targetIndices.map((idx) => ({
+        word: rows[idx].text,
+        partsOfSpeech: rows[idx].partsOfSpeech || [],
+      }));
+
+      // 根據翻譯語言決定 target_language
+      let targetLanguage = "";
+      if (aiGenerateTranslate) {
+        switch (aiGenerateTranslateLang) {
+          case "中文":
+            targetLanguage = "zh-TW";
+            break;
+          case "日文":
+            targetLanguage = "ja";
+            break;
+          case "韓文":
+            targetLanguage = "ko";
+            break;
+        }
+      }
+
+      toast.info(`正在生成 ${wordsToGenerate.length} 個例句...`);
+
+      // 呼叫 API 生成例句
+      const response = await apiClient.generateSentences({
+        words: wordsToGenerate.map((w) => w.word),
+        level: aiGenerateLevel,
+        prompt: aiGeneratePrompt || undefined,
+        translate_to: targetLanguage || undefined,
+        parts_of_speech: wordsToGenerate.map((w) => w.partsOfSpeech),
+      });
+
+      // 更新 rows
+      const newRows = [...rows];
+      const results = (response as { sentences: Array<{ sentence: string; translation?: string }> }).sentences || [];
+
+      targetIndices.forEach((idx, i) => {
+        // 先清空現有的例句和翻譯
+        newRows[idx].example_sentence = "";
+        newRows[idx].example_sentence_translation = "";
+
+        // 填入新生成的例句
+        if (results[i]) {
+          newRows[idx].example_sentence = results[i].sentence;
+          // 只有勾選翻譯且 API 有返回翻譯時才填入
+          if (aiGenerateTranslate && results[i].translation) {
+            newRows[idx].example_sentence_translation = results[i].translation;
+          }
+          // 如果未勾選翻譯，翻譯欄位保持空（已在上面清空）
+        }
       });
 
       setRows(newRows);
-      toast.success(
-        `批次例句中文翻譯完成！處理了 ${itemsNeedTranslation.length} 個項目`,
-      );
+      toast.success(`成功生成 ${results.length} 個例句！`);
+      setAiGenerateModalOpen(false);
     } catch (error) {
-      console.error("Batch example translation error:", error);
-      toast.error("批次例句翻譯失敗，請稍後再試");
+      console.error("AI generate sentences error:", error);
+      toast.error("AI 生成例句失敗，請稍後再試");
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -1804,7 +1878,7 @@ export default function SentenceMakingPanel({
     // 🔥 重點：直接儲存到資料庫
     try {
       const saveData = {
-        title: title || "朗讀評測內容",
+        title: title || "句子模組內容",
         items: updatedRows.map((row) => ({
           text: row.text.trim(),
           definition: row.definition || "",
@@ -1829,7 +1903,7 @@ export default function SentenceMakingPanel({
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
         await apiClient.createContent(lessonId, {
-          type: "reading_assessment",
+          type: "SENTENCE_MAKING",
           ...saveData,
         });
         toast.success(`已新增 ${lines.length} 個項目並創建內容`);
@@ -1914,12 +1988,12 @@ export default function SentenceMakingPanel({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleBatchGenerateExampleTranslations()}
+            onClick={() => handleOpenAIGenerateModal(null)}
             className="bg-purple-100 hover:bg-purple-200 border-purple-300"
-            title="批次生成例句翻譯（中文+英文）"
+            title="批次 AI 生成例句"
           >
             <Globe className="h-4 w-4 mr-1" />
-            批次生成例句翻譯
+            批次AI生成例句
           </Button>
         </div>
       </div>
@@ -1951,12 +2025,10 @@ export default function SentenceMakingPanel({
                   handleGenerateSingleDefinition={
                     handleGenerateSingleDefinition
                   }
-                  handleGenerateSingleDefinitionWithLang={
-                    handleGenerateSingleDefinitionWithLang
-                  }
                   handleGenerateExampleTranslation={
                     handleGenerateExampleTranslation
                   }
+                  handleOpenAIGenerateModal={handleOpenAIGenerateModal}
                   rowsLength={rows.length}
                 />
               );
@@ -2064,6 +2136,125 @@ export default function SentenceMakingPanel({
         </DialogContent>
       </Dialog>
 
+      {/* AI 生成例句對話框 */}
+      <Dialog
+        open={aiGenerateModalOpen}
+        onOpenChange={setAiGenerateModalOpen}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              AI 生成例句
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* 難度等級選擇 */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                難度等級
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {["A1", "A2", "B1", "B2", "C1", "C2"].map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => setAiGenerateLevel(level)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      aiGenerateLevel === level
+                        ? "bg-gradient-to-r from-cyan-400 to-teal-400 text-white shadow-sm"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Prompt 輸入 */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                給 AI 的提示 (選填)
+              </label>
+              <textarea
+                value={aiGeneratePrompt}
+                onChange={(e) => setAiGeneratePrompt(e.target.value)}
+                placeholder="例如：請生成與日常生活相關的例句"
+                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                rows={3}
+              />
+            </div>
+
+            {/* 翻譯選項 */}
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={aiGenerateTranslate}
+                  onChange={(e) => setAiGenerateTranslate(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">翻譯成</span>
+              </label>
+              <select
+                value={aiGenerateTranslateLang}
+                onChange={(e) => setAiGenerateTranslateLang(e.target.value)}
+                disabled={!aiGenerateTranslate}
+                className={`px-3 py-1.5 border rounded-md text-sm ${
+                  !aiGenerateTranslate ? "bg-gray-100 text-gray-400" : ""
+                }`}
+              >
+                <option value="中文">中文</option>
+                <option value="日文">日文</option>
+                <option value="韓文">韓文</option>
+              </select>
+            </div>
+
+            {/* 生成目標提示 */}
+            <div className="text-sm bg-amber-50 border border-amber-200 p-3 rounded-lg">
+              {aiGenerateTargetIndex !== null ? (
+                <div>
+                  <span className="text-amber-700">
+                    將為「<strong>{rows[aiGenerateTargetIndex]?.text || ""}</strong>」重新生成例句
+                  </span>
+                  {rows[aiGenerateTargetIndex]?.example_sentence && (
+                    <div className="text-amber-600 text-xs mt-1">
+                      現有例句將被覆蓋
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <span className="text-amber-700">
+                    將為 <strong>{rows.filter((r) => r.text && r.text.trim()).length}</strong> 個單字重新生成例句
+                  </span>
+                  <div className="text-amber-600 text-xs mt-1">
+                    所有現有例句{aiGenerateTranslate ? "及翻譯" : ""}將被覆蓋
+                    {!aiGenerateTranslate && "，翻譯欄位將被清空"}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAiGenerateModalOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleAIGenerateSentences}
+              disabled={isGeneratingAI}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isGeneratingAI ? "生成中..." : "生成"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Save Button */}
       {onSave && (
         <div className="fixed bottom-6 right-6 z-50">
@@ -2099,6 +2290,7 @@ export default function SentenceMakingPanel({
                   example_sentence: row.example_sentence || "",
                   example_sentence_translation:
                     row.example_sentence_translation || "",
+                  parts_of_speech: row.partsOfSpeech || [],
                 })),
                 target_wpm: 60,
                 target_accuracy: 0.8,
@@ -2130,7 +2322,7 @@ export default function SentenceMakingPanel({
                 // 創建模式：新增內容
                 try {
                   const newContent = await apiClient.createContent(lessonId, {
-                    type: "sentence_making",
+                    type: "SENTENCE_MAKING",
                     ...saveData,
                   });
                   toast.success("內容已成功創建");
