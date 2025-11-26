@@ -210,11 +210,19 @@ export default function TeacherTemplateProgramsNew() {
       lesson_id?: number;
     },
   ) => {
-    if (content.type === "reading_assessment") {
+    // 統一轉成小寫比對
+    const contentType = content.type?.toLowerCase();
+
+    if (contentType === "reading_assessment") {
       setSelectedContent(content);
       setEditorLessonId(content.lesson_id || null);
       setEditorContentId(content.id);
       setShowReadingEditor(true);
+    } else if (contentType === "sentence_making") {
+      // 編輯句子模組內容
+      setSentenceMakingLessonId(content.lesson_id || null);
+      setSentenceMakingContentId(content.id);
+      setShowSentenceMakingEditor(true);
     }
   };
 
@@ -721,6 +729,67 @@ export default function TeacherTemplateProgramsNew() {
                 </div>
               </div>
             </div>
+          )}
+
+        {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
+        {showSentenceMakingEditor &&
+          sentenceMakingLessonId &&
+          sentenceMakingContentId && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+                onClick={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+              />
+
+              {/* Panel */}
+              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    編輯句子模組內容
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="關閉"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <SentenceMakingPanel
+                    content={{ id: sentenceMakingContentId }}
+                    editingContent={{ id: sentenceMakingContentId }}
+                    lessonId={sentenceMakingLessonId}
+                    onUpdateContent={(updatedContent) => {
+                      console.log("Content updated:", updatedContent);
+                    }}
+                    onSave={async () => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                      await fetchTemplatePrograms();
+                      toast.success("內容已成功儲存");
+                    }}
+                    onCancel={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                    isCreating={false}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
         {/* Dialogs */}

@@ -58,14 +58,36 @@ const PARTS_OF_SPEECH = [
   { value: "auxiliary", label: "aux.", fullName: "auxiliary" },
 ] as const;
 
+// 單字翻譯語言選項（含英文）
+type WordTranslationLanguage = "chinese" | "english" | "japanese" | "korean";
+
+const WORD_TRANSLATION_LANGUAGES = [
+  { value: "chinese" as const, label: "中文", code: "zh-TW" },
+  { value: "english" as const, label: "英文", code: "en" },
+  { value: "japanese" as const, label: "日文", code: "ja" },
+  { value: "korean" as const, label: "韓文", code: "ko" },
+];
+
+// 例句翻譯語言選項（不含英文）
+type SentenceTranslationLanguage = "chinese" | "japanese" | "korean";
+
+const SENTENCE_TRANSLATION_LANGUAGES = [
+  { value: "chinese" as const, label: "中文", code: "zh-TW" },
+  { value: "japanese" as const, label: "日文", code: "ja" },
+  { value: "korean" as const, label: "韓文", code: "ko" },
+];
+
 interface ContentRow {
   id: string | number;
   text: string;
-  definition: string;
+  definition: string; // 中文翻譯
   audioUrl?: string;
   audio_url?: string;
-  translation?: string;
-  selectedLanguage?: "chinese" | "english"; // 最後選擇的語言
+  translation?: string; // 英文釋義
+  japanese_translation?: string; // 日文翻譯
+  korean_translation?: string; // 韓文翻譯
+  selectedWordLanguage?: WordTranslationLanguage; // 單字翻譯語言
+  selectedSentenceLanguage?: SentenceTranslationLanguage; // 例句翻譯語言
   partsOfSpeech?: string[]; // 詞性陣列（可複選）
   audioSettings?: {
     accent: string;
@@ -74,7 +96,9 @@ interface ContentRow {
   };
   // Example sentence fields
   example_sentence?: string;
-  example_sentence_translation?: string;
+  example_sentence_translation?: string; // 例句中文翻譯
+  example_sentence_japanese?: string; // 例句日文翻譯
+  example_sentence_korean?: string; // 例句韓文翻譯
 }
 
 interface TTSModalProps {
@@ -812,7 +836,9 @@ interface SortableRowInnerProps {
   handleOpenTTSModal: (row: ContentRow) => void;
   handleRemoveAudio: (index: number) => void;
   handleGenerateSingleDefinition: (index: number) => Promise<void>;
+  handleGenerateSingleDefinitionWithLang: (index: number, lang: WordTranslationLanguage) => Promise<void>;
   handleGenerateExampleTranslation: (index: number) => Promise<void>;
+  handleGenerateExampleTranslationWithLang: (index: number, lang: SentenceTranslationLanguage) => Promise<void>;
   handleOpenAIGenerateModal: (index: number) => void;
   rowsLength: number;
 }
@@ -826,7 +852,9 @@ function SortableRowInner({
   handleOpenTTSModal,
   handleRemoveAudio,
   handleGenerateSingleDefinition,
+  handleGenerateSingleDefinitionWithLang,
   handleGenerateExampleTranslation,
+  handleGenerateExampleTranslationWithLang,
   handleOpenAIGenerateModal,
   rowsLength,
 }: SortableRowInnerProps) {
@@ -956,21 +984,57 @@ function SortableRowInner({
         <div className="flex-1 min-w-[200px] relative">
           <input
             type="text"
-            value={row.definition || ""}
-            onChange={(e) =>
-              handleUpdateRow(index, "definition", e.target.value)
+            value={
+              (() => {
+                const lang = row.selectedWordLanguage || "chinese";
+                if (lang === "chinese") return row.definition || "";
+                if (lang === "english") return row.translation || "";
+                if (lang === "japanese") return row.japanese_translation || "";
+                if (lang === "korean") return row.korean_translation || "";
+                return row.definition || "";
+              })()
             }
-            className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
-            placeholder="輸入單字翻譯(非必填)"
+            onChange={(e) => {
+              const lang = row.selectedWordLanguage || "chinese";
+              let field: keyof ContentRow = "definition";
+              if (lang === "english") field = "translation";
+              else if (lang === "japanese") field = "japanese_translation";
+              else if (lang === "korean") field = "korean_translation";
+              handleUpdateRow(index, field, e.target.value);
+            }}
+            className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
+            placeholder={`${WORD_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯(非必填)`}
             maxLength={200}
           />
-          <button
-            onClick={() => handleGenerateSingleDefinition(index)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 text-gray-600"
-            title="AI 生成翻譯"
-          >
-            <Globe className="h-4 w-4" />
-          </button>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+            <select
+              value={row.selectedWordLanguage || "chinese"}
+              onChange={(e) => {
+                const newLang = e.target.value as WordTranslationLanguage;
+                handleUpdateRow(index, "selectedWordLanguage", newLang);
+                // Auto-generate when switching language if text exists
+                if (row.text && row.text.trim()) {
+                  setTimeout(() => {
+                    handleGenerateSingleDefinitionWithLang(index, newLang);
+                  }, 100);
+                }
+              }}
+              className="px-1 py-0.5 border rounded text-xs bg-white"
+            >
+              {WORD_TRANSLATION_LANGUAGES.map((lang) => (
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleGenerateSingleDefinition(index)}
+              className="p-1 rounded hover:bg-gray-200 text-gray-600"
+              title={`AI 生成${WORD_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯`}
+            >
+              <Globe className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1020,27 +1084,57 @@ function SortableRowInner({
       <div className="relative">
         <input
           type="text"
-          value={row.example_sentence_translation || ""}
-          onChange={(e) =>
-            handleUpdateRow(
-              index,
-              "example_sentence_translation",
-              e.target.value,
-            )
+          value={
+            (() => {
+              const lang = row.selectedSentenceLanguage || "chinese";
+              if (lang === "chinese") return row.example_sentence_translation || "";
+              if (lang === "japanese") return row.example_sentence_japanese || "";
+              if (lang === "korean") return row.example_sentence_korean || "";
+              return row.example_sentence_translation || "";
+            })()
           }
-          className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
-          placeholder="例句翻譯(非必須)"
+          onChange={(e) => {
+            const lang = row.selectedSentenceLanguage || "chinese";
+            let field: keyof ContentRow = "example_sentence_translation";
+            if (lang === "japanese") field = "example_sentence_japanese";
+            else if (lang === "korean") field = "example_sentence_korean";
+            handleUpdateRow(index, field, e.target.value);
+          }}
+          className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
+          placeholder={`${SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}翻譯(非必須)`}
           maxLength={500}
         />
-        {row.example_sentence && row.example_sentence.trim() && (
-          <button
-            onClick={() => handleGenerateExampleTranslation(index)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 text-gray-600"
-            title="AI 生成例句翻譯"
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+          <select
+            value={row.selectedSentenceLanguage || "chinese"}
+            onChange={(e) => {
+              const newLang = e.target.value as SentenceTranslationLanguage;
+              handleUpdateRow(index, "selectedSentenceLanguage", newLang);
+              // Auto-generate when switching language if example sentence exists
+              if (row.example_sentence && row.example_sentence.trim()) {
+                setTimeout(() => {
+                  handleGenerateExampleTranslationWithLang(index, newLang);
+                }, 100);
+              }
+            }}
+            className="px-1 py-0.5 border rounded text-xs bg-white"
           >
-            <Globe className="h-4 w-4" />
-          </button>
-        )}
+            {SENTENCE_TRANSLATION_LANGUAGES.map((lang) => (
+              <option key={lang.value} value={lang.value}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
+          {row.example_sentence && row.example_sentence.trim() && (
+            <button
+              onClick={() => handleGenerateExampleTranslation(index)}
+              className="p-1 rounded hover:bg-gray-200 text-gray-600"
+              title={`AI 生成${SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}例句翻譯`}
+            >
+              <Globe className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1074,7 +1168,7 @@ export default function SentenceMakingPanel({
       text: "",
       definition: "",
       translation: "",
-      selectedLanguage: "chinese",
+      selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
     },
@@ -1083,7 +1177,7 @@ export default function SentenceMakingPanel({
       text: "",
       definition: "",
       translation: "",
-      selectedLanguage: "chinese",
+      selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
     },
@@ -1092,7 +1186,7 @@ export default function SentenceMakingPanel({
       text: "",
       definition: "",
       translation: "",
-      selectedLanguage: "chinese",
+      selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
     },
@@ -1165,10 +1259,15 @@ export default function SentenceMakingPanel({
               translation?: string;
               definition?: string;
               english_definition?: string;
+              japanese_translation?: string;
+              korean_translation?: string;
               audio_url?: string;
-              selectedLanguage?: "chinese" | "english";
+              selectedWordLanguage?: WordTranslationLanguage;
+              selectedSentenceLanguage?: SentenceTranslationLanguage;
               example_sentence?: string;
               example_sentence_translation?: string;
+              example_sentence_japanese?: string;
+              example_sentence_korean?: string;
               parts_of_speech?: string[];
             },
             index: number,
@@ -1177,11 +1276,15 @@ export default function SentenceMakingPanel({
             text: item.text || "",
             definition: item.definition || "", // 中文翻譯
             translation: item.english_definition || "", // 英文釋義
+            japanese_translation: item.japanese_translation || "",
+            korean_translation: item.korean_translation || "",
             audioUrl: item.audio_url || "",
-            selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
+            selectedWordLanguage: item.selectedWordLanguage || "chinese",
+            selectedSentenceLanguage: item.selectedSentenceLanguage || "chinese",
             example_sentence: item.example_sentence || "",
-            example_sentence_translation:
-              item.example_sentence_translation || "",
+            example_sentence_translation: item.example_sentence_translation || "",
+            example_sentence_japanese: item.example_sentence_japanese || "",
+            example_sentence_korean: item.example_sentence_korean || "",
             partsOfSpeech: item.parts_of_speech || [],
           }),
         );
@@ -1204,7 +1307,7 @@ export default function SentenceMakingPanel({
       definition: row.definition, // 中文翻譯
       translation: row.translation, // 英文釋義
       audio_url: row.audioUrl,
-      selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
+      selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
       parts_of_speech: row.partsOfSpeech || [],
@@ -1242,7 +1345,7 @@ export default function SentenceMakingPanel({
       text: "",
       definition: "",
       translation: "",
-      selectedLanguage: "chinese",
+      selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
     };
@@ -1298,7 +1401,7 @@ export default function SentenceMakingPanel({
           definition: row.definition,
           translation: row.translation,
           audio_url: row.audioUrl || "",
-          selectedLanguage: row.selectedLanguage,
+          selectedWordLanguage: row.selectedWordLanguage,
         }));
 
         await apiClient.updateContent(editingContent.id, {
@@ -1356,7 +1459,7 @@ export default function SentenceMakingPanel({
           definition: row.definition, // 中文翻譯
           translation: row.translation, // 英文釋義
           audio_url: row.audioUrl || "",
-          selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
+          selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態
@@ -1489,7 +1592,7 @@ export default function SentenceMakingPanel({
           definition: row.definition, // 中文翻譯
           translation: row.translation, // 英文釋義
           audio_url: row.audioUrl || "",
-          selectedLanguage: row.selectedLanguage, // 記錄最後選擇的語言
+          selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
         }));
 
         // 新增模式：只更新本地狀態，不呼叫 API
@@ -1544,25 +1647,35 @@ export default function SentenceMakingPanel({
   };
 
   const handleGenerateSingleDefinition = async (index: number) => {
+    const currentLang = rows[index].selectedWordLanguage || "chinese";
+    return handleGenerateSingleDefinitionWithLang(index, currentLang);
+  };
+
+  const handleGenerateSingleDefinitionWithLang = async (
+    index: number,
+    targetLang: WordTranslationLanguage,
+  ) => {
     const newRows = [...rows];
     if (!newRows[index].text) {
       toast.error("請先輸入文本");
       return;
     }
 
-    // 檢查是否需要自動辨識詞性（詞性陣列為空）
+    // 檢查是否需要自動辨識詞性（詞性陣列為空且翻譯成中文）
     const needAutoDetectPOS =
-      !newRows[index].partsOfSpeech ||
-      newRows[index].partsOfSpeech.length === 0;
+      targetLang === "chinese" &&
+      (!newRows[index].partsOfSpeech ||
+        newRows[index].partsOfSpeech.length === 0);
 
-    toast.info(`生成翻譯中...`);
+    const langConfig = WORD_TRANSLATION_LANGUAGES.find(l => l.value === targetLang);
+    toast.info(`生成${langConfig?.label || ""}翻譯中...`);
 
     try {
       if (needAutoDetectPOS) {
-        // 使用新的 API 同時翻譯和辨識詞性
+        // 使用新的 API 同時翻譯和辨識詞性（僅中文）
         const response = await apiClient.translateWithPos(
           newRows[index].text,
-          "zh-TW",
+          langConfig?.code || "zh-TW",
         );
 
         newRows[index].definition = response.translation;
@@ -1571,18 +1684,31 @@ export default function SentenceMakingPanel({
           newRows[index].partsOfSpeech = response.parts_of_speech;
         }
       } else {
-        // 已有詞性，只翻譯不改變詞性
+        // 已有詞性或非中文，只翻譯不改變詞性
         const response = (await apiClient.translateText(
           newRows[index].text,
-          "zh-TW",
+          langConfig?.code || "zh-TW",
         )) as { translation: string };
 
-        newRows[index].definition = response.translation;
+        // 根據目標語言寫入對應欄位
+        if (targetLang === "chinese") {
+          newRows[index].definition = response.translation;
+        } else if (targetLang === "english") {
+          newRows[index].translation = response.translation;
+        } else if (targetLang === "japanese") {
+          newRows[index].japanese_translation = response.translation;
+        } else if (targetLang === "korean") {
+          newRows[index].korean_translation = response.translation;
+        }
       }
 
+      // 記錄最後選擇的語言
+      newRows[index].selectedWordLanguage = targetLang;
       setRows(newRows);
       toast.success(
-        needAutoDetectPOS ? "翻譯及詞性辨識完成" : "中文翻譯生成完成",
+        needAutoDetectPOS
+          ? "翻譯及詞性辨識完成"
+          : `${langConfig?.label || ""}翻譯生成完成`,
       );
     } catch (error) {
       console.error("Translation error:", error);
@@ -1673,24 +1799,42 @@ export default function SentenceMakingPanel({
 
   // Example sentence translation functions
   const handleGenerateExampleTranslation = async (index: number) => {
+    const currentLang = rows[index].selectedSentenceLanguage || "chinese";
+    return handleGenerateExampleTranslationWithLang(index, currentLang);
+  };
+
+  const handleGenerateExampleTranslationWithLang = async (
+    index: number,
+    targetLang: SentenceTranslationLanguage,
+  ) => {
     const newRows = [...rows];
     if (!newRows[index].example_sentence) {
       toast.error("請先輸入例句");
       return;
     }
 
-    toast.info("生成例句中文翻譯中...");
+    const langConfig = SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === targetLang);
+    toast.info(`生成例句${langConfig?.label || ""}翻譯中...`);
+
     try {
-      // Generate Chinese translation
-      const chineseResponse = (await apiClient.translateText(
+      const response = (await apiClient.translateText(
         newRows[index].example_sentence!,
-        "zh-TW",
+        langConfig?.code || "zh-TW",
       )) as { translation: string };
 
-      newRows[index].example_sentence_translation = chineseResponse.translation;
+      // 根據目標語言寫入對應欄位
+      if (targetLang === "chinese") {
+        newRows[index].example_sentence_translation = response.translation;
+      } else if (targetLang === "japanese") {
+        newRows[index].example_sentence_japanese = response.translation;
+      } else if (targetLang === "korean") {
+        newRows[index].example_sentence_korean = response.translation;
+      }
 
+      // 記錄最後選擇的語言
+      newRows[index].selectedSentenceLanguage = targetLang;
       setRows(newRows);
-      toast.success("例句中文翻譯生成完成");
+      toast.success(`例句${langConfig?.label || ""}翻譯生成完成`);
     } catch (error) {
       console.error("Example sentence translation error:", error);
       toast.error("例句翻譯失敗，請稍後再試");
@@ -1820,7 +1964,7 @@ export default function SentenceMakingPanel({
       text,
       definition: "",
       translation: "",
-      selectedLanguage: "chinese",
+      selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
     }));
@@ -1887,7 +2031,7 @@ export default function SentenceMakingPanel({
           definition: row.definition || "",
           english_definition: row.translation || "",
           translation: row.definition || "",
-          selectedLanguage: row.selectedLanguage || "chinese",
+          selectedWordLanguage: row.selectedWordLanguage || "chinese",
           audio_url: row.audioUrl || row.audio_url || "",
         })),
         target_wpm: 60,
@@ -2028,8 +2172,14 @@ export default function SentenceMakingPanel({
                   handleGenerateSingleDefinition={
                     handleGenerateSingleDefinition
                   }
+                  handleGenerateSingleDefinitionWithLang={
+                    handleGenerateSingleDefinitionWithLang
+                  }
                   handleGenerateExampleTranslation={
                     handleGenerateExampleTranslation
+                  }
+                  handleGenerateExampleTranslationWithLang={
+                    handleGenerateExampleTranslationWithLang
                   }
                   handleOpenAIGenerateModal={handleOpenAIGenerateModal}
                   rowsLength={rows.length}
@@ -2291,7 +2441,7 @@ export default function SentenceMakingPanel({
                   definition: row.definition || "",
                   english_definition: row.translation || "",
                   translation: row.definition || "",
-                  selectedLanguage: row.selectedLanguage || "chinese",
+                  selectedWordLanguage: row.selectedWordLanguage || "chinese",
                   audio_url: row.audioUrl || row.audio_url || "",
                   example_sentence: row.example_sentence || "",
                   example_sentence_translation:

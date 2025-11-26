@@ -377,8 +377,11 @@ export default function ClassroomDetail({
       return;
     }
 
+    // 統一轉成小寫比對
+    const contentType = content.type?.toLowerCase();
+
     // For reading_assessment type, use side panel for viewing/editing
-    if (content.type === "reading_assessment") {
+    if (contentType === "reading_assessment") {
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -395,7 +398,7 @@ export default function ClassroomDetail({
         lessonName: content.lessonName,
       });
       setIsPanelOpen(true);
-    } else if (content.type === "SENTENCE_MAKING") {
+    } else if (contentType === "sentence_making") {
       // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
       setSelectedContent(content);
       setEditingContent({
@@ -1745,25 +1748,9 @@ export default function ClassroomDetail({
             <div className="h-full flex flex-col">
               {/* Panel Header */}
               <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                <div className="flex-1 mr-4">
-                  <h3 className="font-semibold text-sm text-gray-600 mb-2">
-                    {t("classroomDetail.labels.contentEditor")}
-                  </h3>
-                  <input
-                    type="text"
-                    value={editingContent?.title || selectedContent.title || ""}
-                    onChange={(e) => {
-                      if (editingContent) {
-                        setEditingContent({
-                          ...editingContent,
-                          title: e.target.value,
-                        });
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 border rounded-md text-lg font-medium"
-                    placeholder={t("classroomDetail.labels.enterTitle")}
-                  />
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("classroomDetail.labels.editContent")}
+                </h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1776,7 +1763,7 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {selectedContent.type === "reading_assessment" ? (
+                {selectedContent.type?.toLowerCase() === "reading_assessment" ? (
                   /* ReadingAssessmentPanel has its own save button */
                   <ReadingAssessmentPanel
                     content={selectedContent as ReadingAssessmentContent}
@@ -1790,7 +1777,7 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
-                ) : selectedContent.type === "SENTENCE_MAKING" ? (
+                ) : selectedContent.type?.toLowerCase() === "sentence_making" ? (
                   /* SentenceMakingPanel has its own save button */
                   <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
