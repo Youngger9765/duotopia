@@ -54,6 +54,7 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
   const [isCorrect, setIsCorrect] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioPlayed, setAudioPlayed] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 初始化：打亂例句單字
@@ -61,12 +62,15 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
     resetQuestion();
   }, [word]);
 
-  // 自動播放音檔
+  // 切換題目時自動播放（僅在用戶已互動過後，且是題目切換時才觸發）
+  const prevWordRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (word.audio_url && !audioPlayed) {
+    // 只有在題目切換時才自動播放，不是因為 userHasInteracted 變化
+    if (word.audio_url && userHasInteracted && prevWordRef.current !== undefined && prevWordRef.current !== word.audio_url) {
       playAudio();
     }
-  }, [word.audio_url, audioPlayed]);
+    prevWordRef.current = word.audio_url;
+  }, [word.audio_url, userHasInteracted]);
 
   const resetQuestion = () => {
     const words = word.example_sentence
@@ -85,37 +89,62 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
     setAudioPlayed(false);
   };
 
-  const playAudio = () => {
+  const playAudio = async (isUserInitiated: boolean = false) => {
     if (!word.audio_url) {
       toast.error("此題目沒有音檔");
       return;
     }
 
-    setAudioPlaying(true);
+    // 標記用戶已互動（用於後續自動播放）
+    if (isUserInitiated) {
+      setUserHasInteracted(true);
+    }
 
+    // 先停止舊的音檔（但不清空 src，避免觸發 onerror）
     if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
 
     const audio = new Audio(word.audio_url);
     audioRef.current = audio;
 
+    // 設置事件監聽器
     audio.onended = () => {
       setAudioPlaying(false);
       setAudioPlayed(true);
     };
 
-    audio.onerror = () => {
+    audio.onerror = (e) => {
+      // 只有在音檔真的載入失敗時才顯示錯誤
+      console.error("Audio load error:", e);
       setAudioPlaying(false);
       toast.error("音檔載入失敗");
     };
 
-    audio.play().catch((error) => {
-      console.error("Audio play error:", error);
+    // 先設置播放狀態，再開始播放
+    setAudioPlaying(true);
+
+    try {
+      await audio.play();
+    } catch (error) {
+      // 檢查是否是已知的可忽略錯誤
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          // 瀏覽器自動播放政策阻擋，這是正常的
+          console.log("Auto-play blocked by browser policy, waiting for user interaction");
+        } else if (error.name === "AbortError") {
+          // play() 被 pause() 中斷，通常發生在快速切換時，可以忽略
+          console.log("Audio play was interrupted, this is normal during quick navigation");
+        } else {
+          console.error("Audio play error:", error);
+          toast.error("音檔播放失敗");
+        }
+      }
       setAudioPlaying(false);
-      toast.error("音檔播放失敗");
-    });
+    }
   };
 
   const correctWords = word.example_sentence
@@ -185,21 +214,19 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
       {/* 音檔播放區 */}
       <div className="audio-section mt-8 mb-8 p-6 bg-purple-50 rounded-lg border-2 border-purple-200">
         <div className="text-center">
-          {!audioPlayed && audioPlaying && (
+          {audioPlaying ? (
             <div className="mb-4">
               <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-2" />
               <p className="text-purple-700 font-medium">正在播放例句音檔...</p>
               <p className="text-sm text-purple-600 mt-1">請仔細聆聽</p>
             </div>
-          )}
-
-          {!audioPlaying && (
+          ) : (
             <div className="mb-4">
               <div className="text-lg font-semibold text-gray-800 mb-2">
                 請聽音檔，然後選擇正確的單字組成句子
               </div>
               <Button
-                onClick={playAudio}
+                onClick={() => playAudio(true)}
                 variant="outline"
                 className="border-purple-300 hover:bg-purple-50"
               >
