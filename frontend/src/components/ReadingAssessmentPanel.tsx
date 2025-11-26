@@ -207,7 +207,6 @@ const TTSModal = ({
         }
       }
 
-      console.log("Using MIME type:", mimeType);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000, // 設定位元率
@@ -1127,6 +1126,7 @@ export default function ReadingAssessmentPanel({
   const [batchPasteText, setBatchPasteText] = useState("");
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
+  const [isBatchSaving, setIsBatchSaving] = useState(false);
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1372,10 +1372,6 @@ export default function ReadingAssessmentPanel({
               items,
             });
           }
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
           try {
@@ -1384,7 +1380,6 @@ export default function ReadingAssessmentPanel({
               items,
             };
 
-            console.log("Updating content with new audio:", audioUrl);
             await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
@@ -1409,7 +1404,6 @@ export default function ReadingAssessmentPanel({
                 }),
               );
               setRows(updatedRows);
-              console.log("Updated rows with new audio URLs:", updatedRows);
             }
 
             // 更新本地狀態
@@ -1426,10 +1420,6 @@ export default function ReadingAssessmentPanel({
           }
         } else {
           // 沒有 content ID，音檔將在儲存時上傳
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         }
 
         // 關閉 modal 但不要關閉 panel
@@ -1684,6 +1674,11 @@ export default function ReadingAssessmentPanel({
   };
 
   const handleBatchPaste = async (autoTTS: boolean, autoTranslate: boolean) => {
+    // 防止重複點擊
+    if (isBatchSaving) {
+      return;
+    }
+
     // 分割文字，每行一個項目
     const lines = batchPasteText
       .split("\n")
@@ -1696,6 +1691,9 @@ export default function ReadingAssessmentPanel({
       );
       return;
     }
+
+    // 設定loading狀態
+    setIsBatchSaving(true);
 
     toast.info(
       t("readingAssessmentPanel.batchPasteDialog.messages.processing", {
@@ -1762,6 +1760,7 @@ export default function ReadingAssessmentPanel({
             "readingAssessmentPanel.batchPasteDialog.messages.batchProcessingFailed",
           ),
         );
+        setIsBatchSaving(false);
         return;
       }
     }
@@ -1827,7 +1826,11 @@ export default function ReadingAssessmentPanel({
       toast.error(
         t("readingAssessmentPanel.batchPasteDialog.messages.saveFailed"),
       );
+      setIsBatchSaving(false);
       return;
+    } finally {
+      // 確保無論成功或失敗都清除loading狀態
+      setIsBatchSaving(false);
     }
 
     setBatchPasteDialogOpen(false);
@@ -2029,6 +2032,7 @@ export default function ReadingAssessmentPanel({
               variant="outline"
               onClick={() => setBatchPasteDialogOpen(false)}
               className="px-6 py-2 text-base"
+              disabled={isBatchSaving}
             >
               {t("readingAssessmentPanel.batchPasteDialog.cancel")}
             </Button>
@@ -2037,8 +2041,14 @@ export default function ReadingAssessmentPanel({
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
+              disabled={isBatchSaving}
             >
-              {t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
+              {isBatchSaving
+                ? t(
+                    "readingAssessmentPanel.batchPasteDialog.saving",
+                    "儲存中...",
+                  )
+                : t("readingAssessmentPanel.batchPasteDialog.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2081,8 +2091,6 @@ export default function ReadingAssessmentPanel({
                 target_accuracy: 0.8,
                 time_limit_seconds: 180,
               };
-
-              console.log("Saving data:", saveData);
 
               const existingContentId = editingContent?.id || content?.id;
 

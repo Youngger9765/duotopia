@@ -132,12 +132,6 @@ export default function AudioRecorder({
       const strategy = getRecordingStrategy();
       strategyRef.current = strategy;
 
-      console.log(`Recording strategy for ${strategy.platformName}:`, {
-        mimeType: strategy.preferredMimeType,
-        useRequestData: strategy.useRequestData,
-        validation: strategy.durationValidation,
-      });
-
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -156,9 +150,6 @@ export default function AudioRecorder({
           const options = tryMimeType ? { mimeType: tryMimeType } : {};
           const testRecorder = new MediaRecorder(stream, options);
 
-          console.log(
-            `✅ MediaRecorder created with: ${testRecorder.mimeType}`,
-          );
           mediaRecorder = testRecorder;
           break;
         } catch (err) {
@@ -186,9 +177,6 @@ export default function AudioRecorder({
         // 其他瀏覽器：可以嘗試不指定 MIME type
         try {
           mediaRecorder = new MediaRecorder(stream);
-          console.log(
-            `⚠️ MediaRecorder created with browser default: ${mediaRecorder.mimeType}`,
-          );
         } catch {
           throw new Error("Failed to create MediaRecorder with any MIME type");
         }
@@ -196,10 +184,6 @@ export default function AudioRecorder({
 
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-
-      console.log(
-        `🎙️ AudioRecorder initialized with: ${mediaRecorder.mimeType}`,
-      );
 
       // Handle data available
       mediaRecorder.ondataavailable = (event) => {
@@ -217,12 +201,6 @@ export default function AudioRecorder({
         const audioUrl = URL.createObjectURL(audioBlob);
 
         // 驗證錄音檔案
-        console.log("🎤 Recording completed:", {
-          size: audioBlob.size,
-          type: audioBlob.type,
-          duration: recordingTime,
-        });
-
         // 使用策略的最小檔案大小檢查
         const strategy = strategyRef.current;
         if (audioBlob.size < strategy.minFileSize) {
@@ -284,10 +262,6 @@ export default function AudioRecorder({
           }
 
           // 驗證通過，設定錄音
-          console.log(
-            `Recording validation passed (${validationResult.method}): ${validationResult.duration.toFixed(1)}s`,
-          );
-
           toast.success(t("audioRecorder.toast.recordingComplete"), {
             description: t("audioRecorder.toast.recordingDuration", {
               duration: validationResult.duration.toFixed(1),

@@ -1,0 +1,170 @@
+name: 🧹 Cleanup Per-Issue Test Environment on Issue Close
+
+on:
+  issues:
+    types: [closed]
+  pull_request:
+    types: [closed]
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  cleanup-on-issue-close:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract issue number
+        id: extract
+        run: |
+          echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "🧹 Cleaning up Per-Issue Test Environment for Issue #${{ github.event.issue.number }}"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Cleanup Cloud Run services
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting Cloud Run services for Issue #${ISSUE_NUM}..."
+
+          # Delete frontend service
+          if gcloud run services describe duotopia-preview-issue-${ISSUE_NUM}-frontend \
+             --region=${{ env.REGION }} --format="value(name)" 2>/dev/null; then
+            echo "Deleting frontend service..."
+            gcloud run services delete duotopia-preview-issue-${ISSUE_NUM}-frontend \
+              --region=${{ env.REGION }} \
+              --quiet
+            echo "✅ Frontend service deleted"
+          else
+            echo "ℹ️ Frontend service not found (may already be deleted)"
+          fi
+
+          # Delete backend service
+          if gcloud run services describe duotopia-preview-issue-${ISSUE_NUM}-backend \
+             --region=${{ env.REGION }} --format="value(name)" 2>/dev/null; then
+            echo "Deleting backend service..."
+            gcloud run services delete duotopia-preview-issue-${ISSUE_NUM}-backend \
+              --region=${{ env.REGION }} \
+              --quiet
+            echo "✅ Backend service deleted"
+          else
+            echo "ℹ️ Backend service not found (may already be deleted)"
+          fi
+
+      - name: Cleanup container images
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting container images for Issue #${ISSUE_NUM}..."
+
+          # Delete frontend images
+          gcloud artifacts docker images delete \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
+
+          # Delete backend images
+          gcloud artifacts docker images delete \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
+
+          echo "✅ Cleanup completed"
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## 🧹 Per-Issue Test Environment Cleaned Up\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped'
+            })
+
+  cleanup-on-pr-merge:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract issue number from PR
+        id: extract
+        run: |
+          # Extract issue number from branch name (fix/issue-X-xxx)
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          if [[ "$BRANCH" =~ fix/issue-([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[1]}"
+            echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+            echo "✅ Found issue number: $ISSUE_NUM from branch: $BRANCH"
+          else
+            echo "ℹ️ No issue number found in branch name: $BRANCH"
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: google-github-actions/auth@v2
+        if: steps.extract.outputs.issue_number != ''
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        if: steps.extract.outputs.issue_number != ''
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Cleanup Cloud Run services
+        if: steps.extract.outputs.issue_number != ''
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting Cloud Run services for Issue #${ISSUE_NUM}..."
+
+          # Delete frontend service
+          gcloud run services delete duotopia-preview-issue-${ISSUE_NUM}-frontend \
+            --region=${{ env.REGION }} \
+            --quiet 2>/dev/null || echo "ℹ️ Frontend service not found"
+
+          # Delete backend service
+          gcloud run services delete duotopia-preview-issue-${ISSUE_NUM}-backend \
+            --region=${{ env.REGION }} \
+            --quiet 2>/dev/null || echo "ℹ️ Backend service not found"
+
+      - name: Cleanup container images
+        if: steps.extract.outputs.issue_number != ''
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting container images for Issue #${ISSUE_NUM}..."
+
+          # Delete frontend images
+          gcloud artifacts docker images delete \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
+
+          # Delete backend images
+          gcloud artifacts docker images delete \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
+
+          echo "✅ Cleanup completed for Issue #${ISSUE_NUM}"
+
+      - name: Comment on related issue
+        if: steps.extract.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.extract.outputs.issue_number }};
+            github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧹 Per-Issue Test Environment Cleaned Up\n\nPR #${{ github.event.pull_request.number }} merged, cleaning up resources.\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped`
+            })

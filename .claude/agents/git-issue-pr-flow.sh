@@ -337,6 +337,7 @@ patrol-issues() {
 }
 
 # Check issue comments and auto-label if approved
+# Simple version - let Claude Code (me!) analyze the comments intelligently
 mark-issue-approved() {
   local issue_num=$1
 
@@ -356,8 +357,8 @@ mark-issue-approved() {
     return 0
   fi
 
-  # Check for approval keywords
-  local approval_keywords="測試通過|approved|✅|LGTM"
+  # Simple rule-based detection (fallback when not in Claude Code)
+  local approval_keywords="測試通過|approved|✅|LGTM|沒問題|可以了|看起來不錯|功能正常|測試成功"
   local has_approval=false
   local approver=""
 
@@ -365,10 +366,10 @@ mark-issue-approved() {
     local author=$(echo "$comment" | cut -d: -f1)
     local body=$(echo "$comment" | cut -d: -f2-)
 
-    # Check if comment contains approval keywords
-    if echo "$body" | grep -qiE "$approval_keywords"; then
-      # Check if author is case owner (kaddy-eunice or Youngger9765)
-      if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+    # Check if author is case owner (kaddy-eunice or Youngger9765)
+    if [[ "$author" == "kaddy-eunice" ]] || [[ "$author" == "Youngger9765" ]]; then
+      # Check if comment contains approval keywords
+      if echo "$body" | grep -qiE "$approval_keywords"; then
         has_approval=true
         approver="$author"
         echo -e "${GREEN}✅ Found approval from @${approver}${NC}"
@@ -392,7 +393,7 @@ mark-issue-approved() {
     fi
   else
     echo -e "${YELLOW}⏳ No approval found from case owner yet${NC}"
-    echo -e "${BLUE}💡 Case owner should comment: \"測試通過\" or \"approved\"${NC}"
+    echo -e "${BLUE}💡 Case owner should comment with approval intent (e.g., \"測試通過\", \"looks good\", \"沒問題\")${NC}"
   fi
 }
 
@@ -487,6 +488,186 @@ check-approvals() {
   echo -e "  Backend:  $STAGING_BACKEND_URL"
 }
 
+# Generate PDCA Plan comment template
+generate-pdca-plan-comment() {
+  local issue_num=$1
+
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: generate-pdca-plan-comment <issue_number>${NC}"
+    return 1
+  fi
+
+  cat <<EOF
+## 🎯 PDCA Plan 完成
+
+### ✅ Plan 階段檢查清單
+- [x] **問題已重現** - 有截圖和錯誤訊息證據
+- [x] **根因分析完成** - 5 Why 分析找到根本原因
+- [x] **TDD 測試計畫準備** - Red → Green → Refactor 計畫完整
+- [x] **Schema 變更檢查通過** - ✅ 不涉及 DB schema 變更
+- [x] **影響範圍評估** - 了解受影響功能和用戶範圍
+- [x] **風險評估** - 🟢 低風險 / 🟡 中風險 / 🔴 高風險
+
+### 📋 修復摘要
+**問題**: [一句話描述問題]
+**根本原因**: [根因]
+**修復方案**: [如何修復]
+**預計工時**: [例如：2-4 小時]
+**信心度**: [🟢 高信心 / 🟡 中信心 / 🔴 需要更多調查]
+
+---
+
+### ⏳ 等待批准
+
+**不涉及 Schema 變更且有把握** → 可以直接開始實作
+**涉及 Schema 變更或高風險** → 請批准後開始（回覆「開始實作」或「approved」）
+
+準備好就開始 PDCA Do 階段！
+EOF
+}
+
+# Generate testing guidance comment template
+generate-test-guidance-comment() {
+  local issue_num=$1
+
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: generate-test-guidance-comment <issue_number>${NC}"
+    return 1
+  fi
+
+  cat <<EOF
+## 🧪 測試指引（@case_owner_username 請協助測試）
+
+### 🌐 測試環境
+**Per-Issue Test Environment** (獨立測試環境，不影響 staging):
+- **Frontend URL**: https://duotopia-preview-issue-${issue_num}-frontend.run.app
+- **Backend URL**: https://duotopia-preview-issue-${issue_num}-backend.run.app
+- **測試帳號**: [如需要，提供測試帳號和密碼]
+- **資料庫**: Staging DB (共用，請小心操作)
+
+⚠️ **注意**: Per-Issue Test Environment 會在測試完成後自動清理
+
+---
+
+### 📋 測試步驟（請按順序執行）
+
+#### 步驟 1: [測試項目 1]
+1. [具體操作步驟]
+2. **⚠️ 重點檢查**: [預期結果]
+
+#### 步驟 2: [測試項目 2]
+1. [具體操作步驟]
+2. **✅ 預期結果**: [應該看到什麼]
+
+#### 步驟 3: 測試邊界條件
+1. [邊界測試步驟]
+2. 確認沒有異常行為
+
+---
+
+### ✅ 預期結果 vs ❌ 不應該發生
+
+| 情境 | ✅ 預期行為 | ❌ Bug 行為（修復前） |
+|------|-----------|---------------------|
+| [情境 1] | [正確行為] | [Bug 行為] ❌ |
+| [情境 2] | [正確行為] | [Bug 行為] ❌ |
+
+---
+
+### 🎯 測試通過標準
+
+如果以下**所有條件**都符合，請留言「**測試通過**」或「**✅**」：
+- [ ] [條件 1]
+- [ ] [條件 2]
+- [ ] [條件 3]
+- [ ] 無 Console 錯誤
+- [ ] 整體使用體驗流暢
+
+---
+
+### ❌ 如果發現問題
+
+請回報以下資訊：
+1. **問題描述**: [發生什麼問題]
+2. **重現步驟**: [如何觸發問題]
+3. **截圖**: [最好附上截圖]
+4. **Console 錯誤**: [如果有，請貼上]
+5. **瀏覽器**: [Chrome / Safari / Firefox + 版本]
+
+---
+
+**感謝您的測試！** 🙏
+EOF
+}
+
+# Generate PDCA Act comment template
+generate-pdca-act-comment() {
+  local issue_num=$1
+
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: generate-pdca-act-comment <issue_number>${NC}"
+    return 1
+  fi
+
+  cat <<EOF
+## 🛡️ PDCA Act - 預防改進完成
+
+### 🧪 已加入預防性測試
+**新增測試檔案**: \`tests/unit/test_issue_${issue_num}_prevention.spec.ts\`
+
+**預防測試覆蓋**:
+- [x] 邊界條件測試
+- [x] 錯誤處理測試
+- [x] Regression 測試（確保未來不再發生）
+- [x] 效能測試（如果相關）
+
+**測試結果**: ✅ 全部通過
+
+---
+
+### 📚 文件更新（如果需要）
+- [x] 更新元件使用文件
+- [x] 更新錯誤處理指南
+- [x] 更新程式碼註解
+
+---
+
+### 🎯 改善建議（長期）
+1. **架構改善**: [建議]
+2. **程式碼品質**: [建議]
+3. **測試覆蓋**: [建議]
+4. **監控告警**: [建議]
+
+---
+
+### 📊 完整 PDCA 摘要
+
+| 階段 | 狀態 | 產出 |
+|------|------|------|
+| **Plan** ✅ | 完成 | 問題重現、根因分析、測試計畫 |
+| **Do** ✅ | 完成 | TDD Red→Green→Refactor，所有測試通過 |
+| **Check** ✅ | 完成 | Per-Issue Test Environment + Staging 測試通過 |
+| **Act** ✅ | 完成 | 預防性測試、文件更新、改善建議 |
+
+---
+
+### 🚀 下一步
+
+**已完成**:
+- ✅ 修復問題
+- ✅ Per-Issue Test Environment 測試通過
+- ✅ 所有測試通過（Unit + Integration + E2E）
+- ✅ 預防性測試已加入
+- ✅ 文件已更新
+
+**Issue 可以標記為**: \`✅ tested-in-staging\`（等待 case owner 批准後）
+
+---
+
+**本次修復 PDCA 完整報告到此結束** 🎉
+EOF
+}
+
 # Show help
 git-flow-help() {
   echo -e "${BLUE}🤖 Git Issue PR Flow Agent - Available Commands${NC}"
@@ -502,6 +683,11 @@ git-flow-help() {
   echo -e "  ${YELLOW}update-release-pr${NC}                  - Alias for create-release-pr"
   echo -e "  ${YELLOW}mark-issue-approved <issue>${NC}        - Check comments & auto-label if approved"
   echo -e "  ${YELLOW}check-approvals${NC}                    - Check all issues & mark approved ones"
+  echo ""
+  echo -e "${GREEN}PDCA Templates (for Claude Code):${NC}"
+  echo -e "  ${YELLOW}generate-pdca-plan-comment <issue>${NC} - Generate PDCA Plan template"
+  echo -e "  ${YELLOW}generate-test-guidance-comment <issue>${NC} - Generate testing guidance template"
+  echo -e "  ${YELLOW}generate-pdca-act-comment <issue>${NC}  - Generate PDCA Act template"
   echo ""
   echo -e "${GREEN}Status & Info:${NC}"
   echo -e "  ${YELLOW}git-flow-status${NC}                    - Show current workflow status"
@@ -530,6 +716,9 @@ export -f git-flow-status
 export -f patrol-issues
 export -f mark-issue-approved
 export -f check-approvals
+export -f generate-pdca-plan-comment
+export -f generate-test-guidance-comment
+export -f generate-pdca-act-comment
 export -f git-flow-help
 
 echo -e "${GREEN}✅ Git Issue PR Flow Agent loaded${NC}"

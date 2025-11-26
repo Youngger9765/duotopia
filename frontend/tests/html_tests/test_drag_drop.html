@@ -81,7 +81,9 @@
             function logOrder(container) {
                 const items = [...container.querySelectorAll('.item')];
                 const order = items.map((item, index) => `${index + 1}. ${item.textContent}`);
-                document.getElementById('log').innerHTML = `<h3>新順序:</h3><pre>${order.join('\n')}</pre>`;
+                const logElement = document.getElementById('log');
+                // 安全地設置內容，避免 XSS
+                logElement.textContent = `新順序:\n${order.join('\n')}`;
             }
         }
 

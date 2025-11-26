@@ -1,0 +1,85 @@
+name: Seed Develop Database
+
+on:
+  workflow_dispatch:  # 只允許手動觸發
+    inputs:
+      confirm:
+        description: '⚠️ 確認要重置 DEVELOP 資料庫？輸入 "RESET" 確認'
+        required: true
+        type: string
+
+jobs:
+  seed-develop:
+    name: 🌱 Seed Develop Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⚠️ Validate confirmation
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "RESET" ]]; then
+            echo "❌ ERROR: 必須輸入 'RESET' 才能執行資料庫重置"
+            echo "👉 請在 workflow 觸發時的 confirm 欄位輸入: RESET"
+            exit 1
+          fi
+          echo "✅ 確認輸入正確，繼續執行..."
+
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          echo "📦 安裝 Python 依賴..."
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: 🔍 Verify database connection
+        env:
+          DATABASE_URL: ${{ secrets.DEVELOP_DATABASE_POOLER_URL }}
+        run: |
+          echo "🔍 測試資料庫連線..."
+          cd backend
+          python3 -c "from database import engine; engine.connect(); print('✅ 資料庫連線成功')"
+
+      - name: ⚠️ Show warning
+        run: |
+          echo "⚠️⚠️⚠️ 警告 ⚠️⚠️⚠️"
+          echo "即將執行以下操作："
+          echo "1. DROP 所有 Develop 環境的資料表"
+          echo "2. CREATE 所有資料表結構"
+          echo "3. 插入 Demo 資料（包含句子模組課程）"
+          echo ""
+          echo "🎯 目標環境: DEVELOP"
+          echo "📊 將創建的資料："
+          echo "   - 3 個教師帳號（demo, expired, trial）"
+          echo "   - 2 個班級（五年級A班、六年級B班）"
+          echo "   - 30+ 位學生"
+          echo "   - 多個課程（包含句子模組測試課程）"
+          echo "   - 多個作業與進度資料"
+          echo ""
+          echo "執行中..."
+
+      - name: 🌱 Run seed_data.py
+        env:
+          DATABASE_URL: ${{ secrets.DEVELOP_DATABASE_POOLER_URL }}
+        run: |
+          echo "🌱 開始執行 seed_data.py..."
+          cd backend
+          python3 seed_data.py
+          echo "✅ Seed 資料建立完成！"
+
+      - name: 📊 Verify seed results
+        env:
+          DATABASE_URL: ${{ secrets.DEVELOP_DATABASE_POOLER_URL }}
+        run: |
+          echo "📊 驗證資料是否成功建立..."
+          cd backend
+          python3 verify_seed.py
+          echo ""
+          echo "🎉 Seed 完成！可以登入 develop 環境測試"
+          echo "   教師: demo@duotopia.com / demo123"
+          echo "   學生: 選擇教師 > 選擇班級 > 選擇學生"

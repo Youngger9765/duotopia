@@ -1,0 +1,213 @@
+name: Per-Issue Deploy
+
+on:
+  push:
+    branches:
+      - 'fix/issue-*'
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '!**/*.md'
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  REPOSITORY: duotopia-repo
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.extract.outputs.issue_number }}
+    steps:
+      - name: Extract issue number
+        id: extract
+        run: |
+          echo "🔍 DEBUG: Starting extract job"
+          ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oE '[0-9]+')
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "✅ Issue number: $ISSUE_NUM"
+
+  test-extract:
+    runs-on: ubuntu-latest
+    needs: extract
+    steps:
+      - name: Test extract output
+        run: |
+          echo "🔍 DEBUG: Testing extract output"
+          echo "Issue from extract: ${{ needs.extract.outputs.issue_number }}"
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    needs: extract
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy backend to Cloud Run
+        id: deploy
+        working-directory: ./backend
+        run: |
+          echo "🔍 DEBUG: Starting real backend deployment"
+          ISSUE=${{ needs.extract.outputs.issue_number }}
+          SERVICE="duotopia-preview-issue-${ISSUE}-backend"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
+
+          echo "🔍 DEBUG: Configuring docker"
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+          echo "🔍 DEBUG: Building image"
+          docker build -t "${IMAGE}" .
+
+          echo "🔍 DEBUG: Pushing image"
+          docker push "${IMAGE}"
+
+          echo "🔍 DEBUG: Deploying to Cloud Run"
+
+          # 計算 frontend URL（待 frontend 部署完成後會更新）
+          FRONTEND_URL="https://duotopia-preview-issue-${ISSUE}-frontend-${PROJECT_ID}.${REGION}.run.app"
+
+          # 環境變數設定（使用 staging 的配置）
+          ENV_VARS="DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}"
+          ENV_VARS="$ENV_VARS,DATABASE_POOLER_URL=${{ secrets.STAGING_DATABASE_POOLER_URL }}"
+          ENV_VARS="$ENV_VARS,DATABASE_TYPE=supabase"
+          ENV_VARS="$ENV_VARS,PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}"
+          ENV_VARS="$ENV_VARS,JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}"
+          ENV_VARS="$ENV_VARS,JWT_ALGORITHM=HS256"
+          ENV_VARS="$ENV_VARS,JWT_EXPIRE_MINUTES=1440"
+          ENV_VARS="$ENV_VARS,ENVIRONMENT=preview"
+          ENV_VARS="$ENV_VARS,SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}"
+          ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}"
+          ENV_VARS="$ENV_VARS,FRONTEND_URL=${FRONTEND_URL}"
+          ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+          ENV_VARS="$ENV_VARS,SMTP_HOST=${{ secrets.SMTP_HOST }}"
+          ENV_VARS="$ENV_VARS,SMTP_PORT=${{ secrets.SMTP_PORT }}"
+          ENV_VARS="$ENV_VARS,SMTP_USER=${{ secrets.SMTP_USER }}"
+          ENV_VARS="$ENV_VARS,SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}"
+          ENV_VARS="$ENV_VARS,FROM_EMAIL=${{ secrets.FROM_EMAIL }}"
+          ENV_VARS="$ENV_VARS,FROM_NAME=${{ secrets.FROM_NAME }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}"
+          ENV_VARS="$ENV_VARS,AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}"
+          ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=${PROJECT_ID}"
+          ENV_VARS="$ENV_VARS,REGION=${REGION}"
+          ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_MERCHANT_ID=${{ secrets.TAPPAY_SANDBOX_MERCHANT_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
+          ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
+
+          gcloud run deploy "${SERVICE}" \
+            --image "${IMAGE}" \
+            --platform managed \
+            --region ${REGION} \
+            --allow-unauthenticated \
+            --port 8000 \
+            --memory 512Mi \
+            --max-instances 1 \
+            --min-instances 0 \
+            --set-env-vars "${ENV_VARS}" \
+            --labels "environment=preview,issue=${ISSUE}"
+
+          echo "🔍 DEBUG: Getting service URL"
+          URL=$(gcloud run services describe "${SERVICE}" --platform managed --region ${REGION} --format 'value(status.url)')
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "✅ Backend deployed: ${URL}"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: [extract, deploy-backend]
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy frontend to Cloud Run
+        id: deploy
+        working-directory: ./frontend
+        run: |
+          echo "🔍 DEBUG: Starting frontend deployment"
+          ISSUE=${{ needs.extract.outputs.issue_number }}
+          SERVICE="duotopia-preview-issue-${ISSUE}-frontend"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
+          BACKEND_URL="${{ needs.deploy-backend.outputs.url }}"
+
+          echo "🔍 DEBUG: Backend URL: ${BACKEND_URL}"
+          echo "🔍 DEBUG: Configuring docker"
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+          echo "🔍 DEBUG: Building frontend image"
+          docker build \
+            -f Dockerfile.staging \
+            --build-arg VITE_API_URL="${BACKEND_URL}" \
+            --build-arg VITE_ENVIRONMENT=preview \
+            --build-arg VITE_TAPPAY_SERVER_TYPE=production \
+            --build-arg VITE_TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}" \
+            --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}" \
+            -t "${IMAGE}" \
+            .
+
+          echo "🔍 DEBUG: Pushing frontend image"
+          docker push "${IMAGE}"
+
+          echo "🔍 DEBUG: Deploying frontend to Cloud Run"
+          gcloud run deploy "${SERVICE}" \
+            --image "${IMAGE}" \
+            --platform managed \
+            --region ${REGION} \
+            --allow-unauthenticated \
+            --port 80 \
+            --memory 512Mi \
+            --max-instances 1 \
+            --min-instances 0 \
+            --labels "environment=preview,issue=${ISSUE}"
+
+          echo "🔍 DEBUG: Getting frontend URL"
+          URL=$(gcloud run services describe "${SERVICE}" --platform managed --region ${REGION} --format 'value(status.url)')
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployed: ${URL}"
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: [extract, deploy-backend, deploy-frontend]
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          ISSUE: ${{ needs.extract.outputs.issue_number }}
+          BACKEND: ${{ needs.deploy-backend.outputs.url }}
+          FRONTEND: ${{ needs.deploy-frontend.outputs.url }}
+        with:
+          script: |
+            const issue = process.env.ISSUE;
+            const frontend = process.env.FRONTEND;
+            const backend = process.env.BACKEND;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue,
+              body: "## 🚀 Per-Issue Preview Environment Ready\n\n" +
+                    "**Issue #" + issue + "**\n\n" +
+                    "- **Frontend**: " + frontend + "\n" +
+                    "- **Backend**: " + backend + "\n\n" +
+                    "Min instances = 0 (no cost when idle). Test and comment \"測試通過\" when done."
+            });

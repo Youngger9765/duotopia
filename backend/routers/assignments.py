@@ -6,8 +6,8 @@ Phase 1: 基礎指派功能
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import datetime, timezone  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import and_, func
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from database import get_db
@@ -332,6 +332,20 @@ async def create_assignment(
             status_code=400, detail="No active students in this classroom"
         )
 
+    # 🔥 Preload all ContentItems for all content_ids (avoid N+1)
+    all_content_items = (
+        db.query(ContentItem)
+        .filter(ContentItem.content_id.in_(request.content_ids))
+        .order_by(ContentItem.content_id, ContentItem.order_index)
+        .all()
+    )
+    # Build map: content_id -> [items]
+    content_items_map = {}
+    for item in all_content_items:
+        if item.content_id not in content_items_map:
+            content_items_map[item.content_id] = []
+        content_items_map[item.content_id].append(item)
+
     # 為每個學生建立 StudentAssignment
     for student in students:
         student_assignment = StudentAssignment(
@@ -360,14 +374,8 @@ async def create_assignment(
             db.add(progress)
             db.flush()  # 取得 progress.id
 
-            # 為每個 ContentItem 創建 StudentItemProgress
-
-            content_items = (
-                db.query(ContentItem)
-                .filter(ContentItem.content_id == content_id)
-                .order_by(ContentItem.order_index)
-                .all()
-            )
+            # 🔥 Get content items from preloaded map (no query)
+            content_items = content_items_map.get(content_id, [])
 
             for item in content_items:
                 item_progress = StudentItemProgress(
@@ -416,25 +424,41 @@ async def get_assignments(
 
     assignments = query.order_by(Assignment.created_at.desc()).all()
 
+    # 🔥 Batch-load assignment content counts (avoid N+1)
+    assignment_ids = [a.id for a in assignments]
+    content_counts = (
+        db.query(
+            AssignmentContent.assignment_id,
+            func.count(AssignmentContent.id).label("count"),
+        )
+        .filter(AssignmentContent.assignment_id.in_(assignment_ids))
+        .group_by(AssignmentContent.assignment_id)
+        .all()
+    )
+    content_count_map = {row.assignment_id: row.count for row in content_counts}
+
+    # 🔥 Batch-load all student assignments (avoid N+1)
+    all_student_assignments = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.assignment_id.in_(assignment_ids),
+            StudentAssignment.is_active.is_(True),
+        )
+        .all()
+    )
+    # Build map: assignment_id -> [student_assignments]
+    student_assignments_map = {}
+    for sa in all_student_assignments:
+        if sa.assignment_id not in student_assignments_map:
+            student_assignments_map[sa.assignment_id] = []
+        student_assignments_map[sa.assignment_id].append(sa)
+
     # 組合回應
     result = []
     for assignment in assignments:
-        # 取得內容數量
-        content_count = (
-            db.query(AssignmentContent)
-            .filter(AssignmentContent.assignment_id == assignment.id)
-            .count()
-        )
-
-        # 取得學生進度統計
-        student_assignments = (
-            db.query(StudentAssignment)
-            .filter(
-                StudentAssignment.assignment_id == assignment.id,
-                StudentAssignment.is_active.is_(True),
-            )
-            .all()
-        )
+        # 🔥 Get from preloaded maps (no queries)
+        content_count = content_count_map.get(assignment.id, 0)
+        student_assignments = student_assignments_map.get(assignment.id, [])
 
         status_counts = {
             "not_started": 0,
@@ -630,68 +654,78 @@ async def patch_assignment(
                 StudentAssignment.id.in_(assignment_ids_to_delete)
             ).delete(synchronize_session=False)
 
+        # 🔥 Preload existing student assignments (avoid N+1)
+        existing_student_assignments = (
+            db.query(StudentAssignment)
+            .filter(StudentAssignment.assignment_id == assignment_id)
+            .all()
+        )
+        existing_student_ids = {sa.student_id for sa in existing_student_assignments}
+
+        # 🔥 Preload assignment contents (avoid N+1)
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .order_by(AssignmentContent.order_index)
+            .all()
+        )
+
+        # 🔥 Preload all content items (avoid N+1)
+        content_ids = [ac.content_id for ac in assignment_contents]
+        all_content_items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(content_ids))
+            .order_by(ContentItem.content_id, ContentItem.order_index)
+            .all()
+        )
+        content_items_map = {}
+        for item in all_content_items:
+            if item.content_id not in content_items_map:
+                content_items_map[item.content_id] = []
+            content_items_map[item.content_id].append(item)
+
         # 為新的學生列表創建 StudentAssignment
         for student_id in request.student_ids:
-            # 檢查是否已存在（可能有些學生已經開始作業）
-            existing = (
-                db.query(StudentAssignment)
-                .filter(
-                    StudentAssignment.assignment_id == assignment_id,
-                    StudentAssignment.student_id == student_id,
-                )
-                .first()
+            # 🔥 Check from preloaded set (no query)
+            if student_id in existing_student_ids:
+                continue  # Already exists
+
+            student_assignment = StudentAssignment(
+                assignment_id=assignment_id,
+                student_id=student_id,
+                classroom_id=assignment.classroom_id,
+                title=assignment.title,
+                instructions=assignment.description,
+                due_date=assignment.due_date,
+                status=AssignmentStatus.NOT_STARTED,
+                assigned_at=datetime.now(timezone.utc),
+                is_active=True,
             )
+            db.add(student_assignment)
+            db.flush()  # 取得 student_assignment.id
 
-            if not existing:
-                student_assignment = StudentAssignment(
-                    assignment_id=assignment_id,
-                    student_id=student_id,
-                    classroom_id=assignment.classroom_id,
-                    title=assignment.title,
-                    instructions=assignment.description,
-                    due_date=assignment.due_date,
+            # 🔥 Use preloaded assignment_contents (no query)
+            for ac in assignment_contents:
+                progress = StudentContentProgress(
+                    student_assignment_id=student_assignment.id,
+                    content_id=ac.content_id,
                     status=AssignmentStatus.NOT_STARTED,
-                    assigned_at=datetime.now(timezone.utc),
-                    is_active=True,
+                    order_index=ac.order_index,
+                    is_locked=False if ac.order_index == 1 else True,  # 只解鎖第一個
                 )
-                db.add(student_assignment)
-                db.flush()  # 取得 student_assignment.id
+                db.add(progress)
+                db.flush()  # 取得 progress.id
 
-                # 為新增的學生創建 StudentContentProgress 記錄
+                # 🔥 Use preloaded content_items (no query)
+                content_items = content_items_map.get(ac.content_id, [])
 
-                assignment_contents = (
-                    db.query(AssignmentContent)
-                    .filter(AssignmentContent.assignment_id == assignment_id)
-                    .order_by(AssignmentContent.order_index)
-                    .all()
-                )
-
-                for ac in assignment_contents:
-                    progress = StudentContentProgress(
+                for item in content_items:
+                    item_progress = StudentItemProgress(
                         student_assignment_id=student_assignment.id,
-                        content_id=ac.content_id,
-                        status=AssignmentStatus.NOT_STARTED,
-                        order_index=ac.order_index,
-                        is_locked=False if ac.order_index == 1 else True,  # 只解鎖第一個
+                        content_item_id=item.id,
+                        status="NOT_STARTED",
                     )
-                    db.add(progress)
-                    db.flush()  # 取得 progress.id
-
-                    # 為每個 ContentItem 創建 StudentItemProgress
-                    content_items = (
-                        db.query(ContentItem)
-                        .filter(ContentItem.content_id == ac.content_id)
-                        .order_by(ContentItem.order_index)
-                        .all()
-                    )
-
-                    for item in content_items:
-                        item_progress = StudentItemProgress(
-                            student_assignment_id=student_assignment.id,
-                            content_item_id=item.id,
-                            status="NOT_STARTED",
-                        )
-                        db.add(item_progress)
+                    db.add(item_progress)
 
     db.commit()
 
@@ -917,9 +951,10 @@ async def get_assignment_detail(
                 }
             )
 
-    # 取得學生進度
+    # 取得學生進度（使用 eager loading 避免 N+1）
     student_assignments = (
         db.query(StudentAssignment)
+        .options(selectinload(StudentAssignment.content_progress))
         .filter(
             StudentAssignment.assignment_id == assignment_id,
             StudentAssignment.is_active.is_(True),
@@ -954,18 +989,14 @@ async def get_assignment_detail(
 
         is_assigned = sa is not None
 
-        # 取得各內容進度
+        # 取得各內容進度（使用預先載入的資料，避免 N+1）
         content_progress = []
         if sa:  # 只有已指派的學生才有進度資料
+            # 建立 content_id -> progress 的映射（從預先載入的資料）
+            progress_map = {p.content_id: p for p in sa.content_progress}
+
             for content in contents:
-                progress = (
-                    db.query(StudentContentProgress)
-                    .filter(
-                        StudentContentProgress.student_assignment_id == sa.id,
-                        StudentContentProgress.content_id == content["id"],
-                    )
-                    .first()
-                )
+                progress = progress_map.get(content["id"])
 
                 if progress:
                     content_progress.append(
@@ -2052,8 +2083,21 @@ async def grade_student_assignment(
         # 優化：批次查詢所有 content，避免 N+1 問題
         content_ids = {progress.content_id for progress in progress_records}
         content_dict = {
-            c.id: c for c in db.query(Content).filter(Content.id.in_(content_ids)).all()
+            c.id: c
+            for c in db.query(Content)
+            .filter(Content.id.in_(content_ids))
+            .options(selectinload(Content.content_items))  # 🔥 Eager load items
+            .all()
         }
+
+        # 🔥 Preload all StudentItemProgress (avoid N+1)
+        all_item_progress = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.student_assignment_id == assignment.id)
+            .all()
+        )
+        # Build map: content_item_id -> item_progress
+        item_progress_map = {ip.content_item_id: ip for ip in all_item_progress}
 
         # 對每個 progress record，儲存其對應的所有 item 回饋
         current_item_index = 0
@@ -2082,16 +2126,9 @@ async def grade_student_assignment(
                             item_data.get("feedback")
                             or item_data.get("passed") is not None
                         ):
-                            # 查找對應的 StudentItemProgress 記錄
-                            item_progress = (
-                                db.query(StudentItemProgress)
-                                .filter(
-                                    StudentItemProgress.student_assignment_id
-                                    == assignment.id,
-                                    StudentItemProgress.content_item_id
-                                    == content.content_items[i].id,
-                                )
-                                .first()
+                            # 🔥 Get from preloaded map (no query)
+                            item_progress = item_progress_map.get(
+                                content.content_items[i].id
                             )
 
                             # 方案A：按需創建 - 如果記錄不存在，就創建一個

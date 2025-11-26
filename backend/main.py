@@ -62,6 +62,9 @@ if environment == "development":
 elif environment == "staging":
     # Staging 環境暫時允許所有來源（方便測試）
     allowed_origins = ["*"]
+elif environment == "preview":
+    # Preview 環境（Per-Issue Test Environment）允許所有來源
+    allowed_origins = ["*"]
 elif environment == "production":
     # 生產環境只允許生產域名
     allowed_origins = [

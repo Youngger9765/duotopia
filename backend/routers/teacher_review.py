@@ -1,5 +1,6 @@
 """Teacher review API endpoints for item-level grading"""
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Security
@@ -19,6 +20,7 @@ from schemas import (
 )
 
 router = APIRouter(prefix="/api/teacher-review", tags=["teacher-review"])
+logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
@@ -234,18 +236,22 @@ async def batch_review_items(
 ):
     """Submit reviews for multiple items at once"""
 
+    # 🔥 Preload all StudentItemProgress records (avoid N+1)
+    progress_ids = [r["student_item_progress_id"] for r in batch_review.item_reviews]
+    all_item_progress = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.id.in_(progress_ids))
+        .all()
+    )
+    progress_map = {ip.id: ip for ip in all_item_progress}
+
     success_count = 0
     failed_items = []
 
     for review_data in batch_review.item_reviews:
         try:
-            item_progress = (
-                db.query(StudentItemProgress)
-                .filter(
-                    StudentItemProgress.id == review_data["student_item_progress_id"]
-                )
-                .first()
-            )
+            # 🔥 Get from preloaded map (no query)
+            item_progress = progress_map.get(review_data["student_item_progress_id"])
 
             if item_progress:
                 item_progress.teacher_review_score = review_data["teacher_review_score"]
@@ -262,8 +268,14 @@ async def batch_review_items(
                     }
                 )
         except Exception as e:
+            logger.error(
+                f"Failed to process review for item {review_data.get('student_item_progress_id')}: {str(e)}"
+            )
             failed_items.append(
-                {"id": review_data.get("student_item_progress_id"), "error": str(e)}
+                {
+                    "id": review_data.get("student_item_progress_id"),
+                    "error": "處理失敗，請稍後再試",
+                }
             )
 
     db.commit()

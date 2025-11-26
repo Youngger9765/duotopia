@@ -1,0 +1,76 @@
+name: 🐛 Bug Report
+description: 回報系統問題
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 問題描述
+      description: 請描述遇到的問題
+      placeholder: |
+        例如：學生登入時 Step 1 閃現錯誤訊息
+
+        您可以包含：
+        - 發生了什麼問題
+        - 如何重現
+        - 預期應該怎樣
+        - 截圖或錯誤訊息
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## 📋 處理流程（給 AI/工程師）
+
+        ### ⚠️ 強制規則
+        - **必須創建 PR** (feature → staging)
+        - **不要直接在 staging commit**
+        - 遵循 `.claude/ISSUE_HANDLING_CHECKLIST.md`
+
+        ### 🔄 完整 PDCA 流程
+
+        #### 1️⃣ Plan (計畫)
+        - [ ] 讀取並理解 Issue
+        - [ ] 在 Issue 留言 PDCA Plan 分析
+        - [ ] 5 Why 根因分析
+        - [ ] Schema 變更檢查（如涉及 DB schema 變更 → 停止自動處理）
+        - [ ] 等待用戶確認「開始實作」
+
+        #### 2️⃣ Do (執行)
+        - [ ] 創建 feature branch: `git checkout -b fix/issue-N-xxx`
+        - [ ] TDD 開發：Red → Green → Refactor
+        - [ ] **創建 PR** (feature → staging) - 填寫完整工程報告
+        - [ ] Push feature branch → 觸發 Per-Issue Test Environment 部署
+        - [ ] CI/CD 自動執行測試
+
+        #### 3️⃣ Check (驗證)
+        - [ ] 在 Issue 提供測試指引（給案主，用業務語言）
+        - [ ] 提供 Per-Issue Test Environment URLs
+        - [ ] 案主測試並留言「測試通過」或「✅」
+        - [ ] 執行 `check-approvals` 檢查批准狀態
+
+        #### 4️⃣ Act (改進)
+        - [ ] 雙重批准確認：
+          - ✅ 系統通過：PR 中 CI/CD 全部綠燈
+          - ✅ 業務通過：Issue 中案主批准
+        - [ ] Merge PR to staging: `gh pr merge <PR_NUMBER> --squash`
+        - [ ] **Per-Issue Test Environment 自動清理**（issue 關閉時）
+        - [ ] 在 Issue 通知案主已部署到 Staging
+        - [ ] Production 發布：Release PR (staging → main)
+
+        ### 🧹 自動清理機制
+        - Issue 關閉時自動刪除 Per-Issue Test Environment
+        - Cloud Run services 自動刪除
+        - Container images 自動清理
+        - 💰 立即停止計費
+
+        ### 🔴 絕對禁止
+        - ❌ 直接在 staging commit
+        - ❌ 跳過 PR
+        - ❌ 沒有 CI/CD 就 merge
+        - ❌ 沒有案主批准就 merge
+        - ❌ 涉及 DB Schema 變更時自動處理
