@@ -1187,6 +1187,9 @@
       "title": "選擇內容類型",
       "description": "為 「{{lessonName}}」 選擇要新增的內容類型",
       "processing": "處理中...",
+      "recommended": "推薦",
+      "comingSoon": "即將推出",
+      "cancel": "取消",
       "types": {
         "reading_assessment": {
           "name": "朗讀錄音",
