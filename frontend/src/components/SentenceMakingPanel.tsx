@@ -44,17 +44,18 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 // 詞性列表
+// value 用全名存資料庫，label 用縮寫顯示
 const PARTS_OF_SPEECH = [
-  { value: "n.", label: "n.", fullName: "noun" },
-  { value: "v.", label: "v.", fullName: "verb" },
-  { value: "adj.", label: "adj.", fullName: "adjective" },
-  { value: "adv.", label: "adv.", fullName: "adverb" },
-  { value: "pron.", label: "pron.", fullName: "pronoun" },
-  { value: "prep.", label: "prep.", fullName: "preposition" },
-  { value: "conj.", label: "conj.", fullName: "conjunction" },
-  { value: "interj.", label: "interj.", fullName: "interjection" },
-  { value: "det.", label: "det.", fullName: "determiner" },
-  { value: "aux.", label: "aux.", fullName: "auxiliary" },
+  { value: "noun", label: "n.", fullName: "noun" },
+  { value: "verb", label: "v.", fullName: "verb" },
+  { value: "adjective", label: "adj.", fullName: "adjective" },
+  { value: "adverb", label: "adv.", fullName: "adverb" },
+  { value: "pronoun", label: "pron.", fullName: "pronoun" },
+  { value: "preposition", label: "prep.", fullName: "preposition" },
+  { value: "conjunction", label: "conj.", fullName: "conjunction" },
+  { value: "interjection", label: "interj.", fullName: "interjection" },
+  { value: "determiner", label: "det.", fullName: "determiner" },
+  { value: "auxiliary", label: "aux.", fullName: "auxiliary" },
 ] as const;
 
 interface ContentRow {

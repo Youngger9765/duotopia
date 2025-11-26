@@ -2297,6 +2297,9 @@ async def get_content_detail(
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
             }
             for item in content.content_items
         ]
@@ -2473,6 +2476,9 @@ async def update_content(
                 "question_type": item.item_metadata.get("question_type", "text")
                 if item.item_metadata
                 else "text",
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
             }
             for item in content.content_items
         ]
