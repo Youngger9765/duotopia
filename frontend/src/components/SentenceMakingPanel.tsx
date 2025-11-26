@@ -836,9 +836,15 @@ interface SortableRowInnerProps {
   handleOpenTTSModal: (row: ContentRow) => void;
   handleRemoveAudio: (index: number) => void;
   handleGenerateSingleDefinition: (index: number) => Promise<void>;
-  handleGenerateSingleDefinitionWithLang: (index: number, lang: WordTranslationLanguage) => Promise<void>;
+  handleGenerateSingleDefinitionWithLang: (
+    index: number,
+    lang: WordTranslationLanguage,
+  ) => Promise<void>;
   handleGenerateExampleTranslation: (index: number) => Promise<void>;
-  handleGenerateExampleTranslationWithLang: (index: number, lang: SentenceTranslationLanguage) => Promise<void>;
+  handleGenerateExampleTranslationWithLang: (
+    index: number,
+    lang: SentenceTranslationLanguage,
+  ) => Promise<void>;
   handleOpenAIGenerateModal: (index: number) => void;
   rowsLength: number;
 }
@@ -984,16 +990,14 @@ function SortableRowInner({
         <div className="flex-1 min-w-[200px] relative">
           <input
             type="text"
-            value={
-              (() => {
-                const lang = row.selectedWordLanguage || "chinese";
-                if (lang === "chinese") return row.definition || "";
-                if (lang === "english") return row.translation || "";
-                if (lang === "japanese") return row.japanese_translation || "";
-                if (lang === "korean") return row.korean_translation || "";
-                return row.definition || "";
-              })()
-            }
+            value={(() => {
+              const lang = row.selectedWordLanguage || "chinese";
+              if (lang === "chinese") return row.definition || "";
+              if (lang === "english") return row.translation || "";
+              if (lang === "japanese") return row.japanese_translation || "";
+              if (lang === "korean") return row.korean_translation || "";
+              return row.definition || "";
+            })()}
             onChange={(e) => {
               const lang = row.selectedWordLanguage || "chinese";
               let field: keyof ContentRow = "definition";
@@ -1003,7 +1007,7 @@ function SortableRowInner({
               handleUpdateRow(index, field, e.target.value);
             }}
             className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
-            placeholder={`${WORD_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯(非必填)`}
+            placeholder={`${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯(非必填)`}
             maxLength={200}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -1030,7 +1034,7 @@ function SortableRowInner({
             <button
               onClick={() => handleGenerateSingleDefinition(index)}
               className="p-1 rounded hover:bg-gray-200 text-gray-600"
-              title={`AI 生成${WORD_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯`}
+              title={`AI 生成${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯`}
             >
               <Globe className="h-4 w-4" />
             </button>
@@ -1084,15 +1088,14 @@ function SortableRowInner({
       <div className="relative">
         <input
           type="text"
-          value={
-            (() => {
-              const lang = row.selectedSentenceLanguage || "chinese";
-              if (lang === "chinese") return row.example_sentence_translation || "";
-              if (lang === "japanese") return row.example_sentence_japanese || "";
-              if (lang === "korean") return row.example_sentence_korean || "";
+          value={(() => {
+            const lang = row.selectedSentenceLanguage || "chinese";
+            if (lang === "chinese")
               return row.example_sentence_translation || "";
-            })()
-          }
+            if (lang === "japanese") return row.example_sentence_japanese || "";
+            if (lang === "korean") return row.example_sentence_korean || "";
+            return row.example_sentence_translation || "";
+          })()}
           onChange={(e) => {
             const lang = row.selectedSentenceLanguage || "chinese";
             let field: keyof ContentRow = "example_sentence_translation";
@@ -1101,7 +1104,7 @@ function SortableRowInner({
             handleUpdateRow(index, field, e.target.value);
           }}
           className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
-          placeholder={`${SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}翻譯(非必須)`}
+          placeholder={`${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}翻譯(非必須)`}
           maxLength={500}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -1129,7 +1132,7 @@ function SortableRowInner({
             <button
               onClick={() => handleGenerateExampleTranslation(index)}
               className="p-1 rounded hover:bg-gray-200 text-gray-600"
-              title={`AI 生成${SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}例句翻譯`}
+              title={`AI 生成${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}例句翻譯`}
             >
               <Globe className="h-4 w-4" />
             </button>
@@ -1280,9 +1283,11 @@ export default function SentenceMakingPanel({
             korean_translation: item.korean_translation || "",
             audioUrl: item.audio_url || "",
             selectedWordLanguage: item.selectedWordLanguage || "chinese",
-            selectedSentenceLanguage: item.selectedSentenceLanguage || "chinese",
+            selectedSentenceLanguage:
+              item.selectedSentenceLanguage || "chinese",
             example_sentence: item.example_sentence || "",
-            example_sentence_translation: item.example_sentence_translation || "",
+            example_sentence_translation:
+              item.example_sentence_translation || "",
             example_sentence_japanese: item.example_sentence_japanese || "",
             example_sentence_korean: item.example_sentence_korean || "",
             partsOfSpeech: item.parts_of_speech || [],
@@ -1667,7 +1672,9 @@ export default function SentenceMakingPanel({
       (!newRows[index].partsOfSpeech ||
         newRows[index].partsOfSpeech.length === 0);
 
-    const langConfig = WORD_TRANSLATION_LANGUAGES.find(l => l.value === targetLang);
+    const langConfig = WORD_TRANSLATION_LANGUAGES.find(
+      (l) => l.value === targetLang,
+    );
     toast.info(`生成${langConfig?.label || ""}翻譯中...`);
 
     try {
@@ -1813,7 +1820,9 @@ export default function SentenceMakingPanel({
       return;
     }
 
-    const langConfig = SENTENCE_TRANSLATION_LANGUAGES.find(l => l.value === targetLang);
+    const langConfig = SENTENCE_TRANSLATION_LANGUAGES.find(
+      (l) => l.value === targetLang,
+    );
     toast.info(`生成例句${langConfig?.label || ""}翻譯中...`);
 
     try {

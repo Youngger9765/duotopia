@@ -925,15 +925,13 @@ function SortableRowInner({
         <div className="space-y-2">
           <div className="relative">
             <textarea
-              value={
-                (() => {
-                  const lang = row.selectedLanguage || "chinese";
-                  if (lang === "chinese") return row.definition || "";
-                  if (lang === "japanese") return row.japanese_translation || "";
-                  if (lang === "korean") return row.korean_translation || "";
-                  return row.definition || "";
-                })()
-              }
+              value={(() => {
+                const lang = row.selectedLanguage || "chinese";
+                if (lang === "chinese") return row.definition || "";
+                if (lang === "japanese") return row.japanese_translation || "";
+                if (lang === "korean") return row.korean_translation || "";
+                return row.definition || "";
+              })()}
               onChange={(e) => {
                 const lang = row.selectedLanguage || "chinese";
                 let field: keyof ContentRow = "definition";
@@ -942,13 +940,13 @@ function SortableRowInner({
                 handleUpdateRow(index, field, e.target.value);
               }}
               className="w-full px-3 py-2 pr-24 border rounded-md text-sm resize-none"
-              placeholder={
-                (() => {
-                  const lang = row.selectedLanguage || "chinese";
-                  const langConfig = TRANSLATION_LANGUAGES.find(l => l.value === lang);
-                  return `${langConfig?.label || "中文"}翻譯`;
-                })()
-              }
+              placeholder={(() => {
+                const lang = row.selectedLanguage || "chinese";
+                const langConfig = TRANSLATION_LANGUAGES.find(
+                  (l) => l.value === lang,
+                );
+                return `${langConfig?.label || "中文"}翻譯`;
+              })()}
               rows={2}
               maxLength={500}
             />
@@ -976,7 +974,7 @@ function SortableRowInner({
               <button
                 onClick={() => handleGenerateSingleDefinition(index)}
                 className="p-1 rounded hover:bg-gray-200 text-gray-600 flex items-center gap-0.5"
-                title={`生成${TRANSLATION_LANGUAGES.find(l => l.value === (row.selectedLanguage || "chinese"))?.label || "中文"}翻譯`}
+                title={`生成${TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedLanguage || "chinese"))?.label || "中文"}翻譯`}
               >
                 <Globe className="h-4 w-4" />
               </button>
@@ -1147,7 +1145,8 @@ export default function ReadingAssessmentPanel({
               example_sentence: item.example_sentence || "",
               example_sentence_translation:
                 item.example_sentence_translation || "",
-              example_sentence_definition: item.example_sentence_definition || "",
+              example_sentence_definition:
+                item.example_sentence_definition || "",
             };
           },
         );
@@ -1526,7 +1525,9 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
-    const langConfig = TRANSLATION_LANGUAGES.find(l => l.value === targetLang);
+    const langConfig = TRANSLATION_LANGUAGES.find(
+      (l) => l.value === targetLang,
+    );
     toast.info(`生成${langConfig?.label || ""}翻譯中...`);
 
     try {

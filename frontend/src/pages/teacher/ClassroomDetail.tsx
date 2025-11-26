@@ -1763,7 +1763,8 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {selectedContent.type?.toLowerCase() === "reading_assessment" ? (
+                {selectedContent.type?.toLowerCase() ===
+                "reading_assessment" ? (
                   /* ReadingAssessmentPanel has its own save button */
                   <ReadingAssessmentPanel
                     content={selectedContent as ReadingAssessmentContent}
@@ -1777,7 +1778,8 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
-                ) : selectedContent.type?.toLowerCase() === "sentence_making" ? (
+                ) : selectedContent.type?.toLowerCase() ===
+                  "sentence_making" ? (
                   /* SentenceMakingPanel has its own save button */
                   <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
