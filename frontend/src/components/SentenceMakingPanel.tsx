@@ -854,11 +854,7 @@ function SortableRowInner({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="p-4 bg-gray-50 rounded-lg"
-    >
+    <div ref={setNodeRef} style={style} className="p-4 bg-gray-50 rounded-lg">
       {/* 頂部：拖曳手把 + 序號 + 動作按鈕 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -871,9 +867,7 @@ function SortableRowInner({
           >
             <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
           </div>
-          <span className="text-sm font-medium text-gray-600">
-            {index + 1}
-          </span>
+          <span className="text-sm font-medium text-gray-600">{index + 1}</span>
         </div>
 
         {/* Action buttons */}
@@ -1112,11 +1106,14 @@ export default function SentenceMakingPanel({
 
   // AI 生成例句對話框狀態
   const [aiGenerateModalOpen, setAiGenerateModalOpen] = useState(false);
-  const [aiGenerateTargetIndex, setAiGenerateTargetIndex] = useState<number | null>(null); // null 表示批次生成
+  const [aiGenerateTargetIndex, setAiGenerateTargetIndex] = useState<
+    number | null
+  >(null); // null 表示批次生成
   const [aiGenerateLevel, setAiGenerateLevel] = useState<string>("A1");
   const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
   const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
-  const [aiGenerateTranslateLang, setAiGenerateTranslateLang] = useState<string>("中文");
+  const [aiGenerateTranslateLang, setAiGenerateTranslateLang] =
+    useState<string>("中文");
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // dnd-kit sensors
@@ -1765,7 +1762,12 @@ export default function SentenceMakingPanel({
 
       // 更新 rows
       const newRows = [...rows];
-      const results = (response as { sentences: Array<{ sentence: string; translation?: string }> }).sentences || [];
+      const results =
+        (
+          response as {
+            sentences: Array<{ sentence: string; translation?: string }>;
+          }
+        ).sentences || [];
 
       targetIndices.forEach((idx, i) => {
         // 先清空現有的例句和翻譯
@@ -2137,15 +2139,10 @@ export default function SentenceMakingPanel({
       </Dialog>
 
       {/* AI 生成例句對話框 */}
-      <Dialog
-        open={aiGenerateModalOpen}
-        onOpenChange={setAiGenerateModalOpen}
-      >
+      <Dialog open={aiGenerateModalOpen} onOpenChange={setAiGenerateModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              AI 生成例句
-            </DialogTitle>
+            <DialogTitle className="text-xl font-bold">AI 生成例句</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -2194,7 +2191,9 @@ export default function SentenceMakingPanel({
                   onChange={(e) => setAiGenerateTranslate(e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm font-medium text-gray-700">翻譯成</span>
+                <span className="text-sm font-medium text-gray-700">
+                  翻譯成
+                </span>
               </label>
               <select
                 value={aiGenerateTranslateLang}
@@ -2215,7 +2214,9 @@ export default function SentenceMakingPanel({
               {aiGenerateTargetIndex !== null ? (
                 <div>
                   <span className="text-amber-700">
-                    將為「<strong>{rows[aiGenerateTargetIndex]?.text || ""}</strong>」重新生成例句
+                    將為「
+                    <strong>{rows[aiGenerateTargetIndex]?.text || ""}</strong>
+                    」重新生成例句
                   </span>
                   {rows[aiGenerateTargetIndex]?.example_sentence && (
                     <div className="text-amber-600 text-xs mt-1">
@@ -2226,7 +2227,11 @@ export default function SentenceMakingPanel({
               ) : (
                 <div>
                   <span className="text-amber-700">
-                    將為 <strong>{rows.filter((r) => r.text && r.text.trim()).length}</strong> 個單字重新生成例句
+                    將為{" "}
+                    <strong>
+                      {rows.filter((r) => r.text && r.text.trim()).length}
+                    </strong>{" "}
+                    個單字重新生成例句
                   </span>
                   <div className="text-amber-600 text-xs mt-1">
                     所有現有例句{aiGenerateTranslate ? "及翻譯" : ""}將被覆蓋

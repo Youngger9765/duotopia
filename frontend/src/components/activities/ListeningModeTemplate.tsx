@@ -66,7 +66,12 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
   const prevWordRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     // 只有在題目切換時才自動播放，不是因為 userHasInteracted 變化
-    if (word.audio_url && userHasInteracted && prevWordRef.current !== undefined && prevWordRef.current !== word.audio_url) {
+    if (
+      word.audio_url &&
+      userHasInteracted &&
+      prevWordRef.current !== undefined &&
+      prevWordRef.current !== word.audio_url
+    ) {
       playAudio();
     }
     prevWordRef.current = word.audio_url;
@@ -134,10 +139,14 @@ const ListeningModeTemplate: React.FC<ListeningModeTemplateProps> = ({
       if (error instanceof Error) {
         if (error.name === "NotAllowedError") {
           // 瀏覽器自動播放政策阻擋，這是正常的
-          console.log("Auto-play blocked by browser policy, waiting for user interaction");
+          console.log(
+            "Auto-play blocked by browser policy, waiting for user interaction",
+          );
         } else if (error.name === "AbortError") {
           // play() 被 pause() 中斷，通常發生在快速切換時，可以忽略
-          console.log("Audio play was interrupted, this is normal during quick navigation");
+          console.log(
+            "Audio play was interrupted, this is normal during quick navigation",
+          );
         } else {
           console.error("Audio play error:", error);
           toast.error("音檔播放失敗");
