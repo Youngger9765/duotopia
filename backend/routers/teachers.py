@@ -21,6 +21,10 @@ from models import (
     StudentContentProgress,
     StudentItemProgress,
     ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
 )
 from auth import (
     verify_token,
@@ -131,11 +135,119 @@ class TeacherDashboard(BaseModel):
     is_test_account: bool  # 是否為測試帳號（白名單）
 
 
+class OrganizationRole(BaseModel):
+    """機構角色"""
+
+    organization_id: str
+    organization_name: str
+    role: str  # org_owner, org_admin
+
+
+class SchoolRole(BaseModel):
+    """學校角色"""
+
+    school_id: str
+    school_name: str
+    organization_id: str
+    organization_name: str
+    roles: List[str]  # school_admin, teacher
+
+
+class TeacherRolesResponse(BaseModel):
+    """教師角色回應"""
+
+    teacher_id: int
+    organization_roles: List[OrganizationRole]
+    school_roles: List[SchoolRole]
+    all_roles: List[str]  # Flattened unique list of all roles
+
+
 # ============ Teacher Endpoints ============
 @router.get("/me", response_model=TeacherProfile)
 async def get_teacher_profile(current_teacher: Teacher = Depends(get_current_teacher)):
     """取得教師個人資料"""
     return current_teacher
+
+
+@router.get("/me/roles", response_model=TeacherRolesResponse)
+async def get_teacher_roles(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    取得教師在所有機構和學校的角色
+
+    Returns:
+        - organization_roles: 機構層級的角色 (org_owner, org_admin)
+        - school_roles: 學校層級的角色 (school_admin, teacher)
+        - all_roles: 所有角色的扁平化列表
+    """
+    import uuid
+
+    organization_roles = []
+    school_roles = []
+    all_roles_set = set()
+
+    # 查詢機構角色
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.is_active == True,
+        )
+        .all()
+    )
+
+    for to in teacher_orgs:
+        org = db.query(Organization).filter(Organization.id == to.organization_id).first()
+        if org and org.is_active:
+            organization_roles.append(
+                OrganizationRole(
+                    organization_id=str(to.organization_id),
+                    organization_name=org.display_name or org.name,
+                    role=to.role,
+                )
+            )
+            all_roles_set.add(to.role)
+
+    # 查詢學校角色
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == current_teacher.id,
+            TeacherSchool.is_active == True,
+        )
+        .all()
+    )
+
+    for ts in teacher_schools:
+        school = db.query(School).filter(School.id == ts.school_id).first()
+        if school and school.is_active:
+            org = (
+                db.query(Organization)
+                .filter(Organization.id == school.organization_id)
+                .first()
+            )
+            if org:
+                school_roles.append(
+                    SchoolRole(
+                        school_id=str(ts.school_id),
+                        school_name=school.display_name or school.name,
+                        organization_id=str(school.organization_id),
+                        organization_name=org.display_name or org.name,
+                        roles=ts.roles if ts.roles else [],
+                    )
+                )
+                # 將學校角色加入 all_roles
+                if ts.roles:
+                    all_roles_set.update(ts.roles)
+
+    return TeacherRolesResponse(
+        teacher_id=current_teacher.id,
+        organization_roles=organization_roles,
+        school_roles=school_roles,
+        all_roles=sorted(list(all_roles_set)),
+    )
 
 
 @router.put("/me", response_model=TeacherProfile)

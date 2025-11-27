@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface Organization {
   id: string;
@@ -24,6 +25,7 @@ interface TeacherInfo {
 export default function OrganizationDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
+  const token = useTeacherAuthStore((state) => state.token);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [teachers, setTeachers] = useState<TeacherInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,6 @@ export default function OrganizationDetail() {
 
   const fetchOrganization = async () => {
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -59,7 +60,6 @@ export default function OrganizationDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}/teachers`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -77,7 +77,6 @@ export default function OrganizationDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}/teachers`, {
         method: "POST",
         headers: {
@@ -110,7 +109,6 @@ export default function OrganizationDetail() {
     if (!confirm("確定要移除此教師嗎？")) return;
 
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(
         `/api/organizations/${orgId}/teachers/${teacherId}`,
         {

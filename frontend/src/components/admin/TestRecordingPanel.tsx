@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { retryAudioUpload, retryAIAnalysis } from "@/utils/retryHelper";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 // Single test sentence
 const TEST_SENTENCE = {
@@ -58,7 +59,6 @@ export default function TestRecordingPanel() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -68,14 +68,8 @@ export default function TestRecordingPanel() {
 
   const apiUrl = import.meta.env.VITE_API_URL || "";
 
-  // 檢查是否已登入
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userType = localStorage.getItem("userType");
-    if (token && userType === "teacher") {
-      setIsLoggedIn(true);
-    }
-  }, []);
+  // Use Zustand store for authentication
+  const { token, isAuthenticated } = useTeacherAuthStore();
 
   // Cleanup on unmount
   useEffect(() => {
@@ -247,9 +241,6 @@ export default function TestRecordingPanel() {
 
           // 使用 fetch 直接呼叫，避免 apiClient 的 JSON headers 覆蓋 FormData
           try {
-            const token = localStorage.getItem("token");
-            const apiUrl = import.meta.env.VITE_API_URL || "";
-
             const response = await fetch(`${apiUrl}/api/speech/assess`, {
               method: "POST",
               headers: token
@@ -474,26 +465,14 @@ export default function TestRecordingPanel() {
 
       if (response.ok) {
         const data = await response.json();
-        // 儲存 teacher token
-        localStorage.setItem("token", data.access_token);
-        localStorage.setItem("userType", "teacher");
 
-        // 儲存教師資料
-        const teacherAuthData = {
-          state: {
-            token: data.access_token,
-            teacher: data.teacher || {
-              email: "demo@duotopia.com",
-              name: "Demo Teacher",
-            },
-            isAuthenticated: true,
-          },
-        };
-        localStorage.setItem(
-          "teacher-auth-storage",
-          JSON.stringify(teacherAuthData),
-        );
-        setIsLoggedIn(true);
+        // Use Zustand store's login method
+        const login = useTeacherAuthStore.getState().login;
+        login(data.access_token, data.teacher || {
+          email: "demo@duotopia.com",
+          name: "Demo Teacher",
+        });
+
         toast.success(t("testRecordingPanel.messages.loginSuccess"));
       } else {
         const errorText = await response.text();
@@ -508,14 +487,11 @@ export default function TestRecordingPanel() {
 
   // 登出功能
   const handleLogout = () => {
-    // 清除所有登入資料
-    localStorage.removeItem("token");
-    localStorage.removeItem("userType");
-    localStorage.removeItem("teacher-auth-storage");
-    localStorage.removeItem("student-auth-storage");
+    // Use Zustand store's logout method
+    const logout = useTeacherAuthStore.getState().logout;
+    logout();
 
     // 重設狀態
-    setIsLoggedIn(false);
     setTestResult(null);
     setAudioUrl(null);
     setAudioBlob(null);
@@ -533,12 +509,12 @@ export default function TestRecordingPanel() {
       {/* Quick Test Login */}
       <Alert
         className={
-          isLoggedIn
+          isAuthenticated
             ? "border-green-200 bg-green-50"
             : "border-blue-200 bg-blue-50"
         }
       >
-        {isLoggedIn ? (
+        {isAuthenticated ? (
           <CheckCircle className="h-4 w-4 text-green-600" />
         ) : (
           <AlertCircle className="h-4 w-4" />
@@ -546,18 +522,18 @@ export default function TestRecordingPanel() {
         <AlertDescription className="flex items-center justify-between">
           <div className="flex-1">
             <div className="font-medium">
-              {isLoggedIn
+              {isAuthenticated
                 ? t("testRecordingPanel.labels.loggedInStatus")
                 : t("testRecordingPanel.labels.loginStatus")}
             </div>
             <div className="text-sm text-gray-600">
-              {isLoggedIn
+              {isAuthenticated
                 ? t("testRecordingPanel.labels.loggedInDesc")
                 : t("testRecordingPanel.labels.loginDesc")}
             </div>
           </div>
           <div className="flex gap-2 ml-4">
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <>
                 <Button size="sm" variant="secondary" disabled>
                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -591,7 +567,7 @@ export default function TestRecordingPanel() {
       {/* Test Section */}
       <Card className="relative">
         {/* Overlay when not logged in */}
-        {!isLoggedIn && (
+        {!isAuthenticated && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
             <div className="text-center p-6">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
@@ -661,7 +637,7 @@ export default function TestRecordingPanel() {
               <Button
                 onClick={startRecording}
                 variant="default"
-                disabled={!isLoggedIn}
+                disabled={!isAuthenticated}
               >
                 <Mic className="w-4 h-4 mr-2" />
                 {t("testRecordingPanel.buttons.startRecording")}
@@ -672,7 +648,7 @@ export default function TestRecordingPanel() {
               <Button
                 onClick={stopRecording}
                 variant="destructive"
-                disabled={!isLoggedIn}
+                disabled={!isAuthenticated}
               >
                 <Square className="w-4 h-4 mr-2" />
                 {t("testRecordingPanel.buttons.stopRecording")}
@@ -684,7 +660,7 @@ export default function TestRecordingPanel() {
                 <Button
                   onClick={playRecording}
                   variant="outline"
-                  disabled={!isLoggedIn}
+                  disabled={!isAuthenticated}
                 >
                   {isPlaying ? (
                     <Pause className="w-4 h-4 mr-2" />
@@ -698,7 +674,7 @@ export default function TestRecordingPanel() {
                 <Button
                   onClick={resetRecording}
                   variant="outline"
-                  disabled={!isLoggedIn}
+                  disabled={!isAuthenticated}
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   {t("testRecordingPanel.buttons.reRecord")}
@@ -706,7 +682,7 @@ export default function TestRecordingPanel() {
                 <Button
                   onClick={runCompleteAnalysis}
                   variant="default"
-                  disabled={!isLoggedIn || isAnalyzing}
+                  disabled={!isAuthenticated || isAnalyzing}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {isAnalyzing ? (

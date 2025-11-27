@@ -1766,7 +1766,7 @@ async def get_linked_accounts(
             Student.email == student.email,
             Student.email_verified is True,
             Student.id != student_id,  # 排除自己
-            Student.is_active is True,
+            Student.is_active == True,
         )
         .all()
     )
@@ -1779,7 +1779,7 @@ async def get_linked_accounts(
         db.query(ClassroomStudent)
         .filter(
             ClassroomStudent.student_id.in_(linked_student_ids),
-            ClassroomStudent.is_active is True,
+            ClassroomStudent.is_active == True,
         )
         .all()
     )
@@ -1897,7 +1897,7 @@ async def switch_account(
         db.query(ClassroomStudent)
         .filter(
             ClassroomStudent.student_id == target_student.id,
-            ClassroomStudent.is_active is True,
+            ClassroomStudent.is_active == True,
         )
         .first()
     )
@@ -1956,7 +1956,7 @@ async def unbind_email(
             .filter(
                 ClassroomStudent.student_id == student_id,
                 Classroom.teacher_id == teacher_id,
-                ClassroomStudent.is_active is True,
+                ClassroomStudent.is_active == True,
             )
             .first()
         )

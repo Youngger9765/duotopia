@@ -5,6 +5,8 @@
 import { API_URL } from "../config/api";
 import { retryAIAnalysis } from "../utils/retryHelper";
 import { clearAllAuth } from "./authUtils";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 // 🔐 Security: Only enable debug logs in development
 const DEBUG = false; // 暫時關閉以便追蹤其他問題
@@ -123,30 +125,11 @@ class ApiClient {
 
   private getToken(): string | null {
     // 動態獲取 token，優先學生 token
-    const studentAuth = localStorage.getItem("student-auth-storage");
-    if (studentAuth) {
-      try {
-        const { state } = JSON.parse(studentAuth);
-        if (state?.token) {
-          return state.token;
-        }
-      } catch (e) {
-        if (DEBUG) console.error("Failed to parse student auth:", e);
-      }
-    }
+    const studentToken = useStudentAuthStore.getState().token;
+    if (studentToken) return studentToken;
 
-    // 如果沒有學生 token，檢查老師 token
-    const teacherAuth = localStorage.getItem("teacher-auth-storage");
-    if (teacherAuth) {
-      try {
-        const { state } = JSON.parse(teacherAuth);
-        if (state?.token) {
-          return state.token;
-        }
-      } catch (e) {
-        if (DEBUG) console.error("Failed to parse teacher auth:", e);
-      }
-    }
+    const teacherToken = useTeacherAuthStore.getState().token;
+    if (teacherToken) return teacherToken;
 
     return null;
   }

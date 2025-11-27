@@ -223,7 +223,9 @@ def create_demo_data(db: Session):
         is_demo=False,
     )
 
-    db.add_all([org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher])
+    db.add_all(
+        [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher]
+    )
     db.commit()
     db.refresh(org_owner_teacher)
     db.refresh(org_admin_teacher)
@@ -232,7 +234,12 @@ def create_demo_data(db: Session):
     print("✅ 建立 4 個機構測試帳號")
 
     # 2.2 為機構測試帳號創建訂閱（給予充足配額）
-    for teacher in [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher]:
+    for teacher in [
+        org_owner_teacher,
+        org_admin_teacher,
+        school_admin_teacher,
+        org_teacher,
+    ]:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",  # 使用學校版方案

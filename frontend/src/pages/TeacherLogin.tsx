@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Zap, Home } from "lucide-react";
-import { apiClient, ApiError } from "../lib/api";
+import { apiClient } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { toast } from "sonner";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
@@ -28,9 +27,6 @@ export default function TeacherLogin() {
     email: "",
     password: "",
   });
-  const [resendLoading, setResendLoading] = useState(false);
-  const [lastResendTime, setLastResendTime] = useState(0);
-  const [showResendLink, setShowResendLink] = useState(false);
 
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);
@@ -44,7 +40,6 @@ export default function TeacherLogin() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    setShowResendLink(false);
 
     try {
       const result = await apiClient.teacherLogin(formData);
@@ -60,70 +55,20 @@ export default function TeacherLogin() {
       navigate("/teacher/dashboard");
     } catch (err) {
       console.error("🔑 [ERROR] 登入失敗:", err);
-
-      // Check if error is related to email verification
-      if (err instanceof ApiError) {
-        const errorDetail =
-          typeof err.detail === "string"
-            ? err.detail.toLowerCase()
-            : err.detail.message?.toLowerCase() || "";
-        if (
-          errorDetail.includes("verified") ||
-          errorDetail.includes("驗證") ||
-          errorDetail.includes("verify")
-        ) {
-          setError(t("teacherLogin.errors.accountNotVerified"));
-          setShowResendLink(true);
-        } else {
-          setError(t("teacherLogin.errors.loginFailed"));
-        }
-      } else {
-        setError(t("teacherLogin.errors.loginFailed"));
-      }
+      setError(t("teacherLogin.errors.loginFailed"));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResendVerification = async () => {
-    if (!formData.email) {
-      toast.error(t("teacherLogin.errors.loginFailed"));
-      return;
-    }
-
-    const now = Date.now();
-    const cooldownSeconds = 60;
-    const timeElapsed = (now - lastResendTime) / 1000;
-
-    if (lastResendTime && timeElapsed < cooldownSeconds) {
-      const remainingSeconds = Math.ceil(cooldownSeconds - timeElapsed);
-      toast.error(
-        t("teacherLogin.resend.cooldown", { seconds: remainingSeconds }),
-      );
-      return;
-    }
-
-    setResendLoading(true);
-    try {
-      await apiClient.resendVerification(formData.email);
-      toast.success(t("teacherLogin.resend.success"));
-      setLastResendTime(now);
-    } catch (err) {
-      console.error("重新發送驗證郵件失敗:", err);
-      toast.error(t("teacherLogin.resend.failed"));
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
-  const handleQuickLogin = async (email: string) => {
+  const handleQuickLogin = async (email: string, password: string = "demo123") => {
     setIsLoading(true);
     setError("");
 
     try {
       const result = await apiClient.teacherLogin({
         email,
-        password: "demo123",
+        password,
       });
 
       useTeacherAuthStore.getState().login(result.access_token, {
@@ -222,31 +167,9 @@ export default function TeacherLogin() {
               </div>
 
               {error && (
-                <>
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                  {showResendLink && (
-                    <div className="text-center">
-                      <Button
-                        type="button"
-                        variant="link"
-                        onClick={handleResendVerification}
-                        disabled={resendLoading}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        {resendLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                            {t("teacherLogin.form.loggingIn")}
-                          </>
-                        ) : (
-                          t("teacherLogin.resend.button")
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               <Button
@@ -342,6 +265,94 @@ export default function TeacherLogin() {
                       </div>
                     </div>
                   </Button>
+
+                  {/* 機構測試帳號分隔線 */}
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-2 bg-white text-gray-500">
+                        機構測試帳號
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 機構擁有者 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("owner@duotopia.com", "owner123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        張機構（機構擁有者）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        owner@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 機構管理員 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("orgadmin@duotopia.com", "orgadmin123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-indigo-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        李管理（機構管理員）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        orgadmin@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 學校管理員 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("schooladmin@duotopia.com", "schooladmin123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-orange-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        王校長（學校管理員）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        schooladmin@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 機構教師 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("orgteacher@duotopia.com", "orgteacher123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-teal-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        陳老師（機構教師）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        orgteacher@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
                 </div>
               </>
             )}
@@ -370,14 +381,28 @@ export default function TeacherLogin() {
 
         {/* 測試帳號說明 - 只在非 production 或有 ?is_demo=true 時顯示 */}
         {showDemoBlocks && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
-            <div className="font-semibold mb-1">
-              {t("teacherLogin.demo.passwordHint")}
+          <div className="mt-4 space-y-3">
+            <div className="p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
+              <div className="font-semibold mb-1">
+                🔒 {t("teacherLogin.demo.passwordHint")}
+              </div>
+              <div className="space-y-1">
+                <div>✅ {t("teacherLogin.demo.demoDescription")}</div>
+                <div>🎁 {t("teacherLogin.demo.trialDescription")}</div>
+                <div>❌ {t("teacherLogin.demo.expiredDescription")}</div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <div>✅ {t("teacherLogin.demo.demoDescription")}</div>
-              <div>🎁 {t("teacherLogin.demo.trialDescription")}</div>
-              <div>❌ {t("teacherLogin.demo.expiredDescription")}</div>
+
+            <div className="p-3 bg-purple-50 rounded-lg text-xs text-gray-600">
+              <div className="font-semibold mb-1">
+                🏢 機構測試帳號密碼
+              </div>
+              <div className="space-y-1">
+                <div>💜 owner@duotopia.com - owner123</div>
+                <div>💙 orgadmin@duotopia.com - orgadmin123</div>
+                <div>🧡 schooladmin@duotopia.com - schooladmin123</div>
+                <div>💚 orgteacher@duotopia.com - orgteacher123</div>
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface School {
   id: string;
@@ -25,6 +26,7 @@ interface SchoolTeacherInfo {
 export default function SchoolDetail() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const navigate = useNavigate();
+  const token = useTeacherAuthStore((state) => state.token);
   const [school, setSchool] = useState<School | null>(null);
   const [teachers, setTeachers] = useState<SchoolTeacherInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,6 @@ export default function SchoolDetail() {
 
   const fetchSchool = async () => {
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/schools/${schoolId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -60,7 +61,6 @@ export default function SchoolDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/schools/${schoolId}/teachers`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -78,7 +78,6 @@ export default function SchoolDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/schools/${schoolId}/teachers`, {
         method: "POST",
         headers: {

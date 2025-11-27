@@ -3,24 +3,22 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DigitalTeachingToolbar from "@/components/teachingTools/DigitalTeachingToolbar";
 import {
-  Users,
-  GraduationCap,
-  BookOpen,
   LogOut,
-  Home,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   Menu,
   Crown,
   User,
-  Building2,
+  CreditCard,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { getSidebarGroups } from "@/config/sidebarConfig";
+import { useSidebarRoles } from "@/hooks/useSidebarRoles";
+import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
 
 interface TeacherProfile {
   id: number;
@@ -37,14 +35,6 @@ interface SystemConfig {
   environment: string;
 }
 
-interface SidebarItem {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  path: string;
-  adminOnly?: boolean;
-}
-
 interface TeacherLayoutProps {
   children: ReactNode;
 }
@@ -58,11 +48,34 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     null,
   );
   const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(["dashboard", "class-management", "account"]),
+  );
+
+  // 使用 hook 獲取 sidebar 配置和角色過濾
+  const sidebarGroups = getSidebarGroups(t);
+  const { visibleGroups } = useSidebarRoles(
+    sidebarGroups,
+    config,
+    teacherProfile
+  );
 
   useEffect(() => {
     fetchTeacherProfile();
     fetchConfig();
   }, []);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
 
   const fetchTeacherProfile = async () => {
     try {
@@ -91,58 +104,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     apiClient.logout();
     navigate("/teacher/login");
   };
-
-  const allSidebarItems: SidebarItem[] = [
-    {
-      id: "dashboard",
-      label: t("teacherLayout.nav.dashboard"),
-      icon: Home,
-      path: "/teacher/dashboard",
-    },
-    {
-      id: "organizations",
-      label: "機構管理",
-      icon: Building2,
-      path: "/teacher/organizations",
-    },
-    {
-      id: "classrooms",
-      label: t("teacherLayout.nav.myClassrooms"),
-      icon: GraduationCap,
-      path: "/teacher/classrooms",
-    },
-    {
-      id: "students",
-      label: t("teacherLayout.nav.allStudents"),
-      icon: Users,
-      path: "/teacher/students",
-    },
-    {
-      id: "programs",
-      label: t("teacherLayout.nav.publicPrograms"),
-      icon: BookOpen,
-      path: "/teacher/programs",
-    },
-    {
-      id: "subscription",
-      label: t("teacherLayout.nav.subscription"),
-      icon: CreditCard,
-      path: "/teacher/subscription",
-    },
-  ];
-
-  // 根據系統配置過濾選單項目
-  const sidebarItems = allSidebarItems.filter((item) => {
-    // 如果是訂閱選單，只在付款功能啟用時顯示
-    if (item.id === "subscription") {
-      return config?.enablePayment === true;
-    }
-    // 如果是 Admin 選單，只有 is_admin 的人才看得到
-    if (item.adminOnly) {
-      return teacherProfile?.is_admin === true;
-    }
-    return true;
-  });
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -185,27 +146,19 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {sidebarItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            return (
-              <li key={item.id}>
-                <Link to={item.path} className="block" onClick={onNavigate}>
-                  <Button
-                    variant={active ? "default" : "ghost"}
-                    className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {!sidebarCollapsed && (
-                      <span className="ml-2">{item.label}</span>
-                    )}
-                  </Button>
-                </Link>
-              </li>
-            );
-          })}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        <ul className="space-y-1">
+          {visibleGroups.map((group) => (
+            <SidebarGroup
+              key={group.id}
+              group={group}
+              isExpanded={expandedGroups.has(group.id)}
+              isCollapsed={sidebarCollapsed}
+              isActive={isActive}
+              onToggle={() => toggleGroup(group.id)}
+              onNavigate={onNavigate}
+            />
+          ))}
         </ul>
       </nav>
 
@@ -270,6 +223,20 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             )}
           </Button>
         </Link>
+        {config?.enablePayment && (
+          <Link to="/teacher/subscription" className="block mb-2" onClick={onNavigate}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
+            >
+              <CreditCard className="h-4 w-4" />
+              {!sidebarCollapsed && (
+                <span className="ml-2">{t("teacherLayout.nav.subscription")}</span>
+              )}
+            </Button>
+          </Link>
+        )}
         <Button
           variant="ghost"
           size="sm"

@@ -136,7 +136,7 @@ def check_org_permission(
         .filter(
             TeacherOrganization.teacher_id == teacher_id,
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .first()
     )
@@ -211,7 +211,7 @@ async def list_organizations(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .all()
     )
@@ -221,7 +221,7 @@ async def list_organizations(
     # Get organizations
     organizations = (
         db.query(Organization)
-        .filter(Organization.id.in_(org_ids), Organization.is_active is True)
+        .filter(Organization.id.in_(org_ids), Organization.is_active == True)
         .all()
     )
 
@@ -363,7 +363,7 @@ async def list_organization_teachers(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .all()
     )
@@ -413,7 +413,7 @@ async def add_teacher_to_organization(
             TeacherOrganization.teacher_id == teacher.id,
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .first()
     )
@@ -431,7 +431,7 @@ async def add_teacher_to_organization(
             .filter(
                 TeacherOrganization.organization_id == org_id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active is True,
+                TeacherOrganization.is_active == True,
             )
             .first()
         )
@@ -448,7 +448,7 @@ async def add_teacher_to_organization(
         .filter(
             TeacherOrganization.teacher_id == request.teacher_id,
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .first()
     )
@@ -505,7 +505,7 @@ async def remove_teacher_from_organization(
             TeacherOrganization.teacher_id == teacher.id,
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .first()
     )
@@ -522,7 +522,7 @@ async def remove_teacher_from_organization(
         .filter(
             TeacherOrganization.teacher_id == teacher_id,
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active is True,
+            TeacherOrganization.is_active == True,
         )
         .first()
     )

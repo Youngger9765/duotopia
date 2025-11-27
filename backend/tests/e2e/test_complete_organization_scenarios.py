@@ -18,9 +18,6 @@ from models import (
     TeacherOrganization,
     TeacherSchool,
     ClassroomSchool,
-    Program,
-    Assignment,
-    StudentAssignment,
 )
 from services.casbin_service import get_casbin_service
 
@@ -157,7 +154,9 @@ class TestScenario1BasicCramSchool:
         casbin = get_casbin_service()
 
         assert casbin.has_role(self.zhang.id, "org_owner", f"org-{self.org.id}")
-        assert casbin.has_role(self.zhang.id, "school_admin", f"school-{self.school.id}")
+        assert casbin.has_role(
+            self.zhang.id, "school_admin", f"school-{self.school.id}"
+        )
 
 
 # ============================================================
@@ -284,9 +283,7 @@ class TestScenario2MultiBranch:
 
         assert casbin.has_role(self.wang.id, "org_owner", f"org-{self.org.id}")
         assert casbin.has_role(self.chen.id, "org_admin", f"org-{self.org.id}")
-        assert casbin.has_role(
-            self.chen.id, "school_admin", f"school-{self.taipei.id}"
-        )
+        assert casbin.has_role(self.chen.id, "school_admin", f"school-{self.taipei.id}")
 
 
 # ============================================================
@@ -566,7 +563,7 @@ class TestScenario7SoftDelete:
         """只顯示 active 學校"""
         schools = (
             self.db.query(School)
-            .filter(School.organization_id == self.org.id, School.is_active == True)
+            .filter(School.organization_id == self.org.id, School.is_active is True)
             .all()
         )
 
@@ -575,12 +572,10 @@ class TestScenario7SoftDelete:
 
     def test_soft_deleted_school_still_in_db(self):
         """軟刪除的學校還在資料庫"""
-        school = (
-            self.db.query(School).filter(School.id == self.old_school.id).first()
-        )
+        school = self.db.query(School).filter(School.id == self.old_school.id).first()
 
         assert school is not None
-        assert school.is_active == False
+        assert school.is_active is False
 
     def test_reactivate_school(self):
         """重新啟用學校"""
@@ -589,7 +584,7 @@ class TestScenario7SoftDelete:
 
         schools = (
             self.db.query(School)
-            .filter(School.organization_id == self.org.id, School.is_active == True)
+            .filter(School.organization_id == self.org.id, School.is_active is True)
             .all()
         )
 
