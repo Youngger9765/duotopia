@@ -290,3 +290,178 @@ async def delete_organization(
     db.commit()
 
     return {"message": "Organization deleted successfully"}
+
+
+# ============ Teacher Management Endpoints ============
+
+
+class AddTeacherRequest(BaseModel):
+    """Request model for adding teacher to organization"""
+    teacher_id: int
+    role: str = Field(..., pattern="^(org_owner|org_admin)$")
+
+
+class TeacherRelationResponse(BaseModel):
+    """Response model for teacher-organization relationship"""
+    id: int
+    teacher_id: int
+    organization_id: str
+    role: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @classmethod
+    def from_orm(cls, rel: TeacherOrganization):
+        return cls(
+            id=rel.id,
+            teacher_id=rel.teacher_id,
+            organization_id=str(rel.organization_id),
+            role=rel.role,
+            is_active=rel.is_active,
+            created_at=rel.created_at,
+        )
+
+
+@router.post("/{org_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherRelationResponse)
+async def add_teacher_to_organization(
+    org_id: uuid.UUID,
+    request: AddTeacherRequest,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Add a teacher to organization with specified role.
+    Only org_owner can do this.
+    Role can be org_owner or org_admin.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission (only org_owner can add teachers)
+    org = check_org_permission(teacher.id, org_id, db)
+
+    teacher_org_check = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == teacher.id,
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.role == "org_owner",
+        TeacherOrganization.is_active == True
+    ).first()
+
+    if not teacher_org_check:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only org_owner can add teachers to organization"
+        )
+
+    # Check if adding org_owner and limit to 1
+    if request.role == "org_owner":
+        existing_owner = db.query(TeacherOrganization).filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active == True
+        ).first()
+
+        if existing_owner:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization already has an owner"
+            )
+
+    # Check if teacher already has relationship
+    existing = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == request.teacher_id,
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.is_active == True
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Teacher already belongs to this organization"
+        )
+
+    # Verify teacher exists
+    target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
+    if not target_teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found"
+        )
+
+    # Create relationship
+    teacher_org = TeacherOrganization(
+        teacher_id=request.teacher_id,
+        organization_id=org_id,
+        role=request.role,
+        is_active=True,
+    )
+    db.add(teacher_org)
+    db.commit()
+    db.refresh(teacher_org)
+
+    # Add Casbin role
+    casbin_service.add_role_for_user(
+        request.teacher_id,
+        request.role,
+        f"org-{org_id}"
+    )
+
+    return TeacherRelationResponse.from_orm(teacher_org)
+
+
+@router.delete("/{org_id}/teachers/{teacher_id}")
+async def remove_teacher_from_organization(
+    org_id: uuid.UUID,
+    teacher_id: int,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove a teacher from organization (soft delete).
+    Only org_owner can do this.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission
+    check_org_permission(teacher.id, org_id, db)
+
+    teacher_org_check = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == teacher.id,
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.role == "org_owner",
+        TeacherOrganization.is_active == True
+    ).first()
+
+    if not teacher_org_check:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only org_owner can remove teachers from organization"
+        )
+
+    # Find relationship
+    teacher_org = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == teacher_id,
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.is_active == True
+    ).first()
+
+    if not teacher_org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher relationship not found"
+        )
+
+    # Soft delete
+    teacher_org.is_active = False
+    db.commit()
+
+    # Remove Casbin role
+    casbin_service.delete_role_for_user(
+        teacher_id,
+        teacher_org.role,
+        f"org-{org_id}"
+    )
+
+    return {"message": "Teacher removed from organization successfully"}
