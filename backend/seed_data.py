@@ -26,6 +26,11 @@ from models import (
     ContentType,
     AssignmentStatus,
     SubscriptionPeriod,
+    Organization,
+    School,
+    TeacherOrganization,
+    TeacherSchool,
+    ClassroomSchool,
 )
 from auth import get_password_hash  # noqa: E402
 
@@ -176,7 +181,97 @@ def create_demo_data(db: Session):
     print("   - trial@duotopia.com: 18000秒配額（30天試用）")
     print("   - expired@duotopia.com: 無訂閱週期")
 
-    # ============ 2. Demo 班級 ============
+    # ============ 2. Demo 機構和學校 ============
+    # 2.1 創建示範機構
+    demo_org = Organization(
+        name="duotopia-demo-school",
+        display_name="Duotopia 示範學校",
+        description="展示多租戶機構階層功能的示範機構",
+        contact_email="contact@duotopia.com",
+        contact_phone="+886-2-1234-5678",
+        address="台北市信義區信義路五段7號",
+        is_active=True,
+    )
+    db.add(demo_org)
+    db.commit()
+    db.refresh(demo_org)
+    print("✅ 建立示範機構: Duotopia 示範學校")
+
+    # 2.2 Demo 老師成為機構擁有人
+    demo_teacher_org = TeacherOrganization(
+        teacher_id=demo_teacher.id,
+        organization_id=demo_org.id,
+        role="org_owner",
+        is_active=True,
+    )
+    db.add(demo_teacher_org)
+
+    # Trial 老師成為機構管理員
+    trial_teacher_org = TeacherOrganization(
+        teacher_id=trial_teacher.id,
+        organization_id=demo_org.id,
+        role="org_admin",
+        is_active=True,
+    )
+    db.add(trial_teacher_org)
+    db.commit()
+    print("✅ 設定機構成員:")
+    print("   - demo@duotopia.com: org_owner")
+    print("   - trial@duotopia.com: org_admin")
+
+    # 2.3 創建分校
+    taipei_school = School(
+        organization_id=demo_org.id,
+        name="taipei-branch",
+        display_name="台北分校",
+        description="位於台北市的主要教學據點",
+        contact_email="taipei@duotopia.com",
+        contact_phone="+886-2-8888-0001",
+        address="台北市大安區復興南路一段390號",
+        is_active=True,
+    )
+
+    taichung_school = School(
+        organization_id=demo_org.id,
+        name="taichung-branch",
+        display_name="台中分校",
+        description="位於台中市的教學據點",
+        contact_email="taichung@duotopia.com",
+        contact_phone="+886-4-2222-0002",
+        address="台中市西區公益路68號",
+        is_active=True,
+    )
+
+    db.add_all([taipei_school, taichung_school])
+    db.commit()
+    db.refresh(taipei_school)
+    db.refresh(taichung_school)
+    print("✅ 建立 2 所分校: 台北分校、台中分校")
+
+    # 2.4 設定分校教師關係
+    # Demo 老師是台北分校的校長兼教師
+    demo_taipei_relation = TeacherSchool(
+        teacher_id=demo_teacher.id,
+        school_id=taipei_school.id,
+        roles=["school_admin", "teacher"],
+        is_active=True,
+    )
+    db.add(demo_taipei_relation)
+
+    # Trial 老師是台中分校的教師
+    trial_taichung_relation = TeacherSchool(
+        teacher_id=trial_teacher.id,
+        school_id=taichung_school.id,
+        roles=["teacher"],
+        is_active=True,
+    )
+    db.add(trial_taichung_relation)
+    db.commit()
+    print("✅ 設定分校教師:")
+    print("   - 台北分校: demo老師 (校長+教師)")
+    print("   - 台中分校: trial老師 (教師)")
+
+    # ============ 3. Demo 班級 ============
     classroom_a = Classroom(
         name="五年級A班",
         description="國小五年級英語基礎班",
@@ -195,9 +290,28 @@ def create_demo_data(db: Session):
 
     db.add_all([classroom_a, classroom_b])
     db.commit()
+    db.refresh(classroom_a)
+    db.refresh(classroom_b)
     print("✅ 建立 2 個班級: 五年級A班、六年級B班")
 
-    # ============ 3. Demo 學生（統一密碼：20120101）============
+    # 3.1 將班級綁定到分校
+    classroom_a_school = ClassroomSchool(
+        classroom_id=classroom_a.id,
+        school_id=taipei_school.id,
+        is_active=True,
+    )
+    classroom_b_school = ClassroomSchool(
+        classroom_id=classroom_b.id,
+        school_id=taipei_school.id,
+        is_active=True,
+    )
+    db.add_all([classroom_a_school, classroom_b_school])
+    db.commit()
+    print("✅ 班級綁定到分校:")
+    print("   - 五年級A班 → 台北分校")
+    print("   - 六年級B班 → 台北分校")
+
+    # ============ 4. Demo 學生（統一密碼：20120101）============
     common_birthdate = date(2012, 1, 1)
     common_password = get_password_hash("20120101")
 
