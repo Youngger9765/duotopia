@@ -13,6 +13,7 @@ import {
   Menu,
   Crown,
   User,
+  Building2,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -96,6 +97,12 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       label: t("teacherLayout.nav.dashboard"),
       icon: Home,
       path: "/teacher/dashboard",
+    },
+    {
+      id: "organizations",
+      label: "機構管理",
+      icon: Building2,
+      path: "/teacher/organizations",
     },
     {
       id: "classrooms",
