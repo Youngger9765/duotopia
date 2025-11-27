@@ -49,6 +49,7 @@ from routers import (
     cron,
     organizations,
     schools,
+    classroom_schools,
 )
 from routes import logs
 from api import debug
@@ -256,6 +257,7 @@ app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(organizations.router)  # 機構管理路由
 app.include_router(schools.router)  # 學校管理路由
+app.include_router(classroom_schools.router)  # 班級-學校關聯路由
 app.include_router(assignments.router)
 app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
