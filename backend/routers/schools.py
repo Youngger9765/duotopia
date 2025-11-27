@@ -141,7 +141,7 @@ def check_org_permission(
             TeacherOrganization.teacher_id == teacher_id,
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.role.in_(["org_owner", "org_admin"]),
-            TeacherOrganization.is_active == True,
+            TeacherOrganization.is_active is True,
         )
         .first()
     )
@@ -230,7 +230,7 @@ async def list_schools(
         .filter(
             TeacherOrganization.teacher_id == teacher.id,
             TeacherOrganization.role.in_(["org_owner", "org_admin"]),
-            TeacherOrganization.is_active == True,
+            TeacherOrganization.is_active is True,
         )
         .all()
     )
@@ -239,7 +239,7 @@ async def list_schools(
 
     # Build query
     query = db.query(School).filter(
-        School.organization_id.in_(org_ids), School.is_active == True
+        School.organization_id.in_(org_ids), School.is_active is True
     )
 
     # Apply organization filter if provided
@@ -389,7 +389,7 @@ async def list_school_teachers(
     # Get all teacher relationships
     teacher_schools = (
         db.query(TeacherSchool)
-        .filter(TeacherSchool.school_id == school_id, TeacherSchool.is_active == True)
+        .filter(TeacherSchool.school_id == school_id, TeacherSchool.is_active is True)
         .all()
     )
 
@@ -446,7 +446,7 @@ async def add_teacher_to_school(
         .filter(
             TeacherSchool.teacher_id == request.teacher_id,
             TeacherSchool.school_id == school_id,
-            TeacherSchool.is_active == True,
+            TeacherSchool.is_active is True,
         )
         .first()
     )
@@ -518,7 +518,7 @@ async def update_teacher_school_roles(
         .filter(
             TeacherSchool.teacher_id == teacher_id,
             TeacherSchool.school_id == school_id,
-            TeacherSchool.is_active == True,
+            TeacherSchool.is_active is True,
         )
         .first()
     )
@@ -570,7 +570,7 @@ async def remove_teacher_from_school(
         .filter(
             TeacherSchool.teacher_id == teacher_id,
             TeacherSchool.school_id == school_id,
-            TeacherSchool.is_active == True,
+            TeacherSchool.is_active is True,
         )
         .first()
     )

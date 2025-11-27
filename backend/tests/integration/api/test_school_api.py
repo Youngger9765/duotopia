@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 import uuid
 
+from models import Teacher, Organization, School, TeacherOrganization
 from auth import create_access_token
 from services.casbin_service import get_casbin_service
 
