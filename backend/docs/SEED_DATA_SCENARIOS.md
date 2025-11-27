@@ -71,21 +71,28 @@ The seed data (`backend/seed_data.py`) provides **comprehensive test scenarios**
 
 ---
 
-### 2. 測試機構 (Test Organization)
+### 2. 獨立老師（個體戶模式）
 
-**Organization Details**:
-- Name: `test-organization`
-- Display Name: "測試機構"
-- Contact: test@example.com
-- Status: `is_active=True`
+**Teacher**: **expired@duotopia.com**
 
-**Members**:
-- **expired@duotopia.com**: `org_owner`
+**Organization Membership**: NONE (獨立老師)
 
-**Purpose**: Test cross-organization isolation
-- Teachers from "Duotopia 示範學校" should NOT see this organization
-- Teachers from this organization should NOT see "Duotopia 示範學校" data
-- Validates domain-based permission isolation
+**Purpose**: Test backward compatibility and individual teacher mode
+- ✅ Teachers are NOT required to join organizations
+- ✅ Core features (classrooms, students, assignments) work independently
+- ✅ Organization hierarchy is OPTIONAL
+- ✅ Validates that system supports "individual teacher" (個體戶) use case
+
+**Validation**:
+```bash
+# Login as expired teacher
+GET /api/organizations
+# Should return: [] (empty - no organization membership)
+
+GET /api/classrooms
+# Should return classrooms created by this teacher (if any)
+# Organization features should NOT block basic teacher functionality
+```
 
 ---
 
@@ -131,22 +138,26 @@ GET /api/schools/{taipei_school_id}
 # Should return 403 Forbidden (no access to Taipei school)
 ```
 
-### Scenario 4: Cross-Organization Isolation ✅
-**Test**: Teachers cannot access other organizations
+### Scenario 4: Independent Teacher Mode (個體戶) ✅
+**Test**: Teachers can operate without joining organizations
 
 **Data**:
-- demo/trial teachers → "Duotopia 示範學校"
-- expired teacher → "測試機構"
+- demo/trial teachers → "Duotopia 示範學校" (organization members)
+- expired teacher → INDEPENDENT (no organization)
 
 **Validation**:
 ```bash
 # Login as demo teacher
 GET /api/organizations
-# Should return ONLY: "Duotopia 示範學校" (NOT "測試機構")
+# Should return: ["Duotopia 示範學校"]
 
 # Login as expired teacher
 GET /api/organizations
-# Should return ONLY: "測試機構" (NOT "Duotopia 示範學校")
+# Should return: [] (empty - not a member of any organization)
+
+# Verify expired teacher can still use core features
+GET /api/classrooms
+# Should work normally (organization features are OPTIONAL)
 ```
 
 ### Scenario 5: Soft Delete Filtering ✅
@@ -231,12 +242,11 @@ assert casbin.has_role(demo_teacher.id, "school_admin", f"school-{taipei_school.
    - Has 1 classroom: 三年級C班
 
 3. **expired@duotopia.com**
-   - org_owner @ 測試機構
-   - No schools (for isolation testing)
+   - INDEPENDENT (獨立老師 - no organization)
+   - Tests backward compatibility (organization features are OPTIONAL)
 
-### Organizations (2 total)
+### Organizations (1 total)
 1. Duotopia 示範學校 (active)
-2. 測試機構 (active)
 
 ### Schools (3 total, 1 inactive)
 1. 台北分校 (active) - 2 classrooms
@@ -248,10 +258,10 @@ assert casbin.has_role(demo_teacher.id, "school_admin", f"school-{taipei_school.
 2. 六年級B班 → 台北分校 (15 students)
 3. 三年級C班 → 台中分校 (0 students)
 
-### Teacher-Organization Relationships (3 total)
+### Teacher-Organization Relationships (2 total)
 1. demo → Duotopia 示範學校 (org_owner)
 2. trial → Duotopia 示範學校 (org_admin)
-3. expired → 測試機構 (org_owner)
+**Note**: expired teacher has NO organization (independent teacher mode)
 
 ### Teacher-School Relationships (2 total)
 1. demo → 台北分校 ["school_admin", "teacher"]
@@ -334,16 +344,16 @@ GET /api/schools/{taichung_id}/classrooms
 → [三年級C班]
 ```
 
-### As expired@duotopia.com (different org):
+### As expired@duotopia.com (independent teacher):
 ```bash
 GET /api/organizations
-→ [測試機構]  # NOT Duotopia 示範學校
+→ []  # No organization membership (個體戶模式)
 
 GET /api/schools
-→ []  # No schools in 測試機構 yet
+→ []  # Not a member of any organization
 
-GET /api/schools/{taipei_id}
-→ 403 Forbidden  # Cannot access other org's schools
+GET /api/classrooms
+→ [classrooms created by this teacher]  # Core features still work
 ```
 
 ---
@@ -352,15 +362,16 @@ GET /api/schools/{taipei_id}
 
 After running seed data, verify:
 
-- [ ] 2 organizations created
+- [ ] 1 organization created (Duotopia 示範學校)
 - [ ] 3 schools created (2 active, 1 inactive)
 - [ ] 3 classrooms created and linked to schools
-- [ ] 3 teacher-organization relationships
+- [ ] 2 teacher-organization relationships (demo, trial)
 - [ ] 2 teacher-school relationships
+- [ ] 1 independent teacher (expired - no organization)
 - [ ] demo teacher has multi-role at 台北分校
 - [ ] trial teacher has single role at 台中分校
 - [ ] 舊分校 is soft deleted (is_active=False)
-- [ ] Cross-org isolation works (expired teacher isolated)
+- [ ] expired teacher has NO organization membership (個體戶模式)
 - [ ] Casbin roles synchronized with DB relationships
 
 ---
@@ -369,10 +380,11 @@ After running seed data, verify:
 
 When deploying to production:
 
-1. **Remove Test Data**: Delete "測試機構" and expired teacher
-2. **Keep Demo Data**: Keep "Duotopia 示範學校" for demos
-3. **Clean Up**: Remove inactive schools or reactivate them
+1. **Keep Demo Data**: Keep "Duotopia 示範學校" for demos
+2. **Keep Independent Teacher**: Keep expired teacher to demonstrate optional organization features
+3. **Clean Up**: Remove inactive schools (舊分校) or reactivate them
 4. **Verify Casbin**: Ensure all roles are synced with `casbin_service.load_policy()`
+5. **Document**: Ensure users understand organizations are OPTIONAL
 
 ---
 
