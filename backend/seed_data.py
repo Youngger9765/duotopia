@@ -4,7 +4,7 @@ Seed data for Duotopia - 新作業系統架構
 覆蓋所有作業系統情境（教師端和學生端）
 """
 
-from datetime import datetime, date, timedelta  # noqa: F401
+from datetime import datetime, date, timedelta, timezone  # noqa: F401
 import random
 from sqlalchemy.orm import Session
 from database import get_engine, Base
@@ -181,97 +181,167 @@ def create_demo_data(db: Session):
     print("   - trial@duotopia.com: 18000秒配額（30天試用）")
     print("   - expired@duotopia.com: 無訂閱週期")
 
-    # ============ 2. Demo 機構和學校 ============
-    # 2.1 創建示範機構
-    demo_org = Organization(
-        name="duotopia-demo-school",
-        display_name="Duotopia 示範學校",
-        description="展示多租戶機構階層功能的示範機構",
-        contact_email="contact@duotopia.com",
-        contact_phone="+886-2-1234-5678",
-        address="台北市信義區信義路五段7號",
+    # ============ 2. 機構測試帳號（4個新帳號）============
+    # 🔴 重要：demo, trial, expired 保持為獨立老師，不加入機構
+
+    print("\n🏢 建立機構測試帳號...")
+
+    # 2.1 創建 4 個新教師帳號
+    # 機構擁有者
+    org_owner_teacher = Teacher(
+        email="owner@duotopia.com",
+        name="張機構",
+        password_hash=get_password_hash("owner123"),
+        is_active=True,
+        is_demo=False,
+    )
+
+    # 機構管理員
+    org_admin_teacher = Teacher(
+        email="orgadmin@duotopia.com",
+        name="李管理",
+        password_hash=get_password_hash("orgadmin123"),
+        is_active=True,
+        is_demo=False,
+    )
+
+    # 學校管理員
+    school_admin_teacher = Teacher(
+        email="schooladmin@duotopia.com",
+        name="王校長",
+        password_hash=get_password_hash("schooladmin123"),
+        is_active=True,
+        is_demo=False,
+    )
+
+    # 普通教師
+    org_teacher = Teacher(
+        email="orgteacher@duotopia.com",
+        name="陳老師",
+        password_hash=get_password_hash("orgteacher123"),
+        is_active=True,
+        is_demo=False,
+    )
+
+    db.add_all([org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher])
+    db.commit()
+    db.refresh(org_owner_teacher)
+    db.refresh(org_admin_teacher)
+    db.refresh(school_admin_teacher)
+    db.refresh(org_teacher)
+    print("✅ 建立 4 個機構測試帳號")
+
+    # 2.2 為機構測試帳號創建訂閱（給予充足配額）
+    for teacher in [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher]:
+        period = SubscriptionPeriod(
+            teacher_id=teacher.id,
+            plan_name="School Teachers",  # 使用學校版方案
+            amount_paid=660,  # 學校版金額
+            quota_total=25000,  # 25000 點配額
+            quota_used=0,  # 未使用
+            start_date=datetime.now(timezone.utc),
+            end_date=datetime.now(timezone.utc) + timedelta(days=365),
+            payment_method="manual",  # 手動付款（seed data）
+            payment_status="paid",  # 已付款
+            status="active",  # 啟用中
+        )
+        db.add(period)
+    db.commit()
+    print("✅ 為機構測試帳號建立訂閱（365天，25000點配額）")
+
+    # 2.3 創建測試機構
+    test_org = Organization(
+        name="test-cram-school",
+        display_name="測試補習班",
+        description="用於測試多租戶機構階層功能",
+        contact_email="contact@test-cram.com",
+        contact_phone="+886-2-9999-8888",
+        address="新北市板橋區中山路一段100號",
         is_active=True,
     )
-    db.add(demo_org)
+    db.add(test_org)
     db.commit()
-    db.refresh(demo_org)
-    print("✅ 建立示範機構: Duotopia 示範學校")
+    db.refresh(test_org)
+    print("✅ 建立測試機構: 測試補習班")
 
-    # 2.2 Demo 老師成為機構擁有人
-    demo_teacher_org = TeacherOrganization(
-        teacher_id=demo_teacher.id,
-        organization_id=demo_org.id,
+    # 2.4 設定機構成員
+    # 張機構 = 機構擁有者
+    owner_org_rel = TeacherOrganization(
+        teacher_id=org_owner_teacher.id,
+        organization_id=test_org.id,
         role="org_owner",
         is_active=True,
     )
-    db.add(demo_teacher_org)
+    db.add(owner_org_rel)
 
-    # Trial 老師成為機構管理員
-    trial_teacher_org = TeacherOrganization(
-        teacher_id=trial_teacher.id,
-        organization_id=demo_org.id,
+    # 李管理 = 機構管理員
+    admin_org_rel = TeacherOrganization(
+        teacher_id=org_admin_teacher.id,
+        organization_id=test_org.id,
         role="org_admin",
         is_active=True,
     )
-    db.add(trial_teacher_org)
+    db.add(admin_org_rel)
     db.commit()
     print("✅ 設定機構成員:")
-    print("   - demo@duotopia.com: org_owner")
-    print("   - trial@duotopia.com: org_admin")
+    print("   - owner@duotopia.com (張機構): org_owner")
+    print("   - orgadmin@duotopia.com (李管理): org_admin")
 
-    # 2.3 創建分校
-    taipei_school = School(
-        organization_id=demo_org.id,
+    # 2.5 創建分校（屬於測試機構）
+    main_school = School(
+        organization_id=test_org.id,
+        name="main-branch",
+        display_name="總校",
+        description="測試補習班的主要教學據點",
+        contact_email="main@test-cram.com",
+        contact_phone="+886-2-8888-0001",
+        address="新北市板橋區文化路一段100號",
+        is_active=True,
+    )
+
+    branch_school = School(
+        organization_id=test_org.id,
         name="taipei-branch",
         display_name="台北分校",
-        description="位於台北市的主要教學據點",
-        contact_email="taipei@duotopia.com",
-        contact_phone="+886-2-8888-0001",
-        address="台北市大安區復興南路一段390號",
+        description="測試補習班台北分校",
+        contact_email="taipei@test-cram.com",
+        contact_phone="+886-2-6666-0002",
+        address="台北市中正區羅斯福路一段50號",
         is_active=True,
     )
 
-    taichung_school = School(
-        organization_id=demo_org.id,
-        name="taichung-branch",
-        display_name="台中分校",
-        description="位於台中市的教學據點",
-        contact_email="taichung@duotopia.com",
-        contact_phone="+886-4-2222-0002",
-        address="台中市西區公益路68號",
-        is_active=True,
-    )
-
-    db.add_all([taipei_school, taichung_school])
+    db.add_all([main_school, branch_school])
     db.commit()
-    db.refresh(taipei_school)
-    db.refresh(taichung_school)
-    print("✅ 建立 2 所分校: 台北分校、台中分校")
+    db.refresh(main_school)
+    db.refresh(branch_school)
+    print("✅ 建立 2 所分校: 總校、台北分校")
 
-    # 2.4 設定分校教師關係
-    # Demo 老師是台北分校的校長兼教師
-    demo_taipei_relation = TeacherSchool(
-        teacher_id=demo_teacher.id,
-        school_id=taipei_school.id,
-        roles=["school_admin", "teacher"],
+    # 2.6 設定分校教師關係
+    # 王校長 = 總校的學校管理員
+    school_admin_rel = TeacherSchool(
+        teacher_id=school_admin_teacher.id,
+        school_id=main_school.id,
+        roles=["school_admin"],
         is_active=True,
     )
-    db.add(demo_taipei_relation)
+    db.add(school_admin_rel)
 
-    # Trial 老師是台中分校的教師
-    trial_taichung_relation = TeacherSchool(
-        teacher_id=trial_teacher.id,
-        school_id=taichung_school.id,
+    # 陳老師 = 台北分校的教師
+    teacher_rel = TeacherSchool(
+        teacher_id=org_teacher.id,
+        school_id=branch_school.id,
         roles=["teacher"],
         is_active=True,
     )
-    db.add(trial_taichung_relation)
+    db.add(teacher_rel)
     db.commit()
     print("✅ 設定分校教師:")
-    print("   - 台北分校: demo老師 (校長+教師)")
-    print("   - 台中分校: trial老師 (教師)")
+    print("   - schooladmin@duotopia.com (王校長): 總校 school_admin")
+    print("   - orgteacher@duotopia.com (陳老師): 台北分校 teacher")
 
-    # ============ 3. Demo 班級 ============
+    # ============ 3. 班級資料 ============
+
+    # 3.1 Demo 老師的班級（獨立，不屬於任何機構/學校）
     classroom_a = Classroom(
         name="五年級A班",
         description="國小五年級英語基礎班",
@@ -292,53 +362,53 @@ def create_demo_data(db: Session):
     db.commit()
     db.refresh(classroom_a)
     db.refresh(classroom_b)
-    print("✅ 建立 2 個班級: 五年級A班、六年級B班")
+    print("✅ 建立 demo 老師的獨立班級: 五年級A班、六年級B班（不屬於機構）")
 
-    # 3.1 將班級綁定到分校
-    classroom_a_school = ClassroomSchool(
-        classroom_id=classroom_a.id,
-        school_id=taipei_school.id,
+    # 3.2 機構測試帳號的班級
+    # 王校長（總校）的班級
+    org_classroom_a = Classroom(
+        name="機構初級A班",
+        description="測試補習班初級英語班",
+        level=ProgramLevel.A1,
+        teacher_id=school_admin_teacher.id,
         is_active=True,
     )
-    classroom_b_school = ClassroomSchool(
-        classroom_id=classroom_b.id,
-        school_id=taipei_school.id,
+
+    # 陳老師（台北分校）的班級
+    org_classroom_b = Classroom(
+        name="機構進階B班",
+        description="測試補習班進階英語班",
+        level=ProgramLevel.A2,
+        teacher_id=org_teacher.id,
         is_active=True,
     )
-    db.add_all([classroom_a_school, classroom_b_school])
+
+    db.add_all([org_classroom_a, org_classroom_b])
+    db.commit()
+    db.refresh(org_classroom_a)
+    db.refresh(org_classroom_b)
+    print("✅ 建立機構班級: 機構初級A班、機構進階B班")
+
+    # 3.3 將機構班級綁定到分校
+    org_classroom_a_school = ClassroomSchool(
+        classroom_id=org_classroom_a.id,
+        school_id=main_school.id,
+        is_active=True,
+    )
+    org_classroom_b_school = ClassroomSchool(
+        classroom_id=org_classroom_b.id,
+        school_id=branch_school.id,
+        is_active=True,
+    )
+    db.add_all([org_classroom_a_school, org_classroom_b_school])
     db.commit()
     print("✅ 班級綁定到分校:")
-    print("   - 五年級A班 → 台北分校")
-    print("   - 六年級B班 → 台北分校")
+    print("   - 機構初級A班 → 總校")
+    print("   - 機構進階B班 → 台北分校")
 
-    # ============ 2.5 額外測試場景資料 ============
-    # 🔴 重要: expired 老師保持為「獨立老師」，不加入任何機構
-    # 這是測試「個體戶」模式的關鍵場景
-
-    # 場景2: 在台中分校創建另一個班級 (測試不同分校的班級)
-    classroom_c = Classroom(
-        name="三年級C班",
-        description="台中分校國小三年級英語入門班",
-        level=ProgramLevel.A1,
-        teacher_id=trial_teacher.id,
-        is_active=True,
-    )
-    db.add(classroom_c)
-    db.commit()
-    db.refresh(classroom_c)
-
-    # 綁定到台中分校
-    classroom_c_school = ClassroomSchool(
-        classroom_id=classroom_c.id,
-        school_id=taichung_school.id,
-        is_active=True,
-    )
-    db.add(classroom_c_school)
-    db.commit()
-
-    # 場景3: 創建一個 inactive 的分校 (測試 soft delete)
+    # 3.4 測試場景：創建一個 inactive 的分校 (測試 soft delete)
     inactive_school = School(
-        organization_id=demo_org.id,
+        organization_id=test_org.id,
         name="old-branch",
         display_name="舊分校",
         description="已關閉的分校（用於測試 soft delete）",
@@ -346,11 +416,11 @@ def create_demo_data(db: Session):
     )
     db.add(inactive_school)
     db.commit()
+    print("✅ 額外測試場景: 舊分校 (is_active=False)")
 
-    print("✅ 額外測試場景資料:")
-    print("   - expired 老師: 獨立老師（未加入任何機構）")
-    print("   - 三年級C班 → 台中分校")
-    print("   - 舊分校 (is_active=False)")
+    print("\n📝 重要提醒:")
+    print("   - demo, trial, expired 三個帳號保持為獨立老師")
+    print("   - 機構測試使用 4 個新帳號: owner, orgadmin, schooladmin, orgteacher")
 
     # ============ 4. Demo 學生（統一密碼：20120101）============
     common_birthdate = date(2012, 1, 1)
@@ -457,7 +527,55 @@ def create_demo_data(db: Session):
         db.add(enrollment)
 
     db.commit()
-    print("✅ 學生已加入班級")
+    print("✅ Demo 老師的學生已加入班級")
+
+    # 4.2 為機構班級添加學生
+    # 機構初級A班（王校長 @ 總校）
+    org_students_a = []
+    for i in range(1, 6):  # 5位學生
+        student = Student(
+            name=f"機構學生A{i}",
+            email=f"org_student_a{i}@test.com",
+            password_hash=common_password,
+            birthdate=common_birthdate,
+            student_number=f"ORG-A{i:03d}",
+            is_active=True,
+        )
+        org_students_a.append(student)
+
+    # 機構進階B班（陳老師 @ 台北分校）
+    org_students_b = []
+    for i in range(1, 9):  # 8位學生
+        student = Student(
+            name=f"機構學生B{i}",
+            email=f"org_student_b{i}@test.com",
+            password_hash=common_password,
+            birthdate=common_birthdate,
+            student_number=f"ORG-B{i:03d}",
+            is_active=True,
+        )
+        org_students_b.append(student)
+
+    all_org_students = org_students_a + org_students_b
+    db.add_all(all_org_students)
+    db.commit()
+    print(f"✅ 建立 {len(all_org_students)} 位機構學生（初級A班5位，進階B班8位）")
+
+    # 學生加入機構班級
+    for student in org_students_a:
+        enrollment = ClassroomStudent(
+            classroom_id=org_classroom_a.id, student_id=student.id, is_active=True
+        )
+        db.add(enrollment)
+
+    for student in org_students_b:
+        enrollment = ClassroomStudent(
+            classroom_id=org_classroom_b.id, student_id=student.id, is_active=True
+        )
+        db.add(enrollment)
+
+    db.commit()
+    print("✅ 機構學生已加入班級")
 
     # ============ 5. Demo 課程（三層結構）============
     # 五年級A班課程
@@ -2046,19 +2164,43 @@ def create_demo_data(db: Session):
     print("🎉 Demo 資料建立完成！")
     print("=" * 60)
     print("\n📝 測試帳號：")
-    print("\n【教師登入】")
+    print("\n【獨立教師帳號 - 不屬於機構】")
     print("\n  1️⃣ 已充值帳號（剩餘300天）:")
     print("     Email: demo@duotopia.com")
     print("     密碼: demo123")
     print("     狀態: ✅ 已訂閱，剩餘300天")
+    print("     身份: 獨立老師（五年級A班、六年級B班）")
     print("\n  2️⃣ 未充值/過期帳號:")
     print("     Email: expired@duotopia.com")
     print("     密碼: demo123")
     print("     狀態: ❌ 未訂閱/已過期（10天前過期）")
+    print("     身份: 獨立老師")
     print("\n  3️⃣ 試用期帳號（剩餘30天）:")
     print("     Email: trial@duotopia.com")
     print("     密碼: demo123")
     print("     狀態: 🎁 試用期，剩餘30天")
+    print("     身份: 獨立老師")
+    print("\n【機構測試帳號 - 測試補習班】")
+    print("\n  4️⃣ 機構擁有者 (org_owner):")
+    print("     Email: owner@duotopia.com")
+    print("     密碼: owner123")
+    print("     機構: 測試補習班")
+    print("     權限: 可管理整個機構、所有分校")
+    print("\n  5️⃣ 機構管理員 (org_admin):")
+    print("     Email: orgadmin@duotopia.com")
+    print("     密碼: orgadmin123")
+    print("     機構: 測試補習班")
+    print("     權限: 可訪問所有分校、管理教師")
+    print("\n  6️⃣ 學校管理員 (school_admin):")
+    print("     Email: schooladmin@duotopia.com")
+    print("     密碼: schooladmin123")
+    print("     機構: 測試補習班 - 總校")
+    print("     權限: 只能管理總校、機構初級A班（5位學生）")
+    print("\n  7️⃣ 普通教師 (teacher):")
+    print("     Email: orgteacher@duotopia.com")
+    print("     密碼: orgteacher123")
+    print("     機構: 測試補習班 - 台北分校")
+    print("     權限: 只能訪問台北分校、機構進階B班（8位學生）")
     print("\n【學生登入】")
     print("  方式: 選擇教師 demo@duotopia.com → 選擇班級 → 選擇學生")
     print("\n  五年級A班:")
