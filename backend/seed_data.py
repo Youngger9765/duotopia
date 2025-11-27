@@ -311,6 +311,66 @@ def create_demo_data(db: Session):
     print("   - 五年級A班 → 台北分校")
     print("   - 六年級B班 → 台北分校")
 
+    # ============ 2.5 額外測試場景資料 ============
+    # 場景1: 創建第二個機構 (用於測試跨機構隔離)
+    test_org = Organization(
+        name="test-organization",
+        display_name="測試機構",
+        description="用於測試跨機構資料隔離的測試機構",
+        contact_email="test@example.com",
+        is_active=True,
+    )
+    db.add(test_org)
+    db.commit()
+    db.refresh(test_org)
+
+    # Expired 老師成為測試機構的 owner (測試不同機構隔離)
+    expired_teacher_org = TeacherOrganization(
+        teacher_id=expired_teacher.id,
+        organization_id=test_org.id,
+        role="org_owner",
+        is_active=True,
+    )
+    db.add(expired_teacher_org)
+    db.commit()
+
+    # 場景2: 在台中分校創建另一個班級 (測試不同分校的班級)
+    classroom_c = Classroom(
+        name="三年級C班",
+        description="台中分校國小三年級英語入門班",
+        level=ProgramLevel.A1,
+        teacher_id=trial_teacher.id,
+        is_active=True,
+    )
+    db.add(classroom_c)
+    db.commit()
+    db.refresh(classroom_c)
+
+    # 綁定到台中分校
+    classroom_c_school = ClassroomSchool(
+        classroom_id=classroom_c.id,
+        school_id=taichung_school.id,
+        is_active=True,
+    )
+    db.add(classroom_c_school)
+    db.commit()
+
+    # 場景3: 創建一個 inactive 的分校 (測試 soft delete)
+    inactive_school = School(
+        organization_id=demo_org.id,
+        name="old-branch",
+        display_name="舊分校",
+        description="已關閉的分校（用於測試 soft delete）",
+        is_active=False,  # Soft deleted
+    )
+    db.add(inactive_school)
+    db.commit()
+
+    print("✅ 額外測試場景資料:")
+    print("   - 測試機構 (expired 老師為 owner)")
+    print("   - 三年級C班 → 台中分校")
+    print("   - 舊分校 (is_active=False)")
+
     # ============ 4. Demo 學生（統一密碼：20120101）============
     common_birthdate = date(2012, 1, 1)
     common_password = get_password_hash("20120101")
