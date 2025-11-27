@@ -19,6 +19,10 @@ import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
+import OrganizationManagement from "./pages/teacher/OrganizationManagement";
+import OrganizationDetail from "./pages/teacher/OrganizationDetail";
+import SchoolManagement from "./pages/teacher/SchoolManagement";
+import SchoolDetail from "./pages/teacher/SchoolDetail";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentAssignmentList from "./pages/student/StudentAssignmentList";
@@ -191,6 +195,46 @@ function App() {
           element={
             <ProtectedRoute>
               <TeacherProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/organizations"
+          element={
+            <ProtectedRoute>
+              <OrganizationManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/organizations/:orgId"
+          element={
+            <ProtectedRoute>
+              <OrganizationDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/organizations/:orgId/schools"
+          element={
+            <ProtectedRoute>
+              <SchoolManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/schools"
+          element={
+            <ProtectedRoute>
+              <SchoolManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/schools/:schoolId"
+          element={
+            <ProtectedRoute>
+              <SchoolDetail />
             </ProtectedRoute>
           }
         />

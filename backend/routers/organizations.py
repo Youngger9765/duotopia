@@ -325,6 +325,54 @@ class TeacherRelationResponse(BaseModel):
         )
 
 
+class TeacherInfo(BaseModel):
+    """Teacher information in organization"""
+    id: int
+    email: str
+    name: str
+    role: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{org_id}/teachers", response_model=List[TeacherInfo])
+async def list_organization_teachers(
+    org_id: uuid.UUID,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    List all teachers in an organization.
+    Requires teacher to be a member of the organization.
+    """
+    # Check permission
+    check_org_permission(teacher.id, org_id, db)
+
+    # Get all teacher relationships
+    teacher_orgs = db.query(TeacherOrganization).filter(
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.is_active == True
+    ).all()
+
+    result = []
+    for to in teacher_orgs:
+        t = db.query(Teacher).filter(Teacher.id == to.teacher_id).first()
+        if t:
+            result.append(TeacherInfo(
+                id=t.id,
+                email=t.email,
+                name=t.name,
+                role=to.role,
+                is_active=to.is_active,
+                created_at=to.created_at,
+            ))
+
+    return result
+
+
 @router.post("/{org_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherRelationResponse)
 async def add_teacher_to_organization(
     org_id: uuid.UUID,

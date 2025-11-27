@@ -353,6 +353,54 @@ class TeacherSchoolRelationResponse(BaseModel):
         )
 
 
+class SchoolTeacherInfo(BaseModel):
+    """Teacher information in school"""
+    id: int
+    email: str
+    name: str
+    roles: List[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{school_id}/teachers", response_model=List[SchoolTeacherInfo])
+async def list_school_teachers(
+    school_id: uuid.UUID,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    List all teachers in a school.
+    Requires teacher to be a member of the school or organization.
+    """
+    # Check permission
+    check_school_permission(teacher.id, school_id, db)
+
+    # Get all teacher relationships
+    teacher_schools = db.query(TeacherSchool).filter(
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.is_active == True
+    ).all()
+
+    result = []
+    for ts in teacher_schools:
+        t = db.query(Teacher).filter(Teacher.id == ts.teacher_id).first()
+        if t:
+            result.append(SchoolTeacherInfo(
+                id=t.id,
+                email=t.email,
+                name=t.name,
+                roles=ts.roles if ts.roles else [],
+                is_active=ts.is_active,
+                created_at=ts.created_at,
+            ))
+
+    return result
+
+
 @router.post("/{school_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherSchoolRelationResponse)
 async def add_teacher_to_school(
     school_id: uuid.UUID,
