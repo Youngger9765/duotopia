@@ -253,27 +253,8 @@ def create_demo_data(db: Session):
     print("   - 六年級B班 → 台北分校")
 
     # ============ 2.5 額外測試場景資料 ============
-    # 場景1: 創建第二個機構 (用於測試跨機構隔離)
-    test_org = Organization(
-        name="test-organization",
-        display_name="測試機構",
-        description="用於測試跨機構資料隔離的測試機構",
-        contact_email="test@example.com",
-        is_active=True,
-    )
-    db.add(test_org)
-    db.commit()
-    db.refresh(test_org)
-
-    # Expired 老師成為測試機構的 owner (測試不同機構隔離)
-    expired_teacher_org = TeacherOrganization(
-        teacher_id=expired_teacher.id,
-        organization_id=test_org.id,
-        role="org_owner",
-        is_active=True,
-    )
-    db.add(expired_teacher_org)
-    db.commit()
+    # 🔴 重要: expired 老師保持為「獨立老師」，不加入任何機構
+    # 這是測試「個體戶」模式的關鍵場景
 
     # 場景2: 在台中分校創建另一個班級 (測試不同分校的班級)
     classroom_c = Classroom(
@@ -308,7 +289,7 @@ def create_demo_data(db: Session):
     db.commit()
 
     print("✅ 額外測試場景資料:")
-    print("   - 測試機構 (expired 老師為 owner)")
+    print("   - expired 老師: 獨立老師（未加入任何機構）")
     print("   - 三年級C班 → 台中分校")
     print("   - 舊分校 (is_active=False)")
 
