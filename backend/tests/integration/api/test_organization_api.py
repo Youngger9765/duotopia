@@ -6,7 +6,6 @@ Tests for CRUD operations on organizations with Casbin permission checks.
 
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime
 import uuid
 
 from models import Teacher, Organization, TeacherOrganization
@@ -63,11 +62,7 @@ def test_org(shared_test_session: Session, test_teacher: Teacher):
     shared_test_session.commit()
 
     # Add Casbin role
-    casbin_service.add_role_for_user(
-        test_teacher.id,
-        "org_owner",
-        f"org-{org.id}"
-    )
+    casbin_service.add_role_for_user(test_teacher.id, "org_owner", f"org-{org.id}")
 
     return org
 
@@ -75,7 +70,13 @@ def test_org(shared_test_session: Session, test_teacher: Teacher):
 class TestOrganizationCreate:
     """Tests for POST /api/organizations"""
 
-    def test_create_organization_success(self, test_client, auth_headers, shared_test_session: Session, test_teacher: Teacher):
+    def test_create_organization_success(
+        self,
+        test_client,
+        auth_headers,
+        shared_test_session: Session,
+        test_teacher: Teacher,
+    ):
         """Test creating an organization successfully"""
         response = test_client.post(
             "/api/organizations",
@@ -102,15 +103,23 @@ class TestOrganizationCreate:
         assert "id" in data
 
         # Verify organization exists in database
-        org = shared_test_session.query(Organization).filter(Organization.id == data["id"]).first()
+        org = (
+            shared_test_session.query(Organization)
+            .filter(Organization.id == data["id"])
+            .first()
+        )
         assert org is not None
         assert org.name == "New Organization"
 
         # Verify teacher-organization relationship
-        teacher_org = shared_test_session.query(TeacherOrganization).filter(
-            TeacherOrganization.teacher_id == test_teacher.id,
-            TeacherOrganization.organization_id == org.id
-        ).first()
+        teacher_org = (
+            shared_test_session.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == test_teacher.id,
+                TeacherOrganization.organization_id == org.id,
+            )
+            .first()
+        )
         assert teacher_org is not None
         assert teacher_org.role == "org_owner"
 
@@ -131,7 +140,9 @@ class TestOrganizationCreate:
 class TestOrganizationList:
     """Tests for GET /api/organizations"""
 
-    def test_list_organizations_as_owner(self, test_client, auth_headers, test_org: Organization):
+    def test_list_organizations_as_owner(
+        self, test_client, auth_headers, test_org: Organization
+    ):
         """Test listing organizations as org owner"""
         response = test_client.get("/api/organizations", headers=auth_headers)
 
@@ -144,7 +155,9 @@ class TestOrganizationList:
         org_ids = [org["id"] for org in data]
         assert str(test_org.id) in org_ids
 
-    def test_list_organizations_empty(self, test_client, auth_headers, shared_test_session: Session):
+    def test_list_organizations_empty(
+        self, test_client, auth_headers, shared_test_session: Session
+    ):
         """Test listing organizations when user has no organizations"""
         response = test_client.get("/api/organizations", headers=auth_headers)
 
@@ -156,7 +169,9 @@ class TestOrganizationList:
 class TestOrganizationGet:
     """Tests for GET /api/organizations/{org_id}"""
 
-    def test_get_organization_success(self, test_client, auth_headers, test_org: Organization):
+    def test_get_organization_success(
+        self, test_client, auth_headers, test_org: Organization
+    ):
         """Test getting organization details successfully"""
         response = test_client.get(
             f"/api/organizations/{test_org.id}",
@@ -179,7 +194,9 @@ class TestOrganizationGet:
 
         assert response.status_code == 404
 
-    def test_get_organization_without_permission(self, test_client, shared_test_session: Session):
+    def test_get_organization_without_permission(
+        self, test_client, shared_test_session: Session
+    ):
         """Test getting organization without permission"""
         # Create another teacher without org access
         other_teacher = Teacher(
@@ -212,7 +229,13 @@ class TestOrganizationGet:
 class TestOrganizationUpdate:
     """Tests for PATCH /api/organizations/{org_id}"""
 
-    def test_update_organization_success(self, test_client, auth_headers, test_org: Organization, shared_test_session: Session):
+    def test_update_organization_success(
+        self,
+        test_client,
+        auth_headers,
+        test_org: Organization,
+        shared_test_session: Session,
+    ):
         """Test updating organization successfully"""
         response = test_client.patch(
             f"/api/organizations/{test_org.id}",
@@ -248,7 +271,13 @@ class TestOrganizationUpdate:
 class TestOrganizationDelete:
     """Tests for DELETE /api/organizations/{org_id}"""
 
-    def test_delete_organization_success(self, test_client, auth_headers, test_org: Organization, shared_test_session: Session):
+    def test_delete_organization_success(
+        self,
+        test_client,
+        auth_headers,
+        test_org: Organization,
+        shared_test_session: Session,
+    ):
         """Test deleting organization successfully (soft delete)"""
         response = test_client.delete(
             f"/api/organizations/{test_org.id}",

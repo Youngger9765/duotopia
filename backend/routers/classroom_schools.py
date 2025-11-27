@@ -31,8 +31,7 @@ async def get_current_teacher(
     payload = verify_token(token)
     if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
     teacher_id = payload.get("sub")
@@ -40,15 +39,13 @@ async def get_current_teacher(
 
     if teacher_type != "teacher":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a teacher"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
         )
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
 
     return teacher
@@ -59,11 +56,13 @@ async def get_current_teacher(
 
 class LinkClassroomRequest(BaseModel):
     """Request to link classroom to school"""
+
     school_id: str
 
 
 class ClassroomSchoolResponse(BaseModel):
     """Response for classroom-school link"""
+
     id: int
     classroom_id: int
     school_id: str
@@ -86,6 +85,7 @@ class ClassroomSchoolResponse(BaseModel):
 
 class SchoolInfo(BaseModel):
     """School information"""
+
     id: str
     organization_id: str
     name: str
@@ -110,6 +110,7 @@ class SchoolInfo(BaseModel):
 
 class ClassroomInfo(BaseModel):
     """Classroom information"""
+
     id: int
     name: str
     teacher_id: int
@@ -122,7 +123,11 @@ class ClassroomInfo(BaseModel):
 # ============ API Endpoints ============
 
 
-@router.post("/api/classrooms/{classroom_id}/school", status_code=status.HTTP_201_CREATED, response_model=ClassroomSchoolResponse)
+@router.post(
+    "/api/classrooms/{classroom_id}/school",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ClassroomSchoolResponse,
+)
 async def link_classroom_to_school(
     classroom_id: int,
     request: LinkClassroomRequest,
@@ -135,15 +140,19 @@ async def link_classroom_to_school(
     One classroom can only be linked to one school at a time.
     """
     # Verify classroom exists and belongs to teacher
-    classroom = db.query(Classroom).filter(
-        Classroom.id == classroom_id,
-        Classroom.teacher_id == teacher.id,
-    ).first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.teacher_id == teacher.id,
+        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found or you don't have permission"
+            detail="Classroom not found or you don't have permission",
         )
 
     # Verify school exists
@@ -151,27 +160,29 @@ async def link_classroom_to_school(
         school_uuid = uuid.UUID(request.school_id)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid school ID format"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid school ID format"
         )
 
     school = db.query(School).filter(School.id == school_uuid).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
     # Check if classroom is already linked to a school
-    existing_link = db.query(ClassroomSchool).filter(
-        ClassroomSchool.classroom_id == classroom_id,
-        ClassroomSchool.is_active == True
-    ).first()
+    existing_link = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.classroom_id == classroom_id,
+            ClassroomSchool.is_active == True,
+        )
+        .first()
+    )
 
     if existing_link:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Classroom is already linked to a school"
+            detail="Classroom is already linked to a school",
         )
 
     # Create link
@@ -197,35 +208,42 @@ async def get_classroom_school(
     Get the school that a classroom is linked to.
     """
     # Verify classroom exists and belongs to teacher
-    classroom = db.query(Classroom).filter(
-        Classroom.id == classroom_id,
-        Classroom.teacher_id == teacher.id,
-    ).first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.teacher_id == teacher.id,
+        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found or you don't have permission"
+            detail="Classroom not found or you don't have permission",
         )
 
     # Get active link
-    link = db.query(ClassroomSchool).filter(
-        ClassroomSchool.classroom_id == classroom_id,
-        ClassroomSchool.is_active == True
-    ).first()
+    link = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.classroom_id == classroom_id,
+            ClassroomSchool.is_active == True,
+        )
+        .first()
+    )
 
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom is not linked to any school"
+            detail="Classroom is not linked to any school",
         )
 
     # Get school
     school = db.query(School).filter(School.id == link.school_id).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
     return SchoolInfo.from_orm(school)
@@ -241,27 +259,35 @@ async def unlink_classroom_from_school(
     Unlink a classroom from its school (soft delete).
     """
     # Verify classroom exists and belongs to teacher
-    classroom = db.query(Classroom).filter(
-        Classroom.id == classroom_id,
-        Classroom.teacher_id == teacher.id,
-    ).first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.teacher_id == teacher.id,
+        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found or you don't have permission"
+            detail="Classroom not found or you don't have permission",
         )
 
     # Find active link
-    link = db.query(ClassroomSchool).filter(
-        ClassroomSchool.classroom_id == classroom_id,
-        ClassroomSchool.is_active == True
-    ).first()
+    link = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.classroom_id == classroom_id,
+            ClassroomSchool.is_active == True,
+        )
+        .first()
+    )
 
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom is not linked to any school"
+            detail="Classroom is not linked to any school",
         )
 
     # Soft delete
@@ -284,26 +310,32 @@ async def list_school_classrooms(
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
     # Get all active classroom links
-    links = db.query(ClassroomSchool).filter(
-        ClassroomSchool.school_id == school_id,
-        ClassroomSchool.is_active == True
-    ).all()
+    links = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.school_id == school_id, ClassroomSchool.is_active == True
+        )
+        .all()
+    )
 
     # Get classrooms
     result = []
     for link in links:
-        classroom = db.query(Classroom).filter(Classroom.id == link.classroom_id).first()
+        classroom = (
+            db.query(Classroom).filter(Classroom.id == link.classroom_id).first()
+        )
         if classroom:
-            result.append(ClassroomInfo(
-                id=classroom.id,
-                name=classroom.name,
-                teacher_id=classroom.teacher_id,
-                is_active=classroom.is_active,
-            ))
+            result.append(
+                ClassroomInfo(
+                    id=classroom.id,
+                    name=classroom.name,
+                    teacher_id=classroom.teacher_id,
+                    is_active=classroom.is_active,
+                )
+            )
 
     return result

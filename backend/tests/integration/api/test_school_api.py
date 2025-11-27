@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy.orm import Session
 import uuid
 
-from models import Teacher, Organization, School, TeacherOrganization, TeacherSchool
 from auth import create_access_token
 from services.casbin_service import get_casbin_service
 
@@ -60,11 +59,7 @@ def test_org(shared_test_session: Session, test_teacher: Teacher):
     shared_test_session.commit()
 
     # Add Casbin role
-    casbin_service.add_role_for_user(
-        test_teacher.id,
-        "org_owner",
-        f"org-{org.id}"
-    )
+    casbin_service.add_role_for_user(test_teacher.id, "org_owner", f"org-{org.id}")
 
     return org
 
@@ -87,7 +82,13 @@ def test_school(shared_test_session: Session, test_org: Organization):
 class TestSchoolCreate:
     """Tests for POST /api/schools"""
 
-    def test_create_school_success(self, test_client, auth_headers, test_org: Organization, shared_test_session: Session):
+    def test_create_school_success(
+        self,
+        test_client,
+        auth_headers,
+        test_org: Organization,
+        shared_test_session: Session,
+    ):
         """Test creating a school successfully as org_owner"""
         response = test_client.post(
             "/api/schools",
@@ -110,7 +111,9 @@ class TestSchoolCreate:
         assert data["is_active"] is True
 
         # Verify school exists in database
-        school = shared_test_session.query(School).filter(School.id == data["id"]).first()
+        school = (
+            shared_test_session.query(School).filter(School.id == data["id"]).first()
+        )
         assert school is not None
         assert school.name == "New School"
 
@@ -118,14 +121,13 @@ class TestSchoolCreate:
         """Test creating school without authentication fails"""
         response = test_client.post(
             "/api/schools",
-            json={
-                "organization_id": str(test_org.id),
-                "name": "Unauthorized School"
-            },
+            json={"organization_id": str(test_org.id), "name": "Unauthorized School"},
         )
         assert response.status_code == 401
 
-    def test_create_school_without_permission(self, test_client, shared_test_session: Session, test_org: Organization):
+    def test_create_school_without_permission(
+        self, test_client, shared_test_session: Session, test_org: Organization
+    ):
         """Test creating school without org permission fails"""
         # Create another teacher without org access
         other_teacher = Teacher(
@@ -143,10 +145,7 @@ class TestSchoolCreate:
 
         response = test_client.post(
             "/api/schools",
-            json={
-                "organization_id": str(test_org.id),
-                "name": "Forbidden School"
-            },
+            json={"organization_id": str(test_org.id), "name": "Forbidden School"},
             headers=headers,
         )
         assert response.status_code == 403
@@ -155,7 +154,9 @@ class TestSchoolCreate:
 class TestSchoolList:
     """Tests for GET /api/schools"""
 
-    def test_list_schools_as_org_owner(self, test_client, auth_headers, test_school: School):
+    def test_list_schools_as_org_owner(
+        self, test_client, auth_headers, test_school: School
+    ):
         """Test listing schools as org owner"""
         response = test_client.get("/api/schools", headers=auth_headers)
 
@@ -168,11 +169,12 @@ class TestSchoolList:
         school_ids = [s["id"] for s in data]
         assert str(test_school.id) in school_ids
 
-    def test_list_schools_filter_by_org(self, test_client, auth_headers, test_org: Organization, test_school: School):
+    def test_list_schools_filter_by_org(
+        self, test_client, auth_headers, test_org: Organization, test_school: School
+    ):
         """Test listing schools filtered by organization"""
         response = test_client.get(
-            f"/api/schools?organization_id={test_org.id}",
-            headers=auth_headers
+            f"/api/schools?organization_id={test_org.id}", headers=auth_headers
         )
 
         assert response.status_code == 200
@@ -206,7 +208,9 @@ class TestSchoolGet:
         )
         assert response.status_code == 404
 
-    def test_get_school_without_permission(self, test_client, shared_test_session: Session, test_school: School):
+    def test_get_school_without_permission(
+        self, test_client, shared_test_session: Session, test_school: School
+    ):
         """Test getting school without permission"""
         # Create another teacher without access
         other_teacher = Teacher(
@@ -232,7 +236,13 @@ class TestSchoolGet:
 class TestSchoolUpdate:
     """Tests for PATCH /api/schools/{school_id}"""
 
-    def test_update_school_success(self, test_client, auth_headers, test_school: School, shared_test_session: Session):
+    def test_update_school_success(
+        self,
+        test_client,
+        auth_headers,
+        test_school: School,
+        shared_test_session: Session,
+    ):
         """Test updating school successfully"""
         response = test_client.patch(
             f"/api/schools/{test_school.id}",
@@ -266,7 +276,13 @@ class TestSchoolUpdate:
 class TestSchoolDelete:
     """Tests for DELETE /api/schools/{school_id}"""
 
-    def test_delete_school_success(self, test_client, auth_headers, test_school: School, shared_test_session: Session):
+    def test_delete_school_success(
+        self,
+        test_client,
+        auth_headers,
+        test_school: School,
+        shared_test_session: Session,
+    ):
         """Test deleting school successfully (soft delete)"""
         response = test_client.delete(
             f"/api/schools/{test_school.id}",

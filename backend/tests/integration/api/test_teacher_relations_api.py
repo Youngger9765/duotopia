@@ -91,14 +91,18 @@ def test_school(shared_test_session: Session, test_org: Organization):
 class TestAddTeacherToOrganization:
     """Tests for POST /api/organizations/{org_id}/teachers"""
 
-    def test_add_org_admin_success(self, test_client, owner_headers, test_org: Organization, member_teacher: Teacher, shared_test_session: Session):
+    def test_add_org_admin_success(
+        self,
+        test_client,
+        owner_headers,
+        test_org: Organization,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test adding org_admin successfully"""
         response = test_client.post(
             f"/api/organizations/{test_org.id}/teachers",
-            json={
-                "teacher_id": member_teacher.id,
-                "role": "org_admin"
-            },
+            json={"teacher_id": member_teacher.id, "role": "org_admin"},
             headers=owner_headers,
         )
 
@@ -108,32 +112,48 @@ class TestAddTeacherToOrganization:
         assert data["role"] == "org_admin"
 
         # Verify in database
-        rel = shared_test_session.query(TeacherOrganization).filter(
-            TeacherOrganization.teacher_id == member_teacher.id,
-            TeacherOrganization.organization_id == test_org.id
-        ).first()
+        rel = (
+            shared_test_session.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == member_teacher.id,
+                TeacherOrganization.organization_id == test_org.id,
+            )
+            .first()
+        )
         assert rel is not None
         assert rel.role == "org_admin"
 
         # Verify Casbin role
         casbin_service = get_casbin_service()
-        assert casbin_service.has_role(member_teacher.id, "org_admin", f"org-{test_org.id}")
+        assert casbin_service.has_role(
+            member_teacher.id, "org_admin", f"org-{test_org.id}"
+        )
 
-    def test_add_second_org_owner_fails(self, test_client, owner_headers, test_org: Organization, member_teacher: Teacher):
+    def test_add_second_org_owner_fails(
+        self,
+        test_client,
+        owner_headers,
+        test_org: Organization,
+        member_teacher: Teacher,
+    ):
         """Test that adding second org_owner fails"""
         response = test_client.post(
             f"/api/organizations/{test_org.id}/teachers",
-            json={
-                "teacher_id": member_teacher.id,
-                "role": "org_owner"
-            },
+            json={"teacher_id": member_teacher.id, "role": "org_owner"},
             headers=owner_headers,
         )
 
         assert response.status_code == 400
         assert "already has an owner" in response.json()["detail"]
 
-    def test_add_teacher_duplicate_fails(self, test_client, owner_headers, test_org: Organization, member_teacher: Teacher, shared_test_session: Session):
+    def test_add_teacher_duplicate_fails(
+        self,
+        test_client,
+        owner_headers,
+        test_org: Organization,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test that adding same teacher twice fails"""
         # Add first time
         teacher_org = TeacherOrganization(
@@ -148,10 +168,7 @@ class TestAddTeacherToOrganization:
         # Try to add again
         response = test_client.post(
             f"/api/organizations/{test_org.id}/teachers",
-            json={
-                "teacher_id": member_teacher.id,
-                "role": "org_admin"
-            },
+            json={"teacher_id": member_teacher.id, "role": "org_admin"},
             headers=owner_headers,
         )
 
@@ -161,7 +178,14 @@ class TestAddTeacherToOrganization:
 class TestRemoveTeacherFromOrganization:
     """Tests for DELETE /api/organizations/{org_id}/teachers/{teacher_id}"""
 
-    def test_remove_org_admin_success(self, test_client, owner_headers, test_org: Organization, member_teacher: Teacher, shared_test_session: Session):
+    def test_remove_org_admin_success(
+        self,
+        test_client,
+        owner_headers,
+        test_org: Organization,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test removing org_admin successfully"""
         casbin_service = get_casbin_service()
 
@@ -174,7 +198,9 @@ class TestRemoveTeacherFromOrganization:
         )
         shared_test_session.add(teacher_org)
         shared_test_session.commit()
-        casbin_service.add_role_for_user(member_teacher.id, "org_admin", f"org-{test_org.id}")
+        casbin_service.add_role_for_user(
+            member_teacher.id, "org_admin", f"org-{test_org.id}"
+        )
 
         # Remove
         response = test_client.delete(
@@ -189,20 +215,26 @@ class TestRemoveTeacherFromOrganization:
         assert teacher_org.is_active is False
 
         # Verify Casbin role removed
-        assert not casbin_service.has_role(member_teacher.id, "org_admin", f"org-{test_org.id}")
+        assert not casbin_service.has_role(
+            member_teacher.id, "org_admin", f"org-{test_org.id}"
+        )
 
 
 class TestAddTeacherToSchool:
     """Tests for POST /api/schools/{school_id}/teachers"""
 
-    def test_add_school_admin_success(self, test_client, owner_headers, test_school: School, member_teacher: Teacher, shared_test_session: Session):
+    def test_add_school_admin_success(
+        self,
+        test_client,
+        owner_headers,
+        test_school: School,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test adding school_admin successfully"""
         response = test_client.post(
             f"/api/schools/{test_school.id}/teachers",
-            json={
-                "teacher_id": member_teacher.id,
-                "roles": ["school_admin"]
-            },
+            json={"teacher_id": member_teacher.id, "roles": ["school_admin"]},
             headers=owner_headers,
         )
 
@@ -212,24 +244,37 @@ class TestAddTeacherToSchool:
         assert "school_admin" in data["roles"]
 
         # Verify in database
-        rel = shared_test_session.query(TeacherSchool).filter(
-            TeacherSchool.teacher_id == member_teacher.id,
-            TeacherSchool.school_id == test_school.id
-        ).first()
+        rel = (
+            shared_test_session.query(TeacherSchool)
+            .filter(
+                TeacherSchool.teacher_id == member_teacher.id,
+                TeacherSchool.school_id == test_school.id,
+            )
+            .first()
+        )
         assert rel is not None
         assert "school_admin" in rel.roles
 
         # Verify Casbin role
         casbin_service = get_casbin_service()
-        assert casbin_service.has_role(member_teacher.id, "school_admin", f"school-{test_school.id}")
+        assert casbin_service.has_role(
+            member_teacher.id, "school_admin", f"school-{test_school.id}"
+        )
 
-    def test_add_teacher_with_multiple_roles(self, test_client, owner_headers, test_school: School, member_teacher: Teacher, shared_test_session: Session):
+    def test_add_teacher_with_multiple_roles(
+        self,
+        test_client,
+        owner_headers,
+        test_school: School,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test adding teacher with multiple roles"""
         response = test_client.post(
             f"/api/schools/{test_school.id}/teachers",
             json={
                 "teacher_id": member_teacher.id,
-                "roles": ["school_admin", "teacher"]
+                "roles": ["school_admin", "teacher"],
             },
             headers=owner_headers,
         )
@@ -241,14 +286,25 @@ class TestAddTeacherToSchool:
 
         # Verify Casbin roles
         casbin_service = get_casbin_service()
-        assert casbin_service.has_role(member_teacher.id, "school_admin", f"school-{test_school.id}")
-        assert casbin_service.has_role(member_teacher.id, "teacher", f"school-{test_school.id}")
+        assert casbin_service.has_role(
+            member_teacher.id, "school_admin", f"school-{test_school.id}"
+        )
+        assert casbin_service.has_role(
+            member_teacher.id, "teacher", f"school-{test_school.id}"
+        )
 
 
 class TestUpdateTeacherSchoolRoles:
     """Tests for PATCH /api/schools/{school_id}/teachers/{teacher_id}"""
 
-    def test_update_roles_success(self, test_client, owner_headers, test_school: School, member_teacher: Teacher, shared_test_session: Session):
+    def test_update_roles_success(
+        self,
+        test_client,
+        owner_headers,
+        test_school: School,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test updating teacher roles successfully"""
         casbin_service = get_casbin_service()
 
@@ -261,7 +317,9 @@ class TestUpdateTeacherSchoolRoles:
         )
         shared_test_session.add(teacher_school)
         shared_test_session.commit()
-        casbin_service.add_role_for_user(member_teacher.id, "teacher", f"school-{test_school.id}")
+        casbin_service.add_role_for_user(
+            member_teacher.id, "teacher", f"school-{test_school.id}"
+        )
 
         # Update to school_admin
         response = test_client.patch(
@@ -276,14 +334,25 @@ class TestUpdateTeacherSchoolRoles:
         assert "teacher" in data["roles"]
 
         # Verify Casbin roles updated
-        assert casbin_service.has_role(member_teacher.id, "school_admin", f"school-{test_school.id}")
-        assert casbin_service.has_role(member_teacher.id, "teacher", f"school-{test_school.id}")
+        assert casbin_service.has_role(
+            member_teacher.id, "school_admin", f"school-{test_school.id}"
+        )
+        assert casbin_service.has_role(
+            member_teacher.id, "teacher", f"school-{test_school.id}"
+        )
 
 
 class TestRemoveTeacherFromSchool:
     """Tests for DELETE /api/schools/{school_id}/teachers/{teacher_id}"""
 
-    def test_remove_teacher_success(self, test_client, owner_headers, test_school: School, member_teacher: Teacher, shared_test_session: Session):
+    def test_remove_teacher_success(
+        self,
+        test_client,
+        owner_headers,
+        test_school: School,
+        member_teacher: Teacher,
+        shared_test_session: Session,
+    ):
         """Test removing teacher from school successfully"""
         casbin_service = get_casbin_service()
 
@@ -296,7 +365,9 @@ class TestRemoveTeacherFromSchool:
         )
         shared_test_session.add(teacher_school)
         shared_test_session.commit()
-        casbin_service.add_role_for_user(member_teacher.id, "teacher", f"school-{test_school.id}")
+        casbin_service.add_role_for_user(
+            member_teacher.id, "teacher", f"school-{test_school.id}"
+        )
 
         # Remove
         response = test_client.delete(
@@ -311,4 +382,6 @@ class TestRemoveTeacherFromSchool:
         assert teacher_school.is_active is False
 
         # Verify Casbin role removed
-        assert not casbin_service.has_role(member_teacher.id, "teacher", f"school-{test_school.id}")
+        assert not casbin_service.has_role(
+            member_teacher.id, "teacher", f"school-{test_school.id}"
+        )

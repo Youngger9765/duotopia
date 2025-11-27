@@ -33,8 +33,7 @@ async def get_current_teacher(
     payload = verify_token(token)
     if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
     teacher_id = payload.get("sub")
@@ -42,15 +41,13 @@ async def get_current_teacher(
 
     if teacher_type != "teacher":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a teacher"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
         )
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
 
     return teacher
@@ -61,6 +58,7 @@ async def get_current_teacher(
 
 class SchoolCreate(BaseModel):
     """Request model for creating a school"""
+
     organization_id: str = Field(..., description="Organization UUID")
     name: str = Field(..., min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
@@ -72,6 +70,7 @@ class SchoolCreate(BaseModel):
 
 class SchoolUpdate(BaseModel):
     """Request model for updating a school"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
@@ -83,6 +82,7 @@ class SchoolUpdate(BaseModel):
 
 class SchoolResponse(BaseModel):
     """Response model for school"""
+
     id: str
     organization_id: str
     name: str
@@ -120,9 +120,7 @@ class SchoolResponse(BaseModel):
 
 
 def check_org_permission(
-    teacher_id: int,
-    org_id: uuid.UUID,
-    db: Session
+    teacher_id: int, org_id: uuid.UUID, db: Session
 ) -> Organization:
     """
     Check if teacher has org-level access (org_owner or org_admin).
@@ -133,31 +131,32 @@ def check_org_permission(
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
         )
 
     # Check if teacher is org_owner or org_admin
-    teacher_org = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher_id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.role.in_(["org_owner", "org_admin"]),
-        TeacherOrganization.is_active == True
-    ).first()
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role.in_(["org_owner", "org_admin"]),
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_org:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to manage schools in this organization"
+            detail="You don't have permission to manage schools in this organization",
         )
 
     return org
 
 
 def check_school_permission(
-    teacher_id: int,
-    school_id: uuid.UUID,
-    db: Session
+    teacher_id: int, school_id: uuid.UUID, db: Session
 ) -> School:
     """
     Check if teacher has access to school.
@@ -167,8 +166,7 @@ def check_school_permission(
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
     # Check org-level permission
@@ -216,7 +214,9 @@ async def create_school(
 
 @router.get("", response_model=List[SchoolResponse])
 async def list_schools(
-    organization_id: Optional[str] = Query(None, description="Filter by organization ID"),
+    organization_id: Optional[str] = Query(
+        None, description="Filter by organization ID"
+    ),
     teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
@@ -225,18 +225,21 @@ async def list_schools(
     If organization_id is provided, filter by that organization.
     """
     # Get all organizations where teacher is org_owner or org_admin
-    teacher_orgs = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher.id,
-        TeacherOrganization.role.in_(["org_owner", "org_admin"]),
-        TeacherOrganization.is_active == True
-    ).all()
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.role.in_(["org_owner", "org_admin"]),
+            TeacherOrganization.is_active == True,
+        )
+        .all()
+    )
 
     org_ids = [to.organization_id for to in teacher_orgs]
 
     # Build query
     query = db.query(School).filter(
-        School.organization_id.in_(org_ids),
-        School.is_active == True
+        School.organization_id.in_(org_ids), School.is_active == True
     )
 
     # Apply organization filter if provided
@@ -320,17 +323,20 @@ async def delete_school(
 
 class AddTeacherToSchoolRequest(BaseModel):
     """Request model for adding teacher to school"""
+
     teacher_id: int
     roles: List[str] = Field(..., description="List of roles: school_admin, teacher")
 
 
 class UpdateTeacherRolesRequest(BaseModel):
     """Request model for updating teacher roles"""
+
     roles: List[str] = Field(..., description="List of roles: school_admin, teacher")
 
 
 class TeacherSchoolRelationResponse(BaseModel):
     """Response model for teacher-school relationship"""
+
     id: int
     teacher_id: int
     school_id: str
@@ -355,6 +361,7 @@ class TeacherSchoolRelationResponse(BaseModel):
 
 class SchoolTeacherInfo(BaseModel):
     """Teacher information in school"""
+
     id: int
     email: str
     name: str
@@ -380,28 +387,35 @@ async def list_school_teachers(
     check_school_permission(teacher.id, school_id, db)
 
     # Get all teacher relationships
-    teacher_schools = db.query(TeacherSchool).filter(
-        TeacherSchool.school_id == school_id,
-        TeacherSchool.is_active == True
-    ).all()
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(TeacherSchool.school_id == school_id, TeacherSchool.is_active == True)
+        .all()
+    )
 
     result = []
     for ts in teacher_schools:
         t = db.query(Teacher).filter(Teacher.id == ts.teacher_id).first()
         if t:
-            result.append(SchoolTeacherInfo(
-                id=t.id,
-                email=t.email,
-                name=t.name,
-                roles=ts.roles if ts.roles else [],
-                is_active=ts.is_active,
-                created_at=ts.created_at,
-            ))
+            result.append(
+                SchoolTeacherInfo(
+                    id=t.id,
+                    email=t.email,
+                    name=t.name,
+                    roles=ts.roles if ts.roles else [],
+                    is_active=ts.is_active,
+                    created_at=ts.created_at,
+                )
+            )
 
     return result
 
 
-@router.post("/{school_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherSchoolRelationResponse)
+@router.post(
+    "/{school_id}/teachers",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TeacherSchoolRelationResponse,
+)
 async def add_teacher_to_school(
     school_id: uuid.UUID,
     request: AddTeacherToSchoolRequest,
@@ -415,7 +429,7 @@ async def add_teacher_to_school(
     casbin_service = get_casbin_service()
 
     # Check permission
-    school = check_school_permission(teacher.id, school_id, db)
+    check_school_permission(teacher.id, school_id, db)
 
     # Validate roles
     valid_roles = ["school_admin", "teacher"]
@@ -423,28 +437,31 @@ async def add_teacher_to_school(
         if role not in valid_roles:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid role: {role}. Must be one of {valid_roles}"
+                detail=f"Invalid role: {role}. Must be one of {valid_roles}",
             )
 
     # Check if teacher already has relationship
-    existing = db.query(TeacherSchool).filter(
-        TeacherSchool.teacher_id == request.teacher_id,
-        TeacherSchool.school_id == school_id,
-        TeacherSchool.is_active == True
-    ).first()
+    existing = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == request.teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active == True,
+        )
+        .first()
+    )
 
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Teacher already belongs to this school"
+            detail="Teacher already belongs to this school",
         )
 
     # Verify teacher exists
     target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
     if not target_teacher:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
 
     # Create relationship
@@ -461,15 +478,15 @@ async def add_teacher_to_school(
     # Add Casbin roles
     for role in request.roles:
         casbin_service.add_role_for_user(
-            request.teacher_id,
-            role,
-            f"school-{school_id}"
+            request.teacher_id, role, f"school-{school_id}"
         )
 
     return TeacherSchoolRelationResponse.from_orm(teacher_school)
 
 
-@router.patch("/{school_id}/teachers/{teacher_id}", response_model=TeacherSchoolRelationResponse)
+@router.patch(
+    "/{school_id}/teachers/{teacher_id}", response_model=TeacherSchoolRelationResponse
+)
 async def update_teacher_school_roles(
     school_id: uuid.UUID,
     teacher_id: int,
@@ -492,20 +509,24 @@ async def update_teacher_school_roles(
         if role not in valid_roles:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid role: {role}. Must be one of {valid_roles}"
+                detail=f"Invalid role: {role}. Must be one of {valid_roles}",
             )
 
     # Find relationship
-    teacher_school = db.query(TeacherSchool).filter(
-        TeacherSchool.teacher_id == teacher_id,
-        TeacherSchool.school_id == school_id,
-        TeacherSchool.is_active == True
-    ).first()
+    teacher_school = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_school:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher relationship not found"
+            detail="Teacher relationship not found",
         )
 
     # Get old roles for Casbin cleanup
@@ -519,18 +540,10 @@ async def update_teacher_school_roles(
     # Update Casbin roles
     # Remove old roles
     for role in old_roles:
-        casbin_service.delete_role_for_user(
-            teacher_id,
-            role,
-            f"school-{school_id}"
-        )
+        casbin_service.delete_role_for_user(teacher_id, role, f"school-{school_id}")
     # Add new roles
     for role in request.roles:
-        casbin_service.add_role_for_user(
-            teacher_id,
-            role,
-            f"school-{school_id}"
-        )
+        casbin_service.add_role_for_user(teacher_id, role, f"school-{school_id}")
 
     return TeacherSchoolRelationResponse.from_orm(teacher_school)
 
@@ -552,16 +565,20 @@ async def remove_teacher_from_school(
     check_school_permission(teacher.id, school_id, db)
 
     # Find relationship
-    teacher_school = db.query(TeacherSchool).filter(
-        TeacherSchool.teacher_id == teacher_id,
-        TeacherSchool.school_id == school_id,
-        TeacherSchool.is_active == True
-    ).first()
+    teacher_school = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_school:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher relationship not found"
+            detail="Teacher relationship not found",
         )
 
     # Soft delete
@@ -571,10 +588,6 @@ async def remove_teacher_from_school(
     # Remove all Casbin roles
     roles = teacher_school.roles if teacher_school.roles else []
     for role in roles:
-        casbin_service.delete_role_for_user(
-            teacher_id,
-            role,
-            f"school-{school_id}"
-        )
+        casbin_service.delete_role_for_user(teacher_id, role, f"school-{school_id}")
 
     return {"message": "Teacher removed from school successfully"}

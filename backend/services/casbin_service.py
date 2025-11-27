@@ -23,7 +23,7 @@ class CasbinService:
     使用 RBAC with Domains 模型支援多租戶權限控制
     """
 
-    _instance: Optional['CasbinService'] = None
+    _instance: Optional["CasbinService"] = None
     _enforcer: Optional[casbin.Enforcer] = None
 
     def __new__(cls):
@@ -66,11 +66,7 @@ class CasbinService:
     # ============================================
 
     def check_permission(
-        self,
-        teacher_id: int,
-        domain: str,
-        resource: str,
-        action: str
+        self, teacher_id: int, domain: str, resource: str, action: str
     ) -> bool:
         """
         檢查權限
@@ -90,24 +86,16 @@ class CasbinService:
             >>> service.check_permission(123, 'school-uuid-def', 'manage_teachers', 'write')
             False
         """
-        result = self.enforcer.enforce(
-            str(teacher_id),
-            domain,
-            resource,
-            action
-        )
+        result = self.enforcer.enforce(str(teacher_id), domain, resource, action)
 
-        print(f"[Casbin] Check: teacher={teacher_id}, domain={domain}, "
-              f"resource={resource}, action={action} => {result}")
+        print(
+            f"[Casbin] Check: teacher={teacher_id}, domain={domain}, "
+            f"resource={resource}, action={action} => {result}"
+        )
 
         return result
 
-    def has_role(
-        self,
-        teacher_id: int,
-        role: str,
-        domain: str
-    ) -> bool:
+    def has_role(self, teacher_id: int, role: str, domain: str) -> bool:
         """
         檢查使用者在特定 domain 是否有特定角色
 
@@ -124,22 +112,14 @@ class CasbinService:
             True
         """
         # For domain-based RBAC, check if role exists in user's roles for that domain
-        roles = self.enforcer.get_roles_for_user_in_domain(
-            str(teacher_id),
-            domain
-        )
+        roles = self.enforcer.get_roles_for_user_in_domain(str(teacher_id), domain)
         return role in roles
 
     # ============================================
     # 角色管理
     # ============================================
 
-    def add_role_for_user(
-        self,
-        teacher_id: int,
-        role: str,
-        domain: str
-    ) -> bool:
+    def add_role_for_user(self, teacher_id: int, role: str, domain: str) -> bool:
         """
         為使用者新增角色
 
@@ -152,9 +132,7 @@ class CasbinService:
             bool: 是否成功
         """
         success = self.enforcer.add_role_for_user_in_domain(
-            str(teacher_id),
-            role,
-            domain
+            str(teacher_id), role, domain
         )
 
         if success:
@@ -164,12 +142,7 @@ class CasbinService:
 
         return success
 
-    def delete_role_for_user(
-        self,
-        teacher_id: int,
-        role: str,
-        domain: str
-    ) -> bool:
+    def delete_role_for_user(self, teacher_id: int, role: str, domain: str) -> bool:
         """
         移除使用者的角色
 
@@ -182,9 +155,7 @@ class CasbinService:
             bool: 是否成功
         """
         success = self.enforcer.delete_roles_for_user_in_domain(
-            str(teacher_id),
-            role,
-            domain
+            str(teacher_id), role, domain
         )
 
         if success:
@@ -194,9 +165,7 @@ class CasbinService:
         return success
 
     def delete_all_roles_for_user(
-        self,
-        teacher_id: int,
-        domain: Optional[str] = None
+        self, teacher_id: int, domain: Optional[str] = None
     ) -> bool:
         """
         移除使用者的所有角色
@@ -221,11 +190,7 @@ class CasbinService:
 
         return True
 
-    def get_roles_for_user(
-        self,
-        teacher_id: int,
-        domain: str
-    ) -> List[str]:
+    def get_roles_for_user(self, teacher_id: int, domain: str) -> List[str]:
         """
         取得使用者在特定 domain 的所有角色
 
@@ -236,15 +201,9 @@ class CasbinService:
         Returns:
             List[str]: 角色列表
         """
-        return self.enforcer.get_roles_for_user_in_domain(
-            str(teacher_id),
-            domain
-        )
+        return self.enforcer.get_roles_for_user_in_domain(str(teacher_id), domain)
 
-    def get_all_roles_for_user(
-        self,
-        teacher_id: int
-    ) -> List[tuple]:
+    def get_all_roles_for_user(self, teacher_id: int) -> List[tuple]:
         """
         取得使用者在所有 domain 的角色
 
@@ -288,7 +247,7 @@ class CasbinService:
         # TODO: Implement after database migrations
         raise NotImplementedError("Database sync pending - requires migrations")
 
-# ============================================
+    # ============================================
     # 工具方法
     # ============================================
 
