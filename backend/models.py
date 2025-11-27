@@ -1211,7 +1211,7 @@ class Organization(Base):
     is_active = Column(Boolean, nullable=False, default=True, index=True)
     
     # 設定
-    settings = Column(JSONB, nullable=True)  # 機構層級設定
+    settings = Column(JSONType, nullable=True)  # 機構層級設定
     
     # 時間戳記
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -1248,14 +1248,14 @@ class School(Base):
     
     # 狀態
     is_active = Column(Boolean, nullable=False, default=True, index=True)
-    
+
     # 設定
-    settings = Column(JSONB, nullable=True)  # 學校層級設定
-    
+    settings = Column(JSONType, nullable=True)  # 學校層級設定
+
     # 時間戳記
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     organization = relationship("Organization", back_populates="schools")
     teacher_schools = relationship("TeacherSchool", back_populates="school", cascade="all, delete-orphan")
@@ -1312,9 +1312,9 @@ class TeacherSchool(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     teacher_id = Column(Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False, index=True)
     school_id = Column(UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
-    
-    # 角色列表（使用 JSONB 儲存）['school_admin', 'teacher']
-    roles = Column(JSONB, nullable=False, default=list)
+
+    # 角色列表（使用 JSON/JSONB 儲存）['school_admin', 'teacher']
+    roles = Column(JSONType, nullable=False, default=list)
     
     # 狀態
     is_active = Column(Boolean, nullable=False, default=True, index=True)
