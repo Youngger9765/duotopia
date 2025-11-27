@@ -63,7 +63,9 @@ def test_org(shared_test_session: Session, test_teacher: Teacher):
 
     # Sync to Casbin (must be done AFTER test_client initialization to use same instance)
     casbin_service.add_role_for_user(test_teacher.id, "org_owner", f"org-{org.id}")
-    print(f"[TEST] Added Casbin role: org_owner for teacher={test_teacher.id} in org-{org.id}")
+    print(
+        f"[TEST] Added Casbin role: org_owner for teacher={test_teacher.id} in org-{org.id}"
+    )
 
     return org
 
@@ -141,9 +143,7 @@ class TestOrganizationCreate:
 class TestOrganizationList:
     """Tests for GET /api/organizations"""
 
-    def test_list_organizations_as_owner(
-        self, test_client, auth_headers
-    ):
+    def test_list_organizations_as_owner(self, test_client, auth_headers):
         """Test listing organizations as org owner"""
         # Create organization via API so it's visible to subsequent API calls
         create_response = test_client.post(
@@ -183,9 +183,7 @@ class TestOrganizationList:
 class TestOrganizationGet:
     """Tests for GET /api/organizations/{org_id}"""
 
-    def test_get_organization_success(
-        self, test_client, auth_headers
-    ):
+    def test_get_organization_success(self, test_client, auth_headers):
         """Test getting organization details successfully"""
         # Create organization via API
         create_response = test_client.post(
@@ -335,7 +333,9 @@ class TestOrganizationDelete:
         list_response = test_client.get("/api/organizations", headers=auth_headers)
         assert list_response.status_code == 200
         org_ids = [org["id"] for org in list_response.json()]
-        assert created_org["id"] not in org_ids  # Soft deleted orgs don't appear in list
+        assert (
+            created_org["id"] not in org_ids
+        )  # Soft deleted orgs don't appear in list
 
     def test_delete_organization_not_found(self, test_client, auth_headers):
         """Test deleting non-existent organization"""
