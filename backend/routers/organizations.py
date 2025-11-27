@@ -32,8 +32,7 @@ async def get_current_teacher(
     payload = verify_token(token)
     if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
     teacher_id = payload.get("sub")
@@ -41,15 +40,13 @@ async def get_current_teacher(
 
     if teacher_type != "teacher":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a teacher"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
         )
 
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
 
     return teacher
@@ -60,6 +57,7 @@ async def get_current_teacher(
 
 class OrganizationCreate(BaseModel):
     """Request model for creating an organization"""
+
     name: str = Field(..., min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
@@ -70,6 +68,7 @@ class OrganizationCreate(BaseModel):
 
 class OrganizationUpdate(BaseModel):
     """Request model for updating an organization"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
@@ -81,6 +80,7 @@ class OrganizationUpdate(BaseModel):
 
 class OrganizationResponse(BaseModel):
     """Response model for organization"""
+
     id: str
     name: str
     display_name: Optional[str]
@@ -116,9 +116,7 @@ class OrganizationResponse(BaseModel):
 
 
 def check_org_permission(
-    teacher_id: int,
-    org_id: uuid.UUID,
-    db: Session
+    teacher_id: int, org_id: uuid.UUID, db: Session
 ) -> Organization:
     """
     Check if teacher has access to organization.
@@ -129,21 +127,24 @@ def check_org_permission(
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
         )
 
     # Check if teacher is org owner
-    teacher_org = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher_id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.is_active == True
-    ).first()
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_org:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this organization"
+            detail="You don't have permission to access this organization",
         )
 
     return org
@@ -152,7 +153,9 @@ def check_org_permission(
 # ============ API Endpoints ============
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=OrganizationResponse)
+@router.post(
+    "", status_code=status.HTTP_201_CREATED, response_model=OrganizationResponse
+)
 async def create_organization(
     org_data: OrganizationCreate,
     teacher: Teacher = Depends(get_current_teacher),
@@ -190,11 +193,7 @@ async def create_organization(
     db.commit()
 
     # Add Casbin role
-    casbin_service.add_role_for_user(
-        teacher.id,
-        "org_owner",
-        f"org-{org.id}"
-    )
+    casbin_service.add_role_for_user(teacher.id, "org_owner", f"org-{org.id}")
 
     return OrganizationResponse.from_orm(org)
 
@@ -208,18 +207,23 @@ async def list_organizations(
     List all organizations that the current teacher has access to.
     """
     # Get all teacher-organization relationships
-    teacher_orgs = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher.id,
-        TeacherOrganization.is_active == True
-    ).all()
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active == True,
+        )
+        .all()
+    )
 
     org_ids = [to.organization_id for to in teacher_orgs]
 
     # Get organizations
-    organizations = db.query(Organization).filter(
-        Organization.id.in_(org_ids),
-        Organization.is_active == True
-    ).all()
+    organizations = (
+        db.query(Organization)
+        .filter(Organization.id.in_(org_ids), Organization.is_active == True)
+        .all()
+    )
 
     return [OrganizationResponse.from_orm(org) for org in organizations]
 
@@ -297,12 +301,14 @@ async def delete_organization(
 
 class AddTeacherRequest(BaseModel):
     """Request model for adding teacher to organization"""
+
     teacher_id: int
     role: str = Field(..., pattern="^(org_owner|org_admin)$")
 
 
 class TeacherRelationResponse(BaseModel):
     """Response model for teacher-organization relationship"""
+
     id: int
     teacher_id: int
     organization_id: str
@@ -327,6 +333,7 @@ class TeacherRelationResponse(BaseModel):
 
 class TeacherInfo(BaseModel):
     """Teacher information in organization"""
+
     id: int
     email: str
     name: str
@@ -352,28 +359,38 @@ async def list_organization_teachers(
     check_org_permission(teacher.id, org_id, db)
 
     # Get all teacher relationships
-    teacher_orgs = db.query(TeacherOrganization).filter(
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.is_active == True
-    ).all()
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True,
+        )
+        .all()
+    )
 
     result = []
     for to in teacher_orgs:
         t = db.query(Teacher).filter(Teacher.id == to.teacher_id).first()
         if t:
-            result.append(TeacherInfo(
-                id=t.id,
-                email=t.email,
-                name=t.name,
-                role=to.role,
-                is_active=to.is_active,
-                created_at=to.created_at,
-            ))
+            result.append(
+                TeacherInfo(
+                    id=t.id,
+                    email=t.email,
+                    name=t.name,
+                    role=to.role,
+                    is_active=to.is_active,
+                    created_at=to.created_at,
+                )
+            )
 
     return result
 
 
-@router.post("/{org_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherRelationResponse)
+@router.post(
+    "/{org_id}/teachers",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TeacherRelationResponse,
+)
 async def add_teacher_to_organization(
     org_id: uuid.UUID,
     request: AddTeacherRequest,
@@ -388,54 +405,65 @@ async def add_teacher_to_organization(
     casbin_service = get_casbin_service()
 
     # Check permission (only org_owner can add teachers)
-    org = check_org_permission(teacher.id, org_id, db)
+    check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher.id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.role == "org_owner",
-        TeacherOrganization.is_active == True
-    ).first()
+    teacher_org_check = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_org_check:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can add teachers to organization"
+            detail="Only org_owner can add teachers to organization",
         )
 
     # Check if adding org_owner and limit to 1
     if request.role == "org_owner":
-        existing_owner = db.query(TeacherOrganization).filter(
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active == True
-        ).first()
+        existing_owner = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.role == "org_owner",
+                TeacherOrganization.is_active == True,
+            )
+            .first()
+        )
 
         if existing_owner:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Organization already has an owner"
+                detail="Organization already has an owner",
             )
 
     # Check if teacher already has relationship
-    existing = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == request.teacher_id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.is_active == True
-    ).first()
+    existing = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == request.teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Teacher already belongs to this organization"
+            detail="Teacher already belongs to this organization",
         )
 
     # Verify teacher exists
     target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
     if not target_teacher:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
 
     # Create relationship
@@ -450,11 +478,7 @@ async def add_teacher_to_organization(
     db.refresh(teacher_org)
 
     # Add Casbin role
-    casbin_service.add_role_for_user(
-        request.teacher_id,
-        request.role,
-        f"org-{org_id}"
-    )
+    casbin_service.add_role_for_user(request.teacher_id, request.role, f"org-{org_id}")
 
     return TeacherRelationResponse.from_orm(teacher_org)
 
@@ -475,30 +499,38 @@ async def remove_teacher_from_organization(
     # Check permission
     check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher.id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.role == "org_owner",
-        TeacherOrganization.is_active == True
-    ).first()
+    teacher_org_check = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_org_check:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can remove teachers from organization"
+            detail="Only org_owner can remove teachers from organization",
         )
 
     # Find relationship
-    teacher_org = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher_id,
-        TeacherOrganization.organization_id == org_id,
-        TeacherOrganization.is_active == True
-    ).first()
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
 
     if not teacher_org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher relationship not found"
+            detail="Teacher relationship not found",
         )
 
     # Soft delete
@@ -506,10 +538,6 @@ async def remove_teacher_from_organization(
     db.commit()
 
     # Remove Casbin role
-    casbin_service.delete_role_for_user(
-        teacher_id,
-        teacher_org.role,
-        f"org-{org_id}"
-    )
+    casbin_service.delete_role_for_user(teacher_id, teacher_org.role, f"org-{org_id}")
 
     return {"message": "Teacher removed from organization successfully"}

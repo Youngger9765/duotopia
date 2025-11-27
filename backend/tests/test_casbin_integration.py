@@ -25,18 +25,14 @@ class TestCasbinService:
         """測試新增角色並檢查"""
         # 新增機構層級角色
         success = self.casbin.add_role_for_user(
-            teacher_id=123,
-            role='org_owner',
-            domain='org-test-uuid'
+            teacher_id=123, role="org_owner", domain="org-test-uuid"
         )
 
         assert success == True
 
         # 檢查角色（使用 has_role 方法）
         has_role = self.casbin.has_role(
-            teacher_id=123,
-            role='org_owner',
-            domain='org-test-uuid'
+            teacher_id=123, role="org_owner", domain="org-test-uuid"
         )
 
         assert has_role == True
@@ -44,14 +40,11 @@ class TestCasbinService:
     def test_check_permission_org_owner(self):
         """測試 org_owner 權限"""
         # 新增角色
-        self.casbin.add_role_for_user(123, 'org_owner', 'org-test')
+        self.casbin.add_role_for_user(123, "org_owner", "org-test")
 
         # 檢查權限（org_owner 可以管理學校）
         can_manage_schools = self.casbin.check_permission(
-            teacher_id=123,
-            domain='org-test',
-            resource='manage_schools',
-            action='write'
+            teacher_id=123, domain="org-test", resource="manage_schools", action="write"
         )
 
         assert can_manage_schools == True
@@ -59,9 +52,9 @@ class TestCasbinService:
         # org_owner 也可以管理老師
         can_manage_teachers = self.casbin.check_permission(
             teacher_id=123,
-            domain='org-test',
-            resource='manage_teachers',
-            action='write'
+            domain="org-test",
+            resource="manage_teachers",
+            action="write",
         )
 
         assert can_manage_teachers == True
@@ -69,14 +62,14 @@ class TestCasbinService:
     def test_check_permission_school_admin(self):
         """測試 school_admin 權限"""
         # 新增角色
-        self.casbin.add_role_for_user(456, 'school_admin', 'school-test')
+        self.casbin.add_role_for_user(456, "school_admin", "school-test")
 
         # school_admin 可以管理老師
         can_manage_teachers = self.casbin.check_permission(
             teacher_id=456,
-            domain='school-test',
-            resource='manage_teachers',
-            action='write'
+            domain="school-test",
+            resource="manage_teachers",
+            action="write",
         )
 
         assert can_manage_teachers == True
@@ -84,9 +77,9 @@ class TestCasbinService:
         # school_admin 不能管理學校（只有 org_owner 可以）
         can_manage_schools = self.casbin.check_permission(
             teacher_id=456,
-            domain='school-test',
-            resource='manage_schools',
-            action='write'
+            domain="school-test",
+            resource="manage_schools",
+            action="write",
         )
 
         assert can_manage_schools == False
@@ -94,14 +87,14 @@ class TestCasbinService:
     def test_check_permission_teacher(self):
         """測試 teacher 權限"""
         # 新增角色
-        self.casbin.add_role_for_user(789, 'teacher', 'school-test')
+        self.casbin.add_role_for_user(789, "teacher", "school-test")
 
         # teacher 可以管理自己的班級
         can_manage_classrooms = self.casbin.check_permission(
             teacher_id=789,
-            domain='school-test',
-            resource='manage_own_classrooms',
-            action='write'
+            domain="school-test",
+            resource="manage_own_classrooms",
+            action="write",
         )
 
         assert can_manage_classrooms == True
@@ -109,9 +102,9 @@ class TestCasbinService:
         # teacher 不能管理老師
         can_manage_teachers = self.casbin.check_permission(
             teacher_id=789,
-            domain='school-test',
-            resource='manage_teachers',
-            action='write'
+            domain="school-test",
+            resource="manage_teachers",
+            action="write",
         )
 
         assert can_manage_teachers == False
@@ -119,14 +112,11 @@ class TestCasbinService:
     def test_wildcard_domain(self):
         """測試 wildcard domain (org_owner 可以管理所有學校)"""
         # 新增機構層級角色
-        self.casbin.add_role_for_user(123, 'org_owner', 'org-test')
+        self.casbin.add_role_for_user(123, "org_owner", "org-test")
 
         # org_owner 在機構 domain 可以管理學校
         can_manage = self.casbin.check_permission(
-            teacher_id=123,
-            domain='org-test',
-            resource='manage_schools',
-            action='write'
+            teacher_id=123, domain="org-test", resource="manage_schools", action="write"
         )
 
         assert can_manage == True
@@ -134,46 +124,46 @@ class TestCasbinService:
     def test_delete_role(self):
         """測試刪除角色"""
         # 新增角色
-        self.casbin.add_role_for_user(123, 'teacher', 'school-test')
+        self.casbin.add_role_for_user(123, "teacher", "school-test")
 
         # 確認有角色
-        assert self.casbin.has_role(123, 'teacher', 'school-test') == True
+        assert self.casbin.has_role(123, "teacher", "school-test") == True
 
         # 刪除角色
-        success = self.casbin.delete_role_for_user(123, 'teacher', 'school-test')
+        success = self.casbin.delete_role_for_user(123, "teacher", "school-test")
 
         assert success == True
 
         # 確認已刪除
-        assert self.casbin.has_role(123, 'teacher', 'school-test') == False
+        assert self.casbin.has_role(123, "teacher", "school-test") == False
 
     def test_get_roles_for_user(self):
         """測試取得使用者角色"""
         # 新增多個角色
-        self.casbin.add_role_for_user(123, 'org_owner', 'org-test')
-        self.casbin.add_role_for_user(123, 'school_admin', 'school-test1')
-        self.casbin.add_role_for_user(123, 'teacher', 'school-test2')
+        self.casbin.add_role_for_user(123, "org_owner", "org-test")
+        self.casbin.add_role_for_user(123, "school_admin", "school-test1")
+        self.casbin.add_role_for_user(123, "teacher", "school-test2")
 
         # 取得機構層級角色
-        org_roles = self.casbin.get_roles_for_user(123, 'org-test')
-        assert 'org_owner' in org_roles
+        org_roles = self.casbin.get_roles_for_user(123, "org-test")
+        assert "org_owner" in org_roles
 
         # 取得學校層級角色
-        school_roles = self.casbin.get_roles_for_user(123, 'school-test1')
-        assert 'school_admin' in school_roles
+        school_roles = self.casbin.get_roles_for_user(123, "school-test1")
+        assert "school_admin" in school_roles
 
         # 取得所有角色
         all_roles = self.casbin.get_all_roles_for_user(123)
         assert len(all_roles) == 3
-        assert ('org_owner', 'org-test') in all_roles
-        assert ('school_admin', 'school-test1') in all_roles
-        assert ('teacher', 'school-test2') in all_roles
+        assert ("org_owner", "org-test") in all_roles
+        assert ("school_admin", "school-test1") in all_roles
+        assert ("teacher", "school-test2") in all_roles
 
     def test_delete_all_roles(self):
         """測試刪除所有角色"""
         # 新增多個角色
-        self.casbin.add_role_for_user(123, 'org_owner', 'org-test')
-        self.casbin.add_role_for_user(123, 'teacher', 'school-test')
+        self.casbin.add_role_for_user(123, "org_owner", "org-test")
+        self.casbin.add_role_for_user(123, "teacher", "school-test")
 
         # 刪除所有角色
         self.casbin.delete_all_roles_for_user(123)
@@ -185,22 +175,40 @@ class TestCasbinService:
     def test_multiple_users_same_domain(self):
         """測試多個使用者在同一 domain"""
         # User 1: org_owner
-        self.casbin.add_role_for_user(123, 'org_owner', 'org-test')
+        self.casbin.add_role_for_user(123, "org_owner", "org-test")
 
         # User 2: school_admin
-        self.casbin.add_role_for_user(456, 'school_admin', 'org-test')
+        self.casbin.add_role_for_user(456, "school_admin", "org-test")
 
         # User 3: teacher
-        self.casbin.add_role_for_user(789, 'teacher', 'org-test')
+        self.casbin.add_role_for_user(789, "teacher", "org-test")
 
         # 驗證各自的權限
-        assert self.casbin.check_permission(123, 'org-test', 'manage_schools', 'write') == True
-        assert self.casbin.check_permission(456, 'org-test', 'manage_schools', 'write') == False
-        assert self.casbin.check_permission(789, 'org-test', 'manage_schools', 'write') == False
+        assert (
+            self.casbin.check_permission(123, "org-test", "manage_schools", "write")
+            == True
+        )
+        assert (
+            self.casbin.check_permission(456, "org-test", "manage_schools", "write")
+            == False
+        )
+        assert (
+            self.casbin.check_permission(789, "org-test", "manage_schools", "write")
+            == False
+        )
 
-        assert self.casbin.check_permission(123, 'org-test', 'manage_teachers', 'write') == True
-        assert self.casbin.check_permission(456, 'org-test', 'manage_teachers', 'write') == True
-        assert self.casbin.check_permission(789, 'org-test', 'manage_teachers', 'write') == False
+        assert (
+            self.casbin.check_permission(123, "org-test", "manage_teachers", "write")
+            == True
+        )
+        assert (
+            self.casbin.check_permission(456, "org-test", "manage_teachers", "write")
+            == True
+        )
+        assert (
+            self.casbin.check_permission(789, "org-test", "manage_teachers", "write")
+            == False
+        )
 
     def test_singleton_pattern(self):
         """測試單例模式"""

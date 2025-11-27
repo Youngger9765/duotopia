@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -29,8 +29,8 @@ export default function OrganizationDetail() {
   const [loading, setLoading] = useState(true);
   const [teachersLoading, setTeachersLoading] = useState(false);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
-  const [teacherId, setTeacherId] = useState('');
-  const [role, setRole] = useState<'org_owner' | 'org_admin'>('org_admin');
+  const [teacherId, setTeacherId] = useState("");
+  const [role, setRole] = useState<"org_owner" | "org_admin">("org_admin");
 
   useEffect(() => {
     if (orgId) {
@@ -41,16 +41,16 @@ export default function OrganizationDetail() {
 
   const fetchOrganization = async () => {
     try {
-      const token = localStorage.getItem('teacherToken');
+      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
         setOrganization(data);
       }
     } catch (error) {
-      console.error('Failed to fetch organization:', error);
+      console.error("Failed to fetch organization:", error);
     } finally {
       setLoading(false);
     }
@@ -59,16 +59,16 @@ export default function OrganizationDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const token = localStorage.getItem('teacherToken');
+      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}/teachers`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
         setTeachers(data);
       }
     } catch (error) {
-      console.error('Failed to fetch teachers:', error);
+      console.error("Failed to fetch teachers:", error);
     } finally {
       setTeachersLoading(false);
     }
@@ -77,55 +77,58 @@ export default function OrganizationDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('teacherToken');
+      const token = localStorage.getItem("teacherToken");
       const response = await fetch(`/api/organizations/${orgId}/teachers`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           teacher_id: parseInt(teacherId),
-          role: role
-        })
+          role: role,
+        }),
       });
 
       if (response.ok) {
         setShowAddTeacher(false);
-        setTeacherId('');
-        setRole('org_admin');
+        setTeacherId("");
+        setRole("org_admin");
         fetchTeachers();
-        alert('教師已成功加入機構');
+        alert("教師已成功加入機構");
       } else {
         const error = await response.json();
         alert(`新增失敗: ${error.detail}`);
       }
     } catch (error) {
-      console.error('Add teacher failed:', error);
-      alert('新增教師時發生錯誤');
+      console.error("Add teacher failed:", error);
+      alert("新增教師時發生錯誤");
     }
   };
 
   const handleRemoveTeacher = async (teacherId: number) => {
-    if (!confirm('確定要移除此教師嗎？')) return;
+    if (!confirm("確定要移除此教師嗎？")) return;
 
     try {
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch(`/api/organizations/${orgId}/teachers/${teacherId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch(
+        `/api/organizations/${orgId}/teachers/${teacherId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         fetchTeachers();
-        alert('教師已移除');
+        alert("教師已移除");
       } else {
         const error = await response.json();
         alert(`移除失敗: ${error.detail}`);
       }
     } catch (error) {
-      console.error('Remove teacher failed:', error);
-      alert('移除教師時發生錯誤');
+      console.error("Remove teacher failed:", error);
+      alert("移除教師時發生錯誤");
     }
   };
 
@@ -136,14 +139,16 @@ export default function OrganizationDetail() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
         <button
-          onClick={() => navigate('/teacher/organizations')}
+          onClick={() => navigate("/teacher/organizations")}
           className="mb-4 px-4 py-2 border rounded hover:bg-gray-100"
         >
           ← 返回機構列表
         </button>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-3xl font-bold mb-4">{organization.display_name || organization.name}</h1>
+          <h1 className="text-3xl font-bold mb-4">
+            {organization.display_name || organization.name}
+          </h1>
 
           {organization.description && (
             <p className="text-gray-600 mb-4">{organization.description}</p>
@@ -217,7 +222,9 @@ export default function OrganizationDetail() {
                   <label className="block mb-2">角色 *</label>
                   <select
                     value={role}
-                    onChange={(e) => setRole(e.target.value as 'org_owner' | 'org_admin')}
+                    onChange={(e) =>
+                      setRole(e.target.value as "org_owner" | "org_admin")
+                    }
                     className="w-full border rounded px-3 py-2"
                   >
                     <option value="org_admin">機構管理員 (org_admin)</option>
@@ -257,23 +264,41 @@ export default function OrganizationDetail() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">姓名</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">電郵</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">角色</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">加入時間</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      姓名
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      電郵
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      角色
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      加入時間
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {teachers.map((t) => (
                     <tr key={t.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {t.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {t.email}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          t.role === 'org_owner' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {t.role === 'org_owner' ? '機構擁有人' : '機構管理員'}
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${
+                            t.role === "org_owner"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {t.role === "org_owner" ? "機構擁有人" : "機構管理員"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

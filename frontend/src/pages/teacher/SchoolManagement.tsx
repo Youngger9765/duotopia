@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface School {
   id: string;
@@ -22,19 +22,19 @@ export default function SchoolManagement() {
   const { orgId } = useParams<{ orgId: string }>();
   const [schools, setSchools] = useState<School[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string>(orgId || '');
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(orgId || "");
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    organization_id: orgId || '',
-    name: '',
-    display_name: '',
-    description: '',
-    contact_email: '',
-    contact_phone: '',
-    address: '',
+    organization_id: orgId || "",
+    name: "",
+    display_name: "",
+    description: "",
+    contact_email: "",
+    contact_phone: "",
+    address: "",
   });
 
   useEffect(() => {
@@ -44,15 +44,15 @@ export default function SchoolManagement() {
   useEffect(() => {
     if (selectedOrgId) {
       fetchSchools(selectedOrgId);
-      setFormData(prev => ({ ...prev, organization_id: selectedOrgId }));
+      setFormData((prev) => ({ ...prev, organization_id: selectedOrgId }));
     }
   }, [selectedOrgId]);
 
   const fetchOrganizations = async () => {
     try {
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch('/api/organizations', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch("/api/organizations", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -62,23 +62,26 @@ export default function SchoolManagement() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch organizations:', error);
+      console.error("Failed to fetch organizations:", error);
     }
   };
 
   const fetchSchools = async (organizationId: string) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch(`/api/schools?organization_id=${organizationId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch(
+        `/api/schools?organization_id=${organizationId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         setSchools(data);
       }
     } catch (error) {
-      console.error('Failed to fetch schools:', error);
+      console.error("Failed to fetch schools:", error);
     } finally {
       setLoading(false);
     }
@@ -87,31 +90,40 @@ export default function SchoolManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch('/api/schools', {
-        method: 'POST',
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch("/api/schools", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setShowCreateForm(false);
-        setFormData({ organization_id: selectedOrgId, name: '', display_name: '', description: '', contact_email: '', contact_phone: '', address: '' });
+        setFormData({
+          organization_id: selectedOrgId,
+          name: "",
+          display_name: "",
+          description: "",
+          contact_email: "",
+          contact_phone: "",
+          address: "",
+        });
         fetchSchools(selectedOrgId);
       } else {
         const error = await response.json();
         alert(`Failed to create school: ${error.detail}`);
       }
     } catch (error) {
-      console.error('Create failed:', error);
-      alert('Error creating school');
+      console.error("Create failed:", error);
+      alert("Error creating school");
     }
   };
 
-  if (loading && organizations.length === 0) return <div className="p-8">Loading...</div>;
+  if (loading && organizations.length === 0)
+    return <div className="p-8">Loading...</div>;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -119,7 +131,7 @@ export default function SchoolManagement() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">學校管理</h1>
           <button
-            onClick={() => navigate('/teacher/organizations')}
+            onClick={() => navigate("/teacher/organizations")}
             className="px-4 py-2 border rounded hover:bg-gray-100"
           >
             ← 返回機構列表
@@ -135,7 +147,7 @@ export default function SchoolManagement() {
               onChange={(e) => setSelectedOrgId(e.target.value)}
               className="w-full max-w-md border rounded px-3 py-2"
             >
-              {organizations.map(org => (
+              {organizations.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.display_name || org.name}
                 </option>
@@ -165,7 +177,9 @@ export default function SchoolManagement() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -174,7 +188,9 @@ export default function SchoolManagement() {
                 <input
                   type="text"
                   value={formData.display_name}
-                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, display_name: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -182,7 +198,9 @@ export default function SchoolManagement() {
                 <label className="block mb-2">描述</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                   rows={3}
                 />
@@ -192,7 +210,9 @@ export default function SchoolManagement() {
                 <input
                   type="email"
                   value={formData.contact_email}
-                  onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_email: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -201,7 +221,9 @@ export default function SchoolManagement() {
                 <input
                   type="tel"
                   value={formData.contact_phone}
-                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_phone: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -231,13 +253,22 @@ export default function SchoolManagement() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {schools.map((school) => (
-              <div key={school.id} className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                   onClick={() => navigate(`/teacher/schools/${school.id}`)}>
-                <h3 className="text-xl font-semibold mb-2">{school.display_name || school.name}</h3>
-                {school.description && <p className="text-gray-600 mb-4">{school.description}</p>}
+              <div
+                key={school.id}
+                className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate(`/teacher/schools/${school.id}`)}
+              >
+                <h3 className="text-xl font-semibold mb-2">
+                  {school.display_name || school.name}
+                </h3>
+                {school.description && (
+                  <p className="text-gray-600 mb-4">{school.description}</p>
+                )}
                 <div className="text-sm text-gray-500">
                   {school.contact_email && <div>📧 {school.contact_email}</div>}
-                  <div>創建時間: {new Date(school.created_at).toLocaleDateString()}</div>
+                  <div>
+                    創建時間: {new Date(school.created_at).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             ))}
@@ -255,7 +286,7 @@ export default function SchoolManagement() {
         <div className="text-center py-12 text-gray-500">
           <p>請先創建機構</p>
           <button
-            onClick={() => navigate('/teacher/organizations')}
+            onClick={() => navigate("/teacher/organizations")}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             前往機構管理

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -18,12 +18,12 @@ export default function OrganizationManagement() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: '',
-    display_name: '',
-    description: '',
-    contact_email: '',
-    contact_phone: '',
-    address: '',
+    name: "",
+    display_name: "",
+    description: "",
+    contact_email: "",
+    contact_phone: "",
+    address: "",
   });
 
   useEffect(() => {
@@ -32,16 +32,16 @@ export default function OrganizationManagement() {
 
   const fetchOrganizations = async () => {
     try {
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch('/api/organizations', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch("/api/organizations", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
         setOrganizations(data);
       }
     } catch (error) {
-      console.error('Failed to fetch organizations:', error);
+      console.error("Failed to fetch organizations:", error);
     } finally {
       setLoading(false);
     }
@@ -50,26 +50,33 @@ export default function OrganizationManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('teacherToken');
-      const response = await fetch('/api/organizations', {
-        method: 'POST',
+      const token = localStorage.getItem("teacherToken");
+      const response = await fetch("/api/organizations", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setShowCreateForm(false);
-        setFormData({ name: '', display_name: '', description: '', contact_email: '', contact_phone: '', address: '' });
+        setFormData({
+          name: "",
+          display_name: "",
+          description: "",
+          contact_email: "",
+          contact_phone: "",
+          address: "",
+        });
         fetchOrganizations();
       } else {
-        alert('Failed to create organization');
+        alert("Failed to create organization");
       }
     } catch (error) {
-      console.error('Create failed:', error);
-      alert('Error creating organization');
+      console.error("Create failed:", error);
+      alert("Error creating organization");
     }
   };
 
@@ -98,7 +105,9 @@ export default function OrganizationManagement() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -107,7 +116,9 @@ export default function OrganizationManagement() {
                 <input
                   type="text"
                   value={formData.display_name}
-                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, display_name: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -115,7 +126,9 @@ export default function OrganizationManagement() {
                 <label className="block mb-2">描述</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                   rows={3}
                 />
@@ -125,7 +138,9 @@ export default function OrganizationManagement() {
                 <input
                   type="email"
                   value={formData.contact_email}
-                  onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_email: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -134,7 +149,9 @@ export default function OrganizationManagement() {
                 <input
                   type="tel"
                   value={formData.contact_phone}
-                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_phone: e.target.value })
+                  }
                   className="w-full border rounded px-3 py-2"
                 />
               </div>
@@ -160,13 +177,22 @@ export default function OrganizationManagement() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {organizations.map((org) => (
-          <div key={org.id} className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-               onClick={() => navigate(`/teacher/organizations/${org.id}`)}>
-            <h3 className="text-xl font-semibold mb-2">{org.display_name || org.name}</h3>
-            {org.description && <p className="text-gray-600 mb-4">{org.description}</p>}
+          <div
+            key={org.id}
+            className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate(`/teacher/organizations/${org.id}`)}
+          >
+            <h3 className="text-xl font-semibold mb-2">
+              {org.display_name || org.name}
+            </h3>
+            {org.description && (
+              <p className="text-gray-600 mb-4">{org.description}</p>
+            )}
             <div className="text-sm text-gray-500">
               {org.contact_email && <div>📧 {org.contact_email}</div>}
-              <div>創建時間: {new Date(org.created_at).toLocaleDateString()}</div>
+              <div>
+                創建時間: {new Date(org.created_at).toLocaleDateString()}
+              </div>
             </div>
           </div>
         ))}
