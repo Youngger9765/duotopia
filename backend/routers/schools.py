@@ -14,7 +14,7 @@ from datetime import datetime
 import uuid
 
 from database import get_db
-from models import Teacher, Organization, School, TeacherOrganization
+from models import Teacher, Organization, School, TeacherOrganization, TeacherSchool
 from auth import verify_token
 from services.casbin_service import get_casbin_service
 
@@ -313,3 +313,220 @@ async def delete_school(
     db.commit()
 
     return {"message": "School deleted successfully"}
+
+
+# ============ Teacher Management Endpoints ============
+
+
+class AddTeacherToSchoolRequest(BaseModel):
+    """Request model for adding teacher to school"""
+    teacher_id: int
+    roles: List[str] = Field(..., description="List of roles: school_admin, teacher")
+
+
+class UpdateTeacherRolesRequest(BaseModel):
+    """Request model for updating teacher roles"""
+    roles: List[str] = Field(..., description="List of roles: school_admin, teacher")
+
+
+class TeacherSchoolRelationResponse(BaseModel):
+    """Response model for teacher-school relationship"""
+    id: int
+    teacher_id: int
+    school_id: str
+    roles: List[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @classmethod
+    def from_orm(cls, rel: TeacherSchool):
+        return cls(
+            id=rel.id,
+            teacher_id=rel.teacher_id,
+            school_id=str(rel.school_id),
+            roles=rel.roles if rel.roles else [],
+            is_active=rel.is_active,
+            created_at=rel.created_at,
+        )
+
+
+@router.post("/{school_id}/teachers", status_code=status.HTTP_201_CREATED, response_model=TeacherSchoolRelationResponse)
+async def add_teacher_to_school(
+    school_id: uuid.UUID,
+    request: AddTeacherToSchoolRequest,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Add a teacher to school with specified roles.
+    Requires org_owner or org_admin role.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission
+    school = check_school_permission(teacher.id, school_id, db)
+
+    # Validate roles
+    valid_roles = ["school_admin", "teacher"]
+    for role in request.roles:
+        if role not in valid_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}. Must be one of {valid_roles}"
+            )
+
+    # Check if teacher already has relationship
+    existing = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == request.teacher_id,
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.is_active == True
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Teacher already belongs to this school"
+        )
+
+    # Verify teacher exists
+    target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
+    if not target_teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found"
+        )
+
+    # Create relationship
+    teacher_school = TeacherSchool(
+        teacher_id=request.teacher_id,
+        school_id=school_id,
+        roles=request.roles,
+        is_active=True,
+    )
+    db.add(teacher_school)
+    db.commit()
+    db.refresh(teacher_school)
+
+    # Add Casbin roles
+    for role in request.roles:
+        casbin_service.add_role_for_user(
+            request.teacher_id,
+            role,
+            f"school-{school_id}"
+        )
+
+    return TeacherSchoolRelationResponse.from_orm(teacher_school)
+
+
+@router.patch("/{school_id}/teachers/{teacher_id}", response_model=TeacherSchoolRelationResponse)
+async def update_teacher_school_roles(
+    school_id: uuid.UUID,
+    teacher_id: int,
+    request: UpdateTeacherRolesRequest,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Update teacher's roles in school.
+    Requires org_owner or org_admin role.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission
+    check_school_permission(teacher.id, school_id, db)
+
+    # Validate roles
+    valid_roles = ["school_admin", "teacher"]
+    for role in request.roles:
+        if role not in valid_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}. Must be one of {valid_roles}"
+            )
+
+    # Find relationship
+    teacher_school = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == teacher_id,
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.is_active == True
+    ).first()
+
+    if not teacher_school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher relationship not found"
+        )
+
+    # Get old roles for Casbin cleanup
+    old_roles = teacher_school.roles if teacher_school.roles else []
+
+    # Update roles
+    teacher_school.roles = request.roles
+    db.commit()
+    db.refresh(teacher_school)
+
+    # Update Casbin roles
+    # Remove old roles
+    for role in old_roles:
+        casbin_service.delete_role_for_user(
+            teacher_id,
+            role,
+            f"school-{school_id}"
+        )
+    # Add new roles
+    for role in request.roles:
+        casbin_service.add_role_for_user(
+            teacher_id,
+            role,
+            f"school-{school_id}"
+        )
+
+    return TeacherSchoolRelationResponse.from_orm(teacher_school)
+
+
+@router.delete("/{school_id}/teachers/{teacher_id}")
+async def remove_teacher_from_school(
+    school_id: uuid.UUID,
+    teacher_id: int,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove a teacher from school (soft delete).
+    Requires org_owner or org_admin role.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission
+    check_school_permission(teacher.id, school_id, db)
+
+    # Find relationship
+    teacher_school = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == teacher_id,
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.is_active == True
+    ).first()
+
+    if not teacher_school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher relationship not found"
+        )
+
+    # Soft delete
+    teacher_school.is_active = False
+    db.commit()
+
+    # Remove all Casbin roles
+    roles = teacher_school.roles if teacher_school.roles else []
+    for role in roles:
+        casbin_service.delete_role_for_user(
+            teacher_id,
+            role,
+            f"school-{school_id}"
+        )
+
+    return {"message": "Teacher removed from school successfully"}
