@@ -28,14 +28,14 @@ class TestCasbinService:
             teacher_id=123, role="org_owner", domain="org-test-uuid"
         )
 
-        assert success == True
+        assert success is True
 
         # 檢查角色（使用 has_role 方法）
         has_role = self.casbin.has_role(
             teacher_id=123, role="org_owner", domain="org-test-uuid"
         )
 
-        assert has_role == True
+        assert has_role is True
 
     def test_check_permission_org_owner(self):
         """測試 org_owner 權限"""
@@ -47,7 +47,7 @@ class TestCasbinService:
             teacher_id=123, domain="org-test", resource="manage_schools", action="write"
         )
 
-        assert can_manage_schools == True
+        assert can_manage_schools is True
 
         # org_owner 也可以管理老師
         can_manage_teachers = self.casbin.check_permission(
@@ -57,7 +57,7 @@ class TestCasbinService:
             action="write",
         )
 
-        assert can_manage_teachers == True
+        assert can_manage_teachers is True
 
     def test_check_permission_school_admin(self):
         """測試 school_admin 權限"""
@@ -72,7 +72,7 @@ class TestCasbinService:
             action="write",
         )
 
-        assert can_manage_teachers == True
+        assert can_manage_teachers is True
 
         # school_admin 不能管理學校（只有 org_owner 可以）
         can_manage_schools = self.casbin.check_permission(
@@ -82,7 +82,7 @@ class TestCasbinService:
             action="write",
         )
 
-        assert can_manage_schools == False
+        assert can_manage_schools is False
 
     def test_check_permission_teacher(self):
         """測試 teacher 權限"""
@@ -97,7 +97,7 @@ class TestCasbinService:
             action="write",
         )
 
-        assert can_manage_classrooms == True
+        assert can_manage_classrooms is True
 
         # teacher 不能管理老師
         can_manage_teachers = self.casbin.check_permission(
@@ -107,7 +107,7 @@ class TestCasbinService:
             action="write",
         )
 
-        assert can_manage_teachers == False
+        assert can_manage_teachers is False
 
     def test_wildcard_domain(self):
         """測試 wildcard domain (org_owner 可以管理所有學校)"""
@@ -119,7 +119,7 @@ class TestCasbinService:
             teacher_id=123, domain="org-test", resource="manage_schools", action="write"
         )
 
-        assert can_manage == True
+        assert can_manage is True
 
     def test_delete_role(self):
         """測試刪除角色"""
@@ -127,15 +127,15 @@ class TestCasbinService:
         self.casbin.add_role_for_user(123, "teacher", "school-test")
 
         # 確認有角色
-        assert self.casbin.has_role(123, "teacher", "school-test") == True
+        assert self.casbin.has_role(123, "teacher", "school-test") is True
 
         # 刪除角色
         success = self.casbin.delete_role_for_user(123, "teacher", "school-test")
 
-        assert success == True
+        assert success is True
 
         # 確認已刪除
-        assert self.casbin.has_role(123, "teacher", "school-test") == False
+        assert self.casbin.has_role(123, "teacher", "school-test") is False
 
     def test_get_roles_for_user(self):
         """測試取得使用者角色"""
@@ -186,28 +186,28 @@ class TestCasbinService:
         # 驗證各自的權限
         assert (
             self.casbin.check_permission(123, "org-test", "manage_schools", "write")
-            == True
+            is True
         )
         assert (
             self.casbin.check_permission(456, "org-test", "manage_schools", "write")
-            == False
+            is False
         )
         assert (
             self.casbin.check_permission(789, "org-test", "manage_schools", "write")
-            == False
+            is False
         )
 
         assert (
             self.casbin.check_permission(123, "org-test", "manage_teachers", "write")
-            == True
+            is True
         )
         assert (
             self.casbin.check_permission(456, "org-test", "manage_teachers", "write")
-            == True
+            is True
         )
         assert (
             self.casbin.check_permission(789, "org-test", "manage_teachers", "write")
-            == False
+            is False
         )
 
     def test_singleton_pattern(self):
