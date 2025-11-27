@@ -47,6 +47,7 @@ from routers import (
     subscription,
     payment,
     cron,
+    organizations,
 )
 from routes import logs
 from api import debug
@@ -252,6 +253,7 @@ if environment in ["development", "staging"]:
         pass
 app.include_router(teachers.router)
 app.include_router(students.router)
+app.include_router(organizations.router)  # 機構管理路由
 app.include_router(assignments.router)
 app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
