@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import SubscriptionProgressBanner from "../SubscriptionProgressBanner";
 import { analyticsService } from "@/services/analyticsService";
 import { useTranslation } from "react-i18next";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
 
 interface TapPayPaymentProps {
   amount: number;
@@ -135,26 +137,12 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   // 🔧 修復：正確取得 token 和用戶資料
   const getAuthToken = (): string | null => {
     // 優先學生 token
-    const studentAuth = localStorage.getItem("student-auth-storage");
-    if (studentAuth) {
-      try {
-        const { state } = JSON.parse(studentAuth);
-        if (state?.token) return state.token;
-      } catch (e) {
-        console.error("Failed to parse student auth:", e);
-      }
-    }
+    const studentToken = useStudentAuthStore.getState().token;
+    if (studentToken) return studentToken;
 
     // 檢查老師 token
-    const teacherAuth = localStorage.getItem("teacher-auth-storage");
-    if (teacherAuth) {
-      try {
-        const { state } = JSON.parse(teacherAuth);
-        if (state?.token) return state.token;
-      } catch (e) {
-        console.error("Failed to parse teacher auth:", e);
-      }
-    }
+    const teacherToken = useTeacherAuthStore.getState().token;
+    if (teacherToken) return teacherToken;
 
     return null;
   };
@@ -166,48 +154,34 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
     phone?: string;
   } => {
     // 優先檢查學生資料
-    const studentAuth = localStorage.getItem("student-auth-storage");
-    if (studentAuth) {
-      try {
-        const { state } = JSON.parse(studentAuth);
-        if (state?.user) {
-          const email = state.user.email?.trim();
-          const name = state.user.name?.trim();
+    const studentUser = useStudentAuthStore.getState().user;
+    if (studentUser) {
+      const email = studentUser.email?.trim();
+      const name = studentUser.name?.trim();
 
-          // 驗證 email 格式
-          if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return {
-              email,
-              name: name || "User",
-              phone: state.user.phone_number,
-            };
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse student auth:", e);
+      // 驗證 email 格式
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return {
+          email,
+          name: name || "User",
+          phone: undefined, // StudentUser 沒有 phone 屬性
+        };
       }
     }
 
     // 檢查老師資料
-    const teacherAuth = localStorage.getItem("teacher-auth-storage");
-    if (teacherAuth) {
-      try {
-        const { state } = JSON.parse(teacherAuth);
-        if (state?.user) {
-          const email = state.user.email?.trim();
-          const name = state.user.name?.trim();
+    const teacherUser = useTeacherAuthStore.getState().user;
+    if (teacherUser) {
+      const email = teacherUser.email?.trim();
+      const name = teacherUser.name?.trim();
 
-          // 驗證 email 格式
-          if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return {
-              email,
-              name: name || "User",
-              phone: state.user.phone_number,
-            };
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse teacher auth:", e);
+      // 驗證 email 格式
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return {
+          email,
+          name: name || "User",
+          phone: teacherUser.phone,
+        };
       }
     }
 

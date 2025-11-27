@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import TeacherLayout from "@/components/TeacherLayout";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface Organization {
   id: string;
@@ -16,6 +18,7 @@ export default function OrganizationManagement() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const navigate = useNavigate();
+  const token = useTeacherAuthStore((state) => state.token);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,16 +35,24 @@ export default function OrganizationManagement() {
 
   const fetchOrganizations = async () => {
     try {
-      const token = localStorage.getItem("teacherToken");
+      console.log("🔍 Fetching organizations with token:", token?.substring(0, 20) + "...");
+
       const response = await fetch("/api/organizations", {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      console.log("📡 API Response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("✅ Organizations data:", data);
         setOrganizations(data);
+      } else {
+        const error = await response.text();
+        console.error("❌ API Error:", response.status, error);
       }
     } catch (error) {
-      console.error("Failed to fetch organizations:", error);
+      console.error("❌ Failed to fetch organizations:", error);
     } finally {
       setLoading(false);
     }
@@ -50,7 +61,6 @@ export default function OrganizationManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("teacherToken");
       const response = await fetch("/api/organizations", {
         method: "POST",
         headers: {
@@ -80,19 +90,26 @@ export default function OrganizationManagement() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  if (loading) {
+    return (
+      <TeacherLayout>
+        <div className="p-8">Loading...</div>
+      </TeacherLayout>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">機構管理</h1>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + 新增機構
-        </button>
-      </div>
+    <TeacherLayout>
+      <div className="p-8 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">機構管理</h1>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            + 新增機構
+          </button>
+        </div>
 
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -204,5 +221,6 @@ export default function OrganizationManagement() {
         </div>
       )}
     </div>
+  </TeacherLayout>
   );
 }

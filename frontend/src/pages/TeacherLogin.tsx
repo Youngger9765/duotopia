@@ -61,14 +61,14 @@ export default function TeacherLogin() {
     }
   };
 
-  const handleQuickLogin = async (email: string) => {
+  const handleQuickLogin = async (email: string, password: string = "demo123") => {
     setIsLoading(true);
     setError("");
 
     try {
       const result = await apiClient.teacherLogin({
         email,
-        password: "demo123",
+        password,
       });
 
       useTeacherAuthStore.getState().login(result.access_token, {
@@ -265,6 +265,94 @@ export default function TeacherLogin() {
                       </div>
                     </div>
                   </Button>
+
+                  {/* 機構測試帳號分隔線 */}
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-2 bg-white text-gray-500">
+                        機構測試帳號
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 機構擁有者 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("owner@duotopia.com", "owner123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        張機構（機構擁有者）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        owner@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 機構管理員 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("orgadmin@duotopia.com", "orgadmin123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-indigo-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        李管理（機構管理員）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        orgadmin@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 學校管理員 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("schooladmin@duotopia.com", "schooladmin123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-orange-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        王校長（學校管理員）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        schooladmin@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
+
+                  {/* 機構教師 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("orgteacher@duotopia.com", "orgteacher123")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-teal-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">
+                        陳老師（機構教師）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        orgteacher@duotopia.com
+                      </div>
+                    </div>
+                  </Button>
                 </div>
               </>
             )}
@@ -293,14 +381,28 @@ export default function TeacherLogin() {
 
         {/* 測試帳號說明 - 只在非 production 或有 ?is_demo=true 時顯示 */}
         {showDemoBlocks && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
-            <div className="font-semibold mb-1">
-              {t("teacherLogin.demo.passwordHint")}
+          <div className="mt-4 space-y-3">
+            <div className="p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
+              <div className="font-semibold mb-1">
+                🔒 {t("teacherLogin.demo.passwordHint")}
+              </div>
+              <div className="space-y-1">
+                <div>✅ {t("teacherLogin.demo.demoDescription")}</div>
+                <div>🎁 {t("teacherLogin.demo.trialDescription")}</div>
+                <div>❌ {t("teacherLogin.demo.expiredDescription")}</div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <div>✅ {t("teacherLogin.demo.demoDescription")}</div>
-              <div>🎁 {t("teacherLogin.demo.trialDescription")}</div>
-              <div>❌ {t("teacherLogin.demo.expiredDescription")}</div>
+
+            <div className="p-3 bg-purple-50 rounded-lg text-xs text-gray-600">
+              <div className="font-semibold mb-1">
+                🏢 機構測試帳號密碼
+              </div>
+              <div className="space-y-1">
+                <div>💜 owner@duotopia.com - owner123</div>
+                <div>💙 orgadmin@duotopia.com - orgadmin123</div>
+                <div>🧡 schooladmin@duotopia.com - schooladmin123</div>
+                <div>💚 orgteacher@duotopia.com - orgteacher123</div>
+              </div>
             </div>
           </div>
         )}
