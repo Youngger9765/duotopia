@@ -5,7 +5,6 @@
 import {
   Home,
   Building2,
-  School,
   GraduationCap,
   Users,
   BookOpen,
@@ -13,40 +12,25 @@ import {
 import { SidebarGroup } from "@/types/sidebar";
 
 export const getSidebarGroups = (t: (key: string) => string): SidebarGroup[] => [
-  // 🏢 機構管理 (org_owner, org_admin)
+  // 🏢 組織管理 (org_owner, org_admin, school_admin) - Notion Style
   {
-    id: "organization-management",
-    label: "機構管理",
+    id: "organization-hub",
+    label: "組織管理",
     icon: Building2,
-    requiredRoles: ["org_owner", "org_admin"],
-    items: [
-      {
-        id: "organizations",
-        label: "機構列表",
-        icon: Building2,
-        path: "/teacher/organizations",
-      },
-    ],
-  },
-  // 🏫 學校管理 (org_owner, org_admin, school_admin)
-  {
-    id: "school-management",
-    label: "學校管理",
-    icon: School,
     requiredRoles: ["org_owner", "org_admin", "school_admin"],
     items: [
       {
-        id: "schools",
-        label: "學校資訊",
-        icon: School,
-        path: "/teacher/schools",
+        id: "organizations-hub",
+        label: "組織架構",
+        icon: Building2,
+        path: "/teacher/organizations-hub",
       },
     ],
   },
-  // 👥 班生課管理 (所有教師) - 包含儀表板
+  // 👥 教學管理 (所有教師) - 包含儀表板
   {
     id: "class-management",
-    label: "班生課管理",
+    label: "教學管理",
     icon: GraduationCap,
     items: [
       {

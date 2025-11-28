@@ -111,13 +111,24 @@ class SchoolInfo(BaseModel):
 class ClassroomInfo(BaseModel):
     """Classroom information"""
 
-    id: int
+    id: str
     name: str
-    teacher_id: int
+    program_level: str
     is_active: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm(cls, classroom: Classroom):
+        return cls(
+            id=str(classroom.id),
+            name=classroom.name,
+            program_level=classroom.level.value if classroom.level else "A1",
+            is_active=classroom.is_active,
+            created_at=classroom.created_at,
+        )
 
 
 # ============ API Endpoints ============
@@ -328,14 +339,7 @@ async def list_school_classrooms(
         classroom = (
             db.query(Classroom).filter(Classroom.id == link.classroom_id).first()
         )
-        if classroom:
-            result.append(
-                ClassroomInfo(
-                    id=classroom.id,
-                    name=classroom.name,
-                    teacher_id=classroom.teacher_id,
-                    is_active=classroom.is_active,
-                )
-            )
+        if classroom and classroom.is_active:
+            result.append(ClassroomInfo.from_orm(classroom))
 
     return result

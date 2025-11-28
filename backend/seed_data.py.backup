@@ -164,36 +164,15 @@ def create_demo_data(db: Session):
         is_demo=False,
     )
 
-    # 智慧教育中心機構管理員
-    smart_admin_teacher = Teacher(
-        email="smartadmin@duotopia.com",
-        name="許管理",
-        password_hash=get_password_hash("smartadmin123"),
-        is_active=True,
-        is_demo=False,
-    )
-
-    # 全球語言學院機構管理員
-    global_admin_teacher = Teacher(
-        email="globaladmin@duotopia.com",
-        name="游管理",
-        password_hash=get_password_hash("globaladmin123"),
-        is_active=True,
-        is_demo=False,
-    )
-
     db.add_all(
-        [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher,
-         smart_admin_teacher, global_admin_teacher]
+        [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher]
     )
     db.commit()
     db.refresh(org_owner_teacher)
     db.refresh(org_admin_teacher)
     db.refresh(school_admin_teacher)
     db.refresh(org_teacher)
-    db.refresh(smart_admin_teacher)
-    db.refresh(global_admin_teacher)
-    print("✅ 建立 6 個機構測試帳號")
+    print("✅ 建立 4 個機構測試帳號")
 
     # 2.2 為機構測試帳號創建訂閱（給予充足配額）
     for teacher in [
@@ -201,8 +180,6 @@ def create_demo_data(db: Session):
         org_admin_teacher,
         school_admin_teacher,
         org_teacher,
-        smart_admin_teacher,
-        global_admin_teacher,
     ]:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
@@ -251,74 +228,24 @@ def create_demo_data(db: Session):
         is_active=True,
     )
 
-    # 新增機構 4: 智慧教育中心
-    smart_edu_org = Organization(
-        name="smart-education-center",
-        display_name="智慧教育中心",
-        description="運用科技打造智慧教學環境",
-        contact_email="contact@smart-edu.com",
-        contact_phone="+886-7-1234-5678",
-        address="高雄市前鎮區中山二路150號",
-        is_active=True,
-    )
-
-    # 新增機構 5: 全球語言學院
-    global_lang_org = Organization(
-        name="global-language-institute",
-        display_name="全球語言學院",
-        description="專業的多國語言培訓機構",
-        contact_email="contact@global-lang.com",
-        contact_phone="+886-6-9876-5432",
-        address="台南市東區大學路500號",
-        is_active=True,
-    )
-
-    db.add_all([test_org, excellence_org, future_org, smart_edu_org, global_lang_org])
+    db.add_all([test_org, excellence_org, future_org])
     db.commit()
     db.refresh(test_org)
     db.refresh(excellence_org)
     db.refresh(future_org)
-    db.refresh(smart_edu_org)
-    db.refresh(global_lang_org)
-    print("✅ 建立 5 個測試機構: 測試補習班、卓越教育集團、未來學苑、智慧教育中心、全球語言學院")
+    print("✅ 建立 3 個測試機構: 測試補習班、卓越教育集團、未來學苑")
 
     # 2.4 設定機構成員
-    # 張機構 = 機構擁有者（擁有5個機構）
-    owner_org_rels = [
-        TeacherOrganization(
-            teacher_id=org_owner_teacher.id,
-            organization_id=test_org.id,
-            role="org_owner",
-            is_active=True,
-        ),
-        TeacherOrganization(
-            teacher_id=org_owner_teacher.id,
-            organization_id=excellence_org.id,
-            role="org_owner",
-            is_active=True,
-        ),
-        TeacherOrganization(
-            teacher_id=org_owner_teacher.id,
-            organization_id=future_org.id,
-            role="org_owner",
-            is_active=True,
-        ),
-        TeacherOrganization(
-            teacher_id=org_owner_teacher.id,
-            organization_id=smart_edu_org.id,
-            role="org_owner",
-            is_active=True,
-        ),
-        TeacherOrganization(
-            teacher_id=org_owner_teacher.id,
-            organization_id=global_lang_org.id,
-            role="org_owner",
-            is_active=True,
-        ),
-    ]
-    db.add_all(owner_org_rels)
+    # 張機構 = 機構擁有者
+    owner_org_rel = TeacherOrganization(
+        teacher_id=org_owner_teacher.id,
+        organization_id=test_org.id,
+        role="org_owner",
+        is_active=True,
+    )
+    db.add(owner_org_rel)
 
-    # 李管理 = 機構管理員（只管理測試補習班）
+    # 李管理 = 機構管理員
     admin_org_rel = TeacherOrganization(
         teacher_id=org_admin_teacher.id,
         organization_id=test_org.id,
@@ -326,28 +253,10 @@ def create_demo_data(db: Session):
         is_active=True,
     )
     db.add(admin_org_rel)
-
-    # 智慧教育中心管理員
-    smart_admin_org_rel = TeacherOrganization(
-        teacher_id=smart_admin_teacher.id,
-        organization_id=smart_edu_org.id,
-        role="org_admin",
-        is_active=True,
-    )
-
-    # 全球語言學院管理員
-    global_admin_org_rel = TeacherOrganization(
-        teacher_id=global_admin_teacher.id,
-        organization_id=global_lang_org.id,
-        role="org_admin",
-        is_active=True,
-    )
-    db.add_all([smart_admin_org_rel, global_admin_org_rel])
-
     db.commit()
     print("✅ 設定機構成員:")
-    print("   - owner@duotopia.com (張機構): org_owner of 5 organizations")
-    print("   - orgadmin@duotopia.com (李管理): org_admin of test_org")
+    print("   - owner@duotopia.com (張機構): org_owner")
+    print("   - orgadmin@duotopia.com (李管理): org_admin")
 
     # 2.5 創建分校（每個機構 3 所學校，共 9 所）
 
@@ -453,75 +362,6 @@ def create_demo_data(db: Session):
         is_active=True,
     )
 
-
-
-    # 智慧教育中心的 3 所學校
-    smart_kaohsiung_school = School(
-        organization_id=smart_edu_org.id,
-        name="smart-kaohsiung",
-        display_name="智慧教育-高雄校區",
-        description="智慧教育中心高雄主校區",
-        contact_email="kaohsiung@smart-edu.com",
-        contact_phone="+886-7-1234-1111",
-        address="高雄市前鎮區中山二路150號",
-        is_active=True,
-    )
-
-    smart_zuoying_school = School(
-        organization_id=smart_edu_org.id,
-        name="smart-zuoying",
-        display_name="智慧教育-左營校區",
-        description="智慧教育中心左營分校",
-        contact_email="zuoying@smart-edu.com",
-        contact_phone="+886-7-1234-2222",
-        address="高雄市左營區博愛二路200號",
-        is_active=True,
-    )
-
-    smart_fengshan_school = School(
-        organization_id=smart_edu_org.id,
-        name="smart-fengshan",
-        display_name="智慧教育-鳳山校區",
-        description="智慧教育中心鳳山分校",
-        contact_email="fengshan@smart-edu.com",
-        contact_phone="+886-7-1234-3333",
-        address="高雄市鳳山區光復路一段300號",
-        is_active=True,
-    )
-
-    # 全球語言學院的 3 所學校
-    global_tainan_school = School(
-        organization_id=global_lang_org.id,
-        name="global-tainan",
-        display_name="全球語言-台南校區",
-        description="全球語言學院台南主校區",
-        contact_email="tainan@global-lang.com",
-        contact_phone="+886-6-9876-1111",
-        address="台南市東區大學路500號",
-        is_active=True,
-    )
-
-    global_anping_school = School(
-        organization_id=global_lang_org.id,
-        name="global-anping",
-        display_name="全球語言-安平校區",
-        description="全球語言學院安平分校",
-        contact_email="anping@global-lang.com",
-        contact_phone="+886-6-9876-2222",
-        address="台南市安平區安平路600號",
-        is_active=True,
-    )
-
-    global_yongkang_school = School(
-        organization_id=global_lang_org.id,
-        name="global-yongkang",
-        display_name="全球語言-永康校區",
-        description="全球語言學院永康分校",
-        contact_email="yongkang@global-lang.com",
-        contact_phone="+886-6-9876-3333",
-        address="台南市永康區中華路700號",
-        is_active=True,
-    )
     all_schools = [
         test_main_school,
         test_taipei_school,
@@ -532,19 +372,13 @@ def create_demo_data(db: Session):
         future_main_school,
         future_north_school,
         future_south_school,
-        smart_kaohsiung_school,
-        smart_zuoying_school,
-        smart_fengshan_school,
-        global_tainan_school,
-        global_anping_school,
-        global_yongkang_school,
     ]
 
     db.add_all(all_schools)
     db.commit()
     for school in all_schools:
         db.refresh(school)
-    print("✅ 建立 15 所分校（每個機構 3 所）")
+    print("✅ 建立 9 所分校（每個機構 3 所）")
 
     # 2.6 創建更多教師（每個學校需要至少一個教師）
     # 為了簡化，我們為每個學校創建一個教師
@@ -559,30 +393,6 @@ def create_demo_data(db: Session):
         ("future_main", "蔡老師", "蔡老師"),
         ("future_north", "楊老師", "楊老師"),
         ("future_south", "鄭老師", "鄭老師"),
-        # 智慧教育中心 - 高雄校區（校長+2教師）
-        ("smart_kaohsiung_principal", "許校長", "許校長"),
-        ("smart_kaohsiung_t1", "許老師", "許老師"),
-        ("smart_kaohsiung_t2", "賴老師", "賴老師"),
-        # 智慧教育中心 - 左營校區（校長+2教師）
-        ("smart_zuoying_principal", "洪校長", "洪校長"),
-        ("smart_zuoying_t1", "洪老師A", "洪老師A"),
-        ("smart_zuoying_t2", "洪老師B", "洪老師B"),
-        # 智慧教育中心 - 鳳山校區（校長+2教師）
-        ("smart_fengshan_principal", "蘇校長", "蘇校長"),
-        ("smart_fengshan_t1", "蘇老師A", "蘇老師A"),
-        ("smart_fengshan_t2", "蘇老師B", "蘇老師B"),
-        # 全球語言學院 - 台南校區（校長+2教師）
-        ("global_tainan_principal", "游校長", "游校長"),
-        ("global_tainan_t1", "游老師A", "游老師A"),
-        ("global_tainan_t2", "游老師B", "游老師B"),
-        # 全球語言學院 - 安平校區（校長+2教師）
-        ("global_anping_principal", "周校長", "周校長"),
-        ("global_anping_t1", "周老師A", "周老師A"),
-        ("global_anping_t2", "周老師B", "周老師B"),
-        # 全球語言學院 - 永康校區（校長+2教師）
-        ("global_yongkang_principal", "鍾校長", "鍾校長"),
-        ("global_yongkang_t1", "鍾老師A", "鍾老師A"),
-        ("global_yongkang_t2", "鍾老師B", "鍾老師B"),
     ]
 
     for idx, (school_key, name, display_name) in enumerate(teacher_names):
@@ -630,30 +440,6 @@ def create_demo_data(db: Session):
         (school_teachers[6], future_main_school, ["school_admin"]),
         (school_teachers[7], future_north_school, ["teacher"]),
         (school_teachers[8], future_south_school, ["teacher"]),
-        # 智慧教育中心 - 高雄校區
-        (school_teachers[9], smart_kaohsiung_school, ["school_admin"]),
-        (school_teachers[10], smart_kaohsiung_school, ["teacher"]),
-        (school_teachers[11], smart_kaohsiung_school, ["teacher"]),
-        # 智慧教育中心 - 左營校區
-        (school_teachers[12], smart_zuoying_school, ["school_admin"]),
-        (school_teachers[13], smart_zuoying_school, ["teacher"]),
-        (school_teachers[14], smart_zuoying_school, ["teacher"]),
-        # 智慧教育中心 - 鳳山校區
-        (school_teachers[15], smart_fengshan_school, ["school_admin"]),
-        (school_teachers[16], smart_fengshan_school, ["teacher"]),
-        (school_teachers[17], smart_fengshan_school, ["teacher"]),
-        # 全球語言學院 - 台南校區
-        (school_teachers[18], global_tainan_school, ["school_admin"]),
-        (school_teachers[19], global_tainan_school, ["teacher"]),
-        (school_teachers[20], global_tainan_school, ["teacher"]),
-        # 全球語言學院 - 安平校區
-        (school_teachers[21], global_anping_school, ["school_admin"]),
-        (school_teachers[22], global_anping_school, ["teacher"]),
-        (school_teachers[23], global_anping_school, ["teacher"]),
-        # 全球語言學院 - 永康校區
-        (school_teachers[24], global_yongkang_school, ["school_admin"]),
-        (school_teachers[25], global_yongkang_school, ["teacher"]),
-        (school_teachers[26], global_yongkang_school, ["teacher"]),
     ]
 
     for teacher, school, roles in school_teacher_mappings:
@@ -742,30 +528,6 @@ def create_demo_data(db: Session):
             ProgramLevel.A1,
         ),
         (school_teachers[8], future_south_school, "未來學苑-南桃園-實驗班", ProgramLevel.B1),
-        # 智慧教育中心 - 高雄校區（3個班）
-        (school_teachers[9], smart_kaohsiung_school, "智慧高雄-AI入門班", ProgramLevel.A1),
-        (school_teachers[10], smart_kaohsiung_school, "智慧高雄-AI進階班", ProgramLevel.A2),
-        (school_teachers[11], smart_kaohsiung_school, "智慧高雄-程式班", ProgramLevel.B1),
-        # 智慧教育中心 - 左營校區（3個班）
-        (school_teachers[12], smart_zuoying_school, "智慧左營-科技A班", ProgramLevel.A1),
-        (school_teachers[13], smart_zuoying_school, "智慧左營-科技B班", ProgramLevel.A2),
-        (school_teachers[14], smart_zuoying_school, "智慧左營-創客班", ProgramLevel.B1),
-        # 智慧教育中心 - 鳳山校區（3個班）
-        (school_teachers[15], smart_fengshan_school, "智慧鳳山-程式初級", ProgramLevel.A1),
-        (school_teachers[16], smart_fengshan_school, "智慧鳳山-程式中級", ProgramLevel.A2),
-        (school_teachers[17], smart_fengshan_school, "智慧鳳山-程式高級", ProgramLevel.B2),
-        # 全球語言學院 - 台南校區（3個班）
-        (school_teachers[18], global_tainan_school, "全球台南-國際A班", ProgramLevel.A1),
-        (school_teachers[19], global_tainan_school, "全球台南-國際B班", ProgramLevel.A2),
-        (school_teachers[20], global_tainan_school, "全球台南-商務班", ProgramLevel.B2),
-        # 全球語言學院 - 安平校區（3個班）
-        (school_teachers[21], global_anping_school, "全球安平-多語入門", ProgramLevel.A1),
-        (school_teachers[22], global_anping_school, "全球安平-多語進階", ProgramLevel.A2),
-        (school_teachers[23], global_anping_school, "全球安平-商務英語", ProgramLevel.B1),
-        # 全球語言學院 - 永康校區（3個班）
-        (school_teachers[24], global_yongkang_school, "全球永康-商務A班", ProgramLevel.A2),
-        (school_teachers[25], global_yongkang_school, "全球永康-商務B班", ProgramLevel.B1),
-        (school_teachers[26], global_yongkang_school, "全球永康-國際班", ProgramLevel.B2),
     ]
 
     for teacher, school, classroom_name, level in classroom_data:
@@ -999,35 +761,11 @@ def create_demo_data(db: Session):
         ("未來主校", future_main_school),
         ("未來北桃", future_north_school),
         ("未來南桃", future_south_school),
-        # 智慧教育中心 - 高雄（3個班）
-        ("智高AI入", smart_kaohsiung_school),
-        ("智高AI進", smart_kaohsiung_school),
-        ("智高程式", smart_kaohsiung_school),
-        # 智慧教育中心 - 左營（3個班）
-        ("智左科A", smart_zuoying_school),
-        ("智左科B", smart_zuoying_school),
-        ("智左創客", smart_zuoying_school),
-        # 智慧教育中心 - 鳳山（3個班）
-        ("智鳳程初", smart_fengshan_school),
-        ("智鳳程中", smart_fengshan_school),
-        ("智鳳程高", smart_fengshan_school),
-        # 全球語言學院 - 台南（3個班）
-        ("全南國A", global_tainan_school),
-        ("全南國B", global_tainan_school),
-        ("全南商務", global_tainan_school),
-        # 全球語言學院 - 安平（3個班）
-        ("全安多入", global_anping_school),
-        ("全安多進", global_anping_school),
-        ("全安商英", global_anping_school),
-        # 全球語言學院 - 永康（3個班）
-        ("全永商A", global_yongkang_school),
-        ("全永商B", global_yongkang_school),
-        ("全永國際", global_yongkang_school),
     ]
 
     for idx, (classroom, school) in enumerate(school_classrooms):
         school_prefix, _ = school_names_prefixes[idx]
-        num_students = random.randint(8, 12)  # 每個班級 8-12 位學生
+        num_students = random.randint(5, 8)  # 每個班級 5-8 位學生
 
         classroom_students = []
         for i in range(1, num_students + 1):

@@ -3,7 +3,7 @@
  * 負責獲取用戶角色並過濾可見的 sidebar 分組
  */
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { SidebarGroup } from "@/types/sidebar";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
@@ -21,85 +21,100 @@ export const useSidebarRoles = (
   config: SystemConfig | null,
   teacherProfile: TeacherProfile | null
 ) => {
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 从全局 store 获取 userRoles，而不是自己抓取
   const token = useTeacherAuthStore((state) => state.token);
+  const userRoles = useTeacherAuthStore((state) => state.userRoles);
+  const loading = useTeacherAuthStore((state) => state.rolesLoading);
+  const setUserRoles = useTeacherAuthStore((state) => state.setUserRoles);
+  const setRolesLoading = useTeacherAuthStore((state) => state.setRolesLoading);
 
+  // 使用 ref 防止 React 18 Strict Mode 重复执行
+  const hasFetchedRef = useRef(false);
+
+  // 只在 token 存在且 userRoles 为空时才抓取（全局只抓取一次）
   useEffect(() => {
-    fetchUserRoles();
-  }, [token]);
-
-  const fetchUserRoles = async () => {
-    try {
-      // 如果沒有 token，直接返回（可能是未登入或已登出）
-      if (!token) {
-        console.log("⚠️ [useSidebarRoles] No token found, skipping roles fetch");
-        setLoading(false);
+    const fetchUserRoles = async () => {
+      // 如果没有 token 或已经有 roles 或正在加载或已经抓取过，就跳过
+      if (!token || userRoles.length > 0 || loading || hasFetchedRef.current) {
         return;
       }
 
-      console.log("🔍 [useSidebarRoles] Fetching roles...");
-      const response = await fetch("/api/teachers/me/roles", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log("✅ [useSidebarRoles] Roles received:", data);
-        console.log("✅ [useSidebarRoles] all_roles:", data.all_roles);
-        setUserRoles(data.all_roles || []);
-      } else {
-        console.error("❌ [useSidebarRoles] API response not OK:", response.status);
-      }
-    } catch (err) {
-      console.error("❌ [useSidebarRoles] Failed to fetch user roles:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // 立即标记，防止并发执行
+      hasFetchedRef.current = true;
 
-  // 根據用戶角色和系統配置過濾分組
-  const visibleGroups = sidebarGroups
-    .map((group) => {
-      // 過濾組內的項目
-      const visibleItems = group.items.filter((item) => {
-        // 訂閱選單特殊處理
-        if (item.id === "subscription") {
-          return config?.enablePayment === true;
+      try {
+        setRolesLoading(true);
+        console.log("🔍 [useSidebarRoles] Fetching roles...");
+        const response = await fetch("/api/teachers/me/roles", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          console.log("✅ [useSidebarRoles] Roles received:", data);
+          console.log("✅ [useSidebarRoles] all_roles:", data.all_roles);
+          setUserRoles(data.all_roles || []);
+        } else {
+          console.error("❌ [useSidebarRoles] API response not OK:", response.status);
+          hasFetchedRef.current = false; // 失败时允许重试
         }
-        // Admin 選單特殊處理
-        if (item.adminOnly) {
-          return teacherProfile?.is_admin === true;
+      } catch (err) {
+        console.error("❌ [useSidebarRoles] Failed to fetch user roles:", err);
+        hasFetchedRef.current = false; // 失败时允许重试
+      } finally {
+        setRolesLoading(false);
+      }
+    };
+
+    fetchUserRoles();
+  }, [token, userRoles.length, loading, setUserRoles, setRolesLoading]);
+
+  // 使用 useMemo 缓存过滤结果，只在依赖变化时重新计算
+  const visibleGroups = useMemo(() => {
+    const filtered = sidebarGroups
+      .map((group) => {
+        // 過濾組內的項目
+        const visibleItems = group.items.filter((item) => {
+          // 訂閱選單特殊處理
+          if (item.id === "subscription") {
+            return config?.enablePayment === true;
+          }
+          // Admin 選單特殊處理
+          if (item.adminOnly) {
+            return teacherProfile?.is_admin === true;
+          }
+          // 檢查是否有角色要求
+          if (item.requiredRoles && item.requiredRoles.length > 0) {
+            return item.requiredRoles.some((role) => userRoles.includes(role));
+          }
+          return true;
+        });
+
+        return {
+          ...group,
+          items: visibleItems,
+        };
+      })
+      .filter((group) => {
+        // 過濾掉沒有項目的組
+        if (group.items.length === 0) {
+          return false;
         }
-        // 檢查是否有角色要求
-        if (item.requiredRoles && item.requiredRoles.length > 0) {
-          return item.requiredRoles.some((role) => userRoles.includes(role));
+        // 檢查組本身是否有角色要求
+        if (group.requiredRoles && group.requiredRoles.length > 0) {
+          const hasPermission = group.requiredRoles.some((role) => userRoles.includes(role));
+          console.log(
+            `🔐 [useSidebarRoles] Group "${group.label}": requiredRoles=${group.requiredRoles}, userRoles=${JSON.stringify(userRoles)}, hasPermission=${hasPermission}`
+          );
+          return hasPermission;
         }
         return true;
       });
 
-      return {
-        ...group,
-        items: visibleItems,
-      };
-    })
-    .filter((group) => {
-      // 過濾掉沒有項目的組
-      if (group.items.length === 0) {
-        return false;
-      }
-      // 檢查組本身是否有角色要求
-      if (group.requiredRoles && group.requiredRoles.length > 0) {
-        const hasPermission = group.requiredRoles.some((role) => userRoles.includes(role));
-        console.log(
-          `🔐 [useSidebarRoles] Group "${group.label}": requiredRoles=${group.requiredRoles}, userRoles=${JSON.stringify(userRoles)}, hasPermission=${hasPermission}`
-        );
-        return hasPermission;
-      }
-      return true;
-    });
+    console.log(`📋 [useSidebarRoles] Total groups: ${sidebarGroups.length}, Visible groups: ${filtered.length}`);
+    console.log(`📋 [useSidebarRoles] Visible group labels:`, filtered.map(g => g.label));
 
-  console.log(`📋 [useSidebarRoles] Total groups: ${sidebarGroups.length}, Visible groups: ${visibleGroups.length}`);
-  console.log(`📋 [useSidebarRoles] Visible group labels:`, visibleGroups.map(g => g.label));
+    return filtered;
+  }, [sidebarGroups, userRoles, config, teacherProfile]); // 只在这些依赖变化时重新计算
 
   return { visibleGroups, userRoles, loading };
 };

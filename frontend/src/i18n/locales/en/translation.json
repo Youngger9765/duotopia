@@ -27,7 +27,9 @@
     "paste": "Paste",
     "cut": "Cut",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "nav": {
     "home": "Home",
@@ -1072,7 +1074,7 @@
       "steps": {
         "selectContent": "Select Content",
         "selectStudents": "Select Students",
-        "assignmentDetails": "Assignment Details"
+        "details": "Assignment Details"
       },
       "quota": {
         "remaining": "Quota Remaining",
@@ -1166,11 +1168,6 @@
       },
       "actions": {
         "viewPlans": "View Plans"
-      },
-      "steps": {
-        "selectContent": "Select Content",
-        "selectStudents": "Select Students",
-        "details": "Assignment Details"
       }
     },
     "classroomAssignDialog": {
@@ -1742,6 +1739,10 @@
   "teacherLayout": {
     "title": "Duotopia",
     "subtitle": "Teacher Dashboard",
+    "tabs": {
+      "teaching": "Teaching",
+      "organization": "Organization"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "myClassrooms": "My Classrooms",
@@ -3348,5 +3349,75 @@
     "messages": {
       "linkExpiredDetail": "The password reset link has expired or is invalid, please request a new one"
     }
+  },
+  "organizationHub": {
+    "title": "Organization Management",
+    "search": "Search organizations or schools...",
+    "searchClassrooms": "Search classrooms...",
+    "menu": "Menu",
+    "openMenu": "Open Menu",
+    "addOrganization": "Add Organization",
+    "addSchool": "Add School",
+    "schools": "Schools",
+    "noSchools": "No schools yet",
+    "selectPrompt": "Please select an organization or school from the left",
+    "organization": "Organization",
+    "school": "School",
+    "edit": "Edit",
+    "sidebarTabs": {
+      "organization": "Organization",
+      "teaching": "Teaching"
+    },
+    "myClassrooms": "My Classrooms",
+    "teachingTabComingSoon": "Teaching management coming soon",
+    "stats": {
+      "schoolCount": "Schools",
+      "teacherCount": "Teachers",
+      "studentCount": "Students",
+      "classroomCount": "Classrooms"
+    },
+    "info": {
+      "title": "Basic Information",
+      "name": "Name",
+      "displayName": "Display Name",
+      "description": "Description",
+      "contactEmail": "Contact Email",
+      "createdAt": "Created At"
+    },
+    "addSchoolDialog": {
+      "title": "Add School",
+      "description": "Add a new school to this organization",
+      "name": "School Name",
+      "namePlaceholder": "e.g., taipei-branch",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "e.g., Taipei Branch",
+      "description": "School Description",
+      "descriptionPlaceholder": "Brief description of this school...",
+      "contactEmail": "Contact Email",
+      "contactPhone": "Contact Phone",
+      "address": "Address",
+      "addressPlaceholder": "Full address of the school"
+    },
+    "tabs": {
+      "classrooms": "Classrooms",
+      "teachers": "Teachers"
+    },
+    "table": {
+      "schoolName": "School Name",
+      "admin": "Administrator",
+      "classroomName": "Classroom Name",
+      "teacherName": "Teacher Name",
+      "email": "Email",
+      "contactEmail": "Contact Email",
+      "role": "Role",
+      "level": "Level",
+      "status": "Status",
+      "createdAt": "Created At"
+    },
+    "addClassroom": "Add Classroom",
+    "addTeacher": "Add Teacher",
+    "noClassrooms": "No classrooms yet",
+    "noTeachers": "No teachers yet",
+    "noOrganizations": "No organizations yet"
   }
 }
