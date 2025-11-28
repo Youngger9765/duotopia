@@ -32,9 +32,17 @@ class TTSService:
         if not self.azure_speech_key:
             raise ValueError("AZURE_SPEECH_KEY environment variable is not set")
 
-        # GCS 設定
+        # 儲存設定：GCS 或本地檔案系統
+        self.use_gcs = os.getenv("USE_GCS_STORAGE", "false").lower() == "true"
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
         self.storage_client = None
+
+        # 本地儲存目錄（當不使用 GCS 時）
+        self.local_audio_dir = os.path.join(
+            os.path.dirname(__file__), "..", "static", "tts"
+        )
+        if not self.use_gcs:
+            os.makedirs(self.local_audio_dir, exist_ok=True)
 
     def _get_storage_client(self):
         """延遲初始化 GCS client"""
@@ -99,19 +107,31 @@ class TTSService:
 
                 # 檢查結果
                 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                    # 上傳到 GCS
-                    client = self._get_storage_client()
-                    bucket = client.bucket(self.bucket_name)
-                    blob = bucket.blob(f"tts/{filename}")
+                    if self.use_gcs:
+                        # 上傳到 GCS
+                        client = self._get_storage_client()
+                        bucket = client.bucket(self.bucket_name)
+                        blob = bucket.blob(f"tts/{filename}")
 
-                    blob.upload_from_filename(tmp_file.name)
-                    blob.make_public()
+                        blob.upload_from_filename(tmp_file.name)
+                        blob.make_public()
 
-                    # 清理臨時檔案
-                    os.unlink(tmp_file.name)
+                        # 清理臨時檔案
+                        os.unlink(tmp_file.name)
 
-                    # 返回公開 URL
-                    return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                        # 返回公開 URL
+                        return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                    else:
+                        # 儲存到本地檔案系統
+                        local_path = os.path.join(self.local_audio_dir, filename)
+
+                        # 移動檔案到本地目錄
+                        import shutil
+
+                        shutil.move(tmp_file.name, local_path)
+
+                        # 返回本地 URL
+                        return f"/static/tts/{filename}"
                 else:
                     # 清理臨時檔案
                     os.unlink(tmp_file.name)

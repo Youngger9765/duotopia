@@ -446,6 +446,8 @@ async def get_teacher_programs(
                                             "text": item.text,
                                             "translation": item.translation,
                                             "audio_url": item.audio_url,
+                                            "example_sentence": item.example_sentence,
+                                            "example_sentence_translation": item.example_sentence_translation,
                                             "order_index": item.order_index,
                                         }
                                     )
@@ -2059,6 +2061,7 @@ class ContentCreate(BaseModel):
     items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
+    time_limit_seconds: Optional[int] = None
     order_index: Optional[int] = None  # None = 自動計算為最後一個位置
     level: Optional[str] = "A1"
     tags: Optional[List[str]] = []
@@ -2114,6 +2117,8 @@ async def get_lesson_contents(
                 "text": item.text,
                 "translation": item.translation,
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
             }
             for item in content_items
         ]
@@ -2174,13 +2179,21 @@ async def create_content(
         order_index = content_data.order_index
 
     # 建立 Content（不再使用 items 欄位）
+    # 根據 content_data.type 設定正確的類型
+    try:
+        content_type = ContentType(content_data.type)
+    except ValueError:
+        # 如果類型不存在，預設使用 READING_ASSESSMENT
+        content_type = ContentType.READING_ASSESSMENT
+
     content = Content(
         lesson_id=lesson_id,
-        type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
+        type=content_type,
         title=content_data.title,
         # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
+        time_limit_seconds=content_data.time_limit_seconds,
         order_index=order_index,
         level=content_data.level,
         tags=content_data.tags or [],
@@ -2199,10 +2212,19 @@ async def create_content(
                 text=item_data.get("text", ""),
                 translation=item_data.get("translation", ""),
                 audio_url=item_data.get("audio_url"),
+                example_sentence=item_data.get("example_sentence"),
+                example_sentence_translation=item_data.get(
+                    "example_sentence_translation"
+                ),
             )
             db.add(content_item)
             items_created.append(
-                {"text": content_item.text, "translation": content_item.translation}
+                {
+                    "text": content_item.text,
+                    "translation": content_item.translation,
+                    "example_sentence": content_item.example_sentence,
+                    "example_sentence_translation": content_item.example_sentence_translation,
+                }
             )
 
     db.commit()
@@ -2268,11 +2290,16 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "created_at": item.created_at.isoformat() if item.created_at else None,
                 "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
             }
             for item in content.content_items
         ]
@@ -2393,6 +2420,10 @@ async def update_content(
                     text=item_data.get("text", ""),
                     translation=translation_value,
                     audio_url=item_data.get("audio_url"),
+                    example_sentence=item_data.get("example_sentence"),
+                    example_sentence_translation=item_data.get(
+                        "example_sentence_translation"
+                    ),
                     item_metadata=metadata,
                 )
                 db.add(content_item)
@@ -2434,6 +2465,8 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "options": item.item_metadata.get("options", [])
                 if item.item_metadata
                 else [],
@@ -2443,6 +2476,9 @@ async def update_content(
                 "question_type": item.item_metadata.get("question_type", "text")
                 if item.item_metadata
                 else "text",
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
             }
             for item in content.content_items
         ]
@@ -2533,6 +2569,25 @@ async def translate_text(
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
+@router.post("/translate-with-pos")
+async def translate_with_pos(
+    request: TranslateRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """翻譯單字並辨識詞性"""
+    try:
+        result = await translation_service.translate_with_pos(
+            request.text, request.target_lang
+        )
+        return {
+            "original": request.text,
+            "translation": result["translation"],
+            "parts_of_speech": result["parts_of_speech"],
+        }
+    except Exception as e:
+        print(f"Translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
 @router.post("/translate/batch")
 async def batch_translate(
     request: BatchTranslateRequest,
@@ -2547,6 +2602,51 @@ async def batch_translate(
     except Exception as e:
         print(f"Batch translation error: {e}")
         raise HTTPException(status_code=500, detail="Translation service error")
+
+
+@router.post("/translate-with-pos/batch")
+async def batch_translate_with_pos(
+    request: BatchTranslateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """批次翻譯多個單字並辨識詞性"""
+    try:
+        results = await translation_service.batch_translate_with_pos(
+            request.texts, request.target_lang
+        )
+        return {"originals": request.texts, "results": results}
+    except Exception as e:
+        print(f"Batch translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
+# ============ AI Generate Sentences ============
+class GenerateSentencesRequest(BaseModel):
+    words: List[str]
+    level: Optional[str] = "A1"
+    prompt: Optional[str] = None
+    translate_to: Optional[str] = None  # zh-TW, ja, ko
+    parts_of_speech: Optional[List[List[str]]] = None
+
+
+@router.post("/generate-sentences")
+async def generate_sentences(
+    request: GenerateSentencesRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """AI 生成例句"""
+    try:
+        sentences = await translation_service.generate_sentences(
+            words=request.words,
+            level=request.level,
+            prompt=request.prompt,
+            translate_to=request.translate_to,
+            parts_of_speech=request.parts_of_speech,
+        )
+        return {"sentences": sentences}
+    except Exception as e:
+        print(f"Generate sentences error: {e}")
+        raise HTTPException(status_code=500, detail="Generate sentences failed")
 
 
 # ============ TTS Endpoints ============
@@ -2778,6 +2878,8 @@ async def get_assignment_preview(
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
+                    "example_sentence": item.example_sentence,
+                    "example_sentence_translation": item.example_sentence_translation,
                     "recording_url": None,  # 預覽模式沒有學生錄音
                 }
                 items_data.append(item_data)

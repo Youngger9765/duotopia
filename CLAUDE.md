@@ -35,6 +35,163 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **内容** | 问题、测试链接、批准 | 完整工程报告 |
 | **通过标准** | ✅ 案主 OK | ✅ CI/CD OK |
 
+---
+
+## 🗄️ Database Migration 鐵則（全局規則）
+
+**背景**：Develop 和 Staging 環境共用同一個資料庫，所有 migration 必須向前相容。
+
+### ⚠️ Additive Migration 原則
+
+**所有 migration 都必須是 Additive（新增型）**，無論是在哪個分支開發：
+
+#### ✅ 允許的 Migration（必須使用 IF NOT EXISTS）
+
+```python
+# ✅ 新增表
+op.execute("""
+    CREATE TABLE IF NOT EXISTS new_table (
+        id SERIAL PRIMARY KEY,
+        ...
+    )
+""")
+
+# ✅ 新增欄位（必須 nullable 或有 DEFAULT）
+op.execute("""
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS new_field VARCHAR(50) DEFAULT 'default_value'
+""")
+
+# ✅ 新增 Index
+op.execute("""
+    CREATE INDEX IF NOT EXISTS idx_name ON table_name (column)
+""")
+
+# ✅ 新增 Function（使用 CREATE OR REPLACE）
+op.execute("""
+    CREATE OR REPLACE FUNCTION function_name(...) RETURNS ... AS $$
+    ...
+    $$ LANGUAGE plpgsql;
+""")
+```
+
+#### ❌ 禁止的 Migration（破壞性變更）
+
+```python
+# ❌ 刪除欄位（會破壞其他環境）
+op.drop_column('users', 'old_field')
+op.execute("ALTER TABLE users DROP COLUMN old_field")
+
+# ❌ 重新命名（舊環境會找不到）
+op.alter_column('users', 'name', new_column_name='full_name')
+op.execute("ALTER TABLE users RENAME COLUMN name TO full_name")
+
+# ❌ 修改欄位型別（可能導致資料損失）
+op.alter_column('users', 'age', type_=sa.String())
+op.execute("ALTER TABLE users ALTER COLUMN age TYPE VARCHAR")
+
+# ❌ 刪除表（會破壞其他環境）
+op.drop_table('old_table')
+op.execute("DROP TABLE old_table")
+
+# ❌ 不使用 IF NOT EXISTS（會在共用 DB 環境失敗）
+op.create_table('new_table', ...)  # ❌ 第二次執行會失敗
+```
+
+### 🔍 為什麼需要 IF NOT EXISTS？
+
+**場景說明**：
+```
+Day 1: feature-sentence merge 到 develop
+  → develop CI/CD 執行 migration v12 (CREATE TABLE user_word_progress)
+  → 資料庫：表已建立 ✅
+
+Week 2: develop merge 到 staging
+  → staging CI/CD 執行 migration v12
+  → 如果沒有 IF NOT EXISTS，會報錯：table already exists ❌
+  → 有 IF NOT EXISTS：跳過建立，繼續執行 ✅
+```
+
+**另一個場景**：
+```
+Day 1: feature-A merge 到 staging
+  → staging 執行 migration v13 (ADD COLUMN)
+  → 資料庫：欄位已加入
+
+Day 2: staging merge 回 develop
+  → develop 執行 migration v13
+  → 如果沒有 IF NOT EXISTS，會報錯：column already exists ❌
+```
+
+### 📋 Migration Checklist（每次創建 migration 必須檢查）
+
+創建 migration 前必須確認：
+- [ ] 使用 `CREATE TABLE IF NOT EXISTS` 而非 `op.create_table()`
+- [ ] 使用 `ADD COLUMN IF NOT EXISTS` 而非 `op.add_column()`
+- [ ] 使用 `CREATE INDEX IF NOT EXISTS` 而非 `op.create_index()`
+- [ ] 新增欄位有 `DEFAULT` 或 `nullable=True`
+- [ ] 沒有 DROP, RENAME, ALTER TYPE 等破壞性操作
+- [ ] Functions 使用 `CREATE OR REPLACE`
+
+### 🔧 Migration 範例
+
+**正確範例**（Phase 1 Sentence Making）：
+```python
+def upgrade() -> None:
+    # ✅ 使用 IF NOT EXISTS
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS user_word_progress (
+            id SERIAL PRIMARY KEY,
+            ...
+        )
+    """)
+
+    # ✅ Index 也用 IF NOT EXISTS
+    op.execute("""
+        CREATE INDEX IF NOT EXISTS idx_name ON table (column)
+    """)
+
+    # ✅ Function 用 CREATE OR REPLACE
+    op.execute("""
+        CREATE OR REPLACE FUNCTION update_memory_strength(...)
+        RETURNS ... AS $$ ... $$ LANGUAGE plpgsql;
+    """)
+```
+
+**錯誤範例**（會導致 staging/develop 衝突）：
+```python
+def upgrade() -> None:
+    # ❌ 沒有 IF NOT EXISTS
+    op.create_table('user_word_progress', ...)
+
+    # ❌ 破壞性變更
+    op.drop_column('users', 'old_field')
+    op.alter_column('users', 'name', new_column_name='full_name')
+```
+
+### 🚨 違反規則的後果
+
+1. **共用資料庫環境失敗**
+   - Staging 執行 migration 失敗（表已存在）
+   - Develop 無法測試功能
+
+2. **資料損失風險**
+   - 破壞性變更可能刪除正在測試的資料
+   - 影響其他團隊成員的工作
+
+3. **部署中斷**
+   - CI/CD pipeline 失敗
+   - 需要手動修復資料庫
+
+### 📚 延伸閱讀
+
+- [DEVELOP_ENVIRONMENT_PLAN.md](./docs/DEVELOP_ENVIRONMENT_PLAN.md) - Develop 環境架構說明
+- [Migration 相容性策略](./docs/DEVELOP_ENVIRONMENT_PLAN.md#3-migration-相容性策略)
+
+---
+
+## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
+
 ### Issue 的内容（给案主看）
 - ✅ 问题描述（业务语言）
 - ✅ 测试环境链接

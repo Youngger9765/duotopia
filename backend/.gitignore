@@ -64,3 +64,6 @@ temp/
 scripts/
 *.json
 service-account-key.json
+
+# Generated files
+static/

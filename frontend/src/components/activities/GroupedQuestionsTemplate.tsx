@@ -29,6 +29,10 @@ interface Question {
   teacher_review_score?: number;
   teacher_reviewed_at?: string;
   review_status?: string;
+  // Phase 1: Example sentence fields
+  example_sentence?: string;
+  example_sentence_translation?: string;
+  example_sentence_definition?: string;
   [key: string]: unknown;
 }
 

@@ -112,6 +112,11 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"  # 重新提交（訂正後待批改）
 
 
+class AnswerMode(str, enum.Enum):
+    LISTENING = "listening"  # 聽力模式作答
+    WRITING = "writing"  # 寫作模式作答
+
+
 class TransactionType(str, enum.Enum):
     TRIAL = "TRIAL"  # 試用期啟動
     RECHARGE = "RECHARGE"  # 充值
@@ -126,13 +131,13 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
-    READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
+    READING_ASSESSMENT = "READING_ASSESSMENT"
+    SENTENCE_MAKING = "SENTENCE_MAKING"
     # Phase 2 擴展
-    # SPEAKING_PRACTICE = "speaking_practice"
-    # SPEAKING_SCENARIO = "speaking_scenario"
-    # LISTENING_CLOZE = "listening_cloze"
-    # SENTENCE_MAKING = "sentence_making"
-    # SPEAKING_QUIZ = "speaking_quiz"
+    # SPEAKING_PRACTICE = "SPEAKING_PRACTICE"
+    # SPEAKING_SCENARIO = "SPEAKING_SCENARIO"
+    # LISTENING_CLOZE = "LISTENING_CLOZE"
+    # SPEAKING_QUIZ = "SPEAKING_QUIZ"
 
 
 # ============ 使用者系統 ============
@@ -715,6 +720,15 @@ class Assignment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # 造句練習答題模式（只對 sentence_making 類型有效）
+    # 使用 String 而非 Enum 以匹配 migration 中的 VARCHAR 定義
+    answer_mode = Column(
+        String(20),
+        default="writing",
+        server_default="writing",
+        nullable=False,
+    )
+
     # 指派設定
     # 移除 assign_to_all，改為透過 StudentAssignment 記錄實際指派的學生
 
@@ -883,6 +897,16 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
+
+    # Example sentence fields (Phase 1)
+    example_sentence = Column(Text, nullable=True)  # Example sentence in English
+    example_sentence_translation = Column(
+        Text, nullable=True
+    )  # Chinese translation of example
+    example_sentence_definition = Column(
+        Text, nullable=True
+    )  # English definition of example
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -1165,4 +1189,165 @@ class InvoiceStatusHistory(Base):
         return (
             f"<InvoiceStatusHistory({self.transaction_id}, "
             f"{self.from_status}->{self.to_status}, {self.action_type})>"
+        )
+
+
+# ============ 造句練習記憶曲線系統 ============
+class UserWordProgress(Base):
+    """學生單字記憶進度 - 追蹤艾賓浩斯記憶曲線"""
+
+    __tablename__ = "user_word_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    student_assignment_id = Column(
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content_item_id = Column(
+        Integer, ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # 艾賓浩斯記憶曲線相關欄位
+    memory_strength = Column(
+        Numeric(5, 4), default=0, server_default="0", nullable=False
+    )  # 記憶強度 (0-1)
+    repetition_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 連續答對次數
+    correct_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 累計答對次數
+    incorrect_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 累計答錯次數
+    last_review_at = Column(DateTime(timezone=True))  # 最後複習時間
+    next_review_at = Column(DateTime(timezone=True))  # 下次建議複習時間
+    easiness_factor = Column(
+        Numeric(3, 2), default=2.5, server_default="2.5", nullable=False
+    )  # SM-2 難易度因子
+    interval_days = Column(
+        Numeric(10, 2), default=1, server_default="1", nullable=False
+    )  # 複習間隔天數
+    total_attempts = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 總嘗試次數
+    accuracy_rate = Column(
+        Numeric(5, 4), default=0, server_default="0", nullable=False
+    )  # 正確率
+
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    student = relationship("Student")
+    student_assignment = relationship("StudentAssignment")
+    content_item = relationship("ContentItem")
+
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint(
+            "student_assignment_id",
+            "content_item_id",
+            name="uq_user_word_progress_assignment_item",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<UserWordProgress student={self.student_id} "
+            f"item={self.content_item_id} strength={self.memory_strength}>"
+        )
+
+
+class PracticeSession(Base):
+    """練習記錄 - 每次練習 session"""
+
+    __tablename__ = "practice_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    student_assignment_id = Column(
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # 練習模式
+    practice_mode = Column(String(20), nullable=False)  # 'listening' or 'writing'
+
+    # 本次練習統計
+    words_practiced = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 本次練習單字數
+    correct_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 本次答對題數
+    total_time_seconds = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 總花費時間（秒）
+
+    # 時間戳記
+    started_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at = Column(DateTime(timezone=True))
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    student = relationship("Student")
+    student_assignment = relationship("StudentAssignment")
+    answers = relationship(
+        "PracticeAnswer", back_populates="session", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return (
+            f"<PracticeSession id={self.id} student={self.student_id} "
+            f"mode={self.practice_mode}>"
+        )
+
+
+class PracticeAnswer(Base):
+    """答題詳細記錄"""
+
+    __tablename__ = "practice_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    practice_session_id = Column(
+        Integer, ForeignKey("practice_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    content_item_id = Column(Integer, ForeignKey("content_items.id"), nullable=False)
+
+    # 答題結果
+    is_correct = Column(Boolean, nullable=False)
+    time_spent_seconds = Column(Integer, default=0, server_default="0", nullable=False)
+
+    # 學生答案（JSON 格式儲存）
+    answer_data = Column(JSON)  # {"selected_words": [...], "attempts": 3}
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    session = relationship("PracticeSession", back_populates="answers")
+    content_item = relationship("ContentItem")
+
+    def __repr__(self):
+        return (
+            f"<PracticeAnswer session={self.practice_session_id} "
+            f"item={self.content_item_id} correct={self.is_correct}>"
         )

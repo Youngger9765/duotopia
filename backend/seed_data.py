@@ -686,6 +686,9 @@ def create_demo_data(db: Session):
         db.commit()
         print(f"✅ 建立 {len(content_items)} 個 ContentItem 記錄")
 
+    # ============ 6.5 句子模組測試課程 ============
+    seed_sentence_making_course(db, classroom_a.id, demo_teacher.id)
+
     # ============ 7. 新作業系統（Assignment + StudentAssignment + StudentContentProgress）============
     print("\n📝 建立新作業系統測試資料...")
 
@@ -1809,6 +1812,330 @@ def create_demo_data(db: Session):
     print("  5. 緊急作業：顏色單字測驗（20小時後到期）")
     print("  6. 重新提交：數字練習（李小美 RESUBMITTED）")
     print("=" * 60)
+
+
+def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int):
+    """創建句子模組測試課程資料（90個單字，4個練習內容）
+
+    增強功能：
+    - 每個單字包含詞性 (parts_of_speech) 存於 item_metadata
+    """
+    print("\n🎯 建立句子模組測試課程...")
+
+    # 1. 創建課程 (Program)
+    program = Program(
+        name="日常生活英語造句練習",
+        description="涵蓋日常生活、學校、家庭等主題的基礎英語造句練習",
+        level=ProgramLevel.A1,
+        is_template=False,
+        classroom_id=classroom_id,
+        teacher_id=teacher_id,
+        source_type="custom",
+        source_metadata={"created_by": "seed_data"},
+        estimated_hours=10,
+        order_index=100,  # 放在最後
+        is_active=True,
+    )
+    db.add(program)
+    db.flush()
+    print(f"✅ 創建課程: {program.name} (ID: {program.id})")
+
+    # 2. 創建第一個單元
+    lesson1 = Lesson(
+        program_id=program.id,
+        name="Unit 1: 學校與學習",
+        description="學校相關的常用英文單字與造句練習",
+        order_index=1,
+        estimated_minutes=120,
+        is_active=True,
+    )
+    db.add(lesson1)
+    db.flush()
+    print(f"  ✅ 創建單元: {lesson1.name}")
+
+    # 2.1 第一個單元的第一個造句練習
+    content1_1 = Content(
+        lesson_id=lesson1.id,
+        type=ContentType.SENTENCE_MAKING,
+        title="學校場所與設施",
+        order_index=1,
+        level="A1",
+        is_active=True,
+    )
+    db.add(content1_1)
+    db.flush()
+
+    # 第一個練習的單字 (20個)
+    # 格式: (word, translation, example, example_trans, parts_of_speech)
+    words_set1_1 = [
+        ("school", "學校", "I go to school every day.", "我每天都去上學。", ["noun"]),
+        ("classroom", "教室", "Our classroom is very clean.", "我們的教室很乾淨。", ["noun"]),
+        ("teacher", "老師", "My teacher is very kind.", "我的老師很親切。", ["noun"]),
+        ("student", "學生", "She is a good student.", "她是一位好學生。", ["noun"]),
+        ("desk", "書桌", "There is a book on the desk.", "書桌上有一本書。", ["noun"]),
+        ("chair", "椅子", "Please sit on the chair.", "請坐在椅子上。", ["noun"]),
+        ("board", "黑板", "The teacher writes on the board.", "老師在黑板上寫字。", ["noun"]),
+        ("book", "書", "I like reading books.", "我喜歡看書。", ["noun"]),
+        ("pencil", "鉛筆", "I need a pencil to write.", "我需要一支鉛筆來寫字。", ["noun"]),
+        ("eraser", "橡皮擦", "Can I borrow your eraser?", "我可以借你的橡皮擦嗎？", ["noun"]),
+        ("ruler", "尺", "Use a ruler to draw a straight line.", "用尺畫一條直線。", ["noun"]),
+        ("bag", "書包", "My bag is very heavy.", "我的書包很重。", ["noun"]),
+        ("library", "圖書館", "We study in the library.", "我們在圖書館讀書。", ["noun"]),
+        ("playground", "操場", "Students play on the playground.", "學生們在操場上玩。", ["noun"]),
+        ("lunch", "午餐", "What do you have for lunch?", "你午餐吃什麼？", ["noun"]),
+        ("homework", "作業", "I do my homework every day.", "我每天做作業。", ["noun"]),
+        ("test", "考試", "We have a test tomorrow.", "我們明天有考試。", ["noun", "verb"]),
+        ("subject", "科目", "Math is my favorite subject.", "數學是我最喜歡的科目。", ["noun"]),
+        ("lesson", "課程", "The English lesson is interesting.", "英文課很有趣。", ["noun"]),
+        ("answer", "答案", "Do you know the answer?", "你知道答案嗎？", ["noun", "verb"]),
+    ]
+
+    for idx, (word, translation, example, example_trans, pos) in enumerate(
+        words_set1_1, 1
+    ):
+        item = ContentItem(
+            content_id=content1_1.id,
+            order_index=idx,
+            text=word,
+            translation=translation,
+            example_sentence=example,
+            example_sentence_translation=example_trans,
+            item_metadata={"parts_of_speech": pos},
+        )
+        db.add(item)
+
+    print(f"    ✅ {content1_1.title}: {len(words_set1_1)} 個單字")
+
+    # 2.2 第一個單元的第二個造句練習
+    content1_2 = Content(
+        lesson_id=lesson1.id,
+        type=ContentType.SENTENCE_MAKING,
+        title="學習活動與文具",
+        order_index=2,
+        level="A1",
+        is_active=True,
+    )
+    db.add(content1_2)
+    db.flush()
+
+    # 第二個練習的單字 (22個)
+    # 格式: (word, translation, example, example_trans, parts_of_speech)
+    words_set1_2 = [
+        ("learn", "學習", "I learn English at school.", "我在學校學英文。", ["verb"]),
+        ("study", "研讀", "We study hard for exams.", "我們為了考試努力讀書。", ["verb", "noun"]),
+        ("read", "閱讀", "I read a book every night.", "我每晚讀一本書。", ["verb"]),
+        ("write", "寫", "Please write your name here.", "請在這裡寫下你的名字。", ["verb"]),
+        ("listen", "聽", "Listen to the teacher carefully.", "仔細聽老師說。", ["verb"]),
+        ("speak", "說", "Can you speak English?", "你會說英文嗎？", ["verb"]),
+        ("practice", "練習", "Practice makes perfect.", "熟能生巧。", ["verb", "noun"]),
+        ("remember", "記得", "I remember what you said.", "我記得你說的話。", ["verb"]),
+        ("understand", "理解", "Do you understand this question?", "你理解這個問題嗎？", ["verb"]),
+        ("notebook", "筆記本", "I write notes in my notebook.", "我在筆記本上寫筆記。", ["noun"]),
+        ("pen", "鋼筆", "I write with a blue pen.", "我用藍色的鋼筆寫字。", ["noun"]),
+        (
+            "marker",
+            "麥克筆",
+            "Use a marker to highlight important parts.",
+            "用麥克筆標記重要部分。",
+            ["noun"],
+        ),
+        ("scissors", "剪刀", "I need scissors to cut paper.", "我需要剪刀來剪紙。", ["noun"]),
+        ("glue", "膠水", "Use glue to stick the paper.", "用膠水黏貼紙張。", ["noun", "verb"]),
+        ("crayon", "蠟筆", "Children draw with crayons.", "孩子們用蠟筆畫畫。", ["noun"]),
+        (
+            "calculator",
+            "計算機",
+            "You can use a calculator in math class.",
+            "你可以在數學課使用計算機。",
+            ["noun"],
+        ),
+        (
+            "dictionary",
+            "字典",
+            "Look up new words in a dictionary.",
+            "在字典裡查新單字。",
+            ["noun"],
+        ),
+        ("folder", "文件夾", "Put your papers in the folder.", "把你的文件放進文件夾。", ["noun"]),
+        (
+            "stapler",
+            "釘書機",
+            "Use a stapler to bind papers together.",
+            "用釘書機把紙釘在一起。",
+            ["noun"],
+        ),
+        ("backpack", "背包", "My backpack is full of books.", "我的背包裝滿了書。", ["noun"]),
+        ("locker", "置物櫃", "I keep my things in my locker.", "我把東西放在置物櫃裡。", ["noun"]),
+        ("uniform", "制服", "We wear uniforms to school.", "我們穿制服上學。", ["noun"]),
+    ]
+
+    for idx, (word, translation, example, example_trans, pos) in enumerate(
+        words_set1_2, 1
+    ):
+        item = ContentItem(
+            content_id=content1_2.id,
+            order_index=idx,
+            text=word,
+            translation=translation,
+            example_sentence=example,
+            example_sentence_translation=example_trans,
+            item_metadata={"parts_of_speech": pos},
+        )
+        db.add(item)
+
+    print(f"    ✅ {content1_2.title}: {len(words_set1_2)} 個單字")
+
+    # 3. 創建第二個單元
+    lesson2 = Lesson(
+        program_id=program.id,
+        name="Unit 2: 家庭與日常",
+        description="家庭生活與日常活動相關的英文單字與造句練習",
+        order_index=2,
+        estimated_minutes=120,
+        is_active=True,
+    )
+    db.add(lesson2)
+    db.flush()
+    print(f"  ✅ 創建單元: {lesson2.name}")
+
+    # 3.1 第二個單元的第一個造句練習
+    content2_1 = Content(
+        lesson_id=lesson2.id,
+        type=ContentType.SENTENCE_MAKING,
+        title="家庭成員與房間",
+        order_index=1,
+        level="A1",
+        is_active=True,
+    )
+    db.add(content2_1)
+    db.flush()
+
+    # 第三個練習的單字 (23個)
+    # 格式: (word, translation, example, example_trans, parts_of_speech)
+    words_set2_1 = [
+        ("family", "家庭", "I love my family.", "我愛我的家人。", ["noun"]),
+        ("father", "父親", "My father works in an office.", "我的父親在辦公室工作。", ["noun"]),
+        ("mother", "母親", "My mother cooks delicious food.", "我的母親做美味的食物。", ["noun"]),
+        ("brother", "兄弟", "I have one younger brother.", "我有一個弟弟。", ["noun"]),
+        ("sister", "姊妹", "My sister is in high school.", "我的姊姊在念高中。", ["noun"]),
+        ("grandma", "奶奶/外婆", "My grandma tells me stories.", "我的奶奶給我講故事。", ["noun"]),
+        ("grandpa", "爺爺/外公", "My grandpa likes gardening.", "我的爺爺喜歡園藝。", ["noun"]),
+        ("parent", "父母", "My parents are very caring.", "我的父母很關心我。", ["noun"]),
+        ("home", "家", "I go home after school.", "我放學後回家。", ["noun", "adverb"]),
+        ("house", "房子", "We live in a big house.", "我們住在一棟大房子裡。", ["noun"]),
+        ("room", "房間", "My room is tidy.", "我的房間很整潔。", ["noun"]),
+        ("bedroom", "臥室", "I sleep in my bedroom.", "我在臥室睡覺。", ["noun"]),
+        ("kitchen", "廚房", "Mom is cooking in the kitchen.", "媽媽在廚房煮飯。", ["noun"]),
+        ("bathroom", "浴室", "I brush my teeth in the bathroom.", "我在浴室刷牙。", ["noun"]),
+        ("living room", "客廳", "We watch TV in the living room.", "我們在客廳看電視。", ["noun"]),
+        (
+            "dining room",
+            "餐廳",
+            "We eat dinner in the dining room.",
+            "我們在餐廳吃晚餐。",
+            ["noun"],
+        ),
+        ("window", "窗戶", "Please open the window.", "請打開窗戶。", ["noun"]),
+        ("door", "門", "Close the door, please.", "請關上門。", ["noun"]),
+        ("bed", "床", "I make my bed every morning.", "我每天早上整理床鋪。", ["noun"]),
+        ("table", "桌子", "Put the dishes on the table.", "把盤子放在桌上。", ["noun"]),
+        ("sofa", "沙發", "We sit on the sofa and relax.", "我們坐在沙發上放鬆。", ["noun"]),
+        ("lamp", "檯燈", "Turn on the lamp, please.", "請打開檯燈。", ["noun"]),
+        ("carpet", "地毯", "There is a carpet on the floor.", "地板上有一塊地毯。", ["noun"]),
+    ]
+
+    for idx, (word, translation, example, example_trans, pos) in enumerate(
+        words_set2_1, 1
+    ):
+        item = ContentItem(
+            content_id=content2_1.id,
+            order_index=idx,
+            text=word,
+            translation=translation,
+            example_sentence=example,
+            example_sentence_translation=example_trans,
+            item_metadata={"parts_of_speech": pos},
+        )
+        db.add(item)
+
+    print(f"    ✅ {content2_1.title}: {len(words_set2_1)} 個單字")
+
+    # 3.2 第二個單元的第二個造句練習
+    content2_2 = Content(
+        lesson_id=lesson2.id,
+        type=ContentType.SENTENCE_MAKING,
+        title="日常活動與時間",
+        order_index=2,
+        level="A1",
+        is_active=True,
+    )
+    db.add(content2_2)
+    db.flush()
+
+    # 第四個練習的單字 (25個)
+    # 格式: (word, translation, example, example_trans, parts_of_speech)
+    words_set2_2 = [
+        ("wake up", "起床", "I wake up at 7 o'clock.", "我七點起床。", ["verb"]),
+        ("get up", "起來", "Please get up now.", "請現在起來。", ["verb"]),
+        ("brush", "刷", "I brush my teeth twice a day.", "我一天刷兩次牙。", ["verb", "noun"]),
+        ("wash", "洗", "Wash your hands before eating.", "吃飯前洗手。", ["verb"]),
+        ("eat", "吃", "What do you eat for breakfast?", "你早餐吃什麼？", ["verb"]),
+        ("drink", "喝", "I drink milk every morning.", "我每天早上喝牛奶。", ["verb", "noun"]),
+        (
+            "breakfast",
+            "早餐",
+            "Breakfast is the most important meal.",
+            "早餐是最重要的一餐。",
+            ["noun"],
+        ),
+        ("dinner", "晚餐", "We have dinner at 6 PM.", "我們下午六點吃晚餐。", ["noun"]),
+        ("cook", "煮飯", "My mom cooks very well.", "我媽媽煮飯很好吃。", ["verb", "noun"]),
+        (
+            "clean",
+            "打掃",
+            "I clean my room every week.",
+            "我每週打掃房間。",
+            ["verb", "adjective"],
+        ),
+        ("watch", "看", "I watch TV after dinner.", "我晚餐後看電視。", ["verb", "noun"]),
+        ("play", "玩", "Children play in the park.", "孩子們在公園玩。", ["verb", "noun"]),
+        ("sleep", "睡覺", "I sleep for eight hours.", "我睡八個小時。", ["verb", "noun"]),
+        ("morning", "早上", "Good morning!", "早安！", ["noun"]),
+        ("afternoon", "下午", "See you this afternoon.", "下午見。", ["noun"]),
+        ("evening", "傍晚", "We go for a walk in the evening.", "我們傍晚去散步。", ["noun"]),
+        ("night", "夜晚", "Good night, sleep well.", "晚安，睡個好覺。", ["noun"]),
+        ("today", "今天", "What day is today?", "今天星期幾？", ["noun", "adverb"]),
+        ("tomorrow", "明天", "I will see you tomorrow.", "我明天會見你。", ["noun", "adverb"]),
+        ("yesterday", "昨天", "Yesterday was Monday.", "昨天是星期一。", ["noun", "adverb"]),
+        ("weekend", "週末", "I relax on the weekend.", "我週末放鬆。", ["noun"]),
+        ("busy", "忙碌", "My parents are very busy.", "我的父母很忙。", ["adjective"]),
+        ("free", "有空的", "Are you free this afternoon?", "你今天下午有空嗎？", ["adjective"]),
+        ("tired", "累的", "I feel tired after school.", "我放學後覺得累。", ["adjective"]),
+        ("happy", "快樂的", "I am happy to see you.", "我很高興見到你。", ["adjective"]),
+    ]
+
+    for idx, (word, translation, example, example_trans, pos) in enumerate(
+        words_set2_2, 1
+    ):
+        item = ContentItem(
+            content_id=content2_2.id,
+            order_index=idx,
+            text=word,
+            translation=translation,
+            example_sentence=example,
+            example_sentence_translation=example_trans,
+            item_metadata={"parts_of_speech": pos},
+        )
+        db.add(item)
+
+    print(f"    ✅ {content2_2.title}: {len(words_set2_2)} 個單字")
+
+    # Commit all changes
+    db.commit()
+    total_words = (
+        len(words_set1_1) + len(words_set1_2) + len(words_set2_1) + len(words_set2_2)
+    )
+    print(f"✅ 句子模組課程建立完成：2 單元，4 個練習，共 {total_words} 個單字（含詞性資料）")
 
 
 def seed_template_programs(db: Session):

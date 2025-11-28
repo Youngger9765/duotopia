@@ -19,6 +19,7 @@ import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import SentenceMakingPanel from "@/components/SentenceMakingPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
@@ -133,6 +134,16 @@ export default function ClassroomDetail({
   const [showReadingEditor, setShowReadingEditor] = useState(false);
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
+
+  // Sentence Making Editor state
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+    useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+    number | null
+  >(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+    number | null
+  >(null);
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -366,8 +377,29 @@ export default function ClassroomDetail({
       return;
     }
 
+    // 統一轉成小寫比對
+    const contentType = content.type?.toLowerCase();
+
     // For reading_assessment type, use side panel for viewing/editing
-    if (content.type === "reading_assessment") {
+    if (contentType === "reading_assessment") {
+      setSelectedContent(content);
+      setEditingContent({
+        id: content.id,
+        title: content.title,
+        items_count: content.items_count,
+        items: content.items || [],
+        lesson_id: content.lesson_id,
+        type: content.type,
+        estimated_time: content.estimated_time,
+        target_wpm: content.target_wpm,
+        target_accuracy: content.target_accuracy,
+        time_limit_seconds: content.time_limit_seconds,
+        programName: content.programName,
+        lessonName: content.lessonName,
+      });
+      setIsPanelOpen(true);
+    } else if (contentType === "sentence_making") {
+      // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -880,6 +912,15 @@ export default function ClassroomDetail({
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
+      setShowContentTypeDialog(false);
+    } else if (
+      selection.type === "SENTENCE_MAKING" ||
+      selection.type === "sentence_making"
+    ) {
+      // For sentence_making, use popup for new content creation
+      setSentenceMakingLessonId(selection.lessonId);
+      setSentenceMakingContentId(null); // null for new content
+      setShowSentenceMakingEditor(true);
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -1707,25 +1748,9 @@ export default function ClassroomDetail({
             <div className="h-full flex flex-col">
               {/* Panel Header */}
               <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                <div className="flex-1 mr-4">
-                  <h3 className="font-semibold text-sm text-gray-600 mb-2">
-                    {t("classroomDetail.labels.contentEditor")}
-                  </h3>
-                  <input
-                    type="text"
-                    value={editingContent?.title || selectedContent.title || ""}
-                    onChange={(e) => {
-                      if (editingContent) {
-                        setEditingContent({
-                          ...editingContent,
-                          title: e.target.value,
-                        });
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 border rounded-md text-lg font-medium"
-                    placeholder={t("classroomDetail.labels.enterTitle")}
-                  />
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("classroomDetail.labels.editContent")}
+                </h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1738,9 +1763,25 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {selectedContent.type === "reading_assessment" ? (
+                {selectedContent.type?.toLowerCase() ===
+                "reading_assessment" ? (
                   /* ReadingAssessmentPanel has its own save button */
                   <ReadingAssessmentPanel
+                    content={selectedContent as ReadingAssessmentContent}
+                    editingContent={
+                      editingContent as ReadingAssessmentContent | undefined
+                    }
+                    onUpdateContent={(
+                      updatedContent: Record<string, unknown>,
+                    ) => {
+                      setEditingContent(updatedContent as unknown as Content);
+                    }}
+                    onSave={handleSaveContent}
+                  />
+                ) : selectedContent.type?.toLowerCase() ===
+                  "sentence_making" ? (
+                  /* SentenceMakingPanel has its own save button */
+                  <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
                       editingContent as ReadingAssessmentContent | undefined
@@ -1905,24 +1946,25 @@ export default function ClassroomDetail({
                 )}
               </div>
 
-              {/* Panel Footer - Only show for non-reading_assessment types */}
-              {selectedContent.type !== "reading_assessment" && (
-                <div className="p-4 border-t bg-gray-50">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={closePanel}
-                    >
-                      {t("classroomDetail.buttons.cancel")}
-                    </Button>
-                    <Button className="flex-1" onClick={handleSaveContent}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {t("classroomDetail.buttons.saveChanges")}
-                    </Button>
+              {/* Panel Footer - Only show for types that don't have their own save button */}
+              {selectedContent.type?.toLowerCase() !== "reading_assessment" &&
+                selectedContent.type?.toLowerCase() !== "sentence_making" && (
+                  <div className="p-4 border-t bg-gray-50">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={closePanel}
+                      >
+                        {t("classroomDetail.buttons.cancel")}
+                      </Button>
+                      <Button className="flex-1" onClick={handleSaveContent}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {t("classroomDetail.buttons.saveChanges")}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
         </div>
@@ -2224,6 +2266,54 @@ export default function ClassroomDetail({
                   setEditorContentId(null);
                 }}
                 isCreating={!editorContentId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sentence Making Editor */}
+      {showSentenceMakingEditor && sentenceMakingLessonId && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">句子模組設定</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SentenceMakingPanel
+                content={undefined}
+                editingContent={{ id: sentenceMakingContentId || undefined }}
+                lessonId={sentenceMakingLessonId}
+                onUpdateContent={(updatedContent) => {
+                  // Handle content update if needed
+                  console.log("Content updated:", updatedContent);
+                }}
+                onSave={async () => {
+                  // SentenceMakingPanel handles save internally
+                  // Just close the editor on successful save
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                  await refreshPrograms();
+                  toast.success("內容已成功儲存");
+                }}
+                onCancel={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+                isCreating={!sentenceMakingContentId}
               />
             </div>
           </div>
