@@ -35,7 +35,9 @@ interface OrganizationContextType {
   organizations: Organization[];
   setOrganizations: React.Dispatch<React.SetStateAction<Organization[]>>;
   schools: Record<string, SchoolData[]>;
-  setSchools: React.Dispatch<React.SetStateAction<Record<string, SchoolData[]>>>;
+  setSchools: React.Dispatch<
+    React.SetStateAction<Record<string, SchoolData[]>>
+  >;
   expandedOrgs: string[];
   setExpandedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
   isFetchingOrgs: boolean;
@@ -43,7 +45,7 @@ interface OrganizationContextType {
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
@@ -67,7 +69,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       isFetchingOrgs,
       setIsFetchingOrgs,
     }),
-    [selectedNode, organizations, schools, expandedOrgs, isFetchingOrgs]
+    [selectedNode, organizations, schools, expandedOrgs, isFetchingOrgs],
   );
 
   return (
@@ -81,7 +83,7 @@ export function useOrganization() {
   const context = useContext(OrganizationContext);
   if (context === undefined) {
     throw new Error(
-      "useOrganization must be used within an OrganizationProvider"
+      "useOrganization must be used within an OrganizationProvider",
     );
   }
   return context;

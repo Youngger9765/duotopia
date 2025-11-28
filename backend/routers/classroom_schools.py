@@ -185,7 +185,7 @@ async def link_classroom_to_school(
         db.query(ClassroomSchool)
         .filter(
             ClassroomSchool.classroom_id == classroom_id,
-            ClassroomSchool.is_active == True,
+            ClassroomSchool.is_active.is_(True),
         )
         .first()
     )
@@ -239,7 +239,7 @@ async def get_classroom_school(
         db.query(ClassroomSchool)
         .filter(
             ClassroomSchool.classroom_id == classroom_id,
-            ClassroomSchool.is_active == True,
+            ClassroomSchool.is_active.is_(True),
         )
         .first()
     )
@@ -290,7 +290,7 @@ async def unlink_classroom_from_school(
         db.query(ClassroomSchool)
         .filter(
             ClassroomSchool.classroom_id == classroom_id,
-            ClassroomSchool.is_active == True,
+            ClassroomSchool.is_active.is_(True),
         )
         .first()
     )
@@ -328,7 +328,8 @@ async def list_school_classrooms(
     links = (
         db.query(ClassroomSchool)
         .filter(
-            ClassroomSchool.school_id == school_id, ClassroomSchool.is_active == True
+            ClassroomSchool.school_id == school_id,
+            ClassroomSchool.is_active.is_(True),
         )
         .all()
     )
