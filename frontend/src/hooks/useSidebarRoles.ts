@@ -19,7 +19,7 @@ interface TeacherProfile {
 export const useSidebarRoles = (
   sidebarGroups: SidebarGroup[],
   config: SystemConfig | null,
-  teacherProfile: TeacherProfile | null
+  teacherProfile: TeacherProfile | null,
 ) => {
   // 从全局 store 获取 userRoles，而不是自己抓取
   const token = useTeacherAuthStore((state) => state.token);
@@ -54,7 +54,10 @@ export const useSidebarRoles = (
           console.log("✅ [useSidebarRoles] all_roles:", data.all_roles);
           setUserRoles(data.all_roles || []);
         } else {
-          console.error("❌ [useSidebarRoles] API response not OK:", response.status);
+          console.error(
+            "❌ [useSidebarRoles] API response not OK:",
+            response.status,
+          );
           hasFetchedRef.current = false; // 失败时允许重试
         }
       } catch (err) {
@@ -101,17 +104,24 @@ export const useSidebarRoles = (
         }
         // 檢查組本身是否有角色要求
         if (group.requiredRoles && group.requiredRoles.length > 0) {
-          const hasPermission = group.requiredRoles.some((role) => userRoles.includes(role));
+          const hasPermission = group.requiredRoles.some((role) =>
+            userRoles.includes(role),
+          );
           console.log(
-            `🔐 [useSidebarRoles] Group "${group.label}": requiredRoles=${group.requiredRoles}, userRoles=${JSON.stringify(userRoles)}, hasPermission=${hasPermission}`
+            `🔐 [useSidebarRoles] Group "${group.label}": requiredRoles=${group.requiredRoles}, userRoles=${JSON.stringify(userRoles)}, hasPermission=${hasPermission}`,
           );
           return hasPermission;
         }
         return true;
       });
 
-    console.log(`📋 [useSidebarRoles] Total groups: ${sidebarGroups.length}, Visible groups: ${filtered.length}`);
-    console.log(`📋 [useSidebarRoles] Visible group labels:`, filtered.map(g => g.label));
+    console.log(
+      `📋 [useSidebarRoles] Total groups: ${sidebarGroups.length}, Visible groups: ${filtered.length}`,
+    );
+    console.log(
+      `📋 [useSidebarRoles] Visible group labels:`,
+      filtered.map((g) => g.label),
+    );
 
     return filtered;
   }, [sidebarGroups, userRoles, config, teacherProfile]); // 只在这些依赖变化时重新计算

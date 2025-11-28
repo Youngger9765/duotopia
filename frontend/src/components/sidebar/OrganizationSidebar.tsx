@@ -38,19 +38,22 @@ export function OrganizationSidebar({
   // OrganizationSidebar 不再负责抓取 organizations数据，只负责显示
   // organizations 由 OrganizationHub 页面统一抓取并放入 Context
 
-  const fetchSchools = useCallback(async (orgId: string) => {
-    try {
-      const response = await fetch(`/api/schools?organization_id=${orgId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSchools((prev) => ({ ...prev, [orgId]: data }));
+  const fetchSchools = useCallback(
+    async (orgId: string) => {
+      try {
+        const response = await fetch(`/api/schools?organization_id=${orgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setSchools((prev) => ({ ...prev, [orgId]: data }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch schools:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch schools:", error);
-    }
-  }, [token, setSchools]);
+    },
+    [token, setSchools],
+  );
 
   // 监听 expandedOrgs 变化，自动 fetch schools
   useEffect(() => {
@@ -61,11 +64,12 @@ export function OrganizationSidebar({
     });
   }, [expandedOrgs, schools, fetchSchools]);
 
-  const handleNodeClick = (
-    type: "organization" | "school",
-    data: { id: string; name: string }
-  ) => {
-    console.log("🔵 Sidebar: Clicking node", { type, id: data.id, name: data.name });
+  const handleNodeClick = (type: "organization" | "school", data: any) => {
+    console.log("🔵 Sidebar: Clicking node", {
+      type,
+      id: data.id,
+      name: data.name,
+    });
     setSelectedNode({ type, id: data.id, data });
     console.log("🔵 Sidebar: selectedNode set, navigating...");
     // 導航到 OrganizationHub 頁面
@@ -100,7 +104,7 @@ export function OrganizationSidebar({
                 "hover:no-underline hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2 py-2",
                 selectedNode?.type === "organization" &&
                   selectedNode.id === org.id &&
-                  "bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
+                  "bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100",
               )}
             >
               <div
@@ -127,7 +131,7 @@ export function OrganizationSidebar({
                       "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left",
                       selectedNode?.type === "school" &&
                         selectedNode.id === school.id &&
-                        "bg-green-100 dark:bg-green-900/40 text-green-900 dark:text-green-100"
+                        "bg-green-100 dark:bg-green-900/40 text-green-900 dark:text-green-100",
                     )}
                   >
                     <SchoolIcon className="w-4 h-4 text-green-600 dark:text-green-400" />

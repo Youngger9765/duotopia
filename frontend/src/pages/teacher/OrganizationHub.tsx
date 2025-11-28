@@ -44,7 +44,7 @@ interface Classroom {
   created_at: string;
 }
 
-interface School {
+interface SchoolWithAdmin {
   id: string;
   organization_id: string;
   name: string;
@@ -71,7 +71,7 @@ function OrganizationHubContent() {
   } = useOrganization();
 
   const [statsLoading, setStatsLoading] = useState(false);
-  const [orgSchools, setOrgSchools] = useState<School[]>([]);
+  const [orgSchools, setOrgSchools] = useState<SchoolWithAdmin[]>([]);
   const [schoolTeachers, setSchoolTeachers] = useState<Teacher[]>([]);
   const [schoolClassrooms, setSchoolClassrooms] = useState<Classroom[]>([]);
   const [isLoadingSchoolDetails, setIsLoadingSchoolDetails] = useState(false);
@@ -84,7 +84,9 @@ function OrganizationHubContent() {
     const fetchOrganizations = async () => {
       // 立即检查 ref，防止 race condition
       if (hasFetchedRef.current || isFetchingOrgs || organizations.length > 0) {
-        console.log("🔴 OrganizationHub: Skipping fetch (already have data or fetching)");
+        console.log(
+          "🔴 OrganizationHub: Skipping fetch (already have data or fetching)",
+        );
         return;
       }
 
@@ -99,14 +101,21 @@ function OrganizationHubContent() {
         });
         if (response.ok) {
           const data = await response.json();
-          console.log("🔴 OrganizationHub: Fetched organizations:", data.length, data);
+          console.log(
+            "🔴 OrganizationHub: Fetched organizations:",
+            data.length,
+            data,
+          );
           setOrganizations(data);
           // 自动展开第一个机构
           if (data.length > 0) {
             setExpandedOrgs([data[0].id]);
           }
         } else {
-          console.error("🔴 OrganizationHub: Failed to fetch organizations, status:", response.status);
+          console.error(
+            "🔴 OrganizationHub: Failed to fetch organizations, status:",
+            response.status,
+          );
           hasFetchedRef.current = false; // 失败时允许重试
         }
       } catch (error) {
@@ -124,10 +133,13 @@ function OrganizationHubContent() {
   useEffect(() => {
     console.log("🟡 OrganizationHub: organizations changed", {
       count: organizations.length,
-      hasSelectedNode: !!selectedNode
+      hasSelectedNode: !!selectedNode,
     });
     if (!selectedNode && organizations.length > 0) {
-      console.log("🟢 OrganizationHub: Auto-selecting first organization:", organizations[0]);
+      console.log(
+        "🟢 OrganizationHub: Auto-selecting first organization:",
+        organizations[0],
+      );
       setSelectedNode({
         type: "organization",
         id: organizations[0].id,
@@ -150,7 +162,10 @@ function OrganizationHubContent() {
     }
   }, [selectedNode]);
 
-  const fetchNodeStats = async (type: "organization" | "school", id: string) => {
+  const fetchNodeStats = async (
+    type: "organization" | "school",
+    id: string,
+  ) => {
     try {
       setStatsLoading(true);
 
@@ -199,7 +214,7 @@ function OrganizationHubContent() {
     }
   };
 
-  const handleSchoolClick = (school: School) => {
+  const handleSchoolClick = (school: SchoolWithAdmin) => {
     setSelectedNode({
       type: "school",
       id: school.id,
@@ -209,156 +224,256 @@ function OrganizationHubContent() {
 
   return selectedNode ? (
     <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-            <div className="flex items-start gap-3 flex-1">
-              {selectedNode.type === "organization" ? (
-                <Building2 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-              ) : (
-                <School className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold truncate">
-                    {selectedNode.data.display_name || selectedNode.data.name}
-                  </h1>
-                  <span className={cn(
-                    "px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0",
-                    selectedNode.type === "organization"
-                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                      : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                  )}>
-                    {selectedNode.type === "organization"
-                      ? t("organizationHub.organization")
-                      : t("organizationHub.school")}
-                  </span>
-                </div>
-                {selectedNode.data.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    {selectedNode.data.description}
-                  </p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div className="flex items-start gap-3 flex-1">
+          {selectedNode.type === "organization" ? (
+            <Building2 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+          ) : (
+            <School className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold truncate">
+                {selectedNode.data.display_name || selectedNode.data.name}
+              </h1>
+              <span
+                className={cn(
+                  "px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0",
+                  selectedNode.type === "organization"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
                 )}
+              >
+                {selectedNode.type === "organization"
+                  ? t("organizationHub.organization")
+                  : t("organizationHub.school")}
+              </span>
+            </div>
+            {selectedNode.data.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                {selectedNode.data.description}
+              </p>
+            )}
+          </div>
+        </div>
+        <Button variant="outline" size="sm" className="flex-shrink-0">
+          <Settings className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">{t("organizationHub.edit")}</span>
+        </Button>
+      </div>
+
+      {/* 基本資訊 - 可收合 */}
+      <Accordion type="single" collapsible className="mb-6">
+        <AccordionItem
+          value="info"
+          className="border rounded-lg px-4 bg-white dark:bg-gray-800"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <h3 className="text-lg font-semibold">
+              {t("organizationHub.info.title")}
+            </h3>
+          </AccordionTrigger>
+          <AccordionContent className="pt-4 pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  {t("organizationHub.info.name")}
+                </label>
+                <p className="mt-1">{selectedNode.data.name}</p>
+              </div>
+
+              {selectedNode.data.display_name && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t("organizationHub.info.displayName")}
+                  </label>
+                  <p className="mt-1">{selectedNode.data.display_name}</p>
+                </div>
+              )}
+
+              {selectedNode.data.contact_email && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t("organizationHub.info.contactEmail")}
+                  </label>
+                  <p className="mt-1">{selectedNode.data.contact_email}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  {t("organizationHub.info.createdAt")}
+                </label>
+                <p className="mt-1">
+                  {new Date(selectedNode.data.created_at).toLocaleDateString()}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="flex-shrink-0">
-              <Settings className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t("organizationHub.edit")}</span>
-            </Button>
-          </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-          {/* 基本資訊 - 可收合 */}
-          <Accordion type="single" collapsible className="mb-6">
-            <AccordionItem value="info" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
-              <AccordionTrigger className="hover:no-underline">
-                <h3 className="text-lg font-semibold">{t("organizationHub.info.title")}</h3>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {t("organizationHub.info.name")}
-                    </label>
-                    <p className="mt-1">{selectedNode.data.name}</p>
-                  </div>
+      {/* 學校列表 (機構) / 班級教師管理 Tabs (學校) */}
+      {selectedNode.type === "organization" ? (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t("organizationHub.schools")}</CardTitle>
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                {t("organizationHub.addSchool")}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <div className="text-center py-8 text-gray-500">
+                {t("common.loading")}
+              </div>
+            ) : orgSchools.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      {t("organizationHub.table.schoolName")}
+                    </TableHead>
+                    <TableHead>{t("organizationHub.table.admin")}</TableHead>
+                    <TableHead>
+                      {t("organizationHub.table.contactEmail")}
+                    </TableHead>
+                    <TableHead>{t("organizationHub.table.status")}</TableHead>
+                    <TableHead>
+                      {t("organizationHub.table.createdAt")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orgSchools.map((school) => (
+                    <TableRow
+                      key={school.id}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => handleSchoolClick(school)}
+                    >
+                      <TableCell className="font-medium text-blue-600 dark:text-blue-400">
+                        {school.display_name || school.name}
+                      </TableCell>
+                      <TableCell>
+                        {school.admin_name ? (
+                          <div>
+                            <div className="font-medium">
+                              {school.admin_name}
+                            </div>
+                            {school.admin_email && (
+                              <div className="text-xs text-gray-500">
+                                {school.admin_email}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{school.contact_email || "-"}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs",
+                            school.is_active
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-700",
+                          )}
+                        >
+                          {school.is_active
+                            ? t("common.active")
+                            : t("common.inactive")}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(school.created_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {t("organizationHub.noSchools")}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="classrooms">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="classrooms">
+              {t("organizationHub.tabs.classrooms")}
+            </TabsTrigger>
+            <TabsTrigger value="teachers">
+              {t("organizationHub.tabs.teachers")}
+            </TabsTrigger>
+          </TabsList>
 
-                  {selectedNode.data.display_name && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t("organizationHub.info.displayName")}
-                      </label>
-                      <p className="mt-1">{selectedNode.data.display_name}</p>
-                    </div>
-                  )}
-
-                  {selectedNode.data.contact_email && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t("organizationHub.info.contactEmail")}
-                      </label>
-                      <p className="mt-1">{selectedNode.data.contact_email}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {t("organizationHub.info.createdAt")}
-                    </label>
-                    <p className="mt-1">
-                      {new Date(selectedNode.data.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          {/* 學校列表 (機構) / 班級教師管理 Tabs (學校) */}
-          {selectedNode.type === "organization" ? (
-            <Card className="mb-6">
+          {/* 班級列表 */}
+          <TabsContent value="classrooms" className="mt-4">
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>{t("organizationHub.schools")}</CardTitle>
+                  <CardTitle>{t("organizationHub.tabs.classrooms")}</CardTitle>
                   <Button size="sm">
                     <Plus className="w-4 h-4 mr-2" />
-                    {t("organizationHub.addSchool")}
+                    {t("organizationHub.addClassroom")}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {statsLoading ? (
+                {isLoadingSchoolDetails ? (
                   <div className="text-center py-8 text-gray-500">
                     {t("common.loading")}
                   </div>
-                ) : orgSchools.length > 0 ? (
+                ) : schoolClassrooms.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t("organizationHub.table.schoolName")}</TableHead>
-                        <TableHead>{t("organizationHub.table.admin")}</TableHead>
-                        <TableHead>{t("organizationHub.table.contactEmail")}</TableHead>
-                        <TableHead>{t("organizationHub.table.status")}</TableHead>
-                        <TableHead>{t("organizationHub.table.createdAt")}</TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.classroomName")}
+                        </TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.level")}
+                        </TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.status")}
+                        </TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.createdAt")}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orgSchools.map((school) => (
-                        <TableRow
-                          key={school.id}
-                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-                          onClick={() => handleSchoolClick(school)}
-                        >
-                          <TableCell className="font-medium text-blue-600 dark:text-blue-400">
-                            {school.display_name || school.name}
+                      {schoolClassrooms.map((classroom) => (
+                        <TableRow key={classroom.id}>
+                          <TableCell className="font-medium">
+                            {classroom.name}
                           </TableCell>
-                          <TableCell>
-                            {school.admin_name ? (
-                              <div>
-                                <div className="font-medium">{school.admin_name}</div>
-                                {school.admin_email && (
-                                  <div className="text-xs text-gray-500">{school.admin_email}</div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{school.contact_email || "-"}</TableCell>
+                          <TableCell>{classroom.program_level}</TableCell>
                           <TableCell>
                             <span
                               className={cn(
                                 "px-2 py-1 rounded-full text-xs",
-                                school.is_active
+                                classroom.is_active
                                   ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
+                                  : "bg-gray-100 text-gray-700",
                               )}
                             >
-                              {school.is_active
+                              {classroom.is_active
                                 ? t("common.active")
                                 : t("common.inactive")}
                             </span>
                           </TableCell>
                           <TableCell>
-                            {new Date(school.created_at).toLocaleDateString()}
+                            {new Date(
+                              classroom.created_at,
+                            ).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -366,161 +481,94 @@ function OrganizationHubContent() {
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    {t("organizationHub.noSchools")}
+                    {t("organizationHub.noClassrooms")}
                   </div>
                 )}
               </CardContent>
             </Card>
-          ) : (
-            <Tabs defaultValue="classrooms">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="classrooms">
-                  {t("organizationHub.tabs.classrooms")}
-                </TabsTrigger>
-                <TabsTrigger value="teachers">
-                  {t("organizationHub.tabs.teachers")}
-                </TabsTrigger>
-              </TabsList>
+          </TabsContent>
 
-              {/* 班級列表 */}
-              <TabsContent value="classrooms" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>{t("organizationHub.tabs.classrooms")}</CardTitle>
-                      <Button size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        {t("organizationHub.addClassroom")}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingSchoolDetails ? (
-                      <div className="text-center py-8 text-gray-500">
-                        {t("common.loading")}
-                      </div>
-                    ) : schoolClassrooms.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t("organizationHub.table.classroomName")}</TableHead>
-                            <TableHead>{t("organizationHub.table.level")}</TableHead>
-                            <TableHead>{t("organizationHub.table.status")}</TableHead>
-                            <TableHead>{t("organizationHub.table.createdAt")}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {schoolClassrooms.map((classroom) => (
-                            <TableRow key={classroom.id}>
-                              <TableCell className="font-medium">
-                                {classroom.name}
-                              </TableCell>
-                              <TableCell>{classroom.program_level}</TableCell>
-                              <TableCell>
-                                <span
-                                  className={cn(
-                                    "px-2 py-1 rounded-full text-xs",
-                                    classroom.is_active
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-gray-100 text-gray-700"
-                                  )}
-                                >
-                                  {classroom.is_active
-                                    ? t("common.active")
-                                    : t("common.inactive")}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(
-                                  classroom.created_at
-                                ).toLocaleDateString()}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        {t("organizationHub.noClassrooms")}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* 教師列表 */}
-              <TabsContent value="teachers" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>{t("organizationHub.tabs.teachers")}</CardTitle>
-                      <Button size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        {t("organizationHub.addTeacher")}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingSchoolDetails ? (
-                      <div className="text-center py-8 text-gray-500">
-                        {t("common.loading")}
-                      </div>
-                    ) : schoolTeachers.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t("organizationHub.table.teacherName")}</TableHead>
-                            <TableHead>{t("organizationHub.table.email")}</TableHead>
-                            <TableHead>{t("organizationHub.table.role")}</TableHead>
-                            <TableHead>{t("organizationHub.table.status")}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {schoolTeachers.map((teacher) => (
-                            <TableRow key={teacher.id}>
-                              <TableCell className="font-medium">
-                                {teacher.name}
-                              </TableCell>
-                              <TableCell>{teacher.email}</TableCell>
-                              <TableCell>
-                                <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-                                  {teacher.role}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={cn(
-                                    "px-2 py-1 rounded-full text-xs",
-                                    teacher.is_active
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-gray-100 text-gray-700"
-                                  )}
-                                >
-                                  {teacher.is_active
-                                    ? t("common.active")
-                                    : t("common.inactive")}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        {t("organizationHub.noTeachers")}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
+          {/* 教師列表 */}
+          <TabsContent value="teachers" className="mt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{t("organizationHub.tabs.teachers")}</CardTitle>
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t("organizationHub.addTeacher")}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingSchoolDetails ? (
+                  <div className="text-center py-8 text-gray-500">
+                    {t("common.loading")}
+                  </div>
+                ) : schoolTeachers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          {t("organizationHub.table.teacherName")}
+                        </TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.email")}
+                        </TableHead>
+                        <TableHead>{t("organizationHub.table.role")}</TableHead>
+                        <TableHead>
+                          {t("organizationHub.table.status")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {schoolTeachers.map((teacher) => (
+                        <TableRow key={teacher.id}>
+                          <TableCell className="font-medium">
+                            {teacher.name}
+                          </TableCell>
+                          <TableCell>{teacher.email}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                              {teacher.role}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={cn(
+                                "px-2 py-1 rounded-full text-xs",
+                                teacher.is_active
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700",
+                              )}
+                            >
+                              {teacher.is_active
+                                ? t("common.active")
+                                : t("common.inactive")}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    {t("organizationHub.noTeachers")}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
   ) : (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] p-4">
       <div className="text-center text-gray-400">
         <Building2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p className="text-base sm:text-lg">{t("organizationHub.selectPrompt")}</p>
+        <p className="text-base sm:text-lg">
+          {t("organizationHub.selectPrompt")}
+        </p>
       </div>
     </div>
   );
