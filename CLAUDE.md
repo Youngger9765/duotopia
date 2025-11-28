@@ -1,281 +1,154 @@
-# CLAUDE.md
+# CLAUDE.md - Duotopia Project Configuration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 🚨 CRITICAL MANDATORY RULES - READ FIRST
 
-## 🚨 最高指导原则
+### **CRITICAL RULE #1**: YOU MUST USE AGENT-MANAGER
+**For ANY coding task beyond simple file reading or questions, YOU MUST use:**
+```
+Task(subagent_type="agent-manager", prompt="[your task]", ...)
+```
 
-### 1. 修完要自己去测试过！
+**NO EXCEPTIONS** for these tasks:
+- Writing/editing ANY code
+- Running tests
+- Fixing bugs
+- Implementing features
+- Code review
+- Deployments
+- Git operations
+- Performance optimization
+- Security checks
 
-### 2. GitHub Issue 处理必须使用 @agent-git-issue-pr-flow
+**ONLY EXCEPTIONS** (direct tool use allowed):
+- Reading a single file (`Read` tool)
+- Answering conceptual questions
+- Explaining existing code
 
-⚠️ **当用户提到以下关键字时，自动使用 agent**：
-- 「修复 issue」、「处理 issue #N」
-- 「有什么 issue」、「巡逻 issues」
-- 「部署到 staging」、「准备 release」
-- 「检查 approval」、「查看批准状态」
-- 任何提到 GitHub Issue 编号（#15, #7 等）
+### **CRITICAL RULE #2**: AGENT-MANAGER DECISION TREE
+The agent-manager MUST follow this EXACT routing:
 
-**Agent 功能**：
-- 🔍 完整 PDCA 流程（Plan → Do → Check → Act）
-- 🧪 TDD 测试驱动开发
-- 🌐 Per-Issue Test Environment 管理
-- ✅ AI 智能批准侦测
-- 🛡️ Schema 变更保护
+```
+If task contains "test" or "测试" → test-runner
+If task contains "review" or "审查" → code-reviewer
+If task contains "#" or "issue" or "bug" → git-issue-pr-flow
+If task contains "deploy" or "部署" → git-issue-pr-flow
+If task contains "security" or "安全" → code-reviewer (security mode)
+If task is complex/multi-step → Combine multiple agents
+Otherwise → Analyze context and choose
+```
 
-**详细说明**: `.claude/agents/git-issue-pr-flow.md`
+### **CRITICAL RULE #3**: NO DIRECT EXECUTION
+**FORBIDDEN**: Using Edit/Write/Bash tools directly for coding tasks
+**MANDATORY**: Route through agent-manager FIRST
 
----
+## 📚 Documentation Structure
 
-## 🎯 Issue vs PR 职责分工
+### Agent Documentation (Primary Reference)
+- **[agent-manager.md](./.claude/agents/agent-manager.md)** - 核心原则、验证标准、完成检查清单
+- **[git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)** - PDCA 工作流程、Git 操作、Issue/PR 管理
+- **[test-runner.md](./.claude/agents/test-runner.md)** - 测试指南、覆盖率要求、最佳实践
+- **[code-reviewer.md](./.claude/agents/code-reviewer.md)** - 代码审查、安全检查、性能分析
+- **[task-router.md](./.claude/agents/task-router.md)** - 任务路由助手
 
-| 维度 | **Issue（业务层）** | **PR（技术层）** |
-|------|-------------------|-----------------|
-| **受众** | 👔 案主（非技术） | 💻 工程师（技术） |
-| **目的** | 追踪业务价值 | 追踪技术品质 |
-| **内容** | 问题、测试链接、批准 | 完整工程报告 |
-| **通过标准** | ✅ 案主 OK | ✅ CI/CD OK |
+### Project Documents
+- **[PRD.md](./PRD.md)** - 产品需求文档
+- **[CICD.md](./CICD.md)** - 部署与 CI/CD
+- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - 详细测试指南
+- **[DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)** - 部署状态
 
-### Issue 的内容（给案主看）
-- ✅ 问题描述（业务语言）
-- ✅ 测试环境链接
-- ✅ 案主测试结果和批准
-- ❌ 不要放技术细节
+## 🤖 MANDATORY AGENT SYSTEM
 
-### PR 的内容（给工程师看）
-- ✅ 完整工程报告（根因分析、技术决策、测试覆盖率）
-- ✅ CI/CD 状态检查
-- ✅ 影响范围评估
-- ❌ 不要放案主批准（在 Issue 中）
+### @agent-manager 🧠 **[MANDATORY COORDINATOR]**
+**CRITICAL**: This is NOT optional. YOU MUST use this for ALL coding tasks.
 
----
+**Automatic Invocation Required For**:
+- ✅ ANY code changes (create/edit/delete)
+- ✅ ALL test operations
+- ✅ ANY bug fixes
+- ✅ ALL feature implementations
+- ✅ ANY deployments
+- ✅ ALL Git operations
+- ✅ ANY performance/security tasks
 
-## 🔐 资安铁则
+**How It Works**:
+1. YOU invoke agent-manager via Task tool
+2. Agent-manager analyzes full context
+3. Routes to appropriate specialized agent(s)
+4. Returns consolidated results
 
-**绝对不要在任何会被 commit 的档案中硬编码 secrets！**
+**ENFORCEMENT**: If you try to use Edit/Write/Bash directly for coding, YOU ARE VIOLATING PROJECT RULES
 
-- ❌ 不要在 `.sh`, `.py`, `.ts`, `.yml` 中硬编码 secrets
-- ✅ 本机：`.env` 档案（gitignore）
-- ✅ CI/CD：GitHub Secrets (`gh secret set`)
-- ✅ 生产：Cloud Run 环境变数或 Secret Manager
-- ✅ 程式码：从环境变数读取 (`os.getenv()`, `import.meta.env`)
+### @agent-git-issue-pr-flow
+**Auto-trigger keywords**: issue, fix, bug, #N, 部署, staging, approval
+- Complete PDCA workflow management
+- TDD enforcement
+- Per-Issue Test Environment
+- AI-powered approval detection
 
----
+### @agent-code-reviewer
+**Auto-trigger keywords**: review, check code, quality
+- Security vulnerability scanning
+- Performance analysis
+- Best practices validation
+- Code smell detection
 
-## 🔴 绝对禁止
+### @agent-test-runner
+**Auto-trigger keywords**: test, pytest, npm test
+- Automatic test type detection
+- Coverage reporting
+- Failure analysis
+- Performance benchmarking
 
-1. **`git commit --no-verify`** - 必须修复所有 pre-commit 错误
-2. **主动 commit/push** - 必须等待用户明确命令
-3. **草率判断「修复完成」** - 必须完整测试
+### @agent-task-router
+**Internal use only** - AI-powered task routing assistant
+- Suggests appropriate agents based on task
+- Lightweight Haiku model for efficiency
 
----
+## 🪝 Active Hooks
 
-## ⚠️ 操作顺序 (STOP! READ FIRST!)
+### user-prompt-submit
+Suggests relevant agents/tools before task execution
 
-### 执行任何重要操作前：
-1. **先查 README** - 了解专案标准流程
-2. **先查 CLAUDE.md** - 了解专案特定规则
-3. **先查 package.json/requirements.txt** - 了解已有的脚本命令
-4. **绝对不要自作主张创建资源** - 永远使用专案既有的配置
+### PostToolUse(Write|Edit)
+Auto-formats code after modifications
 
-### 🔴 红线规则（绝对禁止）
-- ❌ 手动 gcloud 命令创建资源 → 必须使用专案配置
-- ❌ 猜测版本号 → 必须查证
-- ❌ 忽略专案既有工具 → npm scripts, pytest 优先
-- ❌ 未读取配置前就执行命令 → 先读后做
+### PreToolUse(Bash(git commit*))
+Validates code quality before commits
 
----
+### Stop
+Runs quality checks at end of each turn
 
-## 🚨 测试驱动开发 (TDD)
+## 🚨 Quick Reference
 
-### 每次修改后的测试流程
+### Must Follow (from agent-manager.md)
+1. **Test before declaring completion** - Never hastily judge "fix complete"
+2. **Use @agent-git-issue-pr-flow for issues** - All GitHub Issue operations
+3. **Never commit/push without user command** - Wait for explicit command
+4. **Never hardcode secrets** - Use .env files and environment variables
+5. **Use feature branches, not staging** - Never commit directly to staging
+6. **Check README/CLAUDE.md/package.json first** - Understand project standards
 
+### Command Shortcuts
 ```bash
-# 1. 型别检查
-npm run typecheck
-
-# 2. 代码检查
-npm run lint
-
-# 3. 建置测试
-npm run build
-
-# 4. 执行测试
-npm run test:api:all     # 后端测试
-npm run test:e2e         # E2E 测试
-
-# 5. 实际浏览器测试
-open http://localhost:5173/[修改的页面]
-# 检查 Console 是否有错误
-# 检查 Network API 请求
-```
-
-### ⚠️ 不要混淆前后端工具
-
-**前端**：`package.json`, `npm`, `tsconfig.json`, `vite.config.ts`
-**后端**：`requirements.txt`, `pip`, `pytest.ini`, `pyproject.toml`
-**通用**：`Makefile`, `docker-compose.yml`, `.env`
-
-### 判断修复完成的标准
-- [ ] API 返回正确的状态码和资料结构
-- [ ] 前端页面正常显示
-- [ ] 功能可以正常操作
-- [ ] 没有 console 错误
-- [ ] 截图证明功能正常
-
-**记住：用户一直帮你抓错 = 你没做好测试！**
-
----
-
-## 🔴 Git Commit/Push 流程
-
-**标准流程**：
-1. 修改代码
-2. **自己测试** - 执行上述所有测试步骤
-3. **报告测试结果** - 告诉用户测试通过与否
-4. **等待命令** - ⚠️ 绝对不要主动 commit 或 push
-
-**正确示范**：
-```
-✅ 我：修改完成，已测试通过（附测试结果）
-✅ 用户：commit push
-✅ 我：执行 git commit && git push
-```
-
-**错误示范**：
-```
-❌ 我：修改完成，现在 commit...（自作主张）
-❌ 我：测试通过，推送到 staging...（没等命令）
-```
-
----
-
-## 🧪 测试档案组织原则
-
-### 📁 测试目录结构
-```
-duotopia/
-├── backend/tests/           # ✅ 所有 Python 测试
-│   ├── unit/               # 单元测试
-│   ├── integration/        # 整合测试
-│   │   ├── api/           # API 测试
-│   │   └── auth/          # 认证测试
-│   └── e2e/               # E2E 测试
-└── frontend/tests/          # ✅ 前端测试
-```
-
-### 🎯 测试分类原则
-
-**单元测试** (`backend/tests/unit/`):
-- 测试单一函数或类别
-- 不依赖外部资源（资料库、API）
-- 档名：`test_模组名称.py`
-
-**整合测试** (`backend/tests/integration/`):
-- API 测试、认证测试
-- 档名：`test_功能描述.py`
-
-**E2E 测试** (`backend/tests/e2e/`):
-- 测试完整用户流程
-- 从登入到完成任务
-
-### 🚨 禁止事项
-- ❌ 放在根目录 `tests/` - 会造成混乱
-- ❌ 放在 `backend/scripts/` - 脚本不是测试
-- ❌ 用奇怪档名 - 如 `test_phase2_api.py`
-- ❌ 混合不同测试类型
-
-### 🔧 测试执行指令
-
-```bash
-# NPM Scripts（推荐）
-npm run test:api                 # 所有 API 测试
-npm run test:api:unit            # 单元测试
-npm run test:api:integration     # 整合测试
-npm run test:api:e2e             # E2E 测试
-npm run test:all                 # 所有测试
-
-# 直接使用 pytest（进阶）
-cd backend
-pytest                           # 所有测试
-pytest -v                        # 详细输出
-pytest tests/unit/               # 只执行单元测试
-pytest --cov=. --cov-report=html # 测试覆盖率
-```
-
----
-
-## 🔍 完成工作前的检查清单
-
-### 回报「完成」前必须执行：
-
-```bash
-# 1. 检查档案位置
-git status --short
-
-# 2. 清理不必要的档案
-# 删除所有 *_temp.py, *_old.py, *_backup.py
-
-# 3. 执行完整测试
+# Testing
 npm run test:api:all
+npm run typecheck
+npm run lint
 npm run build
 
-# 4. 检查 code formatting
-black --check backend/
-npm run lint
-
-# 5. 检查 git diff
-git diff --stat
+# Git workflow (via agent)
+create-feature-fix <issue> <desc>
+deploy-feature <issue>
+update-release-pr
+check-approvals
 ```
 
-### 📋 回报格式标准
+## 🎯 Agent Selection Matrix
 
-```markdown
-## ✅ 完成项目
-- [具体完成的功能/修复]
-
-## 📊 测试结果
-- Unit tests: X/X PASSED
-- Integration tests: X/X PASSED
-- Build: ✅ SUCCESS
-
-## 📝 修改的档案
-1. `路径/档案名` - 做了什么修改
-
-## ⏳ 待用户确认
-- 等待 commit 指示
-```
-
----
-
-## 🏗️ 平台开发核心原则
-
-> **"There is nothing more permanent than a temporary solution"**
-
-### 基础设施优先 (Infrastructure First)
-- ✅ Cloud SQL + Cloud Run 从第一天开始
-- ✅ Terraform 管理所有基础设施
-- ✅ CI/CD pipeline 第一周建立
-- ✅ Secret Manager 管理所有密码
-- ❌ 避免：档案系统当资料库、手写部署脚本、"暂时"的解决方案
-
-### 资料架构不妥协 (Data Architecture)
-- ✅ PostgreSQL 作为 Single Source of Truth
-- ✅ 正确的关联式设计（外键、CASCADE DELETE）
-- ✅ 使用成熟的 ORM（SQLAlchemy）
-- ❌ 避免：混用多种储存方式、没有外键约束
-
-### DevOps 文化 (Everything as Code)
-- ✅ Infrastructure as Code (Terraform)
-- ✅ Configuration as Code (环境变数)
-- ✅ Deployment as Code (CI/CD)
-- ❌ 避免：手动配置伺服器、SSH 修改设定、没有回滚机制
-
----
-
-## 📚 相关文件
-
-- **产品需求**: [PRD.md](./PRD.md)
-- **部署与 CI/CD**: [CICD.md](./CICD.md)
-- **测试指南**: [docs/TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)
-- **部署状态**: [docs/DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)
-- **Git Issue PR Flow Agent**: [.claude/agents/git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)
+| Task Type | Recommended Agent | Trigger Words |
+|-----------|------------------|---------------|
+| Bug fixes | @agent-git-issue-pr-flow | issue, fix, #N |
+| Code review | @agent-code-reviewer | review, quality |
+| Testing | @agent-test-runner | test, pytest |
+| Deployment | @agent-git-issue-pr-flow | deploy, staging |
+| General | Let hooks suggest | - |
