@@ -131,14 +131,9 @@ export function OrganizationSidebar({
                   selectedNode.id === org.id &&
                   "bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100",
               )}
+              onClick={() => handleNodeClick("organization", org)}
             >
-              <div
-                className="flex items-center gap-2 flex-1"
-                onClick={(e) => {
-                  e.stopPropagation(); // 防止触发 accordion toggle
-                  handleNodeClick("organization", org);
-                }}
-              >
+              <div className="flex items-center gap-2 flex-1">
                 <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium truncate">
                   {org.display_name || org.name}
