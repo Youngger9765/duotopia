@@ -453,9 +453,7 @@ async def list_school_teachers(
     # Get all teacher relationships
     teacher_schools = (
         db.query(TeacherSchool)
-        .filter(
-            TeacherSchool.school_id == school_id, TeacherSchool.is_active.is_(True)
-        )
+        .filter(TeacherSchool.school_id == school_id, TeacherSchool.is_active.is_(True))
         .all()
     )
 

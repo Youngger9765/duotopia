@@ -468,10 +468,13 @@ export default function TestRecordingPanel() {
 
         // Use Zustand store's login method
         const login = useTeacherAuthStore.getState().login;
-        login(data.access_token, data.teacher || {
-          email: "demo@duotopia.com",
-          name: "Demo Teacher",
-        });
+        login(
+          data.access_token,
+          data.teacher || {
+            email: "demo@duotopia.com",
+            name: "Demo Teacher",
+          },
+        );
 
         toast.success(t("testRecordingPanel.messages.loginSuccess"));
       } else {

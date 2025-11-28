@@ -12,6 +12,28 @@ import {
 import { Building2, School as SchoolIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Import types from context
+type Organization = {
+  id: string;
+  name: string;
+  display_name?: string;
+  description?: string;
+  contact_email?: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+type SchoolData = {
+  id: string;
+  organization_id: string;
+  name: string;
+  display_name?: string;
+  description?: string;
+  contact_email?: string;
+  is_active: boolean;
+  created_at: string;
+};
+
 interface OrganizationSidebarProps {
   isCollapsed: boolean;
   onNavigate?: () => void;
@@ -64,7 +86,10 @@ export function OrganizationSidebar({
     });
   }, [expandedOrgs, schools, fetchSchools]);
 
-  const handleNodeClick = (type: "organization" | "school", data: any) => {
+  const handleNodeClick = (
+    type: "organization" | "school",
+    data: Organization | SchoolData,
+  ) => {
     console.log("🔵 Sidebar: Clicking node", {
       type,
       id: data.id,
