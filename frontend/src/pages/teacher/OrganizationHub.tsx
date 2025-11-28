@@ -332,70 +332,82 @@ function OrganizationHubContent() {
                 {t("common.loading")}
               </div>
             ) : orgSchools.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      {t("organizationHub.table.schoolName")}
-                    </TableHead>
-                    <TableHead>{t("organizationHub.table.admin")}</TableHead>
-                    <TableHead>
-                      {t("organizationHub.table.contactEmail")}
-                    </TableHead>
-                    <TableHead>{t("organizationHub.table.status")}</TableHead>
-                    <TableHead>
-                      {t("organizationHub.table.createdAt")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orgSchools.map((school) => (
-                    <TableRow
-                      key={school.id}
-                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-                      onClick={() => handleSchoolClick(school)}
-                    >
-                      <TableCell className="font-medium text-blue-600 dark:text-blue-400">
-                        {school.display_name || school.name}
-                      </TableCell>
-                      <TableCell>
-                        {school.admin_name ? (
-                          <div>
-                            <div className="font-medium">
-                              {school.admin_name}
-                            </div>
-                            {school.admin_email && (
-                              <div className="text-xs text-gray-500">
-                                {school.admin_email}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{school.contact_email || "-"}</TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            "px-2 py-1 rounded-full text-xs",
-                            school.is_active
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-700",
-                          )}
+              <div className="overflow-x-auto -mx-6 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">
+                          {t("organizationHub.table.schoolName")}
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap">
+                          {t("organizationHub.table.admin")}
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell whitespace-nowrap">
+                          {t("organizationHub.table.contactEmail")}
+                        </TableHead>
+                        <TableHead className="whitespace-nowrap">
+                          {t("organizationHub.table.status")}
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell whitespace-nowrap">
+                          {t("organizationHub.table.createdAt")}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orgSchools.map((school) => (
+                        <TableRow
+                          key={school.id}
+                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                          onClick={() => handleSchoolClick(school)}
                         >
-                          {school.is_active
-                            ? t("common.active")
-                            : t("common.inactive")}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(school.created_at).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          <TableCell className="font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                            {school.display_name || school.name}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {school.admin_name ? (
+                              <div>
+                                <div className="font-medium">
+                                  {school.admin_name}
+                                </div>
+                                {school.admin_email && (
+                                  <div className="text-xs text-gray-500 truncate max-w-[150px]">
+                                    {school.admin_email}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="truncate block max-w-[200px]">
+                              {school.contact_email || "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={cn(
+                                "px-2 py-1 rounded-full text-xs whitespace-nowrap",
+                                school.is_active
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700",
+                              )}
+                            >
+                              {school.is_active
+                                ? t("common.active")
+                                : t("common.inactive")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell whitespace-nowrap">
+                            {new Date(school.created_at).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 {t("organizationHub.noSchools")}
@@ -432,53 +444,59 @@ function OrganizationHubContent() {
                     {t("common.loading")}
                   </div>
                 ) : schoolClassrooms.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          {t("organizationHub.table.classroomName")}
-                        </TableHead>
-                        <TableHead>
-                          {t("organizationHub.table.level")}
-                        </TableHead>
-                        <TableHead>
-                          {t("organizationHub.table.status")}
-                        </TableHead>
-                        <TableHead>
-                          {t("organizationHub.table.createdAt")}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {schoolClassrooms.map((classroom) => (
-                        <TableRow key={classroom.id}>
-                          <TableCell className="font-medium">
-                            {classroom.name}
-                          </TableCell>
-                          <TableCell>{classroom.program_level}</TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                "px-2 py-1 rounded-full text-xs",
-                                classroom.is_active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700",
-                              )}
-                            >
-                              {classroom.is_active
-                                ? t("common.active")
-                                : t("common.inactive")}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(
-                              classroom.created_at,
-                            ).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto -mx-6 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.classroomName")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.level")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.status")}
+                            </TableHead>
+                            <TableHead className="hidden sm:table-cell whitespace-nowrap">
+                              {t("organizationHub.table.createdAt")}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {schoolClassrooms.map((classroom) => (
+                            <TableRow key={classroom.id}>
+                              <TableCell className="font-medium">
+                                {classroom.name}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {classroom.program_level}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    "px-2 py-1 rounded-full text-xs whitespace-nowrap",
+                                    classroom.is_active
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-gray-100 text-gray-700",
+                                  )}
+                                >
+                                  {classroom.is_active
+                                    ? t("common.active")
+                                    : t("common.inactive")}
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell whitespace-nowrap">
+                                {new Date(
+                                  classroom.created_at,
+                                ).toLocaleDateString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     {t("organizationHub.noClassrooms")}
@@ -506,51 +524,68 @@ function OrganizationHubContent() {
                     {t("common.loading")}
                   </div>
                 ) : schoolTeachers.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          {t("organizationHub.table.teacherName")}
-                        </TableHead>
-                        <TableHead>
-                          {t("organizationHub.table.email")}
-                        </TableHead>
-                        <TableHead>{t("organizationHub.table.role")}</TableHead>
-                        <TableHead>
-                          {t("organizationHub.table.status")}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {schoolTeachers.map((teacher) => (
-                        <TableRow key={teacher.id}>
-                          <TableCell className="font-medium">
-                            {teacher.name}
-                          </TableCell>
-                          <TableCell>{teacher.email}</TableCell>
-                          <TableCell>
-                            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-                              {teacher.role}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                "px-2 py-1 rounded-full text-xs",
-                                teacher.is_active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700",
-                              )}
-                            >
-                              {teacher.is_active
-                                ? t("common.active")
-                                : t("common.inactive")}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto -mx-6 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.teacherName")}
+                            </TableHead>
+                            <TableHead className="hidden sm:table-cell whitespace-nowrap">
+                              {t("organizationHub.table.email")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.role")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.status")}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {schoolTeachers.map((teacher) => (
+                            <TableRow key={teacher.id}>
+                              <TableCell className="font-medium">
+                                <div>
+                                  <div className="whitespace-nowrap">
+                                    {teacher.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate max-w-[150px] sm:hidden">
+                                    {teacher.email}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <span className="truncate block max-w-[200px]">
+                                  {teacher.email}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 whitespace-nowrap">
+                                  {teacher.role}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    "px-2 py-1 rounded-full text-xs whitespace-nowrap",
+                                    teacher.is_active
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-gray-100 text-gray-700",
+                                  )}
+                                >
+                                  {teacher.is_active
+                                    ? t("common.active")
+                                    : t("common.inactive")}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     {t("organizationHub.noTeachers")}

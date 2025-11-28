@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useCallback } from "react";
+import { ReactNode, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -95,33 +95,40 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     navigate("/teacher/login");
   }, [navigate]);
 
-  const fetchTeacherProfile = useCallback(async () => {
-    try {
-      const data = (await apiClient.getTeacherDashboard()) as {
-        teacher: TeacherProfile;
-      };
-      setTeacherProfile(data.teacher);
-    } catch (err) {
-      console.error("Failed to fetch teacher profile:", err);
-      if (err instanceof Error && err.message.includes("401")) {
-        handleLogout();
-      }
-    }
-  }, [handleLogout]);
-
-  const fetchConfig = useCallback(async () => {
-    try {
-      const data = await apiClient.getConfig();
-      setConfig(data);
-    } catch (err) {
-      console.error("Failed to fetch system config:", err);
-    }
-  }, []);
+  // ✅ 使用 useRef 防止重複執行
+  const hasFetchedProfile = useRef(false);
 
   useEffect(() => {
+    // 只在 mount 時執行一次
+    if (hasFetchedProfile.current) return;
+    hasFetchedProfile.current = true;
+
+    const fetchTeacherProfile = async () => {
+      try {
+        const data = (await apiClient.getTeacherDashboard()) as {
+          teacher: TeacherProfile;
+        };
+        setTeacherProfile(data.teacher);
+      } catch (err) {
+        console.error("Failed to fetch teacher profile:", err);
+        if (err instanceof Error && err.message.includes("401")) {
+          handleLogout();
+        }
+      }
+    };
+
+    const fetchConfig = async () => {
+      try {
+        const data = await apiClient.getConfig();
+        setConfig(data);
+      } catch (err) {
+        console.error("Failed to fetch system config:", err);
+      }
+    };
+
     fetchTeacherProfile();
     fetchConfig();
-  }, [fetchTeacherProfile, fetchConfig]);
+  }, []); // 只在 mount 時執行
 
   const isActive = useCallback(
     (path: string) => location.pathname === path,
