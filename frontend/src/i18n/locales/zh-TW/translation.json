@@ -3426,6 +3426,8 @@
       "contactEmail": "聯絡信箱",
       "role": "角色",
       "level": "級別",
+      "classroomCount": "班級數",
+      "teacherCount": "教師數",
       "studentCount": "學生人數",
       "assignmentCount": "作業數量",
       "status": "狀態",
