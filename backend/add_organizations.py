@@ -7,11 +7,11 @@ import re
 seed_file = "/Users/young/project/duotopia/backend/seed_data.py"
 
 # 讀取原始檔案
-with open(seed_file, 'r', encoding='utf-8') as f:
+with open(seed_file, "r", encoding="utf-8") as f:
     content = f.read()
 
 # 1. 在 future_south_school 後新增 6 所學校
-schools_addition = '''
+schools_addition = """
     # 智慧教育中心的 3 所學校
     smart_kaohsiung_school = School(
         organization_id=smart_edu_org.id,
@@ -79,18 +79,18 @@ schools_addition = '''
         address="台南市永康區中華路700號",
         is_active=True,
     )
-'''
+"""
 
 # 找到 future_south_school 定義結束的位置
-pattern = r'(future_south_school = School\([^)]*\))\s*\n'
+pattern = r"(future_south_school = School\([^)]*\))\s*\n"
 match = re.search(pattern, content, re.DOTALL)
 if match:
     insert_pos = match.end()
-    content = content[:insert_pos] + '\n' + schools_addition + content[insert_pos:]
+    content = content[:insert_pos] + "\n" + schools_addition + content[insert_pos:]
     print("✅ 新增 6 所學校定義")
 
 # 2. 更新 all_schools 列表
-old_all_schools = '''    all_schools = [
+old_all_schools = """    all_schools = [
         test_main_school,
         test_taipei_school,
         test_taichung_school,
@@ -100,9 +100,9 @@ old_all_schools = '''    all_schools = [
         future_main_school,
         future_north_school,
         future_south_school,
-    ]'''
+    ]"""
 
-new_all_schools = '''    all_schools = [
+new_all_schools = """    all_schools = [
         test_main_school,
         test_taipei_school,
         test_taichung_school,
@@ -118,19 +118,18 @@ new_all_schools = '''    all_schools = [
         global_tainan_school,
         global_anping_school,
         global_yongkang_school,
-    ]'''
+    ]"""
 
 content = content.replace(old_all_schools, new_all_schools)
 print("✅ 更新 all_schools 列表")
 
 # 3. 更新學校數量提示
 content = content.replace(
-    'print("✅ 建立 9 所分校（每個機構 3 所）")',
-    'print("✅ 建立 15 所分校（每個機構 3 所）")'
+    'print("✅ 建立 9 所分校（每個機構 3 所）")', 'print("✅ 建立 15 所分校（每個機構 3 所）")'
 )
 
 # 4. 新增 6 個教師
-old_teacher_names = '''    teacher_names = [
+old_teacher_names = """    teacher_names = [
         ("test_main", "林主任", "林主任"),
         ("test_taipei", "陳老師", "陳老師"),
         ("test_taichung", "黃老師", "黃老師"),
@@ -140,9 +139,9 @@ old_teacher_names = '''    teacher_names = [
         ("future_main", "蔡老師", "蔡老師"),
         ("future_north", "楊老師", "楊老師"),
         ("future_south", "鄭老師", "鄭老師"),
-    ]'''
+    ]"""
 
-new_teacher_names = '''    teacher_names = [
+new_teacher_names = """    teacher_names = [
         ("test_main", "林主任", "林主任"),
         ("test_taipei", "陳老師", "陳老師"),
         ("test_taichung", "黃老師", "黃老師"),
@@ -158,13 +157,13 @@ new_teacher_names = '''    teacher_names = [
         ("global_tainan", "游老師", "游老師"),
         ("global_anping", "周老師", "周老師"),
         ("global_yongkang", "鍾老師", "鍾老師"),
-    ]'''
+    ]"""
 
 content = content.replace(old_teacher_names, new_teacher_names)
 print("✅ 新增 6 個教師")
 
 # 5. 更新 school_teacher_mappings
-old_mappings = '''    school_teacher_mappings = [
+old_mappings = """    school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
         (school_teachers[1], test_taipei_school, ["teacher"]),
         (school_teachers[2], test_taichung_school, ["teacher"]),
@@ -174,9 +173,9 @@ old_mappings = '''    school_teacher_mappings = [
         (school_teachers[6], future_main_school, ["school_admin"]),
         (school_teachers[7], future_north_school, ["teacher"]),
         (school_teachers[8], future_south_school, ["teacher"]),
-    ]'''
+    ]"""
 
-new_mappings = '''    school_teacher_mappings = [
+new_mappings = """    school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
         (school_teachers[1], test_taipei_school, ["teacher"]),
         (school_teachers[2], test_taichung_school, ["teacher"]),
@@ -192,13 +191,13 @@ new_mappings = '''    school_teacher_mappings = [
         (school_teachers[12], global_tainan_school, ["school_admin"]),
         (school_teachers[13], global_anping_school, ["teacher"]),
         (school_teachers[14], global_yongkang_school, ["teacher"]),
-    ]'''
+    ]"""
 
 content = content.replace(old_mappings, new_mappings)
 print("✅ 更新教師與學校關係")
 
 # 6. 更新 classroom_data
-old_classroom_data = '''    classroom_data = [
+old_classroom_data = """    classroom_data = [
         (school_teachers[0], test_main_school, "測試補習班-總校-A1班", ProgramLevel.A1),
         (school_teachers[1], test_taipei_school, "測試補習班-台北-A2班", ProgramLevel.A2),
         (school_teachers[2], test_taichung_school, "測試補習班-台中-B1班", ProgramLevel.B1),
@@ -228,9 +227,9 @@ old_classroom_data = '''    classroom_data = [
             ProgramLevel.A1,
         ),
         (school_teachers[8], future_south_school, "未來學苑-南桃園-實驗班", ProgramLevel.B1),
-    ]'''
+    ]"""
 
-new_classroom_data = '''    classroom_data = [
+new_classroom_data = """    classroom_data = [
         (school_teachers[0], test_main_school, "測試補習班-總校-A1班", ProgramLevel.A1),
         (school_teachers[1], test_taipei_school, "測試補習班-台北-A2班", ProgramLevel.A2),
         (school_teachers[2], test_taichung_school, "測試補習班-台中-B1班", ProgramLevel.B1),
@@ -266,13 +265,13 @@ new_classroom_data = '''    classroom_data = [
         (school_teachers[12], global_tainan_school, "全球語言-台南-國際班", ProgramLevel.B2),
         (school_teachers[13], global_anping_school, "全球語言-安平-多語班", ProgramLevel.A2),
         (school_teachers[14], global_yongkang_school, "全球語言-永康-商務班", ProgramLevel.B1),
-    ]'''
+    ]"""
 
 content = content.replace(old_classroom_data, new_classroom_data)
 print("✅ 新增 6 個班級")
 
 # 寫回檔案
-with open(seed_file, 'w', encoding='utf-8') as f:
+with open(seed_file, "w", encoding="utf-8") as f:
     f.write(content)
 
 print("\n✅ 完成！已為 owner@duotopia.com 新增 2 個機構（智慧教育中心、全球語言學院）")

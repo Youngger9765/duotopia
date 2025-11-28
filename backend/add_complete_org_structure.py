@@ -10,11 +10,11 @@ import re
 
 seed_file = "/Users/young/project/duotopia/backend/seed_data.py"
 
-with open(seed_file, 'r', encoding='utf-8') as f:
+with open(seed_file, "r", encoding="utf-8") as f:
     content = f.read()
 
 # 1. 在 org_admin_teacher 後新增 2 個新機構的管理員
-new_org_admins = '''
+new_org_admins = """
     # 智慧教育中心管理員
     smart_admin_teacher = Teacher(
         email="smartadmin@duotopia.com",
@@ -32,66 +32,66 @@ new_org_admins = '''
         is_active=True,
         is_demo=False,
     )
-'''
+"""
 
 # 找到 org_teacher 定義後插入
-pattern = r'(org_teacher = Teacher\([^)]*\))\s*\n'
+pattern = r"(org_teacher = Teacher\([^)]*\))\s*\n"
 match = re.search(pattern, content, re.DOTALL)
 if match:
     insert_pos = match.end()
-    content = content[:insert_pos] + '\n' + new_org_admins + content[insert_pos:]
+    content = content[:insert_pos] + "\n" + new_org_admins + content[insert_pos:]
     print("✅ 新增 2 個機構管理員")
 
 # 2. 更新 db.add_all 包含新管理員
-old_add_all = '''    db.add_all(
+old_add_all = """    db.add_all(
         [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher]
-    )'''
+    )"""
 
-new_add_all = '''    db.add_all(
+new_add_all = """    db.add_all(
         [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher,
          smart_admin_teacher, global_admin_teacher]
-    )'''
+    )"""
 
 content = content.replace(old_add_all, new_add_all)
 
 # 3. 更新 refresh
-old_refresh = '''    db.refresh(org_owner_teacher)
+old_refresh = """    db.refresh(org_owner_teacher)
     db.refresh(org_admin_teacher)
     db.refresh(school_admin_teacher)
     db.refresh(org_teacher)
-    print("✅ 建立 4 個機構測試帳號")'''
+    print("✅ 建立 4 個機構測試帳號")"""
 
-new_refresh = '''    db.refresh(org_owner_teacher)
+new_refresh = """    db.refresh(org_owner_teacher)
     db.refresh(org_admin_teacher)
     db.refresh(school_admin_teacher)
     db.refresh(org_teacher)
     db.refresh(smart_admin_teacher)
     db.refresh(global_admin_teacher)
-    print("✅ 建立 6 個機構測試帳號")'''
+    print("✅ 建立 6 個機構測試帳號")"""
 
 content = content.replace(old_refresh, new_refresh)
 
 # 4. 為新管理員建立訂閱
-old_subscription_loop = '''    for teacher in [
+old_subscription_loop = """    for teacher in [
         org_owner_teacher,
         org_admin_teacher,
         school_admin_teacher,
         org_teacher,
-    ]:'''
+    ]:"""
 
-new_subscription_loop = '''    for teacher in [
+new_subscription_loop = """    for teacher in [
         org_owner_teacher,
         org_admin_teacher,
         school_admin_teacher,
         org_teacher,
         smart_admin_teacher,
         global_admin_teacher,
-    ]:'''
+    ]:"""
 
 content = content.replace(old_subscription_loop, new_subscription_loop)
 
 # 5. 為新機構管理員設定機構關係（在 owner_org_rels 後）
-new_admin_rels = '''
+new_admin_rels = """
     # 智慧教育中心管理員
     smart_admin_org_rel = TeacherOrganization(
         teacher_id=smart_admin_teacher.id,
@@ -108,18 +108,20 @@ new_admin_rels = '''
         is_active=True,
     )
     db.add_all([smart_admin_org_rel, global_admin_org_rel])
-'''
+"""
 
 # 在 admin_org_rel 之後插入
-pattern = r'(admin_org_rel = TeacherOrganization\([^)]*\))\s*\n\s*db\.add\(admin_org_rel\)'
+pattern = (
+    r"(admin_org_rel = TeacherOrganization\([^)]*\))\s*\n\s*db\.add\(admin_org_rel\)"
+)
 match = re.search(pattern, content, re.DOTALL)
 if match:
     insert_pos = match.end()
-    content = content[:insert_pos] + '\n' + new_admin_rels + content[insert_pos:]
+    content = content[:insert_pos] + "\n" + new_admin_rels + content[insert_pos:]
     print("✅ 新增機構管理員關係")
 
 # 6. 更新 teacher_names - 為每個學校新增更多教師
-old_teacher_names = '''    teacher_names = [
+old_teacher_names = """    teacher_names = [
         ("test_main", "林主任", "林主任"),
         ("test_taipei", "陳老師", "陳老師"),
         ("test_taichung", "黃老師", "黃老師"),
@@ -135,9 +137,9 @@ old_teacher_names = '''    teacher_names = [
         ("global_tainan", "游老師", "游老師"),
         ("global_anping", "周老師", "周老師"),
         ("global_yongkang", "鍾老師", "鍾老師"),
-    ]'''
+    ]"""
 
-new_teacher_names = '''    teacher_names = [
+new_teacher_names = """    teacher_names = [
         ("test_main", "林主任", "林主任"),
         ("test_taipei", "陳老師", "陳老師"),
         ("test_taichung", "黃老師", "黃老師"),
@@ -171,13 +173,13 @@ new_teacher_names = '''    teacher_names = [
         ("global_yongkang_principal", "鍾校長", "鍾校長"),
         ("global_yongkang_t1", "鍾老師A", "鍾老師A"),
         ("global_yongkang_t2", "鍾老師B", "鍾老師B"),
-    ]'''
+    ]"""
 
 content = content.replace(old_teacher_names, new_teacher_names)
 print("✅ 為新學校新增教師（每校 3 位：校長+2教師）")
 
 # 7. 更新 school_teacher_mappings
-old_mappings = '''    school_teacher_mappings = [
+old_mappings = """    school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
         (school_teachers[1], test_taipei_school, ["teacher"]),
         (school_teachers[2], test_taichung_school, ["teacher"]),
@@ -193,9 +195,9 @@ old_mappings = '''    school_teacher_mappings = [
         (school_teachers[12], global_tainan_school, ["school_admin"]),
         (school_teachers[13], global_anping_school, ["teacher"]),
         (school_teachers[14], global_yongkang_school, ["teacher"]),
-    ]'''
+    ]"""
 
-new_mappings = '''    school_teacher_mappings = [
+new_mappings = """    school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
         (school_teachers[1], test_taipei_school, ["teacher"]),
         (school_teachers[2], test_taichung_school, ["teacher"]),
@@ -229,13 +231,13 @@ new_mappings = '''    school_teacher_mappings = [
         (school_teachers[24], global_yongkang_school, ["school_admin"]),
         (school_teachers[25], global_yongkang_school, ["teacher"]),
         (school_teachers[26], global_yongkang_school, ["teacher"]),
-    ]'''
+    ]"""
 
 content = content.replace(old_mappings, new_mappings)
 print("✅ 更新教師與學校關係（每校 3 位）")
 
 # 8. 更新 classroom_data - 每個新學校 2-3 個班級
-old_classroom_data = '''    classroom_data = [
+old_classroom_data = """    classroom_data = [
         (school_teachers[0], test_main_school, "測試補習班-總校-A1班", ProgramLevel.A1),
         (school_teachers[1], test_taipei_school, "測試補習班-台北-A2班", ProgramLevel.A2),
         (school_teachers[2], test_taichung_school, "測試補習班-台中-B1班", ProgramLevel.B1),
@@ -271,9 +273,9 @@ old_classroom_data = '''    classroom_data = [
         (school_teachers[12], global_tainan_school, "全球語言-台南-國際班", ProgramLevel.B2),
         (school_teachers[13], global_anping_school, "全球語言-安平-多語班", ProgramLevel.A2),
         (school_teachers[14], global_yongkang_school, "全球語言-永康-商務班", ProgramLevel.B1),
-    ]'''
+    ]"""
 
-new_classroom_data = '''    classroom_data = [
+new_classroom_data = """    classroom_data = [
         (school_teachers[0], test_main_school, "測試補習班-總校-A1班", ProgramLevel.A1),
         (school_teachers[1], test_taipei_school, "測試補習班-台北-A2班", ProgramLevel.A2),
         (school_teachers[2], test_taichung_school, "測試補習班-台中-B1班", ProgramLevel.B1),
@@ -327,13 +329,13 @@ new_classroom_data = '''    classroom_data = [
         (school_teachers[24], global_yongkang_school, "全球永康-商務A班", ProgramLevel.A2),
         (school_teachers[25], global_yongkang_school, "全球永康-商務B班", ProgramLevel.B1),
         (school_teachers[26], global_yongkang_school, "全球永康-國際班", ProgramLevel.B2),
-    ]'''
+    ]"""
 
 content = content.replace(old_classroom_data, new_classroom_data)
 print("✅ 為新學校新增班級（每校 3 個班）")
 
 # 9. 更新 school_names_prefixes（為學生命名用）
-old_prefixes = '''    school_names_prefixes = [
+old_prefixes = """    school_names_prefixes = [
         ("測試總校", test_main_school),
         ("測試台北", test_taipei_school),
         ("測試台中", test_taichung_school),
@@ -349,9 +351,9 @@ old_prefixes = '''    school_names_prefixes = [
         ("全球台南", global_tainan_school),
         ("全球安平", global_anping_school),
         ("全球永康", global_yongkang_school),
-    ]'''
+    ]"""
 
-new_prefixes = '''    school_names_prefixes = [
+new_prefixes = """    school_names_prefixes = [
         ("測試總校", test_main_school),
         ("測試台北", test_taipei_school),
         ("測試台中", test_taichung_school),
@@ -385,23 +387,23 @@ new_prefixes = '''    school_names_prefixes = [
         ("全永商A", global_yongkang_school),
         ("全永商B", global_yongkang_school),
         ("全永國際", global_yongkang_school),
-    ]'''
+    ]"""
 
 content = content.replace(old_prefixes, new_prefixes)
 print("✅ 更新學校前綴（用於學生命名）")
 
 # 10. 更新學生數量（每個班級 8-12 位）
 content = content.replace(
-    'num_students = random.randint(5, 8)  # 每個班級 5-8 位學生',
-    'num_students = random.randint(8, 12)  # 每個班級 8-12 位學生'
+    "num_students = random.randint(5, 8)  # 每個班級 5-8 位學生",
+    "num_students = random.randint(8, 12)  # 每個班級 8-12 位學生",
 )
 print("✅ 更新學生數量（每個班級 8-12 位）")
 
 # 寫回檔案
-with open(seed_file, 'w', encoding='utf-8') as f:
+with open(seed_file, "w", encoding="utf-8") as f:
     f.write(content)
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("✅ 完成！已為新機構建立完整架構：")
 print("   📊 智慧教育中心：")
 print("      - 1 個機構管理員（許管理）")
@@ -412,4 +414,4 @@ print("   📊 全球語言學院：")
 print("      - 1 個機構管理員（游管理）")
 print("      - 3 所學校，每校 3 位教師（校長+2教師）")
 print("      - 每校 3 個班級，每班 8-12 位學生")
-print("="*60)
+print("=" * 60)

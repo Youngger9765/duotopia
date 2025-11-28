@@ -183,8 +183,14 @@ def create_demo_data(db: Session):
     )
 
     db.add_all(
-        [org_owner_teacher, org_admin_teacher, school_admin_teacher, org_teacher,
-         smart_admin_teacher, global_admin_teacher]
+        [
+            org_owner_teacher,
+            org_admin_teacher,
+            school_admin_teacher,
+            org_teacher,
+            smart_admin_teacher,
+            global_admin_teacher,
+        ]
     )
     db.commit()
     db.refresh(org_owner_teacher)
@@ -452,8 +458,6 @@ def create_demo_data(db: Session):
         address="桃園市平鎮區環南路500號",
         is_active=True,
     )
-
-
 
     # 智慧教育中心的 3 所學校
     smart_kaohsiung_school = School(
