@@ -66,6 +66,7 @@ interface SchoolWithAdmin {
 function OrganizationHubContent() {
   const { t } = useTranslation();
   const token = useTeacherAuthStore((state) => state.token);
+  const userRoles = useTeacherAuthStore((state) => state.userRoles);
   const {
     selectedNode,
     setSelectedNode,
@@ -81,6 +82,10 @@ function OrganizationHubContent() {
   const [schoolTeachers, setSchoolTeachers] = useState<Teacher[]>([]);
   const [schoolClassrooms, setSchoolClassrooms] = useState<Classroom[]>([]);
   const [isLoadingSchoolDetails, setIsLoadingSchoolDetails] = useState(false);
+
+  // 检查是否有管理权限（org_owner 或 org_admin）
+  const hasManagementPermission =
+    userRoles.includes("org_owner") || userRoles.includes("org_admin");
 
   // 使用 ref 防止 React 18 Strict Mode 的重复执行
   const hasFetchedRef = useRef(false);
@@ -263,26 +268,28 @@ function OrganizationHubContent() {
             )}
           </div>
         </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-shrink-0"
-                disabled
-              >
-                <Settings className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {t("organizationHub.edit")}
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t("common.comingSoon")}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {hasManagementPermission ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-shrink-0"
+                  disabled
+                >
+                  <Settings className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">
+                    {t("organizationHub.edit")}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("common.comingSoon")}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
       </div>
 
       {/* 基本資訊 - 可收合 */}
@@ -342,19 +349,21 @@ function OrganizationHubContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>{t("organizationHub.schools")}</CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="sm" disabled>
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t("organizationHub.addSchool")}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("common.comingSoon")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {hasManagementPermission && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" disabled>
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t("organizationHub.addSchool")}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t("common.comingSoon")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -463,19 +472,21 @@ function OrganizationHubContent() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{t("organizationHub.tabs.classrooms")}</CardTitle>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="sm" disabled>
-                          <Plus className="w-4 h-4 mr-2" />
-                          {t("organizationHub.addClassroom")}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("common.comingSoon")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {hasManagementPermission && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" disabled>
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t("organizationHub.addClassroom")}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("common.comingSoon")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -552,19 +563,21 @@ function OrganizationHubContent() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{t("organizationHub.tabs.teachers")}</CardTitle>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="sm" disabled>
-                          <Plus className="w-4 h-4 mr-2" />
-                          {t("organizationHub.addTeacher")}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("common.comingSoon")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {hasManagementPermission && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" disabled>
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t("organizationHub.addTeacher")}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("common.comingSoon")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
