@@ -24,6 +24,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Building2, School, Settings, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TeacherLayout from "@/components/TeacherLayout";
@@ -257,10 +263,26 @@ function OrganizationHubContent() {
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" className="flex-shrink-0">
-          <Settings className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">{t("organizationHub.edit")}</span>
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+                disabled
+              >
+                <Settings className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {t("organizationHub.edit")}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t("common.comingSoon")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* 基本資訊 - 可收合 */}
@@ -320,10 +342,19 @@ function OrganizationHubContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>{t("organizationHub.schools")}</CardTitle>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                {t("organizationHub.addSchool")}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" disabled>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t("organizationHub.addSchool")}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("common.comingSoon")}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardHeader>
           <CardContent>
@@ -432,10 +463,19 @@ function OrganizationHubContent() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{t("organizationHub.tabs.classrooms")}</CardTitle>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("organizationHub.addClassroom")}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" disabled>
+                          <Plus className="w-4 h-4 mr-2" />
+                          {t("organizationHub.addClassroom")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("common.comingSoon")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </CardHeader>
               <CardContent>
@@ -512,10 +552,19 @@ function OrganizationHubContent() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{t("organizationHub.tabs.teachers")}</CardTitle>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("organizationHub.addTeacher")}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" disabled>
+                          <Plus className="w-4 h-4 mr-2" />
+                          {t("organizationHub.addTeacher")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("common.comingSoon")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </CardHeader>
               <CardContent>

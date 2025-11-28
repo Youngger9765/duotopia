@@ -29,7 +29,8 @@
     "yes": "Yes",
     "no": "No",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "comingSoon": "Coming Soon"
   },
   "nav": {
     "home": "Home",
