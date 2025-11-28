@@ -2715,6 +2715,100 @@ def create_demo_data(db: Session):
                 f"✅ 建立 {len(student_item_progress_records)} 個 StudentItemProgress 記錄（含 AI 評估）"
             )
 
+    # ============ 8.6 為組織班級建立作業 ============
+    print("\n📝 為組織班級建立作業資料...")
+
+    # 為每個學校班級建立一個簡單作業
+    org_assignments_created = 0
+    for classroom, school in school_classrooms[:10]:  # 只為前10個班級建立作業
+        # 建立作業
+        assignment = Assignment(
+            title=f"{school.display_name}-{classroom.name[:10]}作業",
+            description=f"請完成{classroom.name}的練習作業",
+            classroom_id=classroom.id,
+            teacher_id=classroom.teacher_id,
+            due_date=datetime.now() + timedelta(days=7),
+            is_active=True,
+        )
+        db.add(assignment)
+        db.flush()
+
+        # 為該班級的學生建立 StudentAssignment
+        students_in_class = (
+            db.query(ClassroomStudent)
+            .filter(ClassroomStudent.classroom_id == classroom.id)
+            .limit(5)  # 每班只為前5個學生建立
+            .all()
+        )
+
+        for cs in students_in_class:
+            student_assignment = StudentAssignment(
+                assignment_id=assignment.id,
+                student_id=cs.student_id,
+                classroom_id=classroom.id,
+                title=assignment.title,
+                status=random.choice(
+                    [
+                        AssignmentStatus.NOT_STARTED,
+                        AssignmentStatus.IN_PROGRESS,
+                        AssignmentStatus.SUBMITTED,
+                    ]
+                ),
+                instructions=assignment.description,
+                due_date=assignment.due_date,
+                is_active=True,
+            )
+            db.add(student_assignment)
+
+        org_assignments_created += 1
+
+    # 為 org_classroom_a 和 org_classroom_b 建立作業
+    for org_classroom, classroom_name in [
+        (org_classroom_a, "機構初級A班"),
+        (org_classroom_b, "機構進階B班"),
+    ]:
+        assignment = Assignment(
+            title=f"{classroom_name}期末測驗",
+            description=f"{classroom_name}期末綜合練習",
+            classroom_id=org_classroom.id,
+            teacher_id=org_classroom.teacher_id,
+            due_date=datetime.now() + timedelta(days=14),
+            is_active=True,
+        )
+        db.add(assignment)
+        db.flush()
+
+        # 為該班學生建立 StudentAssignment
+        students_in_class = (
+            db.query(ClassroomStudent)
+            .filter(ClassroomStudent.classroom_id == org_classroom.id)
+            .all()
+        )
+
+        for cs in students_in_class:
+            student_assignment = StudentAssignment(
+                assignment_id=assignment.id,
+                student_id=cs.student_id,
+                classroom_id=org_classroom.id,
+                title=assignment.title,
+                status=random.choice(
+                    [
+                        AssignmentStatus.NOT_STARTED,
+                        AssignmentStatus.IN_PROGRESS,
+                        AssignmentStatus.SUBMITTED,
+                    ]
+                ),
+                instructions=assignment.description,
+                due_date=assignment.due_date,
+                is_active=True,
+            )
+            db.add(student_assignment)
+
+        org_assignments_created += 1
+
+    db.commit()
+    print(f"✅ 為組織班級建立 {org_assignments_created} 個作業")
+
     # ============ 9. 統計顯示 ============
     print("\n📊 作業系統統計：")
 

@@ -122,6 +122,12 @@ function OrganizationHubContent() {
   // 页面加载时统一抓取 organizations
   useEffect(() => {
     const fetchOrganizations = async () => {
+      // 检查 token 是否存在
+      if (!token) {
+        console.log("🔴 OrganizationHub: No token available yet");
+        return;
+      }
+
       // 立即检查 ref，防止 race condition
       if (hasFetchedRef.current || isFetchingOrgs || organizations.length > 0) {
         console.log(
@@ -167,7 +173,8 @@ function OrganizationHubContent() {
     };
 
     fetchOrganizations();
-  }, []); // 只在页面加载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, organizations.length, isFetchingOrgs]); // 当 token 可用时执行
 
   // 自动选中第一个组织
   useEffect(() => {
@@ -452,6 +459,15 @@ function OrganizationHubContent() {
                         <TableHead className="hidden md:table-cell whitespace-nowrap">
                           {t("organizationHub.table.contactEmail")}
                         </TableHead>
+                        <TableHead className="text-center whitespace-nowrap">
+                          {t("organizationHub.table.classroomCount")}
+                        </TableHead>
+                        <TableHead className="text-center whitespace-nowrap">
+                          {t("organizationHub.table.teacherCount")}
+                        </TableHead>
+                        <TableHead className="text-center whitespace-nowrap">
+                          {t("organizationHub.table.studentCount")}
+                        </TableHead>
                         <TableHead className="whitespace-nowrap">
                           {t("organizationHub.table.status")}
                         </TableHead>
@@ -489,6 +505,21 @@ function OrganizationHubContent() {
                           <TableCell className="hidden md:table-cell">
                             <span className="truncate block max-w-[200px]">
                               {school.contact_email || "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-sm font-medium">
+                              {school.classroom_count}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-sm font-medium">
+                              {school.teacher_count}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="px-2 py-1 rounded-md bg-green-50 text-green-700 text-sm font-medium">
+                              {school.student_count}
                             </span>
                           </TableCell>
                           <TableCell>
