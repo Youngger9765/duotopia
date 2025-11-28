@@ -1,0 +1,5 @@
+{
+  "hooks": {
+    "UserPromptSubmit": ".claude/hooks/check-agent-rules.py"
+  }
+}
