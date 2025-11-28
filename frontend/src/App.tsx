@@ -23,6 +23,7 @@ import OrganizationManagement from "./pages/teacher/OrganizationManagement";
 import OrganizationDetail from "./pages/teacher/OrganizationDetail";
 import SchoolManagement from "./pages/teacher/SchoolManagement";
 import SchoolDetail from "./pages/teacher/SchoolDetail";
+import OrganizationHub from "./pages/teacher/OrganizationHub";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentAssignmentList from "./pages/student/StudentAssignmentList";
@@ -195,6 +196,14 @@ function App() {
           element={
             <ProtectedRoute>
               <TeacherProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/organizations-hub"
+          element={
+            <ProtectedRoute>
+              <OrganizationHub />
             </ProtectedRoute>
           }
         />

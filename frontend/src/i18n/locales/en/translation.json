@@ -27,53 +27,9 @@
     "paste": "Paste",
     "cut": "Cut",
     "yes": "Yes",
-    "no": "No"
-  },
-  "rearrangement": {
-    "loading": "Loading questions...",
-    "noQuestions": "No questions available",
-    "progress": "Question {{current}}/{{total}}",
-    "questionTitle": "Question {{number}}",
-    "hint": "Hint",
-    "playAudio": "Play Audio",
-    "audioDisabledCompleted": "This question is completed, audio cannot be played",
-    "audioPrompt": "Click to play audio and start answering",
-    "playbackRate": "Playback Speed",
-    "totalScore": "Total Score",
-    "expectedScore": "Expected Score",
-    "errorsRemaining": "{{remaining}} chances remaining",
-    "unlimited": "Unlimited",
-    "selectWordsHint": "Click the words below in order to form the correct sentence",
-    "correctAnswer": "Correct Answer",
-    "jumpToQuestion": "Jump to question {{number}}",
-    "scoreCategories": {
-      "listening": "Listening",
-      "writing": "Writing",
-      "speaking": "Speaking"
-    },
-    "messages": {
-      "timeout": "Time's up! Question auto-submitted",
-      "incorrect": "Incorrect! The correct word is \"{{correct}}\"",
-      "incorrectSimple": "Incorrect, please try again",
-      "questionComplete": "Correct! You earned {{score}} points",
-      "challengeFailed": "Too many errors, challenge failed",
-      "correct": "Correct!",
-      "scoreEarned": "Score earned: {{score}} points",
-      "tooManyErrors": "Too many errors",
-      "tryAgain": "Click the button below to try again",
-      "retryPenalty": "Since you've seen the answer, the maximum score after retry is 60 points",
-      "allComplete": "All done! Score: {{score}} points"
-    },
-    "buttons": {
-      "retry": "Try Again",
-      "next": "Next Question",
-      "finish": "Finish"
-    },
-    "errors": {
-      "loadFailed": "Failed to load questions",
-      "submitFailed": "Failed to submit answer",
-      "retryFailed": "Failed to retry"
-    }
+    "no": "No",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "nav": {
     "home": "Home",
@@ -138,20 +94,12 @@
     "hero": {
       "badge": "AI-Powered English Learning Revolution",
       "title": "Duotopia",
-      "subtitle": "AI-Powered Gamified English Learning Platform for Listening, Speaking, Reading, and Writing",
-      "description": "Duotopia creates personalized gamified learning experiences for students, teachers, and parents aged 6-18, helping every student speak English with confidence!",
+      "subtitle": "Multiple Intelligence English Learning Platform",
+      "description": "Through AI speech recognition and instant feedback, create personalized English speaking learning experiences for students aged 6-15. Let every child speak English with confidence!",
       "freeTrial": "Free Trial",
       "watchVideo": "Watch Demo Video",
       "trustedBy": "Trusted by {{count}}+ teachers",
-      "studentsUsing": "{{count}}+ students using",
-      "tagline": "AI-Powered English Learning & Smart Assignment Grading",
-      "brand": "Duotopia",
-      "benefit1": "Helps ESL teachers save time through AI-powered lesson planning and automated grading;",
-      "benefit2": "Students practice effectively through gamified resources and activities, improving learning outcomes;",
-      "benefit3": "Teachers and parents build trust through data-driven insights and efficient communication.",
-      "trustedTeachers": "Trusted by 1,000+ ESL Teachers",
-      "studentsImproved": "Improved 10,000,000+ Students' Speaking Skills",
-      "freeTrialBtn": "Start Free Trial"
+      "studentsUsing": "{{count}}+ students using"
     },
     "stats": {
       "satisfaction": "Student Satisfaction",
@@ -264,21 +212,6 @@
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
       "copyright": "© 2025 Duotopia. All rights reserved."
-    },
-    "header": {
-      "logo": "Duotopia"
-    },
-    "cta2": {
-      "title": "Ready to Reclaim Your Teaching Time?",
-      "subtitle": "Start the English learning revolution with DUOTOPIA's immersive learning experience",
-      "button": "Experience 1-Second Assignment Grading",
-      "noCreditCard": "No credit card required"
-    },
-    "steps": {
-      "title": "Quick 3-Step Start",
-      "step1": "Create Class in 1 Second",
-      "step2": "Import Students in 2 Seconds",
-      "step3": "Paste Materials in 3 Seconds"
     }
   },
   "pricing": {
@@ -415,16 +348,6 @@
     },
     "error": {
       "loadFailed": "Load failed"
-    },
-    "share": {
-      "button": "Share to Students",
-      "title": "Share Student Login Link",
-      "description": "Students can scan the QR code or use the link to login directly",
-      "copy": "Copy",
-      "copied": "Copied",
-      "instructions": "How to share:",
-      "instruction1": "Scan QR Code: Students can scan the QR code with their phone to go directly to the login page",
-      "instruction2": "Copy Link: Click the 'Copy' button to share the link with students"
     }
   },
   "admin": {
@@ -585,7 +508,8 @@
     },
     "flowStatus": {
       "title": "Assignment Progress Flow",
-      "todo": "To Do",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
       "submitted": "Submitted",
       "returned": "Returned for Revision",
       "resubmitted": "Resubmitted",
@@ -604,12 +528,7 @@
       "activities": "{{completed}} / {{total}} activities"
     },
     "contentType": {
-      "default": "Practice"
-    },
-    "contentTypes": {
-      "VOCABULARY_SET": "Vocabulary Set",
-      "SPEAKING": "Sentence Reading",
-      "REARRANGEMENT": "Sentence Rearrangement"
+      "default": "Reading Practice"
     },
     "dueDate": {
       "overdue": "Overdue by {{days}} day(s)",
@@ -627,9 +546,13 @@
       "resubmit": "Resubmit"
     },
     "emptyStates": {
-      "todo": {
-        "title": "No pending assignments",
-        "description": "All assignments have been completed or submitted!"
+      "notStarted": {
+        "title": "No assignments to start",
+        "description": "All assignments have been started!"
+      },
+      "inProgress": {
+        "title": "No assignments in progress",
+        "description": "Start practicing your assignments!"
       },
       "submitted": {
         "title": "No assignments pending grading",
@@ -712,15 +635,13 @@
     "messages": {
       "noActivities": "This assignment has no activities yet",
       "submitSuccess": "Assignment submitted successfully!",
-      "submittingWithPending": "Assignment submitted! {{count}} question(s) are still being analyzed in the background. Please check back later for complete results.",
       "analyzingRecording": "Analyzing Recording",
       "batchAnalyzing": "Analyzing {{current}}/{{total}} items",
       "pleaseWait": "Please wait...",
       "doNotSwitchQuestions": "Please do not switch questions",
       "doNotLeave": "Please do not leave this page",
       "batchAnalysisComplete": "Completed {{count}} analyses",
-      "batchAnalysisFailed": "Auto-analysis failed, please try again later",
-      "submittingAssignment": "Submitting Assignment..."
+      "batchAnalysisFailed": "Auto-analysis failed, please try again later"
     },
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
@@ -742,7 +663,6 @@
       "title": "Incomplete Items",
       "incompleteItems": "The following items have not been recorded. Please complete them before submitting:",
       "notRecorded": "(Not Recorded)",
-      "notUploaded": "(Not Yet Uploaded)",
       "notAnalyzed": "(Not Analyzed)",
       "itemNumber": "Item {{number}}"
     },
@@ -752,11 +672,7 @@
       "itemCountSingular": "{{count}} item"
     },
     "activityTypes": {
-      "reading": "Reading Practice",
-      "listening": "Listening Practice",
-      "speaking": "Speaking Practice",
-      "sentence": "Sentence Making",
-      "rearrangement": "Example Sentence Rearrangement"
+      "reading": "Reading Practice"
     },
     "stats": {
       "minutes": "minutes",
@@ -778,9 +694,7 @@
       "cannotValidate": "Unable to validate recording, please record again",
       "complete": "Recording Complete",
       "duration": "Recording duration: {{duration}} seconds",
-      "completePreview": "Recording Complete (Preview mode, will not be saved)",
-      "uploading": "Uploading recording...",
-      "uploadSuccess": "Upload complete, you can now click analyze"
+      "completePreview": "Recording Complete (Preview mode, will not be saved)"
     },
     "preview": {
       "cannotSubmit": "Cannot submit assignment in preview mode"
@@ -913,15 +827,7 @@
     },
     "errors": {
       "loginFailed": "Login failed, please check your credentials",
-      "quickLoginFailed": "{{email}} login failed",
-      "accountNotVerified": "Account not verified, please verify your email first"
-    },
-    "resend": {
-      "button": "Resend Verification Email",
-      "success": "Verification email has been resent! Please check your inbox",
-      "failed": "Failed to send, please try again later",
-      "cooldown": "Please wait {{seconds}} seconds before resending",
-      "noEmail": "Didn't receive the email?"
+      "quickLoginFailed": "{{email}} login failed"
     }
   },
   "studentLogin": {
@@ -1165,6 +1071,11 @@
   "dialogs": {
     "assignmentDialog": {
       "title": "Assign New Assignment",
+      "steps": {
+        "selectContent": "Select Content",
+        "selectStudents": "Select Students",
+        "details": "Assignment Details"
+      },
       "quota": {
         "remaining": "Quota Remaining",
         "remainingColon": "Quota Remaining:",
@@ -1190,8 +1101,7 @@
         "loadingLabel": "Loading...",
         "selectAll": "Select All",
         "deselectAll": "Deselect All",
-        "items": "items",
-        "clearAll": "Clear All"
+        "items": "items"
       },
       "selectStudents": {
         "description": "Select students to receive the assignment",
@@ -1239,23 +1149,17 @@
         "noStudentSelected": "Please select at least one student",
         "createFailed": "Failed to create assignment",
         "loadProgramsFailed": "Failed to load programs",
-        "loadTemplateFailed": "Failed to load template programs",
-        "loadClassroomProgramsFailed": "Failed to load classroom programs",
         "loadLessonsFailed": "Failed to load lessons",
         "loadContentsFailed": "Failed to load contents",
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
-        "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
-        "missingAudio": "Selected content is missing audio",
-        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first"
+        "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle"
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
       },
       "contentTypes": {
-        "reading_assessment": "Example Sentences",
-        "READING_ASSESSMENT": "Example Sentences",
-        "example_sentences": "Example Sentences",
-        "EXAMPLE_SENTENCES": "Example Sentences",
+        "reading_assessment": "Reading Assessment",
+        "READING_ASSESSMENT": "Reading Assessment",
         "speaking_practice": "Speaking Practice",
         "speaking_scenario": "Speaking Scenario",
         "listening_cloze": "Listening Cloze",
@@ -1264,35 +1168,6 @@
       },
       "actions": {
         "viewPlans": "View Plans"
-      },
-      "steps": {
-        "selectContent": "Select Content",
-        "practiceMode": "Practice Mode",
-        "selectStudents": "Select Students",
-        "details": "Assignment Details"
-      },
-      "practiceMode": {
-        "title": "Practice Mode Settings",
-        "description": "Select the practice mode and related settings for students",
-        "advancedSettings": "Advanced Settings",
-        "reading": "Sentence Reading",
-        "readingDesc": "Students read sentences aloud, system scores pronunciation",
-        "rearrangement": "Sentence Rearrangement",
-        "rearrangementDesc": "Students rearrange shuffled words into correct sentences",
-        "timeLimit": "Per-question Time Limit",
-        "seconds": "seconds",
-        "unlimited": "Unlimited",
-        "default": "Default",
-        "shuffleQuestions": "Shuffle Questions",
-        "shuffleQuestionsDesc": "Randomize question order for each practice session",
-        "showAnswer": "Show Answer",
-        "showAnswerDesc": "Show correct answer after completing each question",
-        "playAudio": "Play Audio",
-        "playAudioYes": "Yes (Listening Practice)",
-        "playAudioNo": "No (Writing Practice)",
-        "scoreListening": "Score Category: Listening",
-        "scoreWriting": "Score Category: Writing",
-        "scoreSpeaking": "Score Category: Speaking"
       }
     },
     "classroomAssignDialog": {
@@ -1313,35 +1188,31 @@
       "comingSoon": "Coming Soon",
       "cancel": "Cancel",
       "types": {
-        "example_sentences": {
-          "name": "Example Sentences",
-          "description": "Create sentences for reading or rearrangement practice (2-25 words)",
-          "recommended": "Recommended"
-        },
-        "vocabulary_set": {
-          "name": "Vocabulary Set",
-          "description": "Create vocabulary sets for memorization practice",
-          "comingSoon": "Coming Soon"
-        },
-        "multiple_choice": {
-          "name": "Multiple Choice",
-          "description": "Create multiple choice questions for testing",
-          "comingSoon": "Coming Soon"
-        },
-        "scenario_dialogue": {
-          "name": "Scenario Dialogue",
-          "description": "Create scenario dialogues for practice",
-          "comingSoon": "Coming Soon"
-        },
         "reading_assessment": {
           "name": "Reading Recording",
           "description": "Students read and record text",
-          "deprecated": true
+          "recommended": "Recommended"
+        },
+        "speaking_practice": {
+          "name": "Speaking Practice",
+          "description": "Free speaking practice with AI feedback",
+          "comingSoon": "Coming Soon"
+        },
+        "speaking_scenario": {
+          "name": "Scenario Dialogue",
+          "description": "Practice dialogues in specific scenarios"
+        },
+        "listening_cloze": {
+          "name": "Listening Cloze",
+          "description": "Fill in missing words after listening"
         },
         "sentence_making": {
           "name": "Sentence Making",
-          "description": "Make sentences using given words or patterns",
-          "deprecated": true
+          "description": "Make sentences using given words or patterns"
+        },
+        "speaking_quiz": {
+          "name": "Speaking Quiz",
+          "description": "Test speaking ability through Q&A"
         }
       },
       "buttons": {
@@ -1812,7 +1683,7 @@
     },
     "total": "Total {{count}} students",
     "columns": {
-      "studentNumber": "Student Number",
+      "id": "ID",
       "studentName": "Student Name",
       "contactInfo": "Contact Info",
       "passwordStatus": "Password Status",
@@ -1853,8 +1724,7 @@
       "phone": "Phone:",
       "classroom": "Classroom:",
       "password": "Password:",
-      "lastLogin": "Last Login:",
-      "studentNumber": "Student Number:"
+      "lastLogin": "Last Login:"
     }
   },
   "subscriptionProgressBanner": {
@@ -1869,6 +1739,10 @@
   "teacherLayout": {
     "title": "Duotopia",
     "subtitle": "Teacher Dashboard",
+    "tabs": {
+      "teaching": "Teaching",
+      "organization": "Organization"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "myClassrooms": "My Classrooms",
@@ -1963,16 +1837,14 @@
   "readingAssessmentPanel": {
     "title": "Title",
     "titleRequired": "Please enter a title",
-    "defaultTitle": "",
+    "defaultTitle": "Reading Assessment Content",
     "batchActions": {
       "batchPaste": "Batch Paste",
       "batchPasteTooltip": "Batch paste content, one item per line",
-      "batchGenerateTTS": "Batch Generate Text to Speech",
+      "batchGenerateTTS": "Batch Generate TTS",
       "batchGenerateTTSTooltip": "Generate speech using free Microsoft Edge TTS",
       "batchGenerateTranslation": "Batch Generate Translation",
-      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings",
-      "generatingTTS": "Generating...",
-      "generatingTranslation": "Translating..."
+      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings"
     },
     "row": {
       "dragToReorder": "Drag to reorder",
@@ -1992,12 +1864,7 @@
       "delete": "Delete",
       "addItem": "Add Item",
       "maxRowsReached": "Maximum 15 rows allowed",
-      "minRowsRequired": "At least 1 row required",
-      "cannotDeleteWithProgress": "This item has student progress and cannot be deleted"
-    },
-    "assignmentCopyWarning": {
-      "title": "Notice: This is an assignment copy",
-      "message": "Items with student progress cannot be deleted (delete buttons are disabled). You can modify item content, but cannot remove items that have been answered."
+      "minRowsRequired": "At least 1 row required"
     },
     "ttsModal": {
       "title": "Audio Settings",
@@ -2058,11 +1925,11 @@
     },
     "batchPasteDialog": {
       "title": "Batch Paste Content",
-      "description": "One item per line, supports auto audio generation and translation",
+      "description": "One item per line, supports auto TTS and translation",
       "inputLabel": "Paste content:",
       "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
       "itemCount": "{{count}} items",
-      "autoGenerateTTS": "Auto Generate Audio",
+      "autoGenerateTTS": "Auto Generate TTS",
       "autoTranslate": "Auto Translate",
       "cancel": "Cancel",
       "confirmPaste": "Confirm Paste",
@@ -2199,30 +2066,20 @@
       "noDescription": "No Description",
       "unknownType": "Unknown Type",
       "notSet": "Not Set",
-      "readingAssessmentSettings": "Add Example Sentences",
+      "readingAssessmentSettings": "Reading Assessment Settings",
       "subscriptionExpiredWarning": "⚠️ Subscription Expired",
       "daysRemaining": "{{days}} days remaining",
       "requiresSubscription": "Subscription required to assign homework",
       "estimatedTime": "{{time}} minutes",
-      "itemsCount": "{{count}} items",
-      "editContent": "Edit Content"
+      "itemsCount": "{{count}} items"
     },
     "contentTypes": {
-      "VOCABULARY_SET": "Vocabulary Set",
-      "SPEAKING": "Sentence Reading",
-      "REARRANGEMENT": "Sentence Rearrangement",
+      "readingAssessment": "Reading Assessment",
       "speakingPractice": "Speaking Practice",
-      "speaking_practice": "Speaking Practice",
-      "SPEAKING_PRACTICE": "Speaking Practice",
       "speakingScenario": "Speaking Scenario",
-      "speaking_scenario": "Speaking Scenario",
-      "SPEAKING_SCENARIO": "Speaking Scenario",
       "listeningCloze": "Listening Cloze",
-      "listening_cloze": "Listening Cloze",
-      "LISTENING_CLOZE": "Listening Cloze",
+      "sentenceMaking": "Sentence Making",
       "speakingQuiz": "Speaking Quiz",
-      "speaking_quiz": "Speaking Quiz",
-      "SPEAKING_QUIZ": "Speaking Quiz",
       "readingRecordingPractice": "Reading Recording Practice",
       "newContent": "New Content"
     },
@@ -2256,7 +2113,6 @@
       "questions": "questions",
       "giveScore": "Give Score",
       "scoreRange": "0-100 points",
-      "usingAverageScore": "(Using Average Score)",
       "selectGradingStatus": "Select Grading Status",
       "referenceAudio": "Reference Audio",
       "transcription": "Speech Recognition Result",
@@ -2307,13 +2163,7 @@
       "pronunciationClear": "Clear pronunciation",
       "fluencyGood": "Good fluency",
       "accuracyHigh": "High accuracy",
-      "completenessGood": "Good completeness",
-      "aiGrading": "AI is grading...",
-      "aiGradingComplete": "AI grading completed!",
-      "aiGradingFailed": "AI grading failed, please try again",
-      "noStudentToGrade": "No student to grade (status must be Submitted or Resubmitted)",
-      "audioUploadFailed": "Recording upload failed",
-      "audioUploadFailedDetail": "Analysis results available, but recording file was not uploaded"
+      "completenessGood": "Good completeness"
     },
     "status": {
       "notStarted": "Not Started",
@@ -2345,7 +2195,6 @@
     "buttons": {
       "backToList": "Back to Assignment List",
       "gradeAssignment": "Grade Assignment",
-      "batchGrade": "AI Batch Grade",
       "cancel": "Cancel",
       "save": "Save",
       "edit": "Edit",
@@ -2388,86 +2237,18 @@
       "people": "people"
     },
     "contentTypes": {
-      "readingAssessment": "Example Sentences",
-      "reading_assessment": "Example Sentences",
-      "READING_ASSESSMENT": "Example Sentences",
-      "EXAMPLE_SENTENCES": "Example Sentences",
-      "speakingPractice": "Speaking Practice",
-      "speaking_practice": "Speaking Practice",
+      "READING_ASSESSMENT": "Reading Assessment",
       "SPEAKING_PRACTICE": "Speaking Practice",
-      "speakingScenario": "Speaking Scenario",
-      "speaking_scenario": "Speaking Scenario",
       "SPEAKING_SCENARIO": "Speaking Scenario",
-      "listeningCloze": "Listening Cloze",
-      "listening_cloze": "Listening Cloze",
       "LISTENING_CLOZE": "Listening Cloze",
-      "sentenceMaking": "Vocabulary Set",
-      "sentence_making": "Vocabulary Set",
-      "SENTENCE_MAKING": "Vocabulary Set",
-      "VOCABULARY_SET": "Vocabulary Set",
-      "speakingQuiz": "Speaking Quiz",
-      "speaking_quiz": "Speaking Quiz",
-      "SPEAKING_QUIZ": "Speaking Quiz",
-      "MULTIPLE_CHOICE": "Multiple Choice",
-      "SCENARIO_DIALOGUE": "Scenario Dialogue"
-    }
-  },
-  "batchGrading": {
-    "title": "AI Batch Grading",
-    "progress": "Grading... ({{current}}/{{total}} students)",
-    "studentName": "Student Name",
-    "accuracy": "Accuracy",
-    "fluency": "Fluency",
-    "pronunciation": "Pronunciation",
-    "completeness": "Completeness",
-    "totalScore": "Total Score",
-    "missingItems": "Missing Items",
-    "decision": "Decision",
-    "action": "Action",
-    "decisionGraded": "Complete Grading",
-    "decisionReturned": "Return for Correction",
-    "decisionPending": "Pending",
-    "submitSingle": "Submit",
-    "submitAll": "Submit All",
-    "selectAllGraded": "Select All: Complete",
-    "selectAllReturned": "Select All: Return",
-    "clearAll": "Clear All Selections",
-    "selectDecisionFirst": "Please select a decision first (return or complete)",
-    "singleSubmitSuccess": "Grading completed: {{name}}",
-    "allSubmitSuccess": "Grading completed: {{graded}} completed, {{returned}} returned, {{unchanged}} pending",
-    "returnForCorrection": "Return for Correction",
-    "averageAccuracy": "Average Accuracy",
-    "averageFluency": "Average Fluency",
-    "averagePronunciation": "Average Pronunciation",
-    "averageCompleteness": "Average Completeness",
-    "pause": "Pause",
-    "close": "Close",
-    "selectedForReturn": "Selected {{count}} students for return",
-    "confirmButton": "Confirm",
-    "confirmGrading": "Confirm Grading",
-    "processing": "Processing...",
-    "helperText": "After clicking 'Confirm', only checked students will be returned, others will keep their status",
-    "successReturned": "Returned {{count}} students for correction",
-    "successNoAction": "No students processed",
-    "successDescription": "Graded {{graded}} students, returned {{returned}} for correction",
-    "errorDescription": "Failed to finalize grading, please try again",
-    "messages": {
-      "success": "Successfully graded {{count}} students",
-      "error": "Grading failed, please try again later",
-      "returnSuccess": "Marked {{count}} students for correction",
-      "returnError": "Failed to update correction status"
-    },
-    "aria": {
-      "markAsGraded": "Mark {{name}} as grading complete",
-      "markAsReturned": "Mark {{name}} as return for correction",
-      "markAsPending": "Mark {{name}} as pending"
+      "SENTENCE_MAKING": "Sentence Making",
+      "SPEAKING_QUIZ": "Speaking Quiz"
     }
   },
   "previewPage": {
     "loading": "Loading preview...",
     "messages": {
-      "loadError": "Failed to load preview data",
-      "previewComplete": "Preview complete"
+      "loadError": "Failed to load preview data"
     },
     "buttons": {
       "backToList": "Back to Assignment List"
@@ -2613,7 +2394,7 @@
       "featureInDevelopment": "{{type}} feature in development"
     },
     "dialogs": {
-      "addReadingTitle": "Add Example Sentences",
+      "addReadingTitle": "Add Reading Content",
       "editContentTitle": "Edit Content"
     }
   },
@@ -3267,7 +3048,6 @@
       "saveFailed": "Save failed, please try again later",
       "deleteFailed": "Delete failed, please try again later",
       "emailInUse": "Email already in use, please use another email",
-      "studentNumberDuplicate": "This student number already exists in the classroom, please use another number",
       "invalidBirthdate": "Invalid birthdate format, please use YYYY-MM-DD",
       "requiredFields": "Please fill in all required fields",
       "nameRequired": "Name is required",
@@ -3405,9 +3185,7 @@
       "passed": "Passed",
       "notPassed": "Not Passed",
       "uploadAndAnalyze": "Upload & Analyze",
-      "analyzing": "Analyzing...",
-      "analyzed": "Analyzed",
-      "analysisFailed": "Analysis Failed (Click to Retry)",
+      "analyzing": "Uploading and analyzing",
       "aiAnalyzing": "AI is analyzing...",
       "pleaseWait": "Please wait a moment",
       "clickToAssess": "Click button above to assess",
@@ -3572,171 +3350,74 @@
       "linkExpiredDetail": "The password reset link has expired or is invalid, please request a new one"
     }
   },
-  "contentEditor": {
-    "labels": {
-      "title": "Title",
-      "pasteContent": "Paste content:"
+  "organizationHub": {
+    "title": "Organization Management",
+    "search": "Search organizations or schools...",
+    "searchClassrooms": "Search classrooms...",
+    "menu": "Menu",
+    "openMenu": "Open Menu",
+    "addOrganization": "Add Organization",
+    "addSchool": "Add School",
+    "schools": "Schools",
+    "noSchools": "No schools yet",
+    "selectPrompt": "Please select an organization or school from the left",
+    "organization": "Organization",
+    "school": "School",
+    "edit": "Edit",
+    "sidebarTabs": {
+      "organization": "Organization",
+      "teaching": "Teaching"
     },
-    "placeholders": {
-      "enterContentTitle": "Enter content title",
-      "enterText": "Enter text"
+    "myClassrooms": "My Classrooms",
+    "teachingTabComingSoon": "Teaching management coming soon",
+    "stats": {
+      "schoolCount": "Schools",
+      "teacherCount": "Teachers",
+      "studentCount": "Students",
+      "classroomCount": "Classrooms"
     },
-    "buttons": {
-      "save": "Save",
-      "cancel": "Cancel",
-      "addItem": "Add Item",
-      "confirmPaste": "Confirm Paste",
-      "processing": "Processing...",
-      "startRecording": "Start Recording",
-      "stopRecording": "Stop Recording",
-      "rerecord": "Re-record"
+    "info": {
+      "title": "Basic Information",
+      "name": "Name",
+      "displayName": "Display Name",
+      "description": "Description",
+      "contactEmail": "Contact Email",
+      "createdAt": "Created At"
     },
-    "modals": {
-      "audioSettings": "Audio Settings",
-      "batchPasteTitle": "Batch Paste Content",
-      "batchPasteSubtitle": "One item per line, supports auto-generate Text to Speech and translation"
+    "addSchoolDialog": {
+      "title": "Add School",
+      "description": "Add a new school to this organization",
+      "name": "School Name",
+      "namePlaceholder": "e.g., taipei-branch",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "e.g., Taipei Branch",
+      "description": "School Description",
+      "descriptionPlaceholder": "Brief description of this school...",
+      "contactEmail": "Contact Email",
+      "contactPhone": "Contact Phone",
+      "address": "Address",
+      "addressPlaceholder": "Full address of the school"
     },
-    "checkboxes": {
-      "autoGenerateTTS": "Auto Generate Text to Speech",
-      "autoTranslate": "Auto Translate"
+    "tabs": {
+      "classrooms": "Classrooms",
+      "teachers": "Teachers"
     },
-    "tooltips": {
-      "dragToReorder": "Drag to reorder",
-      "playAudio": "Play audio",
-      "removeAudio": "Remove audio",
-      "duplicate": "Duplicate",
-      "delete": "Delete",
-      "cannotDeleteWithProgress": "Cannot delete item with student progress",
-      "openTTSRecording": "Open TTS/Recording",
-      "rerecordOrGenerate": "Re-record/Generate",
-      "ttsMicrosoftEdge": "Generate speech using free Microsoft Edge TTS",
-      "playGeneratedAudio": "Play generated audio"
+    "table": {
+      "schoolName": "School Name",
+      "admin": "Administrator",
+      "classroomName": "Classroom Name",
+      "teacherName": "Teacher Name",
+      "email": "Email",
+      "contactEmail": "Contact Email",
+      "role": "Role",
+      "level": "Level",
+      "status": "Status",
+      "createdAt": "Created At"
     },
-    "audioSources": {
-      "tts": "TTS Voice",
-      "aiGenerated": "AI Generated",
-      "recording": "Recording",
-      "teacherRecorded": "Teacher Recorded"
-    },
-    "messages": {
-      "loading": "Loading...",
-      "savingSuccess": "Saved successfully",
-      "savingFailed": "Save failed",
-      "contentCreatedSuccess": "Content created successfully",
-      "creatingContentFailed": "Failed to create content",
-      "loadingContentFailed": "Failed to load content",
-      "enterTitle": "Please enter a title",
-      "addAtLeastOneItem": "Please add at least one content item",
-      "maxRowsReached": "Maximum 15 rows allowed",
-      "minRowsRequired": "At least 1 row is required",
-      "cannotDeleteWithProgress": "Cannot delete item with student progress",
-      "audioRemoved": "Audio removed",
-      "removeAudioFailed": "Failed to remove audio",
-      "audioGeneratedSuccess": "Audio generated! Click play to preview",
-      "generationFailed": "Generation failed, please try again",
-      "maxRecordingTimeReached": "Maximum recording time of 30 seconds reached",
-      "recordingFileTooLarge": "Recording file too large, please shorten recording",
-      "recordingFailed": "Recording failed, please check microphone permission",
-      "recordingComplete": "Recording complete! You can preview or re-record",
-      "recordingStarted": "Recording started",
-      "cannotStartRecording": "Cannot start recording, please check microphone permission",
-      "selectAudioSource": "Please select audio source (TTS or Recording)",
-      "uploadRetrying": "Upload failed, retrying...",
-      "uploadFailed": "Upload failed, please check network connection",
-      "generateOrRecordFirst": "Please generate or record audio first",
-      "ttsAudioDeleted": "TTS audio deleted",
-      "recordingDeleted": "Recording deleted",
-      "noRecordingToPlay": "No recording to play",
-      "cannotPlayRecording": "Cannot play recording",
-      "selectAudioSourceToUse": "You have two audio sources, please select one to use:",
-      "maxRecordingTime": "Maximum recording time 30 seconds",
-      "uploadingRecording": "Uploading recording...",
-      "recordingFileReady": "Recording ready ({{duration}}s)",
-      "audioGenerated": "Audio generated! Click play to preview",
-      "ttsAudioReady": "TTS audio ready",
-      "allItemsHaveAudio": "All items already have audio",
-      "generatingAudioFiles": "Generating {{count}} audio files...",
-      "audioGeneratedSuccessfully": "Successfully generated {{count}} audio files! Audio will be uploaded when saving content.",
-      "audioGeneratedAndSaved": "Successfully generated and saved {{count}} audio files!",
-      "savingFailedButAudioGenerated": "Save failed, but audio was generated",
-      "batchGenerationFailed": "Batch generation failed, please try again",
-      "enterTextFirst": "Please enter text first",
-      "generatingTranslation": "Generating translation...",
-      "translationComplete": "Translation complete",
-      "translationFailed": "Translation failed, please try again later",
-      "noItemsNeedTranslation": "No items need translation",
-      "startingBatchTranslation": "Starting batch translation...",
-      "batchTranslationComplete": "Batch translation complete! Processed {{count}} items",
-      "batchTranslationFailed": "Batch translation failed, please try again later",
-      "enterContent": "Please enter content",
-      "processingItems": "Processing {{count}} items...",
-      "batchProcessingFailed": "Batch processing failed",
-      "itemsAddedAndSaved": "Added {{added}} items and saved (total {{total}})",
-      "itemsAddedSaveToComplete": "Added {{added}} items (total {{total}}), click Save to complete",
-      "updateFailedButAudioGenerated": "Update failed, but audio was generated",
-      "items": "items"
-    },
-    "translationLanguages": {
-      "chinese": "Chinese",
-      "english": "English",
-      "japanese": "Japanese",
-      "korean": "Korean"
-    },
-    "warnings": {
-      "assignmentCopy": "Note: This is an assignment copy",
-      "assignmentCopyDescription": "Items with student progress cannot be deleted (delete button is disabled). You can modify content but cannot remove answered items."
-    },
-    "ttsSettings": {
-      "title": "Audio Settings",
-      "accent": "Accent",
-      "gender": "Gender",
-      "speed": "Speed"
-    }
-  },
-  "sentenceMakingPanel": {
-    "placeholders": {
-      "enterEnglishWord": "Enter English word",
-      "enterEnglishSentence": "Enter English sentence",
-      "aiPromptExample": "e.g., Please generate sentences related to daily life"
-    },
-    "tooltips": {
-      "generateExampleSentence": "AI Generate Example Sentence",
-      "batchAIGenerateExamples": "Batch AI Generate Examples"
-    },
-    "buttons": {
-      "batchAIGenerateExamples": "Batch AI Generate",
-      "generate": "Generate",
-      "generating": "Generating..."
-    },
-    "modals": {
-      "aiGenerateExamplesTitle": "AI Generate Examples"
-    },
-    "labels": {
-      "difficultyLevel": "Difficulty Level",
-      "aiPrompt": "AI Prompt (Optional)",
-      "translateTo": "Translate to"
-    },
-    "messages": {
-      "allItemsHaveAudioOrEmpty": "All items have audio or sentences are empty",
-      "generatingExampleAudio": "Generating {{count}} example audio files...",
-      "translationAndPOSComplete": "Translation and POS detection complete",
-      "enterExampleFirst": "Please enter example sentence first",
-      "generatingExampleTranslation": "Generating example translation...",
-      "exampleTranslationComplete": "Example translation complete",
-      "exampleTranslationFailed": "Example translation failed, please try again",
-      "noItemsForExampleGeneration": "No items for example generation (please enter words first)",
-      "generatingExamples": "Generating {{count}} examples...",
-      "examplesGeneratedSuccess": "Successfully generated {{count}} examples!",
-      "exampleGenerationFailed": "AI example generation failed, please try again",
-      "willRegenerateFor": "Will regenerate example for \"{{word}}\"",
-      "existingWillBeOverwritten": "Existing example will be overwritten",
-      "wordsWillRegenerate": "Will regenerate examples for {{count}} words",
-      "allExistingExamples": "All existing examples",
-      "andTranslations": "and translations",
-      "willBeOverwritten": "will be overwritten",
-      "translationFieldsCleared": "Translation fields will be cleared",
-      "itemsAddedAndCreated": "Added {{count}} items and created content",
-      "itemsAdded": "Added {{added}} items (total {{total}})"
-    }
+    "addClassroom": "Add Classroom",
+    "addTeacher": "Add Teacher",
+    "noClassrooms": "No classrooms yet",
+    "noTeachers": "No teachers yet",
+    "noOrganizations": "No organizations yet"
   }
 }

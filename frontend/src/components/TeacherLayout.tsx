@@ -1,7 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import DigitalTeachingToolbar from "@/components/teachingTools/DigitalTeachingToolbar";
+import { cn } from "@/lib/utils";
 import {
   LogOut,
   ChevronLeft,
@@ -19,6 +19,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSidebarGroups } from "@/config/sidebarConfig";
 import { useSidebarRoles } from "@/hooks/useSidebarRoles";
 import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
+import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { OrganizationSidebar } from "@/components/sidebar/OrganizationSidebar";
 
 interface TeacherProfile {
   id: number;
@@ -48,36 +50,50 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     null,
   );
   const [config, setConfig] = useState<SystemConfig | null>(null);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(["dashboard", "class-management", "account"]),
-  );
 
   // 使用 hook 獲取 sidebar 配置和角色過濾
-  const sidebarGroups = getSidebarGroups(t);
+  const sidebarGroups = useMemo(() => getSidebarGroups(t), [t]);
   const { visibleGroups } = useSidebarRoles(
     sidebarGroups,
     config,
     teacherProfile
   );
 
+  // Sidebar Tab state - 組織管理 / 教學管理
+  const [sidebarTab, setSidebarTab] = useState<"organization" | "teaching">("teaching");
+
+  // 根據路由自動切換 sidebar tab
   useEffect(() => {
-    fetchTeacherProfile();
-    fetchConfig();
-  }, []);
+    if (location.pathname.includes("/organizations-hub")) {
+      setSidebarTab("organization");
+    } else {
+      setSidebarTab("teaching");
+    }
+  }, [location.pathname]);
 
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
+  // 檢查是否有管理權限（是否可以看到組織管理 tab）
+  const hasManagementPermission = useMemo(
+    () => visibleGroups.some((group) => group.id === "organization-hub"),
+    [visibleGroups]
+  );
+
+  // 根據選中的 Tab 過濾 groups
+  const filteredGroups = useMemo(() => {
+    return visibleGroups.filter((group) => {
+      if (sidebarTab === "organization") {
+        return group.id === "organization-hub";
       } else {
-        newSet.add(groupId);
+        return group.id !== "organization-hub";
       }
-      return newSet;
     });
-  };
+  }, [visibleGroups, sidebarTab]);
 
-  const fetchTeacherProfile = async () => {
+  const handleLogout = useCallback(() => {
+    apiClient.logout();
+    navigate("/teacher/login");
+  }, [navigate]);
+
+  const fetchTeacherProfile = useCallback(async () => {
     try {
       const data = (await apiClient.getTeacherDashboard()) as {
         teacher: TeacherProfile;
@@ -89,26 +105,27 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         handleLogout();
       }
     }
-  };
+  }, [handleLogout]);
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const data = await apiClient.getConfig();
       setConfig(data);
     } catch (err) {
       console.error("Failed to fetch system config:", err);
     }
-  };
+  }, []);
 
-  const handleLogout = () => {
-    apiClient.logout();
-    navigate("/teacher/login");
-  };
+  useEffect(() => {
+    fetchTeacherProfile();
+    fetchConfig();
+  }, [fetchTeacherProfile, fetchConfig]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
-  // Sidebar content component (reused in both mobile and desktop)
-  const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+  // Memoize SidebarContent to prevent unnecessary re-renders
+  const SidebarContent = useMemo(() =>
+    ({ onNavigate }: { onNavigate?: () => void }) => (
     <>
       {/* Header */}
       <div className="p-4 border-b">
@@ -138,32 +155,67 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             )}
           </Button>
         </div>
-        {!sidebarCollapsed && (
-          <div>
-            <LanguageSwitcher />
+
+        {/* Tab Switcher - 只在未收合且有管理權限時顯示 */}
+        {!sidebarCollapsed && hasManagementPermission && (
+          <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <button
+              onClick={() => setSidebarTab("teaching")}
+              className={cn(
+                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                sidebarTab === "teaching"
+                  ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+              )}
+            >
+              {t("teacherLayout.tabs.teaching")}
+            </button>
+            <button
+              onClick={() => setSidebarTab("organization")}
+              className={cn(
+                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                sidebarTab === "organization"
+                  ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+              )}
+            >
+              {t("teacherLayout.tabs.organization")}
+            </button>
           </div>
         )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
-        <ul className="space-y-1">
-          {visibleGroups.map((group) => (
-            <SidebarGroup
-              key={group.id}
-              group={group}
-              isExpanded={expandedGroups.has(group.id)}
-              isCollapsed={sidebarCollapsed}
-              isActive={isActive}
-              onToggle={() => toggleGroup(group.id)}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </ul>
+        {sidebarTab === "organization" ? (
+          <OrganizationSidebar
+            isCollapsed={sidebarCollapsed}
+            onNavigate={onNavigate}
+          />
+        ) : (
+          <ul className="space-y-1">
+            {filteredGroups.map((group) => (
+              <SidebarGroup
+                key={group.id}
+                group={group}
+                isCollapsed={sidebarCollapsed}
+                isActive={isActive}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        )}
       </nav>
 
       {/* User Info & Logout */}
       <div className="p-4 border-t dark:border-gray-700">
+        {/* 語言切換器 */}
+        {!sidebarCollapsed && (
+          <div className="mb-4">
+            <LanguageSwitcher />
+          </div>
+        )}
+
         {teacherProfile && (
           <div className="mb-4">
             {sidebarCollapsed ? (
@@ -248,10 +300,23 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         </Button>
       </div>
     </>
-  );
+  ), [
+    sidebarCollapsed,
+    t,
+    setSidebarCollapsed,
+    hasManagementPermission,
+    sidebarTab,
+    setSidebarTab,
+    filteredGroups,
+    isActive,
+    teacherProfile,
+    config,
+    handleLogout,
+  ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <OrganizationProvider>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
@@ -294,11 +359,9 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-auto relative">
-          <DigitalTeachingToolbar />
-          {children}
-        </div>
+        <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
       </div>
     </div>
+    </OrganizationProvider>
   );
 }

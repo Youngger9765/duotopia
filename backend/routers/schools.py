@@ -94,12 +94,14 @@ class SchoolResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime]
+    admin_name: Optional[str] = None
+    admin_email: Optional[str] = None
 
     class Config:
         from_attributes = True
 
     @classmethod
-    def from_orm(cls, school: School):
+    def from_orm(cls, school: School, admin_name: Optional[str] = None, admin_email: Optional[str] = None):
         """Convert School model to response"""
         return cls(
             id=str(school.id),
@@ -113,6 +115,8 @@ class SchoolResponse(BaseModel):
             is_active=school.is_active,
             created_at=school.created_at,
             updated_at=school.updated_at,
+            admin_name=admin_name,
+            admin_email=admin_email,
         )
 
 
@@ -247,7 +251,32 @@ async def list_schools(
         query = query.filter(School.organization_id == uuid.UUID(organization_id))
 
     schools = query.all()
-    return [SchoolResponse.from_orm(school) for school in schools]
+
+    # Build response with admin info
+    result = []
+    for school in schools:
+        # Find school admin
+        admin_rel = (
+            db.query(TeacherSchool)
+            .filter(
+                TeacherSchool.school_id == school.id,
+                TeacherSchool.roles.op('@>')(["school_admin"]),
+                TeacherSchool.is_active == True,
+            )
+            .first()
+        )
+
+        admin_name = None
+        admin_email = None
+        if admin_rel:
+            admin_teacher = db.query(Teacher).filter(Teacher.id == admin_rel.teacher_id).first()
+            if admin_teacher:
+                admin_name = admin_teacher.name
+                admin_email = admin_teacher.email
+
+        result.append(SchoolResponse.from_orm(school, admin_name=admin_name, admin_email=admin_email))
+
+    return result
 
 
 @router.get("/{school_id}", response_model=SchoolResponse)
@@ -261,7 +290,27 @@ async def get_school(
     Requires org_owner or org_admin role.
     """
     school = check_school_permission(teacher.id, school_id, db)
-    return SchoolResponse.from_orm(school)
+
+    # Find school admin
+    admin_rel = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.school_id == school.id,
+            TeacherSchool.roles.op('@>')(["school_admin"]),
+            TeacherSchool.is_active == True,
+        )
+        .first()
+    )
+
+    admin_name = None
+    admin_email = None
+    if admin_rel:
+        admin_teacher = db.query(Teacher).filter(Teacher.id == admin_rel.teacher_id).first()
+        if admin_teacher:
+            admin_name = admin_teacher.name
+            admin_email = admin_teacher.email
+
+    return SchoolResponse.from_orm(school, admin_name=admin_name, admin_email=admin_email)
 
 
 @router.patch("/{school_id}", response_model=SchoolResponse)
