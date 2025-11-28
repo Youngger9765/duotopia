@@ -685,14 +685,14 @@ def create_demo_data(db: Session):
     # 2.7 設定教師與學校關係
     school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
-        (school_teachers[1], test_taipei_school, ["teacher"]),
-        (school_teachers[2], test_taichung_school, ["teacher"]),
+        (school_teachers[1], test_taipei_school, ["school_admin"]),
+        (school_teachers[2], test_taichung_school, ["school_admin"]),
         (school_teachers[3], excellence_central_school, ["school_admin"]),
-        (school_teachers[4], excellence_east_school, ["teacher"]),
-        (school_teachers[5], excellence_west_school, ["teacher"]),
+        (school_teachers[4], excellence_east_school, ["school_admin"]),
+        (school_teachers[5], excellence_west_school, ["school_admin"]),
         (school_teachers[6], future_main_school, ["school_admin"]),
-        (school_teachers[7], future_north_school, ["teacher"]),
-        (school_teachers[8], future_south_school, ["teacher"]),
+        (school_teachers[7], future_north_school, ["school_admin"]),
+        (school_teachers[8], future_south_school, ["school_admin"]),
         # 智慧教育中心 - 高雄校區
         (school_teachers[9], smart_kaohsiung_school, ["school_admin"]),
         (school_teachers[10], smart_kaohsiung_school, ["teacher"]),
