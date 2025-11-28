@@ -173,7 +173,6 @@ function OrganizationHubContent() {
     };
 
     fetchOrganizations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, organizations.length, isFetchingOrgs]); // 当 token 可用时执行
 
   // 自动选中第一个组织
@@ -288,15 +287,16 @@ function OrganizationHubContent() {
       setIsSaving(true);
 
       // 呼叫 API 更新機構
-      await apiClient.put(`/api/organizations/${selectedNode.id}`, editFormData);
+      await apiClient.put(
+        `/api/organizations/${selectedNode.id}`,
+        editFormData,
+      );
 
       // 更新 Context 中的資料
       setOrganizations((prev) =>
         prev.map((org) =>
-          org.id === selectedNode.id
-            ? { ...org, ...editFormData }
-            : org
-        )
+          org.id === selectedNode.id ? { ...org, ...editFormData } : org,
+        ),
       );
 
       // 更新 selectedNode
@@ -810,7 +810,10 @@ function OrganizationHubContent() {
                 id="display_name"
                 value={editFormData.display_name}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, display_name: e.target.value })
+                  setEditFormData({
+                    ...editFormData,
+                    display_name: e.target.value,
+                  })
                 }
                 placeholder={t("organizationHub.displayNamePlaceholder")}
               />
@@ -824,7 +827,10 @@ function OrganizationHubContent() {
                 id="description"
                 value={editFormData.description}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, description: e.target.value })
+                  setEditFormData({
+                    ...editFormData,
+                    description: e.target.value,
+                  })
                 }
                 placeholder={t("organizationHub.descriptionPlaceholder")}
                 rows={3}
@@ -840,7 +846,10 @@ function OrganizationHubContent() {
                 type="email"
                 value={editFormData.contact_email}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, contact_email: e.target.value })
+                  setEditFormData({
+                    ...editFormData,
+                    contact_email: e.target.value,
+                  })
                 }
                 placeholder={t("organizationHub.contactEmailPlaceholder")}
               />
