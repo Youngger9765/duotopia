@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { SidebarGroup } from "@/types/sidebar";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
@@ -21,12 +22,17 @@ export const useSidebarRoles = (
   config: SystemConfig | null,
   teacherProfile: TeacherProfile | null,
 ) => {
-  // 从全局 store 获取 userRoles，而不是自己抓取
-  const token = useTeacherAuthStore((state) => state.token);
-  const userRoles = useTeacherAuthStore((state) => state.userRoles);
-  const loading = useTeacherAuthStore((state) => state.rolesLoading);
-  const setUserRoles = useTeacherAuthStore((state) => state.setUserRoles);
-  const setRolesLoading = useTeacherAuthStore((state) => state.setRolesLoading);
+  // ✅ 使用 shallow compare 優化 - 只在這些欄位變化時才 re-render
+  const { token, userRoles, loading, setUserRoles, setRolesLoading } =
+    useTeacherAuthStore(
+      useShallow((state) => ({
+        token: state.token,
+        userRoles: state.userRoles,
+        loading: state.rolesLoading,
+        setUserRoles: state.setUserRoles,
+        setRolesLoading: state.setRolesLoading,
+      })),
+    );
 
   // 使用 ref 防止 React 18 Strict Mode 重复执行
   const hasFetchedRef = useRef(false);
