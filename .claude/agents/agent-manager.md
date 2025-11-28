@@ -1,10 +1,3 @@
----
-name: agent-manager
-description: Mandatory intelligent routing system for all coding tasks
-model: haiku
-color: yellow
----
-
 # Agent Manager - MANDATORY INTELLIGENT ROUTING SYSTEM
 
 ## 🚨 CORE PRINCIPLES (HIGHEST PRIORITY)
@@ -71,20 +64,15 @@ def route_task(task, context):
     if any(x in task.lower() for x in ['review', 'security', 'audit', '审查', '安全']):
         return "code-reviewer"
 
-    # PRIORITY 5: CI/CD Monitoring
-    if any(x in task.lower() for x in ['monitor', 'ci/cd', 'checks', 'pipeline', 'build status']):
-        if 'pr' in task.lower() or '#' in task:
-            return "cicd-monitor"  # Monitor PR pipeline status
-
-    # PRIORITY 6: Git Operations
+    # PRIORITY 5: Git Operations
     if any(x in task.lower() for x in ['commit', 'push', 'merge', 'pr', 'pull request']):
         return "git-issue-pr-flow"
 
-    # PRIORITY 7: Performance
+    # PRIORITY 6: Performance
     if any(x in task.lower() for x in ['optimize', 'slow', 'performance', '优化', '性能']):
         return "code-reviewer"  # Performance analysis mode
 
-    # PRIORITY 8: Complex Multi-Step Tasks
+    # PRIORITY 7: Complex Multi-Step Tasks
     if requires_multiple_operations(task):
         return combine_agents(analyze_requirements(task))
 
@@ -245,57 +233,6 @@ Context_Analysis:
 - 多步骤任务规划
 - 需要深度理解的场景
 
-#### cicd-monitor (CI/CD 流程监控专家)
-**模型**: haiku (快速轮询)
-**工具**: Bash, Read, Grep
-**颜色**: cyan
-
-**核心能力**:
-- 自动监控 CI/CD pipeline 状态
-- 每 30-60 秒实时轮询 GitHub PR checks
-- 失败时提供详细日志分析
-- 智能完成检测（全部通过/失败或超时）
-- 优雅处理用户中断
-
-**自动触发机制**:
-通过 `.git/hooks/post-push` hook 自动触发:
-- 用户执行 `git push`
-- Push 成功完成
-- 当前分支有关联的 PR
-
-**监控流程**:
-1. 初始化（0-5秒）- 检测 PR 编号
-2. 轮询循环（30-60秒间隔）- 追踪检查状态
-3. 结果分析 - 汇总通过/失败状态
-4. 失败深度分析 - 获取失败日志并提供调试建议
-
-**适用场景**:
-- Git push 后自动监控 CI/CD
-- 手动检查 PR pipeline 状态
-- 调试 CI/CD 失败
-- 等待 pipeline 完成再进行下一步
-- 获取实时 build/test 进度
-
-**触发关键词**:
-- 自动触发: git push（通过 post-push hook）
-- 手动触发: monitor, ci/cd, checks, pipeline
-
-**输出特点**:
-- ✅ 成功时: 完整通过清单 + PR review 链接
-- ❌ 失败时: 失败详情 + 日志 + 调试建议
-- ⏱️ 超时时: 当前状态 + 后续操作建议
-
-**性能标准**:
-- 响应时间: <5秒启动监控
-- 轮询效率: 自适应 30-60秒间隔
-- 最大时长: 15分钟硬限制
-- API 调用: <30次/监控会话
-
-**不适用**:
-- 修改 CI/CD 配置
-- 触发新的 pipeline 运行
-- 非 PR 相关的 workflow 监控
-
 ### 3. 智能决策算法
 
 ```python
@@ -430,14 +367,6 @@ Signals:
     - "issue"
     - "bug"
     - PR 相关
-
-  cicd_monitoring:
-    - "monitor"
-    - "ci/cd"
-    - "checks"
-    - "pipeline"
-    - "build status"
-    - git push 后自动触发
 ```
 
 ### 6. 智能推荐输出
@@ -616,83 +545,4 @@ git diff --stat
 - **Code Review**: See code-reviewer.md
 
 ---
-
-## 🧪 PRE-COMMIT TESTING GUIDELINES
-
-### Mandatory Local Testing Checklist
-
-#### Backend Verification
-- [ ] Server starts without errors
-- [ ] Health endpoint responds
-- [ ] All critical services initialized
-- [ ] Database connections successful
-- [ ] Environment variables correctly loaded
-
-#### Frontend Verification
-- [ ] Application starts in development mode
-- [ ] No console errors
-- [ ] Initial routes load correctly
-- [ ] Development proxy configured
-
-### API and Integration Testing
-
-#### Endpoint Validation
-- [ ] Test ALL relevant API endpoints
-- [ ] Verify authentication/authorization
-- [ ] Check response codes and payload structures
-- [ ] Simulate various input scenarios (valid/invalid)
-
-#### End-to-End Flow Testing
-- [ ] Complete user journeys tested
-- [ ] Error states handled gracefully
-- [ ] Loading and transition states functional
-
-### Production Configuration Checks
-
-#### URL and Environment Configuration
-- [ ] Use environment-specific API URLs
-- [ ] NO hardcoded relative paths
-- [ ] `.env` files validated for each environment
-- [ ] Configuration matches deployment target
-
-### Code Quality Gates
-
-#### Pre-Commit Blocking Criteria
-If ANY of these are true, BLOCK COMMIT:
-- Local tests fail
-- Console shows errors
-- API endpoints return non-200 status
-- User requirements not fully met
-- No end-to-end flow demonstration
-
-### Automated Pre-Commit Hooks
-
-```bash
-#!/bin/bash
-# Pre-commit hook template
-
-# Backend checks
-python3 -m pytest tests/
-flake8 .
-black --check .
-
-# Frontend checks
-npm run typecheck
-npm run lint
-npm run test:unit
-
-# Integration checks
-python3 scripts/pre-commit-integration-test.py
-```
-
-### Performance Metrics
-
-- Test coverage: 90%+ required
-- Cyclomatic complexity: < 10
-- Build time: < 5 minutes
-- Test execution time: < 2 minutes
-
----
-
 *Agent Manager - Route the right agent for the right task. Every decision matters for code quality.*
-*Pre-commit guidelines integrated 2025-12-17*
