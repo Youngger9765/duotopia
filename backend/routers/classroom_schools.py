@@ -6,14 +6,15 @@ Manages the linking of classrooms to schools within the organization hierarchy.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 import uuid
 
 from database import get_db
-from models import Teacher, School, Classroom, ClassroomSchool
+from models import Teacher, School, Classroom, ClassroomSchool, ClassroomStudent, Assignment
 from auth import verify_token
 
 
@@ -116,18 +117,28 @@ class ClassroomInfo(BaseModel):
     program_level: str
     is_active: bool
     created_at: datetime
+    teacher_name: str | None = None
+    teacher_email: str | None = None
+    student_count: int = 0
+    assignment_count: int = 0
 
     class Config:
         from_attributes = True
 
     @classmethod
-    def from_orm(cls, classroom: Classroom):
+    def from_orm_with_counts(
+        cls, classroom: Classroom, student_count: int, assignment_count: int
+    ):
         return cls(
             id=str(classroom.id),
             name=classroom.name,
             program_level=classroom.level.value if classroom.level else "A1",
             is_active=classroom.is_active,
             created_at=classroom.created_at,
+            teacher_name=classroom.teacher.name if classroom.teacher else None,
+            teacher_email=classroom.teacher.email if classroom.teacher else None,
+            student_count=student_count,
+            assignment_count=assignment_count,
         )
 
 
@@ -315,7 +326,8 @@ async def list_school_classrooms(
     db: Session = Depends(get_db),
 ):
     """
-    List all classrooms in a school.
+    List all classrooms in a school with student and assignment counts.
+    Optimized to avoid N+1 queries.
     """
     # Verify school exists
     school = db.query(School).filter(School.id == school_id).first()
@@ -324,23 +336,55 @@ async def list_school_classrooms(
             status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
-    # Get all active classroom links
-    links = (
-        db.query(ClassroomSchool)
+    # Get all active classroom IDs for this school
+    classroom_ids_subq = (
+        db.query(ClassroomSchool.classroom_id)
         .filter(
             ClassroomSchool.school_id == school_id,
             ClassroomSchool.is_active.is_(True),
         )
+        .subquery()
+    )
+
+    classroom_ids = db.query(classroom_ids_subq.c.classroom_id).scalar_subquery()
+
+    # Create subqueries for counts
+    student_counts = (
+        db.query(
+            ClassroomStudent.classroom_id,
+            func.count(ClassroomStudent.student_id).label("count"),
+        )
+        .group_by(ClassroomStudent.classroom_id)
+        .subquery()
+    )
+
+    assignment_counts = (
+        db.query(
+            Assignment.classroom_id, func.count(Assignment.id).label("count")
+        )
+        .group_by(Assignment.classroom_id)
+        .subquery()
+    )
+
+    # Get classrooms with teacher preloaded and counts in a single query
+    classrooms_query = (
+        db.query(
+            Classroom,
+            func.coalesce(student_counts.c.count, 0).label("student_count"),
+            func.coalesce(assignment_counts.c.count, 0).label("assignment_count"),
+        )
+        .options(joinedload(Classroom.teacher))
+        .outerjoin(student_counts, Classroom.id == student_counts.c.classroom_id)
+        .outerjoin(assignment_counts, Classroom.id == assignment_counts.c.classroom_id)
+        .filter(Classroom.id.in_(classroom_ids), Classroom.is_active.is_(True))
         .all()
     )
 
-    # Get classrooms
+    # Build result
     result = []
-    for link in links:
-        classroom = (
-            db.query(Classroom).filter(Classroom.id == link.classroom_id).first()
+    for classroom, student_count, assignment_count in classrooms_query:
+        result.append(
+            ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)
         )
-        if classroom and classroom.is_active:
-            result.append(ClassroomInfo.from_orm(classroom))
 
     return result
