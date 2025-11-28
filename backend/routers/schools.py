@@ -289,7 +289,9 @@ async def list_schools(
 
     # Batch query for teacher counts (unique teachers per school)
     teacher_counts = dict(
-        db.query(TeacherSchool.school_id, func.count(func.distinct(TeacherSchool.teacher_id)))
+        db.query(
+            TeacherSchool.school_id, func.count(func.distinct(TeacherSchool.teacher_id))
+        )
         .filter(
             TeacherSchool.school_id.in_(school_ids), TeacherSchool.is_active.is_(True)
         )
@@ -299,9 +301,18 @@ async def list_schools(
 
     # Batch query for student counts (via classrooms)
     student_counts_raw = (
-        db.query(ClassroomSchool.school_id, func.count(func.distinct(ClassroomStudent.student_id)))
-        .join(ClassroomStudent, ClassroomSchool.classroom_id == ClassroomStudent.classroom_id)
-        .filter(ClassroomSchool.school_id.in_(school_ids), ClassroomSchool.is_active.is_(True))
+        db.query(
+            ClassroomSchool.school_id,
+            func.count(func.distinct(ClassroomStudent.student_id)),
+        )
+        .join(
+            ClassroomStudent,
+            ClassroomSchool.classroom_id == ClassroomStudent.classroom_id,
+        )
+        .filter(
+            ClassroomSchool.school_id.in_(school_ids),
+            ClassroomSchool.is_active.is_(True),
+        )
         .group_by(ClassroomSchool.school_id)
         .all()
     )

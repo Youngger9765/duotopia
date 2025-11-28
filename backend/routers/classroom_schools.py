@@ -14,7 +14,14 @@ from datetime import datetime
 import uuid
 
 from database import get_db
-from models import Teacher, School, Classroom, ClassroomSchool, ClassroomStudent, Assignment
+from models import (
+    Teacher,
+    School,
+    Classroom,
+    ClassroomSchool,
+    ClassroomStudent,
+    Assignment,
+)
 from auth import verify_token
 
 
@@ -359,9 +366,7 @@ async def list_school_classrooms(
     )
 
     assignment_counts = (
-        db.query(
-            Assignment.classroom_id, func.count(Assignment.id).label("count")
-        )
+        db.query(Assignment.classroom_id, func.count(Assignment.id).label("count"))
         .group_by(Assignment.classroom_id)
         .subquery()
     )
@@ -384,7 +389,9 @@ async def list_school_classrooms(
     result = []
     for classroom, student_count, assignment_count in classrooms_query:
         result.append(
-            ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)
+            ClassroomInfo.from_orm_with_counts(
+                classroom, student_count, assignment_count
+            )
         )
 
     return result
