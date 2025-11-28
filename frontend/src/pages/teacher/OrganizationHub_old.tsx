@@ -243,7 +243,7 @@ export default function OrganizationHub() {
 
           // Fetch student count for each classroom
           const studentCounts = await Promise.all(
-            classroomsData.map(async (classroom: any) => {
+            classroomsData.map(async (classroom: { id: string }) => {
               try {
                 const res = await fetch(
                   `/api/classrooms/${classroom.id}/students`,
