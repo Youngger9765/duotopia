@@ -78,6 +78,9 @@ interface SchoolWithAdmin {
   created_at: string;
   admin_name?: string;
   admin_email?: string;
+  classroom_count: number;
+  teacher_count: number;
+  student_count: number;
 }
 
 function OrganizationHubContent() {

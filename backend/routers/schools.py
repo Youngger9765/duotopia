@@ -8,13 +8,22 @@ Only org_owner and org_admin can manage schools.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 import uuid
 
 from database import get_db
-from models import Teacher, Organization, School, TeacherOrganization, TeacherSchool
+from models import (
+    Teacher,
+    Organization,
+    School,
+    TeacherOrganization,
+    TeacherSchool,
+    ClassroomSchool,
+    ClassroomStudent,
+)
 from auth import verify_token
 from services.casbin_service import get_casbin_service
 
@@ -96,6 +105,9 @@ class SchoolResponse(BaseModel):
     updated_at: Optional[datetime]
     admin_name: Optional[str] = None
     admin_email: Optional[str] = None
+    classroom_count: int = 0
+    teacher_count: int = 0
+    student_count: int = 0
 
     class Config:
         from_attributes = True
@@ -106,6 +118,9 @@ class SchoolResponse(BaseModel):
         school: School,
         admin_name: Optional[str] = None,
         admin_email: Optional[str] = None,
+        classroom_count: int = 0,
+        teacher_count: int = 0,
+        student_count: int = 0,
     ):
         """Convert School model to response"""
         return cls(
@@ -122,6 +137,9 @@ class SchoolResponse(BaseModel):
             updated_at=school.updated_at,
             admin_name=admin_name,
             admin_email=admin_email,
+            classroom_count=classroom_count,
+            teacher_count=teacher_count,
+            student_count=student_count,
         )
 
 
@@ -256,8 +274,40 @@ async def list_schools(
         query = query.filter(School.organization_id == uuid.UUID(organization_id))
 
     schools = query.all()
+    school_ids = [s.id for s in schools]
 
-    # Build response with admin info
+    # Batch query for classroom counts
+    classroom_counts = dict(
+        db.query(ClassroomSchool.school_id, func.count(ClassroomSchool.classroom_id))
+        .filter(
+            ClassroomSchool.school_id.in_(school_ids),
+            ClassroomSchool.is_active.is_(True),
+        )
+        .group_by(ClassroomSchool.school_id)
+        .all()
+    )
+
+    # Batch query for teacher counts (unique teachers per school)
+    teacher_counts = dict(
+        db.query(TeacherSchool.school_id, func.count(func.distinct(TeacherSchool.teacher_id)))
+        .filter(
+            TeacherSchool.school_id.in_(school_ids), TeacherSchool.is_active.is_(True)
+        )
+        .group_by(TeacherSchool.school_id)
+        .all()
+    )
+
+    # Batch query for student counts (via classrooms)
+    student_counts_raw = (
+        db.query(ClassroomSchool.school_id, func.count(func.distinct(ClassroomStudent.student_id)))
+        .join(ClassroomStudent, ClassroomSchool.classroom_id == ClassroomStudent.classroom_id)
+        .filter(ClassroomSchool.school_id.in_(school_ids), ClassroomSchool.is_active.is_(True))
+        .group_by(ClassroomSchool.school_id)
+        .all()
+    )
+    student_counts = dict(student_counts_raw)
+
+    # Build response with admin info and counts
     result = []
     for school in schools:
         # Find school admin
@@ -283,7 +333,12 @@ async def list_schools(
 
         result.append(
             SchoolResponse.from_orm(
-                school, admin_name=admin_name, admin_email=admin_email
+                school,
+                admin_name=admin_name,
+                admin_email=admin_email,
+                classroom_count=classroom_counts.get(school.id, 0),
+                teacher_count=teacher_counts.get(school.id, 0),
+                student_count=student_counts.get(school.id, 0),
             )
         )
 
