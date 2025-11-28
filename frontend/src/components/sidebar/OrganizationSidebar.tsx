@@ -61,7 +61,10 @@ export function OrganizationSidebar({
     });
   }, [expandedOrgs, schools, fetchSchools]);
 
-  const handleNodeClick = (type: "organization" | "school", data: any) => {
+  const handleNodeClick = (
+    type: "organization" | "school",
+    data: { id: string; name: string }
+  ) => {
     console.log("🔵 Sidebar: Clicking node", { type, id: data.id, name: data.name });
     setSelectedNode({ type, id: data.id, data });
     console.log("🔵 Sidebar: selectedNode set, navigating...");

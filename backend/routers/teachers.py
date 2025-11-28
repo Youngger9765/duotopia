@@ -199,7 +199,9 @@ async def get_teacher_roles(
     )
 
     for to in teacher_orgs:
-        org = db.query(Organization).filter(Organization.id == to.organization_id).first()
+        org = (
+            db.query(Organization).filter(Organization.id == to.organization_id).first()
+        )
         if org and org.is_active:
             organization_roles.append(
                 OrganizationRole(
