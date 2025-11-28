@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "儲存",
+    "saving": "儲存中...",
     "cancel": "取消",
     "confirm": "確認",
     "delete": "刪除",
@@ -3370,6 +3371,13 @@
     "organization": "機構",
     "school": "學校",
     "edit": "編輯",
+    "editOrganization": "編輯機構",
+    "editOrganizationDescription": "修改機構的基本資訊",
+    "displayNamePlaceholder": "例如：範例機構",
+    "descriptionPlaceholder": "簡短描述這個機構...",
+    "contactEmailPlaceholder": "contact@example.com",
+    "editSuccess": "機構資訊已成功更新",
+    "editError": "更新機構資訊失敗，請稍後再試",
     "sidebarTabs": {
       "organization": "組織管理",
       "teaching": "教學管理"
@@ -3412,11 +3420,14 @@
       "schoolName": "學校名稱",
       "admin": "管理人",
       "classroomName": "班級名稱",
+      "teacher": "授課教師",
       "teacherName": "教師姓名",
       "email": "信箱",
       "contactEmail": "聯絡信箱",
       "role": "角色",
       "level": "級別",
+      "studentCount": "學生人數",
+      "assignmentCount": "作業數量",
       "status": "狀態",
       "createdAt": "建立時間"
     },

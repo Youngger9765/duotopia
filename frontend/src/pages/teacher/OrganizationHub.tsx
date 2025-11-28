@@ -11,6 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { apiClient } from "@/lib/api";
+import { toast } from "sonner";
+import {
   Table,
   TableBody,
   TableCell,
@@ -48,6 +61,10 @@ interface Classroom {
   program_level: string;
   is_active: boolean;
   created_at: string;
+  teacher_name?: string;
+  teacher_email?: string;
+  student_count: number;
+  assignment_count: number;
 }
 
 interface SchoolWithAdmin {
@@ -82,6 +99,15 @@ function OrganizationHubContent() {
   const [schoolTeachers, setSchoolTeachers] = useState<Teacher[]>([]);
   const [schoolClassrooms, setSchoolClassrooms] = useState<Classroom[]>([]);
   const [isLoadingSchoolDetails, setIsLoadingSchoolDetails] = useState(false);
+
+  // 编辑机构 Dialog 状态
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    display_name: "",
+    description: "",
+    contact_email: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // 检查是否有管理权限（org_owner 或 org_admin）
   const hasManagementPermission =
@@ -233,6 +259,52 @@ function OrganizationHubContent() {
     });
   };
 
+  const handleEditClick = () => {
+    if (!selectedNode) return;
+
+    // 初始化表單資料
+    setEditFormData({
+      display_name: selectedNode.data.display_name || "",
+      description: selectedNode.data.description || "",
+      contact_email: selectedNode.data.contact_email || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedNode) return;
+
+    try {
+      setIsSaving(true);
+
+      // 呼叫 API 更新機構
+      await apiClient.put(`/api/organizations/${selectedNode.id}`, editFormData);
+
+      // 更新 Context 中的資料
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === selectedNode.id
+            ? { ...org, ...editFormData }
+            : org
+        )
+      );
+
+      // 更新 selectedNode
+      setSelectedNode({
+        ...selectedNode,
+        data: { ...selectedNode.data, ...editFormData },
+      });
+
+      toast.success(t("organizationHub.editSuccess"));
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to update organization:", error);
+      toast.error(t("organizationHub.editError"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return selectedNode ? (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
@@ -269,26 +341,17 @@ function OrganizationHubContent() {
           </div>
         </div>
         {hasManagementPermission ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-shrink-0"
-                  disabled
-                >
-                  <Settings className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">
-                    {t("organizationHub.edit")}
-                  </span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t("common.comingSoon")}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0"
+            onClick={handleEditClick}
+          >
+            <Settings className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">
+              {t("organizationHub.edit")}
+            </span>
+          </Button>
         ) : null}
       </div>
 
@@ -504,12 +567,21 @@ function OrganizationHubContent() {
                               {t("organizationHub.table.classroomName")}
                             </TableHead>
                             <TableHead className="whitespace-nowrap">
+                              {t("organizationHub.table.teacher")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap">
                               {t("organizationHub.table.level")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap text-center">
+                              {t("organizationHub.table.studentCount")}
+                            </TableHead>
+                            <TableHead className="whitespace-nowrap text-center">
+                              {t("organizationHub.table.assignmentCount")}
                             </TableHead>
                             <TableHead className="whitespace-nowrap">
                               {t("organizationHub.table.status")}
                             </TableHead>
-                            <TableHead className="hidden sm:table-cell whitespace-nowrap">
+                            <TableHead className="hidden lg:table-cell whitespace-nowrap">
                               {t("organizationHub.table.createdAt")}
                             </TableHead>
                           </TableRow>
@@ -521,7 +593,33 @@ function OrganizationHubContent() {
                                 {classroom.name}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">
+                                {classroom.teacher_name ? (
+                                  <div>
+                                    <div className="font-medium">
+                                      {classroom.teacher_name}
+                                    </div>
+                                    {classroom.teacher_email && (
+                                      <div className="text-xs text-gray-500 truncate max-w-[150px]">
+                                        {classroom.teacher_email}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 {classroom.program_level}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-sm font-medium">
+                                  {classroom.student_count}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-sm font-medium">
+                                  {classroom.assignment_count}
+                                </span>
                               </TableCell>
                               <TableCell>
                                 <span
@@ -537,7 +635,7 @@ function OrganizationHubContent() {
                                     : t("common.inactive")}
                                 </span>
                               </TableCell>
-                              <TableCell className="hidden sm:table-cell whitespace-nowrap">
+                              <TableCell className="hidden lg:table-cell whitespace-nowrap">
                                 {new Date(
                                   classroom.created_at,
                                 ).toLocaleDateString()}
@@ -658,6 +756,77 @@ function OrganizationHubContent() {
           </TabsContent>
         </Tabs>
       )}
+
+      {/* 編輯機構 Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t("organizationHub.editOrganization")}</DialogTitle>
+            <DialogDescription>
+              {t("organizationHub.editOrganizationDescription")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="display_name">
+                {t("organizationHub.info.displayName")}
+              </Label>
+              <Input
+                id="display_name"
+                value={editFormData.display_name}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, display_name: e.target.value })
+                }
+                placeholder={t("organizationHub.displayNamePlaceholder")}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">
+                {t("organizationHub.info.description")}
+              </Label>
+              <Textarea
+                id="description"
+                value={editFormData.description}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, description: e.target.value })
+                }
+                placeholder={t("organizationHub.descriptionPlaceholder")}
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="contact_email">
+                {t("organizationHub.info.contactEmail")}
+              </Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={editFormData.contact_email}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, contact_email: e.target.value })
+                }
+                placeholder={t("organizationHub.contactEmailPlaceholder")}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isSaving}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving}>
+              {isSaving ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   ) : (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] p-4">
