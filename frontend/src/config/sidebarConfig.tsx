@@ -2,16 +2,12 @@
  * Sidebar 配置 - 定義所有選單分組和項目
  */
 
-import {
-  Home,
-  Building2,
-  GraduationCap,
-  Users,
-  BookOpen,
-} from "lucide-react";
+import { Home, Building2, GraduationCap, Users, BookOpen } from "lucide-react";
 import { SidebarGroup } from "@/types/sidebar";
 
-export const getSidebarGroups = (t: (key: string) => string): SidebarGroup[] => [
+export const getSidebarGroups = (
+  t: (key: string) => string,
+): SidebarGroup[] => [
   // 🏢 組織管理 (org_owner, org_admin, school_admin) - Notion Style
   {
     id: "organization-hub",

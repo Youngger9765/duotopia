@@ -180,7 +180,6 @@ async def get_teacher_roles(
         - school_roles: 學校層級的角色 (school_admin, teacher)
         - all_roles: 所有角色的扁平化列表
     """
-    import uuid
 
     organization_roles = []
     school_roles = []
@@ -191,7 +190,7 @@ async def get_teacher_roles(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.is_active == True,
+            TeacherOrganization.is_active.is_(True),
         )
         .all()
     )
@@ -215,7 +214,7 @@ async def get_teacher_roles(
         db.query(TeacherSchool)
         .filter(
             TeacherSchool.teacher_id == current_teacher.id,
-            TeacherSchool.is_active == True,
+            TeacherSchool.is_active.is_(True),
         )
         .all()
     )
