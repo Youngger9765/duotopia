@@ -6,7 +6,7 @@ Expected: 只有 assigned_at <= 當前時間的作業才應該顯示給學生
 """
 
 import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -48,6 +48,7 @@ def setup_future_assignment(test_db_session: Session, test_client: TestClient):
         email="student_issue34@test.com",
         password_hash="hashed",
         student_number="S001",
+        birthdate=date(2010, 1, 1),  # Required field
     )
     test_db_session.add(student)
     test_db_session.flush()
