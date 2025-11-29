@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { RolePermissionMatrix } from "@/components/organization/RolePermissionMatrix";
+import { Shield } from "lucide-react";
 
 interface Organization {
   id: string;
@@ -33,6 +35,7 @@ export default function OrganizationDetail() {
   const [showAddTeacher, setShowAddTeacher] = useState(false);
   const [teacherId, setTeacherId] = useState("");
   const [role, setRole] = useState<"org_owner" | "org_admin">("org_admin");
+  const [showPermissions, setShowPermissions] = useState(false);
 
   useEffect(() => {
     if (orgId) {
@@ -173,6 +176,25 @@ export default function OrganizationDetail() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Permissions Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">權限管理</h2>
+          <button
+            onClick={() => setShowPermissions(!showPermissions)}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center gap-2"
+          >
+            <Shield className="h-4 w-4" />
+            {showPermissions ? "隱藏" : "查看"}角色權限矩陣
+          </button>
+        </div>
+        {showPermissions && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <RolePermissionMatrix />
+          </div>
+        )}
       </div>
 
       {/* Schools Section */}
