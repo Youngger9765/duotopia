@@ -382,7 +382,7 @@ class TestCascadeDelete:
         classroom = Classroom(
             name="Test Class",
             teacher_id=org_owner.id,
-            grade_level="5",
+            grade="5",
             is_active=True,
         )
         shared_test_session.add(classroom)
@@ -426,11 +426,11 @@ class TestOrgOwnerUniqueness:
             .filter(
                 TeacherOrganization.organization_id == demo_org.id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active is True,
+                TeacherOrganization.is_active == True,
             )
             .all()
         )
-        assert len(existing_owners) == 1
+        assert len(existing_owners) == 1, f"Expected 1 org_owner, found {len(existing_owners)}"
         assert existing_owners[0].teacher_id == org_owner.id
 
         # In API, attempting to add another org_owner would be blocked
@@ -481,11 +481,11 @@ class TestOrgOwnerUniqueness:
             .filter(
                 TeacherOrganization.organization_id == demo_org.id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active is True,
+                TeacherOrganization.is_active == True,
             )
             .all()
         )
-        assert len(owners) == 1
+        assert len(owners) == 1, f"Expected 1 org_owner, found {len(owners)}"
         assert owners[0].teacher_id == org_admin.id
 
 
@@ -641,7 +641,7 @@ class TestEdgeCases:
         classroom = Classroom(
             name="Test Class",
             teacher_id=org_owner.id,
-            grade_level="5",
+            grade="5",
             is_active=True,
         )
         shared_test_session.add(classroom)
@@ -661,11 +661,11 @@ class TestEdgeCases:
             shared_test_session.query(ClassroomSchool)
             .filter(
                 ClassroomSchool.classroom_id == classroom.id,
-                ClassroomSchool.is_active is True,
+                ClassroomSchool.is_active == True,
             )
             .all()
         )
-        assert len(active_links) == 1
+        assert len(active_links) == 1, f"Expected 1 active link, found {len(active_links)}"
         assert active_links[0].school_id == school1.id
 
     def test_inactive_organizations_not_listed(
@@ -678,6 +678,7 @@ class TestEdgeCases:
         )
         shared_test_session.add(active_org)
         shared_test_session.commit()
+        shared_test_session.refresh(active_org)
 
         # Create inactive org
         inactive_org = Organization(
@@ -685,17 +686,18 @@ class TestEdgeCases:
         )
         shared_test_session.add(inactive_org)
         shared_test_session.commit()
+        shared_test_session.refresh(inactive_org)
 
         # Query only active orgs
         active_orgs = (
             shared_test_session.query(Organization)
-            .filter(Organization.is_active is True)
+            .filter(Organization.is_active == True)
             .all()
         )
 
         org_ids = [org.id for org in active_orgs]
-        assert active_org.id in org_ids
-        assert inactive_org.id not in org_ids
+        assert active_org.id in org_ids, f"Active org {active_org.id} not found in {org_ids}"
+        assert inactive_org.id not in org_ids, f"Inactive org {inactive_org.id} should not be in {org_ids}"
 
     def test_empty_roles_array_handled_correctly(
         self,

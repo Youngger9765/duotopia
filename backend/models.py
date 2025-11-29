@@ -1366,6 +1366,9 @@ class TeacherSchool(Base):
     # 角色列表（使用 JSON/JSONB 儲存）['school_admin', 'teacher']
     roles = Column(JSONType, nullable=False, default=list)
 
+    # 自訂權限 (JSONB) - 覆蓋預設角色權限
+    permissions = Column(JSONType, nullable=True, default=None)
+
     # 狀態
     is_active = Column(Boolean, nullable=False, default=True, index=True)
 

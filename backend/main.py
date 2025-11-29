@@ -18,6 +18,7 @@ from core.thread_pool import (
 
 # Import middleware
 # from middleware.rate_limiter import RateLimitMiddleware  # Temporarily disabled due to bug
+from utils.performance import performance_logging_middleware, setup_query_logging
 
 # Import routers
 from routers import (
@@ -93,6 +94,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add performance monitoring middleware
+app.middleware("http")(performance_logging_middleware)
+
 
 # Mount static files directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -109,7 +113,14 @@ async def startup_event():
     # 初始化線程池
     get_speech_thread_pool()
     get_audio_thread_pool()
-    print("🚀 Application startup complete - Thread pools initialized")
+
+    # Setup query logging (only log slow queries in production)
+    from database import get_engine
+
+    log_all = environment == "development"
+    setup_query_logging(get_engine(), log_all=log_all)
+
+    print("🚀 Application startup complete - Thread pools initialized, query logging enabled")
 
 
 @app.on_event("shutdown")
