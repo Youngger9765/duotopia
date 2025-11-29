@@ -346,6 +346,16 @@
     },
     "error": {
       "loadFailed": "Load failed"
+    },
+    "share": {
+      "button": "Share to Students",
+      "title": "Share Student Login Link",
+      "description": "Students can scan the QR code or use the link to login directly",
+      "copy": "Copy",
+      "copied": "Copied",
+      "instructions": "How to share:",
+      "instruction1": "Scan QR Code: Students can scan the QR code with their phone to go directly to the login page",
+      "instruction2": "Copy Link: Click the 'Copy' button to share the link with students"
     }
   },
   "admin": {

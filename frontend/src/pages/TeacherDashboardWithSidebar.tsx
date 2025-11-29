@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -8,6 +9,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Users,
   GraduationCap,
@@ -19,7 +28,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { apiClient } from "../lib/api";
 
 interface TeacherProfile {
@@ -86,6 +99,7 @@ type SidebarView = "dashboard" | "classrooms" | "students" | "programs";
 
 export default function TeacherDashboardWithSidebar() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
   );
@@ -95,6 +109,10 @@ export default function TeacherDashboardWithSidebar() {
   // Sidebar state
   const [currentView, setCurrentView] = useState<SidebarView>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Data for different views
   const [classroomsDetail, setClassroomsDetail] = useState<ClassroomDetail[]>(
@@ -158,6 +176,23 @@ export default function TeacherDashboardWithSidebar() {
     navigate("/teacher/login");
   };
 
+  const handleCopyUrl = async () => {
+    if (!dashboardData) return;
+    const studentLoginUrl = `${window.location.origin}/student/login?teacher_email=${dashboardData.teacher.email}`;
+    try {
+      await navigator.clipboard.writeText(studentLoginUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy URL:", err);
+    }
+  };
+
+  const getStudentLoginUrl = () => {
+    if (!dashboardData) return "";
+    return `${window.location.origin}/student/login?teacher_email=${dashboardData.teacher.email}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -208,6 +243,59 @@ export default function TeacherDashboardWithSidebar() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+      {/* Share to Students Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("teacherDashboard.share.title")}</DialogTitle>
+            <DialogDescription>
+              {t("teacherDashboard.share.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* QR Code */}
+            <div className="flex justify-center p-4 bg-white border rounded-lg">
+              <QRCodeSVG value={getStudentLoginUrl()} size={200} />
+            </div>
+
+            {/* URL Input with Copy Button */}
+            <div className="flex items-center space-x-2">
+              <Input
+                value={getStudentLoginUrl()}
+                readOnly
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={handleCopyUrl}
+                className="flex-shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    {t("teacherDashboard.share.copied")}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {t("teacherDashboard.share.copy")}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Instructions */}
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>{t("teacherDashboard.share.instructions")}</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>{t("teacherDashboard.share.instruction1")}</li>
+                <li>{t("teacherDashboard.share.instruction2")}</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Sidebar */}
       <div
         className={`bg-white shadow-lg transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"} flex flex-col`}
@@ -288,7 +376,10 @@ export default function TeacherDashboardWithSidebar() {
       {/* Main Content */}
       <div className="flex-1 p-6 overflow-auto">
         {currentView === "dashboard" && (
-          <DashboardContent dashboardData={dashboardData} />
+          <DashboardContent
+            dashboardData={dashboardData}
+            onShareClick={() => setShowShareDialog(true)}
+          />
         )}
 
         {currentView === "classrooms" && (
@@ -322,12 +413,28 @@ export default function TeacherDashboardWithSidebar() {
 }
 
 // Dashboard Content Component
-function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
+function DashboardContent({
+  dashboardData,
+  onShareClick,
+}: {
+  dashboardData: DashboardData;
+  onShareClick: () => void;
+}) {
+  const { t } = useTranslation();
+
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-6">
-        歡迎回來，{dashboardData.teacher.name}！
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-3xl font-bold text-gray-900">
+          {t("teacherDashboard.welcome.title", {
+            name: dashboardData.teacher.name,
+          })}
+        </h2>
+        <Button onClick={onShareClick} className="flex items-center gap-2">
+          <Share2 className="h-4 w-4" />
+          {t("teacherDashboard.share.button")}
+        </Button>
+      </div>
 
       {/* Subscription Status Card */}
       {dashboardData.subscription_status === "trial" &&

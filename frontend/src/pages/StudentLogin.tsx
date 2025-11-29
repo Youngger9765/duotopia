@@ -37,6 +37,7 @@ export default function StudentLogin() {
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);
   const isDemoMode = searchParams.get("is_demo") === "true";
+  const urlTeacherEmail = searchParams.get("teacher_email");
 
   // 檢查環境
   const isProduction = import.meta.env.VITE_ENVIRONMENT === "production";
@@ -64,6 +65,15 @@ export default function StudentLogin() {
       setTeacherHistory(JSON.parse(history));
     }
   }, []);
+
+  // Auto-validate teacher email from URL parameter
+  useEffect(() => {
+    if (urlTeacherEmail && step === 1) {
+      setTeacherEmail(urlTeacherEmail);
+      handleTeacherSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTeacherEmail]);
 
   // Step 1: Teacher selection
   const handleTeacherSubmit = async () => {

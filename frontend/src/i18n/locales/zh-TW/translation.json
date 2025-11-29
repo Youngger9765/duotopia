@@ -346,6 +346,16 @@
     },
     "error": {
       "loadFailed": "載入失敗"
+    },
+    "share": {
+      "button": "分享給學生",
+      "title": "分享學生登入連結",
+      "description": "學生可以掃描 QR 碼或使用連結直接登入",
+      "copy": "複製",
+      "copied": "已複製",
+      "instructions": "分享方式：",
+      "instruction1": "掃描 QR 碼：學生可以用手機掃描 QR 碼直接進入登入頁面",
+      "instruction2": "複製連結：點擊「複製」按鈕，將連結分享給學生"
     }
   },
   "admin": {
