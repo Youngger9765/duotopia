@@ -145,6 +145,87 @@ Runs quality checks at end of each turn
 ### error-reflection.py (Stop hook)
 Automatically detects errors and triggers learning reflection
 
+## 🤖 @claude GitHub Bot 使用指南
+
+### 如何让 @claude 遵循项目流程
+
+当在 GitHub Issue 中使用 @claude bot 时，必须提供明确指示以确保遵循 git-issue-pr-flow 流程。
+
+#### ✅ 正确的指示格式
+
+```
+@claude 请按照以下步骤修复此 Issue：
+
+1. **使用固定分支**: 在 `claude/issue-26` 分支上工作（不要创建带时间戳的新分支）
+2. **检查既有分支**: 如果分支已存在，请先 pull 最新代码再修改
+3. **遵循 PDCA 流程**:
+   - Plan: 分析问题根因，提出修复方案
+   - Do: 实施修复并编写测试
+   - Check: 推送到分支触发 Per-Issue Test Environment
+   - Act: 等待测试反馈，必要时迭代改进
+4. **不要自动创建 PR**: 推送代码后等待人工审查再创建 PR
+
+参考文档: .claude/agents/git-issue-pr-flow.md
+```
+
+#### ❌ 错误的指示（会导致分支堆积）
+
+```
+@claude 请修复此问题
+```
+
+这会导致 @claude 创建带时间戳的新分支（如 `claude/issue-26-20251129-1639`），每次修复都会堆积新分支。
+
+#### 🔑 关键要点
+
+1. **明确指定分支名**: 告诉 @claude 使用 `claude/issue-XX` 格式
+2. **要求检查既有分支**: 避免重复创建
+3. **引用 git-issue-pr-flow.md**: 确保 @claude 知道遵循 PDCA 流程
+4. **分步骤指示**: 明确每个阶段的产出要求
+
+### @claude 分支清理
+
+如果 @claude 已经创建了多个带时间戳的分支，可以手动清理：
+
+```bash
+# 列出所有 claude/issue-XX-* 分支
+git fetch --prune
+git branch -r | grep "claude/issue-26-"
+
+# 删除多余的旧分支（保留最新的）
+git push origin --delete claude/issue-26-20251129-1546
+git push origin --delete claude/issue-26-20251129-1613
+git push origin --delete claude/issue-26-20251129-1626
+```
+
+当 Issue 关闭时，cleanup workflow 会自动删除所有相关分支。
+
+### 最佳实践示例
+
+#### 初次修复
+```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
+
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程：
+1. Plan: 分析所有留言反馈，理解需求（保留上方提示，移除下方重复提示）
+2. Do: 实施修复
+3. Check: 推送到 claude/issue-26 触发部署
+4. Act: 等待测试反馈
+
+不要创建带时间戳的分支，不要自动创建 PR。
+```
+
+#### 后续迭代
+```
+@claude 请在既有的 `claude/issue-26` 分支上继续修复。
+
+根据最新反馈：
+- Preview 环境也要隐藏测试提示
+- 检查代码是否 clean
+
+请 pull 最新代码后再修改，然后推送触发重新部署。
+```
+
 ## 🚨 Quick Reference
 
 ### Must Follow Rules
@@ -155,6 +236,7 @@ Automatically detects errors and triggers learning reflection
 5. **Use feature branches, not staging** - Never commit directly to staging
 6. **Check README/CLAUDE.md/package.json first** - Understand project standards
 7. **Learn from every error** - Use error reflection system to prevent recurrence
+8. **指导 @claude bot** - 在 Issue 中使用 @claude 时，明确指定使用固定分支和遵循 PDCA 流程
 
 ### Command Shortcuts
 ```bash
