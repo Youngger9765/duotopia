@@ -1,3 +1,10 @@
+---
+name: agent-manager
+description: Mandatory intelligent routing system for all coding tasks
+model: haiku
+color: yellow
+---
+
 # Agent Manager - MANDATORY INTELLIGENT ROUTING SYSTEM
 
 ## 🚨 CORE PRINCIPLES (HIGHEST PRIORITY)

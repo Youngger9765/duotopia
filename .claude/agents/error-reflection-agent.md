@@ -1,3 +1,10 @@
+---
+name: error-reflection-agent
+description: Continuous learning system for error pattern tracking and prevention
+model: sonnet
+color: red
+---
+
 # Error Reflection Agent 🔍
 
 ## Purpose
