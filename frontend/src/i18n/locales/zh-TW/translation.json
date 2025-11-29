@@ -540,7 +540,7 @@
       "continue": "繼續作業",
       "view": "檢視作業",
       "viewResults": "查看結果",
-      "resubmit": "重新提交"
+      "resubmit": "開始訂正"
     },
     "emptyStates": {
       "todo": {
@@ -578,7 +578,7 @@
       "view": "檢視作業",
       "startAssignment": "開始作業",
       "continueAssignment": "繼續作業",
-      "resubmit": "重新提交"
+      "resubmit": "開始訂正"
     },
     "overview": {
       "estimatedTime": "預估時間: {{time}}",
@@ -1182,6 +1182,9 @@
       "title": "選擇內容類型",
       "description": "為 「{{lessonName}}」 選擇要新增的內容類型",
       "processing": "處理中...",
+      "recommended": "推薦",
+      "comingSoon": "即將推出",
+      "cancel": "取消",
       "types": {
         "reading_assessment": {
           "name": "朗讀錄音",

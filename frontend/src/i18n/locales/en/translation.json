@@ -1182,6 +1182,9 @@
       "title": "Select Content Type",
       "description": "Select the content type to add to \"{{lessonName}}\"",
       "processing": "Processing...",
+      "recommended": "Recommended",
+      "comingSoon": "Coming Soon",
+      "cancel": "Cancel",
       "types": {
         "reading_assessment": {
           "name": "Reading Recording",
