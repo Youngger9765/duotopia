@@ -212,23 +212,27 @@ jobs:
             const branch = context.ref.replace('refs/heads/', '');
             const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
 
+            const body = [
+              '✅ **部署完成！**',
+              '',
+              '測試環境已更新：',
+              `- 🌐 **Frontend**: ${frontend}`,
+              `- ⚙️ **Backend**: ${backend}`,
+              '',
+              '@kaddy-eunice 請測試最新版本',
+              '',
+              '**部署資訊**:',
+              `- 📝 Commit: \`${sha}\``,
+              `- 🔧 分支: \`${branch}\``,
+              `- ⏰ 部署時間: ${now}`,
+              '',
+              '💡 Min instances = 0 (閒置時不產生費用)',
+              '✍️ 測試完成後請回覆「測試通過」'
+            ].join('\n');
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: parseInt(issue),
-              body: `✅ **部署完成！**
-
-測試環境已更新：
-- 🌐 **Frontend**: ${frontend}
-- ⚙️ **Backend**: ${backend}
-
-@kaddy-eunice 請測試最新版本
-
-**部署資訊**:
-- 📝 Commit: \`${sha}\`
-- 🔧 分支: \`${branch}\`
-- ⏰ 部署時間: ${now}
-
-💡 Min instances = 0 (閒置時不產生費用)
-✍️ 測試完成後請回覆「測試通過」`
+              body: body
             });
