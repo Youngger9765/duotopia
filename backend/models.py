@@ -837,7 +837,27 @@ class StudentAssignment(Base):
 
 
 class StudentContentProgress(Base):
-    """學生-內容進度表 - 追蹤學生對每個內容的完成狀況"""
+    """
+    ⚠️ DEPRECATED - 此模型計劃在未來版本中移除
+
+    學生-內容進度表 - 追蹤學生對每個內容的完成狀況
+
+    ⚠️ WARNING: This model is redundant and scheduled for removal.
+
+    Why deprecated:
+    - All actual student data is stored in StudentItemProgress
+    - All fields can be aggregated from StudentItemProgress
+    - The `is_locked` field is never checked in business logic
+    - Keeping this only for backward compatibility
+
+    Migration plan:
+    - Phase 1: Mark as deprecated (current)
+    - Phase 2: Create aggregation functions from StudentItemProgress
+    - Phase 3: Refactor all 76+ references to use aggregation
+    - Phase 4: Remove this model and database table
+
+    New code should NOT use this model. Use StudentItemProgress instead.
+    """
 
     __tablename__ = "student_content_progress"
 
