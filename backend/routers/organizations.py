@@ -6,14 +6,14 @@ CRUD operations for organizations with Casbin permission checks.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 import uuid
 
 from database import get_db
-from models import Teacher, Organization, TeacherOrganization
+from models import Teacher, Organization, TeacherOrganization, TeacherSchool, School
 from auth import verify_token
 from services.casbin_service import get_casbin_service
 
@@ -354,13 +354,16 @@ async def list_organization_teachers(
     """
     List all teachers in an organization.
     Requires teacher to be a member of the organization.
+
+    Performance optimization: Uses joinedload to fetch teachers in a single query.
     """
     # Check permission
     check_org_permission(teacher.id, org_id, db)
 
-    # Get all teacher relationships
+    # Get all teacher relationships with eager loading (eliminates N+1 query)
     teacher_orgs = (
         db.query(TeacherOrganization)
+        .options(joinedload(TeacherOrganization.teacher))
         .filter(
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.is_active.is_(True),
@@ -370,13 +373,12 @@ async def list_organization_teachers(
 
     result = []
     for to in teacher_orgs:
-        t = db.query(Teacher).filter(Teacher.id == to.teacher_id).first()
-        if t:
+        if to.teacher:
             result.append(
                 TeacherInfo(
-                    id=t.id,
-                    email=t.email,
-                    name=t.name,
+                    id=to.teacher.id,
+                    email=to.teacher.email,
+                    name=to.teacher.name,
                     role=to.role,
                     is_active=to.is_active,
                     created_at=to.created_at,
@@ -541,3 +543,169 @@ async def remove_teacher_from_organization(
     casbin_service.delete_role_for_user(teacher_id, teacher_org.role, f"org-{org_id}")
 
     return {"message": "Teacher removed from organization successfully"}
+
+
+# ============ Permission Management Endpoints ============
+
+
+class TeacherPermissionsUpdate(BaseModel):
+    """Request model for updating teacher permissions"""
+
+    can_create_classrooms: Optional[bool] = None
+    can_view_other_teachers: Optional[bool] = None
+    can_manage_students: Optional[bool] = None
+    max_classrooms: Optional[int] = None
+    allowed_actions: Optional[
+        List[str]
+    ] = None  # ["create", "read", "update", "delete"]
+
+
+class TeacherPermissionsResponse(BaseModel):
+    """Response model for teacher permissions"""
+
+    teacher_id: int
+    school_id: str
+    roles: List[str]
+    permissions: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.put("/{org_id}/teachers/{teacher_id}/permissions")
+async def update_teacher_permissions(
+    org_id: uuid.UUID,
+    teacher_id: int,
+    permissions_data: TeacherPermissionsUpdate,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Update teacher's custom permissions within schools of this organization.
+    Only org_owner can set custom permissions.
+
+    Permissions are stored in teacher_schools.permissions (JSONB) and override default role permissions.
+    """
+    # Check if current teacher is org_owner
+    check_org_permission(teacher.id, org_id, db)
+
+    teacher_org_check = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not teacher_org_check:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only org_owner can manage teacher permissions",
+        )
+
+    # Get teacher_school relationships with JOIN on schools (performance optimization)
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .join(School, School.id == TeacherSchool.school_id)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            School.organization_id == org_id,
+            School.is_active.is_(True),
+            TeacherSchool.is_active.is_(True),
+        )
+        .all()
+    )
+
+    if not teacher_schools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found in any schools of this organization",
+        )
+
+    # Build permissions dict from request
+    new_permissions = {}
+    if permissions_data.can_create_classrooms is not None:
+        new_permissions[
+            "can_create_classrooms"
+        ] = permissions_data.can_create_classrooms
+    if permissions_data.can_view_other_teachers is not None:
+        new_permissions[
+            "can_view_other_teachers"
+        ] = permissions_data.can_view_other_teachers
+    if permissions_data.can_manage_students is not None:
+        new_permissions["can_manage_students"] = permissions_data.can_manage_students
+    if permissions_data.max_classrooms is not None:
+        new_permissions["max_classrooms"] = permissions_data.max_classrooms
+    if permissions_data.allowed_actions is not None:
+        new_permissions["allowed_actions"] = permissions_data.allowed_actions
+
+    # Update permissions for all teacher_school relationships
+    updated_count = 0
+    for ts in teacher_schools:
+        # Merge with existing permissions
+        current_permissions = ts.permissions or {}
+        current_permissions.update(new_permissions)
+        ts.permissions = current_permissions
+        updated_count += 1
+
+    db.commit()
+
+    return {
+        "message": f"Permissions updated for teacher {teacher_id} in {updated_count} school(s)",
+        "updated_schools": updated_count,
+        "permissions": new_permissions,
+    }
+
+
+@router.get("/{org_id}/teachers/{teacher_id}/permissions")
+async def get_teacher_permissions(
+    org_id: uuid.UUID,
+    teacher_id: int,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Get teacher's permissions across all schools in this organization.
+    Requires org_owner or org_admin role.
+
+    Performance optimization: Uses JOIN to fetch teacher_schools in a single query.
+    """
+    # Check if current teacher has access to org
+    check_org_permission(teacher.id, org_id, db)
+
+    # Get teacher_school relationships with JOIN on schools
+    # This eliminates the need to query schools separately
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .join(School, School.id == TeacherSchool.school_id)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            School.organization_id == org_id,
+            School.is_active.is_(True),
+            TeacherSchool.is_active.is_(True),
+        )
+        .all()
+    )
+
+    if not teacher_schools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher not found in any schools of this organization",
+        )
+
+    # Return permissions for each school
+    result = []
+    for ts in teacher_schools:
+        result.append(
+            {
+                "teacher_id": ts.teacher_id,
+                "school_id": str(ts.school_id),
+                "roles": ts.roles,
+                "permissions": ts.permissions,
+            }
+        )
+
+    return {"teacher_id": teacher_id, "schools": result}

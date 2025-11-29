@@ -4,7 +4,14 @@ from sqlalchemy.orm import Session
 from typing import Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from models import Teacher, Student
+from models import (
+    Teacher,
+    Student,
+    ClassroomStudent,
+    ClassroomSchool,
+    School,
+    Organization,
+)
 from auth import (
     verify_password,
     create_access_token,
@@ -277,6 +284,48 @@ async def student_login(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
+    # Query classroom's school and organization
+    school_name = None
+    organization_name = None
+
+    # Get student's active classroom enrollment
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.student_id == student.id,
+            ClassroomStudent.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if classroom_student:
+        # Get classroom's school via ClassroomSchool
+        classroom_school = (
+            db.query(ClassroomSchool)
+            .filter(
+                ClassroomSchool.classroom_id == classroom_student.classroom_id,
+                ClassroomSchool.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if classroom_school:
+            # Get school info
+            school = (
+                db.query(School).filter(School.id == classroom_school.school_id).first()
+            )
+            if school and school.is_active:
+                school_name = school.display_name or school.name
+
+                # Get school's organization
+                organization = (
+                    db.query(Organization)
+                    .filter(Organization.id == school.organization_id)
+                    .first()
+                )
+                if organization and organization.is_active:
+                    organization_name = organization.display_name or organization.name
+
     # 創建 JWT token
     access_token = create_access_token(
         data={
@@ -297,6 +346,8 @@ async def student_login(
             "email": student.email,
             "name": student.name,
             "student_number": student.student_number,
+            "school_name": school_name,
+            "organization_name": organization_name,
         },
     }
 

@@ -1,7 +1,7 @@
 import random
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func, text
 from pydantic import BaseModel, Field, field_validator
 from database import get_db
@@ -120,6 +120,21 @@ class StudentSummary(BaseModel):
     classroom_name: str
 
 
+class OrganizationInfo(BaseModel):
+    """機構資訊"""
+
+    id: str
+    name: str
+    type: str  # personal, school_group, etc.
+
+
+class SchoolInfo(BaseModel):
+    """學校資訊"""
+
+    id: str
+    name: str
+
+
 class TeacherDashboard(BaseModel):
     teacher: TeacherProfile
     classroom_count: int
@@ -133,6 +148,10 @@ class TeacherDashboard(BaseModel):
     days_remaining: int
     can_assign_homework: bool
     is_test_account: bool  # 是否為測試帳號（白名單）
+    # Organization and roles information
+    organization: Optional[OrganizationInfo] = None
+    schools: List[SchoolInfo] = []
+    roles: List[str] = []  # All unique roles from TeacherSchool and TeacherOrganization
 
 
 class OrganizationRole(BaseModel):
@@ -308,6 +327,57 @@ async def get_teacher_dashboard(
 ):
     """取得教師儀表板資料"""
 
+    # Query teacher's organization via TeacherOrganization (with eager loading)
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .options(joinedload(TeacherOrganization.organization))
+        .first()
+    )
+
+    organization_info = None
+    if teacher_org and teacher_org.organization and teacher_org.organization.is_active:
+        org = teacher_org.organization
+        organization_info = OrganizationInfo(
+            id=str(org.id),
+            name=org.display_name or org.name,
+            type=org.type or "personal",
+        )
+
+    # Query teacher's schools via TeacherSchool (with eager loading)
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == current_teacher.id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .options(joinedload(TeacherSchool.school))
+        .all()
+    )
+
+    schools_info = []
+    all_roles_set = set()
+
+    # Add organization role if exists
+    if teacher_org:
+        all_roles_set.add(teacher_org.role)
+
+    # Process schools and collect roles
+    for ts in teacher_schools:
+        if ts.school and ts.school.is_active:
+            schools_info.append(
+                SchoolInfo(
+                    id=str(ts.school.id),
+                    name=ts.school.display_name or ts.school.name,
+                )
+            )
+            # Add school roles
+            if ts.roles:
+                all_roles_set.update(ts.roles)
+
     # Get classrooms with student count (only active classrooms)
     classrooms = (
         db.query(Classroom)
@@ -392,6 +462,10 @@ async def get_teacher_dashboard(
         days_remaining=current_teacher.days_remaining,
         can_assign_homework=current_teacher.can_assign_homework,
         is_test_account=is_test_account,
+        # Organization and roles information
+        organization=organization_info,
+        schools=schools_info,
+        roles=sorted(list(all_roles_set)),
     )
 
 
