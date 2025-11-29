@@ -147,6 +147,58 @@ Automatically detects errors and triggers learning reflection
 
 ## 🤖 @claude GitHub Bot 使用指南
 
+### ⚠️ CRITICAL: Git Branch Naming Convention (MANDATORY FOR @claude bot)
+
+**When @claude bot works on GitHub Issues, it MUST follow these EXACT rules:**
+
+#### Branch Name Format
+- **REQUIRED FORMAT**: `claude/issue-<NUMBER>` (WITHOUT any timestamp or date suffix)
+- **Examples**:
+  - ✅ CORRECT: `claude/issue-26`
+  - ✅ CORRECT: `claude/issue-99`
+  - ❌ WRONG: `claude/issue-26-20251129-1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-20251129_1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-password-hint` (has description - FORBIDDEN)
+
+#### Branch Reuse Rule
+**Before creating a new branch, @claude bot MUST:**
+1. Check if branch `claude/issue-<NUMBER>` already exists
+2. If exists: Checkout and pull latest changes
+3. If not exists: Create new branch with EXACT format above
+
+**Example workflow @claude bot should follow:**
+```bash
+# Step 1: Check if branch exists
+if git ls-remote --heads origin claude/issue-26 | grep -q claude/issue-26; then
+  # Branch exists - reuse it
+  git fetch origin claude/issue-26:claude/issue-26
+  git checkout claude/issue-26
+  git pull origin claude/issue-26
+else
+  # Branch doesn't exist - create it
+  git checkout -b claude/issue-26
+fi
+
+# Step 2: Make changes and commit
+# ... (work on the issue)
+
+# Step 3: Push to the SAME branch
+git push origin claude/issue-26
+```
+
+#### Why This Matters
+1. **No Branch Accumulation** - Reusing branches prevents hundreds of abandoned branches
+2. **Automatic Cleanup** - When issue closes, only ONE branch needs cleanup
+3. **CI/CD Integration** - Per-Issue Test Environment expects fixed branch names
+4. **Kubernetes Compatibility** - Underscore timestamps break K8s namespace naming
+
+#### Enforcement
+- **Issue will be rejected** if @claude creates timestamped branches
+- **User will manually delete** all timestamped branches and request re-work
+- **Only fixed format branches** will be reviewed and merged
+
+---
+
 ### 如何让 @claude 遵循项目流程
 
 当在 GitHub Issue 中使用 @claude bot 时，必须提供明确指示以确保遵循 git-issue-pr-flow 流程。
@@ -156,7 +208,10 @@ Automatically detects errors and triggers learning reflection
 ```
 @claude 请按照以下步骤修复此 Issue：
 
-1. **使用固定分支**: 在 `claude/issue-26` 分支上工作（不要创建带时间戳的新分支）
+1. **使用固定分支**: 在 `claude/issue-26` 分支上工作
+   - ⚠️ CRITICAL: 分支名必须是 `claude/issue-26`，不能有任何时间戳或日期后缀
+   - 如果分支已存在，必须先 checkout 并 pull 最新代码
+   - 绝对禁止创建 `claude/issue-26-YYYYMMDD-HHMM` 格式的分支
 2. **检查既有分支**: 如果分支已存在，请先 pull 最新代码再修改
 3. **遵循 PDCA 流程**:
    - Plan: 分析问题根因，提出修复方案
@@ -170,11 +225,37 @@ Automatically detects errors and triggers learning reflection
 
 #### ❌ 错误的指示（会导致分支堆积）
 
+**Example 1: Too vague**
 ```
 @claude 请修复此问题
 ```
+结果：创建 `claude/issue-26-20251129-1639` ❌
 
-这会导致 @claude 创建带时间戳的新分支（如 `claude/issue-26-20251129-1639`），每次修复都会堆积新分支。
+**Example 2: Missing branch name requirement**
+```
+@claude 请按照 PDCA 流程修复
+```
+结果：创建 `claude/issue-26-20251129-1655` ❌
+
+**Example 3: Not emphasizing NO TIMESTAMP**
+```
+@claude 请在 claude/issue-26 分支上修复
+```
+结果：仍可能创建带时间戳的分支 ❌
+
+**Correct approach: Be EXTREMELY explicit**
+```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
+
+⚠️ CRITICAL BRANCH NAMING RULE:
+- Branch name MUST be exactly: claude/issue-26
+- DO NOT add any timestamp (no YYYYMMDD-HHMM suffix)
+- DO NOT add any date suffix
+- If branch exists, checkout and pull it first
+
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程工作。
+```
+结果：使用 `claude/issue-26` ✅
 
 #### 🔑 关键要点
 
