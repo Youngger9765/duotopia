@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - 'fix/issue-*'
+      - 'feature/issue-*'
+      - 'claude/issue-*'
     paths:
       - 'frontend/**'
       - 'backend/**'
       - '!**/*.md'
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
 
 env:
   PROJECT_ID: duotopia-472708
@@ -24,7 +31,8 @@ jobs:
         id: extract
         run: |
           echo "🔍 DEBUG: Starting extract job"
-          ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oE '[0-9]+')
+          # Extract first number after 'issue-' pattern
+          ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oP 'issue-\K\d+')
           echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
           echo "✅ Issue number: $ISSUE_NUM"
 
@@ -187,6 +195,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     needs: [extract, deploy-backend, deploy-frontend]
+    if: success()
     permissions:
       issues: write
     steps:
@@ -200,14 +209,31 @@ jobs:
             const issue = process.env.ISSUE;
             const frontend = process.env.FRONTEND;
             const backend = process.env.BACKEND;
+            const sha = context.sha.substring(0, 7);
+            const branch = context.ref.replace('refs/heads/', '');
+            const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+
+            const body = [
+              '✅ **部署完成！**',
+              '',
+              '測試環境已更新：',
+              `- 🌐 **Frontend**: ${frontend}`,
+              `- ⚙️ **Backend**: ${backend}`,
+              '',
+              '@kaddy-eunice 請測試最新版本',
+              '',
+              '**部署資訊**:',
+              `- 📝 Commit: \`${sha}\``,
+              `- 🔧 分支: \`${branch}\``,
+              `- ⏰ 部署時間: ${now}`,
+              '',
+              '💡 Min instances = 0 (閒置時不產生費用)',
+              '✍️ 測試完成後請回覆「測試通過」'
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issue,
-              body: "## 🚀 Per-Issue Preview Environment Ready\n\n" +
-                    "**Issue #" + issue + "**\n\n" +
-                    "- **Frontend**: " + frontend + "\n" +
-                    "- **Backend**: " + backend + "\n\n" +
-                    "Min instances = 0 (no cost when idle). Test and comment \"測試通過\" when done."
+              issue_number: parseInt(issue),
+              body: body
             });
