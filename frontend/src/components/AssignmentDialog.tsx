@@ -385,7 +385,9 @@ export function AssignmentDialog({
         due_date: formData.due_date
           ? formData.due_date.toISOString()
           : undefined,
-        start_date: formData.start_date ? formData.start_date.toISOString() : undefined,
+        start_date: formData.start_date
+          ? formData.start_date.toISOString()
+          : undefined,
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -1088,10 +1090,19 @@ export function AssignmentDialog({
                       </Label>
                       <Input
                         type="date"
-                        value={formData.start_date ? formData.start_date.toISOString().split("T")[0] : ""}
+                        value={
+                          formData.start_date
+                            ? formData.start_date.toISOString().split("T")[0]
+                            : ""
+                        }
                         onChange={(e) => {
-                          const dateValue = e.target.value ? new Date(e.target.value) : undefined;
-                          setFormData((prev) => ({ ...prev, start_date: dateValue }));
+                          const dateValue = e.target.value
+                            ? new Date(e.target.value)
+                            : undefined;
+                          setFormData((prev) => ({
+                            ...prev,
+                            start_date: dateValue,
+                          }));
                         }}
                         className="text-sm"
                       />
