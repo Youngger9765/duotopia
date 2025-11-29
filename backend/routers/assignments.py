@@ -113,6 +113,7 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None  # 開始日期
 
 
 class UpdateAssignmentRequest(BaseModel):
@@ -348,6 +349,9 @@ async def create_assignment(
 
     # 為每個學生建立 StudentAssignment
     for student in students:
+        # Calculate assigned_at from start_date or use current time
+        assigned_at_time = request.start_date if request.start_date else datetime.now(timezone.utc)
+
         student_assignment = StudentAssignment(
             assignment_id=assignment.id,
             student_id=student.id,
@@ -356,6 +360,7 @@ async def create_assignment(
             title=request.title,
             instructions=request.description,
             due_date=request.due_date,
+            assigned_at=assigned_at_time,  # Use start_date from frontend
             status=AssignmentStatus.NOT_STARTED,
             is_active=True,
         )
