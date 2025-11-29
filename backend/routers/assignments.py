@@ -113,6 +113,7 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None  # Issue #34: 開始日期
 
 
 class UpdateAssignmentRequest(BaseModel):
@@ -123,6 +124,7 @@ class UpdateAssignmentRequest(BaseModel):
     instructions: Optional[str] = None  # Alias for description
     due_date: Optional[datetime] = None
     student_ids: Optional[List[int]] = None
+    start_date: Optional[datetime] = None  # Issue #34: 開始日期
 
 
 class AssignmentResponse(BaseModel):
@@ -346,6 +348,9 @@ async def create_assignment(
             content_items_map[item.content_id] = []
         content_items_map[item.content_id].append(item)
 
+    # Issue #34: 計算 assigned_at 時間（使用 start_date 或當前時間）
+    assigned_at_time = request.start_date if request.start_date else datetime.now(timezone.utc)
+
     # 為每個學生建立 StudentAssignment
     for student in students:
         student_assignment = StudentAssignment(
@@ -356,6 +361,7 @@ async def create_assignment(
             title=request.title,
             instructions=request.description,
             due_date=request.due_date,
+            assigned_at=assigned_at_time,  # Issue #34: 使用前端設定的開始日期
             status=AssignmentStatus.NOT_STARTED,
             is_active=True,
         )
@@ -684,6 +690,9 @@ async def patch_assignment(
                 content_items_map[item.content_id] = []
             content_items_map[item.content_id].append(item)
 
+        # Issue #34: 計算 assigned_at 時間（使用 start_date 或當前時間）
+        assigned_at_time = request.start_date if request.start_date else datetime.now(timezone.utc)
+
         # 為新的學生列表創建 StudentAssignment
         for student_id in request.student_ids:
             # 🔥 Check from preloaded set (no query)
@@ -698,7 +707,7 @@ async def patch_assignment(
                 instructions=assignment.description,
                 due_date=assignment.due_date,
                 status=AssignmentStatus.NOT_STARTED,
-                assigned_at=datetime.now(timezone.utc),
+                assigned_at=assigned_at_time,  # Issue #34: 使用前端設定的開始日期
                 is_active=True,
             )
             db.add(student_assignment)
