@@ -31,7 +31,8 @@ jobs:
         id: extract
         run: |
           echo "🔍 DEBUG: Starting extract job"
-          ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oE '[0-9]+')
+          # Extract first number after 'issue-' pattern
+          ISSUE_NUM=$(echo "${{ github.ref_name }}" | grep -oP 'issue-\K\d+')
           echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
           echo "✅ Issue number: $ISSUE_NUM"
 
