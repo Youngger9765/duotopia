@@ -350,7 +350,9 @@ async def create_assignment(
     # 為每個學生建立 StudentAssignment
     for student in students:
         # Calculate assigned_at from start_date or use current time
-        assigned_at_time = request.start_date if request.start_date else datetime.now(timezone.utc)
+        assigned_at_time = (
+            request.start_date if request.start_date else datetime.now(timezone.utc)
+        )
 
         student_assignment = StudentAssignment(
             assignment_id=assignment.id,
