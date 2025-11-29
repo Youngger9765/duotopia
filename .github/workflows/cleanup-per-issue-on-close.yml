@@ -13,6 +13,7 @@ env:
 permissions:
   issues: write
   contents: read
+  id-token: write
 
 jobs:
   cleanup-on-issue-close:
@@ -70,12 +71,12 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed"
@@ -100,10 +101,10 @@ jobs:
       - name: Extract issue number from PR
         id: extract
         run: |
-          # Extract issue number from branch name (fix/issue-X-xxx)
+          # Extract issue number from branch name (fix/issue-X-xxx, feature/issue-X-xxx, claude/issue-X-xxx)
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          if [[ "$BRANCH" =~ fix/issue-([0-9]+) ]]; then
-            ISSUE_NUM="${BASH_REMATCH[1]}"
+          if [[ "$BRANCH" =~ (fix|feature|claude)/issue-([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[2]}"
             echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
             echo "✅ Found issue number: $ISSUE_NUM from branch: $BRANCH"
           else
@@ -146,12 +147,12 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed for Issue #${ISSUE_NUM}"
