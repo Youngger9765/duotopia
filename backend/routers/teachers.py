@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, text
+from sqlalchemy import func, text, or_
 from pydantic import BaseModel
 from database import get_db
 from schemas import ProgramUpdate
@@ -401,9 +401,14 @@ async def get_teacher_programs(
     if is_template is not None:
         query = query.filter(Program.is_template == is_template)
 
-    # 過濾特定班級
+    # 過濾特定班級：顯示公版模板 OR 該班級專屬課程
     if classroom_id is not None:
-        query = query.filter(Program.classroom_id == classroom_id)
+        query = query.filter(
+            or_(
+                Program.is_template.is_(True),  # 公版模板
+                Program.classroom_id == classroom_id,  # 該班級專屬課程
+            )
+        )
 
     programs = query.order_by(Program.order_index).all()
 

@@ -170,7 +170,10 @@ export function AssignmentDialog({
     try {
       setLoadingPrograms(true);
       // Only load program list, not lessons or contents
-      const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
+      // Filter by classroom_id to show only public templates and classroom-specific programs
+      const response = await apiClient.get<Program[]>(
+        `/api/teachers/programs?classroom_id=${classroomId}`
+      );
       setPrograms(response);
     } catch (error) {
       console.error("Failed to load programs:", error);
