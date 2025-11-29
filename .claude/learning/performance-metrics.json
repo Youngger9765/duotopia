@@ -1,0 +1,39 @@
+{
+  "metrics": {
+    "error_rate": {
+      "current_week": 0.01,
+      "last_week": 0.0,
+      "trend": "stable",
+      "target": 0.02
+    },
+    "repeat_errors": {
+      "current_week": 0,
+      "last_week": 0,
+      "trend": "stable",
+      "target": 0
+    },
+    "time_to_fix": {
+      "average_minutes": 0,
+      "median_minutes": 0,
+      "trend": "stable"
+    },
+    "test_coverage": {
+      "current": 0,
+      "target": 90,
+      "trend": "stable"
+    }
+  },
+  "weekly_summary": {
+    "week_of": "2025-11-29",
+    "total_tasks": 0,
+    "errors_caught": 1,
+    "errors_prevented": 0,
+    "top_improvement": "Error reflection system initialized"
+  },
+  "historical": [],
+  "metadata": {
+    "created": "2025-11-29T00:00:00Z",
+    "last_updated": "2025-11-29T00:00:00Z",
+    "version": "1.0.0"
+  }
+}

@@ -17,21 +17,34 @@ NC='\033[0m' # No Color
 # Create feature branch for bug fix
 create-feature-fix() {
   local issue_num=$1
-  local description=$2
+  local description=$2  # Optional, for backward compatibility
 
-  if [ -z "$issue_num" ] || [ -z "$description" ]; then
-    echo -e "${RED}❌ Usage: create-feature-fix <issue_number> <description>${NC}"
-    echo "   Example: create-feature-fix 7 student-login-loading"
+  if [ -z "$issue_num" ]; then
+    echo -e "${RED}❌ Usage: create-feature-fix <issue_number> [description]${NC}"
+    echo "   Example: create-feature-fix 28"
+    echo "   With description: create-feature-fix 28 student-login-loading"
     return 1
   fi
 
+  local branch_name="claude/issue-${issue_num}"
+
   git checkout staging
   git pull origin staging
-  git checkout -b "fix/issue-${issue_num}-${description}"
 
-  echo -e "${GREEN}✅ Created branch: fix/issue-${issue_num}-${description}${NC}"
+  # Check if branch already exists
+  if git show-ref --verify --quiet refs/heads/"$branch_name"; then
+    echo -e "${YELLOW}⚠️  Branch $branch_name already exists${NC}"
+    echo -e "${BLUE}💡 Switching to existing branch and pulling latest changes...${NC}"
+    git checkout "$branch_name"
+    git pull origin "$branch_name" 2>/dev/null || echo -e "${YELLOW}⚠️  Branch not on remote yet${NC}"
+  else
+    echo -e "${BLUE}📝 Creating new branch: $branch_name${NC}"
+    git checkout -b "$branch_name"
+  fi
+
+  echo -e "${GREEN}✅ On branch: $branch_name${NC}"
   echo -e "${BLUE}📝 Make your changes and commit${NC}"
-  echo -e "${BLUE}🚀 Then run: deploy-feature ${issue_num}${NC}"
+  echo -e "${BLUE}🚀 Then push: git push origin $branch_name${NC}"
 }
 
 # Create feature branch for new feature
@@ -64,8 +77,8 @@ deploy-feature() {
   fi
 
   # Ensure on feature branch
-  if [[ ! $branch =~ ^(fix|feat)/ ]]; then
-    echo -e "${RED}❌ Must be on a feature branch (fix/* or feat/*)${NC}"
+  if [[ ! $branch =~ ^(fix|feat|claude)/ ]]; then
+    echo -e "${RED}❌ Must be on a feature branch (fix/* or feat/* or claude/*)${NC}"
     return 1
   fi
 
@@ -126,8 +139,8 @@ deploy-feature-no-issue() {
   local branch=$(git branch --show-current)
 
   # Ensure on feature branch
-  if [[ ! $branch =~ ^(fix|feat)/ ]]; then
-    echo -e "${RED}❌ Must be on a feature branch (fix/* or feat/*)${NC}"
+  if [[ ! $branch =~ ^(fix|feat|claude)/ ]]; then
+    echo -e "${RED}❌ Must be on a feature branch (fix/* or feat/* or claude/*)${NC}"
     return 1
   fi
 
@@ -243,15 +256,15 @@ git-flow-status() {
   echo -e "Current branch: ${YELLOW}$current_branch${NC}"
 
   # Check if on feature branch
-  if [[ $current_branch =~ ^(fix|feat)/ ]]; then
+  if [[ $current_branch =~ ^(fix|feat|claude)/ ]]; then
     echo -e "Status: ${GREEN}On feature branch${NC}"
-    echo -e "Next: Commit changes, then run ${YELLOW}deploy-feature <issue_number>${NC}"
+    echo -e "Next: Commit changes, then run ${YELLOW}git push origin $current_branch${NC}"
   elif [[ $current_branch == "staging" ]]; then
     echo -e "Status: ${GREEN}On staging branch${NC}"
     echo -e "Next: Run ${YELLOW}create-release-pr${NC} to prepare release"
   elif [[ $current_branch == "main" ]]; then
     echo -e "Status: ${GREEN}On main branch${NC}"
-    echo -e "Next: Create feature branch with ${YELLOW}create-feature-fix <issue> <desc>${NC}"
+    echo -e "Next: Create feature branch with ${YELLOW}create-feature-fix <issue>${NC}"
   else
     echo -e "Status: ${YELLOW}Unknown branch${NC}"
   fi
@@ -330,7 +343,7 @@ patrol-issues() {
 
   echo ""
   echo -e "${BLUE}💡 Quick Actions:${NC}"
-  echo -e "  ${YELLOW}create-feature-fix <issue_number> <description>${NC} - Start working on an issue"
+  echo -e "  ${YELLOW}create-feature-fix <issue_number>${NC}              - Start working on an issue"
   echo -e "  ${YELLOW}check-approvals${NC}                                 - Check approval status for release"
   echo -e "  ${YELLOW}gh issue view <issue_number>${NC}                    - View issue details"
   echo -e "  ${YELLOW}gh issue view <issue_number> --web${NC}              - Open in browser"
@@ -673,7 +686,7 @@ git-flow-help() {
   echo -e "${BLUE}🤖 Git Issue PR Flow Agent - Available Commands${NC}"
   echo ""
   echo -e "${GREEN}Feature Development:${NC}"
-  echo -e "  ${YELLOW}create-feature-fix <issue> <desc>${NC}  - Create fix branch for issue"
+  echo -e "  ${YELLOW}create-feature-fix <issue>${NC}         - Create fix branch for issue"
   echo -e "  ${YELLOW}create-feature <desc>${NC}              - Create feature branch"
   echo -e "  ${YELLOW}deploy-feature <issue>${NC}             - Deploy to staging (with issue)"
   echo -e "  ${YELLOW}deploy-feature-no-issue${NC}            - Deploy to staging (no issue)"
@@ -695,14 +708,15 @@ git-flow-help() {
   echo -e "  ${YELLOW}git-flow-help${NC}                      - Show this help message"
   echo ""
   echo -e "${BLUE}📚 Example Workflow:${NC}"
-  echo -e "  1. ${YELLOW}create-feature-fix 7 student-login-loading${NC}"
+  echo -e "  1. ${YELLOW}create-feature-fix 28${NC}"
   echo -e "  2. Make changes and commit"
-  echo -e "  3. ${YELLOW}deploy-feature 7${NC}"
-  echo -e "  4. Test in staging"
-  echo -e "  5. ${YELLOW}update-release-pr${NC}"
-  echo -e "  6. Case owner comments \"測試通過\" on issue"
-  echo -e "  7. ${YELLOW}check-approvals${NC} (auto-detects approval & adds label)"
-  echo -e "  8. ${YELLOW}gh pr merge <PR_NUMBER>${NC} (when all approved)"
+  echo -e "  3. ${YELLOW}git push origin claude/issue-28${NC}"
+  echo -e "  4. Test in Per-Issue Test Environment"
+  echo -e "  5. ${YELLOW}gh pr create --base staging --head claude/issue-28 --title \"Fix: [description]\"${NC}"
+  echo -e "  6. ${YELLOW}update-release-pr${NC}"
+  echo -e "  7. Case owner comments \"測試通過\" on issue"
+  echo -e "  8. ${YELLOW}check-approvals${NC}"
+  echo -e "  9. ${YELLOW}gh pr merge <PR_NUMBER>${NC}"
 }
 
 # Export functions for use in shell

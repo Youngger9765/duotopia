@@ -12,13 +12,16 @@ env:
 
 permissions:
   issues: write
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
   cleanup-on-issue-close:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Extract issue number
         id: extract
         run: |
@@ -70,15 +73,30 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed"
+
+      - name: Cleanup claude branch
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting claude branch for Issue #${ISSUE_NUM}..."
+
+          # Check if the exact branch exists: claude/issue-XX
+          BRANCH="claude/issue-${ISSUE_NUM}"
+          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q "${BRANCH}"; then
+            echo "Found branch to delete: $BRANCH"
+            git push origin --delete "$BRANCH" && echo "✅ Claude branch cleaned up" || echo "⚠️ Failed to delete $BRANCH"
+          else
+            echo "ℹ️ No claude branch found for Issue #${ISSUE_NUM}"
+          fi
 
       - name: Comment on issue
         uses: actions/github-script@v7
@@ -100,10 +118,10 @@ jobs:
       - name: Extract issue number from PR
         id: extract
         run: |
-          # Extract issue number from branch name (fix/issue-X-xxx)
+          # Extract issue number from branch name (fix/issue-X-xxx, feature/issue-X-xxx, claude/issue-X-xxx)
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          if [[ "$BRANCH" =~ fix/issue-([0-9]+) ]]; then
-            ISSUE_NUM="${BASH_REMATCH[1]}"
+          if [[ "$BRANCH" =~ (fix|feature|claude)/issue-([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[2]}"
             echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
             echo "✅ Found issue number: $ISSUE_NUM from branch: $BRANCH"
           else
@@ -146,15 +164,31 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed for Issue #${ISSUE_NUM}"
+
+      - name: Cleanup claude branch
+        if: steps.extract.outputs.issue_number != ''
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting claude branch for Issue #${ISSUE_NUM}..."
+
+          # Check if the exact branch exists: claude/issue-XX
+          BRANCH="claude/issue-${ISSUE_NUM}"
+          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q "${BRANCH}"; then
+            echo "Found branch to delete: $BRANCH"
+            git push origin --delete "$BRANCH" && echo "✅ Claude branch cleaned up" || echo "⚠️ Failed to delete $BRANCH"
+          else
+            echo "ℹ️ No claude branch found for Issue #${ISSUE_NUM}"
+          fi
 
       - name: Comment on related issue
         if: steps.extract.outputs.issue_number != ''

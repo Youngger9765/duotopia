@@ -1284,8 +1284,6 @@ async def batch_import_students(
     db: Session = Depends(get_db),
 ):
     """批次匯入學生（支持班級名稱而非ID）"""
-    import uuid
-
     if not import_data.students:
         raise HTTPException(status_code=400, detail="沒有提供學生資料")
 
@@ -1446,14 +1444,14 @@ async def batch_import_students(
 
                     student_name = new_name  # Use the new name with suffix
 
-            # Generate email if not provided
-            email = f"student_{uuid.uuid4().hex[:8]}@duotopia.local"
+            # Don't generate fake email - let students bind their own email later
+            # email = None allows students to decide whether to bind email themselves
 
             # Create student
             default_password = birthdate.strftime("%Y%m%d")
             student = Student(
                 name=student_name,
-                email=email,
+                email=None,  # Let students bind email themselves
                 birthdate=birthdate,
                 password_hash=get_password_hash(default_password),
                 password_changed=False,
