@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - 'fix/issue-*'
+      - 'feature/issue-*'
+      - 'claude/issue-*'  # Support @claude created branches
     paths:
       - 'frontend/**'
       - 'backend/**'
       - '!**/*.md'
+
+permissions:
+  contents: read
+  issues: write
 
 env:
   PROJECT_ID: duotopia-472708
@@ -187,6 +193,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     needs: [extract, deploy-backend, deploy-frontend]
+    if: success()
     permissions:
       issues: write
     steps:
@@ -200,14 +207,38 @@ jobs:
             const issue = process.env.ISSUE;
             const frontend = process.env.FRONTEND;
             const backend = process.env.BACKEND;
+            const sha = context.sha.substring(0, 7);
+            const branch = context.ref.replace('refs/heads/', '');
+
+            // Format timestamp in Taiwan timezone
+            const now = new Date();
+            const taiwanTime = now.toLocaleString('zh-TW', {
+              timeZone: 'Asia/Taipei',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            });
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue,
-              body: "## 🚀 Per-Issue Preview Environment Ready\n\n" +
-                    "**Issue #" + issue + "**\n\n" +
-                    "- **Frontend**: " + frontend + "\n" +
-                    "- **Backend**: " + backend + "\n\n" +
-                    "Min instances = 0 (no cost when idle). Test and comment \"測試通過\" when done."
+              body: `✅ **部署完成！**
+
+測試環境已更新：
+- 🌐 **Frontend**: ${frontend}
+- ⚙️ **Backend**: ${backend}
+
+@kaddy-eunice 請測試最新版本
+
+**部署資訊**:
+- 📝 Commit: \`${sha}\`
+- 🔧 分支: \`${branch}\`
+- ⏰ 部署時間: ${taiwanTime}
+
+💡 Min instances = 0 (閒置時不產生費用)
+✍️ 測試完成後請回覆「測試通過」`
             });
