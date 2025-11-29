@@ -113,6 +113,7 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None  # 開始日期（指派日期）
 
 
 class UpdateAssignmentRequest(BaseModel):
@@ -122,6 +123,7 @@ class UpdateAssignmentRequest(BaseModel):
     description: Optional[str] = None
     instructions: Optional[str] = None  # Alias for description
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None  # 開始日期（指派日期）
     student_ids: Optional[List[int]] = None
 
 
@@ -356,6 +358,7 @@ async def create_assignment(
             title=request.title,
             instructions=request.description,
             due_date=request.due_date,
+            assigned_at=request.start_date if request.start_date else datetime.now(timezone.utc),  # 使用使用者指定的開始日期
             status=AssignmentStatus.NOT_STARTED,
             is_active=True,
         )
@@ -698,7 +701,7 @@ async def patch_assignment(
                 instructions=assignment.description,
                 due_date=assignment.due_date,
                 status=AssignmentStatus.NOT_STARTED,
-                assigned_at=datetime.now(timezone.utc),
+                assigned_at=request.start_date if request.start_date else datetime.now(timezone.utc),  # 使用使用者指定的開始日期（如果有提供）
                 is_active=True,
             )
             db.add(student_assignment)
