@@ -93,8 +93,12 @@ export default function StudentLayout() {
   // Mock organization data - in real app, fetch from API or context
   // TODO: Add organization_name and school_name to StudentUser type
   const organizationData = {
-    organization: ((user as unknown as Record<string, unknown>)?.organization_name as string) || "Duotopia Learning",
-    school: ((user as unknown as Record<string, unknown>)?.school_name as string) || "示範學校",
+    organization:
+      ((user as unknown as Record<string, unknown>)
+        ?.organization_name as string) || "Duotopia Learning",
+    school:
+      ((user as unknown as Record<string, unknown>)?.school_name as string) ||
+      "示範學校",
     classroom: user?.classroom_name || "默認班級",
   };
 

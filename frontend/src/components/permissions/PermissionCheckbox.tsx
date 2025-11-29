@@ -1,13 +1,13 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { PermissionManager, TeacherPermissions } from '@/lib/permissions';
-import { Info } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { PermissionManager, TeacherPermissions } from "@/lib/permissions";
+import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 
 interface PermissionCheckboxProps {
   permission: keyof TeacherPermissions;
@@ -32,11 +32,11 @@ export function PermissionCheckbox({
   // Format permission name for display
   const formatPermissionName = (perm: string): string => {
     return perm
-      .replace(/_/g, ' ')
-      .replace(/^can /, '')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .replace(/_/g, " ")
+      .replace(/^can /, "")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   const displayName = formatPermissionName(permission);
@@ -52,7 +52,7 @@ export function PermissionCheckbox({
       <div className="flex-1">
         <Label
           htmlFor={permission}
-          className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
+          className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
         >
           {displayName}
         </Label>

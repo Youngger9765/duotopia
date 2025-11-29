@@ -14,7 +14,6 @@ from models import (
     TransactionType,
     SubscriptionPeriod,
     PointUsageLog,
-    Organization,
     TeacherOrganization,
 )
 from routers.teachers import get_current_teacher

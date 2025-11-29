@@ -1,9 +1,23 @@
-import { memo, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { PermissionManager, Teacher } from '@/lib/permissions';
-import { Shield, Users, Eye, Settings, BookOpen, CheckCircle2, XCircle } from 'lucide-react';
+import { memo, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { PermissionManager, Teacher } from "@/lib/permissions";
+import {
+  Shield,
+  Users,
+  Eye,
+  Settings,
+  BookOpen,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 
 interface PermissionSummaryProps {
   teacher: Teacher;
@@ -22,17 +36,17 @@ export const PermissionSummary = memo(function PermissionSummary({
 }: PermissionSummaryProps) {
   const permissions = useMemo(
     () => PermissionManager.getAllPermissions(teacher),
-    [teacher]
+    [teacher],
   );
 
   const isOrgOwner = useMemo(
     () => PermissionManager.isOrgOwner(teacher),
-    [teacher]
+    [teacher],
   );
 
   const isSchoolAdmin = useMemo(
     () => PermissionManager.isSchoolAdmin(teacher),
-    [teacher]
+    [teacher],
   );
 
   // Calculate permission score (percentage of permissions enabled) - memoized
@@ -49,9 +63,9 @@ export const PermissionSummary = memo(function PermissionSummary({
   }, [permissions]);
 
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 50) return 'text-orange-600';
-    return 'text-gray-600';
+    if (score >= 80) return "text-green-600";
+    if (score >= 50) return "text-orange-600";
+    return "text-gray-600";
   };
 
   const getRoleBadge = () => {
@@ -88,7 +102,9 @@ export const PermissionSummary = memo(function PermissionSummary({
               <div className="text-sm font-medium">{teacher.name}</div>
               {getRoleBadge()}
             </div>
-            <div className={`text-2xl font-bold ${getScoreColor(permissionScore)}`}>
+            <div
+              className={`text-2xl font-bold ${getScoreColor(permissionScore)}`}
+            >
               {permissionScore.toFixed(0)}%
             </div>
           </div>
@@ -101,30 +117,31 @@ export const PermissionSummary = memo(function PermissionSummary({
   const permissionItems = [
     {
       icon: <BookOpen className="h-4 w-4" />,
-      label: 'Create Classrooms',
+      label: "Create Classrooms",
       enabled: permissions.can_create_classrooms,
-      detail: permissions.max_classrooms === -1
-        ? 'Unlimited'
-        : `Max: ${permissions.max_classrooms || 0}`,
+      detail:
+        permissions.max_classrooms === -1
+          ? "Unlimited"
+          : `Max: ${permissions.max_classrooms || 0}`,
     },
     {
       icon: <Users className="h-4 w-4" />,
-      label: 'View Other Teachers',
+      label: "View Other Teachers",
       enabled: permissions.can_view_other_teachers,
     },
     {
       icon: <Users className="h-4 w-4" />,
-      label: 'Manage Students',
+      label: "Manage Students",
       enabled: permissions.can_manage_students,
     },
     {
       icon: <Eye className="h-4 w-4" />,
-      label: 'View All Classrooms',
+      label: "View All Classrooms",
       enabled: permissions.can_view_all_classrooms,
     },
     {
       icon: <Settings className="h-4 w-4" />,
-      label: 'Edit School Settings',
+      label: "Edit School Settings",
       enabled: permissions.can_edit_school_settings,
     },
   ];
@@ -145,7 +162,9 @@ export const PermissionSummary = memo(function PermissionSummary({
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Permission Level</span>
-            <span className={`text-xl font-bold ${getScoreColor(permissionScore)}`}>
+            <span
+              className={`text-xl font-bold ${getScoreColor(permissionScore)}`}
+            >
               {permissionScore.toFixed(0)}%
             </span>
           </div>
@@ -163,14 +182,20 @@ export const PermissionSummary = memo(function PermissionSummary({
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <div className={item.enabled ? 'text-green-600' : 'text-gray-400'}>
+                    <div
+                      className={
+                        item.enabled ? "text-green-600" : "text-gray-400"
+                      }
+                    >
                       {item.icon}
                     </div>
                     <span className="text-sm">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {item.detail && (
-                      <span className="text-xs text-gray-500">{item.detail}</span>
+                      <span className="text-xs text-gray-500">
+                        {item.detail}
+                      </span>
                     )}
                     {item.enabled ? (
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -183,18 +208,21 @@ export const PermissionSummary = memo(function PermissionSummary({
             </div>
 
             {/* Allowed Actions */}
-            {permissions.allowed_actions && permissions.allowed_actions.length > 0 && (
-              <div className="pt-2 border-t">
-                <h4 className="text-sm font-semibold mb-2">Allowed Actions:</h4>
-                <div className="flex flex-wrap gap-1">
-                  {permissions.allowed_actions.map((action, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {action}
-                    </Badge>
-                  ))}
+            {permissions.allowed_actions &&
+              permissions.allowed_actions.length > 0 && (
+                <div className="pt-2 border-t">
+                  <h4 className="text-sm font-semibold mb-2">
+                    Allowed Actions:
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {permissions.allowed_actions.map((action, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {action}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
       </CardContent>

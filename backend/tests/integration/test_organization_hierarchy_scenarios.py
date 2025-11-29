@@ -426,11 +426,13 @@ class TestOrgOwnerUniqueness:
             .filter(
                 TeacherOrganization.organization_id == demo_org.id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .all()
         )
-        assert len(existing_owners) == 1, f"Expected 1 org_owner, found {len(existing_owners)}"
+        assert (
+            len(existing_owners) == 1
+        ), f"Expected 1 org_owner, found {len(existing_owners)}"
         assert existing_owners[0].teacher_id == org_owner.id
 
         # In API, attempting to add another org_owner would be blocked
@@ -481,7 +483,7 @@ class TestOrgOwnerUniqueness:
             .filter(
                 TeacherOrganization.organization_id == demo_org.id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .all()
         )
@@ -661,11 +663,13 @@ class TestEdgeCases:
             shared_test_session.query(ClassroomSchool)
             .filter(
                 ClassroomSchool.classroom_id == classroom.id,
-                ClassroomSchool.is_active == True,
+                ClassroomSchool.is_active.is_(True),
             )
             .all()
         )
-        assert len(active_links) == 1, f"Expected 1 active link, found {len(active_links)}"
+        assert (
+            len(active_links) == 1
+        ), f"Expected 1 active link, found {len(active_links)}"
         assert active_links[0].school_id == school1.id
 
     def test_inactive_organizations_not_listed(
@@ -691,13 +695,17 @@ class TestEdgeCases:
         # Query only active orgs
         active_orgs = (
             shared_test_session.query(Organization)
-            .filter(Organization.is_active == True)
+            .filter(Organization.is_active.is_(True))
             .all()
         )
 
         org_ids = [org.id for org in active_orgs]
-        assert active_org.id in org_ids, f"Active org {active_org.id} not found in {org_ids}"
-        assert inactive_org.id not in org_ids, f"Inactive org {inactive_org.id} should not be in {org_ids}"
+        assert (
+            active_org.id in org_ids
+        ), f"Active org {active_org.id} not found in {org_ids}"
+        assert (
+            inactive_org.id not in org_ids
+        ), f"Inactive org {inactive_org.id} should not be in {org_ids}"
 
     def test_empty_roles_array_handled_correctly(
         self,

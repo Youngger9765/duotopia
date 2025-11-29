@@ -1,14 +1,14 @@
-import { useState, useMemo, memo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState, useMemo, memo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,21 +16,24 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { toast } from 'sonner';
-import { Search, Save, X, Undo2, Shield, Users } from 'lucide-react';
+} from "@/components/ui/table";
+import { toast } from "sonner";
+import { Search, Save, X, Undo2, Shield, Users } from "lucide-react";
 import {
   PermissionManager,
   TeacherPermissions,
   PERMISSION_TEMPLATES,
   PermissionTemplateName,
   Teacher,
-} from '@/lib/permissions';
-import { useDebounce } from '@/hooks/useDebounce';
+} from "@/lib/permissions";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface TeacherPermissionManagerProps {
   teachers: Teacher[];
-  onSavePermissions: (teacherId: number, permissions: TeacherPermissions) => Promise<void>;
+  onSavePermissions: (
+    teacherId: number,
+    permissions: TeacherPermissions,
+  ) => Promise<void>;
   onCancel?: () => void;
 }
 
@@ -43,11 +46,17 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
   onSavePermissions,
   onCancel,
 }: TeacherPermissionManagerProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<PermissionTemplateName | ''>('');
-  const [permissionChanges, setPermissionChanges] = useState<PermissionChanges>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<
+    PermissionTemplateName | ""
+  >("");
+  const [permissionChanges, setPermissionChanges] = useState<PermissionChanges>(
+    {},
+  );
   const [saving, setSaving] = useState(false);
-  const [selectedTeachers, setSelectedTeachers] = useState<Set<number>>(new Set());
+  const [selectedTeachers, setSelectedTeachers] = useState<Set<number>>(
+    new Set(),
+  );
 
   // Debounce search term for better performance (500ms delay)
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -59,7 +68,7 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
     return teachers.filter(
       (teacher) =>
         teacher.name.toLowerCase().includes(term) ||
-        teacher.email.toLowerCase().includes(term)
+        teacher.email.toLowerCase().includes(term),
     );
   }, [teachers, debouncedSearchTerm]);
 
@@ -76,7 +85,7 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
   const updatePermission = (
     teacherId: number,
     permission: keyof TeacherPermissions,
-    value: boolean | number | string[]
+    value: boolean | number | string[],
   ) => {
     const currentPermissions = getTeacherPermissions(teacherId);
     const newPermissions = { ...currentPermissions, [permission]: value };
@@ -90,11 +99,12 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
   // Apply template to selected teachers
   const applyTemplate = () => {
     if (!selectedTemplate || selectedTeachers.size === 0) {
-      toast.error('Please select a template and at least one teacher');
+      toast.error("Please select a template and at least one teacher");
       return;
     }
 
-    const templatePermissions = PermissionManager.applyTemplate(selectedTemplate);
+    const templatePermissions =
+      PermissionManager.applyTemplate(selectedTemplate);
     const newChanges = { ...permissionChanges };
 
     selectedTeachers.forEach((teacherId) => {
@@ -103,7 +113,7 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
 
     setPermissionChanges(newChanges);
     toast.success(
-      `Applied ${PERMISSION_TEMPLATES[selectedTemplate].name} template to ${selectedTeachers.size} teacher(s)`
+      `Applied ${PERMISSION_TEMPLATES[selectedTemplate].name} template to ${selectedTeachers.size} teacher(s)`,
     );
   };
 
@@ -130,25 +140,29 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
   // Save all changes
   const handleSaveAll = async () => {
     if (Object.keys(permissionChanges).length === 0) {
-      toast.info('No changes to save');
+      toast.info("No changes to save");
       return;
     }
 
     setSaving(true);
     try {
-      const savePromises = Object.entries(permissionChanges).map(([teacherId, permissions]) => {
-        if (!PermissionManager.validatePermissions(permissions)) {
-          throw new Error(`Invalid permissions for teacher ${teacherId}`);
-        }
-        return onSavePermissions(parseInt(teacherId), permissions);
-      });
+      const savePromises = Object.entries(permissionChanges).map(
+        ([teacherId, permissions]) => {
+          if (!PermissionManager.validatePermissions(permissions)) {
+            throw new Error(`Invalid permissions for teacher ${teacherId}`);
+          }
+          return onSavePermissions(parseInt(teacherId), permissions);
+        },
+      );
 
       await Promise.all(savePromises);
-      toast.success(`Successfully updated permissions for ${savePromises.length} teacher(s)`);
+      toast.success(
+        `Successfully updated permissions for ${savePromises.length} teacher(s)`,
+      );
       setPermissionChanges({});
       setSelectedTeachers(new Set());
     } catch (error) {
-      toast.error('Failed to save permissions: ' + (error as Error).message);
+      toast.error("Failed to save permissions: " + (error as Error).message);
     } finally {
       setSaving(false);
     }
@@ -158,7 +172,7 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
   const handleReset = () => {
     setPermissionChanges({});
     setSelectedTeachers(new Set());
-    toast.info('Changes reset');
+    toast.info("Changes reset");
   };
 
   // Get role badge
@@ -206,13 +220,23 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset} disabled={!hasChanges}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            disabled={!hasChanges}
+          >
             <Undo2 className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button variant="default" size="sm" onClick={handleSaveAll} disabled={!hasChanges || saving}>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleSaveAll}
+            disabled={!hasChanges || saving}
+          >
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save All'}
+            {saving ? "Saving..." : "Save All"}
           </Button>
           {onCancel && (
             <Button variant="ghost" size="sm" onClick={onCancel}>
@@ -226,9 +250,16 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
       {/* Bulk Actions */}
       <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="flex-1">
-          <label className="text-sm font-medium mb-2 block">Apply Template to Selected:</label>
+          <label className="text-sm font-medium mb-2 block">
+            Apply Template to Selected:
+          </label>
           <div className="flex gap-2">
-            <Select value={selectedTemplate} onValueChange={(value) => setSelectedTemplate(value as PermissionTemplateName)}>
+            <Select
+              value={selectedTemplate}
+              onValueChange={(value) =>
+                setSelectedTemplate(value as PermissionTemplateName)
+              }
+            >
               <SelectTrigger className="w-full sm:w-64">
                 <SelectValue placeholder="Select template..." />
               </SelectTrigger>
@@ -260,7 +291,10 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedTeachers.size === filteredTeachers.length && filteredTeachers.length > 0}
+                    checked={
+                      selectedTeachers.size === filteredTeachers.length &&
+                      filteredTeachers.length > 0
+                    }
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
@@ -277,7 +311,10 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
             <TableBody>
               {filteredTeachers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                  <TableCell
+                    colSpan={9}
+                    className="text-center py-8 text-gray-500"
+                  >
                     No teachers found
                   </TableCell>
                 </TableRow>
@@ -291,19 +328,23 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                   return (
                     <TableRow
                       key={teacher.id}
-                      className={`${hasChange ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''} ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}
+                      className={`${hasChange ? "bg-yellow-50 dark:bg-yellow-900/10" : ""} ${isSelected ? "bg-blue-50 dark:bg-blue-900/10" : ""}`}
                     >
                       <TableCell>
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={() => toggleTeacherSelection(teacher.id)}
+                          onCheckedChange={() =>
+                            toggleTeacherSelection(teacher.id)
+                          }
                           disabled={isOrgOwner}
                         />
                       </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{teacher.name}</div>
-                          <div className="text-sm text-gray-500">{teacher.email}</div>
+                          <div className="text-sm text-gray-500">
+                            {teacher.email}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{getRoleBadge(teacher)}</TableCell>
@@ -311,7 +352,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                         <Checkbox
                           checked={permissions.can_create_classrooms}
                           onCheckedChange={(checked) =>
-                            updatePermission(teacher.id, 'can_create_classrooms', checked === true)
+                            updatePermission(
+                              teacher.id,
+                              "can_create_classrooms",
+                              checked === true,
+                            )
                           }
                           disabled={isOrgOwner}
                         />
@@ -320,7 +365,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                         <Checkbox
                           checked={permissions.can_view_other_teachers}
                           onCheckedChange={(checked) =>
-                            updatePermission(teacher.id, 'can_view_other_teachers', checked === true)
+                            updatePermission(
+                              teacher.id,
+                              "can_view_other_teachers",
+                              checked === true,
+                            )
                           }
                           disabled={isOrgOwner}
                         />
@@ -329,7 +378,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                         <Checkbox
                           checked={permissions.can_manage_students}
                           onCheckedChange={(checked) =>
-                            updatePermission(teacher.id, 'can_manage_students', checked === true)
+                            updatePermission(
+                              teacher.id,
+                              "can_manage_students",
+                              checked === true,
+                            )
                           }
                           disabled={isOrgOwner}
                         />
@@ -338,7 +391,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                         <Checkbox
                           checked={permissions.can_view_all_classrooms}
                           onCheckedChange={(checked) =>
-                            updatePermission(teacher.id, 'can_view_all_classrooms', checked === true)
+                            updatePermission(
+                              teacher.id,
+                              "can_view_all_classrooms",
+                              checked === true,
+                            )
                           }
                           disabled={isOrgOwner}
                         />
@@ -347,7 +404,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                         <Checkbox
                           checked={permissions.can_edit_school_settings}
                           onCheckedChange={(checked) =>
-                            updatePermission(teacher.id, 'can_edit_school_settings', checked === true)
+                            updatePermission(
+                              teacher.id,
+                              "can_edit_school_settings",
+                              checked === true,
+                            )
                           }
                           disabled={isOrgOwner}
                         />
@@ -357,7 +418,11 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
                           type="number"
                           value={permissions.max_classrooms || 0}
                           onChange={(e) =>
-                            updatePermission(teacher.id, 'max_classrooms', parseInt(e.target.value) || 0)
+                            updatePermission(
+                              teacher.id,
+                              "max_classrooms",
+                              parseInt(e.target.value) || 0,
+                            )
                           }
                           className="w-20 text-center"
                           min={-1}
@@ -376,7 +441,8 @@ export const TeacherPermissionManager = memo(function TeacherPermissionManager({
       {/* Summary */}
       <div className="text-sm text-gray-600 dark:text-gray-400">
         Showing {filteredTeachers.length} of {teachers.length} teachers
-        {hasChanges && ` • ${Object.keys(permissionChanges).length} pending changes`}
+        {hasChanges &&
+          ` • ${Object.keys(permissionChanges).length} pending changes`}
         {selectedTeachers.size > 0 && ` • ${selectedTeachers.size} selected`}
       </div>
     </div>

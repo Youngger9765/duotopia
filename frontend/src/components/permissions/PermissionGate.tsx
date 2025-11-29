@@ -1,5 +1,9 @@
-import { ReactNode } from 'react';
-import { PermissionManager, Teacher, TeacherPermissions } from '@/lib/permissions';
+import { ReactNode } from "react";
+import {
+  PermissionManager,
+  Teacher,
+  TeacherPermissions,
+} from "@/lib/permissions";
 
 interface PermissionGateProps {
   teacher: Teacher | null;
