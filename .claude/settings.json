@@ -1,5 +1,7 @@
 {
   "hooks": {
-    "UserPromptSubmit": ".claude/hooks/check-agent-rules.py"
+    "UserPromptSubmit": ".claude/hooks/check-agent-rules.py",
+    "PreToolUse(Write)": ".claude/hooks/check-file-size.py",
+    "PreToolUse(Edit)": ".claude/hooks/check-file-size.py"
   }
 }

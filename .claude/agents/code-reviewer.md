@@ -47,6 +47,7 @@ You are a senior code reviewer specializing in security, performance, and best p
 - [ ] Functions < 50 lines
 - [ ] Cyclomatic complexity < 10
 - [ ] Test coverage adequate
+- [ ] **File size limits respected** (see File Size Check below)
 
 ### Phase 5: Documentation
 - [ ] Code comments for complex logic
@@ -100,6 +101,121 @@ You are a senior code reviewer specializing in security, performance, and best p
 3. **WebSearch** - Check latest security advisories
 4. **Glob** - Find related files that might be affected
 
+## File Size Check (CONTEXT-AWARE)
+
+**INTELLIGENT**: File size checks adapt based on code context (POC vs Production).
+
+### Thresholds (Context-Aware)
+
+#### Production Code (`routers/`, `pages/`, `components/`, etc.)
+- **500 lines**: ⚠️ Warning - Consider refactoring if adding >50 lines
+- **1000 lines**: 🔴 Critical - MUST refactor before major changes
+- **Action**: Strict enforcement for maintainability
+
+#### POC/Experimental Code (`poc_*`, `demo_*`, `experiments/`, etc.)
+- **1000 lines**: 💡 Info - Gentle suggestion only
+- **2000 lines**: ⚠️ Warning - Performance concern (slow IDE)
+- **Action**: Relaxed, user can continue without refactoring
+
+#### General Code
+- **500 lines**: 💡 Info - Notice only
+- **1000 lines**: ⚠️ Warning - Recommend refactoring
+- **Action**: Moderate enforcement
+
+#### Documentation Files (`.md`)
+- **800 lines**: 💡 Suggestion to split into topics
+
+### User Override
+Users can skip checks by adding to file header:
+```python
+# file-size-check: ignore
+# Reason: POC for new feature, will refactor after validation
+```
+
+### Detection Process
+```bash
+# Count lines in modified files
+wc -l [file_path]
+
+# Automatic context detection:
+# - POC patterns: poc_*, demo_*, test_*, experiments/
+# - Production patterns: routers/, pages/, components/
+# - Apply appropriate threshold based on context
+```
+
+### Response Protocol
+
+#### Production Code > 1000 lines (CRITICAL)
+1. **STOP** and mark as 🔴 CRITICAL ISSUE
+2. **ANALYZE** file structure:
+   ```python
+   # Example analysis
+   - Line 1-500: Classroom CRUD operations
+   - Line 501-1000: Student management logic
+   - Line 1001-1500: Assignment operations
+   - Line 1501-2000: Utility functions
+   ```
+3. **RECOMMEND** specific modularization:
+   ```
+   Suggested split for routers/teachers.py (3237 lines):
+   routers/teachers/
+     __init__.py           # Main router (200 lines)
+     classroom_ops.py      # Classroom operations (800 lines)
+     student_ops.py        # Student management (900 lines)
+     assignment_ops.py     # Assignment operations (800 lines)
+     utils.py              # Helper functions (300 lines)
+     validators.py         # Input validation (237 lines)
+   ```
+4. **REQUIRE** user approval before allowing changes
+
+#### Production Code 500-1000 lines (WARNING)
+1. **WARN** in report
+2. **SUGGEST** refactoring if adding significant code (>50 lines)
+3. **DOCUMENT** technical debt
+
+#### POC Code 1000-2000 lines (INFO)
+1. **INFO** - Gentle suggestion only
+2. **MENTION** refactoring when moving to production
+3. **ALLOW** to continue without refactoring
+
+#### POC Code > 2000 lines (WARNING)
+1. **WARN** about performance issues (slow IDE, long build times)
+2. **SUGGEST** splitting even for POC
+3. **ALLOW** to continue with awareness
+
+### Report Format
+```markdown
+### 📏 File Size Analysis
+
+#### 🔴 Critical - Production Code Too Large
+- `backend/routers/teachers.py` - **3237 lines** (🏭 Production, Limit: 1000)
+  - **Impact**: Hard to maintain, difficult code review, slow IDE
+  - **Recommended split**: See modularization plan above
+  - **Action**: MUST refactor before making major changes
+
+#### ⚠️ Warning - Consider Refactoring
+- `frontend/src/pages/ClassroomDetail.tsx` - **723 lines** (🏭 Production, Limit: 500)
+  - **Suggestion**: Extract hooks to separate files
+  - **Action**: Refactor if adding >50 lines
+
+#### 💡 Info - POC File Notice
+- `backend/poc_new_feature.py` - **1500 lines** (🧪 POC/Experimental)
+  - **Notice**: This is experimental code, size limits are relaxed
+  - **Suggestion**: Consider refactoring when moving to production
+  - **Action**: You may continue without refactoring
+```
+
+### Context Detection
+The hook automatically detects file context:
+
+**POC/Experimental indicators**:
+- Filename: `poc_*`, `demo_*`, `temp_*`, `draft_*`, `test_*`
+- Directory: `poc/`, `experiments/`, `prototypes/`, `scripts/`, `tools/`
+- Test files: `test_*.py`, `*.test.ts`, `*.spec.ts`
+
+**Production code indicators**:
+- Directory: `routers/`, `pages/`, `components/`, `services/`, `models/`, `api/`
+
 ## Auto-Review Triggers
 
 Automatically perform review when detecting:
@@ -109,6 +225,7 @@ Automatically perform review when detecting:
 - Uncaught promise rejections
 - Missing authentication checks
 - Large bundle size increases
+- **Files exceeding 500 lines** (File Size Check)
 
 ## Example Commands
 

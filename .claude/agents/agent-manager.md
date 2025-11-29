@@ -26,6 +26,7 @@ MUST wait for explicit user command before any git commit or push operations.
 3. **Hasty completion** - Must complete comprehensive testing
 4. **Direct staging commits** - Must use feature branches
 5. **"Fixes #N" in feature branch** - Only use "Related to #N"
+6. **Modifying oversized files without refactoring** - Files >1000 lines require modularization plan first
 
 ## Operation Priority Rules
 
