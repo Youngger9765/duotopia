@@ -52,9 +52,13 @@ Otherwise → Analyze context and choose
 
 ### Project Documents
 - **[PRD.md](./PRD.md)** - 产品需求文档
+- **[ORG_IMPLEMENTATION_SPEC.md](./ORG_IMPLEMENTATION_SPEC.md)** - 机构层级管理系统完整规格 + 性能优化
 - **[CICD.md](./CICD.md)** - 部署与 CI/CD
 - **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - 详细测试指南
 - **[DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)** - 部署状态
+
+### Integration Guides
+- **[TapPay Integration](./docs/integrations/TAPPAY_INTEGRATION_GUIDE.md)** - 金流与电子发票整合完整指南
 
 ## 🤖 MANDATORY AGENT SYSTEM
 
