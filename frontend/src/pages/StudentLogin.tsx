@@ -38,6 +38,9 @@ export default function StudentLogin() {
   const searchParams = new URLSearchParams(window.location.search);
   const isDemoMode = searchParams.get("is_demo") === "true";
 
+  // 檢查是否有 teacher_email 參數 (Issue #52: 擴充學生登入功能)
+  const teacherEmailFromUrl = searchParams.get("teacher_email");
+
   // 檢查環境
   const isProduction = import.meta.env.VITE_ENVIRONMENT === "production";
   const showDemoBlocks = !isProduction || isDemoMode;
@@ -64,6 +67,54 @@ export default function StudentLogin() {
       setTeacherHistory(JSON.parse(history));
     }
   }, []);
+
+  // Issue #52: Auto-validate teacher email from URL parameter and skip to step 2
+  useEffect(() => {
+    const autoValidateTeacher = async () => {
+      if (teacherEmailFromUrl && teacherEmailFromUrl.trim()) {
+        setTeacherEmail(teacherEmailFromUrl);
+        setLoading(true);
+        try {
+          // Validate teacher email exists
+          const response = await teacherService.validateTeacher(teacherEmailFromUrl);
+          if (response.valid) {
+            const teacher = {
+              email: teacherEmailFromUrl,
+              name: response.name,
+              lastUsed: new Date(),
+            };
+
+            // Save to history
+            const history = localStorage.getItem("teacherHistory");
+            const existingHistory = history ? JSON.parse(history) : [];
+            const updatedHistory = [
+              teacher,
+              ...existingHistory.filter((t: TeacherHistory) => t.email !== teacherEmailFromUrl),
+            ].slice(0, 5); // Keep last 5 teachers
+
+            localStorage.setItem("teacherHistory", JSON.stringify(updatedHistory));
+            setTeacherHistory(updatedHistory);
+            setSelectedTeacher(teacher);
+
+            // Load classrooms for this teacher
+            const classroomsData = await teacherService.getPublicClassrooms(teacherEmailFromUrl);
+            setClassrooms(classroomsData);
+
+            // Skip to step 2 (classroom selection)
+            setStep(2);
+          } else {
+            setError(t("studentLogin.errors.teacherNotFound"));
+          }
+        } catch {
+          setError(t("studentLogin.errors.teacherValidationFailed"));
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    autoValidateTeacher();
+  }, [teacherEmailFromUrl, t]);
 
   // Step 1: Teacher selection
   const handleTeacherSubmit = async () => {

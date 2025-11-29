@@ -346,6 +346,16 @@
     },
     "error": {
       "loadFailed": "載入失敗"
+    },
+    "shareButton": "分享給學生",
+    "shareModal": {
+      "title": "分享學生登入連結",
+      "description": "分享此 QR Code 或連結給您的學生，讓他們直接登入",
+      "scanQR": "掃描 QR Code 登入",
+      "shareLink": "或複製並分享此連結：",
+      "copyLink": "複製連結",
+      "copied": "已複製！",
+      "instructions": "使用此連結的學生將跳過輸入教師 Email 的步驟，直接進入選擇班級。"
     }
   },
   "admin": {

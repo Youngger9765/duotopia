@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TeacherLayout from "@/components/TeacherLayout";
-import { Users, UserCheck, BookOpen, Settings } from "lucide-react";
+import { Users, UserCheck, BookOpen, Settings, Share2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ShareStudentLoginModal } from "@/components/ShareStudentLoginModal";
 
 interface DashboardData {
   teacher: {
@@ -42,6 +43,7 @@ export default function TeacherDashboard() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,11 +96,21 @@ export default function TeacherDashboard() {
   return (
     <TeacherLayout>
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">
-          {t("teacherDashboard.welcome.title", {
-            name: dashboardData.teacher.name,
-          })}
-        </h2>
+        {/* Header with Share Button - Issue #52 */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold text-gray-900">
+            {t("teacherDashboard.welcome.title", {
+              name: dashboardData.teacher.name,
+            })}
+          </h2>
+          <Button
+            onClick={() => setShowShareModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            {t("teacherDashboard.shareButton")}
+          </Button>
+        </div>
 
         {/* Subscription Status Card - Always Show */}
         <Card
@@ -275,6 +287,13 @@ export default function TeacherDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Share Student Login Modal - Issue #52 */}
+        <ShareStudentLoginModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          teacherEmail={dashboardData.teacher.email}
+        />
       </div>
     </TeacherLayout>
   );

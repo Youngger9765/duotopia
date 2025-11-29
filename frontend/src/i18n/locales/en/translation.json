@@ -346,6 +346,16 @@
     },
     "error": {
       "loadFailed": "Load failed"
+    },
+    "shareButton": "Share to Students",
+    "shareModal": {
+      "title": "Share Student Login Link",
+      "description": "Share this QR code or link with your students to let them login directly",
+      "scanQR": "Scan QR Code to Login",
+      "shareLink": "Or copy and share this link:",
+      "copyLink": "Copy Link",
+      "copied": "Copied!",
+      "instructions": "Students who use this link will skip the teacher email input step and go directly to class selection."
     }
   },
   "admin": {
