@@ -1,0 +1,35 @@
+{
+  "patterns": [
+    {
+      "id": "P001",
+      "category": "testing",
+      "severity": "high",
+      "error_types": [
+        "test_failure"
+      ],
+      "description": "Testing error: test_failure",
+      "occurrences": 1,
+      "last_seen": "2025-11-29T03:00:44.151508",
+      "root_causes": [],
+      "prevention_strategies": [],
+      "related_patterns": []
+    }
+  ],
+  "statistics": {
+    "total_errors": 1,
+    "by_category": {
+      "testing": 1
+    },
+    "by_severity": {
+      "critical": 0,
+      "high": 1,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "metadata": {
+    "created": "2025-11-29T00:00:00Z",
+    "last_updated": "2025-11-29T00:00:00Z",
+    "version": "1.0.0"
+  }
+}
