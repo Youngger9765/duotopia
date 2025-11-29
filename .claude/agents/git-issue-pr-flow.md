@@ -45,9 +45,10 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 
 ### Phase 2: PDCA Do (Start commits)
 1. **Create Feature Branch** (NOT staging!):
-   - `create-feature-fix <NUM> <description>`
-   - Format: `fix/issue-<NUM>-<description>`
+   - `create-feature-fix <NUM>`
+   - Format: `claude/issue-<NUM>` (固定分支名，不含時間戳)
    - **NEVER commit directly to staging**
+   - **分支重用**: 如果分支已存在，會自動切換並拉取最新代碼
 2. **TDD Development**:
    - Write failing tests (Red Phase) - create `backend/tests/integration/api/test_issue_<NUM>.py`
    - Implement fix (Green Phase)
@@ -58,16 +59,16 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 4. **Local Testing**:
    - `cd backend && pytest tests/ -v`
    - `cd frontend && npm run typecheck && npm run build`
-5. **Push Feature Branch**: `git push origin fix/issue-<NUM>-xxx`
+5. **Push Feature Branch**: `git push origin claude/issue-<NUM>`
    - **Confirm pushing feature branch, NOT staging**
 
 ### Phase 3: PDCA Check (Wait for approvals)
 1. Wait for Per-Issue Test Environment deployment
-   - Monitor: `gh run list --branch fix/issue-<NUM>-xxx --limit 5`
+   - Monitor: `gh run list --branch claude/issue-<NUM> --limit 5`
    - URL: `https://duotopia-preview-issue-<NUM>-frontend.run.app`
 2. **MANDATORY: Create PR** (most critical step!):
    ```bash
-   gh pr create --base staging --head fix/issue-<NUM>-xxx \
+   gh pr create --base staging --head claude/issue-<NUM> \
      --title "Fix: [description]" \
      --body "Related to #<NUM> [full engineering report]"
    ```
@@ -97,7 +98,7 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 ## Available Commands
 
 ### Feature Development
-- `create-feature-fix <issue> <desc>` - Create fix branch
+- `create-feature-fix <issue>` - Create fix branch
 - `deploy-feature <issue>` - Merge to staging
 
 ### Release Management
