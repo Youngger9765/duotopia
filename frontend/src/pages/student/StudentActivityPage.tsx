@@ -144,7 +144,7 @@ export default function StudentActivityPage() {
     } catch (error) {
       console.error("Failed to load activities:", error);
       toast.error(t("studentActivityPage.errors.loadFailed"));
-      navigate(`/student/assignment/${assignmentId}/detail`);
+      navigate("/student/assignments");
     } finally {
       setLoading(false);
     }
@@ -171,7 +171,7 @@ export default function StudentActivityPage() {
 
       toast.success(t("studentActivityPage.messages.submitSuccess"));
       setTimeout(() => {
-        window.location.href = `/student/assignment/${assignmentId}/detail`;
+        window.location.href = "/student/assignments";
       }, 500);
     } catch (error) {
       console.error("Failed to submit:", error);
@@ -219,7 +219,7 @@ export default function StudentActivityPage() {
       assignmentTitle={assignmentTitle}
       assignmentId={parseInt(assignmentId!)}
       assignmentStatus={assignmentStatus}
-      onBack={() => navigate(`/student/assignment/${assignmentId}/detail`)}
+      onBack={() => navigate("/student/assignments")}
       onSubmit={handleSubmit}
     />
   );
