@@ -151,7 +151,10 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                       {t("teacherLayout.title")}
                     </h1>
                     {/* TODO: Add organization_id to TeacherProfile type */}
-                    {Boolean((teacherProfile as unknown as Record<string, unknown>)?.organization_id) && (
+                    {Boolean(
+                      (teacherProfile as unknown as Record<string, unknown>)
+                        ?.organization_id,
+                    ) && (
                       <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs">
                         <Building2 className="h-3 w-3" />
                         <span>Org</span>
@@ -164,7 +167,10 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                 </div>
               ) : (
                 <div className="flex-1 flex justify-center">
-                  {Boolean((teacherProfile as unknown as Record<string, unknown>)?.organization_id) && (
+                  {Boolean(
+                    (teacherProfile as unknown as Record<string, unknown>)
+                      ?.organization_id,
+                  ) && (
                     <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   )}
                 </div>

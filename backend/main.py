@@ -120,7 +120,9 @@ async def startup_event():
     log_all = environment == "development"
     setup_query_logging(get_engine(), log_all=log_all)
 
-    print("🚀 Application startup complete - Thread pools initialized, query logging enabled")
+    print(
+        "🚀 Application startup complete - Thread pools initialized, query logging enabled"
+    )
 
 
 @app.on_event("shutdown")

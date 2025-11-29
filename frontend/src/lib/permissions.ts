@@ -29,8 +29,8 @@ export interface Teacher {
  */
 export const PERMISSION_TEMPLATES = {
   ORGANIZATION_ADMIN: {
-    name: 'Organization Admin',
-    description: 'Full administrative access across all schools',
+    name: "Organization Admin",
+    description: "Full administrative access across all schools",
     permissions: {
       can_create_classrooms: true,
       can_view_other_teachers: true,
@@ -38,12 +38,12 @@ export const PERMISSION_TEMPLATES = {
       can_view_all_classrooms: true,
       can_edit_school_settings: true,
       max_classrooms: -1, // unlimited
-      allowed_actions: ['*'] as string[], // all actions
+      allowed_actions: ["*"] as string[], // all actions
     } as TeacherPermissions,
   },
   SCHOOL_ADMIN: {
-    name: 'School Admin',
-    description: 'Administrative access within assigned schools',
+    name: "School Admin",
+    description: "Administrative access within assigned schools",
     permissions: {
       can_create_classrooms: true,
       can_view_other_teachers: true,
@@ -52,16 +52,16 @@ export const PERMISSION_TEMPLATES = {
       can_edit_school_settings: true,
       max_classrooms: -1,
       allowed_actions: [
-        'manage_classrooms',
-        'manage_students',
-        'view_reports',
-        'manage_teachers',
+        "manage_classrooms",
+        "manage_students",
+        "view_reports",
+        "manage_teachers",
       ] as string[],
     } as TeacherPermissions,
   },
   SENIOR_TEACHER: {
-    name: 'Senior Teacher',
-    description: 'Create and manage classrooms, view other teachers',
+    name: "Senior Teacher",
+    description: "Create and manage classrooms, view other teachers",
     permissions: {
       can_create_classrooms: true,
       can_view_other_teachers: true,
@@ -70,16 +70,16 @@ export const PERMISSION_TEMPLATES = {
       can_edit_school_settings: false,
       max_classrooms: 10,
       allowed_actions: [
-        'create_classroom',
-        'manage_own_classrooms',
-        'view_other_classrooms',
-        'manage_students',
+        "create_classroom",
+        "manage_own_classrooms",
+        "view_other_classrooms",
+        "manage_students",
       ] as string[],
     } as TeacherPermissions,
   },
   TEACHER: {
-    name: 'Teacher',
-    description: 'Basic classroom management',
+    name: "Teacher",
+    description: "Basic classroom management",
     permissions: {
       can_create_classrooms: true,
       can_view_other_teachers: false,
@@ -87,12 +87,16 @@ export const PERMISSION_TEMPLATES = {
       can_view_all_classrooms: false,
       can_edit_school_settings: false,
       max_classrooms: 5,
-      allowed_actions: ['create_classroom', 'manage_own_classrooms', 'manage_students'] as string[],
+      allowed_actions: [
+        "create_classroom",
+        "manage_own_classrooms",
+        "manage_students",
+      ] as string[],
     } as TeacherPermissions,
   },
   LIMITED_TEACHER: {
-    name: 'Limited Teacher',
-    description: 'View-only with specific classroom access',
+    name: "Limited Teacher",
+    description: "View-only with specific classroom access",
     permissions: {
       can_create_classrooms: false,
       can_view_other_teachers: false,
@@ -100,12 +104,15 @@ export const PERMISSION_TEMPLATES = {
       can_view_all_classrooms: false,
       can_edit_school_settings: false,
       max_classrooms: 0,
-      allowed_actions: ['view_assigned_classrooms', 'view_students'] as string[],
+      allowed_actions: [
+        "view_assigned_classrooms",
+        "view_students",
+      ] as string[],
     } as TeacherPermissions,
   },
   CUSTOM: {
-    name: 'Custom',
-    description: 'Fully customizable permissions',
+    name: "Custom",
+    description: "Fully customizable permissions",
     permissions: {
       can_create_classrooms: false,
       can_view_other_teachers: false,
@@ -127,14 +134,20 @@ export class PermissionManager {
   /**
    * Check if teacher has a specific permission
    */
-  static hasPermission(teacher: Teacher | null, permission: keyof TeacherPermissions): boolean {
+  static hasPermission(
+    teacher: Teacher | null,
+    permission: keyof TeacherPermissions,
+  ): boolean {
     if (!teacher) return false;
 
     // Organization owners have all permissions
     if (this.isOrgOwner(teacher)) return true;
 
     // School admins have all permissions within their schools
-    if (this.isSchoolAdmin(teacher) && permission !== 'can_edit_school_settings') {
+    if (
+      this.isSchoolAdmin(teacher) &&
+      permission !== "can_edit_school_settings"
+    ) {
       return true;
     }
 
@@ -154,7 +167,7 @@ export class PermissionManager {
     const allowedActions = teacher.permissions?.allowed_actions || [];
 
     // Check for wildcard permission
-    if (allowedActions.includes('*')) return true;
+    if (allowedActions.includes("*")) return true;
 
     // Check for specific action
     return allowedActions.includes(action);
@@ -187,7 +200,9 @@ export class PermissionManager {
     }
 
     // Return teacher's explicit permissions or default
-    return teacher.permissions || PERMISSION_TEMPLATES.LIMITED_TEACHER.permissions;
+    return (
+      teacher.permissions || PERMISSION_TEMPLATES.LIMITED_TEACHER.permissions
+    );
   }
 
   /**
@@ -207,11 +222,14 @@ export class PermissionManager {
   /**
    * Check if teacher can create more classrooms
    */
-  static canCreateClassroom(teacher: Teacher | null, currentClassroomCount: number): boolean {
+  static canCreateClassroom(
+    teacher: Teacher | null,
+    currentClassroomCount: number,
+  ): boolean {
     if (!teacher) return false;
 
     // Check basic permission
-    if (!this.hasPermission(teacher, 'can_create_classrooms')) {
+    if (!this.hasPermission(teacher, "can_create_classrooms")) {
       return false;
     }
 
@@ -234,22 +252,26 @@ export class PermissionManager {
   /**
    * Apply permission template to teacher
    */
-  static applyTemplate(templateName: PermissionTemplateName): TeacherPermissions {
+  static applyTemplate(
+    templateName: PermissionTemplateName,
+  ): TeacherPermissions {
     return { ...this.getTemplate(templateName) };
   }
 
   /**
    * Get user-friendly permission description
    */
-  static getPermissionDescription(permission: keyof TeacherPermissions): string {
+  static getPermissionDescription(
+    permission: keyof TeacherPermissions,
+  ): string {
     const descriptions: Record<keyof TeacherPermissions, string> = {
-      can_create_classrooms: 'Create new classrooms',
-      can_view_other_teachers: 'View other teachers in the organization',
-      can_manage_students: 'Add, edit, and remove students',
-      can_view_all_classrooms: 'View all classrooms in assigned schools',
-      can_edit_school_settings: 'Edit school settings and configuration',
-      max_classrooms: 'Maximum number of classrooms (-1 for unlimited)',
-      allowed_actions: 'List of allowed actions',
+      can_create_classrooms: "Create new classrooms",
+      can_view_other_teachers: "View other teachers in the organization",
+      can_manage_students: "Add, edit, and remove students",
+      can_view_all_classrooms: "View all classrooms in assigned schools",
+      can_edit_school_settings: "Edit school settings and configuration",
+      max_classrooms: "Maximum number of classrooms (-1 for unlimited)",
+      allowed_actions: "List of allowed actions",
     };
 
     return descriptions[permission] || permission;
@@ -258,7 +280,9 @@ export class PermissionManager {
   /**
    * Validate permission object
    */
-  static validatePermissions(permissions: Partial<TeacherPermissions>): boolean {
+  static validatePermissions(
+    permissions: Partial<TeacherPermissions>,
+  ): boolean {
     // Check if max_classrooms is valid
     if (
       permissions.max_classrooms !== undefined &&
@@ -269,7 +293,10 @@ export class PermissionManager {
     }
 
     // If can't create classrooms, max should be 0
-    if (permissions.can_create_classrooms === false && (permissions.max_classrooms || 0) > 0) {
+    if (
+      permissions.can_create_classrooms === false &&
+      (permissions.max_classrooms || 0) > 0
+    ) {
       return false;
     }
 
@@ -281,7 +308,7 @@ export class PermissionManager {
    */
   static mergePermissions(
     base: TeacherPermissions,
-    override: Partial<TeacherPermissions>
+    override: Partial<TeacherPermissions>,
   ): TeacherPermissions {
     return {
       ...base,
@@ -298,7 +325,7 @@ export class PermissionManager {
    */
   static isMoreRestrictive(
     permissions1: TeacherPermissions,
-    permissions2: TeacherPermissions
+    permissions2: TeacherPermissions,
   ): boolean {
     const p1 = permissions1;
     const p2 = permissions2;

@@ -107,7 +107,11 @@ export default function OrganizationManagement() {
   };
 
   const handleDelete = async (orgId: string) => {
-    if (!confirm("Are you sure you want to delete this organization? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this organization? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -139,7 +143,11 @@ export default function OrganizationManagement() {
       return;
     }
 
-    if (!confirm(`Delete ${selectedOrgs.size} selected organization(s)? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Delete ${selectedOrgs.size} selected organization(s)? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -149,12 +157,14 @@ export default function OrganizationManagement() {
         fetch(`/api/organizations/${orgId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        })
+        }),
       );
 
       await Promise.all(deletePromises);
       toast.success(`Deleted ${selectedOrgs.size} organization(s)`);
-      setOrganizations(organizations.filter((org) => !selectedOrgs.has(org.id)));
+      setOrganizations(
+        organizations.filter((org) => !selectedOrgs.has(org.id)),
+      );
       setSelectedOrgs(new Set());
     } catch (error) {
       console.error("Batch delete failed:", error);
@@ -256,11 +266,21 @@ export default function OrganizationManagement() {
     );
   }
 
-  const FormModal = ({ isEdit = false, onSubmit, onClose }: { isEdit?: boolean; onSubmit: (e: React.FormEvent) => void; onClose: () => void }) => (
+  const FormModal = ({
+    isEdit = false,
+    onSubmit,
+    onClose,
+  }: {
+    isEdit?: boolean;
+    onSubmit: (e: React.FormEvent) => void;
+    onClose: () => void;
+  }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">{isEdit ? "編輯機構" : "創建新機構"}</h2>
+          <h2 className="text-2xl font-bold">
+            {isEdit ? "編輯機構" : "創建新機構"}
+          </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -272,7 +292,9 @@ export default function OrganizationManagement() {
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Enter organization name"
             />
           </div>
@@ -281,7 +303,9 @@ export default function OrganizationManagement() {
             <Input
               type="text"
               value={formData.display_name}
-              onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, display_name: e.target.value })
+              }
               placeholder="Display name (optional)"
             />
           </div>
@@ -289,7 +313,9 @@ export default function OrganizationManagement() {
             <label className="block mb-2 text-sm font-medium">描述</label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
               rows={3}
               placeholder="Organization description"
@@ -300,7 +326,9 @@ export default function OrganizationManagement() {
             <Input
               type="email"
               value={formData.contact_email}
-              onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, contact_email: e.target.value })
+              }
               placeholder="contact@example.com"
             />
           </div>
@@ -309,12 +337,19 @@ export default function OrganizationManagement() {
             <Input
               type="tel"
               value={formData.contact_phone}
-              onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, contact_phone: e.target.value })
+              }
               placeholder="+1234567890"
             />
           </div>
           <div className="flex gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
               取消
             </Button>
             <Button type="submit" disabled={saving}>
@@ -323,8 +358,10 @@ export default function OrganizationManagement() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   {isEdit ? "更新中..." : "創建中..."}
                 </>
+              ) : isEdit ? (
+                "更新"
               ) : (
-                isEdit ? "更新" : "創建"
+                "創建"
               )}
             </Button>
           </div>
@@ -371,7 +408,10 @@ export default function OrganizationManagement() {
           <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Checkbox
-                checked={selectedOrgs.size === organizations.length && organizations.length > 0}
+                checked={
+                  selectedOrgs.size === organizations.length &&
+                  organizations.length > 0
+                }
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm font-medium">Select All</span>
@@ -416,7 +456,9 @@ export default function OrganizationManagement() {
               <div
                 key={org.id}
                 className={`border rounded-lg p-6 hover:shadow-lg transition-all ${
-                  isSelected ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/10' : ''
+                  isSelected
+                    ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/10"
+                    : ""
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -428,7 +470,9 @@ export default function OrganizationManagement() {
                     />
                     <h3
                       className="text-xl font-semibold cursor-pointer hover:text-blue-600"
-                      onClick={() => navigate(`/teacher/organizations/${org.id}`)}
+                      onClick={() =>
+                        navigate(`/teacher/organizations/${org.id}`)
+                      }
                     >
                       {org.display_name || org.name}
                     </h3>

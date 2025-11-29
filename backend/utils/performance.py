@@ -8,7 +8,7 @@ and request-level query count tracking.
 import time
 import logging
 from contextlib import contextmanager
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from fastapi import Request
@@ -83,7 +83,9 @@ def setup_query_logging(engine: Engine, log_all: bool = False):
     """
 
     @event.listens_for(engine, "before_cursor_execute")
-    def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    def before_cursor_execute(
+        conn, cursor, statement, parameters, context, executemany
+    ):
         """Record query start time"""
         context._query_start_time = time.time()
 
@@ -146,7 +148,7 @@ async def performance_logging_middleware(request: Request, call_next):
 
     try:
         response = await call_next(request)
-    except Exception as e:
+    except Exception:
         logger.exception("Request failed with exception")
         raise
     finally:
