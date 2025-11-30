@@ -40,15 +40,27 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 4. Reproduce problem with evidence (screenshots/logs)
 5. Root cause analysis (5 Why)
 6. Design TDD test plan
-7. Generate plan: `generate-pdca-plan-comment <NUM>`
-8. Post plan and wait for approval
+7. Generate PDCA Plan from template:
+   - Copy template from `.claude/templates/pdca-plan.md`
+   - Fill in: Issue number, problem analysis, root cause, solution, test plan
+8. **Post PDCA Plan to Issue #<NUM> as comment**:
+   - Use: `gh issue comment <NUM> --body-file .claude/templates/pdca-plan-filled.md`
+   - Or paste template content directly
+   - 📍 Location: GitHub Issue comment (not internal report)
+   - ⏸️ STOP and wait for user to review plan
+   - ✅ Only proceed to Phase 2 after approval
 
 ### Phase 2: PDCA Do (Start commits)
 1. **Create Feature Branch** (NOT staging!):
-   - `create-feature-fix <NUM>`
-   - Format: `claude/issue-<NUM>` (固定分支名，不含時間戳)
+   - From staging: `git checkout staging && git pull origin staging`
+   - Create branch: `git checkout -b fix/issue-<NUM>-<description>`
+   - Format: `fix/issue-<NUM>-<description>` (包含問題描述)
    - **NEVER commit directly to staging**
-   - **分支重用**: 如果分支已存在，會自動切換並拉取最新代碼
+   - **分支重用**: If branch exists:
+     ```bash
+     git checkout fix/issue-<NUM>-<description>
+     git pull origin fix/issue-<NUM>-<description>
+     ```
 2. **TDD Development**:
    - Write failing tests (Red Phase) - create `backend/tests/integration/api/test_issue_<NUM>.py`
    - Implement fix (Green Phase)
@@ -59,16 +71,21 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 4. **Local Testing**:
    - `cd backend && pytest tests/ -v`
    - `cd frontend && npm run typecheck && npm run build`
-5. **Push Feature Branch**: `git push origin claude/issue-<NUM>`
+5. **Push Feature Branch**: `git push origin fix/issue-<NUM>-<description>`
    - **Confirm pushing feature branch, NOT staging**
 
 ### Phase 3: PDCA Check (Wait for approvals)
 1. Wait for Per-Issue Test Environment deployment
-   - Monitor: `gh run list --branch claude/issue-<NUM> --limit 5`
-   - URL: `https://duotopia-preview-issue-<NUM>-frontend.run.app`
+   - Monitor: `gh run list --branch fix/issue-<NUM>-<description> --limit 5`
+   - Check workflow status: `gh run watch`
+   - **Automated**: per-issue-deploy.yml workflow automatically:
+     - ✅ Deploys frontend and backend
+     - ✅ Posts test URLs to Issue
+     - ✅ @ mentions kaddy-eunice
+     - ✅ Provides deployment info (commit, branch, time)
 2. **MANDATORY: Create PR** (most critical step!):
    ```bash
-   gh pr create --base staging --head claude/issue-<NUM> \
+   gh pr create --base staging --head fix/issue-<NUM>-<description> \
      --title "Fix: [description]" \
      --body "Related to #<NUM> [full engineering report]"
    ```
@@ -77,46 +94,122 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 3. Wait for CI/CD checks in PR:
    - `gh pr checks <PR_NUMBER>`
    - All tests pass, TypeScript compiles, ESLint passes
-4. Generate testing guide: `generate-test-guidance-comment <NUM>`
-5. Post guide for case owner in Issue (business language)
-6. **Dual Approval Required**:
-   - System: PR CI/CD all green ✅
-   - Business: Case owner approves in Issue
-7. Check approval: `check-approvals`
-8. Merge PR: `gh pr merge <PR> --squash` (use gh command, not manual merge)
+4. **No need for additional testing guide**:
+   - per-issue-deploy.yml already posts test URLs to Issue
+   - Case owner has all information needed to test
+5. **Dual Approval Required (BOTH 必須完成，順序不限)**:
+   - ✅ System: PR CI/CD all green
+   - ✅ Business: Case owner approves in Issue (留言「測試通過」等關鍵字)
+   - ⚠️ **兩者都通過才能 merge**
+6. **Wait for dual approval** (automated detection):
+   - ✅ System: PR CI/CD all green (check with `gh pr checks <PR>`)
+   - ✅ Business: Case owner approves in Issue
+   - 🤖 Auto-Approval Detection workflow monitors Issue comments
+   - When approval keyword detected → auto-adds label `✅ tested-in-staging`
+   - No manual command needed!
+7. Merge PR: `gh pr merge <PR> --squash` (use gh command, not manual merge)
+8. **Note**: Issue will NOT auto-close (PR uses "Related to #<NUM>")
+   - Issue remains open for staging verification
+   - Will auto-close when Release PR (staging→main) merges with "Fixes #<NUM>"
 
 ### Phase 4: PDCA Act (Production release)
 1. Notify case owner in Issue about staging deployment
 2. Add preventive tests for edge cases
 3. Update documentation if needed
-4. Generate completion report: `generate-pdca-act-comment <NUM>`
-5. Post Act report to issue
-6. Create Release PR: `update-release-pr` (staging → main)
-7. Merge to production: `gh pr merge <RELEASE_PR> --merge`
-8. Issue auto-closes with "Fixes #<NUM>" in Release PR
+4. Generate completion report from template:
+   - Copy template from `.claude/templates/pdca-act.md`
+   - Fill in: completion summary, files changed, test results, lessons learned
+5. Post Act report to Issue:
+   - Use: `gh issue comment <NUM> --body-file .claude/templates/pdca-act-filled.md`
+   - Or paste template content directly
+6. **Wait for user command to create Release PR**:
+   - User decides when to release to production
+   - May accumulate multiple fixes before release
+   - User will explicitly say "release to production" or "update release PR"
+7. Create Release PR: `update-release-pr` (staging → main)
+   - PR uses "Fixes #<NUM>" to auto-close issues
+   - Multiple issues can be included in one release
+   - Note: This is a complex operation that could be further automated
+8. Merge to production: `gh pr merge <RELEASE_PR> --merge`
+9. Issue auto-closes with "Fixes #<NUM>" in Release PR
+
+## Automated GitHub Actions Workflows
+
+### Per-Issue Deploy (per-issue-deploy.yml)
+
+**觸發條件**: Push to `fix/issue-*`, `feature/issue-*`, or `claude/issue-*` branches
+
+**自動執行流程**:
+1. 提取 Issue number from branch name
+2. 部署 Backend to Cloud Run:
+   - Service: `duotopia-preview-issue-<NUM>-backend`
+   - URL: `https://duotopia-preview-issue-<NUM>-backend-<PROJECT_ID>.<REGION>.run.app`
+   - Environment: Uses staging database
+   - Min instances: 0 (閒置時不產生費用)
+3. 部署 Frontend to Cloud Run:
+   - Service: `duotopia-preview-issue-<NUM>-frontend`
+   - URL: `https://duotopia-preview-issue-<NUM>-frontend-<PROJECT_ID>.<REGION>.run.app`
+   - Min instances: 0 (閒置時不產生費用)
+4. **自動在 Issue 留言**:
+   - ✅ 部署完成通知
+   - 🌐 Frontend URL
+   - ⚙️ Backend URL
+   - 📝 Commit SHA
+   - 🔧 Branch name
+   - ⏰ 部署時間
+   - @ kaddy-eunice 請求測試
+   - 提示回覆「測試通過」
+
+**Agent 行為**:
+- ✅ Agent push 後自動觸發（無需手動操作）
+- ✅ Workflow 自動留言（Agent 無需手動貼測試 URL）
+- ✅ 等待 workflow 完成後再繼續 Phase 3 其他步驟
+
+### Cleanup Workflow (cleanup-per-issue-on-close.yml)
+
+**觸發條件** (自動執行):
+1. **Issue 關閉** (`issues.closed` event)
+2. **PR Merge** (`pull_request.closed` + `merged=true`)
+
+**清理項目**:
+1. 🗑️ Cloud Run Services:
+   - `duotopia-preview-issue-<NUM>-frontend`
+   - `duotopia-preview-issue-<NUM>-backend`
+2. 🗑️ Container Images:
+   - Frontend Docker image
+   - Backend Docker image
+3. 🗑️ Git Branch:
+   - `fix/issue-<NUM>-*` (new format)
+   - `claude/issue-<NUM>` (legacy format for backward compatibility)
+4. 💬 在 Issue 留言通知清理完成
+
+**Agent 行為**:
+- ✅ 完全自動化（Agent 無需手動執行）
+- ✅ Issue 關閉或 PR merge 即觸發
+- ✅ 自動停止計費（min-instances=0 的服務也會刪除）
+
+**清理時機**:
+- PR merge to staging → 測試環境資源刪除
+- Issue close → 所有相關資源刪除
+- **Note**: 兩個事件都會觸發清理，確保資源不遺留
 
 ## Available Commands
 
-### Feature Development
-- `create-feature-fix <issue>` - Create fix branch
-- `deploy-feature <issue>` - Merge to staging
+### Git Operations
+- Standard git commands for branching, committing, pushing
+- Use `gh` CLI for PR/Issue operations
 
 ### Release Management
-- `update-release-pr` - Create/update staging→main PR
-- `check-approvals` - AI approval detection
+- `update-release-pr` - Create/update staging→main PR (complex logic, consider automating)
 
-### Issue Management
-- `patrol-issues` - List open issues with stats
-- `mark-issue-approved <issue>` - Detect approval
+### Templates
+- `.claude/templates/pdca-plan.md` - PDCA Plan template
+- `.claude/templates/pdca-act.md` - PDCA Act completion report template
 
-### PDCA Templates (MANDATORY)
-- `generate-pdca-plan-comment <issue>` - Plan phase template
-- `generate-test-guidance-comment <issue>` - Testing instructions
-- `generate-pdca-act-comment <issue>` - Act completion report
-
-### Status
-- `git-flow-status` - Current workflow state
-- `git-flow-help` - Command reference
+### Automated Workflows
+- Auto-Approval Detection: Monitors Issue comments for approval keywords
+- Per-Issue Deploy: Deploys test environment on branch push
+- Cleanup: Deletes resources on Issue close or PR merge
 
 ## Git Commit/Push Workflow
 
@@ -147,6 +240,7 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 | **Purpose** | Track business value | Track technical quality |
 | **Content** | Problem, test links, approval | Complete engineering report |
 | **Pass Standard** | ✅ Owner OK | ✅ CI/CD OK |
+| **Cleanup** | Issue 關閉觸發自動清理 | PR merge 觸發自動清理 |
 
 ### Issue Content (For Business Owners)
 - ✅ Problem description (business language)
@@ -240,5 +334,3 @@ Detects approval in comments containing:
 6. All issues go through PR review
 
 Remember: Quality over speed. Every issue deserves proper PDCA treatment. PR = Code Review + CI/CD Gate. Both are mandatory.
-
-For detailed command documentation, see: `/Users/young/project/duotopia/.claude/agents/git-issue-pr-flow.sh`
