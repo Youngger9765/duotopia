@@ -30,9 +30,11 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from services.billing_service import get_billing_service
-from services.billing_analysis_service import get_billing_analysis_service
-from services.email_service import email_service
+from services.billing_service import get_billing_service  # noqa: E402
+from services.billing_analysis_service import (  # noqa: E402
+    get_billing_analysis_service,
+)
+from services.email_service import email_service  # noqa: E402
 
 # 創建 logs 目錄（如果不存在）
 logs_dir = backend_dir / "logs"

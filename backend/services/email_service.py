@@ -990,7 +990,8 @@ class EmailService:
                         {recommendations_section}
 
                         <!-- 分析洞察 -->
-                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981;
+                                    padding: 15px; margin: 20px 0;">
                             <h3 style="color: #047857; margin-top: 0;">🔍 AI 分析洞察</h3>
                             <p>{analysis.get("summary", "系統運作正常，無異常費用增長。")}</p>
                         </div>
@@ -999,7 +1000,8 @@ class EmailService:
 
                         <p style="color: #6b7280; font-size: 14px;">
                             此報告由 Duotopia 帳單監控系統自動生成。<br>
-                            如需查看詳細數據，請登入 <a href="{self.frontend_url}/admin/billing">管理後台</a>。
+                            如需查看詳細數據，請登入
+                            <a href="{self.frontend_url}/admin/billing">管理後台</a>。
                         </p>
                     </div>
 

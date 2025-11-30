@@ -10,17 +10,18 @@
 """
 
 import pytest
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, AsyncMock
 import sys
 from pathlib import Path
+from unittest.mock import Mock, AsyncMock
 
 # 添加 backend 目錄到 Python path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from services.email_service import EmailService
-from services.billing_analysis_service import BillingAnalysisService
+from services.email_service import EmailService  # noqa: E402
+from services.billing_analysis_service import (  # noqa: E402
+    BillingAnalysisService,
+)
 
 
 class TestEmailBillingReport:

@@ -2,7 +2,6 @@
 import os
 import logging
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
 import openai
 
 logger = logging.getLogger(__name__)
@@ -261,8 +260,7 @@ class BillingAnalysisService:
             # Fallback to basic summary
             return self._generate_basic_summary(
                 current_data.get("total_cost", 0),
-                previous_data.get("total_cost", 0)
-                - current_data.get("total_cost", 0),
+                previous_data.get("total_cost", 0) - current_data.get("total_cost", 0),
                 trend,
                 trend_percent,
                 len(anomalies) > 0,
