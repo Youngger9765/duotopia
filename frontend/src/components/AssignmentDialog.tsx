@@ -169,8 +169,24 @@ export function AssignmentDialog({
   const loadPrograms = async () => {
     try {
       setLoadingPrograms(true);
+
+      // Validate classroomId
+      if (!classroomId || classroomId <= 0) {
+        console.error("Invalid classroomId:", classroomId);
+        toast.error(
+          t("dialogs.assignmentDialog.errors.invalidClassroom") ||
+            "Invalid classroom",
+        );
+        setPrograms([]);
+        setLoadingPrograms(false);
+        return;
+      }
+
       // Only load program list, not lessons or contents
-      const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
+      // Issue #32: Filter by classroom_id to show public templates + classroom-specific courses
+      const response = await apiClient.get<Program[]>(
+        `/api/teachers/programs?classroom_id=${classroomId}`,
+      );
       setPrograms(response);
     } catch (error) {
       console.error("Failed to load programs:", error);
