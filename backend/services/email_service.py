@@ -848,6 +848,224 @@ class EmailService:
             logger.error(f"❌ Failed to send renewal reminder email: {str(e)}")
             return False
 
+    def send_billing_daily_summary(
+        self,
+        admin_email: str,
+        admin_name: str,
+        billing_data: dict,
+        analysis: dict,
+    ) -> bool:
+        """
+        發送每日帳單摘要郵件
+
+        Args:
+            admin_email: 管理員 Email
+            admin_name: 管理員姓名
+            billing_data: 帳單數據（來自 billing_service）
+            analysis: AI 分析結果
+
+        Returns:
+            是否成功發送
+        """
+        try:
+            # 建立服務費用排行表格
+            top_services_rows = ""
+            for service in billing_data.get("top_services", [])[:5]:
+                service_name = service.get("service", "Unknown")
+                cost = service.get("cost", 0)
+                top_services_rows += f"""
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">{service_name}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                        ${cost:.2f}
+                    </td>
+                </tr>
+                """
+
+            # 建立異常警報區域
+            anomaly_section = ""
+            if analysis.get("has_anomalies"):
+                anomaly_section = """
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+                    <h3 style="color: #dc2626; margin-top: 0;">⚠️ 異常警報</h3>
+                """
+                for anomaly in analysis.get("anomalies", []):
+                    service = anomaly.get("service", "Unknown")
+                    increase = anomaly.get("increase_percent", 0)
+                    current = anomaly.get("current_cost", 0)
+                    previous = anomaly.get("previous_cost", 0)
+                    anomaly_section += f"""
+                    <div style="background-color: white; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                        <strong>{service}</strong>:
+                        ${previous:.2f} → ${current:.2f}
+                        <span style="color: #dc2626; font-weight: bold;">(+{increase:.1f}%)</span>
+                    </div>
+                    """
+                anomaly_section += "</div>"
+
+            # 建立建議區域
+            recommendations_section = ""
+            if analysis.get("recommendations"):
+                recommendations_section = """
+                <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0;">
+                    <h3 style="color: #1e40af; margin-top: 0;">💡 AI 建議</h3>
+                    <ul style="margin: 10px 0;">
+                """
+                for rec in analysis.get("recommendations", []):
+                    recommendations_section += f"<li style='margin: 5px 0;'>{rec}</li>"
+                recommendations_section += "</ul></div>"
+
+            # 建立趨勢圖表 ASCII art（簡化版）
+            daily_costs = billing_data.get("daily_costs", [])[-7:]  # 最近7天
+            trend_chart = self._generate_trend_chart_html(daily_costs)
+
+            # 構建完整 HTML 郵件
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 800px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                               color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background-color: #ffffff; padding: 30px; border: 1px solid #e5e7eb;
+                                border-top: none; border-radius: 0 0 10px 10px; }}
+                    .stat-card {{ background: #f9fafb; border-radius: 8px; padding: 20px; margin: 15px 0;
+                                  border: 1px solid #e5e7eb; }}
+                    .stat-value {{ font-size: 32px; font-weight: bold; color: #1f2937; }}
+                    .stat-label {{ color: #6b7280; font-size: 14px; }}
+                    table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+                    th {{ background-color: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; }}
+                    .footer {{ text-align: center; color: #6b7280; padding: 20px; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>📊 GCP 帳單每日摘要</h1>
+                        <p style="margin: 5px 0; opacity: 0.9;">
+                            {billing_data.get("period", {}).get("start", "")} -
+                            {billing_data.get("period", {}).get("end", "")}
+                        </p>
+                    </div>
+
+                    <div class="content">
+                        <p>親愛的 {admin_name}，</p>
+
+                        <p>以下是您的 GCP 帳單每日摘要報告：</p>
+
+                        <!-- 總費用卡片 -->
+                        <div class="stat-card">
+                            <div class="stat-label">過去 7 天總費用</div>
+                            <div class="stat-value">${billing_data.get("total_cost", 0):.2f}</div>
+                            <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">
+                                日均: ${billing_data.get("total_cost", 0) / 7:.2f}
+                            </div>
+                        </div>
+
+                        <!-- 異常警報 -->
+                        {anomaly_section}
+
+                        <!-- Top 服務費用 -->
+                        <h3 style="margin-top: 30px;">🏆 Top 5 服務費用</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>服務名稱</th>
+                                    <th style="text-align: right;">費用</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {top_services_rows}
+                            </tbody>
+                        </table>
+
+                        <!-- 每日趨勢圖 -->
+                        <h3 style="margin-top: 30px;">📈 過去 7 天費用趨勢</h3>
+                        {trend_chart}
+
+                        <!-- AI 分析建議 -->
+                        {recommendations_section}
+
+                        <!-- 分析洞察 -->
+                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                            <h3 style="color: #047857; margin-top: 0;">🔍 AI 分析洞察</h3>
+                            <p>{analysis.get("summary", "系統運作正常，無異常費用增長。")}</p>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                        <p style="color: #6b7280; font-size: 14px;">
+                            此報告由 Duotopia 帳單監控系統自動生成。<br>
+                            如需查看詳細數據，請登入 <a href="{self.frontend_url}/admin/billing">管理後台</a>。
+                        </p>
+                    </div>
+
+                    <div class="footer">
+                        <p>© 2025 Duotopia. All rights reserved.</p>
+                        <p>此郵件由系統自動發送，請勿直接回覆。</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            # 發送郵件
+            subject = f"📊 GCP 帳單每日摘要 - ${billing_data.get('total_cost', 0):.2f} (過去7天)"
+            if analysis.get("has_anomalies"):
+                subject = f"⚠️ {subject} - 偵測到異常"
+
+            success = self.send_email(admin_email, subject, html_content)
+
+            if success:
+                logger.info(f"✅ Daily billing summary sent to {admin_email}")
+            else:
+                logger.error(f"❌ Failed to send daily billing summary to {admin_email}")
+
+            return success
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send billing summary email: {str(e)}")
+            return False
+
+    def _generate_trend_chart_html(self, daily_costs: list) -> str:
+        """生成簡易的趨勢圖表 HTML"""
+        if not daily_costs:
+            return "<p>暫無數據</p>"
+
+        max_cost = max([item["cost"] for item in daily_costs]) if daily_costs else 1
+        if max_cost == 0:
+            max_cost = 1  # 避免除以零
+
+        chart_html = """
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        """
+
+        for item in daily_costs:
+            date = item["date"]
+            cost = item["cost"]
+            percentage = (cost / max_cost) * 100
+
+            chart_html += f"""
+            <div style="margin: 8px 0;">
+                <div style="display: flex; align-items: center;">
+                    <div style="width: 80px; font-size: 12px; color: #6b7280;">{date}</div>
+                    <div style="flex: 1; background: #e5e7eb; border-radius: 4px; height: 24px; position: relative;">
+                        <div style="background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+                                    width: {percentage}%; height: 100%; border-radius: 4px;"></div>
+                    </div>
+                    <div style="width: 80px; text-align: right; font-weight: 600; color: #1f2937;">
+                        ${cost:.2f}
+                    </div>
+                </div>
+            </div>
+            """
+
+        chart_html += "</div>"
+        return chart_html
+
 
 # 全域 email 服務實例
 email_service = EmailService()
