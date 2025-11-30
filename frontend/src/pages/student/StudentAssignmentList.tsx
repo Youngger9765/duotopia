@@ -11,7 +11,6 @@ import {
   BookOpen,
   Clock,
   Calendar,
-  Play,
   CheckCircle,
   AlertCircle,
   BarChart3,
@@ -163,10 +162,6 @@ export default function StudentAssignmentList() {
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return {
-          text: t("studentAssignmentList.status.notStarted"),
-          color: "bg-gray-100 text-gray-800",
-        };
       case "IN_PROGRESS":
         return {
           text: t("studentAssignmentList.status.inProgress"),
@@ -200,9 +195,8 @@ export default function StudentAssignmentList() {
   const getStatusIcon = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return <Clock className="h-4 w-4" />;
       case "IN_PROGRESS":
-        return <Play className="h-4 w-4" />;
+        return <Clock className="h-4 w-4" />;
       case "SUBMITTED":
       case "RESUBMITTED":
         return <CheckCircle className="h-4 w-4" />;
