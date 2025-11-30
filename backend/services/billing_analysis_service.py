@@ -2,7 +2,7 @@
 import os
 import logging
 from typing import Dict, Any, List
-import openai
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +12,11 @@ class BillingAnalysisService:
 
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        if self.openai_api_key:
-            openai.api_key = self.openai_api_key
         self.use_ai = bool(self.openai_api_key)
+        if self.use_ai:
+            self.client = AsyncOpenAI(api_key=self.openai_api_key)
+        else:
+            self.client = None
 
     async def analyze_billing_data(
         self,
@@ -238,7 +240,7 @@ class BillingAnalysisService:
 """
 
             # 調用 OpenAI API
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
