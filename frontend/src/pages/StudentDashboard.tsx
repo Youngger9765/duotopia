@@ -182,7 +182,8 @@ export default function StudentDashboard() {
   };
 
   const handleStartAssignment = (assignmentId: number) => {
-    navigate(`/student/assignment/${assignmentId}/detail`);
+    // Navigate directly to activity page, skipping the confirmation screen (Issue #28)
+    navigate(`/student/assignment/${assignmentId}/activity`);
   };
 
   const handleViewAllAssignments = () => {
