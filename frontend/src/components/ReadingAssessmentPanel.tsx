@@ -57,6 +57,7 @@ interface ContentRow {
     gender: string;
     speed: string;
   };
+  has_student_progress?: boolean; // 是否有學生進度
 }
 
 interface TTSModalProps {
@@ -1060,12 +1061,27 @@ function SortableRowInner({
         </button>
         <button
           onClick={() => handleRemoveRow(index)}
-          className="p-1 rounded hover:bg-gray-200"
-          title={t("readingAssessmentPanel.row.delete")}
-          disabled={rowsLength <= 1}
+          className={`p-1 rounded ${
+            row.has_student_progress || rowsLength <= 1
+              ? "cursor-not-allowed"
+              : "hover:bg-gray-200"
+          }`}
+          title={
+            row.has_student_progress
+              ? t(
+                  "readingAssessmentPanel.row.cannotDeleteWithProgress",
+                  "此題目有學生進度，無法刪除"
+                )
+              : t("readingAssessmentPanel.row.delete")
+          }
+          disabled={rowsLength <= 1 || row.has_student_progress}
         >
           <Trash2
-            className={`h-4 w-4 ${rowsLength <= 1 ? "text-gray-300" : "text-gray-600"}`}
+            className={`h-4 w-4 ${
+              rowsLength <= 1 || row.has_student_progress
+                ? "text-gray-300"
+                : "text-gray-600"
+            }`}
           />
         </button>
       </div>
@@ -1153,22 +1169,17 @@ export default function ReadingAssessmentPanel({
       setIsInitialLoad(true);
       setTitle(editingContent.title || "");
       if (editingContent.items && Array.isArray(editingContent.items)) {
-        const convertedRows = editingContent.items.map(
-          (
-            item: {
-              text?: string;
-              translation?: string;
-              definition?: string;
-              audio_url?: string;
-            },
-            index: number,
-          ) => ({
-            id: (index + 1).toString(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const convertedRows = (editingContent.items as any[]).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any, index: number) => ({
+            id: item.id || (index + 1).toString(),
             text: item.text || "",
             definition: item.definition || "",
             translation: item.translation || "",
             audioUrl: item.audio_url || "",
             selectedLanguage: "chinese" as "chinese" | "english",
+            has_student_progress: item.has_student_progress || false, // 🔥 保留學生進度狀態
           }),
         );
         setRows(convertedRows);
@@ -1202,24 +1213,17 @@ export default function ReadingAssessmentPanel({
 
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map(
-          (
-            item: {
-              text?: string;
-              translation?: string;
-              definition?: string;
-              english_definition?: string;
-              audio_url?: string;
-              selectedLanguage?: "chinese" | "english";
-            },
-            index: number,
-          ) => ({
-            id: (index + 1).toString(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const convertedRows = (data.items as any[]).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any, index: number) => ({
+            id: item.id || (index + 1).toString(),
             text: item.text || "",
             definition: item.definition || "", // 中文翻譯
             translation: item.english_definition || "", // 英文釋義
             audioUrl: item.audio_url || "",
             selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
+            has_student_progress: item.has_student_progress || false, // 🔥 保留學生進度狀態
           }),
         );
         setRows(convertedRows);
@@ -1291,14 +1295,15 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
-    // 如果是作業副本，顯示警告
-    if (isAssignmentCopy) {
-      const confirmed = window.confirm(
-        "⚠️ 注意：如果學生已經對此題目有進度記錄（錄音、分數等），將無法刪除。\n\n是否確定要嘗試刪除此題目？"
+    // 檢查此題目是否有學生進度
+    if (rows[index].has_student_progress) {
+      toast.error(
+        t(
+          "readingAssessmentPanel.row.cannotDeleteWithProgress",
+          "此題目有學生進度，無法刪除"
+        )
       );
-      if (!confirmed) {
-        return;
-      }
+      return;
     }
 
     const newRows = rows.filter((_, i) => i !== index);
@@ -1902,6 +1907,42 @@ export default function ReadingAssessmentPanel({
     <div className="flex flex-col h-full max-h-[calc(100vh-200px)]">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 space-y-4 pb-4">
+        {/* Assignment Copy Warning Banner */}
+        {isAssignmentCopy && (
+          <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-md">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-orange-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-orange-800">
+                  <span className="font-medium">
+                    {t(
+                      "readingAssessmentPanel.assignmentCopyWarning.title",
+                      "注意：此為作業副本"
+                    )}
+                  </span>
+                  <br />
+                  {t(
+                    "readingAssessmentPanel.assignmentCopyWarning.message",
+                    "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Title Input - Show in both create and edit mode */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">

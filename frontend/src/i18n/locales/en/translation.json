@@ -1855,7 +1855,12 @@
       "delete": "Delete",
       "addItem": "Add Item",
       "maxRowsReached": "Maximum 15 rows allowed",
-      "minRowsRequired": "At least 1 row required"
+      "minRowsRequired": "At least 1 row required",
+      "cannotDeleteWithProgress": "This item has student progress and cannot be deleted"
+    },
+    "assignmentCopyWarning": {
+      "title": "Notice: This is an assignment copy",
+      "message": "Items with student progress cannot be deleted (delete buttons are disabled). You can modify item content, but cannot remove items that have been answered."
     },
     "ttsModal": {
       "title": "Audio Settings",

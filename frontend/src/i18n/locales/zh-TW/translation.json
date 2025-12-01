@@ -1857,7 +1857,12 @@
       "delete": "刪除",
       "addItem": "新增項目",
       "maxRowsReached": "最多只能新增 15 列",
-      "minRowsRequired": "至少需要保留 1 列"
+      "minRowsRequired": "至少需要保留 1 列",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除"
+    },
+    "assignmentCopyWarning": {
+      "title": "注意：此為作業副本",
+      "message": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
     },
     "ttsModal": {
       "title": "音檔設定",

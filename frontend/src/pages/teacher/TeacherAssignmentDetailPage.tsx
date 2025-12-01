@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -296,6 +296,9 @@ export default function TeacherAssignmentDetailPage() {
   const [editingContentId, setEditingContentId] = useState<number | null>(null);
   const [contentDetails, setContentDetails] = useState<Record<number, any>>({});
   const [activeDragId, setActiveDragId] = useState<number | null>(null); // 追蹤正在拖拽的項目
+
+  // 🔥 追蹤正在載入的內容 ID，避免重複請求（Race Condition 保護）
+  const loadingRef = useRef<Set<number>>(new Set());
 
   // dnd-kit sensors - 優化移動端拖拽體驗
   // PointerSensor 同時支持鼠標和觸摸事件
@@ -616,7 +619,19 @@ export default function TeacherAssignmentDetailPage() {
     });
   };
 
-  const loadContentDetail = async (contentId: number) => {
+  const loadContentDetail = async (contentId: number, forceReload = false) => {
+    // 🔥 如果已有緩存且不強制重載，直接返回（避免重複請求）
+    if (!forceReload && contentDetails[contentId]) {
+      return;
+    }
+
+    // 🔥 正在載入中，避免重複請求（Race Condition 保護）
+    if (loadingRef.current.has(contentId)) {
+      return;
+    }
+
+    loadingRef.current.add(contentId);
+
     try {
       const detail = await apiClient.getContentDetail(contentId);
       setContentDetails((prev) => ({
@@ -626,6 +641,9 @@ export default function TeacherAssignmentDetailPage() {
     } catch (error) {
       console.error("Failed to load content detail:", error);
       toast.error(t("assignmentDetail.messages.loadContentError") || "無法載入內容詳情");
+    } finally {
+      // 🔥 請求完成後移除標記（無論成功或失敗）
+      loadingRef.current.delete(contentId);
     }
   };
 
@@ -1291,7 +1309,7 @@ export default function TeacherAssignmentDetailPage() {
                       });
                       
                       // 重新載入內容詳情（無論是否展開都會重新載入）
-                      await loadContentDetail(savedContentId);
+                      await loadContentDetail(savedContentId, true); // 🔥 強制重載以獲取最新數據
                       
                       // 如果該內容已展開，確保展開狀態保持
                       if (expandedContentId === savedContentId) {

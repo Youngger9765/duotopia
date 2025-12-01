@@ -657,12 +657,28 @@ class ApiClient {
     id: number;
     title: string;
     items: Array<{
+      id: number;
       text: string;
       translation?: string;
       definition?: string;
+      english_definition?: string;
+      selectedLanguage?: string;
       audio_url?: string;
+      has_student_progress?: boolean; // 🔥 是否有學生進度
+      item_metadata?: Record<string, any>;
+      order_index?: number;
+      content_id?: number;
+      created_at?: string;
+      updated_at?: string;
     }>;
     audio_urls?: string[];
+    type?: string;
+    target_wpm?: number;
+    target_accuracy?: number;
+    time_limit_seconds?: number;
+    order_index?: number;
+    level?: string;
+    tags?: string[];
   }> {
     return this.request(`/api/teachers/contents/${contentId}`, {
       method: "GET",

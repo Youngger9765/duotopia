@@ -2245,11 +2245,43 @@ async def get_content_detail(
             Lesson.is_active.is_(True),
             Program.is_active.is_(True),
         )
+        .options(selectinload(Content.content_items))  # 🔥 避免 N+1：Eager load items
         .first()
     )
 
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
+
+    # 檢查每個 ContentItem 是否有學生進度
+    item_ids = [item.id for item in content.content_items] if hasattr(content, "content_items") else []
+    items_with_progress = set()
+
+    if item_ids:
+        # 查詢哪些 item 有學生實際數據
+        progresses = db.query(StudentItemProgress).filter(
+            StudentItemProgress.content_item_id.in_(item_ids)
+        ).all()
+
+        for progress in progresses:
+            # 使用與 update_content 相同的檢查邏輯
+            has_data = (
+                progress.recording_url
+                or progress.answer_text
+                or progress.transcription
+                or progress.submitted_at
+                or progress.accuracy_score is not None
+                or progress.fluency_score is not None
+                or progress.pronunciation_score is not None
+                or progress.ai_feedback
+                or progress.ai_assessed_at
+                or progress.teacher_review_score is not None
+                or progress.teacher_feedback
+                or progress.teacher_passed is not None
+                or progress.teacher_reviewed_at
+                or progress.status != "NOT_STARTED"
+            )
+            if has_data:
+                items_with_progress.add(progress.content_item_id)
 
     return {
         "id": content.id,
@@ -2278,6 +2310,7 @@ async def get_content_detail(
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                "has_student_progress": item.id in items_with_progress,  # 🔥 新增：是否有學生進度
             }
             for item in content.content_items
         ]

@@ -49,7 +49,15 @@ def upgrade() -> None:
         ["source_content_id"],
         ["id"],
     )
-    
+
+    # 建立 source_content_id 索引（優化查找所有副本的查詢）
+    op.create_index(
+        "ix_contents_source_content_id",
+        "contents",
+        ["source_content_id"],
+        unique=False,
+    )
+
     # ============ 添加性能索引 ============
     # 添加 AssignmentContent 複合索引（優化查詢排序）
     op.create_index(
@@ -85,8 +93,9 @@ def downgrade() -> None:
     # ============ 移除作業副本機制欄位 ============
     # 移除外鍵約束
     op.drop_constraint("fk_contents_source_content_id", "contents", type_="foreignkey")
-    
+
     # 移除索引
+    op.drop_index("ix_contents_source_content_id", table_name="contents")
     op.drop_index("ix_contents_is_assignment_copy", table_name="contents")
     
     # 移除欄位
