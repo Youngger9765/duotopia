@@ -6,7 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import TeacherLayout from "@/components/TeacherLayout";
+import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -16,14 +24,15 @@ import {
   X,
   Calendar,
   Users,
-  FileText,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ChevronRight,
   Search,
+  BookOpen,
 } from "lucide-react";
 import { Student, Assignment } from "@/types";
+import { cn } from "@/lib/utils";
 
 // Extended assignment interface for this specific page
 interface AssignmentDetail extends Assignment {
@@ -83,6 +92,10 @@ export default function TeacherAssignmentDetailPage() {
     assignmentId: string;
   }>();
   const navigate = useNavigate();
+  
+  // 檢查是否有 editContent 查詢參數
+  const searchParams = new URLSearchParams(window.location.search);
+  const shouldEditContent = searchParams.get("editContent") === "true";
 
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -92,7 +105,18 @@ export default function TeacherAssignmentDetailPage() {
   const [editingData, setEditingData] = useState<Partial<AssignmentDetail>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [expandedContent, setExpandedContent] = useState(false);
+  const [expandedContent, setExpandedContent] = useState(shouldEditContent); // 如果有 editContent 參數，自動展開
+  const [assignmentContents, setAssignmentContents] = useState<
+    Array<{
+      id: number;
+      title: string;
+      type: string;
+      order_index: number;
+    }>
+  >([]);
+  const [expandedContentId, setExpandedContentId] = useState<number | null>(null);
+  const [editingContentId, setEditingContentId] = useState<number | null>(null);
+  const [contentDetails, setContentDetails] = useState<Record<number, any>>({});
 
   useEffect(() => {
     let isActive = true;
@@ -162,6 +186,10 @@ export default function TeacherAssignmentDetailPage() {
       }
 
       // Process assigned students
+
+      // 獲取作業的副本內容列表
+      const contents = (response as any).contents || [];
+      setAssignmentContents(contents);
 
       const assignmentData = {
         ...response,
@@ -388,6 +416,75 @@ export default function TeacherAssignmentDetailPage() {
       instructions: assignment?.instructions,
       due_date: assignment?.due_date ? assignment.due_date.split("T")[0] : "",
     });
+  };
+
+  const loadContentDetail = async (contentId: number) => {
+    try {
+      const detail = await apiClient.getContentDetail(contentId);
+      setContentDetails((prev) => ({
+        ...prev,
+        [contentId]: detail,
+      }));
+    } catch (error) {
+      console.error("Failed to load content detail:", error);
+      toast.error(t("assignmentDetail.messages.loadContentError") || "無法載入內容詳情");
+    }
+  };
+
+  const handleEditContent = async (
+    contentId: number,
+    updatedData: {
+      title?: string;
+      items?: Array<{
+        text: string;
+        translation?: string;
+        audio_url?: string;
+      }>;
+    },
+  ) => {
+    try {
+      // 檢查是否有學生進度（用於刪除警告）
+      const hasProgress = await checkContentHasProgress(contentId);
+      if (hasProgress && updatedData.items) {
+        const oldItemCount = contentDetails[contentId]?.items?.length || 0;
+        const newItemCount = updatedData.items.length;
+        if (newItemCount < oldItemCount) {
+          // 嘗試刪除題目
+          const confirmed = window.confirm(
+            t("assignmentDetail.messages.deleteItemWarning") ||
+              "刪除題目可能會導致學生進度記錄丟失。確定要繼續嗎？",
+          );
+          if (!confirmed) {
+            return;
+          }
+        }
+      }
+
+      await apiClient.put(`/api/teachers/contents/${contentId}`, updatedData);
+      toast.success(t("assignmentDetail.messages.updateContentSuccess") || "內容已更新");
+      
+      // 重新載入內容詳情
+      await loadContentDetail(contentId);
+      setEditingContentId(null);
+      
+      // 重新載入作業詳情
+      await fetchAssignmentDetail();
+    } catch (error: any) {
+      console.error("Failed to update content:", error);
+      const errorMessage =
+        error?.response?.data?.detail || error?.message || "更新失敗";
+      toast.error(errorMessage);
+    }
+  };
+
+  const checkContentHasProgress = async (_contentId: number): Promise<boolean> => {
+    try {
+      // 通過獲取內容詳情來檢查（後端會自動檢查是否有進度）
+      // 如果更新時有錯誤，會返回 400 錯誤
+      return false; // 暫時返回 false，實際檢查在更新時進行
+    } catch {
+      return false;
+    }
   };
 
   const handleAssignStudent = async (studentId: number) => {
@@ -780,17 +877,17 @@ export default function TeacherAssignmentDetailPage() {
           </div>
         </Card>
 
-        {/* Content Details (Expandable) */}
-        {assignment.content && (
+        {/* 作業單元內容列表 (Assignment Copy Contents) */}
+        {assignmentContents.length > 0 && (
           <Card className="p-6 dark:bg-gray-800 dark:border-gray-700">
             <div
               className="flex items-center justify-between cursor-pointer"
               onClick={() => setExpandedContent(!expandedContent)}
             >
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-lg font-semibold dark:text-gray-100">
-                  {t("assignmentDetail.labels.contentDetails")}
+                  作業單元內容 ({assignmentContents.length})
                 </h3>
               </div>
               {expandedContent ? (
@@ -801,50 +898,146 @@ export default function TeacherAssignmentDetailPage() {
             </div>
 
             {expandedContent && (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {t("assignmentDetail.labels.contentTitle")}
-                  </span>
-                  <span className="font-medium ml-2 dark:text-gray-100">
-                    {assignment.content.title}
-                  </span>
-                </div>
-                {assignment.content.items &&
-                  assignment.content.items.length > 0 && (
-                    <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {t("assignmentDetail.labels.itemCount")}
-                      </span>
-                      <span className="font-medium ml-2 dark:text-gray-100">
-                        {assignment.content.items.length}{" "}
-                        {t("assignmentDetail.labels.items")}
-                      </span>
+              <div className="mt-4 space-y-2">
+                {assignmentContents.map((content, index) => (
+                  <Card
+                    key={content.id}
+                    className="p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-bold text-blue-600">
+                            #{index + 1}
+                          </span>
+                          <span className="font-medium">{content.title}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {content.type}
+                          </Badge>
+                        </div>
+                        {expandedContentId === content.id &&
+                          contentDetails[content.id] && (
+                            <div className="mt-3 space-y-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <div className="text-sm">
+                                <span className="text-gray-600 dark:text-gray-300">
+                                  題目數量：
+                                </span>
+                                <span className="font-medium ml-2">
+                                  {contentDetails[content.id].items?.length || 0}{" "}
+                                  題
+                                </span>
+                              </div>
+                              {contentDetails[content.id].items?.map(
+                                (item: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="text-xs p-2 bg-white dark:bg-gray-800 rounded"
+                                  >
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                      {idx + 1}.
+                                    </span>{" "}
+                                    <span className="font-medium">
+                                      {item.text}
+                                    </span>
+                                    {item.translation && (
+                                      <span className="text-gray-500 ml-2">
+                                        ({item.translation})
+                                      </span>
+                                    )}
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (expandedContentId === content.id) {
+                              setExpandedContentId(null);
+                            } else {
+                              setExpandedContentId(content.id);
+                              loadContentDetail(content.id);
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              expandedContentId === content.id && "rotate-90",
+                            )}
+                          />
+                          展開
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingContentId(content.id);
+                            loadContentDetail(content.id);
+                          }}
+                          className="text-orange-600 hover:text-orange-700 border-orange-200 hover:bg-orange-50"
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          編輯
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                {assignment.content.target_wpm && (
-                  <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("assignmentDetail.labels.targetSpeed")}
-                    </span>
-                    <span className="font-medium ml-2 dark:text-gray-100">
-                      {assignment.content.target_wpm} WPM
-                    </span>
-                  </div>
-                )}
-                {assignment.content.target_accuracy && (
-                  <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("assignmentDetail.labels.targetAccuracy")}
-                    </span>
-                    <span className="font-medium ml-2 dark:text-gray-100">
-                      {Math.round(assignment.content.target_accuracy * 100)}%
-                    </span>
-                  </div>
-                )}
+                  </Card>
+                ))}
               </div>
             )}
           </Card>
+        )}
+
+        {/* 編輯副本內容對話框 */}
+        {editingContentId && contentDetails[editingContentId] && (
+          <Dialog
+            open={editingContentId !== null}
+            onOpenChange={(open) => !open && setEditingContentId(null)}
+          >
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {t("assignmentDetail.labels.editContent") || "編輯作業內容"}
+                </DialogTitle>
+                <p className="text-sm text-amber-600 mt-2">
+                  ⚠️ 注意：此為作業副本。刪除已有學生進度的題目將被阻止。
+                </p>
+              </DialogHeader>
+              <div className="mt-4">
+                <ReadingAssessmentPanel
+                  content={{
+                    id: editingContentId,
+                    title: contentDetails[editingContentId].title || "",
+                  }}
+                  editingContent={contentDetails[editingContentId]}
+                  onUpdateContent={async (updatedData) => {
+                    await handleEditContent(editingContentId, updatedData);
+                  }}
+                  onSave={async () => {
+                    // onSave 在 ReadingAssessmentPanel 內部會自動調用 handleEditContent
+                    // 關閉編輯對話框
+                    setEditingContentId(null);
+                  }}
+                  lessonId={0} // 作業副本不需要 lessonId
+                  isCreating={false}
+                  isAssignmentCopy={true} // 🔥 標記為作業副本
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingContentId(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Progress Overview */}

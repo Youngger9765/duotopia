@@ -1084,6 +1084,7 @@ interface ReadingAssessmentPanelProps {
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
+  isAssignmentCopy?: boolean; // 是否為作業副本（需要特別處理刪除）
 }
 
 export default function ReadingAssessmentPanel({
@@ -1093,6 +1094,7 @@ export default function ReadingAssessmentPanel({
   onSave,
   lessonId,
   isCreating = false,
+  isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
   const [title, setTitle] = useState(t("readingAssessmentPanel.defaultTitle"));
@@ -1253,6 +1255,17 @@ export default function ReadingAssessmentPanel({
       toast.error(t("readingAssessmentPanel.row.minRowsRequired"));
       return;
     }
+
+    // 如果是作業副本，顯示警告
+    if (isAssignmentCopy) {
+      const confirmed = window.confirm(
+        "⚠️ 注意：如果學生已經對此題目有進度記錄（錄音、分數等），將無法刪除。\n\n是否確定要嘗試刪除此題目？"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     const newRows = rows.filter((_, i) => i !== index);
     setRows(newRows);
   };

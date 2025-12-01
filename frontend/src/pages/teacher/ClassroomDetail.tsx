@@ -1491,6 +1491,18 @@ export default function ClassroomDetail({
                                   <Button
                                     variant="outline"
                                     size="sm"
+                                    className="flex-1 h-12 min-h-12 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                    onClick={() => {
+                                      navigate(
+                                        `/teacher/classroom/${id}/assignment/${assignment.id}?editContent=true`,
+                                      );
+                                    }}
+                                  >
+                                    {t("classroomDetail.buttons.editContent", "編輯內容")}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
                                     className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
                                     onClick={() => {
                                       navigate(
@@ -1660,6 +1672,21 @@ export default function ClassroomDetail({
                                         >
                                           {t(
                                             "classroomDetail.buttons.viewDetails",
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-orange-600 hover:text-orange-700 dark:text-orange-400 h-10 min-h-10"
+                                          onClick={() => {
+                                            navigate(
+                                              `/teacher/classroom/${id}/assignment/${assignment.id}?editContent=true`,
+                                            );
+                                          }}
+                                        >
+                                          {t(
+                                            "classroomDetail.buttons.editContent",
+                                            "編輯內容",
                                           )}
                                         </Button>
                                         <Button
