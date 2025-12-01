@@ -401,14 +401,9 @@ async def get_teacher_programs(
     if is_template is not None:
         query = query.filter(Program.is_template == is_template)
 
-    # 過濾特定班級：顯示公版課程 OR 該班級專屬課程 (Issue #32)
+    # 過濾特定班級
     if classroom_id is not None:
-        query = query.filter(
-            or_(
-                Program.is_template is True,  # 公版課程（所有班級共用）
-                Program.classroom_id == classroom_id,  # 該班級專屬課程
-            )
-        )
+        query = query.filter(Program.classroom_id == classroom_id)
 
     programs = query.order_by(Program.order_index).all()
 
