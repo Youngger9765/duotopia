@@ -21,6 +21,7 @@ from sqlalchemy import (
     Index,
     TypeDecorator,
     select,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID, JSONB
 from sqlalchemy.orm import relationship, Session
@@ -687,9 +688,11 @@ class Content(Base):
     is_public = Column(Boolean, default=False)  # 是否公開（給其他老師使用）
 
     # 作業副本機制欄位
-    is_assignment_copy = Column(Boolean, default=False, index=True)  # 標記是否為作業副本
+    is_assignment_copy = Column(
+        Boolean, server_default=text("false"), default=False, index=True
+    )  # 標記是否為作業副本
     source_content_id = Column(
-        Integer, ForeignKey("contents.id"), nullable=True
+        Integer, ForeignKey("contents.id"), nullable=True, index=True
     )  # 原始內容 ID（如果是副本）
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
