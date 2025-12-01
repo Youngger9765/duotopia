@@ -11,7 +11,6 @@ import {
   BookOpen,
   Clock,
   Calendar,
-  Play,
   CheckCircle,
   AlertCircle,
   BarChart3,
@@ -28,11 +27,10 @@ export default function StudentAssignmentList() {
 
   const [assignments, setAssignments] = useState<StudentAssignmentCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("not_started");
+  const [activeTab, setActiveTab] = useState("todo"); // Changed from "not_started" to "todo"
   const [stats, setStats] = useState({
     totalAssignments: 0,
-    notStarted: 0,
-    inProgress: 0,
+    todo: 0, // Merged NOT_STARTED + IN_PROGRESS
     submitted: 0,
     graded: 0,
     returned: 0,
@@ -115,11 +113,9 @@ export default function StudentAssignmentList() {
       setAssignments(assignmentCards);
 
       // Calculate stats for each status
-      const notStarted = assignmentCards.filter(
-        (a) => a.status === "NOT_STARTED",
-      ).length;
-      const inProgress = assignmentCards.filter(
-        (a) => a.status === "IN_PROGRESS",
+      // Merge NOT_STARTED and IN_PROGRESS into TODO
+      const todo = assignmentCards.filter(
+        (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
       ).length;
       const submitted = assignmentCards.filter(
         (a) => a.status === "SUBMITTED",
@@ -144,8 +140,7 @@ export default function StudentAssignmentList() {
 
       setStats({
         totalAssignments: assignmentCards.length,
-        notStarted: notStarted,
-        inProgress: inProgress,
+        todo: todo, // Combined NOT_STARTED + IN_PROGRESS
         submitted: submitted,
         graded: graded,
         returned: returned,
@@ -167,10 +162,6 @@ export default function StudentAssignmentList() {
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return {
-          text: t("studentAssignmentList.status.notStarted"),
-          color: "bg-gray-100 text-gray-800",
-        };
       case "IN_PROGRESS":
         return {
           text: t("studentAssignmentList.status.inProgress"),
@@ -204,9 +195,8 @@ export default function StudentAssignmentList() {
   const getStatusIcon = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return <Clock className="h-4 w-4" />;
       case "IN_PROGRESS":
-        return <Play className="h-4 w-4" />;
+        return <Clock className="h-4 w-4" />;
       case "SUBMITTED":
       case "RESUBMITTED":
         return <CheckCircle className="h-4 w-4" />;
@@ -425,11 +415,11 @@ export default function StudentAssignmentList() {
               {t("studentAssignmentList.flowStatus.title")}
             </h3>
             <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 pt-2 justify-start sm:justify-center flex-nowrap">
-              {/* 未開始 */}
+              {/* 待完成 (Merged: NOT_STARTED + IN_PROGRESS) */}
               <button
-                onClick={() => setActiveTab("not_started")}
+                onClick={() => setActiveTab("todo")}
                 className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "not_started"
+                  activeTab === "todo"
                     ? "scale-105"
                     : "opacity-70 hover:opacity-100"
                 }`}
@@ -437,65 +427,25 @@ export default function StudentAssignmentList() {
                 <div className="relative">
                   <div
                     className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "not_started"
-                        ? "bg-gray-600 border-gray-600 text-white"
-                        : "bg-white border-gray-300 text-gray-600"
-                    }`}
-                  >
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.notStarted > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.notStarted}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "not_started"
-                      ? "text-gray-900"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.notStarted")}
-                </span>
-              </button>
-
-              <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
-
-              {/* 進行中 */}
-              <button
-                onClick={() => setActiveTab("in_progress")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "in_progress"
-                    ? "scale-110"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "in_progress"
+                      activeTab === "todo"
                         ? "bg-blue-600 border-blue-600 text-white"
                         : "bg-white border-gray-300 text-blue-600"
                     }`}
                   >
-                    <Play className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                   </div>
-                  {stats.inProgress > 0 && (
+                  {stats.todo > 0 && (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.inProgress}
+                      {stats.todo}
                     </div>
                   )}
                 </div>
                 <span
                   className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "in_progress"
-                      ? "text-gray-900"
-                      : "text-gray-600"
+                    activeTab === "todo" ? "text-gray-900" : "text-gray-600"
                   }`}
                 >
-                  {t("studentAssignmentList.flowStatus.inProgress")}
+                  {t("studentAssignmentList.flowStatus.todo")}
                 </span>
               </button>
 
@@ -657,65 +607,34 @@ export default function StudentAssignmentList() {
           className="space-y-6"
         >
           <TabsList className="hidden">
-            <TabsTrigger value="not_started" />
-            <TabsTrigger value="in_progress" />
+            <TabsTrigger value="todo" />
             <TabsTrigger value="submitted" />
             <TabsTrigger value="returned" />
             <TabsTrigger value="resubmitted" />
             <TabsTrigger value="graded" />
           </TabsList>
 
-          {/* NOT_STARTED Tab */}
-          <TabsContent value="not_started" className="space-y-4">
+          {/* TODO Tab (Merged: NOT_STARTED + IN_PROGRESS) */}
+          <TabsContent value="todo" className="space-y-4">
             {(() => {
-              const notStartedAssignments = assignments.filter(
-                (a) => a.status === "NOT_STARTED",
+              const todoAssignments = assignments.filter(
+                (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
               );
-              return notStartedAssignments.length === 0 ? (
+              return todoAssignments.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
                     <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.notStarted.title")}
+                      {t("studentAssignmentList.emptyStates.todo.title")}
                     </h3>
                     <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.notStarted.description",
-                      )}
+                      {t("studentAssignmentList.emptyStates.todo.description")}
                     </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {notStartedAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
-          </TabsContent>
-
-          {/* IN_PROGRESS Tab */}
-          <TabsContent value="in_progress" className="space-y-4">
-            {(() => {
-              const inProgressAssignments = assignments.filter(
-                (a) => a.status === "IN_PROGRESS",
-              );
-              return inProgressAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.inProgress.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.inProgress.description",
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {inProgressAssignments.map(renderAssignmentCard)}
+                  {todoAssignments.map(renderAssignmentCard)}
                 </div>
               );
             })()}
