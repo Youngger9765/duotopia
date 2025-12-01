@@ -27,3 +27,8 @@ per-file-ignores =
     # Test files with specific issues
     backend/tests/integration/auth/test_auth_comprehensive.py: F401, F811
     backend/tests/integration/api/test_manual_grading.py: E501
+    # Test files with SQLite pragma setup (E402)
+    tests/integration/api/test_assignment_bulk_operations.py: E402
+    tests/integration/api/test_assignment_content_copy_mechanism.py: E402
+    tests/integration/api/test_assignment_permission_filtering.py: E402
+    tests/integration/api/test_student_assignment_end_to_end.py: E402
