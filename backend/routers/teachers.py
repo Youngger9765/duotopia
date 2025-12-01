@@ -355,7 +355,7 @@ async def get_teacher_classrooms(
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
-                    "student_id": cs.student.student_number,
+                    "student_number": cs.student.student_number,
                     "birthdate": (
                         cs.student.birthdate.isoformat()
                         if cs.student.birthdate
@@ -944,7 +944,7 @@ async def create_student(
         "default_password": default_password,
         "password_changed": False,
         "classroom_id": student_data.classroom_id,
-        "student_id": student.student_number,
+        "student_number": student.student_number,
         "phone": student_data.phone,
         "email_verified": False,  # 新建立的學生 email 未驗證
     }
@@ -1005,7 +1005,7 @@ async def get_student(
         "email": student.email,
         "birthdate": student.birthdate.isoformat(),
         "password_changed": student.password_changed,
-        "student_id": student.student_number,
+        "student_number": student.student_number,
     }
 
 

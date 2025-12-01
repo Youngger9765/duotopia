@@ -195,7 +195,7 @@ export function StudentDialogs({
           id: response.id as number,
           name: response.name as string,
           email: response.email as string,
-          student_number: response.student_id as string | undefined,
+          student_number: response.student_number as string | undefined,
           birthdate: response.birthdate as string | undefined,
           password_changed: response.password_changed as boolean | undefined,
           classroom_id: response.classroom_id as number | undefined,
