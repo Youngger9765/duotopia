@@ -1165,11 +1165,6 @@
       },
       "actions": {
         "viewPlans": "查看方案"
-      },
-      "steps": {
-        "selectContent": "選擇內容",
-        "selectStudents": "選擇學生",
-        "details": "作業詳情"
       }
     },
     "classroomAssignDialog": {
@@ -2074,11 +2069,23 @@
     },
     "contentTypes": {
       "readingAssessment": "朗讀評測",
+      "reading_assessment": "朗讀評測",
+      "READING_ASSESSMENT": "朗讀評測",
       "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
+      "SPEAKING_PRACTICE": "口說練習",
       "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
+      "SPEAKING_SCENARIO": "情境對話",
       "listeningCloze": "聽力填空",
+      "listening_cloze": "聽力填空",
+      "LISTENING_CLOZE": "聽力填空",
       "sentenceMaking": "造句練習",
+      "sentence_making": "造句練習",
+      "SENTENCE_MAKING": "造句練習",
       "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
+      "SPEAKING_QUIZ": "口說測驗",
       "readingRecordingPractice": "朗讀錄音練習",
       "newContent": "新內容"
     },
@@ -2233,14 +2240,27 @@
       "instructionsPlaceholder": "輸入作業說明...",
       "noInstructions": "無說明",
       "notSet": "未設定",
-      "people": "人"
+      "people": "人",
+      "editContent": "編輯內容"
     },
     "contentTypes": {
+      "readingAssessment": "朗讀評測",
+      "reading_assessment": "朗讀評測",
       "READING_ASSESSMENT": "朗讀評測",
+      "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
+      "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
       "SPEAKING_SCENARIO": "情境對話",
+      "listeningCloze": "聽力填空",
+      "listening_cloze": "聽力填空",
       "LISTENING_CLOZE": "聽力填空",
+      "sentenceMaking": "造句練習",
+      "sentence_making": "造句練習",
       "SENTENCE_MAKING": "造句練習",
+      "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
       "SPEAKING_QUIZ": "口說測驗"
     }
   },

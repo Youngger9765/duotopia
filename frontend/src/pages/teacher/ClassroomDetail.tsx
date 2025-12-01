@@ -1491,18 +1491,6 @@ export default function ClassroomDetail({
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="flex-1 h-12 min-h-12 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                                    onClick={() => {
-                                      navigate(
-                                        `/teacher/classroom/${id}/assignment/${assignment.id}?editContent=true`,
-                                      );
-                                    }}
-                                  >
-                                    {t("classroomDetail.buttons.editContent", "編輯內容")}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
                                     className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
                                     onClick={() => {
                                       navigate(
@@ -1560,7 +1548,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                                   },
+                                  reading_assessment: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.readingAssessment",
+                                    ),
+                                    color:
+                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                  },
                                   SPEAKING_PRACTICE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingPractice",
+                                    ),
+                                    color:
+                                      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                  },
+                                  speaking_practice: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingPractice",
                                     ),
@@ -1574,7 +1576,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
                                   },
+                                  speaking_scenario: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingScenario",
+                                    ),
+                                    color:
+                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                  },
                                   LISTENING_CLOZE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.listeningCloze",
+                                    ),
+                                    color:
+                                      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                  },
+                                  listening_cloze: {
                                     label: t(
                                       "classroomDetail.contentTypes.listeningCloze",
                                     ),
@@ -1588,7 +1604,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
                                   },
+                                  sentence_making: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.sentenceMaking",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  },
                                   SPEAKING_QUIZ: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingQuiz",
+                                    ),
+                                    color:
+                                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                  },
+                                  speaking_quiz: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingQuiz",
                                     ),
@@ -1672,21 +1702,6 @@ export default function ClassroomDetail({
                                         >
                                           {t(
                                             "classroomDetail.buttons.viewDetails",
-                                          )}
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-orange-600 hover:text-orange-700 dark:text-orange-400 h-10 min-h-10"
-                                          onClick={() => {
-                                            navigate(
-                                              `/teacher/classroom/${id}/assignment/${assignment.id}?editContent=true`,
-                                            );
-                                          }}
-                                        >
-                                          {t(
-                                            "classroomDetail.buttons.editContent",
-                                            "編輯內容",
                                           )}
                                         </Button>
                                         <Button

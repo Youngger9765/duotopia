@@ -412,7 +412,7 @@ async def create_assignment(
     all_student_assignments = []
     all_progress_records = []
     all_item_progress_records = []
-    
+
     assigned_at_time = (
         request.start_date if request.start_date else datetime.now(timezone.utc)
     )
@@ -830,6 +830,61 @@ async def patch_assignment(
         "assignment_id": assignment_id,
         "message": "Assignment updated successfully",
     }
+
+
+@router.put("/assignments/{assignment_id}/contents/reorder")
+async def reorder_assignment_contents(
+    assignment_id: int,
+    order_data: List[Dict[str, int]],  # [{"content_id": 1, "order_index": 1}, ...]
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    重新排序作業內容（AssignmentContent）
+    """
+    if not isinstance(current_user, Teacher):
+        raise HTTPException(
+            status_code=403, detail="Only teachers can reorder assignment contents"
+        )
+
+    # 驗證作業屬於當前教師
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_user.id,
+            Assignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404, detail="Assignment not found or you don't have permission"
+        )
+
+    # 批次查詢 AssignmentContent，避免 N+1 問題
+    content_ids = [item["content_id"] for item in order_data]
+    assignment_contents = (
+        db.query(AssignmentContent)
+        .filter(
+            AssignmentContent.assignment_id == assignment_id,
+            AssignmentContent.content_id.in_(content_ids),
+        )
+        .all()
+    )
+    assignment_contents_dict = {
+        ac.content_id: ac for ac in assignment_contents
+    }
+
+    # 更新順序
+    for item in order_data:
+        ac = assignment_contents_dict.get(item["content_id"])
+        if ac:
+            ac.order_index = item["order_index"]
+
+    db.commit()
+    return {"success": True, "message": "Assignment contents reordered successfully"}
 
 
 @router.delete("/assignments/{assignment_id}")

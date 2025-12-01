@@ -30,34 +30,58 @@ class AudioUploadService:
         self.environment = os.getenv("ENVIRONMENT", "development")
 
     def _get_storage_client(self):
-        """延遲初始化 GCS client"""
+        """延遲初始化 GCS client（使用與 tts.py 相同的認證邏輯）"""
         if not self.storage_client:
             from google.cloud import storage
+
+            # 檢查必要的環境變數
+            if not self.bucket_name:
+                raise ValueError("GCS_BUCKET_NAME environment variable is not set")
 
             # 方法 1: 嘗試使用 service account key (生產環境)
             backend_dir = os.path.dirname(os.path.dirname(__file__))
             key_path = os.path.join(backend_dir, "service-account-key.json")
 
             if os.path.exists(key_path):
+                # 檢查文件是否為空或無效
                 try:
-                    self.storage_client = storage.Client.from_service_account_json(
-                        key_path
-                    )
-                    print("✅ GCS client initialized with service account key")
-                    return self.storage_client
-                except Exception as e:
-                    print(f"⚠️  Failed to use service account key: {e}")
+                    import json
+                    if os.path.getsize(key_path) > 0:
+                        with open(key_path, 'r') as f:
+                            json.load(f)  # 驗證 JSON 格式
+                        # JSON 有效，嘗試使用
+                        try:
+                            self.storage_client = storage.Client.from_service_account_json(
+                                key_path
+                            )
+                            print("✅ Audio Upload GCS client initialized with service account key")
+                            return self.storage_client
+                        except Exception as e:
+                            print(f"⚠️  Failed to use service account key: {e}")
+                    else:
+                        print(f"⚠️  Service account key file is empty, skipping")
+                except (json.JSONDecodeError, ValueError) as e:
+                    print(f"⚠️  Service account key file is invalid JSON: {e}, skipping")
 
             # 方法 2: 使用 Application Default Credentials (本機開發)
+            # 臨時清除 GOOGLE_APPLICATION_CREDENTIALS 環境變數（如果它指向無效的 key 文件）
+            original_creds = os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
             try:
                 self.storage_client = storage.Client()
-                print("✅ GCS client initialized with Application Default Credentials")
+                print("✅ Audio Upload GCS client initialized with Application Default Credentials")
                 print("   (使用 gcloud auth application-default login 認證)")
                 return self.storage_client
             except Exception as e:
-                print(f"❌ GCS client initialization failed: {e}")
+                print(f"❌ Audio Upload GCS client initialization failed: {e}")
                 print("   請執行: gcloud auth application-default login")
+                # 如果原本有 GOOGLE_APPLICATION_CREDENTIALS，恢復它
+                if original_creds:
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = original_creds
                 return None
+            finally:
+                # 如果原本有 GOOGLE_APPLICATION_CREDENTIALS，恢復它
+                if original_creds:
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = original_creds
 
         return self.storage_client
 

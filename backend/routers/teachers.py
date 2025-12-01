@@ -2788,6 +2788,7 @@ async def batch_generate_tts(
     """批次生成 TTS 音檔"""
     try:
         from services.tts import get_tts_service
+        import traceback
 
         tts_service = get_tts_service()
 
@@ -2801,8 +2802,14 @@ async def batch_generate_tts(
 
         return {"audio_urls": audio_urls}
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Batch TTS error: {e}")
-        raise HTTPException(status_code=500, detail="Batch TTS generation failed")
+        print(f"Traceback: {error_trace}")
+        # 返回更詳細的錯誤訊息（僅在開發環境）
+        import os
+        error_detail = str(e) if os.getenv("ENVIRONMENT") in ["development", "staging"] else "Batch TTS generation failed"
+        raise HTTPException(status_code=500, detail=error_detail)
 
 
 @router.get("/tts/voices")

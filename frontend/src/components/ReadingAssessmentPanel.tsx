@@ -1129,6 +1129,7 @@ export default function ReadingAssessmentPanel({
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // 🔥 標記是否為初始載入
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1145,9 +1146,39 @@ export default function ReadingAssessmentPanel({
   // Load existing content data from database
   useEffect(() => {
     if (content?.id) {
+      setIsInitialLoad(true); // 🔥 標記為初始載入
       loadContentData();
+    } else if (editingContent?.id) {
+      // 🔥 如果有 editingContent，直接使用它（不需要重新載入）
+      setIsInitialLoad(true);
+      setTitle(editingContent.title || "");
+      if (editingContent.items && Array.isArray(editingContent.items)) {
+        const convertedRows = editingContent.items.map(
+          (
+            item: {
+              text?: string;
+              translation?: string;
+              definition?: string;
+              audio_url?: string;
+            },
+            index: number,
+          ) => ({
+            id: (index + 1).toString(),
+            text: item.text || "",
+            definition: item.definition || "",
+            translation: item.translation || "",
+            audioUrl: item.audio_url || "",
+            selectedLanguage: "chinese" as "chinese" | "english",
+          }),
+        );
+        setRows(convertedRows);
+      }
+      setIsLoading(false);
+      setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 100);
     }
-  }, [content?.id]);
+  }, [content?.id, editingContent?.id]);
 
   const loadContentData = async () => {
     if (!content?.id) return;
@@ -1198,12 +1229,16 @@ export default function ReadingAssessmentPanel({
       toast.error(t("readingAssessmentPanel.save.loadFailed"));
     } finally {
       setIsLoading(false);
+      // 🔥 載入完成後，等待一個 tick 再標記為非初始載入
+      setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 100);
     }
   };
 
-  // Update parent when data changes
+  // Update parent when data changes (但不包括初始載入)
   useEffect(() => {
-    if (!onUpdateContent) return;
+    if (!onUpdateContent || isInitialLoad) return; // 🔥 初始載入時不觸發
 
     const items = rows.map((row) => ({
       text: row.text,
@@ -1218,7 +1253,7 @@ export default function ReadingAssessmentPanel({
       title,
       items,
     });
-  }, [rows, title]);
+  }, [rows, title, isInitialLoad]);
 
   // dnd-kit drag end handler
   const handleDragEnd = (event: DragEndEvent) => {
