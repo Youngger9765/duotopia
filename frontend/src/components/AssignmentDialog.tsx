@@ -10,12 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -128,6 +122,7 @@ export function AssignmentDialog({
     student_ids: [] as number[],
     assign_to_all: true,
     due_date: undefined as Date | undefined,
+    start_date: undefined as Date | undefined,
   });
 
   useEffect(() => {
@@ -142,6 +137,7 @@ export function AssignmentDialog({
         student_ids: students.map((s) => s.id), // 預設全選所有學生
         assign_to_all: true,
         due_date: undefined,
+        start_date: new Date(), // 預設為今天
       });
       setCurrentStep(1);
     }
@@ -383,6 +379,9 @@ export function AssignmentDialog({
         due_date: formData.due_date
           ? formData.due_date.toISOString()
           : undefined,
+        start_date: formData.start_date
+          ? formData.start_date.toISOString()
+          : undefined,
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -445,6 +444,7 @@ export function AssignmentDialog({
       student_ids: [],
       assign_to_all: true,
       due_date: undefined,
+      start_date: undefined,
     });
     setSelectedContents(new Set());
     setExpandedPrograms(new Set());
@@ -1084,7 +1084,20 @@ export function AssignmentDialog({
                       </Label>
                       <Input
                         type="date"
-                        defaultValue={new Date().toISOString().split("T")[0]}
+                        value={
+                          formData.start_date
+                            ? formData.start_date.toISOString().split("T")[0]
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const dateValue = e.target.value
+                            ? new Date(e.target.value)
+                            : undefined;
+                          setFormData((prev) => ({
+                            ...prev,
+                            start_date: dateValue,
+                          }));
+                        }}
                         className="text-sm"
                       />
                     </div>
@@ -1093,40 +1106,24 @@ export function AssignmentDialog({
                         <Clock className="h-3.5 w-3.5" />
                         {t("dialogs.assignmentDialog.details.dueDate")}
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal text-sm h-9",
-                              !formData.due_date && "text-muted-foreground",
-                            )}
-                          >
-                            {formData.due_date ? (
-                              format(formData.due_date, "yyyy/MM/dd")
-                            ) : (
-                              <span>
-                                {t(
-                                  "dialogs.assignmentDialog.details.selectDate",
-                                )}
-                              </span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={formData.due_date}
-                            onSelect={(date) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                due_date: date,
-                              }))
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={
+                          formData.due_date
+                            ? formData.due_date.toISOString().split("T")[0]
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const dateValue = e.target.value
+                            ? new Date(e.target.value)
+                            : undefined;
+                          setFormData((prev) => ({
+                            ...prev,
+                            due_date: dateValue,
+                          }));
+                        }}
+                        className="text-sm"
+                      />
                     </div>
                   </div>
 

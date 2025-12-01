@@ -1,0 +1,30 @@
+{
+  "preferences": {
+    "communication_style": "concise",
+    "detail_level": "high",
+    "auto_fix": false,
+    "notification_threshold": "medium",
+    "learning_mode": "active"
+  },
+  "workflows": {
+    "preferred_test_runner": "pytest",
+    "git_workflow": "feature-branch",
+    "commit_style": "conventional",
+    "deployment_approval": "manual"
+  },
+  "quality_standards": {
+    "min_test_coverage": 80,
+    "required_checks": [
+      "tests",
+      "typecheck",
+      "lint"
+    ],
+    "security_scan": true,
+    "performance_benchmark": true
+  },
+  "metadata": {
+    "created": "2025-11-29T00:00:00Z",
+    "last_updated": "2025-11-29T00:00:00Z",
+    "version": "1.0.0"
+  }
+}

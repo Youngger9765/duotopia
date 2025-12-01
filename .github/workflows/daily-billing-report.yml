@@ -1,0 +1,132 @@
+name: Daily Billing Report
+
+on:
+  # 每天早上 9:00 (UTC+8) 執行，即 UTC 1:00
+  schedule:
+    - cron: '0 1 * * *'
+
+  # 允許手動觸發
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: 'Admin email to send report (optional, uses default from secrets)'
+        required: false
+        type: string
+
+jobs:
+  send-billing-report:
+    name: Generate and Send Daily Billing Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Create logs directory
+        run: |
+          mkdir -p backend/logs
+          mkdir -p backend/data/billing_history
+
+      - name: Run daily billing report
+        env:
+          # Admin email configuration
+          ADMIN_EMAIL: ${{ inputs.admin_email || secrets.ADMIN_EMAIL || 'myduotopia@gmail.com' }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME || 'Duotopia Admin' }}
+
+          # SMTP configuration
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL || 'noreply@duotopia.com' }}
+          FROM_NAME: ${{ secrets.FROM_NAME || 'Duotopia Billing System' }}
+
+          # Frontend URL
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://duotopia.com' }}
+
+          # GCP configuration
+          GCP_PROJECT_ID: duotopia-472708
+
+          # OpenAI API key (optional, for AI analysis)
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+          # Billing report configuration
+          ANOMALY_THRESHOLD: ${{ vars.ANOMALY_THRESHOLD || '50' }}
+          SAVE_HISTORY: ${{ vars.SAVE_HISTORY || 'true' }}
+        run: |
+          cd backend
+          python scripts/daily_billing_report.py
+
+      - name: Upload billing history
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-history-${{ github.run_id }}
+          path: backend/data/billing_history/
+          retention-days: 90
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-report-logs-${{ github.run_id }}
+          path: backend/logs/billing_report.log
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_title = `❌ Daily Billing Report Failed - ${new Date().toISOString().split('T')[0]}`;
+            const issue_body = `
+            ## Daily Billing Report Execution Failed
+
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Triggered by:** ${{ github.event_name }}
+            **Branch:** ${{ github.ref }}
+
+            ### Possible Reasons:
+            - BigQuery data not available
+            - SMTP credentials not configured
+            - Network connectivity issues
+            - Script error
+
+            ### Action Required:
+            1. Check workflow logs
+            2. Verify environment variables and secrets
+            3. Test BigQuery connectivity
+            4. Re-run workflow manually if needed
+
+            ### Environment:
+            - GCP Project: duotopia-472708
+            - Admin Email: ${{ secrets.ADMIN_EMAIL || 'NOT_SET' }}
+            - SMTP Configured: ${{ secrets.SMTP_USER && 'YES' || 'NO' }}
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issue_title,
+              body: issue_body,
+              labels: ['billing', 'automation', 'bug']
+            });

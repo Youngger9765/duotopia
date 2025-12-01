@@ -506,8 +506,7 @@
     },
     "flowStatus": {
       "title": "Assignment Progress Flow",
-      "notStarted": "Not Started",
-      "inProgress": "In Progress",
+      "todo": "To Do",
       "submitted": "Submitted",
       "returned": "Returned for Revision",
       "resubmitted": "Resubmitted",
@@ -544,13 +543,9 @@
       "resubmit": "Resubmit"
     },
     "emptyStates": {
-      "notStarted": {
-        "title": "No assignments to start",
-        "description": "All assignments have been started!"
-      },
-      "inProgress": {
-        "title": "No assignments in progress",
-        "description": "Start practicing your assignments!"
+      "todo": {
+        "title": "No pending assignments",
+        "description": "All assignments have been completed or submitted!"
       },
       "submitted": {
         "title": "No assignments pending grading",
@@ -1187,6 +1182,9 @@
       "title": "Select Content Type",
       "description": "Select the content type to add to \"{{lessonName}}\"",
       "processing": "Processing...",
+      "recommended": "Recommended",
+      "comingSoon": "Coming Soon",
+      "cancel": "Cancel",
       "types": {
         "reading_assessment": {
           "name": "Reading Recording",
