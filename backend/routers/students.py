@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
-from datetime import datetime, timedelta  # noqa: F401
+from datetime import datetime, timedelta, timezone  # noqa: F401
 from database import get_db
 from models import (
     Student,
@@ -164,9 +164,15 @@ async def get_student_assignments(
     student_id = current_user.get("sub")
 
     # Get assignments
+    # 🔥 Fix Issue #34: 只顯示已開始的作業（assigned_at <= 當前時間）
+    current_time = datetime.now(timezone.utc)
+
     assignments = (
         db.query(StudentAssignment)
-        .filter(StudentAssignment.student_id == int(student_id))
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.assigned_at <= current_time,  # 🔥 只顯示已開始的作業
+        )
         .order_by(
             StudentAssignment.due_date.desc()
             if StudentAssignment.due_date
