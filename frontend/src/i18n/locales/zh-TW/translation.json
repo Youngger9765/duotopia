@@ -1069,7 +1069,7 @@
       "steps": {
         "selectContent": "選擇內容",
         "selectStudents": "選擇學生",
-        "assignmentDetails": "作業詳情"
+        "details": "作業詳情"
       },
       "quota": {
         "remaining": "配額餘額",

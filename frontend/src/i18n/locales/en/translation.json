@@ -1064,11 +1064,6 @@
   "dialogs": {
     "assignmentDialog": {
       "title": "Assign New Assignment",
-      "steps": {
-        "selectContent": "Select Content",
-        "selectStudents": "Select Students",
-        "assignmentDetails": "Assignment Details"
-      },
       "quota": {
         "remaining": "Quota Remaining",
         "remainingColon": "Quota Remaining:",
@@ -1142,6 +1137,8 @@
         "noStudentSelected": "Please select at least one student",
         "createFailed": "Failed to create assignment",
         "loadProgramsFailed": "Failed to load programs",
+        "loadTemplateFailed": "Failed to load template programs",
+        "loadClassroomProgramsFailed": "Failed to load classroom programs",
         "loadLessonsFailed": "Failed to load lessons",
         "loadContentsFailed": "Failed to load contents",
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
