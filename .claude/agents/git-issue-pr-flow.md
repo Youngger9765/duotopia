@@ -24,6 +24,68 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 5. **Never Skip Testing Instructions** - Provide clear steps for case owners
 6. **Never Commit Without User Approval** - Wait for explicit command
 7. **Language: English or Traditional Chinese Only** - For all GitHub comments
+8. **Always Update Issue Labels After PR Merge** - Keep status tracking accurate
+
+## Complete Workflow Example
+
+### Scenario: Multiple Issues Ready for Production
+
+```bash
+# 1. Check current status
+gh issue list --label "🚀 Ready for Production"
+# Output: Issues #26, #27, #28, #34 ready
+
+# 2. Verify staging vs main diff
+git log origin/main..origin/staging --oneline
+# Shows 5 commits (4 PRs + 1 cleanup)
+
+# 3. Create Release PR with all issues documented
+gh pr create --base main --head staging \
+  --title "Release: Deploy UX improvements and bug fixes to Production" \
+  --body "## 📦 Production Release
+
+Fixes #26, #27, #28, #34
+
+### Issues Included
+- #26: 學生密碼輸入下方需要初始密碼提示
+- #27: 學生儀錶板【我的作業】顯示方式需調整
+- #28: 移除開始寫作業前的確認畫面
+- #34: 設定未來開始日期時，學生提前看到作業卡片
+
+### PRs Merged to Staging
+- PR #38: feat: Add password hints to student login page
+- PR #46: [UX] 學生儀錶板【我的作業】顯示方式需調整
+- PR #47: [UX] 移除開始寫作業前的確認畫面
+- PR #49: [Bug] 設定未來開始日期時，學生提前看到作業卡片
+
+### Testing Status
+✅ All issues tested and approved by case owner in staging
+✅ All CI/CD checks passed
+✅ No breaking changes detected
+"
+
+# 4. Review and merge
+gh pr checks <RELEASE_PR_NUMBER>  # Verify all green
+gh pr merge <RELEASE_PR_NUMBER> --merge
+
+# 5. Automated cleanup triggered (cleanup-per-issue-on-close.yml)
+# When issues close, workflow automatically:
+# - Deletes Cloud Run services for each issue
+# - Deletes container images
+# - Deletes feature branches
+# - Posts cleanup confirmation
+# - Stops billing immediately
+
+# 6. Verify cleanup (optional)
+gh issue view 26 --comments  # Should see cleanup confirmation
+gcloud run services list --region=asia-east1 | grep "preview-issue"  # Should be empty
+
+# 7. Result: 
+# ✅ All 4 issues automatically closed
+# ✅ All test environments deleted
+# ✅ All billing stopped
+# ✅ Feature branches cleaned up
+```
 
 ## Workflow Phases
 
@@ -108,30 +170,124 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
    - When approval keyword detected → auto-adds label `✅ tested-in-staging`
    - No manual command needed!
 7. Merge PR: `gh pr merge <PR> --squash` (use gh command, not manual merge)
-8. **Note**: Issue will NOT auto-close (PR uses "Related to #<NUM>")
-   - Issue remains open for staging verification
-   - Will auto-close when Release PR (staging→main) merges with "Fixes #<NUM>"
+
+8. **Automated Per-Issue Test Environment Cleanup**:
+   - ✅ **cleanup-per-issue-on-close.yml** automatically triggered
+   - Deletes Cloud Run services (frontend + backend)
+   - Deletes container images
+   - Deletes feature branch
+   - Posts cleanup confirmation to Issue
+   - 💰 **Billing stops for test environment**
+   
+9. **Update Issue Labels After Merge**:
+   ```bash
+   # Remove in-progress labels
+   gh issue edit <NUM> --remove-label "⏳ 等待案主測試"
+   gh issue edit <NUM> --remove-label "✅ PDCA: Check"
+   gh issue edit <NUM> --remove-label "🧪 Per-Issue Test Env"
+   
+   # Add staging-ready label
+   gh issue edit <NUM> --add-label "🚀 Ready for Production"
+   ```
+   - This clearly marks which issues have been merged to staging
+   - Easy to track which issues are waiting for production release
+   
+10. **Note**: Issue will NOT auto-close (PR uses "Related to #<NUM>")
+    - Issue remains open for staging verification
+    - Will auto-close when Release PR (staging→main) merges with "Fixes #<NUM>"
 
 ### Phase 4: PDCA Act (Production release)
-1. Notify case owner in Issue about staging deployment
-2. Add preventive tests for edge cases
-3. Update documentation if needed
-4. Generate completion report from template:
-   - Copy template from `.claude/templates/pdca-act.md`
-   - Fill in: completion summary, files changed, test results, lessons learned
-5. Post Act report to Issue:
-   - Use: `gh issue comment <NUM> --body-file .claude/templates/pdca-act-filled.md`
-   - Or paste template content directly
-6. **Wait for user command to create Release PR**:
+1. **Check which Issues are ready for production**:
+   ```bash
+   # List all issues with "🚀 Ready for Production" label
+   gh issue list --label "🚀 Ready for Production" --json number,title,labels
+   ```
+   - These are issues that have been merged to staging
+   - User decides when to release to production
+   
+2. **Wait for user command to create Release PR**:
    - User decides when to release to production
    - May accumulate multiple fixes before release
    - User will explicitly say "release to production" or "update release PR"
-7. Create Release PR: `update-release-pr` (staging → main)
-   - PR uses "Fixes #<NUM>" to auto-close issues
-   - Multiple issues can be included in one release
-   - Note: This is a complex operation that could be further automated
-8. Merge to production: `gh pr merge <RELEASE_PR> --merge`
-9. Issue auto-closes with "Fixes #<NUM>" in Release PR
+
+3. **Create Release PR** (staging → main):
+   ```bash
+   # Gather all ready issues
+   ISSUES=$(gh issue list --label "🚀 Ready for Production" --json number --jq '.[].number' | tr '\n' ',' | sed 's/,$//')
+   
+   # Create PR with detailed description
+   gh pr create --base main --head staging \
+     --title "Release: Deploy to Production" \
+     --body "## 📦 Production Release
+   
+   This release includes the following fixes that have been tested and approved in staging:
+   
+   $(gh issue list --label "🚀 Ready for Production" --json number,title --jq '.[] | "- Fixes #\(.number): \(.title)"')
+   
+   ### Issues Included
+   $(gh issue list --label "🚀 Ready for Production" --json number,title,labels --jq '.[] | "- #\(.number): \(.title)"')
+   
+   ### Commits
+   $(git log origin/main..origin/staging --oneline)
+   
+   ---
+   **Note**: Merging this PR will:
+   - Deploy all changes to production
+   - Automatically close all listed issues
+   - Trigger production deployment workflow
+   "
+   ```
+   - PR automatically lists all issues and commits
+   - Clear documentation of what's being released
+   - Uses "Fixes #<NUM>" to auto-close issues when merged
+
+4. **Review Release PR**:
+   - Check all CI/CD passes
+   - Verify commit list matches expectations
+   - Confirm all listed issues are ready
+
+5. **Merge to production**: 
+   ```bash
+   gh pr merge <RELEASE_PR> --merge
+   ```
+   - Use `--merge` (not squash) to preserve commit history
+   - Issues auto-close with "Fixes #<NUM>" in Release PR
+   
+6. **Automated Cleanup** (triggered by issue close):
+   - ✅ **cleanup-per-issue-on-close.yml** automatically runs when issue closes
+   - Deletes Cloud Run services for each issue:
+     - `duotopia-preview-issue-<NUM>-frontend`
+     - `duotopia-preview-issue-<NUM>-backend`
+   - Deletes container images from Artifact Registry
+   - Deletes **ALL** related feature branches:
+     - `fix/issue-<NUM>-*` (primary format)
+     - `feature/issue-<NUM>-*`
+     - `claude/issue-<NUM>` (legacy format)
+     - 🔍 **Catches accidental duplicate branches for same issue**
+   - Posts cleanup confirmation comment to issue
+   - 💰 **Billing stops immediately** when services deleted
+   
+7. **Verify Complete Cleanup** (automated check):
+   ```bash
+   # Check if any branches still exist for closed issues
+   for issue in 26 27 28 34; do
+     echo "Checking Issue #${issue}:"
+     git branch -r | grep "issue-${issue}" || echo "✅ No branches found"
+     
+     # Check if any Cloud Run services still exist
+     gcloud run services list --region=asia-east1 | grep "issue-${issue}" || echo "✅ No services found"
+   done
+   ```
+   
+8. **Manual Cleanup** (if automated cleanup missed something):
+   ```bash
+   # Force delete any remaining branches for an issue
+   ISSUE_NUM=26
+   git branch -r | grep "issue-${ISSUE_NUM}" | sed 's/origin\///' | xargs -I {} git push origin --delete {}
+   
+   # Remove labels from closed issues (optional)
+   gh issue edit ${ISSUE_NUM} --remove-label "🚀 Ready for Production"
+   ```
 
 ## Automated GitHub Actions Workflows
 
@@ -168,30 +324,106 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 ### Cleanup Workflow (cleanup-per-issue-on-close.yml)
 
 **觸發條件** (自動執行):
-1. **Issue 關閉** (`issues.closed` event)
-2. **PR Merge** (`pull_request.closed` + `merged=true`)
+1. **Issue 關閉** (`issues.closed` event) - **主要觸發點**
+   - Release PR merge 後，issues 自動關閉
+   - 關閉後立即觸發 cleanup
+2. **PR Merge** (`pull_request.closed` + `merged=true`) - **備用觸發點**
+   - PR merge to staging 時也會清理
+   - 雙重保障，確保資源不遺留
 
-**清理項目**:
-1. 🗑️ Cloud Run Services:
+**清理項目** (完全自動化):
+1. 🗑️ **Cloud Run Services** (停止計費):
    - `duotopia-preview-issue-<NUM>-frontend`
    - `duotopia-preview-issue-<NUM>-backend`
-2. 🗑️ Container Images:
-   - Frontend Docker image
-   - Backend Docker image
-3. 🗑️ Git Branch:
-   - `fix/issue-<NUM>-*` (new format)
-   - `claude/issue-<NUM>` (legacy format for backward compatibility)
-4. 💬 在 Issue 留言通知清理完成
+   - Min instances = 0 的服務也會刪除
+   - 💰 **立即停止計費**
+   
+2. 🗑️ **Container Images** (節省儲存空間):
+   - Frontend Docker images
+   - Backend Docker images
+   - 從 Artifact Registry 完全刪除
+   
+3. 🗑️ **Git Branches** (保持 repo 整潔):
+   - 🔍 **智能檢測**: 使用 regex pattern `issue-<NUM>([^0-9]|$)` 查找所有相關分支
+   - 匹配所有格式：
+     - `fix/issue-26-description` ✅
+     - `feature/issue-26-test` ✅
+     - `claude/issue-26-20251129-1639` ✅ (時間戳格式)
+     - `claude/issue-26` ✅ (簡單格式)
+   - ⚠️ **防止遺漏**: 
+     - 即使同一個 issue 開了多個分支，都會被清理
+     - 包含歷史遺留的 claude 時間戳分支
+   - 🚫 **避免誤刪**: Pattern 確保不會刪除 `issue-260` (不同 issue)
+   - 例如：
+     - ✅ `issue-26-test` → 刪除
+     - ✅ `issue-26` → 刪除
+     - ❌ `issue-260` → 保留（不同 issue）
+   
+4. 💬 **通知留言**:
+   - 在 Issue 留言確認清理完成
+   - 列出刪除的資源
+   - 確認計費已停止
+
+**執行流程**:
+```
+Issue Close (via Release PR merge)
+    ↓
+cleanup-per-issue-on-close.yml triggered
+    ↓
+1. Extract issue number
+2. Delete Cloud Run services (frontend + backend)
+3. Delete container images
+4. Delete feature branches
+5. Post confirmation comment
+    ↓
+✅ All resources cleaned
+💰 Billing stopped
+```
 
 **Agent 行為**:
-- ✅ 完全自動化（Agent 無需手動執行）
-- ✅ Issue 關閉或 PR merge 即觸發
-- ✅ 自動停止計費（min-instances=0 的服務也會刪除）
+- ✅ **完全自動化** - Agent 無需手動執行任何操作
+- ✅ **雙重觸發保障** - Issue 關閉或 PR merge 都會觸發
+- ✅ **立即停止計費** - 服務刪除後不再產生費用
+- ✅ **確認通知** - 在 Issue 留言確認清理完成
 
 **清理時機**:
-- PR merge to staging → 測試環境資源刪除
-- Issue close → 所有相關資源刪除
-- **Note**: 兩個事件都會觸發清理，確保資源不遺留
+| 事件 | 觸發時機 | 清理內容 | 目的 |
+|------|---------|---------|------|
+| **PR merge to staging** | Phase 3 完成 | 測試環境資源 | 節省成本 |
+| **Issue close** | Phase 4 完成 | 所有相關資源 | 完全清理 |
+
+**Note**: 兩個事件都會觸發清理，確保資源不遺留。Issue close 是主要觸發點。
+
+## Issue Status Tracking
+
+### Labels and Their Meanings
+
+| Label | Phase | Meaning |
+|-------|-------|---------|
+| `✅ PDCA: Plan` | Phase 1 | PDCA Plan posted, waiting for approval |
+| `✅ PDCA: Do` | Phase 2 | Development in progress |
+| `🧪 Per-Issue Test Env` | Phase 2 | Test environment deployed |
+| `⏳ 等待案主測試` | Phase 3 | Waiting for case owner testing |
+| `✅ tested-in-staging` | Phase 3 | Case owner approved in test env |
+| `✅ PDCA: Check` | Phase 3 | In review/testing phase |
+| `🚀 Ready for Production` | Phase 3→4 | **Merged to staging, ready for production** |
+| *(closed)* | Phase 4 | Released to production |
+
+### Quick Status Queries
+
+```bash
+# Check what's ready for production release
+gh issue list --label "🚀 Ready for Production"
+
+# Check what's currently in testing
+gh issue list --label "⏳ 等待案主測試"
+
+# Check what's in development
+gh issue list --label "✅ PDCA: Do"
+
+# See all open issues by phase
+gh issue list --json number,title,labels
+```
 
 ## Available Commands
 
@@ -200,7 +432,13 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 - Use `gh` CLI for PR/Issue operations
 
 ### Release Management
-- `update-release-pr` - Create/update staging→main PR (complex logic, consider automating)
+```bash
+# Check what's ready for production
+gh issue list --label "🚀 Ready for Production"
+
+# Create Release PR (staging → main)
+# See Phase 4 for detailed commands
+```
 
 ### Templates
 - `.claude/templates/pdca-plan.md` - PDCA Plan template
