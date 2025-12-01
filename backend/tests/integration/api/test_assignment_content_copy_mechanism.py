@@ -25,7 +25,6 @@ from models import (
     AssignmentContent,
     StudentAssignment,
     StudentItemProgress,
-    AssignmentStatus,
     ContentType,
     SubscriptionPeriod,
 )
@@ -42,12 +41,15 @@ engine = create_engine(
 # 啟用 SQLite 外鍵約束
 from sqlalchemy import event
 
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     """啟用 SQLite 外鍵約束"""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -231,14 +233,17 @@ class TestAssignmentContentCopy:
         assert original_content.source_content_id is None
 
         # 驗證：創建了副本 Content（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_contents = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).all()
+        copy_contents = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .all()
+        )
         assert len(copy_contents) == 1
         copy_content = copy_contents[0]
 
@@ -308,14 +313,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 ContentItem（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         copy_item = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == copy_content.id)
@@ -364,14 +372,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 Content（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
 
         # 2. 更新副本 Content
         response = client.put(
@@ -399,9 +410,7 @@ class TestAssignmentContentCopy:
 
         db.close()
 
-    def test_only_template_contents_are_shown_when_creating_assignment(
-        self, test_data
-    ):
+    def test_only_template_contents_are_shown_when_creating_assignment(self, test_data):
         """測試：派作業時只顯示模板內容，不顯示作業副本"""
         token = get_auth_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -489,14 +498,18 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 驗證：創建了兩個副本 Content（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_contents = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).order_by(Content.order_index).all()
+        copy_contents = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .order_by(Content.order_index)
+            .all()
+        )
         assert len(copy_contents) == 2
 
         # 驗證第一個副本
@@ -588,14 +601,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 Content（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
 
         # 驗證：副本包含所有 3 個 ContentItem
         copy_items = (
@@ -706,14 +722,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 驗證：創建了副本（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         assert copy_content is not None
         assert copy_content.source_content_id == 3  # 指向公版內容
         assert copy_content.title == "公版內容"
@@ -753,14 +772,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 驗證：創建了副本（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         assert copy_content is not None
         assert copy_content.source_content_id == 1  # 指向班級課程內容
         assert copy_content.title == "測試內容"
@@ -797,14 +819,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 ContentItem（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         copy_item = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == copy_content.id)
@@ -823,7 +848,9 @@ class TestAssignmentContentCopy:
 
         db.close()
 
-    def test_modifying_multiple_assignment_copies_does_not_affect_templates(self, test_data):
+    def test_modifying_multiple_assignment_copies_does_not_affect_templates(
+        self, test_data
+    ):
         """測試：修改作業內多個 Content 和 ContentItem 副本時，模板完全不受影響"""
         token = get_auth_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -915,14 +942,18 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得兩個副本 Content（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_contents = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).order_by(Content.order_index).all()
+        copy_contents = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .order_by(Content.order_index)
+            .all()
+        )
         assert len(copy_contents) == 2
         copy_content1 = copy_contents[0]  # 對應原始 content_id=1
         copy_content2 = copy_contents[1]  # 對應原始 content_id=2
@@ -1040,8 +1071,12 @@ class TestAssignmentContentCopy:
         assert original_items2[2].text == "How are you"  # 模板未變
 
         # 5. 驗證：副本已經被修改（重新查詢）
-        updated_copy_content1 = db.query(Content).filter(Content.id == copy_content1.id).first()
-        updated_copy_content2 = db.query(Content).filter(Content.id == copy_content2.id).first()
+        updated_copy_content1 = (
+            db.query(Content).filter(Content.id == copy_content1.id).first()
+        )
+        updated_copy_content2 = (
+            db.query(Content).filter(Content.id == copy_content2.id).first()
+        )
         assert updated_copy_content1.title == "修改後的副本內容1"
         assert updated_copy_content2.title == "修改後的副本內容2"
 
@@ -1073,7 +1108,9 @@ class TestAssignmentContentCopy:
 
         db.close()
 
-    def test_updating_assignment_content_with_student_progress_loses_data(self, test_data):
+    def test_updating_assignment_content_with_student_progress_loses_data(
+        self, test_data
+    ):
         """測試：當學生已有進度時，修改作業 ContentItem 會導致進度丟失（問題驗證）"""
         token = get_auth_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -1097,14 +1134,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 Content 和 ContentItem（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         copy_item = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == copy_content.id)
@@ -1147,9 +1187,15 @@ class TestAssignmentContentCopy:
 
         # 3. 驗證進度存在
         db = TestingSessionLocal()
-        progress_before = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress_id).first()
+        progress_before = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress_id)
+            .first()
+        )
         assert progress_before is not None
-        assert progress_before.recording_url == "https://example.com/student_recording.mp3"
+        assert (
+            progress_before.recording_url == "https://example.com/student_recording.mp3"
+        )
         assert progress_before.accuracy_score == 90.5
         db.close()
 
@@ -1172,14 +1218,16 @@ class TestAssignmentContentCopy:
 
         # 5. 驗證：學生的進度記錄應該被保留（智能遷移）
         db = TestingSessionLocal()
-        progress_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress_id).first()
+        progress_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress_id)
+            .first()
+        )
         assert progress_after is not None  # ✅ 進度記錄應該被保留
 
         # 驗證：ContentItem 已更新（ID 不變，文字已更新）
         updated_copy_item = (
-            db.query(ContentItem)
-            .filter(ContentItem.id == copy_item_id)
-            .first()
+            db.query(ContentItem).filter(ContentItem.id == copy_item_id).first()
         )
         assert updated_copy_item is not None
         assert updated_copy_item.id == copy_item_id  # ✅ ID 不變
@@ -1187,12 +1235,16 @@ class TestAssignmentContentCopy:
 
         # 驗證：學生的進度記錄仍然有效
         assert progress_after.content_item_id == copy_item_id  # ✅ 仍然指向同一個 ContentItem
-        assert progress_after.recording_url == "https://example.com/student_recording.mp3"  # ✅ 錄音保留
+        assert (
+            progress_after.recording_url == "https://example.com/student_recording.mp3"
+        )  # ✅ 錄音保留
         assert progress_after.accuracy_score == 90.5  # ✅ 分數保留
 
         db.close()
 
-    def test_smart_update_preserves_student_progress_when_modifying_text(self, test_data):
+    def test_smart_update_preserves_student_progress_when_modifying_text(
+        self, test_data
+    ):
         """測試：智能更新 - 修改文字時保留學生進度"""
         token = get_auth_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -1216,14 +1268,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 取得副本 Content 和 ContentItem（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         copy_item = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == copy_content.id)
@@ -1275,13 +1330,21 @@ class TestAssignmentContentCopy:
 
         # 4. 驗證：學生進度保留，ContentItem ID 不變
         db = TestingSessionLocal()
-        progress_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress_id).first()
+        progress_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress_id)
+            .first()
+        )
         assert progress_after is not None
         assert progress_after.content_item_id == copy_item_id  # ✅ ID 不變
-        assert progress_after.recording_url == "https://example.com/recording.mp3"  # ✅ 錄音保留
+        assert (
+            progress_after.recording_url == "https://example.com/recording.mp3"
+        )  # ✅ 錄音保留
         assert progress_after.accuracy_score == 95.0  # ✅ 分數保留
 
-        updated_item = db.query(ContentItem).filter(ContentItem.id == copy_item_id).first()
+        updated_item = (
+            db.query(ContentItem).filter(ContentItem.id == copy_item_id).first()
+        )
         assert updated_item.text == "Good morning!"  # ✅ 文字已更新
 
         db.close()
@@ -1309,14 +1372,17 @@ class TestAssignmentContentCopy:
 
         db = TestingSessionLocal()
 
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         copy_item = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == copy_content.id)
@@ -1372,7 +1438,11 @@ class TestAssignmentContentCopy:
 
         # 4. 驗證：原有進度保留，新增的題目沒有進度
         db = TestingSessionLocal()
-        progress_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress_id).first()
+        progress_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress_id)
+            .first()
+        )
         assert progress_after is not None
         assert progress_after.content_item_id == copy_item_id  # ✅ 原有進度保留
 
@@ -1438,14 +1508,17 @@ class TestAssignmentContentCopy:
 
         db = TestingSessionLocal()
 
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
 
         copy_items = (
             db.query(ContentItem)
@@ -1502,12 +1575,18 @@ class TestAssignmentContentCopy:
 
         # 4. 驗證：第一個題目的進度保留，第二個題目被刪除
         db = TestingSessionLocal()
-        progress1_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress1_id).first()
+        progress1_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress1_id)
+            .first()
+        )
         assert progress1_after is not None
         assert progress1_after.content_item_id == copy_item1_id  # ✅ 進度保留
 
         # 驗證第二個題目被刪除
-        item2_after = db.query(ContentItem).filter(ContentItem.id == copy_item2_id).first()
+        item2_after = (
+            db.query(ContentItem).filter(ContentItem.id == copy_item2_id).first()
+        )
         assert item2_after is None  # ✅ 已刪除
 
         db.close()
@@ -1550,14 +1629,17 @@ class TestAssignmentContentCopy:
 
         db = TestingSessionLocal()
 
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
 
         copy_items = (
             db.query(ContentItem)
@@ -1657,14 +1739,17 @@ class TestAssignmentContentCopy:
 
         db = TestingSessionLocal()
 
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
 
         copy_items = (
             db.query(ContentItem)
@@ -1754,8 +1839,16 @@ class TestAssignmentContentCopy:
         assert copy_item2_id in item_ids
 
         # 驗證進度記錄仍然有效
-        progress1_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress1_id).first()
-        progress2_after = db.query(StudentItemProgress).filter(StudentItemProgress.id == progress2_id).first()
+        progress1_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress1_id)
+            .first()
+        )
+        progress2_after = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.id == progress2_id)
+            .first()
+        )
         assert progress1_after is not None
         assert progress2_after is not None
         assert progress1_after.recording_url == "https://example.com/recording1.mp3"
@@ -1787,14 +1880,17 @@ class TestAssignmentContentCopy:
         db = TestingSessionLocal()
 
         # 驗證副本存在（透過 AssignmentContent 關聯表查詢）
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         content_ids = [ac.content_id for ac in assignment_contents]
-        copy_content = db.query(Content).filter(
-            Content.id.in_(content_ids),
-            Content.is_assignment_copy.is_(True)
-        ).first()
+        copy_content = (
+            db.query(Content)
+            .filter(Content.id.in_(content_ids), Content.is_assignment_copy.is_(True))
+            .first()
+        )
         assert copy_content is not None
         copy_content_id = copy_content.id
 
@@ -1818,9 +1914,7 @@ class TestAssignmentContentCopy:
         # 3. 驗證：副本已被硬刪除
         db = TestingSessionLocal()
         copy_content_after = (
-            db.query(Content)
-            .filter(Content.id == copy_content_id)
-            .first()
+            db.query(Content).filter(Content.id == copy_content_id).first()
         )
         assert copy_content_after is None  # 副本應該被硬刪除
 
@@ -1840,4 +1934,3 @@ class TestAssignmentContentCopy:
         assert assignment.is_active is False  # 作業被軟刪除
 
         db.close()
-

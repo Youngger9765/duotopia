@@ -16,8 +16,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'cd6eab4e2001'
-down_revision: Union[str, None] = '289edf7e0aa8'
+revision: str = "cd6eab4e2001"
+down_revision: Union[str, None] = "289edf7e0aa8"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -26,13 +26,15 @@ def upgrade() -> None:
     # ============ 新增作業副本機制欄位 ============
     op.add_column(
         "contents",
-        sa.Column("is_assignment_copy", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "is_assignment_copy", sa.Boolean(), nullable=False, server_default="false"
+        ),
     )
     op.add_column(
         "contents",
         sa.Column("source_content_id", sa.Integer(), nullable=True),
     )
-    
+
     # 建立索引以提升查詢效率
     op.create_index(
         "ix_contents_is_assignment_copy",
@@ -40,7 +42,7 @@ def upgrade() -> None:
         ["is_assignment_copy"],
         unique=False,
     )
-    
+
     # 建立外鍵約束
     op.create_foreign_key(
         "fk_contents_source_content_id",
@@ -66,7 +68,7 @@ def upgrade() -> None:
         ["assignment_id", "order_index"],
         unique=False,
     )
-    
+
     # 添加 StudentContentProgress 複合索引（優化查詢排序）
     op.create_index(
         "ix_student_content_progress_assignment_order",
@@ -74,7 +76,7 @@ def upgrade() -> None:
         ["student_assignment_id", "order_index"],
         unique=False,
     )
-    
+
     # 添加 StudentItemProgress 索引（優化查詢）
     op.create_index(
         "ix_student_item_progress_assignment",
@@ -86,10 +88,17 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # ============ 移除性能索引 ============
-    op.drop_index("ix_student_item_progress_assignment", table_name="student_item_progress")
-    op.drop_index("ix_student_content_progress_assignment_order", table_name="student_content_progress")
-    op.drop_index("ix_assignment_content_assignment_order", table_name="assignment_contents")
-    
+    op.drop_index(
+        "ix_student_item_progress_assignment", table_name="student_item_progress"
+    )
+    op.drop_index(
+        "ix_student_content_progress_assignment_order",
+        table_name="student_content_progress",
+    )
+    op.drop_index(
+        "ix_assignment_content_assignment_order", table_name="assignment_contents"
+    )
+
     # ============ 移除作業副本機制欄位 ============
     # 移除外鍵約束
     op.drop_constraint("fk_contents_source_content_id", "contents", type_="foreignkey")
@@ -97,7 +106,7 @@ def downgrade() -> None:
     # 移除索引
     op.drop_index("ix_contents_source_content_id", table_name="contents")
     op.drop_index("ix_contents_is_assignment_copy", table_name="contents")
-    
+
     # 移除欄位
     op.drop_column("contents", "source_content_id")
     op.drop_column("contents", "is_assignment_copy")

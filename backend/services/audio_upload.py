@@ -46,29 +46,36 @@ class AudioUploadService:
                 # 檢查文件是否為空或無效
                 try:
                     import json
+
                     if os.path.getsize(key_path) > 0:
-                        with open(key_path, 'r') as f:
+                        with open(key_path, "r") as f:
                             json.load(f)  # 驗證 JSON 格式
                         # JSON 有效，嘗試使用
                         try:
-                            self.storage_client = storage.Client.from_service_account_json(
-                                key_path
+                            self.storage_client = (
+                                storage.Client.from_service_account_json(key_path)
                             )
-                            print("✅ Audio Upload GCS client initialized with service account key")
+                            print(
+                                "✅ Audio Upload GCS client initialized with service account key"
+                            )
                             return self.storage_client
                         except Exception as e:
                             print(f"⚠️  Failed to use service account key: {e}")
                     else:
-                        print(f"⚠️  Service account key file is empty, skipping")
+                        print("⚠️  Service account key file is empty, skipping")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"⚠️  Service account key file is invalid JSON: {e}, skipping")
+                    print(
+                        f"⚠️  Service account key file is invalid JSON: {e}, skipping"
+                    )
 
             # 方法 2: 使用 Application Default Credentials (本機開發)
             # 臨時清除 GOOGLE_APPLICATION_CREDENTIALS 環境變數（如果它指向無效的 key 文件）
             original_creds = os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
             try:
                 self.storage_client = storage.Client()
-                print("✅ Audio Upload GCS client initialized with Application Default Credentials")
+                print(
+                    "✅ Audio Upload GCS client initialized with Application Default Credentials"
+                )
                 print("   (使用 gcloud auth application-default login 認證)")
                 return self.storage_client
             except Exception as e:

@@ -434,7 +434,9 @@ async def get_teacher_programs(
                 contents_data = []
                 if lesson.contents:
                     for content in sorted(lesson.contents, key=lambda x: x.order_index):
-                        if content.is_active and not content.is_assignment_copy:  # 🔥 只顯示模板內容
+                        if (
+                            content.is_active and not content.is_assignment_copy
+                        ):  # 🔥 只顯示模板內容
                             # 將 content_items 轉換成舊格式 items
                             items_data = []
                             if content.content_items:
@@ -1759,7 +1761,8 @@ async def get_program(
                     for content in sorted(
                         lesson.contents or [], key=lambda x: x.order_index
                     )
-                    if content.is_active and not content.is_assignment_copy  # 🔥 Filter by is_active and not assignment copy
+                    if content.is_active
+                    and not content.is_assignment_copy  # 🔥 Filter by is_active and not assignment copy
                 ],
             }
             for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)
@@ -2253,14 +2256,20 @@ async def get_content_detail(
         raise HTTPException(status_code=404, detail="Content not found")
 
     # 檢查每個 ContentItem 是否有學生進度
-    item_ids = [item.id for item in content.content_items] if hasattr(content, "content_items") else []
+    item_ids = (
+        [item.id for item in content.content_items]
+        if hasattr(content, "content_items")
+        else []
+    )
     items_with_progress = set()
 
     if item_ids:
         # 查詢哪些 item 有學生實際數據
-        progresses = db.query(StudentItemProgress).filter(
-            StudentItemProgress.content_item_id.in_(item_ids)
-        ).all()
+        progresses = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.content_item_id.in_(item_ids))
+            .all()
+        )
 
         for progress in progresses:
             # 使用與 update_content 相同的檢查邏輯
@@ -2341,8 +2350,12 @@ async def update_content(
         db.query(Content)
         .outerjoin(Lesson)
         .outerjoin(Program)
-        .outerjoin(AssignmentContent, AssignmentContent.content_id == Content.id)  # 透過 AssignmentContent 關聯
-        .outerjoin(Assignment, Assignment.id == AssignmentContent.assignment_id)  # 再 join Assignment
+        .outerjoin(
+            AssignmentContent, AssignmentContent.content_id == Content.id
+        )  # 透過 AssignmentContent 關聯
+        .outerjoin(
+            Assignment, Assignment.id == AssignmentContent.assignment_id
+        )  # 再 join Assignment
         .filter(
             Content.id == content_id,
             Content.is_active.is_(True),
@@ -2352,8 +2365,8 @@ async def update_content(
             (
                 (Content.is_assignment_copy.is_(False))
                 & (
-            (Program.teacher_id == current_teacher.id)
-            | (Program.is_template.is_(True))
+                    (Program.teacher_id == current_teacher.id)
+                    | (Program.is_template.is_(True))
                 )
                 & (Lesson.is_active.is_(True))
                 & (Program.is_active.is_(True))
@@ -2419,7 +2432,7 @@ async def update_content(
                     )
                     .first()
                     is not None
-        )
+                )
 
         # 建立新音檔 URL 的集合
         new_audio_urls = set()
@@ -2437,7 +2450,6 @@ async def update_content(
         if has_student_progress:
             # ========== 智能更新邏輯 ==========
             # 1. 建立舊 ContentItem 的映射（用於匹配）
-            existing_items_by_id = {item.id: item for item in existing_items}
             matched_items = set()  # 已匹配的舊 item ID
             items_to_delete = []  # 需要刪除的 item
 
@@ -2836,12 +2848,18 @@ async def batch_generate_tts(
         return {"audio_urls": audio_urls}
     except Exception as e:
         import traceback
+
         error_trace = traceback.format_exc()
         print(f"Batch TTS error: {e}")
         print(f"Traceback: {error_trace}")
         # 返回更詳細的錯誤訊息（僅在開發環境）
         import os
-        error_detail = str(e) if os.getenv("ENVIRONMENT") in ["development", "staging"] else "Batch TTS generation failed"
+
+        error_detail = (
+            str(e)
+            if os.getenv("ENVIRONMENT") in ["development", "staging"]
+            else "Batch TTS generation failed"
+        )
         raise HTTPException(status_code=500, detail=error_detail)
 
 

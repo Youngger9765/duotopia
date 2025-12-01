@@ -21,12 +21,9 @@ from models import (
     Lesson,
     Content,
     ContentItem,
-    Assignment,
-    AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
     StudentItemProgress,
-    AssignmentStatus,
     ContentType,
     SubscriptionPeriod,
 )
@@ -43,12 +40,14 @@ engine = create_engine(
 # 啟用 SQLite 外鍵約束
 from sqlalchemy import event
 
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     """啟用 SQLite 外鍵約束"""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -217,7 +216,7 @@ class TestAssignmentBulkOperations:
     def test_create_assignment_with_many_students_creates_all_records(self, test_data):
         """
         測試：派作業給大量學生時，所有記錄都正確創建
-        
+
         期望：
         1. 30 個 StudentAssignment 記錄
         2. 30 個 StudentContentProgress 記錄（每個學生 1 個）
@@ -279,7 +278,9 @@ class TestAssignmentBulkOperations:
             .filter(StudentAssignment.assignment_id == assignment_id)
             .all()
         )
-        expected_item_count = test_data["student_count"] * test_data["item_count"]  # 30 * 5 = 150
+        expected_item_count = (
+            test_data["student_count"] * test_data["item_count"]
+        )  # 30 * 5 = 150
         assert len(student_item_progress) == expected_item_count  # ✅ 150 個
 
         # 驗證：每個學生的記錄都正確關聯
@@ -288,7 +289,8 @@ class TestAssignmentBulkOperations:
             content_progress = (
                 db.query(StudentContentProgress)
                 .filter(
-                    StudentContentProgress.student_assignment_id == student_assignment.id
+                    StudentContentProgress.student_assignment_id
+                    == student_assignment.id
                 )
                 .all()
             )
@@ -314,7 +316,7 @@ class TestAssignmentBulkOperations:
     def test_create_assignment_bulk_operations_are_atomic(self, test_data):
         """
         測試：批量操作是原子性的
-        
+
         期望：
         1. 如果任何一步失敗，所有變更都應該回滾
         2. 不會留下部分創建的記錄
@@ -322,7 +324,7 @@ class TestAssignmentBulkOperations:
         # 這個測試需要模擬錯誤情況
         # 由於我們無法輕易模擬資料庫錯誤，這個測試主要驗證事務處理邏輯
         # 實際的錯誤處理會在集成測試中驗證
-        
+
         token = get_teacher_auth_token()
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -345,7 +347,7 @@ class TestAssignmentBulkOperations:
         # 驗證所有記錄都存在
         db = TestingSessionLocal()
         assignment_id = response.json()["assignment_id"]
-        
+
         student_assignments = (
             db.query(StudentAssignment)
             .filter(StudentAssignment.assignment_id == assignment_id)
@@ -358,7 +360,7 @@ class TestAssignmentBulkOperations:
     def test_create_assignment_performance_with_many_students(self, test_data):
         """
         測試：批量操作性能優於多次 flush
-        
+
         期望：
         1. 派作業給 30 個學生應該在合理時間內完成（< 2 秒）
         2. 所有記錄都正確創建
@@ -412,7 +414,7 @@ class TestAssignmentBulkOperations:
     def test_create_assignment_with_multiple_contents_and_students(self, test_data):
         """
         測試：多個內容 + 多個學生的批量操作
-        
+
         期望：
         1. 30 個學生 × 3 個內容 = 90 個 StudentContentProgress
         2. 30 個學生 × 3 個內容 × 5 個題目 = 450 個 StudentItemProgress
@@ -514,4 +516,3 @@ class TestAssignmentBulkOperations:
         assert len(student_item_progress) == 450  # ✅
 
         db.close()
-

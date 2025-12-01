@@ -48,37 +48,51 @@ class TTSService:
                 # 檢查文件是否為空或無效
                 try:
                     import json
+
                     if os.path.getsize(key_path) > 0:
-                        with open(key_path, 'r') as f:
+                        with open(key_path, "r") as f:
                             json.load(f)  # 驗證 JSON 格式
                         # JSON 有效，嘗試使用
                         try:
-                            self.storage_client = storage.Client.from_service_account_json(
-                                key_path
+                            self.storage_client = (
+                                storage.Client.from_service_account_json(key_path)
                             )
-                            print("✅ TTS GCS client initialized with service account key")
+                            print(
+                                "✅ TTS GCS client initialized with service account key"
+                            )
                             return self.storage_client
                         except Exception as e:
                             print(f"⚠️  Failed to use service account key: {e}")
                     else:
-                        print(f"⚠️  Service account key file is empty, skipping")
+                        print("⚠️  Service account key file is empty, skipping")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"⚠️  Service account key file is invalid JSON: {e}, skipping")
+                    print(
+                        f"⚠️  Service account key file is invalid JSON: {e}, skipping"
+                    )
 
             # 方法 2: 使用 Application Default Credentials (本機開發)
             try:
                 # 臨時清除 GOOGLE_APPLICATION_CREDENTIALS 環境變數（如果指向無效文件）
                 import google.auth
-                original_creds_env = os.environ.pop('GOOGLE_APPLICATION_CREDENTIALS', None)
+
+                original_creds_env = os.environ.pop(
+                    "GOOGLE_APPLICATION_CREDENTIALS", None
+                )
                 try:
                     credentials, project = google.auth.default()
-                    self.storage_client = storage.Client(credentials=credentials, project=project)
-                    print("✅ TTS GCS client initialized with Application Default Credentials")
+                    self.storage_client = storage.Client(
+                        credentials=credentials, project=project
+                    )
+                    print(
+                        "✅ TTS GCS client initialized with Application Default Credentials"
+                    )
                     return self.storage_client
                 finally:
                     # 恢復環境變數（如果之前存在）
                     if original_creds_env:
-                        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = original_creds_env
+                        os.environ[
+                            "GOOGLE_APPLICATION_CREDENTIALS"
+                        ] = original_creds_env
             except Exception as e:
                 print(f"❌ TTS GCS client initialization failed: {e}")
                 print("   請執行: gcloud auth application-default login")
@@ -126,7 +140,7 @@ class TTSService:
                     "AZURE_SPEECH_KEY environment variable is not set. "
                     "Please configure Azure Speech Service credentials."
                 )
-            
+
             # 配置 Azure Speech
             speech_config = speechsdk.SpeechConfig(
                 subscription=self.azure_speech_key, region=self.azure_speech_region
@@ -142,7 +156,7 @@ class TTSService:
             tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
             tmp_file_path = tmp_file.name
             tmp_file.close()  # 關閉文件句柄，但保留文件
-            
+
             try:
                 # 配置音檔輸出
                 audio_config = speechsdk.audio.AudioOutputConfig(filename=tmp_file_path)
@@ -170,7 +184,10 @@ class TTSService:
                 else:
                     cancellation_details = speechsdk.CancellationDetails(result)
                     error_msg = f"Azure TTS failed: {result.reason}"
-                    if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                    if (
+                        cancellation_details.reason
+                        == speechsdk.CancellationReason.Error
+                    ):
                         error_msg += f" - {cancellation_details.error_details}"
                     raise Exception(error_msg)
             finally:
@@ -179,7 +196,9 @@ class TTSService:
                     try:
                         os.unlink(tmp_file_path)
                     except Exception as e:
-                        print(f"Warning: Failed to delete temp file {tmp_file_path}: {e}")
+                        print(
+                            f"Warning: Failed to delete temp file {tmp_file_path}: {e}"
+                        )
 
         except Exception as e:
             raise Exception(f"TTS generation failed: {str(e)}")
@@ -207,14 +226,17 @@ class TTSService:
 
         # 使用 return_exceptions=True 來捕獲個別任務的錯誤
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # 檢查是否有錯誤
         errors = [r for r in results if isinstance(r, Exception)]
         if errors:
             # 如果有錯誤，拋出第一個錯誤（包含更多上下文）
-            error_msg = f"Batch TTS generation failed: {len(errors)} out of {len(texts)} failed. First error: {str(errors[0])}"
+            error_msg = (
+                f"Batch TTS generation failed: {len(errors)} out of {len(texts)} "
+                f"failed. First error: {str(errors[0])}"
+            )
             raise Exception(error_msg)
-        
+
         return results
 
     async def get_available_voices(self, language: str = "en") -> list[dict]:

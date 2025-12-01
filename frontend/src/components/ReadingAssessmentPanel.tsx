@@ -1070,7 +1070,7 @@ function SortableRowInner({
             row.has_student_progress
               ? t(
                   "readingAssessmentPanel.row.cannotDeleteWithProgress",
-                  "此題目有學生進度，無法刪除"
+                  "此題目有學生進度，無法刪除",
                 )
               : t("readingAssessmentPanel.row.delete")
           }
@@ -1300,8 +1300,8 @@ export default function ReadingAssessmentPanel({
       toast.error(
         t(
           "readingAssessmentPanel.row.cannotDeleteWithProgress",
-          "此題目有學生進度，無法刪除"
-        )
+          "此題目有學生進度，無法刪除",
+        ),
       );
       return;
     }
@@ -1929,13 +1929,13 @@ export default function ReadingAssessmentPanel({
                   <span className="font-medium">
                     {t(
                       "readingAssessmentPanel.assignmentCopyWarning.title",
-                      "注意：此為作業副本"
+                      "注意：此為作業副本",
                     )}
                   </span>
                   <br />
                   {t(
                     "readingAssessmentPanel.assignmentCopyWarning.message",
-                    "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+                    "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。",
                   )}
                 </p>
               </div>

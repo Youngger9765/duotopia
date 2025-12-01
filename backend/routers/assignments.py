@@ -330,8 +330,7 @@ async def create_assignment(
 
             # 複製所有 ContentItem（使用 eager loaded 的 content_items，避免 N+1）
             original_items = sorted(
-                original_content.content_items,
-                key=lambda x: x.order_index
+                original_content.content_items, key=lambda x: x.order_index
             )
 
             for original_item in original_items:
@@ -457,7 +456,9 @@ async def create_assignment(
                         content_item_id=item.id,  # 使用副本 ContentItem ID
                         status="NOT_STARTED",
                     )
-                    all_item_progress_records.append((item_progress, student_assignment))
+                    all_item_progress_records.append(
+                        (item_progress, student_assignment)
+                    )
 
         # 🔥 批量添加 StudentAssignment（使用 add_all 以支持關聯）
         db.add_all(all_student_assignments)
@@ -484,8 +485,7 @@ async def create_assignment(
         db.rollback()  # 回滾所有變更
         logger.error(f"Failed to create assignment: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create assignment: {str(e)}"
+            status_code=500, detail=f"Failed to create assignment: {str(e)}"
         )
 
     return {
@@ -878,9 +878,7 @@ async def reorder_assignment_contents(
         )
         .all()
     )
-    assignment_contents_dict = {
-        ac.content_id: ac for ac in assignment_contents
-    }
+    assignment_contents_dict = {ac.content_id: ac for ac in assignment_contents}
 
     # 更新順序
     for item in order_data:
@@ -937,10 +935,10 @@ async def delete_assignment(
         .filter(AssignmentContent.assignment_id == assignment_id)
         .all()
     )
-    
+
     # 取得所有 content_id
     content_ids_in_assignment = [ac.content_id for ac in assignment_content_records]
-    
+
     # 找出這些 content 中屬於作業副本的
     copy_contents = (
         db.query(Content)

@@ -24,12 +24,10 @@ from models import (
     Lesson,
     Content,
     ContentItem,
-    Assignment,
     AssignmentContent,
     StudentAssignment,
     StudentItemProgress,
     StudentContentProgress,
-    AssignmentStatus,
     ContentType,
     SubscriptionPeriod,
 )
@@ -46,12 +44,14 @@ engine = create_engine(
 # 啟用 SQLite 外鍵約束
 from sqlalchemy import event
 
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     """啟用 SQLite 外鍵約束"""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -267,9 +267,11 @@ class TestStudentAssignmentEndToEnd:
         db = TestingSessionLocal()
 
         # 驗證：創建了作業副本
-        assignment_contents = db.query(AssignmentContent).filter(
-            AssignmentContent.assignment_id == assignment_id
-        ).all()
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == assignment_id)
+            .all()
+        )
         assert len(assignment_contents) == 1
         copy_content_id = assignment_contents[0].content_id
 
@@ -326,7 +328,9 @@ class TestStudentAssignmentEndToEnd:
         db = TestingSessionLocal()
         student_progress = (
             db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == student_assignment_id)
+            .filter(
+                StudentContentProgress.student_assignment_id == student_assignment_id
+            )
             .first()
         )
         progress_id = student_progress.id
@@ -398,7 +402,9 @@ class TestStudentAssignmentEndToEnd:
         db = TestingSessionLocal()
 
         # 重新查詢 ContentItem（應該是同一個 ID，只是內容更新了）
-        updated_item = db.query(ContentItem).filter(ContentItem.id == copy_item1_id).first()
+        updated_item = (
+            db.query(ContentItem).filter(ContentItem.id == copy_item1_id).first()
+        )
         assert updated_item is not None
         assert updated_item.id == copy_item1_id  # ✅ ID 沒變
         assert updated_item.text == "Hello there"  # ✅ 文字已更新
@@ -413,7 +419,9 @@ class TestStudentAssignmentEndToEnd:
             .first()
         )
         assert item_progress_after is not None  # ✅ 進度記錄仍然存在
-        assert item_progress_after.content_item_id == copy_item1_id  # ✅ content_item_id 沒變
+        assert (
+            item_progress_after.content_item_id == copy_item1_id
+        )  # ✅ content_item_id 沒變
         assert item_progress_after.accuracy_score == 85.0  # ✅ 分數保留
 
         db.close()
@@ -491,7 +499,9 @@ class TestStudentAssignmentEndToEnd:
 
         # ✅ 驗證：學生看到的仍然是原始文字，模板修改不影響作業副本
         assert activities_after["activities"][0]["items"][0]["text"] == "Good morning"
-        assert activities_after["activities"][0]["items"][0]["text"] != "Modified template text"
+        assert (
+            activities_after["activities"][0]["items"][0]["text"]
+            != "Modified template text"
+        )
 
         print("✅ 模板修改不影響作業副本！")
-

@@ -106,18 +106,36 @@ interface StudentProgress {
   };
 }
 
+// Content detail type for assignment content items
+interface ContentDetail {
+  id?: number;
+  title?: string;
+  items?: Array<{
+    id: number;
+    text: string;
+    translation?: string;
+    audio_url?: string;
+    definition: string;
+    english_definition?: string;
+    selectedLanguage?: "chinese" | "english";
+    has_student_progress?: boolean;
+  }>;
+  type?: string;
+  audio_urls?: string[];
+}
+
 // 可排序的內容項目組件（移到函數外部）
 interface SortableContentItemProps {
   content: {
     id: number;
     title: string;
-    type: string;
+    type?: string;
     order_index: number;
   };
   index: number;
   totalItems: number; // 總項目數，用於判斷是否可以上下移動
   expandedContentId: number | null;
-  contentDetails: Record<number, any>;
+  contentDetails: Record<number, ContentDetail>;
   onExpand: (id: number) => void;
   onEdit: (id: number) => void;
   onMoveUp: (id: number) => void; // 向上移動
@@ -194,9 +212,11 @@ function SortableContentItem({
                 <span className="text-xs sm:text-sm font-bold text-blue-600 flex-shrink-0">
                   #{index + 1}
                 </span>
-                <span className="font-medium text-sm sm:text-base truncate">{content.title}</span>
+                <span className="font-medium text-sm sm:text-base truncate">
+                  {content.title}
+                </span>
                 <Badge variant="outline" className="text-xs flex-shrink-0">
-                  {getContentTypeLabel(content.type)}
+                  {getContentTypeLabel(content.type || "")}
                 </Badge>
               </div>
               {expandedContentId === content.id &&
@@ -210,8 +230,7 @@ function SortableContentItem({
                         {contentDetails[content.id].items?.length || 0} 題
                       </span>
                     </div>
-                    {contentDetails[content.id].items?.map(
-                      (item: any, idx: number) => (
+                    {contentDetails[content.id].items?.map((item, idx) => (
                         <div
                           key={idx}
                           className="text-xs p-2 bg-white dark:bg-gray-800 rounded break-words"
@@ -270,7 +289,7 @@ export default function TeacherAssignmentDetailPage() {
     assignmentId: string;
   }>();
   const navigate = useNavigate();
-  
+
   // 檢查是否有 editContent 查詢參數
   const searchParams = new URLSearchParams(window.location.search);
   const shouldEditContent = searchParams.get("editContent") === "true";
@@ -288,13 +307,17 @@ export default function TeacherAssignmentDetailPage() {
     Array<{
       id: number;
       title: string;
-      type: string;
+      type?: string;
       order_index: number;
     }>
   >([]);
-  const [expandedContentId, setExpandedContentId] = useState<number | null>(null);
+  const [expandedContentId, setExpandedContentId] = useState<number | null>(
+    null,
+  );
   const [editingContentId, setEditingContentId] = useState<number | null>(null);
-  const [contentDetails, setContentDetails] = useState<Record<number, any>>({});
+  const [contentDetails, setContentDetails] = useState<
+    Record<number, ContentDetail>
+  >({});
   const [activeDragId, setActiveDragId] = useState<number | null>(null); // 追蹤正在拖拽的項目
 
   // 🔥 追蹤正在載入的內容 ID，避免重複請求（Race Condition 保護）
@@ -375,17 +398,24 @@ export default function TeacherAssignmentDetailPage() {
             (sp: { is_assigned?: boolean; student_number: number }) =>
               sp.is_assigned === true,
           )
-          .map(
-            (sp: { is_assigned?: boolean; student_number: number }) =>
-              sp.student_number,
-          )
+          .map((sp: { student_number: number }) => sp.student_number)
           .filter((id) => id !== null);
       }
 
       // Process assigned students
 
       // 獲取作業的副本內容列表
-      const contents = (response as any).contents || [];
+      const contents =
+        (
+          response as {
+            contents?: Array<{
+              id: number;
+              title: string;
+              type?: string;
+              order_index: number;
+            }>;
+          }
+        ).contents || [];
       setAssignmentContents(contents);
 
       // 從 contents 陣列取得第一個內容的類型
@@ -396,7 +426,7 @@ export default function TeacherAssignmentDetailPage() {
         assigned_at: assignedDate,
         students: studentIds,
         student_count: studentIds.length,
-        content_type: firstContentType, // 🔥 從 contents 陣列取得類型
+        content_type: firstContentType || "", // 🔥 從 contents 陣列取得類型
         instructions:
           (response as AssignmentDetail & { description?: string })
             .description || response.instructions, // API returns 'description'
@@ -636,11 +666,13 @@ export default function TeacherAssignmentDetailPage() {
       const detail = await apiClient.getContentDetail(contentId);
       setContentDetails((prev) => ({
         ...prev,
-        [contentId]: detail,
+        [contentId]: detail as ContentDetail,
       }));
     } catch (error) {
       console.error("Failed to load content detail:", error);
-      toast.error(t("assignmentDetail.messages.loadContentError") || "無法載入內容詳情");
+      toast.error(
+        t("assignmentDetail.messages.loadContentError") || "無法載入內容詳情",
+      );
     } finally {
       // 🔥 請求完成後移除標記（無論成功或失敗）
       loadingRef.current.delete(contentId);
@@ -796,7 +828,7 @@ export default function TeacherAssignmentDetailPage() {
 
       // 🔥 保存舊順序（用於錯誤恢復）
       const oldContents = [...assignmentContents];
-      
+
       // 立即更新 UI（樂觀更新）
       const newContents = arrayMove(assignmentContents, oldIndex, newIndex);
       setAssignmentContents(newContents);
@@ -814,7 +846,7 @@ export default function TeacherAssignmentDetailPage() {
         );
 
         // 靜默成功，不顯示 toast（用戶已經看到順序改變）
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to reorder contents:", error);
         // 恢復原順序
         setAssignmentContents(oldContents);
@@ -825,7 +857,9 @@ export default function TeacherAssignmentDetailPage() {
 
   // 處理向上移動（移動端按鈕）
   const handleMoveUp = async (contentId: number) => {
-    const currentIndex = assignmentContents.findIndex((c) => c.id === contentId);
+    const currentIndex = assignmentContents.findIndex(
+      (c) => c.id === contentId,
+    );
     if (currentIndex <= 0) return; // 已經是最上面
 
     const newIndex = currentIndex - 1;
@@ -843,7 +877,7 @@ export default function TeacherAssignmentDetailPage() {
         `/api/teachers/assignments/${assignmentId}/contents/reorder`,
         orderData,
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to move content up:", error);
       setAssignmentContents(oldContents);
       toast.error("移動失敗，請重試");
@@ -852,7 +886,9 @@ export default function TeacherAssignmentDetailPage() {
 
   // 處理向下移動（移動端按鈕）
   const handleMoveDown = async (contentId: number) => {
-    const currentIndex = assignmentContents.findIndex((c) => c.id === contentId);
+    const currentIndex = assignmentContents.findIndex(
+      (c) => c.id === contentId,
+    );
     if (currentIndex >= assignmentContents.length - 1) return; // 已經是最下面
 
     const newIndex = currentIndex + 1;
@@ -870,7 +906,7 @@ export default function TeacherAssignmentDetailPage() {
         `/api/teachers/assignments/${assignmentId}/contents/reorder`,
         orderData,
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to move content down:", error);
       setAssignmentContents(oldContents);
       toast.error("移動失敗，請重試");
@@ -881,36 +917,38 @@ export default function TeacherAssignmentDetailPage() {
     // 將 snake_case 轉換為 camelCase，或直接使用原值
     // API 可能返回: reading_assessment, READING_ASSESSMENT, 或 readingAssessment
     let normalizedType = type;
-    
+
     // 如果是大寫的 SNAKE_CASE，轉為小寫
-    if (type === type.toUpperCase() && type.includes('_')) {
+    if (type === type.toUpperCase() && type.includes("_")) {
       normalizedType = type.toLowerCase();
     }
-    
+
     // 如果是 snake_case，轉為 camelCase
-    if (normalizedType.includes('_')) {
-      normalizedType = normalizedType.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    if (normalizedType.includes("_")) {
+      normalizedType = normalizedType.replace(/_([a-z])/g, (_, letter) =>
+        letter.toUpperCase(),
+      );
     }
-    
+
     // 嘗試翻譯鍵值
     const typeKey = `assignmentDetail.contentTypes.${normalizedType}`;
     const translated = t(typeKey);
-    
+
     // 如果翻譯失敗（返回鍵值本身），嘗試其他格式
     if (translated === typeKey) {
       // 嘗試使用 gradingPage.contentTypes（大寫格式）
       const upperType = type.toUpperCase();
       const gradingKey = `gradingPage.contentTypes.${upperType}`;
       const gradingTranslated = t(gradingKey);
-      
+
       if (gradingTranslated !== gradingKey) {
         return gradingTranslated;
       }
-      
+
       // 如果都失敗，返回原始值（至少顯示原始類型）
       return type;
     }
-    
+
     return translated;
   };
 
@@ -1033,11 +1071,11 @@ export default function TeacherAssignmentDetailPage() {
         {/* Assignment Info Card */}
         <Card className="relative p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
           {/* 編輯按鈕 - 右上角 */}
-            {isEditing ? (
+          {isEditing ? (
             <div className="absolute top-4 right-4 flex gap-2">
-                <Button
+              <Button
                 type="button"
-                  variant="outline"
+                variant="outline"
                 size="sm"
                 onClick={(e) => {
                   e.preventDefault();
@@ -1045,11 +1083,11 @@ export default function TeacherAssignmentDetailPage() {
                   handleCancel();
                 }}
                 className="text-gray-600 hover:text-gray-700 border-gray-200 hover:bg-gray-50"
-                >
+              >
                 <X className="h-4 w-4 mr-1" />
-                  {t("assignmentDetail.buttons.cancel")}
-                </Button>
-                <Button
+                {t("assignmentDetail.buttons.cancel")}
+              </Button>
+              <Button
                 type="button"
                 size="sm"
                 onClick={(e) => {
@@ -1058,15 +1096,15 @@ export default function TeacherAssignmentDetailPage() {
                   handleSave();
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
+              >
                 <Save className="h-4 w-4 mr-1" />
-                  {t("assignmentDetail.buttons.save")}
-                </Button>
+                {t("assignmentDetail.buttons.save")}
+              </Button>
             </div>
-            ) : (
-              <Button
+          ) : (
+            <Button
               type="button"
-                variant="outline"
+              variant="outline"
               size="sm"
               onClick={(e) => {
                 e.preventDefault();
@@ -1074,11 +1112,11 @@ export default function TeacherAssignmentDetailPage() {
                 setIsEditing(true);
               }}
               className="absolute top-4 right-4 text-orange-600 hover:text-orange-700 border-orange-200 hover:bg-orange-50"
-              >
+            >
               <Edit2 className="h-4 w-4 mr-1" />
-                {t("assignmentDetail.buttons.edit")}
-              </Button>
-            )}
+              {t("assignmentDetail.buttons.edit")}
+            </Button>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
@@ -1246,7 +1284,7 @@ export default function TeacherAssignmentDetailPage() {
                         getContentTypeLabel={getContentTypeLabel}
                       />
                     ))}
-                </div>
+                  </div>
                 </SortableContext>
                 {/* 拖拽視覺反饋 - 移動端優化 */}
                 <DragOverlay>
@@ -1255,7 +1293,8 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex items-center gap-2">
                         <GripVertical className="h-5 w-5 text-gray-400" />
                         <span className="font-medium">
-                          {assignmentContents.find((c) => c.id === activeDragId)?.title || "移動中..."}
+                          {assignmentContents.find((c) => c.id === activeDragId)
+                            ?.title || "移動中..."}
                         </span>
                       </div>
                     </Card>
@@ -1288,7 +1327,7 @@ export default function TeacherAssignmentDetailPage() {
                     title: contentDetails[editingContentId].title || "",
                   }}
                   editingContent={contentDetails[editingContentId]}
-                  onUpdateContent={async (_updatedData) => {
+                  onUpdateContent={async () => {
                     // 🔥 只更新本地狀態，不觸發保存
                     // onUpdateContent 會在載入時自動觸發，所以不應該直接保存
                     // 保存應該由用戶點擊「儲存」按鈕觸發
@@ -1298,7 +1337,7 @@ export default function TeacherAssignmentDetailPage() {
                     // 關閉編輯對話框
                     const savedContentId = editingContentId;
                     setEditingContentId(null);
-                    
+
                     // 🔥 重新載入內容詳情以更新題目區塊
                     if (savedContentId) {
                       // 清除舊的內容詳情，強制重新載入
@@ -1307,10 +1346,10 @@ export default function TeacherAssignmentDetailPage() {
                         delete updated[savedContentId];
                         return updated;
                       });
-                      
+
                       // 重新載入內容詳情（無論是否展開都會重新載入）
                       await loadContentDetail(savedContentId, true); // 🔥 強制重載以獲取最新數據
-                      
+
                       // 如果該內容已展開，確保展開狀態保持
                       if (expandedContentId === savedContentId) {
                         // 內容詳情已重新載入，組件會自動重新渲染
@@ -1321,7 +1360,7 @@ export default function TeacherAssignmentDetailPage() {
                   isCreating={false}
                   isAssignmentCopy={true} // 🔥 標記為作業副本
                 />
-                  </div>
+              </div>
               <DialogFooter>
                 <Button
                   variant="outline"

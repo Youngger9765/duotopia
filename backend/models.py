@@ -763,7 +763,9 @@ class AssignmentContent(Base):
         UniqueConstraint(
             "assignment_id", "content_id", name="unique_assignment_content"
         ),
-        Index("ix_assignment_content_assignment_order", "assignment_id", "order_index"),  # 優化查詢排序
+        Index(
+            "ix_assignment_content_assignment_order", "assignment_id", "order_index"
+        ),  # 優化查詢排序
     )
 
     def __repr__(self):
@@ -869,7 +871,11 @@ class StudentContentProgress(Base):
 
     # Constraints - 優化查詢性能
     __table_args__ = (
-        Index("ix_student_content_progress_assignment_order", "student_assignment_id", "order_index"),  # 優化查詢排序
+        Index(
+            "ix_student_content_progress_assignment_order",
+            "student_assignment_id",
+            "order_index",
+        ),  # 優化查詢排序
     )
 
     def __repr__(self):

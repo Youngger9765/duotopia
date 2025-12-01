@@ -11,7 +11,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from main import app
-from models import Base, Teacher, SubscriptionPeriod, Classroom, Program, Lesson, Content, ContentItem
+from models import (
+    Base,
+    Teacher,
+    SubscriptionPeriod,
+    Classroom,
+    Program,
+    Lesson,
+    Content,
+    ContentItem,
+)
 from routers.auth import get_password_hash
 from database import get_db
 from datetime import datetime, timedelta, timezone
@@ -25,13 +34,17 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 # 啟用 SQLite 外鍵約束
 from sqlalchemy import event
+
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 Base.metadata.create_all(bind=engine)
+
 
 def override_get_db():
     try:
@@ -39,6 +52,7 @@ def override_get_db():
         yield db
     finally:
         db.close()
+
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -49,7 +63,7 @@ client = TestClient(app)
 def test_data():
     """設置測試數據"""
     db = TestingSessionLocal()
-    
+
     try:
         # 清空資料庫
         db.query(ContentItem).delete()
@@ -324,4 +338,3 @@ class TestAssignmentPermissionFiltering:
 
         # 老師 B 應該看不到任何結果（因為班級 1 不屬於他）
         assert len(programs_b) == 0
-
