@@ -689,7 +689,7 @@ class Content(Base):
 
     # 作業副本機制欄位
     is_assignment_copy = Column(
-        Boolean, server_default=text("false"), default=False, index=True
+        Boolean, nullable=False, server_default=text("false"), default=False, index=True
     )  # 標記是否為作業副本
     source_content_id = Column(
         Integer, ForeignKey("contents.id"), nullable=True, index=True
