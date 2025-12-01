@@ -626,6 +626,54 @@ async def save_activity_progress(
     return {"message": "Progress saved successfully"}
 
 
+def calculate_assignment_score(
+    student_assignment_id: int, db: Session
+) -> Optional[float]:
+    """
+    Calculate assignment total score from StudentItemProgress AI scores
+
+    Logic (per Issue #53):
+    1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
+    2. For assignment: total_score = sum(all_item_scores) / total_items
+    3. If item has no AI scores: count as 0
+    4. If no items exist: return None
+
+    Args:
+        student_assignment_id: StudentAssignment ID
+        db: Database session
+
+    Returns:
+        Calculated score (0-100) or None if cannot calculate
+    """
+    # Get all item progress records
+    items = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.student_assignment_id == student_assignment_id)
+        .all()
+    )
+
+    if not items:
+        return None  # No items, cannot calculate
+
+    # Calculate each item's score
+    item_scores = []
+    for item in items:
+        # Use the overall_score property which handles partial scores
+        if item.overall_score is not None:
+            item_scores.append(float(item.overall_score))
+        else:
+            # No AI scores, count as 0 (per Issue #53 requirement)
+            item_scores.append(0.0)
+
+    # Calculate average of all item scores
+    total_score = sum(item_scores) / len(item_scores)
+
+    # Clamp score to valid range [0, 100]
+    total_score = max(0.0, min(100.0, total_score))
+
+    return round(total_score, 2)
+
+
 @router.post("/assignments/{assignment_id}/submit")
 async def submit_assignment(
     assignment_id: int,
@@ -672,11 +720,17 @@ async def submit_assignment(
     student_assignment.status = AssignmentStatus.SUBMITTED
     student_assignment.submitted_at = datetime.now()
 
+    # 🆕 Auto-calculate score from StudentItemProgress AI scores (Issue #53)
+    calculated_score = calculate_assignment_score(student_assignment.id, db)
+    if calculated_score is not None:
+        student_assignment.score = calculated_score
+
     db.commit()
 
     return {
         "message": "Assignment submitted successfully",
         "submitted_at": student_assignment.submitted_at.isoformat(),
+        "score": student_assignment.score,  # Include calculated score in response
     }
 
 
