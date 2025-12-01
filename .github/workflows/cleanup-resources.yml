@@ -137,98 +137,252 @@ jobs:
       - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: 🐳 Clean Backend Images
+      - name: 🐳 Clean Production & Staging Images
         run: |
-          echo "🔍 Checking backend container images..."
+          echo "🔍 Cleaning production and staging container images..."
 
           KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
-          echo "📌 Will keep $KEEP_COUNT most recent images"
+          echo "📌 Will keep $KEEP_COUNT most recent images per service"
+          echo ""
 
-          # 列出所有 backend images (使用正確的指令)
-          IMAGES=$(gcloud artifacts docker tags list \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend \
-            --format="value(digest)" \
-            --sort-by="~timestamp" 2>/dev/null || echo "")
+          # Services to clean
+          services=(
+            "duotopia-production-backend"
+            "duotopia-production-frontend"
+            "duotopia-staging-backend"
+            "duotopia-staging-frontend"
+          )
 
-          if [ -z "$IMAGES" ]; then
-            echo "⚠️ No images found or repository doesn't exist"
-            exit 0
-          fi
+          total_deleted=0
 
-          TOTAL=$(echo "$IMAGES" | wc -l)
-          echo "📊 Total images: $TOTAL"
+          for service in "${services[@]}"; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📦 Service: $service"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          if [ $TOTAL -gt $KEEP_COUNT ]; then
-            TO_DELETE=$(echo "$IMAGES" | tail -n +$((KEEP_COUNT + 1)))
-            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+            FULL_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${service}"
 
-            echo "🗑️ Deleting $DELETE_COUNT old images..."
+            # Get digests sorted by CREATE_TIME (newest first)
+            DIGESTS=$(gcloud artifacts docker images list "${FULL_PATH}" \
+              --sort-by="~CREATE_TIME" 2>&1 | grep "sha256:" | awk '{print $2}' || true)
 
-            for DIGEST in $TO_DELETE; do
-              echo "  Deleting: $DIGEST"
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend@sha256:$DIGEST"
+            if [ -z "$DIGESTS" ]; then
+              echo "   ℹ️  No images found"
+              echo ""
+              continue
+            fi
 
-              # 直接刪除映像（會自動刪除相關的 tags）
-              if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
-                echo "    ✅ Successfully deleted image: $DIGEST"
-              else
-                echo "    ⚠️ Failed to delete image: $DIGEST"
+            TOTAL=$(echo "$DIGESTS" | wc -l | tr -d ' ')
+            echo "   📊 Total images: $TOTAL"
+
+            if [ "$TOTAL" -le "$KEEP_COUNT" ]; then
+              echo "   ✅ Already optimal ($TOTAL <= $KEEP_COUNT)"
+              echo ""
+              continue
+            fi
+
+            # Keep the first KEEP_COUNT, delete the rest
+            DELETE_DIGESTS=$(echo "$DIGESTS" | tail -n +"$((KEEP_COUNT + 1))")
+            DELETE_COUNT=$(echo "$DELETE_DIGESTS" | wc -l | tr -d ' ')
+
+            echo "   ✅ Keeping $KEEP_COUNT newest image(s)"
+            echo "   🗑️  Deleting $DELETE_COUNT old image(s)..."
+
+            echo "$DELETE_DIGESTS" | while read -r digest; do
+              if [ -n "$digest" ]; then
+                IMAGE_URI="${FULL_PATH}@${digest}"
+                short_digest="${digest:7:12}"
+                echo "      Deleting: ${short_digest}..."
+
+                if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
+                  echo "         ✅ Deleted"
+                  total_deleted=$((total_deleted + 1))
+                else
+                  echo "         ⚠️  Failed"
+                fi
               fi
             done
 
-            echo "✅ Backend images cleanup complete!"
-          else
-            echo "✅ No cleanup needed. Only $TOTAL images exist."
-          fi
+            echo ""
+          done
 
-      - name: 🐳 Clean Frontend Images
+          echo "✅ Production & Staging images cleanup complete!"
+          echo "   Total deleted: $total_deleted images"
+
+  cleanup-preview-images:
+    name: 🧪 Clean Preview-Issue Images
+    runs-on: ubuntu-latest
+    needs: cleanup-container-images
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 🧪 Clean Preview-Issue Images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔍 Checking frontend container images..."
+          echo "========================================="
+          echo "🧪 Preview-Issue Images Cleanup"
+          echo "========================================="
+          echo ""
 
-          KEEP_COUNT=${{ github.event.inputs.keep_images || '2' }}
-          echo "📌 Will keep $KEEP_COUNT most recent images"
+          KEEP_COUNT=1  # Keep only the latest version for preview environments
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}"
 
-          # 列出所有 frontend images (使用正確的指令)
-          IMAGES=$(gcloud artifacts docker tags list \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend \
-            --format="value(digest)" \
-            --sort-by="~timestamp" 2>/dev/null || echo "")
+          # Get list of open issues from GitHub
+          echo "📋 Fetching open issues from GitHub..."
+          OPEN_ISSUES=$(gh issue list --state open --json number --jq '.[].number' | sort -n || echo "")
 
-          if [ -z "$IMAGES" ]; then
-            echo "⚠️ No images found or repository doesn't exist"
+          if [ -z "$OPEN_ISSUES" ]; then
+            echo "ℹ️  No open issues found"
             exit 0
           fi
 
-          TOTAL=$(echo "$IMAGES" | wc -l)
-          echo "📊 Total images: $TOTAL"
+          echo "📌 Open issues: $(echo $OPEN_ISSUES | tr '\n' ' ')"
+          echo ""
 
-          if [ $TOTAL -gt $KEEP_COUNT ]; then
-            TO_DELETE=$(echo "$IMAGES" | tail -n +$((KEEP_COUNT + 1)))
-            DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+          # Get all preview-issue packages
+          echo "🔍 Scanning all preview-issue images..."
+          ALL_PACKAGES=$(gcloud artifacts docker images list \
+            ${REGISTRY} \
+            --include-tags \
+            --format="value(package)" 2>&1 | \
+            grep "preview-issue" | \
+            sort -u || true)
 
-            echo "🗑️ Deleting $DELETE_COUNT old images..."
-
-            for DIGEST in $TO_DELETE; do
-              echo "  Deleting: $DIGEST"
-              IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend@sha256:$DIGEST"
-
-              # 直接刪除映像（會自動刪除相關的 tags）
-              if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
-                echo "    ✅ Successfully deleted image: $DIGEST"
-              else
-                echo "    ⚠️ Failed to delete image: $DIGEST"
-              fi
-            done
-
-            echo "✅ Frontend images cleanup complete!"
-          else
-            echo "✅ No cleanup needed. Only $TOTAL images exist."
+          if [ -z "$ALL_PACKAGES" ]; then
+            echo "ℹ️  No preview-issue images found"
+            exit 0
           fi
+
+          total_deleted=0
+          total_kept=0
+
+          # Extract issue numbers from packages and process
+          for package in $ALL_PACKAGES; do
+            # Extract issue number from package name (e.g., duotopia-preview-issue-26-backend)
+            issue_num=$(echo "$package" | sed -n 's/.*preview-issue-\([0-9]\+\)-.*/\1/p')
+
+            if [ -z "$issue_num" ]; then
+              continue
+            fi
+
+            # Check if issue is still open
+            if echo "$OPEN_ISSUES" | grep -q "^${issue_num}$"; then
+              # Issue is open - keep latest KEEP_COUNT versions
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "📦 Issue #${issue_num} (OPEN) - $(basename $package)"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              # Get digests sorted by CREATE_TIME (newest first)
+              DIGESTS=$(gcloud artifacts docker images list "${package}" \
+                --sort-by="~CREATE_TIME" 2>&1 | grep "sha256:" | awk '{print $2}' || true)
+
+              if [ -z "$DIGESTS" ]; then
+                echo "   ℹ️  No images found"
+                echo ""
+                continue
+              fi
+
+              TOTAL=$(echo "$DIGESTS" | wc -l | tr -d ' ')
+              echo "   📊 Total images: $TOTAL"
+
+              if [ "$TOTAL" -le "$KEEP_COUNT" ]; then
+                echo "   ✅ Already optimal ($TOTAL <= $KEEP_COUNT)"
+                total_kept=$((total_kept + TOTAL))
+                echo ""
+                continue
+              fi
+
+              # Keep the first KEEP_COUNT, delete the rest
+              DELETE_DIGESTS=$(echo "$DIGESTS" | tail -n +"$((KEEP_COUNT + 1))")
+              DELETE_COUNT=$(echo "$DELETE_DIGESTS" | wc -l | tr -d ' ')
+
+              echo "   ✅ Keeping $KEEP_COUNT newest image(s)"
+              echo "   🗑️  Deleting $DELETE_COUNT old image(s)..."
+
+              total_kept=$((total_kept + KEEP_COUNT))
+
+              echo "$DELETE_DIGESTS" | while read -r digest; do
+                if [ -n "$digest" ]; then
+                  IMAGE_URI="${package}@${digest}"
+                  short_digest="${digest:7:12}"
+                  echo "      Deleting: ${short_digest}..."
+
+                  if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
+                    echo "         ✅ Deleted"
+                    total_deleted=$((total_deleted + 1))
+                  else
+                    echo "         ⚠️  Failed"
+                  fi
+                fi
+              done
+
+              echo ""
+            else
+              # Issue is closed - delete ALL versions
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "🗑️  Issue #${issue_num} (CLOSED) - $(basename $package)"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              # Get all digests
+              DIGESTS=$(gcloud artifacts docker images list "${package}" \
+                --sort-by="~CREATE_TIME" 2>&1 | grep "sha256:" | awk '{print $2}' || true)
+
+              if [ -z "$DIGESTS" ]; then
+                echo "   ℹ️  No images found"
+                echo ""
+                continue
+              fi
+
+              TOTAL=$(echo "$DIGESTS" | wc -l | tr -d ' ')
+              echo "   📊 Total images: $TOTAL"
+              echo "   🗑️  Deleting all $TOTAL image(s)..."
+
+              echo "$DIGESTS" | while read -r digest; do
+                if [ -n "$digest" ]; then
+                  IMAGE_URI="${package}@${digest}"
+                  short_digest="${digest:7:12}"
+                  echo "      Deleting: ${short_digest}..."
+
+                  if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
+                    echo "         ✅ Deleted"
+                    total_deleted=$((total_deleted + 1))
+                  else
+                    echo "         ⚠️  Failed"
+                  fi
+                fi
+              done
+
+              echo ""
+            fi
+          done
+
+          echo "========================================="
+          echo "✅ Preview-Issue Images Cleanup Complete!"
+          echo "========================================="
+          echo "📊 Summary:"
+          echo "   - Total deleted: $total_deleted images"
+          echo "   - Total kept: $total_kept images"
+          echo ""
 
   summary:
     name: 📊 Cleanup Summary
     runs-on: ubuntu-latest
-    needs: [cleanup-cloud-run, cleanup-container-images]
+    needs: [cleanup-cloud-run, cleanup-container-images, cleanup-preview-images]
     if: always()
 
     steps:

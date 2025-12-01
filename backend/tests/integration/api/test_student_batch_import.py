@@ -20,9 +20,7 @@ def teacher_with_classrooms(test_session):
         email="teacher@test.com",
         password_hash=get_password_hash("password123"),
         is_active=True,
-        is_verified=True,
-        subscription_status="active",
-        subscription_plan="monthly",
+        email_verified=True,
     )
     test_session.add(teacher)
     test_session.commit()
@@ -41,7 +39,12 @@ def auth_headers(teacher_with_classrooms):
     """Get auth headers for teacher"""
     from auth import create_access_token
 
-    token = create_access_token({"sub": teacher_with_classrooms["teacher"].email})
+    token = create_access_token(
+        {
+            "sub": teacher_with_classrooms["teacher"].id,  # Use teacher ID not email
+            "type": "teacher",  # Required by get_current_teacher
+        }
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -444,14 +447,14 @@ class TestStudentBatchImport:
         students = test_session.query(Student).filter(Student.name.like("學生%")).all()
         assert len(students) == 150
 
-    def test_batch_import_with_email_generation(
+    def test_batch_import_without_email_generation(
         self,
         test_client: TestClient,
         test_session: Session,
         teacher_with_classrooms,
         auth_headers,
     ):
-        """Test that emails are auto-generated when not provided"""
+        """Test that emails are NOT auto-generated - students can bind their own email later"""
         batch_data = {
             "students": [
                 {
@@ -471,10 +474,9 @@ class TestStudentBatchImport:
         data = response.json()
         assert data["success_count"] == 1
 
-        # Verify email was generated
+        # Verify email was NOT generated (should be None)
         student = test_session.query(Student).filter(Student.name == "王小明").first()
-        assert student.email is not None
-        assert "@" in student.email  # Has valid email format
+        assert student.email is None  # Students should bind email themselves later
 
     def test_batch_import_unauthorized(self, client: TestClient):
         """Test import without authentication"""
