@@ -18,6 +18,7 @@ from models import (
     Assignment,
     AssignmentContent,
     StudentContentProgress,
+    StudentItemProgress,
     ProgramLevel,
 )
 from auth import (
@@ -433,7 +434,7 @@ async def get_teacher_programs(
                 contents_data = []
                 if lesson.contents:
                     for content in sorted(lesson.contents, key=lambda x: x.order_index):
-                        if content.is_active:
+                        if content.is_active and not content.is_assignment_copy:  # 🔥 只顯示模板內容
                             # 將 content_items 轉換成舊格式 items
                             items_data = []
                             if content.content_items:
@@ -1758,7 +1759,7 @@ async def get_program(
                     for content in sorted(
                         lesson.contents or [], key=lambda x: x.order_index
                     )
-                    if content.is_active  # Filter by is_active
+                    if content.is_active and not content.is_assignment_copy  # 🔥 Filter by is_active and not assignment copy
                 ],
             }
             for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)
@@ -2097,7 +2098,11 @@ async def get_lesson_contents(
 
     contents = (
         db.query(Content)
-        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
+        .filter(
+            Content.lesson_id == lesson_id,
+            Content.is_active.is_(True),
+            Content.is_assignment_copy.is_(False),  # 🔥 只返回模板內容
+        )
         .options(selectinload(Content.content_items))  # 🔥 Eager load items
         .order_by(Content.order_index)
         .all()
@@ -2240,11 +2245,43 @@ async def get_content_detail(
             Lesson.is_active.is_(True),
             Program.is_active.is_(True),
         )
+        .options(selectinload(Content.content_items))  # 🔥 避免 N+1：Eager load items
         .first()
     )
 
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
+
+    # 檢查每個 ContentItem 是否有學生進度
+    item_ids = [item.id for item in content.content_items] if hasattr(content, "content_items") else []
+    items_with_progress = set()
+
+    if item_ids:
+        # 查詢哪些 item 有學生實際數據
+        progresses = db.query(StudentItemProgress).filter(
+            StudentItemProgress.content_item_id.in_(item_ids)
+        ).all()
+
+        for progress in progresses:
+            # 使用與 update_content 相同的檢查邏輯
+            has_data = (
+                progress.recording_url
+                or progress.answer_text
+                or progress.transcription
+                or progress.submitted_at
+                or progress.accuracy_score is not None
+                or progress.fluency_score is not None
+                or progress.pronunciation_score is not None
+                or progress.ai_feedback
+                or progress.ai_assessed_at
+                or progress.teacher_review_score is not None
+                or progress.teacher_feedback
+                or progress.teacher_passed is not None
+                or progress.teacher_reviewed_at
+                or progress.status != "NOT_STARTED"
+            )
+            if has_data:
+                items_with_progress.add(progress.content_item_id)
 
     return {
         "id": content.id,
@@ -2273,6 +2310,7 @@ async def get_content_detail(
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                "has_student_progress": item.id in items_with_progress,  # 🔥 新增：是否有學生進度
             }
             for item in content.content_items
         ]
@@ -2295,22 +2333,37 @@ async def update_content(
     db: Session = Depends(get_db),
 ):
     """更新內容"""
-    # Verify the content belongs to the teacher or is a template program
+    # Verify the content belongs to the teacher
+    # 支援兩種情況：
+    # 1. 模板內容：屬於老師的課程或公版課程
+    # 2. 作業副本：屬於老師的作業
     content = (
         db.query(Content)
-        .join(Lesson)
-        .join(Program)
+        .outerjoin(Lesson)
+        .outerjoin(Program)
+        .outerjoin(AssignmentContent, AssignmentContent.content_id == Content.id)  # 透過 AssignmentContent 關聯
+        .outerjoin(Assignment, Assignment.id == AssignmentContent.assignment_id)  # 再 join Assignment
         .filter(
             Content.id == content_id,
             Content.is_active.is_(True),
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
         )
         .filter(
-            # Either: content belongs to teacher's program
-            # Or: content belongs to a template program (公版課程)
+            # 模板內容：屬於老師的課程或公版課程
+            (
+                (Content.is_assignment_copy.is_(False))
+                & (
             (Program.teacher_id == current_teacher.id)
             | (Program.is_template.is_(True))
+                )
+                & (Lesson.is_active.is_(True))
+                & (Program.is_active.is_(True))
+            )
+            # 作業副本：屬於老師的作業
+            | (
+                (Content.is_assignment_copy.is_(True))
+                & (Assignment.teacher_id == current_teacher.id)
+                & (Assignment.is_active.is_(True))
+            )
         )
         .first()
     )
@@ -2328,9 +2381,44 @@ async def update_content(
     if update_data.items is not None:
         # 處理 ContentItem 更新
         # 先取得現有的 ContentItem
-
         existing_items = (
-            db.query(ContentItem).filter(ContentItem.content_id == content.id).all()
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        # 檢查是否是作業副本且有學生進度
+        is_assignment_copy = content.is_assignment_copy
+        has_student_progress = False
+        if is_assignment_copy:
+            # 檢查是否有學生進度記錄
+            existing_item_ids = [item.id for item in existing_items]
+            if existing_item_ids:
+                has_student_progress = (
+                    db.query(StudentItemProgress)
+                    .filter(StudentItemProgress.content_item_id.in_(existing_item_ids))
+                    .filter(
+                        # 檢查是否有實際數據（不是只有 NOT_STARTED 狀態）
+                        (
+                            (StudentItemProgress.recording_url.isnot(None))
+                            | (StudentItemProgress.answer_text.isnot(None))
+                            | (StudentItemProgress.transcription.isnot(None))
+                            | (StudentItemProgress.submitted_at.isnot(None))
+                            | (StudentItemProgress.accuracy_score.isnot(None))
+                            | (StudentItemProgress.fluency_score.isnot(None))
+                            | (StudentItemProgress.pronunciation_score.isnot(None))
+                            | (StudentItemProgress.ai_feedback.isnot(None))
+                            | (StudentItemProgress.ai_assessed_at.isnot(None))
+                            | (StudentItemProgress.teacher_review_score.isnot(None))
+                            | (StudentItemProgress.teacher_feedback.isnot(None))
+                            | (StudentItemProgress.teacher_passed.isnot(None))
+                            | (StudentItemProgress.teacher_reviewed_at.isnot(None))
+                            | (StudentItemProgress.status != "NOT_STARTED")
+                        )
+                    )
+                    .first()
+                    is not None
         )
 
         # 建立新音檔 URL 的集合
@@ -2345,20 +2433,20 @@ async def update_content(
                 if existing_item.audio_url not in new_audio_urls:
                     audio_manager.delete_old_audio(existing_item.audio_url)
 
-        # 使用參數化查詢刪除所有現有的 ContentItem，確保唯一約束不衝突
+        # 🔥 智能更新邏輯：如果有學生進度，使用智能更新；否則使用刪除重建
+        if has_student_progress:
+            # ========== 智能更新邏輯 ==========
+            # 1. 建立舊 ContentItem 的映射（用於匹配）
+            existing_items_by_id = {item.id: item for item in existing_items}
+            matched_items = set()  # 已匹配的舊 item ID
+            items_to_delete = []  # 需要刪除的 item
 
-        db.execute(
-            text("DELETE FROM content_items WHERE content_id = :content_id"),
-            {"content_id": content.id},
-        )
+            # 2. 處理新的 items（匹配、更新、創建）
+            for new_idx, item_data in enumerate(update_data.items):
+                if not isinstance(item_data, dict):
+                    continue
 
-        # 確保刪除操作執行完成
-        db.flush()
-
-        # 創建新的 ContentItem
-        for idx, item_data in enumerate(update_data.items):
-            if isinstance(item_data, dict):
-                # Store additional fields in item_metadata
+                # 準備 metadata
                 metadata = {}
                 if "options" in item_data:
                     metadata["options"] = item_data["options"]
@@ -2370,32 +2458,170 @@ async def update_content(
                 # 處理雙語翻譯支援
                 if "definition" in item_data:
                     metadata["chinese_translation"] = item_data["definition"]
-                # 前端將英文釋義發送到 translation 欄位，需要正確映射到 english_definition
                 if "translation" in item_data and item_data["translation"]:
-                    # 如果 selectedLanguage 是 english，則 translation 欄位包含英文釋義
                     if item_data.get("selectedLanguage") == "english":
                         metadata["english_definition"] = item_data["translation"]
-                # 也處理直接傳來的 english_definition 欄位（向後相容）
                 if "english_definition" in item_data:
                     metadata["english_definition"] = item_data["english_definition"]
                 if "selectedLanguage" in item_data:
                     metadata["selected_language"] = item_data["selectedLanguage"]
 
-                # 根據前端傳來的資料決定存儲到 translation 欄位的內容
-                # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
                 translation_value = item_data.get("definition") or item_data.get(
                     "translation", ""
                 )
+                new_text = item_data.get("text", "")
+                new_audio_url = item_data.get("audio_url")
 
-                content_item = ContentItem(
-                    content_id=content.id,
-                    order_index=idx,
-                    text=item_data.get("text", ""),
-                    translation=translation_value,
-                    audio_url=item_data.get("audio_url"),
-                    item_metadata=metadata,
+                # 嘗試匹配現有的 ContentItem
+                matched_item = None
+
+                # 策略1：通過 text 和 audio_url 匹配
+                for old_item in existing_items:
+                    if old_item.id in matched_items:
+                        continue  # 已經被匹配過了
+
+                    # 匹配條件：text 相同 或 audio_url 相同
+                    text_matches = old_item.text == new_text
+                    audio_matches = (
+                        old_item.audio_url
+                        and new_audio_url
+                        and old_item.audio_url == new_audio_url
+                    )
+
+                    if text_matches or audio_matches:
+                        matched_item = old_item
+                        matched_items.add(old_item.id)
+                        break
+
+                # 策略2：如果無法匹配，且數量相同，通過 order_index 匹配（假設只是修改內容）
+                if not matched_item and len(existing_items) == len(update_data.items):
+                    if new_idx < len(existing_items):
+                        old_item = existing_items[new_idx]
+                        if old_item.id not in matched_items:
+                            matched_item = old_item
+                            matched_items.add(old_item.id)
+
+                if matched_item:
+                    # 更新現有的 ContentItem（ID 不變！）
+                    matched_item.order_index = new_idx
+                    matched_item.text = new_text
+                    matched_item.translation = translation_value
+                    matched_item.audio_url = new_audio_url
+                    matched_item.item_metadata = metadata
+                else:
+                    # 無法匹配，創建新的 ContentItem
+                    new_item = ContentItem(
+                        content_id=content.id,
+                        order_index=new_idx,
+                        text=new_text,
+                        translation=translation_value,
+                        audio_url=new_audio_url,
+                        item_metadata=metadata,
+                    )
+                    db.add(new_item)
+
+            # 3. 找出未匹配的舊 item（需要刪除）
+            for old_item in existing_items:
+                if old_item.id not in matched_items:
+                    items_to_delete.append(old_item)
+
+            # 4. 檢查是否可以安全刪除
+            if items_to_delete:
+                deleted_item_ids = [item.id for item in items_to_delete]
+                # 批量查詢所有相關的 StudentItemProgress
+                all_progresses = (
+                    db.query(StudentItemProgress)
+                    .filter(StudentItemProgress.content_item_id.in_(deleted_item_ids))
+                    .all()
                 )
-                db.add(content_item)
+
+                # 檢查每個要刪除的 item 是否有學生數據
+                unsafe_to_delete = []
+                for deleted_item in items_to_delete:
+                    # 檢查是否有實際數據
+                    has_data = any(
+                        (
+                            p.recording_url
+                            or p.answer_text
+                            or p.transcription
+                            or p.submitted_at
+                            or p.accuracy_score is not None
+                            or p.fluency_score is not None
+                            or p.pronunciation_score is not None
+                            or p.ai_feedback
+                            or p.ai_assessed_at
+                            or p.teacher_review_score is not None
+                            or p.teacher_feedback
+                            or p.teacher_passed is not None
+                            or p.teacher_reviewed_at
+                            or p.status != "NOT_STARTED"
+                        )
+                        for p in all_progresses
+                        if p.content_item_id == deleted_item.id
+                    )
+
+                    if has_data:
+                        unsafe_to_delete.append(deleted_item)
+
+                if unsafe_to_delete:
+                    # 有學生記錄的 item 不能刪除
+                    unsafe_texts = [
+                        item.text[:30] + "..." if len(item.text) > 30 else item.text
+                        for item in unsafe_to_delete
+                    ]
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"無法刪除以下題目，因為學生已有進度：{', '.join(unsafe_texts)}",
+                    )
+
+                # 安全刪除未使用的 item（CASCADE 會自動處理 StudentItemProgress）
+                for item in items_to_delete:
+                    db.delete(item)
+
+        else:
+            # ========== 原來的邏輯：刪除重建（用於模板或沒有學生進度的情況）==========
+            db.execute(
+                text("DELETE FROM content_items WHERE content_id = :content_id"),
+                {"content_id": content.id},
+            )
+            db.flush()
+
+            # 創建新的 ContentItem
+            for idx, item_data in enumerate(update_data.items):
+                if isinstance(item_data, dict):
+                    # Store additional fields in item_metadata
+                    metadata = {}
+                    if "options" in item_data:
+                        metadata["options"] = item_data["options"]
+                    if "correct_answer" in item_data:
+                        metadata["correct_answer"] = item_data["correct_answer"]
+                    if "question_type" in item_data:
+                        metadata["question_type"] = item_data["question_type"]
+
+                    # 處理雙語翻譯支援
+                    if "definition" in item_data:
+                        metadata["chinese_translation"] = item_data["definition"]
+                    if "translation" in item_data and item_data["translation"]:
+                        if item_data.get("selectedLanguage") == "english":
+                            metadata["english_definition"] = item_data["translation"]
+                    if "english_definition" in item_data:
+                        metadata["english_definition"] = item_data["english_definition"]
+                    if "selectedLanguage" in item_data:
+                        metadata["selected_language"] = item_data["selectedLanguage"]
+
+                    translation_value = item_data.get("definition") or item_data.get(
+                        "translation", ""
+                    )
+
+                    content_item = ContentItem(
+                        content_id=content.id,
+                        order_index=idx,
+                        text=item_data.get("text", ""),
+                        translation=translation_value,
+                        audio_url=item_data.get("audio_url"),
+                        item_metadata=metadata,
+                    )
+                    db.add(content_item)
     if update_data.target_wpm is not None:
         content.target_wpm = update_data.target_wpm
     if update_data.target_accuracy is not None:
@@ -2595,6 +2821,7 @@ async def batch_generate_tts(
     """批次生成 TTS 音檔"""
     try:
         from services.tts import get_tts_service
+        import traceback
 
         tts_service = get_tts_service()
 
@@ -2608,8 +2835,14 @@ async def batch_generate_tts(
 
         return {"audio_urls": audio_urls}
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Batch TTS error: {e}")
-        raise HTTPException(status_code=500, detail="Batch TTS generation failed")
+        print(f"Traceback: {error_trace}")
+        # 返回更詳細的錯誤訊息（僅在開發環境）
+        import os
+        error_detail = str(e) if os.getenv("ENVIRONMENT") in ["development", "staging"] else "Batch TTS generation failed"
+        raise HTTPException(status_code=500, detail=error_detail)
 
 
 @router.get("/tts/voices")

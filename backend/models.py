@@ -686,6 +686,12 @@ class Content(Base):
     tags = Column(JSON, default=list)  # 標籤列表
     is_public = Column(Boolean, default=False)  # 是否公開（給其他老師使用）
 
+    # 作業副本機制欄位
+    is_assignment_copy = Column(Boolean, default=False, index=True)  # 標記是否為作業副本
+    source_content_id = Column(
+        Integer, ForeignKey("contents.id"), nullable=True
+    )  # 原始內容 ID（如果是副本）
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -694,6 +700,9 @@ class Content(Base):
     content_items = relationship(
         "ContentItem", back_populates="content", cascade="all, delete-orphan"
     )
+    source_content = relationship(
+        "Content", remote_side=[id], foreign_keys=[source_content_id]
+    )  # 原始內容（如果是副本）
 
     def __repr__(self):
         return f"<Content {self.title}>"
@@ -754,6 +763,7 @@ class AssignmentContent(Base):
         UniqueConstraint(
             "assignment_id", "content_id", name="unique_assignment_content"
         ),
+        Index("ix_assignment_content_assignment_order", "assignment_id", "order_index"),  # 優化查詢排序
     )
 
     def __repr__(self):
@@ -856,6 +866,11 @@ class StudentContentProgress(Base):
         "StudentAssignment", back_populates="content_progress"
     )
     content = relationship("Content")
+
+    # Constraints - 優化查詢性能
+    __table_args__ = (
+        Index("ix_student_content_progress_assignment_order", "student_assignment_id", "order_index"),  # 優化查詢排序
+    )
 
     def __repr__(self):
         return (
@@ -968,6 +983,7 @@ class StudentItemProgress(Base):
         UniqueConstraint(
             "student_assignment_id", "content_item_id", name="_student_item_progress_uc"
         ),
+        Index("ix_student_item_progress_assignment", "student_assignment_id"),  # 優化查詢性能
     )
 
     @property

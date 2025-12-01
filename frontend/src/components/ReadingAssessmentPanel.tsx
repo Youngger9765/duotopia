@@ -57,6 +57,7 @@ interface ContentRow {
     gender: string;
     speed: string;
   };
+  has_student_progress?: boolean; // 是否有學生進度
 }
 
 interface TTSModalProps {
@@ -1060,12 +1061,27 @@ function SortableRowInner({
         </button>
         <button
           onClick={() => handleRemoveRow(index)}
-          className="p-1 rounded hover:bg-gray-200"
-          title={t("readingAssessmentPanel.row.delete")}
-          disabled={rowsLength <= 1}
+          className={`p-1 rounded ${
+            row.has_student_progress || rowsLength <= 1
+              ? "cursor-not-allowed"
+              : "hover:bg-gray-200"
+          }`}
+          title={
+            row.has_student_progress
+              ? t(
+                  "readingAssessmentPanel.row.cannotDeleteWithProgress",
+                  "此題目有學生進度，無法刪除"
+                )
+              : t("readingAssessmentPanel.row.delete")
+          }
+          disabled={rowsLength <= 1 || row.has_student_progress}
         >
           <Trash2
-            className={`h-4 w-4 ${rowsLength <= 1 ? "text-gray-300" : "text-gray-600"}`}
+            className={`h-4 w-4 ${
+              rowsLength <= 1 || row.has_student_progress
+                ? "text-gray-300"
+                : "text-gray-600"
+            }`}
           />
         </button>
       </div>
@@ -1084,6 +1100,7 @@ interface ReadingAssessmentPanelProps {
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
+  isAssignmentCopy?: boolean; // 是否為作業副本（需要特別處理刪除）
 }
 
 export default function ReadingAssessmentPanel({
@@ -1093,6 +1110,7 @@ export default function ReadingAssessmentPanel({
   onSave,
   lessonId,
   isCreating = false,
+  isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
   const [title, setTitle] = useState(t("readingAssessmentPanel.defaultTitle"));
@@ -1127,6 +1145,7 @@ export default function ReadingAssessmentPanel({
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // 🔥 標記是否為初始載入
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1143,9 +1162,34 @@ export default function ReadingAssessmentPanel({
   // Load existing content data from database
   useEffect(() => {
     if (content?.id) {
+      setIsInitialLoad(true); // 🔥 標記為初始載入
       loadContentData();
+    } else if (editingContent?.id) {
+      // 🔥 如果有 editingContent，直接使用它（不需要重新載入）
+      setIsInitialLoad(true);
+      setTitle(editingContent.title || "");
+      if (editingContent.items && Array.isArray(editingContent.items)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const convertedRows = (editingContent.items as any[]).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any, index: number) => ({
+            id: item.id || (index + 1).toString(),
+            text: item.text || "",
+            definition: item.definition || "",
+            translation: item.translation || "",
+            audioUrl: item.audio_url || "",
+            selectedLanguage: "chinese" as "chinese" | "english",
+            has_student_progress: item.has_student_progress || false, // 🔥 保留學生進度狀態
+          }),
+        );
+        setRows(convertedRows);
+      }
+      setIsLoading(false);
+      setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 100);
     }
-  }, [content?.id]);
+  }, [content?.id, editingContent?.id]);
 
   const loadContentData = async () => {
     if (!content?.id) return;
@@ -1169,24 +1213,17 @@ export default function ReadingAssessmentPanel({
 
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
-        const convertedRows = data.items.map(
-          (
-            item: {
-              text?: string;
-              translation?: string;
-              definition?: string;
-              english_definition?: string;
-              audio_url?: string;
-              selectedLanguage?: "chinese" | "english";
-            },
-            index: number,
-          ) => ({
-            id: (index + 1).toString(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const convertedRows = (data.items as any[]).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any, index: number) => ({
+            id: item.id || (index + 1).toString(),
             text: item.text || "",
             definition: item.definition || "", // 中文翻譯
             translation: item.english_definition || "", // 英文釋義
             audioUrl: item.audio_url || "",
             selectedLanguage: item.selectedLanguage || "chinese", // 使用保存的語言選擇，預設中文
+            has_student_progress: item.has_student_progress || false, // 🔥 保留學生進度狀態
           }),
         );
         setRows(convertedRows);
@@ -1196,12 +1233,16 @@ export default function ReadingAssessmentPanel({
       toast.error(t("readingAssessmentPanel.save.loadFailed"));
     } finally {
       setIsLoading(false);
+      // 🔥 載入完成後，等待一個 tick 再標記為非初始載入
+      setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 100);
     }
   };
 
-  // Update parent when data changes
+  // Update parent when data changes (但不包括初始載入)
   useEffect(() => {
-    if (!onUpdateContent) return;
+    if (!onUpdateContent || isInitialLoad) return; // 🔥 初始載入時不觸發
 
     const items = rows.map((row) => ({
       text: row.text,
@@ -1216,7 +1257,7 @@ export default function ReadingAssessmentPanel({
       title,
       items,
     });
-  }, [rows, title]);
+  }, [rows, title, isInitialLoad]);
 
   // dnd-kit drag end handler
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1253,6 +1294,18 @@ export default function ReadingAssessmentPanel({
       toast.error(t("readingAssessmentPanel.row.minRowsRequired"));
       return;
     }
+
+    // 檢查此題目是否有學生進度
+    if (rows[index].has_student_progress) {
+      toast.error(
+        t(
+          "readingAssessmentPanel.row.cannotDeleteWithProgress",
+          "此題目有學生進度，無法刪除"
+        )
+      );
+      return;
+    }
+
     const newRows = rows.filter((_, i) => i !== index);
     setRows(newRows);
   };
@@ -1854,6 +1907,42 @@ export default function ReadingAssessmentPanel({
     <div className="flex flex-col h-full max-h-[calc(100vh-200px)]">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 space-y-4 pb-4">
+        {/* Assignment Copy Warning Banner */}
+        {isAssignmentCopy && (
+          <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-md">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-orange-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-orange-800">
+                  <span className="font-medium">
+                    {t(
+                      "readingAssessmentPanel.assignmentCopyWarning.title",
+                      "注意：此為作業副本"
+                    )}
+                  </span>
+                  <br />
+                  {t(
+                    "readingAssessmentPanel.assignmentCopyWarning.message",
+                    "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Title Input - Show in both create and edit mode */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">

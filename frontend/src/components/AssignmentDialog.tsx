@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import {
@@ -33,7 +34,29 @@ import {
   MessageSquare,
   Loader2,
   Gauge,
+  ShoppingCart,
+  GripVertical,
+  X,
+  Globe,
+  School,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -90,6 +113,98 @@ interface QuotaInfo {
   plan_name: string;
 }
 
+// 購物車項目的詳細資訊（用於排序和顯示）
+interface CartItem {
+  contentId: number;
+  programName: string;
+  lessonName: string;
+  contentTitle: string;
+  contentType: string;
+  itemsCount?: number;
+  order: number; // 用於排序
+}
+
+// 可拖曳的購物車項目組件
+interface SortableCartItemProps {
+  item: CartItem;
+  index: number;
+  onRemove: (contentId: number) => void;
+  t: (key: string) => string;
+}
+
+function SortableCartItem({
+  item,
+  index,
+  onRemove,
+  t,
+}: SortableCartItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.contentId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "p-2 bg-white hover:shadow-md transition-shadow",
+        isDragging && "shadow-lg ring-2 ring-blue-500"
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing mt-1 p-1 hover:bg-gray-100 rounded"
+        >
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-xs font-bold text-blue-600">
+              #{index + 1}
+            </span>
+            <span className="text-xs font-medium truncate">
+              {item.contentTitle}
+            </span>
+          </div>
+          <div className="text-xs text-gray-500 truncate">
+            {item.programName} / {item.lessonName}
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <Badge variant="outline" className="px-1 py-0 text-xs">
+              {useContentTypeLabel(item.contentType, t)}
+            </Badge>
+            {item.itemsCount && (
+              <span className="text-xs text-gray-500">
+                {item.itemsCount} 題
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => onRemove(item.contentId)}
+          className="p-1 hover:bg-red-50 rounded text-red-500 hover:text-red-700"
+          title="移除"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </Card>
+  );
+}
+
 export function AssignmentDialog({
   open,
   onClose,
@@ -99,22 +214,36 @@ export function AssignmentDialog({
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingClassroomPrograms, setLoadingClassroomPrograms] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>(
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [programs, setPrograms] = useState<Program[]>([]);
+  const [activeTab, setActiveTab] = useState<"template" | "classroom">("template");
+  
+  // 分別儲存公版和班級課程
+  const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
+  const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
+  
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(
     new Set(),
   );
   const [expandedLessons, setExpandedLessons] = useState<Set<number>>(
     new Set(),
   );
-  const [selectedContents, setSelectedContents] = useState<Set<number>>(
-    new Set(),
-  );
+  
+  // 購物車：儲存詳細的選擇項目（用於排序和顯示）
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
+
+  // dnd-kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const [formData, setFormData] = useState({
     title: "",
@@ -127,10 +256,11 @@ export function AssignmentDialog({
 
   useEffect(() => {
     if (open) {
-      loadPrograms();
+      loadTemplatePrograms();
+      loadClassroomPrograms();
       loadQuotaInfo();
       // Reset form when dialog opens
-      setSelectedContents(new Set());
+      setCartItems([]);
       setFormData({
         title: "",
         instructions: "",
@@ -140,6 +270,7 @@ export function AssignmentDialog({
         start_date: new Date(), // 預設為今天
       });
       setCurrentStep(1);
+      setActiveTab("template");
     }
   }, [open, classroomId, students]);
 
@@ -168,24 +299,44 @@ export function AssignmentDialog({
     }
   };
 
-  const loadPrograms = async () => {
+  // 加載公版課程（模板）
+  const loadTemplatePrograms = async () => {
     try {
-      setLoadingPrograms(true);
-      // Only load program list, not lessons or contents
-      const response = await apiClient.get<Program[]>(`/api/teachers/programs`);
-      setPrograms(response);
+      setLoadingTemplates(true);
+      const response = await apiClient.get<Program[]>(
+        `/api/teachers/programs?is_template=true`
+      );
+      setTemplatePrograms(response);
     } catch (error) {
-      console.error("Failed to load programs:", error);
-      toast.error(t("dialogs.assignmentDialog.errors.loadProgramsFailed"));
-      setPrograms([]);
+      console.error("Failed to load template programs:", error);
+      toast.error(t("dialogs.assignmentDialog.errors.loadTemplateFailed"));
+      setTemplatePrograms([]);
     } finally {
-      setLoadingPrograms(false);
+      setLoadingTemplates(false);
+    }
+  };
+
+  // 加載班級課程（只能看到當前班級的課程）
+  const loadClassroomPrograms = async () => {
+    try {
+      setLoadingClassroomPrograms(true);
+      const response = await apiClient.get<Program[]>(
+        `/api/teachers/programs?classroom_id=${classroomId}`
+      );
+      setClassroomPrograms(response);
+    } catch (error) {
+      console.error("Failed to load classroom programs:", error);
+      toast.error(t("dialogs.assignmentDialog.errors.loadClassroomProgramsFailed"));
+      setClassroomPrograms([]);
+    } finally {
+      setLoadingClassroomPrograms(false);
     }
   };
 
   const loadProgramLessons = async (programId: number) => {
-    // Check if lessons already loaded
-    const program = programs.find((p) => p.id === programId);
+    // Check if lessons already loaded in either list
+    const allPrograms = [...templatePrograms, ...classroomPrograms];
+    const program = allPrograms.find((p) => p.id === programId);
     if (program?.lessons && program.lessons.length > 0) {
       return; // Already loaded
     }
@@ -196,12 +347,14 @@ export function AssignmentDialog({
         `/api/teachers/programs/${programId}`,
       );
 
-      // Update the program with lessons (but without contents)
-      setPrograms((prev) =>
+      // Update the program with lessons in the correct list
+      const updatePrograms = (prev: Program[]) =>
         prev.map((p) =>
           p.id === programId ? { ...p, lessons: detail.lessons || [] } : p,
-        ),
       );
+
+      setTemplatePrograms(updatePrograms);
+      setClassroomPrograms(updatePrograms);
     } catch (error) {
       console.error(`Failed to load lessons for program ${programId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadLessonsFailed"));
@@ -211,9 +364,10 @@ export function AssignmentDialog({
   };
 
   const loadLessonContents = async (lessonId: number) => {
-    // Find the lesson and check if contents already loaded
+    // Find the lesson and check if contents already loaded in either list
     let foundLesson: Lesson | undefined;
-    programs.forEach((program) => {
+    const allPrograms = [...templatePrograms, ...classroomPrograms];
+    allPrograms.forEach((program) => {
       const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {
         foundLesson = lesson;
@@ -230,15 +384,17 @@ export function AssignmentDialog({
         `/api/teachers/lessons/${lessonId}/contents`,
       );
 
-      // Update the lesson with contents
-      setPrograms((prev) =>
+      // Update the lesson with contents in both lists
+      const updatePrograms = (prev: Program[]) =>
         prev.map((program) => ({
           ...program,
           lessons: program.lessons?.map((lesson) =>
             lesson.id === lessonId ? { ...lesson, contents } : lesson,
           ),
-        })),
-      );
+        }));
+
+      setTemplatePrograms(updatePrograms);
+      setClassroomPrograms(updatePrograms);
     } catch (error) {
       console.error(`Failed to load contents for lesson ${lessonId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadContentsFailed"));
@@ -285,35 +441,99 @@ export function AssignmentDialog({
     }
   };
 
-  const toggleContent = (contentId: number) => {
-    setSelectedContents((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(contentId)) {
-        newSet.delete(contentId);
+  // 添加/移除內容到購物車
+  const toggleContent = (
+    contentId: number,
+    programName: string,
+    lessonName: string,
+    content: Content
+  ) => {
+    setCartItems((prev) => {
+      const exists = prev.find((item) => item.contentId === contentId);
+      if (exists) {
+        // 移除
+        return prev.filter((item) => item.contentId !== contentId);
       } else {
-        newSet.add(contentId);
+        // 添加
+        return [
+          ...prev,
+          {
+            contentId,
+            programName,
+            lessonName,
+            contentTitle: content.title,
+            contentType: content.type,
+            itemsCount: content.items_count,
+            order: prev.length, // 順序為當前數量
+          },
+        ];
       }
-      return newSet;
     });
   };
 
-  const toggleAllInLesson = (lesson: Lesson) => {
+  // 從購物車移除項目
+  const removeFromCart = (contentId: number) => {
+    setCartItems((prev) => {
+      const filtered = prev.filter((item) => item.contentId !== contentId);
+      // 重新計算順序
+      return filtered.map((item, index) => ({ ...item, order: index }));
+    });
+  };
+
+  // 處理拖曳結束事件
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setCartItems((items) => {
+        const oldIndex = items.findIndex((item) => item.contentId === active.id);
+        const newIndex = items.findIndex((item) => item.contentId === over.id);
+
+        const reorderedItems = arrayMove(items, oldIndex, newIndex);
+        // 重新計算順序
+        return reorderedItems.map((item, index) => ({ ...item, order: index }));
+      });
+    }
+  };
+
+  const toggleAllInLesson = (
+    lesson: Lesson,
+    programName: string,
+    lessonName: string
+  ) => {
     if (!lesson.contents) return;
 
     const lessonContentIds = lesson.contents.map((c) => c.id);
     const allSelected = lessonContentIds.every((id) =>
-      selectedContents.has(id),
+      cartItems.some((item) => item.contentId === id)
     );
 
-    setSelectedContents((prev) => {
-      const newSet = new Set(prev);
       if (allSelected) {
-        lessonContentIds.forEach((id) => newSet.delete(id));
+      // 移除所有
+      setCartItems((prev) => {
+        const filtered = prev.filter(
+          (item) => !lessonContentIds.includes(item.contentId)
+        );
+        return filtered.map((item, index) => ({ ...item, order: index }));
+      });
       } else {
-        lessonContentIds.forEach((id) => newSet.add(id));
-      }
-      return newSet;
+      // 添加所有
+      setCartItems((prev) => {
+        const existingIds = new Set(prev.map((item) => item.contentId));
+        const newItems = lesson.contents!
+          .filter((content) => !existingIds.has(content.id))
+          .map((content, idx) => ({
+            contentId: content.id,
+            programName,
+            lessonName,
+            contentTitle: content.title,
+            contentType: content.type,
+            itemsCount: content.items_count,
+            order: prev.length + idx,
+          }));
+        return [...prev, ...newItems];
     });
+    }
   };
 
   const toggleStudent = (studentId: number) => {
@@ -340,7 +560,7 @@ export function AssignmentDialog({
 
   const handleSubmit = async () => {
     // Validation
-    if (selectedContents.size === 0) {
+    if (cartItems.length === 0) {
       toast.error(t("dialogs.assignmentDialog.errors.noContentSelected"));
       return;
     }
@@ -369,12 +589,17 @@ export function AssignmentDialog({
 
     setLoading(true);
     try {
+      // 按購物車順序排列的內容 ID
+      const sortedContentIds = cartItems
+        .sort((a, b) => a.order - b.order)
+        .map((item) => item.contentId);
+
       // Create one assignment with multiple contents (新架構)
       const payload = {
         title: formData.title,
         description: formData.instructions || undefined, // 欄位名稱改為 description
         classroom_id: classroomId,
-        content_ids: Array.from(selectedContents), // 多個內容 ID
+        content_ids: sortedContentIds, // 多個內容 ID（已排序）
         student_ids: formData.assign_to_all ? [] : formData.student_ids,
         due_date: formData.due_date
           ? formData.due_date.toISOString()
@@ -446,44 +671,18 @@ export function AssignmentDialog({
       due_date: undefined,
       start_date: undefined,
     });
-    setSelectedContents(new Set());
+    setCartItems([]);
     setExpandedPrograms(new Set());
     setExpandedLessons(new Set());
     setCurrentStep(1);
+    setActiveTab("template");
     onClose();
-  };
-
-  // Get selected content details for summary
-  const getSelectedContentsSummary = () => {
-    const summary: {
-      program: string;
-      lesson: string;
-      content: string;
-      type: string;
-    }[] = [];
-
-    programs.forEach((program) => {
-      program.lessons?.forEach((lesson) => {
-        lesson.contents?.forEach((content) => {
-          if (selectedContents.has(content.id)) {
-            summary.push({
-              program: program.name,
-              lesson: lesson.name,
-              content: content.title,
-              type: content.type,
-            });
-          }
-        });
-      });
-    });
-
-    return summary;
   };
 
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return selectedContents.size > 0;
+        return cartItems.length > 0;
       case 2:
         return formData.student_ids.length > 0;
       case 3:
@@ -638,25 +837,38 @@ export function AssignmentDialog({
         <div className="flex-1 overflow-hidden px-6 py-3">
           {/* Step 1: Select Contents */}
           {currentStep === 1 && (
-            <div className="h-full flex flex-col">
+            <div className="h-full flex gap-4">
+              {/* 左側：課程列表 (70%) */}
+              <div className="flex-1 flex flex-col">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
                   {t("dialogs.assignmentDialog.selectContent.description")}
                 </p>
-                {selectedContents.size > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-50 text-blue-700"
-                  >
-                    {t("dialogs.assignmentDialog.selectContent.selected", {
-                      count: selectedContents.size,
-                    })}
-                  </Badge>
-                )}
               </div>
 
-              <ScrollArea className="flex-1 border rounded-lg p-3">
-                {loadingPrograms ? (
+                {/* Tab 切換：公版 / 班級版 */}
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "template" | "classroom")} className="flex-1 flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2 mb-2">
+                    <TabsTrigger 
+                      value="template" 
+                      className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    >
+                      <Globe className="h-4 w-4" />
+                      公版課程
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="classroom" 
+                      className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    >
+                      <School className="h-4 w-4" />
+                      班級課程
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* 公版課程 Tab */}
+                  <TabsContent value="template" className="flex-1 mt-0 overflow-hidden">
+                    <ScrollArea className="h-full border rounded-lg p-3">
+                {loadingTemplates ? (
                   <div className="flex flex-col items-center justify-center h-96">
                     <div className="relative">
                       {/* Outer ring */}
@@ -673,7 +885,7 @@ export function AssignmentDialog({
                       {t("dialogs.assignmentDialog.selectContent.loadingDesc")}
                     </p>
                   </div>
-                ) : programs.length === 0 ? (
+                ) : templatePrograms.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-96">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
                     <p className="text-gray-500">
@@ -685,7 +897,7 @@ export function AssignmentDialog({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {programs.map((program) => (
+                    {templatePrograms.map((program) => (
                       <Card key={program.id} className="overflow-hidden">
                         <button
                           onClick={() => toggleProgram(program.id)}
@@ -769,11 +981,11 @@ export function AssignmentDialog({
                                             className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              toggleAllInLesson(lesson);
+                                              toggleAllInLesson(lesson, program.name, lesson.name);
                                             }}
                                           >
                                             {lesson.contents.every((c) =>
-                                              selectedContents.has(c.id),
+                                              cartItems.some((item) => item.contentId === c.id),
                                             )
                                               ? t(
                                                   "dialogs.assignmentDialog.selectContent.deselectAll",
@@ -789,23 +1001,28 @@ export function AssignmentDialog({
                                   {expandedLessons.has(lesson.id) &&
                                     lesson.contents && (
                                       <div className="ml-6 space-y-1 pb-2 bg-white">
-                                        {lesson.contents.map((content) => (
+                                        {lesson.contents.map((content) => {
+                                          const isSelected = cartItems.some(
+                                            (item) => item.contentId === content.id
+                                          );
+                                          return (
                                           <button
                                             key={content.id}
                                             onClick={() =>
-                                              toggleContent(content.id)
+                                              toggleContent(
+                                                content.id,
+                                                program.name,
+                                                lesson.name,
+                                                content
+                                              )
                                             }
                                             className={cn(
                                               "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
-                                              selectedContents.has(
-                                                content.id,
-                                              ) &&
+                                              isSelected &&
                                                 "bg-blue-50 hover:bg-blue-100",
                                             )}
                                           >
-                                            {selectedContents.has(
-                                              content.id,
-                                            ) ? (
+                                            {isSelected ? (
                                               <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
                                             ) : (
                                               <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -835,7 +1052,8 @@ export function AssignmentDialog({
                                               </div>
                                             </div>
                                           </button>
-                                        ))}
+                                        );
+                                        })}
                                       </div>
                                     )}
                                 </div>
@@ -847,33 +1065,238 @@ export function AssignmentDialog({
                   </div>
                 )}
               </ScrollArea>
+                  </TabsContent>
 
-              {/* Compact Selected Contents Summary */}
-              {selectedContents.size > 0 && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex flex-wrap gap-1">
-                    {getSelectedContentsSummary()
-                      .slice(0, 8)
-                      .map((item, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="secondary"
-                          className="bg-white text-xs py-0 h-5"
+                  {/* 班級課程 Tab */}
+                  <TabsContent value="classroom" className="flex-1 mt-0 overflow-hidden">
+                    <ScrollArea className="h-full border rounded-lg p-3">
+                {loadingClassroomPrograms ? (
+                  <div className="flex flex-col items-center justify-center h-96">
+                    <div className="relative">
+                      <div className="absolute inset-0 animate-ping">
+                        <div className="h-16 w-16 rounded-full border-4 border-blue-200 opacity-75"></div>
+                      </div>
+                      <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
+                    </div>
+                    <p className="mt-6 text-lg font-medium text-gray-700">
+                      載入班級課程中...
+                    </p>
+                  </div>
+                ) : classroomPrograms.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-96">
+                    <Package className="h-16 w-16 text-gray-300 mb-4" />
+                    <p className="text-gray-500">此班級尚無課程</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      請先在班級中建立課程
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {classroomPrograms.map((program) => (
+                      <Card key={program.id} className="overflow-hidden">
+                        <button
+                          onClick={() => toggleProgram(program.id)}
+                          className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
                         >
-                          {item.content}
+                          <div className="flex items-center gap-2">
+                            {loadingLessons[program.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : expandedPrograms.has(program.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                            <Package className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium">{program.name}</span>
+                            {program.level && (
+                              <Badge variant="outline" className="ml-2">
+                                {program.level}
                         </Badge>
-                      ))}
-                    {selectedContents.size > 8 && (
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">
+                              {t(
+                                "dialogs.assignmentDialog.selectContent.units",
+                                { count: program.lessons?.length || 0 },
+                              )}
+                            </span>
+                          </div>
+                        </button>
+
+                        {expandedPrograms.has(program.id) &&
+                          program.lessons && (
+                            <div className="border-t bg-gray-50">
+                              {program.lessons.map((lesson) => (
+                                <div key={lesson.id} className="ml-6">
+                                  <button
+                                    onClick={() => toggleLesson(lesson.id)}
+                                    className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {loadingLessons[lesson.id] ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : expandedLessons.has(lesson.id) ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                      <Layers className="h-4 w-4 text-green-600" />
+                                      <span className="text-sm">
+                                        {lesson.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500">
+                                        {t(
+                                          "dialogs.assignmentDialog.selectContent.contents",
+                                          {
+                                            count: lesson.contents?.length || 0,
+                                          },
+                                        )}
+                                      </span>
+                                      {lesson.contents &&
+                                        lesson.contents.length > 0 &&
+                                        !loadingLessons[lesson.id] && (
+                                          <span
+                                            className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleAllInLesson(lesson, program.name, lesson.name);
+                                            }}
+                                          >
+                                            {lesson.contents.every((c) =>
+                                              cartItems.some((item) => item.contentId === c.id),
+                                            )
+                                              ? t(
+                                                  "dialogs.assignmentDialog.selectContent.deselectAll",
+                                                )
+                                              : t(
+                                                  "dialogs.assignmentDialog.selectContent.selectAll",
+                                                )}
+                                          </span>
+                                        )}
+                                    </div>
+                                  </button>
+
+                                  {expandedLessons.has(lesson.id) &&
+                                    lesson.contents && (
+                                      <div className="ml-6 space-y-1 pb-2 bg-white">
+                                        {lesson.contents.map((content) => {
+                                          const isSelected = cartItems.some(
+                                            (item) => item.contentId === content.id
+                                          );
+                                          return (
+                                          <button
+                                            key={content.id}
+                                            onClick={() =>
+                                              toggleContent(
+                                                content.id,
+                                                program.name,
+                                                lesson.name,
+                                                content
+                                              )
+                                            }
+                                            className={cn(
+                                              "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
+                                              isSelected &&
+                                                "bg-blue-50 hover:bg-blue-100",
+                                            )}
+                                          >
+                                            {isSelected ? (
+                                              <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                            ) : (
+                                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            )}
+                                            <div className="flex-1">
+                                              <div className="text-sm font-medium">
+                                                {content.title}
+                                              </div>
+                                              <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Badge
-                        variant="secondary"
-                        className="bg-white text-xs py-0 h-5"
+                                                  variant="outline"
+                                                  className="px-1 py-0"
                       >
-                        +{selectedContents.size - 8}
+                                                  {useContentTypeLabel(
+                                                    content.type,
+                                                    t,
+                                                  )}
                       </Badge>
+                                                {content.items_count && (
+                                                  <span>
+                                                    {content.items_count}{" "}
+                                                    {t(
+                                                      "dialogs.assignmentDialog.selectContent.items",
+                                                    )}
+                                                  </span>
                     )}
                   </div>
+                                            </div>
+                                          </button>
+                                        );
+                                        })}
                 </div>
               )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* 右側：購物車 (30%) */}
+              <div className="w-[30%] flex flex-col border rounded-lg bg-gray-50">
+                <div className="p-3 border-b bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold">已選擇的內容</h3>
+                  </div>
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                    {cartItems.length}
+                  </Badge>
+                </div>
+
+                <ScrollArea className="flex-1 p-3">
+                  {cartItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                      <ShoppingCart className="h-12 w-12 text-gray-300 mb-3" />
+                      <p className="text-sm text-gray-500">尚未選擇任何內容</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        從左側課程中選擇單元內容
+                      </p>
+                    </div>
+                  ) : (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={cartItems.map((item) => item.contentId)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2">
+                          {cartItems.sort((a, b) => a.order - b.order).map((item, index) => (
+                            <SortableCartItem
+                              key={item.contentId}
+                              item={item}
+                              index={index}
+                              onRemove={removeFromCart}
+                              t={t}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </ScrollArea>
+              </div>
             </div>
           )}
 
@@ -1141,7 +1564,7 @@ export function AssignmentDialog({
                         <span className="font-medium text-blue-900">
                           {t(
                             "dialogs.assignmentDialog.details.contentCountValue",
-                            { count: selectedContents.size },
+                            { count: cartItems.length },
                           )}
                         </span>
                       </div>
