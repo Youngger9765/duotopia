@@ -15,10 +15,10 @@ exclude =
 
 # Per-file ignores for test files (業界最佳實踐)
 per-file-ignores =
-    # Test files often have unused imports for fixtures and test data setup
-    backend/tests/*/test_*.py: F401, F841
-    backend/tests/*/*/test_*.py: F401, F841
-    backend/tests/*/*/*/test_*.py: F401, F841
+    # Test files often have unused imports for fixtures and test data setup, and may have E402 for SQLite pragma setup
+    backend/tests/*/test_*.py: F401, F841, E402
+    backend/tests/*/*/test_*.py: F401, F841, E402
+    backend/tests/*/*/*/test_*.py: F401, F841, E402
     backend/scripts/test_*.py: F401
     # conftest.py imports fixtures that are auto-discovered by pytest
     backend/tests/conftest.py: E402

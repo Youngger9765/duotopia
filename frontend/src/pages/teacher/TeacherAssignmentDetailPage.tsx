@@ -231,22 +231,21 @@ function SortableContentItem({
                       </span>
                     </div>
                     {contentDetails[content.id].items?.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="text-xs p-2 bg-white dark:bg-gray-800 rounded break-words"
-                        >
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {idx + 1}.
-                          </span>{" "}
-                          <span className="font-medium">{item.text}</span>
-                          {item.translation && (
-                            <span className="text-gray-500 ml-2">
-                              ({item.translation})
-                            </span>
-                          )}
-                        </div>
-                      ),
-                    )}
+                      <div
+                        key={idx}
+                        className="text-xs p-2 bg-white dark:bg-gray-800 rounded break-words"
+                      >
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {idx + 1}.
+                        </span>{" "}
+                        <span className="font-medium">{item.text}</span>
+                        {item.translation && (
+                          <span className="text-gray-500 ml-2">
+                            ({item.translation})
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
             </div>
