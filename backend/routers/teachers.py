@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, text, or_
+from sqlalchemy import func, text
 from pydantic import BaseModel
 from database import get_db
 from schemas import ProgramUpdate
