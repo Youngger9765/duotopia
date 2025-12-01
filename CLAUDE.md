@@ -1,532 +1,356 @@
-# CLAUDE.md
+# CLAUDE.md - Duotopia Project Configuration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 🚨 CRITICAL MANDATORY RULES - READ FIRST
 
-## 🚨 最高指導原則
+### **CRITICAL RULE #1**: YOU MUST USE GENERAL-PURPOSE AGENT
+**For ANY coding task beyond simple file reading or questions, YOU MUST use:**
+```
+Task(subagent_type="general-purpose", prompt="[your task]", ...)
+```
 
-### 1. 修完要自己去測試過！
+**NO EXCEPTIONS** for these tasks:
+- Writing/editing ANY code
+- Running tests
+- Fixing bugs
+- Implementing features
+- Code review
+- Deployments
+- Git operations
+- Performance optimization
+- Security checks
 
-### 2. **GitHub Issue 處理必須使用 @agent-git-issue-pr-flow**
+**ONLY EXCEPTIONS** (direct tool use allowed):
+- Reading a single file (`Read` tool)
+- Answering conceptual questions
+- Explaining existing code
 
-⚠️ **當用戶提到以下關鍵字時，自動使用 agent**：
-- 「修復 issue」、「處理 issue #N」
-- 「有什麼 issue」、「巡邏 issues」
-- 「部署到 staging」、「準備 release」
-- 「檢查 approval」、「查看批准狀態」
-- 任何提到 GitHub Issue 編號（#15, #7 等）
+### **CRITICAL RULE #2**: GENERAL-PURPOSE AGENT ROUTING
+The general-purpose agent MUST handle these tasks:
 
-**Agent 功能**：
-- 🔍 完整 PDCA 流程（Plan → Do → Check → Act）
-- 🧪 TDD 測試驅動開發
-- 🌐 Per-Issue Test Environment 管理
-- ✅ AI 智能批准偵測
-- 🛡️ Schema 變更保護
+```
+If task contains "test" or "测试" → test-runner
+If task contains "review" or "审查" → code-reviewer
+If task contains "#" or "issue" or "bug" → git-issue-pr-flow
+If task contains "deploy" or "部署" → git-issue-pr-flow
+If task contains "security" or "安全" → code-reviewer (security mode)
+If task is complex/multi-step → Combine multiple agents
+Otherwise → Analyze context and choose
+```
 
-**詳細說明**: `.claude/agents/git-issue-pr-flow.md`
+### **CRITICAL RULE #3**: NO DIRECT EXECUTION
+**FORBIDDEN**: Using Edit/Write/Bash tools directly for coding tasks
+**MANDATORY**: Route through general-purpose agent FIRST
 
----
+## 📚 Documentation Structure
 
-## 🎯 Issue vs PR 職責分工（重要）
+### Agent Documentation (Primary Reference)
+- **[agent-manager.md](./.claude/agents/agent-manager.md)** - 核心原则、验证标准、完成检查清单
+- **[git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)** - PDCA 工作流程、Git 操作、Issue/PR 管理
+- **[test-runner.md](./.claude/agents/test-runner.md)** - 测试指南、覆盖率要求、最佳实践
+- **[code-reviewer.md](./.claude/agents/code-reviewer.md)** - 代码审查、安全检查、性能分析
+- **[task-router.md](./.claude/agents/task-router.md)** - 任务路由助手
 
-### 核心原則：業務層 vs 技術層
+### Project Documents
+- **[PRD.md](./PRD.md)** - 产品需求文档
+- **[CICD.md](./CICD.md)** - 部署与 CI/CD
+- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - 详细测试指南
+- **[DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)** - 部署状态
 
-| 維度 | **Issue（業務層）** | **PR（技術層）** |
-|------|-------------------|-----------------|
-| **受眾** | 👔 案主（非技術） | 💻 工程師（技術） |
-| **目的** | 追蹤業務價值 | 追蹤技術品質 |
-| **內容** | 問題、測試連結、批准 | 完整工程研發測試報告 |
-| **通過標準** | ✅ **業務通過**（案主 OK） | ✅ **系統通過**（CI/CD OK） |
-| **Template** | `.github/ISSUE_TEMPLATE/` | `.github/pull_request_template.md` |
+## 🤖 MANDATORY AGENT SYSTEM
 
-### Issue 的內容（給案主看）
-- ✅ 問題描述（業務語言）
-- ✅ Per-Issue Test Environment 連結
-- ✅ Staging 測試連結
-- ✅ 案主測試結果和批准
-- ❌ 不要放技術細節（根因分析、code diff 等）
+### @general-purpose 🧠 **[MANDATORY FOR ALL CODING]**
+**CRITICAL**: This is NOT optional. YOU MUST use this for ALL coding tasks.
 
-### PR 的內容（給工程師看）
-- ✅ 完整工程研發測試報告
-- ✅ 根因分析（5 Why）
-- ✅ 技術決策說明
-- ✅ 測試覆蓋率（Unit/Integration/E2E）
-- ✅ CI/CD 狀態檢查
-- ✅ 影響範圍評估
-- ❌ 不要放案主批准（這在 Issue 中）
+**Automatic Invocation Required For**:
+- ✅ ANY code changes (create/edit/delete)
+- ✅ ALL test operations
+- ✅ ANY bug fixes
+- ✅ ALL feature implementations
+- ✅ ANY deployments
+- ✅ ALL Git operations
+- ✅ ANY performance/security tasks
 
-### 為什麼需要 PR？
-1. 💻 **Code Review 平台** - 逐行評論、建議修改
-2. 🤖 **CI/CD 檢查點** - Merge 前必須通過測試
-3. 📝 **技術決策紀錄** - 為什麼這樣實作？
-4. 🔒 **品質保證** - 防止壞代碼進入 staging
-5. 📊 **完整工程報告** - 一個 feature/fix = 一個 PR
+**How It Works**:
+1. YOU invoke general-purpose agent via Task tool
+2. Agent analyzes full context
+3. Executes task with best practices
+4. Returns complete results
 
-**Per-Issue Test Environment ≠ PR**：
-- Per-Issue Test Environment：給**案主**測試功能（業務驗證）
-- PR：給**工程師** code review 和 CI/CD（技術驗證）
+**ENFORCEMENT**: If you try to use Edit/Write/Bash directly for coding, YOU ARE VIOLATING PROJECT RULES
 
-### Schema 變更紅線
-- ❌ **絕對禁止**自動處理涉及 DB schema 變更的 issue
-- ✅ 必須在 PR 中標記「需要 DB schema 變更」
-- ✅ 必須等待人工審查批准
-- ✅ 提供完整的 migration 計畫
+### @agent-git-issue-pr-flow
+**Auto-trigger keywords**: issue, fix, bug, #N, 部署, staging, approval
+- Complete PDCA workflow management
+- TDD enforcement
+- Per-Issue Test Environment
+- AI-powered approval detection
 
----
+### @agent-code-reviewer
+**Auto-trigger keywords**: review, check code, quality
+- Security vulnerability scanning
+- Performance analysis
+- Best practices validation
+- Code smell detection
 
-## 🚨 GitHub Issue 處理規則
+### @agent-test-runner
+**Auto-trigger keywords**: test, pytest, npm test
+- Automatic test type detection
+- Coverage reporting
+- Failure analysis
+- Performance benchmarking
 
-**⚠️ 使用 @agent-git-issue-pr-flow 處理所有 GitHub Issues**
+### @agent-task-router
+**Internal use only** - AI-powered task routing assistant
+- Suggests appropriate agents based on task
+- Lightweight Haiku model for efficiency
 
-### 適用範圍
-- ✅ 修復 issue bug、實作 feature request、任何有 issue number 的工作
-- ℹ️ 其他情況可彈性處理（緊急 hotfix、實驗性功能、文件更新）
+### @agent-error-reflection 🔍 **[CONTINUOUS LEARNING]**
+**Auto-trigger**: Errors, test failures, user corrections
+- Automatic error detection and pattern recognition
+- Learning from mistakes to prevent recurrence
+- Performance metrics tracking
+- Weekly improvement reports
 
-### Agent 自動處理的流程
-1. **PDCA 完整循環**: Plan → Do → Check → Act
-2. **避免意外關閉 Issue**: Feature branch 使用 `Related to #N`，只在 Release PR 使用 `Fixes #N`
-3. **雙重批准**: CI/CD 系統通過 + 案主批准（AI 智能偵測）
-4. **Per-Issue Test Environment**: 每個 issue 獨立測試環境，測試完自動清理
+**Commands**:
+- `/reflect [error-description]` - Manual error reflection
+- `/weekly-review` - Generate weekly improvement report
 
----
+**Learning Files**:
+- `.claude/learning/error-patterns.json` - Error pattern database
+- `.claude/learning/improvements.json` - Improvement tracking
+- `.claude/learning/performance-metrics.json` - Performance metrics
+- `.claude/learning/user-preferences.json` - User preferences
 
-## 🔐 資安鐵則：絕對禁止 Hardcode Secrets！
+**Key Features**:
+- Never repeat the same mistake twice
+- Automatic pattern detection
+- Proactive error prevention
+- Continuous improvement tracking
+- Data-driven decision making
 
-**絕對不要在任何會被 commit 的檔案中硬編碼 secrets！**
+## 🪝 Active Hooks
 
-### Secret 管理規則：
-- ❌ 不要在 `.sh`, `.py`, `.ts`, `.yml` 中硬編碼 secrets
-- ✅ 本機開發：使用 `.env` 檔案（gitignore）
-- ✅ CI/CD：使用 GitHub Secrets (`gh secret set`)
-- ✅ 生產環境：使用 Cloud Run 環境變數或 Secret Manager
-- ✅ 程式碼：從環境變數讀取 (`os.getenv()`, `import.meta.env`)
-- ⚠️ 洩漏後：立即重新生成並清除 git 歷史
+### user-prompt-submit
+Suggests relevant agents/tools before task execution
 
----
+### PostToolUse(Write|Edit)
+Auto-formats code after modifications
 
-## 🔴 絕對禁止使用 --no-verify！
-**永遠不要偷懶！** 所有 pre-commit hooks 的錯誤都必須修復，不能跳過：
-- ❌ **絕對禁止** `git commit --no-verify`
-- ✅ **必須修復** 所有 flake8、ESLint、black 錯誤
-- ✅ **必須通過** 所有 pre-commit 檢查才能 commit
+### PreToolUse(Bash(git commit*))
+Validates code quality before commits
 
-## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
+### Stop
+Runs quality checks at end of each turn
 
-### 在執行任何重要操作前，必須按順序檢查：
-1. **先查 README** - 了解專案標準流程
-2. **先查 CLAUDE.md** - 了解專案特定規則
-3. **先查 package.json/requirements.txt** - 了解已有的腳本命令
-4. **絕對不要自作主張創建資源** - 永遠使用專案既有的配置
+### error-reflection.py (Stop hook)
+Automatically detects errors and triggers learning reflection
 
-### 🔴 紅線規則 (絕對禁止)：
-- ❌ **不要手動 gcloud 命令創建資源** - 必須使用專案配置
-- ❌ **不要猜測版本號** - POSTGRES_15 vs POSTGRES_17 等必須查證
-- ❌ **不要忽略專案既有工具** - npm scripts, pytest 優先
-- ❌ **不要在未讀取配置前就執行命令** - 先讀後做
+## 🤖 @claude GitHub Bot 使用指南
 
-### ✅ 正確操作範例：
+### ⚠️ CRITICAL: Git Branch Naming Convention (MANDATORY FOR @claude bot)
+
+**When @claude bot works on GitHub Issues, it MUST follow these EXACT rules:**
+
+#### Branch Name Format
+- **REQUIRED FORMAT**: `claude/issue-<NUMBER>` (WITHOUT any timestamp or date suffix)
+- **Examples**:
+  - ✅ CORRECT: `claude/issue-26`
+  - ✅ CORRECT: `claude/issue-99`
+  - ❌ WRONG: `claude/issue-26-20251129-1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-20251129_1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-password-hint` (has description - FORBIDDEN)
+
+#### Branch Reuse Rule
+**Before creating a new branch, @claude bot MUST:**
+1. Check if branch `claude/issue-<NUMBER>` already exists
+2. If exists: Checkout and pull latest changes
+3. If not exists: Create new branch with EXACT format above
+
+**Example workflow @claude bot should follow:**
 ```bash
-# 錯誤：直接創建 Cloud SQL
-gcloud sql instances create duotopia-db-staging --database-version=POSTGRES_15
+# Step 1: Check if branch exists
+if git ls-remote --heads origin claude/issue-26 | grep -q claude/issue-26; then
+  # Branch exists - reuse it
+  git fetch origin claude/issue-26:claude/issue-26
+  git checkout claude/issue-26
+  git pull origin claude/issue-26
+else
+  # Branch doesn't exist - create it
+  git checkout -b claude/issue-26
+fi
 
-# 正確：使用專案配置
-gcloud sql instances create duotopia-staging-0827 \
-  --database-version=POSTGRES_17 \
-  --tier=db-f1-micro \
-  --region=asia-east1
+# Step 2: Make changes and commit
+# ... (work on the issue)
+
+# Step 3: Push to the SAME branch
+git push origin claude/issue-26
 ```
 
-### ⚡ 每次修改後必須執行的測試流程：
+#### Why This Matters
+1. **No Branch Accumulation** - Reusing branches prevents hundreds of abandoned branches
+2. **Automatic Cleanup** - When issue closes, only ONE branch needs cleanup
+3. **CI/CD Integration** - Per-Issue Test Environment expects fixed branch names
+4. **Kubernetes Compatibility** - Underscore timestamps break K8s namespace naming
 
-1. **立即編譯測試**
-   ```bash
-   npm run build  # 確保沒有編譯錯誤
-   ```
+#### Enforcement
+- **Issue will be rejected** if @claude creates timestamped branches
+- **User will manually delete** all timestamped branches and request re-work
+- **Only fixed format branches** will be reviewed and merged
 
-2. **實際打開瀏覽器檢查**
-   ```bash
-   open http://localhost:5173/[修改的頁面]
-   ```
+---
 
-3. **檢查瀏覽器控制台**
-   - 打開 F12 開發者工具
-   - 查看 Console 是否有錯誤
-   - 檢查 Network 標籤 API 請求
+### 如何让 @claude 遵循项目流程
 
-4. **API 功能測試**
-   ```bash
-   # 寫測試腳本驗證 API
-   python test_[功能]_api.py
-   ```
+当在 GitHub Issue 中使用 @claude bot 时，必须提供明确指示以确保遵循 git-issue-pr-flow 流程。
 
-5. **截圖存證**
-   ```bash
-   screencapture -x frontend_[功能]_fixed.png
-   ```
+#### ✅ 正确的指示格式
 
-**⚠️ 絕對不要讓用戶一直幫你抓錯！每個修復都要自己先測試過！**
-
-### 🔴 Git Commit/Push 流程（絕對遵守）
-
-**標準工作流程：**
-1. **修改代碼**
-2. **自己測試** - 執行上述所有測試步驟
-3. **報告測試結果** - 告訴用戶測試通過與否
-4. **等待命令** - ⚠️ **絕對不要主動 commit 或 push**
-
-**禁止事項：**
-- ❌ **絕對禁止** 自己決定何時 commit
-- ❌ **絕對禁止** 自己決定何時 push
-- ❌ **絕對禁止** 測試不完整就想 commit
-- ❌ **絕對禁止** 沒有用戶明確命令就 commit/push
-
-**正確做法：**
 ```
-✅ 我：修改完成，已測試通過（附測試結果）
-✅ 用戶：commit push
-✅ 我：執行 git commit && git push
+@claude 请按照以下步骤修复此 Issue：
+
+1. **使用固定分支**: 在 `claude/issue-26` 分支上工作
+   - ⚠️ CRITICAL: 分支名必须是 `claude/issue-26`，不能有任何时间戳或日期后缀
+   - 如果分支已存在，必须先 checkout 并 pull 最新代码
+   - 绝对禁止创建 `claude/issue-26-YYYYMMDD-HHMM` 格式的分支
+2. **检查既有分支**: 如果分支已存在，请先 pull 最新代码再修改
+3. **遵循 PDCA 流程**:
+   - Plan: 分析问题根因，提出修复方案
+   - Do: 实施修复并编写测试
+   - Check: 推送到分支触发 Per-Issue Test Environment
+   - Act: 等待测试反馈，必要时迭代改进
+4. **不要自动创建 PR**: 推送代码后等待人工审查再创建 PR
+
+参考文档: .claude/agents/git-issue-pr-flow.md
 ```
 
-**錯誤做法：**
+#### ❌ 错误的指示（会导致分支堆积）
+
+**Example 1: Too vague**
 ```
-❌ 我：修改完成，現在 commit...（自作主張）
-❌ 我：測試通過，推送到 staging...（沒等命令）
+@claude 请修复此问题
 ```
+结果：创建 `claude/issue-26-20251129-1639` ❌
 
-### 🔴 絕對禁止草率判斷「修復完成」！
-
-**血淋淋的教訓（2025-09-07）：**
+**Example 2: Missing branch name requirement**
 ```
-錯誤行為：
-1. 看到 API 返回 200 OK 就以為修好了 ❌
-2. 沒有檢查 API 返回的實際資料內容 ❌
-3. 沒有在前端瀏覽器實際測試功能 ❌
-4. 截圖抓錯（抓到桌面背景）還說功能正常 ❌
-5. 急著要 commit push 而沒有驗證 ❌
-
-正確做法：
-1. API 返回 200 不代表功能正常 ✅
-2. 必須檢查返回的 JSON 資料結構和內容 ✅
-3. 必須在瀏覽器中實際操作功能 ✅
-4. 截圖必須確認是正確的頁面 ✅
-5. 測試通過後才能 commit ✅
+@claude 请按照 PDCA 流程修复
 ```
+结果：创建 `claude/issue-26-20251129-1655` ❌
 
-**判斷修復完成的標準：**
-- [ ] API 返回正確的狀態碼
-- [ ] API 返回正確的資料結構
-- [ ] 前端頁面正常顯示
-- [ ] 功能可以正常操作
-- [ ] 沒有 console 錯誤
-- [ ] 截圖證明功能正常
-
-**記住：用戶說「操你媽的」時，代表你沒有做好測試！**
-
-## 🏗️ 平台開發核心原則 - 不要繞遠路
-
-### 🎯 核心教訓：直接用生產級方案，避免技術債
-
-> **"There is nothing more permanent than a temporary solution"**
-> 臨時解決方案會變成永久的技術債
-
-### 📊 平台開發鐵則
-
-#### 1. **基礎設施優先 (Infrastructure First)**
-```yaml
-正確做法 (Day 1)：
-✅ Cloud SQL + Cloud Run 從第一天開始
-✅ Terraform 管理所有基礎設施
-✅ CI/CD pipeline 第一週建立
-✅ Secret Manager 管理所有密碼
-✅ 監控告警從第一天開始
-
-錯誤做法（避免）：
-❌ 用檔案系統當資料庫（如 Base44 BaaS）
-❌ 手寫部署腳本（deploy.sh）
-❌ 手動管理環境變數
-❌ "先簡單後複雜" 的漸進式架構
+**Example 3: Not emphasizing NO TIMESTAMP**
 ```
-
-#### 2. **資料架構不妥協 (Data Architecture Non-negotiable)**
-```yaml
-正確做法：
-✅ PostgreSQL 作為 Single Source of Truth
-✅ 正確的關聯式設計（外鍵、CASCADE DELETE）
-✅ JSONB 處理彈性資料
-✅ Redis 作為快取層
-✅ 使用成熟的 ORM（如 SQLAlchemy）
-
-錯誤做法：
-❌ Base44 entities 當資料庫
-❌ 混用多種儲存方式
-❌ 沒有外鍵約束
-❌ Schema 多次重構
+@claude 请在 claude/issue-26 分支上修复
 ```
+结果：仍可能创建带时间戳的分支 ❌
 
-#### 3. **DevOps 文化 (Everything as Code)**
-```yaml
-正確做法：
-✅ Infrastructure as Code (Terraform)
-✅ Configuration as Code (環境變數)
-✅ Deployment as Code (CI/CD)
-✅ Immutable Infrastructure
-✅ Blue-Green Deployment
-
-錯誤做法：
-❌ 手動配置伺服器
-❌ SSH 進去修改設定
-❌ 部署後手動測試
-❌ 沒有回滾機制
+**Correct approach: Be EXTREMELY explicit**
 ```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
 
-### 🚀 新專案 Day 1 Checklist
+⚠️ CRITICAL BRANCH NAMING RULE:
+- Branch name MUST be exactly: claude/issue-26
+- DO NOT add any timestamp (no YYYYMMDD-HHMM suffix)
+- DO NOT add any date suffix
+- If branch exists, checkout and pull it first
+
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程工作。
+```
+结果：使用 `claude/issue-26` ✅
+
+#### 🔑 关键要点
+
+1. **明确指定分支名**: 告诉 @claude 使用 `claude/issue-XX` 格式
+2. **要求检查既有分支**: 避免重复创建
+3. **引用 git-issue-pr-flow.md**: 确保 @claude 知道遵循 PDCA 流程
+4. **分步骤指示**: 明确每个阶段的产出要求
+
+### @claude 分支清理
+
+如果 @claude 已经创建了多个带时间戳的分支，可以手动清理：
 
 ```bash
-# Day 1 必須完成（8小時內）：
-□ Terraform 專案初始化
-□ PostgreSQL + Redis 設定
-□ GitHub Actions CI/CD Pipeline
-□ 環境分離 (dev/staging/prod)
-□ Secret Manager 設定
-□ 基本健康檢查 API (/api/health)
-□ 監控告警設定
-□ 第一個 E2E 測試
+# 列出所有 claude/issue-XX-* 分支
+git fetch --prune
+git branch -r | grep "claude/issue-26-"
 
-# 絕對不要做的事：
-✗ 用 BaaS 平台儲存業務資料
-✗ 手寫 shell scripts 部署
-✗ "暫時" 的解決方案
-✗ "之後再加" 的安全措施
-✗ 沒有測試就上線
+# 删除多余的旧分支（保留最新的）
+git push origin --delete claude/issue-26-20251129-1546
+git push origin --delete claude/issue-26-20251129-1613
+git push origin --delete claude/issue-26-20251129-1626
 ```
 
-## 🚨 測試驅動開發 (TDD)
+当 Issue 关闭时，cleanup workflow 会自动删除所有相关分支。
 
-### 每次修復都必須：
-1. **寫測試** - 先寫測試確認問題存在
-2. **自己測試** - 實際執行代碼驗證修復
-3. **驗證結果** - 確認看到正確的結果
+### 最佳实践示例
 
-### ⚠️ 重要提醒 - 不要混淆前後端工具！
-**前端 (JavaScript/TypeScript)**：
-- `package.json` - Node.js 套件管理
-- `npm` / `yarn` - 套件安裝工具
-- `tsconfig.json` - TypeScript 設定
-- `vite.config.ts` - Vite 建置設定
+#### 初次修复
+```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
 
-**後端 (Python)**：
-- `requirements.txt` - Python 套件管理
-- `pip` - Python 套件安裝工具
-- `pytest.ini` - pytest 測試設定
-- `setup.py` / `pyproject.toml` - Python 專案設定
-- **不要把 Python 設定寫在 package.json！**
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程：
+1. Plan: 分析所有留言反馈，理解需求（保留上方提示，移除下方重复提示）
+2. Do: 实施修复
+3. Check: 推送到 claude/issue-26 触发部署
+4. Act: 等待测试反馈
 
-**通用工具**：
-- `Makefile` - 跨語言的快捷指令
-- `docker-compose.yml` - 容器編排
-- `.env` - 環境變數
+不要创建带时间戳的分支，不要自动创建 PR。
+```
 
-### 測試流程：
+#### 后续迭代
+```
+@claude 请在既有的 `claude/issue-26` 分支上继续修复。
+
+根据最新反馈：
+- Preview 环境也要隐藏测试提示
+- 检查代码是否 clean
+
+请 pull 最新代码后再修改，然后推送触发重新部署。
+```
+
+## 🚨 Quick Reference
+
+### Must Follow Rules
+1. **Test before declaring completion** - Never hastily judge "fix complete"
+2. **Use general-purpose agent for ALL coding** - No exceptions
+3. **Never commit/push without user command** - Wait for explicit command
+4. **Never hardcode secrets** - Use .env files and environment variables
+5. **Use feature branches, not staging** - Never commit directly to staging
+6. **Check README/CLAUDE.md/package.json first** - Understand project standards
+7. **Learn from every error** - Use error reflection system to prevent recurrence
+8. **指导 @claude bot** - 在 Issue 中使用 @claude 时，明确指定使用固定分支和遵循 PDCA 流程
+
+### Command Shortcuts
 ```bash
-# 1. 型別檢查（最重要）
+# Testing
+npm run test:api:all
 npm run typecheck
-
-# 2. ESLint 檢查
 npm run lint
-
-# 3. 單元測試（如果有）
-npm test --if-present
-
-# 4. 建置測試
 npm run build
 
-# 5. E2E 測試（如果有）
-npx playwright test --if-present
+# Git workflow
+git checkout -b fix/issue-<NUM>-<description>  # Create feature branch
+gh pr create --base staging                     # Create PR
+gh pr checks <PR>                               # Check CI/CD status
+gh pr merge <PR> --squash                       # Merge PR
+update-release-pr                               # Create staging→main PR (complex, consider automating)
+
+# Templates
+.claude/templates/pdca-plan.md                  # PDCA Plan template
+.claude/templates/pdca-act.md                   # PDCA Act completion template
+
+# Automated workflows (no manual commands needed)
+# - Auto-Approval Detection: Monitors Issue comments
+# - Per-Issue Deploy: Deploys on branch push
+# - Cleanup: Deletes resources on Issue close
 ```
 
-**絕對不要讓用戶一直幫你抓錯！每個修復都要自己先測試過！**
+## 🎯 Agent Selection Matrix
 
-## 🔍 完成工作前的強制檢查清單 (Pre-Completion Checklist)
-
-### ⚠️ 每次回報「完成」前必須執行：
-
-```bash
-# 1. 檢查檔案位置
-git status --short
-# 確認：
-# - 所有測試檔案在正確目錄 (unit/integration/e2e)
-# - 沒有重複的測試檔案
-# - 沒有開發過程中的臨時檔案
-
-# 2. 清理不必要的檔案
-# 刪除所有 *_temp.py, *_old.py, *_backup.py, *_test*.py (開發過程檔案)
-# 只保留最終版本的測試檔案
-
-# 3. 執行完整測試
-npm run test:api:all  # 所有後端測試
-npm run build        # 前端建置
-
-# 4. 檢查 code formatting
-black --check backend/  # Python
-npm run lint           # TypeScript/JavaScript
-
-# 5. 檢查 git diff
-git diff --stat        # 確認改動合理
-git diff              # 檢視實際變更內容
-```
-
-### 📋 回報格式標準
-
-完成工作時必須包含：
-
-```markdown
-## ✅ 完成項目
-- [具體完成的功能/修復]
-
-## 📊 測試結果
-- Unit tests: X/X PASSED
-- Integration tests: X/X PASSED
-- E2E tests: X/X PASSED
-
-## 📝 修改的檔案
-1. `路徑/檔案名` - 做了什麼修改
-2. `路徑/檔案名` - 做了什麼修改
-
-## 🗑️ 已刪除的臨時檔案
-- `舊檔案名` - 為何刪除
-
-## ⏳ 待用戶確認
-- 等待 commit 指示（遵守 "不要主動 commit" 規則）
-```
-
-### 🚨 絕對不要：
-- ❌ 回報「完成」時還有臨時測試檔案沒清理
-- ❌ 回報「完成」時測試檔案位置不對
-- ❌ 回報「完成」時沒有執行完整測試
-- ❌ 回報「完成」時 git status 一團亂
-- ❌ 讓用戶問「檔案位置對嗎？」「臨時檔案刪了嗎？」
-
-**記住：用戶問這些問題 = 你沒做好基本檢查！**
-
-## 🧪 測試檔案組織原則 (Test Organization Rules)
-
-### ⚠️ 重要：測試檔案必須放在正確位置！
-
-**絕對不要亂放測試檔案！** 每個測試都有固定的位置規則：
-
-### 📁 測試目錄結構
-```
-duotopia/
-├── backend/tests/           # ✅ 正確：所有 Python 測試
-│   ├── unit/               # 單元測試
-│   │   └── test_*.py
-│   ├── integration/        # 整合測試
-│   │   ├── api/           # API 整合測試
-│   │   │   └── test_*.py
-│   │   └── auth/          # 認證整合測試
-│   │       └── test_*.py
-│   └── e2e/               # E2E 測試
-│       └── test_*.py
-├── frontend/tests/          # ✅ 正確：前端測試（如果需要）
-└── tests/                   # ❌ 錯誤：不要用這個資料夾！
-```
-
-### 🎯 測試分類原則
-
-#### 1. **單元測試** (`backend/tests/unit/`)
-- 測試單一函數或類別
-- 不依賴外部資源（資料庫、API）
-- 檔名：`test_模組名稱.py`
-- 例：`test_schemas.py`, `test_utils.py`
-
-#### 2. **整合測試** (`backend/tests/integration/`)
-- **API 測試** (`api/`): 測試 API 端點功能
-  - `test_student_classroom_assignment.py` ✅
-  - `test_student_deletion_soft_delete.py` ✅
-  - `test_classroom_deletion.py` ✅
-- **認證測試** (`auth/`): 測試登入、權限功能
-  - `test_auth_comprehensive.py` ✅
-  - `test_student_login.py` ✅
-
-#### 3. **E2E 測試** (`backend/tests/e2e/`)
-- 測試完整用戶流程
-- 從登入到完成任務的完整測試
-- 例：`test_assignment_flow.py`
-
-### 🚨 禁止事項
-1. **絕對不要放在根目錄 `tests/`** - 這會造成混亂！
-2. **不要放在 `backend/scripts/`** - 腳本不是測試！
-3. **不要用奇怪檔名** - 如 `test_phase2_api.py`
-4. **不要混合不同測試類型** - 單元測試不要呼叫 API
-
-### 📝 測試檔名規範
-- ✅ **正確**: `test_student_classroom_assignment.py`
-- ✅ **正確**: `test_auth_comprehensive.py`
-- ❌ **錯誤**: `test_phase2_api.py`（語意不清）
-- ❌ **錯誤**: `student_test.py`（不符合 pytest 慣例）
-
-### 🔧 業界標準測試執行指令
-
-#### NPM Scripts (推薦使用)
-```bash
-# API 測試
-npm run test:api                 # 所有 API 整合測試
-npm run test:api:unit            # 單元測試
-npm run test:api:integration     # 整合測試
-npm run test:api:e2e             # E2E 測試
-npm run test:api:all             # 所有 Python 測試
-npm run test:api:coverage        # 測試覆蓋率報告
-
-# 前端測試
-npm run test:e2e                 # Playwright E2E 測試
-npm run test:e2e:ui              # Playwright UI 模式
-
-# 完整測試
-npm run test:all                 # 所有測試（Python + Playwright）
-```
-
-#### 直接使用 pytest（進階用法）
-```bash
-cd backend
-
-# 基本測試執行
-pytest                                    # 所有測試（289個）
-pytest -v                                # 詳細輸出
-pytest tests/unit/                       # 只執行單元測試
-pytest tests/integration/api/            # 只執行 API 測試
-
-# 特定測試
-pytest tests/integration/api/test_student_classroom_assignment.py -v
-
-# 測試分類執行
-pytest -m "unit"                         # 執行標記為 unit 的測試
-pytest -m "api and not slow"             # 執行 API 測試但排除慢測試
-
-# 測試覆蓋率
-pytest --cov=. --cov-report=html        # 生成 HTML 覆蓋率報告
-
-# 平行執行（需安裝 pytest-xdist）
-pytest -n auto                          # 自動偵測 CPU 核心數平行執行
-```
-
-#### CI/CD 使用
-```bash
-# GitHub Actions 使用
-pytest --junitxml=test-results.xml
-```
-
-### 📋 檢查清單
-創建新測試前必須確認：
-- [ ] 檔案放在正確目錄
-- [ ] 檔名符合 `test_*.py` 格式
-- [ ] 檔名清楚描述測試內容
-- [ ] 測試類型分類正確（unit/integration/e2e）
-
-**記住：亂放測試檔案 = 技術債務 = 維護噩夢！**
-
-## 📚 相關文件
-
-- **產品需求**: [PRD.md](./PRD.md)
-- **部署與 CI/CD**: [CICD.md](./CICD.md)
-- **測試指南**: [docs/TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)
-- **部署狀態**: [docs/DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)
-- **Git Issue PR Flow Agent**: [.claude/agents/git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)
+| Task Type | Recommended Agent | Trigger Words |
+|-----------|------------------|---------------|
+| ALL Coding Tasks | @general-purpose | ALL coding keywords |
+| Bug fixes | @general-purpose → git-issue-pr-flow | issue, fix, #N |
+| Code review | @code-reviewer | review, quality |
+| Testing | @test-runner | test, pytest |
+| Deployment | @general-purpose → git-issue-pr-flow | deploy, staging |
+| Error reflection | @error-reflection | /reflect, /weekly-review |
