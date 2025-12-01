@@ -2319,8 +2319,8 @@ async def update_content(
             (
                 (Content.is_assignment_copy.is_(False))
                 & (
-                    (Program.teacher_id == current_teacher.id)
-                    | (Program.is_template.is_(True))
+            (Program.teacher_id == current_teacher.id)
+            | (Program.is_template.is_(True))
                 )
                 & (Lesson.is_active.is_(True))
                 & (Program.is_active.is_(True))
@@ -2386,7 +2386,7 @@ async def update_content(
                     )
                     .first()
                     is not None
-                )
+        )
 
         # 建立新音檔 URL 的集合
         new_audio_urls = set()

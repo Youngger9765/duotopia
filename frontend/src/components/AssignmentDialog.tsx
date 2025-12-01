@@ -351,7 +351,7 @@ export function AssignmentDialog({
       const updatePrograms = (prev: Program[]) =>
         prev.map((p) =>
           p.id === programId ? { ...p, lessons: detail.lessons || [] } : p,
-        );
+      );
 
       setTemplatePrograms(updatePrograms);
       setClassroomPrograms(updatePrograms);
@@ -508,7 +508,7 @@ export function AssignmentDialog({
       cartItems.some((item) => item.contentId === id)
     );
 
-    if (allSelected) {
+      if (allSelected) {
       // 移除所有
       setCartItems((prev) => {
         const filtered = prev.filter(
@@ -516,7 +516,7 @@ export function AssignmentDialog({
         );
         return filtered.map((item, index) => ({ ...item, order: index }));
       });
-    } else {
+      } else {
       // 添加所有
       setCartItems((prev) => {
         const existingIds = new Set(prev.map((item) => item.contentId));
@@ -532,7 +532,7 @@ export function AssignmentDialog({
             order: prev.length + idx,
           }));
         return [...prev, ...newItems];
-      });
+    });
     }
   };
 
@@ -840,11 +840,11 @@ export function AssignmentDialog({
             <div className="h-full flex gap-4">
               {/* 左側：課程列表 (70%) */}
               <div className="flex-1 flex flex-col">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm text-gray-600">
-                    {t("dialogs.assignmentDialog.selectContent.description")}
-                  </p>
-                </div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {t("dialogs.assignmentDialog.selectContent.description")}
+                </p>
+              </div>
 
                 {/* Tab 切換：公版 / 班級版 */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "template" | "classroom")} className="flex-1 flex flex-col">
@@ -974,7 +974,7 @@ export function AssignmentDialog({
                                           )}
                                         </span>
                                       )}
-                                        {lesson.contents &&
+                                      {lesson.contents &&
                                         lesson.contents.length > 0 &&
                                         !loadingLessons[lesson.id] && (
                                           <span
@@ -1111,7 +1111,7 @@ export function AssignmentDialog({
                             {program.level && (
                               <Badge variant="outline" className="ml-2">
                                 {program.level}
-                              </Badge>
+                        </Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
@@ -1213,15 +1213,15 @@ export function AssignmentDialog({
                                                 {content.title}
                                               </div>
                                               <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Badge
+                      <Badge
                                                   variant="outline"
                                                   className="px-1 py-0"
-                                                >
+                      >
                                                   {useContentTypeLabel(
                                                     content.type,
                                                     t,
                                                   )}
-                                                </Badge>
+                      </Badge>
                                                 {content.items_count && (
                                                   <span>
                                                     {content.items_count}{" "}
@@ -1229,14 +1229,14 @@ export function AssignmentDialog({
                                                       "dialogs.assignmentDialog.selectContent.items",
                                                     )}
                                                   </span>
-                                                )}
-                                              </div>
+                    )}
+                  </div>
                                             </div>
                                           </button>
                                         );
                                         })}
-                                      </div>
-                                    )}
+                </div>
+              )}
                                 </div>
                               ))}
                             </div>
