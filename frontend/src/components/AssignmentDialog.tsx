@@ -122,6 +122,7 @@ export function AssignmentDialog({
     student_ids: [] as number[],
     assign_to_all: true,
     due_date: undefined as Date | undefined,
+    start_date: undefined as Date | undefined,
   });
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export function AssignmentDialog({
         student_ids: students.map((s) => s.id), // 預設全選所有學生
         assign_to_all: true,
         due_date: undefined,
+        start_date: new Date(), // 預設為今天
       });
       setCurrentStep(1);
     }
@@ -393,6 +395,9 @@ export function AssignmentDialog({
         due_date: formData.due_date
           ? formData.due_date.toISOString()
           : undefined,
+        start_date: formData.start_date
+          ? formData.start_date.toISOString()
+          : undefined,
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -455,6 +460,7 @@ export function AssignmentDialog({
       student_ids: [],
       assign_to_all: true,
       due_date: undefined,
+      start_date: undefined,
     });
     setSelectedContents(new Set());
     setExpandedPrograms(new Set());
@@ -1094,7 +1100,20 @@ export function AssignmentDialog({
                       </Label>
                       <Input
                         type="date"
-                        defaultValue={new Date().toISOString().split("T")[0]}
+                        value={
+                          formData.start_date
+                            ? formData.start_date.toISOString().split("T")[0]
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const dateValue = e.target.value
+                            ? new Date(e.target.value)
+                            : undefined;
+                          setFormData((prev) => ({
+                            ...prev,
+                            start_date: dateValue,
+                          }));
+                        }}
                         className="text-sm"
                       />
                     </div>

@@ -192,9 +192,89 @@ jobs:
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Frontend deployed: ${URL}"
 
-  comment:
+  cleanup-images:
     runs-on: ubuntu-latest
     needs: [extract, deploy-backend, deploy-frontend]
+    if: success()
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: 🧹 Clean Old Images for This Issue
+        run: |
+          echo "🧹 Cleaning old images for Issue #${{ needs.extract.outputs.issue_number }}..."
+
+          KEEP_COUNT=1  # Keep only the latest version
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}"
+          ISSUE="${{ needs.extract.outputs.issue_number }}"
+
+          # Services to clean for this issue
+          services=(
+            "duotopia-preview-issue-${ISSUE}-backend"
+            "duotopia-preview-issue-${ISSUE}-frontend"
+          )
+
+          total_deleted=0
+
+          for service in "${services[@]}"; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📦 Service: $service"
+
+            FULL_PATH="${REGISTRY}/${service}"
+
+            # Get digests sorted by CREATE_TIME (newest first)
+            DIGESTS=$(gcloud artifacts docker images list "${FULL_PATH}" \
+              --sort-by="~CREATE_TIME" 2>&1 | grep "sha256:" | awk '{print $2}' || true)
+
+            if [ -z "$DIGESTS" ]; then
+              echo "   ℹ️  No images found"
+              continue
+            fi
+
+            TOTAL=$(echo "$DIGESTS" | wc -l | tr -d ' ')
+            echo "   📊 Total images: $TOTAL"
+
+            if [ "$TOTAL" -le "$KEEP_COUNT" ]; then
+              echo "   ✅ Already optimal ($TOTAL <= $KEEP_COUNT)"
+              continue
+            fi
+
+            # Keep the first KEEP_COUNT, delete the rest
+            DELETE_DIGESTS=$(echo "$DIGESTS" | tail -n +"$((KEEP_COUNT + 1))")
+            DELETE_COUNT=$(echo "$DELETE_DIGESTS" | wc -l | tr -d ' ')
+
+            echo "   ✅ Keeping $KEEP_COUNT newest image(s)"
+            echo "   🗑️  Deleting $DELETE_COUNT old image(s)..."
+
+            echo "$DELETE_DIGESTS" | while read -r digest; do
+              if [ -n "$digest" ]; then
+                IMAGE_URI="${FULL_PATH}@${digest}"
+                short_digest="${digest:7:12}"
+
+                if gcloud artifacts docker images delete "${IMAGE_URI}" --delete-tags --quiet 2>&1; then
+                  echo "      ✅ Deleted: ${short_digest}"
+                  total_deleted=$((total_deleted + 1))
+                else
+                  echo "      ⚠️  Failed: ${short_digest}"
+                fi
+              fi
+            done
+
+            echo ""
+          done
+
+          if [ $total_deleted -gt 0 ]; then
+            echo "✅ Cleaned up $total_deleted old image(s) for Issue #${ISSUE}"
+          else
+            echo "✅ No cleanup needed - already optimal"
+          fi
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: [extract, deploy-backend, deploy-frontend, cleanup-images]
     if: success()
     permissions:
       issues: write

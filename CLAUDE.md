@@ -327,11 +327,21 @@ npm run typecheck
 npm run lint
 npm run build
 
-# Git workflow (via agent)
-create-feature-fix <issue> <desc>
-deploy-feature <issue>
-update-release-pr
-check-approvals
+# Git workflow
+git checkout -b fix/issue-<NUM>-<description>  # Create feature branch
+gh pr create --base staging                     # Create PR
+gh pr checks <PR>                               # Check CI/CD status
+gh pr merge <PR> --squash                       # Merge PR
+update-release-pr                               # Create staging→main PR (complex, consider automating)
+
+# Templates
+.claude/templates/pdca-plan.md                  # PDCA Plan template
+.claude/templates/pdca-act.md                   # PDCA Act completion template
+
+# Automated workflows (no manual commands needed)
+# - Auto-Approval Detection: Monitors Issue comments
+# - Per-Issue Deploy: Deploys on branch push
+# - Cleanup: Deletes resources on Issue close
 ```
 
 ## 🎯 Agent Selection Matrix
