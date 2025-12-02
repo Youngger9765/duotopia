@@ -156,7 +156,7 @@ def test_create_student_with_same_student_number_different_classroom(
     # Should succeed (200 OK)
     assert response.status_code == 200
     student2_id = response.json()["id"]
-    assert response.json()["student_id"] == "S002"
+    assert response.json()["student_number"] == "S002"
 
     # Clean up
     test_db_session.query(ClassroomStudent).filter(
@@ -319,7 +319,7 @@ def test_update_student_keep_same_student_number_should_succeed(
     # Should succeed (200 OK)
     assert response.status_code == 200
     assert response.json()["name"] == "Student One Updated"
-    assert response.json()["student_id"] == "S006"
+    assert response.json()["student_number"] == "S006"
 
     # Clean up
     test_db_session.query(ClassroomStudent).filter(
