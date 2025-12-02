@@ -5,6 +5,9 @@ on:
     types: [closed]
   pull_request:
     types: [closed]
+  push:  # Explicitly ignore all push events
+    branches-ignore:
+      - '**'
 
 env:
   PROJECT_ID: duotopia-472708
