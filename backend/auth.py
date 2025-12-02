@@ -168,7 +168,7 @@ async def get_current_student(
     如果需要允許老師預覽，請使用 get_current_student_or_teacher
     """
     from models import Student
-    from database import SessionLocal
+    from database import get_session_local
 
     # 驗證必須是學生
     user_type = current_user.get("type")
@@ -179,6 +179,7 @@ async def get_current_student(
 
     # 從資料庫查詢 Student 對象
     user_id = current_user.get("sub")
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         student = db.query(Student).filter(Student.id == int(user_id)).first()

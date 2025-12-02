@@ -15,10 +15,16 @@ const DEBUG = false; // 暫時關閉以便追蹤其他問題
 export class ApiError extends Error {
   constructor(
     public status: number,
-    public detail: string,
+    public detail: string | { message?: string; errors?: string[] },
     public originalError?: unknown,
   ) {
-    super(detail);
+    // Extract message for Error base class
+    const message = typeof detail === 'object' && detail?.message
+      ? detail.message
+      : typeof detail === 'string'
+        ? detail
+        : 'Unknown error';
+    super(message);
     this.name = "ApiError";
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
@@ -179,10 +185,10 @@ class ApiClient {
           });
         }
 
-        // Extract detail message
+        // Extract detail - preserve structured error objects
         const detail =
           typeof error === "object" && error !== null && "detail" in error
-            ? String(error.detail)
+            ? error.detail
             : `HTTP ${response.status} Error`;
 
         // Throw ApiError instead of generic Error

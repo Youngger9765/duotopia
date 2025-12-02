@@ -246,8 +246,19 @@ async def get_assignment_activities(
 
     # 獲取作業對應的 Assignment（如果有 assignment_id）
     activities = []
+    assignment_practice_mode = None
+    assignment_score_category = None
 
     if student_assignment.assignment_id:
+        # 獲取 Assignment 的 practice_mode 設定
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+        if assignment:
+            assignment_practice_mode = assignment.practice_mode
+            assignment_score_category = assignment.score_category
         # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
         progress_records = (
             db.query(StudentContentProgress)
@@ -537,6 +548,8 @@ async def get_assignment_activities(
         "assignment_id": assignment_id,
         "title": student_assignment.title,
         "status": student_assignment.status.value,  # 返回作業狀態
+        "practice_mode": assignment_practice_mode,  # 例句重組/朗讀模式
+        "score_category": assignment_score_category,  # 計分類別
         "total_activities": len(activities),
         "activities": activities,
     }
@@ -1938,3 +1951,362 @@ async def get_mastery_status(
         words_mastered=row[3],
         total_words=row[4],
     )
+
+
+# ============ 例句重組（Rearrangement）API ============
+
+
+class RearrangementQuestionResponse(BaseModel):
+    """例句重組題目回應"""
+
+    content_item_id: int
+    shuffled_words: List[str]  # 打亂後的單字列表
+    word_count: int
+    max_errors: int
+    time_limit: int  # 時間限制（秒）
+    play_audio: bool  # 是否播放音檔
+    audio_url: Optional[str] = None
+    translation: Optional[str] = None
+
+
+class RearrangementAnswerRequest(BaseModel):
+    """例句重組答題請求"""
+
+    content_item_id: int
+    selected_word: str  # 學生選擇的單字
+    current_position: int  # 目前已正確選擇的位置（0-based）
+
+
+class RearrangementAnswerResponse(BaseModel):
+    """例句重組答題回應"""
+
+    is_correct: bool
+    correct_word: Optional[str] = None  # 如果錯誤，顯示正確答案
+    error_count: int
+    max_errors: int
+    expected_score: float
+    correct_word_count: int
+    total_word_count: int
+    challenge_failed: bool  # 達到錯誤上限
+    completed: bool  # 是否完成此題
+
+
+class RearrangementRetryRequest(BaseModel):
+    """重新挑戰請求"""
+
+    content_item_id: int
+
+
+class RearrangementCompleteRequest(BaseModel):
+    """完成題目請求"""
+
+    content_item_id: int
+    timeout: bool = False  # 是否因超時完成
+
+
+@router.get("/assignments/{assignment_id}/rearrangement-questions")
+async def get_rearrangement_questions(
+    assignment_id: int,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """取得例句重組題目列表"""
+    import random
+
+    # 驗證學生作業存在（assignment_id 實際上是 StudentAssignment.id）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得作業設定
+    assignment = (
+        db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是例句重組模式
+    if assignment.practice_mode != "rearrangement":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in rearrangement mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    # 如果需要打亂順序
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    questions = []
+    for item in content_items:
+        # 打亂單字順序
+        words = item.text.strip().split()
+        shuffled_words = words.copy()
+        random.shuffle(shuffled_words)
+
+        questions.append(
+            RearrangementQuestionResponse(
+                content_item_id=item.id,
+                shuffled_words=shuffled_words,
+                word_count=item.word_count or len(words),
+                max_errors=item.max_errors or (3 if len(words) <= 10 else 5),
+                time_limit=assignment.time_limit_per_question or 40,
+                play_audio=assignment.play_audio or False,
+                audio_url=item.audio_url,
+                translation=item.translation,
+            )
+        )
+
+    return {
+        "student_assignment_id": assignment_id,
+        "practice_mode": "rearrangement",
+        "score_category": assignment.score_category,
+        "questions": questions,
+        "total_questions": len(questions),
+    }
+
+
+@router.post("/assignments/{assignment_id}/rearrangement-answer")
+async def submit_rearrangement_answer(
+    assignment_id: int,
+    request: RearrangementAnswerRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """提交例句重組答案"""
+    import math
+
+    # 驗證學生作業存在（assignment_id 實際上是 StudentAssignment.id）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得內容項目
+    content_item = (
+        db.query(ContentItem).filter(ContentItem.id == request.content_item_id).first()
+    )
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    # 取得或建立進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        progress = StudentItemProgress(
+            student_assignment_id=assignment_id,
+            content_item_id=request.content_item_id,
+            status="IN_PROGRESS",
+            error_count=0,
+            correct_word_count=0,
+            expected_score=100.0,
+            rearrangement_data={"selections": []},
+        )
+        db.add(progress)
+        db.flush()
+
+    # 解析正確答案
+    correct_words = content_item.text.strip().split()
+    word_count = len(correct_words)
+    max_errors = content_item.max_errors or (3 if word_count <= 10 else 5)
+    points_per_word = math.floor(100 / word_count)
+
+    # 檢查答案是否正確
+    current_position = request.current_position
+    if current_position >= word_count:
+        raise HTTPException(status_code=400, detail="Invalid position")
+
+    correct_word = correct_words[current_position]
+    is_correct = request.selected_word.strip() == correct_word.strip()
+
+    # 更新進度
+    if is_correct:
+        progress.correct_word_count = current_position + 1
+    else:
+        progress.error_count = (progress.error_count or 0) + 1
+        progress.expected_score = max(
+            0, float(progress.expected_score or 100) - points_per_word
+        )
+
+    # 記錄選擇歷史
+    selections = progress.rearrangement_data.get("selections", []) if progress.rearrangement_data else []
+    selections.append({
+        "position": current_position,
+        "selected": request.selected_word,
+        "correct": correct_word,
+        "is_correct": is_correct,
+        "timestamp": datetime.now().isoformat(),
+    })
+    progress.rearrangement_data = {"selections": selections}
+
+    # 檢查是否達到錯誤上限
+    challenge_failed = progress.error_count >= max_errors
+
+    # 檢查是否完成
+    completed = progress.correct_word_count >= word_count
+
+    if completed:
+        progress.status = "COMPLETED"
+        # 確保保底分（完成作答最低分）
+        assignment = db.query(Assignment).filter(
+            Assignment.id == student_assignment.assignment_id
+        ).first()
+        if assignment:
+            # 取得總題數
+            total_items = (
+                db.query(ContentItem)
+                .join(Content)
+                .join(AssignmentContent)
+                .filter(AssignmentContent.assignment_id == assignment.id)
+                .count()
+            )
+            min_score = math.floor(100 / total_items) if total_items > 0 else 1
+            progress.expected_score = max(float(progress.expected_score or 0), min_score)
+
+    db.commit()
+
+    return RearrangementAnswerResponse(
+        is_correct=is_correct,
+        correct_word=correct_word if not is_correct else None,
+        error_count=progress.error_count or 0,
+        max_errors=max_errors,
+        expected_score=float(progress.expected_score or 0),
+        correct_word_count=progress.correct_word_count or 0,
+        total_word_count=word_count,
+        challenge_failed=challenge_failed,
+        completed=completed,
+    )
+
+
+@router.post("/assignments/{student_assignment_id}/rearrangement-retry")
+async def retry_rearrangement(
+    student_assignment_id: int,
+    request: RearrangementRetryRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """重新挑戰題目（重置分數）"""
+    # 驗證學生作業存在
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == student_assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        raise HTTPException(status_code=404, detail="Progress not found")
+
+    # 重置進度
+    progress.error_count = 0
+    progress.correct_word_count = 0
+    progress.expected_score = 100.0
+    progress.retry_count = (progress.retry_count or 0) + 1
+    progress.status = "IN_PROGRESS"
+    progress.rearrangement_data = {"selections": [], "retries": progress.retry_count}
+
+    db.commit()
+
+    return {
+        "success": True,
+        "retry_count": progress.retry_count,
+        "message": "Progress reset. You can start again.",
+    }
+
+
+@router.post("/assignments/{student_assignment_id}/rearrangement-complete")
+async def complete_rearrangement(
+    student_assignment_id: int,
+    request: RearrangementCompleteRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """完成題目（時間到期或主動完成）"""
+    # 驗證學生作業存在
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == student_assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        raise HTTPException(status_code=404, detail="Progress not found")
+
+    # 標記完成狀態
+    progress.status = "COMPLETED"
+    progress.timeout_ended = request.timeout
+
+    # 如果是超時，當下預期分數就是最終分數
+    # 如果是正常完成且分數為 0（未作答完），設為 0 分
+
+    db.commit()
+
+    return {
+        "success": True,
+        "final_score": float(progress.expected_score or 0),
+        "timeout": request.timeout,
+        "completed_at": datetime.now().isoformat(),
+    }

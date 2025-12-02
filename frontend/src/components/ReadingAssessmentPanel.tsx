@@ -22,7 +22,7 @@ import {
   Clipboard,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { retryAudioUpload } from "@/utils/retryHelper";
 // dnd-kit imports
 import {
@@ -1028,7 +1028,7 @@ export default function ReadingAssessmentPanel({
   lessonId,
   isCreating = false,
 }: ReadingAssessmentPanelProps) {
-  const [title, setTitle] = useState("朗讀評測內容");
+  const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([
     {
       id: "1",
@@ -1273,9 +1273,20 @@ export default function ReadingAssessmentPanel({
         });
 
         toast.success("已移除音檔");
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to remove audio:", error);
-        toast.error("移除音檔失敗");
+        // 解析 ApiError 的結構化錯誤訊息
+        if (error instanceof ApiError) {
+          const detail = error.detail;
+          const errorMessage = typeof detail === 'object' && detail?.message
+            ? detail.message
+            : typeof detail === 'string'
+              ? detail
+              : null;
+          toast.error(errorMessage || "移除音檔失敗");
+        } else {
+          toast.error("移除音檔失敗");
+        }
         // 恢復原始狀態
         const originalRows = [...rows];
         setRows(originalRows);
@@ -1383,9 +1394,20 @@ export default function ReadingAssessmentPanel({
                 items,
               });
             }
-          } catch (error) {
+          } catch (error: unknown) {
             console.error("Failed to update content:", error);
-            toast.error("更新失敗，但音檔已生成");
+            // 解析 ApiError 的結構化錯誤訊息
+            if (error instanceof ApiError) {
+              const detail = error.detail;
+              const errorMessage = typeof detail === 'object' && detail?.message
+                ? detail.message
+                : typeof detail === 'string'
+                  ? detail
+                  : null;
+              toast.error(errorMessage || "更新失敗，但音檔已生成");
+            } else {
+              toast.error("更新失敗，但音檔已生成");
+            }
           }
         } else {
           // 沒有 content ID，音檔將在儲存時上傳
@@ -1492,9 +1514,20 @@ export default function ReadingAssessmentPanel({
             }
 
             toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
-          } catch (error) {
+          } catch (error: unknown) {
             console.error("Failed to save TTS:", error);
-            toast.error("儲存失敗，但音檔已生成");
+            // 解析 ApiError 的結構化錯誤訊息
+            if (error instanceof ApiError) {
+              const detail = error.detail;
+              const errorMessage = typeof detail === 'object' && detail?.message
+                ? detail.message
+                : typeof detail === 'string'
+                  ? detail
+                  : null;
+              toast.error(errorMessage || "儲存失敗，但音檔已生成");
+            } else {
+              toast.error("儲存失敗，但音檔已生成");
+            }
           }
         } else {
           // 沒有 content ID，只是本地更新
@@ -1717,7 +1750,7 @@ export default function ReadingAssessmentPanel({
     // 🔥 重點：直接儲存到資料庫
     try {
       const saveData = {
-        title: title || "朗讀評測內容",
+        title: title,
         items: updatedRows.map((row) => ({
           text: row.text.trim(),
           definition: row.definition || "",
@@ -2019,9 +2052,20 @@ export default function ReadingAssessmentPanel({
                       items: saveData.items,
                     });
                   }
-                } catch (error) {
+                } catch (error: unknown) {
                   console.error("Failed to update content:", error);
-                  toast.error("儲存失敗");
+                  // 解析 ApiError 的結構化錯誤訊息
+                  if (error instanceof ApiError) {
+                    const detail = error.detail;
+                    const errorMessage = typeof detail === 'object' && detail?.message
+                      ? detail.message
+                      : typeof detail === 'string'
+                        ? detail
+                        : null;
+                    toast.error(errorMessage || "儲存失敗");
+                  } else {
+                    toast.error("儲存失敗");
+                  }
                 }
               } else if (isCreating && lessonId) {
                 // 創建模式：新增內容
@@ -2037,9 +2081,20 @@ export default function ReadingAssessmentPanel({
                       newContent,
                     );
                   }
-                } catch (error) {
+                } catch (error: unknown) {
                   console.error("Failed to create content:", error);
-                  toast.error("創建內容失敗");
+                  // 解析 ApiError 的結構化錯誤訊息
+                  if (error instanceof ApiError) {
+                    const detail = error.detail;
+                    const errorMessage = typeof detail === 'object' && detail?.message
+                      ? detail.message
+                      : typeof detail === 'string'
+                        ? detail
+                        : null;
+                    toast.error(errorMessage || "創建內容失敗");
+                  } else {
+                    toast.error("創建內容失敗");
+                  }
                 }
               }
             }}

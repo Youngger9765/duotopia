@@ -36,7 +36,7 @@ import {
   Mic,
   Trash2,
 } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Content,
@@ -380,8 +380,9 @@ export default function ClassroomDetail({
     // 統一轉成小寫比對
     const contentType = content.type?.toLowerCase();
 
-    // For reading_assessment type, use side panel for viewing/editing
-    if (contentType === "reading_assessment") {
+    // For reading_assessment and example_sentences type, use side panel for viewing/editing
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (contentType === "reading_assessment" || contentType === "example_sentences") {
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -510,9 +511,20 @@ export default function ClassroomDetail({
       toast.success(t("classroomDetail.messages.contentUpdated"));
       await refreshPrograms();
       closePanel();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to update content:", error);
-      toast.error(t("classroomDetail.messages.updateContentFailed"));
+      // 解析 ApiError 的結構化錯誤訊息
+      if (error instanceof ApiError) {
+        const detail = error.detail;
+        const errorMessage = typeof detail === 'object' && detail?.message
+          ? detail.message
+          : typeof detail === 'string'
+            ? detail
+            : null;
+        toast.error(errorMessage || t("classroomDetail.messages.updateContentFailed"));
+      } else {
+        toast.error(t("classroomDetail.messages.updateContentFailed"));
+      }
     }
   };
 
@@ -907,17 +919,24 @@ export default function ClassroomDetail({
     programName: string;
     lessonName: string;
   }) => {
-    // For reading_assessment, use popup for new content creation
-    if (selection.type === "reading_assessment") {
+    // For reading_assessment and example_sentences, use popup for new content creation
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (
+      selection.type === "reading_assessment" ||
+      selection.type === "example_sentences" ||
+      selection.type === "EXAMPLE_SENTENCES"
+    ) {
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
       setShowContentTypeDialog(false);
     } else if (
       selection.type === "SENTENCE_MAKING" ||
-      selection.type === "sentence_making"
+      selection.type === "sentence_making" ||
+      selection.type === "vocabulary_set" ||
+      selection.type === "VOCABULARY_SET"
     ) {
-      // For sentence_making, use popup for new content creation
+      // For sentence_making/vocabulary_set, use popup for new content creation
       setSentenceMakingLessonId(selection.lessonId);
       setSentenceMakingContentId(null); // null for new content
       setShowSentenceMakingEditor(true);
@@ -1763,9 +1782,10 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {selectedContent.type?.toLowerCase() ===
-                "reading_assessment" ? (
+                {(selectedContent.type?.toLowerCase() === "reading_assessment" ||
+                  selectedContent.type?.toLowerCase() === "example_sentences") ? (
                   /* ReadingAssessmentPanel has its own save button */
+                  /* EXAMPLE_SENTENCES uses the same panel as READING_ASSESSMENT */
                   <ReadingAssessmentPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
@@ -1778,8 +1798,8 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
-                ) : selectedContent.type?.toLowerCase() ===
-                  "sentence_making" ? (
+                ) : (selectedContent.type?.toLowerCase() === "sentence_making" ||
+                  selectedContent.type?.toLowerCase() === "vocabulary_set") ? (
                   /* SentenceMakingPanel has its own save button */
                   <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
@@ -1948,7 +1968,9 @@ export default function ClassroomDetail({
 
               {/* Panel Footer - Only show for types that don't have their own save button */}
               {selectedContent.type?.toLowerCase() !== "reading_assessment" &&
-                selectedContent.type?.toLowerCase() !== "sentence_making" && (
+                selectedContent.type?.toLowerCase() !== "example_sentences" &&
+                selectedContent.type?.toLowerCase() !== "sentence_making" &&
+                selectedContent.type?.toLowerCase() !== "vocabulary_set" && (
                   <div className="p-4 border-t bg-gray-50">
                     <div className="flex space-x-2">
                       <Button

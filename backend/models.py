@@ -131,13 +131,30 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
-    READING_ASSESSMENT = "READING_ASSESSMENT"
-    SENTENCE_MAKING = "SENTENCE_MAKING"
-    # Phase 2 擴展
-    # SPEAKING_PRACTICE = "SPEAKING_PRACTICE"
-    # SPEAKING_SCENARIO = "SPEAKING_SCENARIO"
-    # LISTENING_CLOZE = "LISTENING_CLOZE"
-    # SPEAKING_QUIZ = "SPEAKING_QUIZ"
+    # Phase 1 - 啟用
+    EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"  # 例句集（原 READING_ASSESSMENT）
+
+    # Phase 2 - 暫時禁用（UI 中不顯示）
+    VOCABULARY_SET = "VOCABULARY_SET"        # 單字集（原 SENTENCE_MAKING）
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"      # 單選題庫
+    SCENARIO_DIALOGUE = "SCENARIO_DIALOGUE"  # 情境對話
+
+    # Legacy values - 保留向後相容性（deprecated，新資料不應使用）
+    READING_ASSESSMENT = "READING_ASSESSMENT"  # @deprecated: use EXAMPLE_SENTENCES
+    SENTENCE_MAKING = "SENTENCE_MAKING"        # @deprecated: use VOCABULARY_SET
+
+
+class PracticeMode(str, enum.Enum):
+    """作答模式（例句集專用）"""
+    READING = "reading"            # 例句朗讀 -> 口說分類
+    REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
+
+
+class ScoreCategory(str, enum.Enum):
+    """分數記錄分類"""
+    SPEAKING = "speaking"    # 口說
+    LISTENING = "listening"  # 聽力
+    WRITING = "writing"      # 寫作
 
 
 # ============ 使用者系統 ============
@@ -720,8 +737,8 @@ class Assignment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # 造句練習答題模式（只對 sentence_making 類型有效）
-    # 使用 String 而非 Enum 以匹配 migration 中的 VARCHAR 定義
+    # Legacy: 造句練習答題模式（只對舊 SENTENCE_MAKING 類型有效）
+    # @deprecated: 請使用 practice_mode 和 play_audio 替代
     answer_mode = Column(
         String(20),
         default="writing",
@@ -729,8 +746,21 @@ class Assignment(Base):
         nullable=False,
     )
 
-    # 指派設定
-    # 移除 assign_to_all，改為透過 StudentAssignment 記錄實際指派的學生
+    # ===== 新增：例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode = Column(String(20), default="reading")
+
+    # 每題時間限制（秒）：10/20/30/40
+    time_limit_per_question = Column(Integer, default=40)
+
+    # 是否打亂題目順序
+    shuffle_questions = Column(Boolean, default=False)
+
+    # 是否播放音檔（例句重組專用）
+    play_audio = Column(Boolean, default=False)
+
+    # 分數記錄分類：'speaking' / 'listening' / 'writing'
+    score_category = Column(String(20), default=None)
 
     # 軟刪除標記
     is_active = Column(Boolean, default=True)
@@ -907,6 +937,13 @@ class ContentItem(Base):
         Text, nullable=True
     )  # English definition of example
 
+    # ===== 新增：例句重組相關欄位 =====
+    # 單字數量（建立時自動計算）
+    word_count = Column(Integer, nullable=True)
+
+    # 允許錯誤次數（根據 word_count 自動計算：2-10 字 → 3 次，11-25 字 → 5 次）
+    max_errors = Column(Integer, nullable=True)
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -974,6 +1011,25 @@ class StudentItemProgress(Base):
         String(20), default="NOT_STARTED"
     )  # NOT_STARTED, IN_PROGRESS, COMPLETED, SUBMITTED
     attempts = Column(Integer, default=0)
+
+    # ===== 新增：例句重組相關欄位 =====
+    # 錯誤次數
+    error_count = Column(Integer, default=0)
+
+    # 已正確選擇的單字數量
+    correct_word_count = Column(Integer, default=0)
+
+    # 重新挑戰次數
+    retry_count = Column(Integer, default=0)
+
+    # 預期分數（作答過程中持續更新）
+    expected_score = Column(DECIMAL(5, 2), default=0)
+
+    # 是否因時間到期結束
+    timeout_ended = Column(Boolean, default=False)
+
+    # 例句重組作答記錄（JSON 格式）
+    rearrangement_data = Column(JSONB, default=None)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

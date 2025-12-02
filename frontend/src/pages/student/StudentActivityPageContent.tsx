@@ -24,6 +24,7 @@ import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessment
 import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
 import GroupedQuestionsTemplate from "@/components/activities/GroupedQuestionsTemplate";
 import SentenceMakingActivity from "@/components/activities/SentenceMakingActivity";
+import RearrangementActivity from "@/components/activities/RearrangementActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -126,6 +127,7 @@ interface StudentActivityPageContentProps {
   onBack?: () => void;
   onSubmit?: () => void;
   assignmentStatus?: string;
+  practiceMode?: string | null; // 例句重組/朗讀模式
 }
 
 export default function StudentActivityPageContent({
@@ -137,6 +139,7 @@ export default function StudentActivityPageContent({
   onBack,
   onSubmit,
   assignmentStatus = "",
+  practiceMode = null,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
 
@@ -1150,7 +1153,9 @@ export default function StudentActivityPageContent({
       case "reading_assessment":
         return (
           <Badge variant="outline">
-            {t("studentActivityPage.activityTypes.reading")}
+            {practiceMode === "rearrangement"
+              ? t("studentActivityPage.activityTypes.rearrangement")
+              : t("studentActivityPage.activityTypes.reading")}
           </Badge>
         );
       case "listening_cloze":
@@ -1176,6 +1181,15 @@ export default function StudentActivityPageContent({
         return (
           <Badge variant="outline">
             {t("studentActivityPage.activityTypes.sentence")}
+          </Badge>
+        );
+      case "EXAMPLE_SENTENCES":
+      case "example_sentences":
+        return (
+          <Badge variant="outline">
+            {practiceMode === "rearrangement"
+              ? t("studentActivityPage.activityTypes.rearrangement")
+              : t("studentActivityPage.activityTypes.reading")}
           </Badge>
         );
       case "speaking_quiz":
@@ -1223,11 +1237,20 @@ export default function StudentActivityPageContent({
     const answer = answers.get(activity.id);
 
     // SENTENCE_MAKING 類型使用新的 SentenceMakingActivity 組件，不要進入舊的 GroupedQuestionsTemplate
+    // READING_ASSESSMENT + rearrangement 模式使用 RearrangementActivity，也不要進入 GroupedQuestionsTemplate
+    const isRearrangementMode =
+      (activity.type === "READING_ASSESSMENT" ||
+        activity.type === "reading_assessment" ||
+        activity.type === "EXAMPLE_SENTENCES" ||
+        activity.type === "example_sentences") &&
+      practiceMode === "rearrangement";
+
     if (
       activity.items &&
       activity.items.length > 0 &&
       activity.type !== "SENTENCE_MAKING" &&
-      activity.type !== "sentence_making"
+      activity.type !== "sentence_making" &&
+      !isRearrangementMode
     ) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const aiAssessments: Record<number, any> = {};
@@ -1361,19 +1384,43 @@ export default function StudentActivityPageContent({
       case "READING_ASSESSMENT":
       case "reading_assessment":
         console.log(
-          "✅ [StudentActivityPageContent] Rendering ReadingAssessmentTemplate",
+          "✅ [StudentActivityPageContent] Rendering READING_ASSESSMENT, practiceMode:",
+          practiceMode,
         );
-        return (
-          <ReadingAssessmentTemplate
-            content={activity.content}
-            targetText={activity.target_text}
-            existingAudioUrl={answer?.audioUrl}
-            onRecordingComplete={handleRecordingComplete}
-            exampleAudioUrl={activity.example_audio_url}
-            progressId={activity.id}
-            readOnly={isReadOnly}
-          />
-        );
+        // 例句集：根據 practiceMode 決定使用哪種練習模式
+        if (practiceMode === "rearrangement") {
+          // 例句重組模式
+          return (
+            <RearrangementActivity
+              studentAssignmentId={assignmentId}
+              isPreviewMode={isPreviewMode}
+              onComplete={(totalScore, totalQuestions) => {
+                toast.success(
+                  t("rearrangement.messages.allComplete", {
+                    score: totalScore,
+                    total: totalQuestions * 100,
+                  }),
+                );
+                if (onSubmit) {
+                  onSubmit();
+                }
+              }}
+            />
+          );
+        } else {
+          // 預設朗讀模式
+          return (
+            <ReadingAssessmentTemplate
+              content={activity.content}
+              targetText={activity.target_text}
+              existingAudioUrl={answer?.audioUrl}
+              onRecordingComplete={handleRecordingComplete}
+              exampleAudioUrl={activity.example_audio_url}
+              progressId={activity.id}
+              readOnly={isReadOnly}
+            />
+          );
+        }
 
       case "SENTENCE_MAKING":
       case "sentence_making":
@@ -1398,6 +1445,47 @@ export default function StudentActivityPageContent({
       //   const smAnswer = answers.get(activity.id);
       //   ...使用 SentenceMakingTemplate
       // }
+
+      case "EXAMPLE_SENTENCES":
+      case "example_sentences":
+        console.log(
+          "✅ [StudentActivityPageContent] Rendering EXAMPLE_SENTENCES, practiceMode:",
+          practiceMode,
+        );
+        // 例句集：根據 practiceMode 決定使用哪種練習模式
+        if (practiceMode === "rearrangement") {
+          // 例句重組模式
+          return (
+            <RearrangementActivity
+              studentAssignmentId={assignmentId}
+              isPreviewMode={isPreviewMode}
+              onComplete={(totalScore, totalQuestions) => {
+                toast.success(
+                  t("rearrangement.messages.allComplete", {
+                    score: totalScore,
+                    total: totalQuestions * 100,
+                  }),
+                );
+                if (onSubmit) {
+                  onSubmit();
+                }
+              }}
+            />
+          );
+        } else {
+          // 預設朗讀模式（與 READING_ASSESSMENT 相同邏輯）
+          return (
+            <ReadingAssessmentTemplate
+              content={activity.content}
+              targetText={activity.target_text}
+              existingAudioUrl={answer?.audioUrl}
+              onRecordingComplete={handleRecordingComplete}
+              exampleAudioUrl={activity.example_audio_url}
+              progressId={activity.id}
+              readOnly={isReadOnly}
+            />
+          );
+        }
 
       case "listening_cloze":
         return (

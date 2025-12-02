@@ -51,14 +51,14 @@ jobs:
           echo "即將執行以下操作："
           echo "1. DROP 所有 Develop 環境的資料表"
           echo "2. CREATE 所有資料表結構"
-          echo "3. 插入 Demo 資料（包含句子模組課程）"
+          echo "3. 插入 Demo 資料（包含例句集課程）"
           echo ""
           echo "🎯 目標環境: DEVELOP"
           echo "📊 將創建的資料："
           echo "   - 3 個教師帳號（demo, expired, trial）"
           echo "   - 2 個班級（五年級A班、六年級B班）"
           echo "   - 30+ 位學生"
-          echo "   - 多個課程（包含句子模組測試課程）"
+          echo "   - 多個課程（包含例句集測試課程）"
           echo "   - 多個作業與進度資料"
           echo ""
           echo "執行中..."
@@ -71,6 +71,15 @@ jobs:
           cd backend
           python3 seed_data.py
           echo "✅ Seed 資料建立完成！"
+
+      - name: 🌱 Run seed_example_sentences.py
+        env:
+          DATABASE_URL: ${{ secrets.DEVELOP_DATABASE_POOLER_URL }}
+        run: |
+          echo "🌱 開始執行 seed_example_sentences.py..."
+          cd backend
+          python3 scripts/seed_example_sentences.py --reset
+          echo "✅ 例句集課程建立完成！"
 
       - name: 📊 Verify seed results
         env:

@@ -29,6 +29,44 @@
     "yes": "是",
     "no": "否"
   },
+  "rearrangement": {
+    "loading": "正在載入題目...",
+    "noQuestions": "目前沒有需要練習的題目",
+    "progress": "第 {{current}}/{{total}} 題",
+    "questionTitle": "第 {{number}} 題",
+    "hint": "提示",
+    "playAudio": "播放音檔",
+    "totalScore": "目前總分",
+    "expectedScore": "預期得分",
+    "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",
+    "selectWordsHint": "請依序點選下方單字組成正確句子",
+    "scoreCategories": {
+      "listening": "聽力",
+      "writing": "寫作",
+      "speaking": "口說"
+    },
+    "messages": {
+      "timeout": "時間到！本題已自動結算",
+      "incorrect": "錯誤！正確答案是「{{correct}}」",
+      "questionComplete": "答對了！本題得 {{score}} 分",
+      "challengeFailed": "錯誤次數過多，挑戰失敗",
+      "correct": "答對了！",
+      "scoreEarned": "本題得分：{{score}} 分",
+      "tooManyErrors": "錯誤次數過多",
+      "tryAgain": "點擊下方按鈕重新挑戰",
+      "allComplete": "全部完成！總得分 {{score}}/{{total}}"
+    },
+    "buttons": {
+      "retry": "重新挑戰",
+      "next": "下一題",
+      "finish": "完成"
+    },
+    "errors": {
+      "loadFailed": "載入題目失敗",
+      "submitFailed": "提交答案失敗",
+      "retryFailed": "重新挑戰失敗"
+    }
+  },
   "nav": {
     "home": "首頁",
     "dashboard": "儀表板",
@@ -670,7 +708,11 @@
       "itemCountSingular": "{{count}}題"
     },
     "activityTypes": {
-      "reading": "朗讀練習"
+      "reading": "朗讀練習",
+      "listening": "聽力練習",
+      "speaking": "口說練習",
+      "sentence": "造句練習",
+      "rearrangement": "例句重組"
     },
     "stats": {
       "minutes": "分鐘",
@@ -1099,7 +1141,8 @@
         "loadingLabel": "載入中...",
         "selectAll": "全選",
         "deselectAll": "取消全選",
-        "items": "題"
+        "items": "題",
+        "clearAll": "清除全部"
       },
       "selectStudents": {
         "description": "選擇要接收作業的學生",
@@ -1156,8 +1199,10 @@
         "created": "成功創建作業，已指派給 {{count}} 位學生"
       },
       "contentTypes": {
-        "reading_assessment": "朗讀評測",
-        "READING_ASSESSMENT": "朗讀評測",
+        "reading_assessment": "例句集",
+        "READING_ASSESSMENT": "例句集",
+        "example_sentences": "例句集",
+        "EXAMPLE_SENTENCES": "例句集",
         "speaking_practice": "口說練習",
         "speaking_scenario": "情境對話",
         "listening_cloze": "聽力填空",
@@ -1169,8 +1214,29 @@
       },
       "steps": {
         "selectContent": "選擇內容",
+        "practiceMode": "練習模式",
         "selectStudents": "選擇學生",
         "details": "作業詳情"
+      },
+      "practiceMode": {
+        "title": "練習模式設定",
+        "description": "選擇學生練習的模式和相關設定",
+        "advancedSettings": "進階設定",
+        "reading": "例句朗讀",
+        "readingDesc": "學生朗讀例句，系統評分發音",
+        "rearrangement": "例句重組",
+        "rearrangementDesc": "學生將打散的單字重新排列成正確句子",
+        "timeLimit": "作答時間限制",
+        "seconds": "秒",
+        "default": "預設",
+        "shuffleQuestions": "隨機題目順序",
+        "shuffleQuestionsDesc": "每次練習時隨機排列題目順序",
+        "playAudio": "播放音檔",
+        "playAudioYes": "是（聽力練習）",
+        "playAudioNo": "否（寫作練習）",
+        "scoreListening": "計分類別：聽力",
+        "scoreWriting": "計分類別：寫作",
+        "scoreSpeaking": "計分類別：口說"
       }
     },
     "classroomAssignDialog": {
@@ -1191,31 +1257,35 @@
       "comingSoon": "即將推出",
       "cancel": "取消",
       "types": {
+        "example_sentences": {
+          "name": "例句集",
+          "description": "建立例句供學生練習朗讀或重組（2-25個單字）",
+          "recommended": "推薦"
+        },
+        "vocabulary_set": {
+          "name": "單字集",
+          "description": "建立單字集供學生記憶練習",
+          "comingSoon": "即將推出"
+        },
+        "multiple_choice": {
+          "name": "單選題庫",
+          "description": "建立單選題目供學生測驗",
+          "comingSoon": "即將推出"
+        },
+        "scenario_dialogue": {
+          "name": "情境對話",
+          "description": "建立情境對話供學生練習",
+          "comingSoon": "即將推出"
+        },
         "reading_assessment": {
           "name": "朗讀錄音",
           "description": "學生朗讀課文並錄音",
-          "recommended": "推薦"
-        },
-        "speaking_practice": {
-          "name": "口說練習",
-          "description": "自由口說練習，AI 提供即時回饋",
-          "comingSoon": "即將推出"
-        },
-        "speaking_scenario": {
-          "name": "情境對話",
-          "description": "在特定情境下進行對話練習"
-        },
-        "listening_cloze": {
-          "name": "聽力填空",
-          "description": "聽音檔後填入缺少的單字"
+          "deprecated": true
         },
         "sentence_making": {
           "name": "造句練習",
-          "description": "使用指定單字或句型造句"
-        },
-        "speaking_quiz": {
-          "name": "口說測驗",
-          "description": "回答問題測試口說能力"
+          "description": "使用指定單字或句型造句",
+          "deprecated": true
         }
       },
       "buttons": {
@@ -1836,7 +1906,7 @@
   "readingAssessmentPanel": {
     "title": "標題",
     "titleRequired": "請輸入內容標題",
-    "defaultTitle": "朗讀評測內容",
+    "defaultTitle": "",
     "batchActions": {
       "batchPaste": "批次貼上",
       "batchPasteTooltip": "批次貼上素材，每行一個項目",
@@ -2065,12 +2135,13 @@
       "noDescription": "無說明",
       "unknownType": "未知類型",
       "notSet": "未設定",
-      "readingAssessmentSettings": "朗讀評測設定",
+      "readingAssessmentSettings": "新增例句集",
       "subscriptionExpiredWarning": "⚠️ 訂閱已過期",
       "daysRemaining": "剩餘 {{days}} 天",
       "requiresSubscription": "需要訂閱才能指派作業",
       "estimatedTime": "{{time}} 分鐘",
-      "itemsCount": "{{count}} 個項目"
+      "itemsCount": "{{count}} 個項目",
+      "editContent": "編輯內容"
     },
     "contentTypes": {
       "readingAssessment": "朗讀評測",
@@ -2236,7 +2307,8 @@
       "people": "人"
     },
     "contentTypes": {
-      "READING_ASSESSMENT": "朗讀評測",
+      "READING_ASSESSMENT": "例句集",
+      "EXAMPLE_SENTENCES": "例句集",
       "SPEAKING_PRACTICE": "口說練習",
       "SPEAKING_SCENARIO": "情境對話",
       "LISTENING_CLOZE": "聽力填空",
@@ -2247,7 +2319,8 @@
   "previewPage": {
     "loading": "載入預覽中...",
     "messages": {
-      "loadError": "無法載入預覽資料"
+      "loadError": "無法載入預覽資料",
+      "previewComplete": "預覽完成"
     },
     "buttons": {
       "backToList": "返回作業列表"
@@ -2393,7 +2466,7 @@
       "featureInDevelopment": "{{type}} 功能開發中"
     },
     "dialogs": {
-      "addReadingTitle": "新增朗讀內容",
+      "addReadingTitle": "新增例句集",
       "editContentTitle": "編輯內容"
     }
   },

@@ -113,7 +113,22 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
-    answer_mode: str = "writing"  # 造句練習答題模式：'listening' 或 'writing'，預設為 'writing'
+
+    # Legacy: 舊版造句練習答題模式（保留向後相容）
+    answer_mode: str = "writing"  # @deprecated: 請使用 practice_mode 和 play_audio
+
+    # ===== 新增：例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode: str = "reading"
+
+    # 每題時間限制（秒）：10/20/30/40
+    time_limit_per_question: int = 40
+
+    # 是否打亂題目順序
+    shuffle_questions: bool = False
+
+    # 是否播放音檔（例句重組專用）
+    play_audio: bool = False
 
 
 class UpdateAssignmentRequest(BaseModel):
@@ -274,6 +289,18 @@ async def create_assignment(
     if len(contents) != len(request.content_ids):
         raise HTTPException(status_code=404, detail="Some contents not found")
 
+    # 根據 practice_mode 和 play_audio 計算 score_category
+    def determine_score_category(practice_mode: str, play_audio: bool) -> str:
+        if practice_mode == "reading":
+            return "speaking"
+        elif practice_mode == "rearrangement":
+            return "listening" if play_audio else "writing"
+        return "speaking"  # 預設
+
+    score_category = determine_score_category(
+        request.practice_mode, request.play_audio
+    )
+
     # 建立 Assignment 主表記錄
     assignment = Assignment(
         title=request.title,
@@ -281,7 +308,13 @@ async def create_assignment(
         classroom_id=request.classroom_id,
         teacher_id=current_user.id,
         due_date=request.due_date,
-        answer_mode=request.answer_mode,  # 設定答題模式
+        answer_mode=request.answer_mode,  # Legacy: 保留向後相容
+        # ===== 新增：例句集作答模式設定 =====
+        practice_mode=request.practice_mode,
+        time_limit_per_question=request.time_limit_per_question,
+        shuffle_questions=request.shuffle_questions,
+        play_audio=request.play_audio,
+        score_category=score_category,
         is_active=True,
     )
     db.add(assignment)

@@ -213,13 +213,14 @@ export default function TeacherTemplateProgramsNew() {
     // 統一轉成小寫比對
     const contentType = content.type?.toLowerCase();
 
-    if (contentType === "reading_assessment") {
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (contentType === "reading_assessment" || contentType === "example_sentences") {
       setSelectedContent(content);
       setEditorLessonId(content.lesson_id || null);
       setEditorContentId(content.id);
       setShowReadingEditor(true);
-    } else if (contentType === "sentence_making") {
-      // 編輯句子模組內容
+    } else if (contentType === "sentence_making" || contentType === "vocabulary_set") {
+      // 編輯句子模組/單字集內容
       setSentenceMakingLessonId(content.lesson_id || null);
       setSentenceMakingContentId(content.id);
       setShowSentenceMakingEditor(true);
@@ -831,7 +832,12 @@ export default function TeacherTemplateProgramsNew() {
               setContentLessonInfo(null);
 
               // Handle different content types
-              if (selection.type === "reading_assessment") {
+              // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+              if (
+                selection.type === "reading_assessment" ||
+                selection.type === "example_sentences" ||
+                selection.type === "EXAMPLE_SENTENCES"
+              ) {
                 // Open modal for new content
                 setEditorLessonId(selection.lessonId);
                 setEditorContentId(null); // null = new content
@@ -839,9 +845,11 @@ export default function TeacherTemplateProgramsNew() {
                 setShowReadingEditor(true);
               } else if (
                 selection.type === "SENTENCE_MAKING" ||
-                selection.type === "sentence_making"
+                selection.type === "sentence_making" ||
+                selection.type === "vocabulary_set" ||
+                selection.type === "VOCABULARY_SET"
               ) {
-                // For sentence_making, use popup for new content creation
+                // For sentence_making/vocabulary_set, use popup for new content creation
                 setSentenceMakingLessonId(selection.lessonId);
                 setSentenceMakingContentId(null); // null for new content
                 setShowSentenceMakingEditor(true);
