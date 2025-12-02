@@ -82,11 +82,11 @@ Assignment #26: "20251126"
 
 ```bash
 # Dry run 测试（28 个作业）
-DATABASE_URL="postgresql://postgres.gpmcajqrqmzgzzndbtbg:...@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres" \
+DATABASE_URL="postgresql://postgres.<PROJECT_ID>:***@aws-0-region.pooler.supabase.com:6543/postgres" \
 python scripts/migrate_assignments_to_copy.py <<< 'no'
 
 # 真实迁移
-DATABASE_URL="postgresql://postgres.gpmcajqrqmzgzzndbtbg:...@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres" \
+DATABASE_URL="postgresql://postgres.<PROJECT_ID>:***@aws-0-region.pooler.supabase.com:6543/postgres" \
 python scripts/migrate_assignments_to_copy.py <<< 'yes'
 ```
 
