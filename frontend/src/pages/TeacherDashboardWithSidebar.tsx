@@ -260,11 +260,7 @@ export default function TeacherDashboardWithSidebar() {
 
             {/* URL Input with Copy Button */}
             <div className="flex items-center space-x-2">
-              <Input
-                value={getStudentLoginUrl()}
-                readOnly
-                className="flex-1"
-              />
+              <Input value={getStudentLoginUrl()} readOnly className="flex-1" />
               <Button
                 size="sm"
                 onClick={handleCopyUrl}
