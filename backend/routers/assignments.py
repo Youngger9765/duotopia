@@ -226,6 +226,35 @@ class AIGradingResponse(BaseModel):
     processing_time_seconds: float
 
 
+class BatchGradingRequest(BaseModel):
+    """批次批改請求"""
+
+    classroom_id: int
+    return_for_correction: Dict[str, bool] = {}  # {student_id: should_return}
+
+
+class StudentBatchGradingResult(BaseModel):
+    """單個學生的批改結果"""
+
+    student_id: int
+    student_name: str
+    total_score: float
+    missing_items: int
+    avg_pronunciation: float
+    avg_accuracy: float
+    avg_fluency: float
+    avg_completeness: float
+    status: str
+
+
+class BatchGradingResponse(BaseModel):
+    """批次批改回應"""
+
+    total_students: int
+    processed: int
+    results: List[StudentBatchGradingResult]
+
+
 # ============ API Endpoints ============
 
 
@@ -2051,112 +2080,45 @@ async def get_student_submission(
                         if item_progress.status == "SUBMITTED":
                             submission["status"] = "submitted"
 
-                        # 創建 AI 評分物件 - 全部從 ai_feedback JSON 欄位讀取
-                        if item_progress.ai_feedback:
-                            # ai_feedback 是 JSON 字串，需要解析
+                        # 🔥 優化：核心分數從獨立欄位讀取（熱數據）
+                        if item_progress.has_ai_assessment:
                             import json
 
-                            try:
-                                ai_data = (
-                                    json.loads(item_progress.ai_feedback)
-                                    if isinstance(item_progress.ai_feedback, str)
-                                    else item_progress.ai_feedback
-                                )
-                            except (json.JSONDecodeError, TypeError):
-                                ai_data = None
+                            # 使用 overall_score property（自動從 4 個分數計算）
+                            overall = item_progress.overall_score
 
-                            if ai_data and isinstance(ai_data, dict):
-                                submission["ai_scores"] = {
-                                    "accuracy_score": float(
-                                        ai_data.get("accuracy_score", 0)
-                                    ),
-                                    "fluency_score": float(
-                                        ai_data.get("fluency_score", 0)
-                                    ),
-                                    "pronunciation_score": float(
-                                        ai_data.get("pronunciation_score", 0)
-                                    ),
-                                    "completeness_score": float(
-                                        ai_data.get("completeness_score", 0)
-                                    ),
-                                    "overall_score": float(
-                                        ai_data.get("overall_score", 0)
-                                    )
-                                    if ai_data.get("overall_score")
-                                    else (
-                                        (
-                                            float(ai_data.get("accuracy_score", 0))
-                                            + float(ai_data.get("fluency_score", 0))
-                                            + float(
-                                                ai_data.get("pronunciation_score", 0)
-                                            )
-                                            + float(
-                                                ai_data.get("completeness_score", 0)
-                                            )
-                                        )
-                                        / 4
-                                    ),
-                                    "word_details": ai_data.get("word_details", []),
-                                }
-                        else:
-                            # 統一只從 ai_feedback JSON 中取得分數
+                            # 冷數據從 JSON 讀取
+                            ai_feedback_data = {}
                             if item_progress.ai_feedback:
                                 try:
-                                    if isinstance(item_progress.ai_feedback, str):
-                                        ai_feedback_data = json.loads(
-                                            item_progress.ai_feedback
-                                        )
-                                    else:
-                                        ai_feedback_data = item_progress.ai_feedback
+                                    ai_feedback_data = (
+                                        json.loads(item_progress.ai_feedback)
+                                        if isinstance(item_progress.ai_feedback, str)
+                                        else item_progress.ai_feedback
+                                    )
+                                except (json.JSONDecodeError, TypeError):
+                                    ai_feedback_data = {}
 
-                                    submission["ai_scores"] = {
-                                        "accuracy_score": float(
-                                            ai_feedback_data.get("accuracy_score", 0)
-                                        ),
-                                        "fluency_score": float(
-                                            ai_feedback_data.get("fluency_score", 0)
-                                        ),
-                                        "pronunciation_score": float(
-                                            ai_feedback_data.get(
-                                                "pronunciation_score", 0
-                                            )
-                                        ),
-                                        "completeness_score": float(
-                                            ai_feedback_data.get(
-                                                "completeness_score", 0
-                                            )
-                                        ),
-                                        "overall_score": (
-                                            (
-                                                float(
-                                                    ai_feedback_data.get(
-                                                        "accuracy_score", 0
-                                                    )
-                                                )
-                                                + float(
-                                                    ai_feedback_data.get(
-                                                        "fluency_score", 0
-                                                    )
-                                                )
-                                                + float(
-                                                    ai_feedback_data.get(
-                                                        "pronunciation_score", 0
-                                                    )
-                                                )
-                                            )
-                                            / 3
-                                        ),
-                                        "word_details": ai_feedback_data.get(
-                                            "word_details", []
-                                        ),
-                                    }
-                                except (
-                                    json.JSONDecodeError,
-                                    TypeError,
-                                    AttributeError,
-                                ):
-                                    # 如果 JSON 解析失敗，不顯示 AI 評分
-                                    submission["ai_scores"] = None
+                            submission["ai_scores"] = {
+                                # 核心分數從獨立欄位讀取（性能優化）
+                                "accuracy_score": float(
+                                    item_progress.accuracy_score or 0
+                                ),
+                                "fluency_score": float(
+                                    item_progress.fluency_score or 0
+                                ),
+                                "pronunciation_score": float(
+                                    item_progress.pronunciation_score or 0
+                                ),
+                                "completeness_score": float(
+                                    item_progress.completeness_score or 0
+                                ),
+                                "overall_score": float(overall) if overall else 0.0,
+                                # 冷數據從 JSON 讀取
+                                "word_details": ai_feedback_data.get(
+                                    "word_details", []
+                                ),
+                            }
 
                             # AI 評分已經設定完成，無需額外處理
 
@@ -2366,6 +2328,7 @@ async def grade_student_assignment(
                                         accuracy_score=None,
                                         fluency_score=None,
                                         pronunciation_score=None,
+                                        completeness_score=None,
                                         ai_feedback=None,
                                         # 老師可以直接給評語
                                         review_status="PENDING",
@@ -2657,3 +2620,189 @@ async def manual_grade_assignment(
         "graded_at": assignment.graded_at.isoformat(),
         "message": "Assignment graded successfully",
     }
+
+
+@router.post(
+    "/assignments/{assignment_id}/batch-grade", response_model=BatchGradingResponse
+)
+@trace_function("Batch Grade Assignment")
+async def batch_grade_assignment(
+    assignment_id: int,
+    request: BatchGradingRequest,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_user),
+):
+    """
+    AI 批次批改作業
+
+    批改流程：
+    1. 查找所有「已提交」或「已訂正」的學生
+    2. 計算每個學生的分數：
+       - 每題分數 = (總體發音 + 準確度 + 流暢度 + 完整度) / 4
+       - 總分 = 所有題目平均分
+       - 平均成績 = 各項目平均
+    3. 更新作業狀態（已批改 或 已退回）
+    """
+    perf = PerformanceSnapshot(f"Batch_Grade_Assignment_{assignment_id}")
+
+    # 1. 驗證教師權限
+    with start_span("Verify Teacher Permission"):
+        assignment = (
+            db.query(Assignment)
+            .join(Classroom)
+            .filter(
+                and_(
+                    Assignment.id == assignment_id,
+                    Classroom.id == request.classroom_id,
+                    Classroom.teacher_id == current_teacher.id,
+                )
+            )
+            .first()
+        )
+
+        if not assignment:
+            raise HTTPException(
+                status_code=404,
+                detail="Assignment not found or you don't have permission",
+            )
+        perf.checkpoint("Permission Check")
+
+    # 2. 查找需要批改的學生（狀態為 SUBMITTED 或 RESUBMITTED）
+    with start_span("Query Students to Grade"):
+        student_assignments = (
+            db.query(StudentAssignment)
+            .join(Student)
+            .filter(
+                and_(
+                    StudentAssignment.assignment_id == assignment_id,
+                    StudentAssignment.status.in_(
+                        [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
+                    ),
+                )
+            )
+            .options(selectinload(StudentAssignment.student))
+            .all()
+        )
+        perf.checkpoint(f"Found {len(student_assignments)} Students")
+
+    results = []
+
+    # 3. 批改每個學生的作業
+    with start_span("Process Each Student"):
+        for student_assignment in student_assignments:
+            student = student_assignment.student
+
+            # 4. 取得該學生所有題目的進度
+            item_progress_list = (
+                db.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == student_assignment.id
+                )
+                .all()
+            )
+
+            # 5. 計算分數
+            item_scores = []
+            pronunciation_scores = []
+            accuracy_scores = []
+            fluency_scores = []
+            completeness_scores = []
+            missing_count = 0
+
+            for item in item_progress_list:
+                # 檢查是否有錄音
+                if not item.recording_url:
+                    # 缺題
+                    item_scores.append(0)
+                    missing_count += 1
+                    continue
+
+                # 檢查是否有 AI 評分
+                if not item.has_ai_assessment:
+                    # 沒有分析結果，視為 0 分
+                    item_scores.append(0)
+                    missing_count += 1
+                    continue
+
+                # 收集有效分數
+                available_scores = []
+                if item.pronunciation_score is not None:
+                    available_scores.append(float(item.pronunciation_score))
+                    pronunciation_scores.append(float(item.pronunciation_score))
+                if item.accuracy_score is not None:
+                    available_scores.append(float(item.accuracy_score))
+                    accuracy_scores.append(float(item.accuracy_score))
+                if item.fluency_score is not None:
+                    available_scores.append(float(item.fluency_score))
+                    fluency_scores.append(float(item.fluency_score))
+                if item.completeness_score is not None:
+                    available_scores.append(float(item.completeness_score))
+                    completeness_scores.append(float(item.completeness_score))
+
+                # 計算該題分數（4 項平均）
+                if available_scores:
+                    item_score = sum(available_scores) / len(available_scores)
+                    item_scores.append(item_score)
+                else:
+                    item_scores.append(0)
+                    missing_count += 1
+
+            # 6. 計算總分和平均分
+            total_score = sum(item_scores) / len(item_scores) if item_scores else 0.0
+
+            avg_pronunciation = (
+                sum(pronunciation_scores) / len(pronunciation_scores)
+                if pronunciation_scores
+                else 0.0
+            )
+            avg_accuracy = (
+                sum(accuracy_scores) / len(accuracy_scores) if accuracy_scores else 0.0
+            )
+            avg_fluency = (
+                sum(fluency_scores) / len(fluency_scores) if fluency_scores else 0.0
+            )
+            avg_completeness = (
+                sum(completeness_scores) / len(completeness_scores)
+                if completeness_scores
+                else 0.0
+            )
+
+            # 7. 更新 StudentAssignment
+            student_assignment.score = total_score
+            student_assignment.graded_at = datetime.now(timezone.utc)
+
+            # 8. 根據 return_for_correction 決定狀態
+            student_id_str = str(student.id)
+            if request.return_for_correction.get(student_id_str, False):
+                student_assignment.status = AssignmentStatus.RETURNED
+                student_assignment.returned_at = datetime.now(timezone.utc)
+            else:
+                student_assignment.status = AssignmentStatus.GRADED
+
+            # 9. 記錄結果
+            results.append(
+                StudentBatchGradingResult(
+                    student_id=student.id,
+                    student_name=student.name,
+                    total_score=round(total_score, 1),
+                    missing_items=missing_count,
+                    avg_pronunciation=round(avg_pronunciation, 1),
+                    avg_accuracy=round(avg_accuracy, 1),
+                    avg_fluency=round(avg_fluency, 1),
+                    avg_completeness=round(avg_completeness, 1),
+                    status=student_assignment.status.value,
+                )
+            )
+
+        perf.checkpoint("All Students Processed")
+
+    # 10. 提交到資料庫
+    with start_span("Database Commit"):
+        db.commit()
+        perf.checkpoint("Database Committed")
+
+    perf.finish()
+
+    return BatchGradingResponse(
+        total_students=len(student_assignments), processed=len(results), results=results
+    )

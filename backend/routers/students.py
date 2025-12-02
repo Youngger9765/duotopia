@@ -424,60 +424,61 @@ async def get_assignment_activities(
                             )
                             item_data["review_status"] = item_progress.review_status
 
-                            if (
-                                item_progress.has_ai_assessment
-                                and item_progress.ai_feedback
-                            ):
-                                # 從 ai_feedback JSON 中取得分數
+                            if item_progress.has_ai_assessment:
+                                # 🔥 優化：核心分數從獨立欄位讀取（熱數據），冷數據從 JSON 讀取
                                 import json
 
-                                try:
-                                    ai_feedback = (
-                                        json.loads(item_progress.ai_feedback)
-                                        if isinstance(item_progress.ai_feedback, str)
-                                        else item_progress.ai_feedback
-                                    )
-                                    item_data["ai_assessment"] = {
-                                        "accuracy_score": float(
-                                            ai_feedback.get("accuracy_score", 0)
-                                        ),
-                                        "fluency_score": float(
-                                            ai_feedback.get("fluency_score", 0)
-                                        ),
-                                        "pronunciation_score": float(
-                                            ai_feedback.get("pronunciation_score", 0)
-                                        ),
-                                        "completeness_score": float(
-                                            ai_feedback.get("completeness_score", 0)
-                                        ),
-                                        "prosody_score": ai_feedback.get(
-                                            "prosody_score"
-                                        ),
-                                        # 舊版相容性
-                                        "word_details": ai_feedback.get(
-                                            "word_details", []
-                                        ),
-                                        # 🔥 新版詳細分析資料
-                                        "detailed_words": ai_feedback.get(
-                                            "detailed_words", []
-                                        ),
-                                        "reference_text": ai_feedback.get(
-                                            "reference_text", ""
-                                        ),
-                                        "recognized_text": ai_feedback.get(
-                                            "recognized_text", ""
-                                        ),
-                                        "analysis_summary": ai_feedback.get(
-                                            "analysis_summary", {}
-                                        ),
-                                        "ai_feedback": item_progress.ai_feedback,
-                                        "assessed_at": item_progress.ai_assessed_at.isoformat()
-                                        if item_progress.ai_assessed_at
-                                        else None,
-                                    }
-                                except (json.JSONDecodeError, TypeError):
-                                    # 如果 JSON 解析失敗，設為 None
-                                    item_data["ai_assessment"] = None
+                                ai_feedback_data = {}
+                                if item_progress.ai_feedback:
+                                    try:
+                                        ai_feedback_data = (
+                                            json.loads(item_progress.ai_feedback)
+                                            if isinstance(
+                                                item_progress.ai_feedback, str
+                                            )
+                                            else item_progress.ai_feedback
+                                        )
+                                    except (json.JSONDecodeError, TypeError):
+                                        ai_feedback_data = {}
+
+                                # 核心分數從獨立欄位讀取（優化性能）
+                                item_data["ai_assessment"] = {
+                                    "accuracy_score": float(
+                                        item_progress.accuracy_score or 0
+                                    ),
+                                    "fluency_score": float(
+                                        item_progress.fluency_score or 0
+                                    ),
+                                    "pronunciation_score": float(
+                                        item_progress.pronunciation_score or 0
+                                    ),
+                                    "completeness_score": float(
+                                        item_progress.completeness_score or 0
+                                    ),
+                                    # 冷數據從 JSON 讀取
+                                    "prosody_score": ai_feedback_data.get(
+                                        "prosody_score"
+                                    ),
+                                    "word_details": ai_feedback_data.get(
+                                        "word_details", []
+                                    ),
+                                    "detailed_words": ai_feedback_data.get(
+                                        "detailed_words", []
+                                    ),
+                                    "reference_text": ai_feedback_data.get(
+                                        "reference_text", ""
+                                    ),
+                                    "recognized_text": ai_feedback_data.get(
+                                        "recognized_text", ""
+                                    ),
+                                    "analysis_summary": ai_feedback_data.get(
+                                        "analysis_summary", {}
+                                    ),
+                                    "ai_feedback": item_progress.ai_feedback,
+                                    "assessed_at": item_progress.ai_assessed_at.isoformat()
+                                    if item_progress.ai_assessed_at
+                                    else None,
+                                }
 
                         items_with_ids.append(item_data)
 
@@ -1252,6 +1253,7 @@ async def upload_student_recording(
                     existing_item_progress.accuracy_score = None
                     existing_item_progress.fluency_score = None
                     existing_item_progress.pronunciation_score = None
+                    existing_item_progress.completeness_score = None
                     existing_item_progress.ai_feedback = None
                     existing_item_progress.ai_assessed_at = None
                     print("Cleared AI scores for re-recording")

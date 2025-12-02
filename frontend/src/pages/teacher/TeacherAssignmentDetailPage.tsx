@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import TeacherLayout from "@/components/TeacherLayout";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import BatchGradingModal from "@/components/BatchGradingModal";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -30,6 +31,7 @@ import {
   ChevronRight,
   Search,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { Student, Assignment } from "@/types";
 import { cn } from "@/lib/utils";
@@ -318,6 +320,7 @@ export default function TeacherAssignmentDetailPage() {
     Record<number, ContentDetail>
   >({});
   const [activeDragId, setActiveDragId] = useState<number | null>(null); // 追蹤正在拖拽的項目
+  const [showBatchGradingModal, setShowBatchGradingModal] = useState(false);
 
   // 🔥 追蹤正在載入的內容 ID，避免重複請求（Race Condition 保護）
   const loadingRef = useRef<Set<number>>(new Set());
@@ -1063,6 +1066,15 @@ export default function TeacherAssignmentDetailPage() {
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
+            </Button>
+            {/* AI批改按鈕 */}
+            <Button
+              onClick={() => setShowBatchGradingModal(true)}
+              disabled={stats.total === 0}
+              className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 h-12 min-h-12 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {t("assignmentDetail.buttons.batchGrade")}
             </Button>
           </div>
         </div>
@@ -2164,6 +2176,18 @@ export default function TeacherAssignmentDetailPage() {
             </table>
           </div>
         </Card>
+
+        {/* Batch Grading Modal */}
+        <BatchGradingModal
+          open={showBatchGradingModal}
+          onOpenChange={setShowBatchGradingModal}
+          assignmentId={Number(assignmentId)}
+          classroomId={Number(classroomId)}
+          onComplete={() => {
+            // Refresh student progress after batch grading
+            fetchStudentProgress();
+          }}
+        />
       </div>
     </TeacherLayout>
   );

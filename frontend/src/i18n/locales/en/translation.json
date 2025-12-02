@@ -2121,6 +2121,7 @@
       "questions": "questions",
       "giveScore": "Give Score",
       "scoreRange": "0-100 points",
+      "usingAverageScore": "(Using Average Score)",
       "selectGradingStatus": "Select Grading Status",
       "referenceAudio": "Reference Audio",
       "transcription": "Speech Recognition Result",
@@ -2203,6 +2204,7 @@
     "buttons": {
       "backToList": "Back to Assignment List",
       "gradeAssignment": "Grade Assignment",
+      "batchGrade": "AI Batch Grade",
       "cancel": "Cancel",
       "save": "Save",
       "edit": "Edit",
@@ -2263,6 +2265,26 @@
       "speakingQuiz": "Speaking Quiz",
       "speaking_quiz": "Speaking Quiz",
       "SPEAKING_QUIZ": "Speaking Quiz"
+    }
+  },
+  "batchGrading": {
+    "title": "AI Batch Grading",
+    "progress": "Grading... ({{current}}/{{total}} students)",
+    "studentName": "Student Name",
+    "totalScore": "Total Score",
+    "missingItems": "Missing Items",
+    "returnForCorrection": "Return for Correction",
+    "averageAccuracy": "Average Accuracy",
+    "averageFluency": "Average Fluency",
+    "averagePronunciation": "Average Pronunciation",
+    "averageCompleteness": "Average Completeness",
+    "pause": "Pause",
+    "close": "Close",
+    "messages": {
+      "success": "Successfully graded {{count}} students",
+      "error": "Grading failed, please try again later",
+      "returnSuccess": "Marked {{count}} students for correction",
+      "returnError": "Failed to update correction status"
     }
   },
   "previewPage": {

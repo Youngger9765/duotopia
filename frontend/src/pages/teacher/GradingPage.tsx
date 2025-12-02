@@ -112,6 +112,7 @@ export default function GradingPage() {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [loading, setLoading] = useState(true);
   const [score, setScore] = useState<number | null>(null);
+  const [isAutoCalculatedScore, setIsAutoCalculatedScore] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [itemFeedbacks, setItemFeedbacks] = useState<ItemFeedback>({});
@@ -419,6 +420,11 @@ export default function GradingPage() {
     if (!submission) return;
 
     let appliedCount = 0;
+    let totalPronunciation = 0;
+    let totalAccuracy = 0;
+    let totalFluency = 0;
+    let totalCompleteness = 0;
+    let scoreCount = 0;
 
     const newFeedbacks = { ...itemFeedbacks };
 
@@ -431,6 +437,21 @@ export default function GradingPage() {
           const aiScore = aiScores?.overall_score;
 
           if (aiScore !== undefined) {
+            // Accumulate scores for average calculation
+            if (aiScores?.pronunciation_score !== undefined) {
+              totalPronunciation += aiScores.pronunciation_score;
+              scoreCount++;
+            }
+            if (aiScores?.accuracy_score !== undefined) {
+              totalAccuracy += aiScores.accuracy_score;
+            }
+            if (aiScores?.fluency_score !== undefined) {
+              totalFluency += aiScores.fluency_score;
+            }
+            if (aiScores?.completeness_score !== undefined) {
+              totalCompleteness += aiScores.completeness_score;
+            }
+
             if (aiScore >= 75) {
               // 生成具體的通過評語
               const strengths = [];
@@ -483,6 +504,21 @@ export default function GradingPage() {
         const aiScore = aiScores?.overall_score;
 
         if (aiScore !== undefined) {
+          // Accumulate scores for average calculation
+          if (aiScores?.pronunciation_score !== undefined) {
+            totalPronunciation += aiScores.pronunciation_score;
+            scoreCount++;
+          }
+          if (aiScores?.accuracy_score !== undefined) {
+            totalAccuracy += aiScores.accuracy_score;
+          }
+          if (aiScores?.fluency_score !== undefined) {
+            totalFluency += aiScores.fluency_score;
+          }
+          if (aiScores?.completeness_score !== undefined) {
+            totalCompleteness += aiScores.completeness_score;
+          }
+
           if (aiScore >= 75) {
             const strengths = [];
             if (
@@ -528,6 +564,19 @@ export default function GradingPage() {
     }
 
     setItemFeedbacks(newFeedbacks);
+
+    // Calculate average score automatically
+    if (scoreCount > 0) {
+      const avgPronunciation = totalPronunciation / scoreCount;
+      const avgAccuracy = totalAccuracy / scoreCount;
+      const avgFluency = totalFluency / scoreCount;
+      const avgCompleteness = totalCompleteness / scoreCount;
+      const calculatedScore = Math.round(
+        (avgPronunciation + avgAccuracy + avgFluency + avgCompleteness) / 4,
+      );
+      setScore(calculatedScore);
+      setIsAutoCalculatedScore(true);
+    }
 
     // 立即儲存 - 傳入最新的 feedbacks
     await performAutoSave(newFeedbacks);
@@ -1498,6 +1547,7 @@ export default function GradingPage() {
                           const numValue = parseInt(value);
                           if (numValue >= 0 && numValue <= 100) {
                             setScore(numValue);
+                            setIsAutoCalculatedScore(false); // Reset flag when manually changed
                           }
                         }
                       }}
@@ -1509,6 +1559,11 @@ export default function GradingPage() {
                           : "bg-white border-blue-500 text-blue-600 focus:ring-blue-500"
                       }`}
                     />
+                    {isAutoCalculatedScore && (
+                      <div className="text-xs text-green-600 dark:text-green-400 text-center mt-1 font-medium">
+                        {t("gradingPage.labels.usingAverageScore")}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500 text-center mt-1">
                       {t("gradingPage.labels.scoreRange")}
                     </div>

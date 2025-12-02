@@ -12,7 +12,7 @@ exclude =
     migrations,
     .pytest_cache,
     node_modules,
-    backend/scripts/migrate_assignments_to_copy.py,
+    backend/scripts/,
     backend/alembic/versions.backup
 
 # Per-file ignores for test files (業界最佳實踐)
