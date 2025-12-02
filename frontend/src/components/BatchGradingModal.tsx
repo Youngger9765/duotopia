@@ -227,23 +227,23 @@ export default function BatchGradingModal({
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleSelectAll("GRADED")}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
+                      className="flex-1 h-12 min-h-12 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                     >
-                      完成批改
+                      {/* TODO: i18n */}完成批改
                     </Button>
                     <Button
                       onClick={() => handleSelectAll("RETURNED")}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700"
+                      className="flex-1 h-12 min-h-12 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                     >
-                      退回訂正
+                      {/* TODO: i18n */}退回訂正
                     </Button>
                   </div>
                   <Button
                     onClick={() => handleSelectAll(null)}
                     variant="outline"
-                    className="w-full"
+                    className="w-full h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    清除所有選擇
+                    {/* TODO: i18n */}清除所有選擇
                   </Button>
                 </div>
 
@@ -251,22 +251,22 @@ export default function BatchGradingModal({
                 <div className="hidden sm:flex gap-3">
                   <Button
                     onClick={() => handleSelectAll("GRADED")}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
+                    className="flex-1 h-12 min-h-12 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    全選：完成批改
+                    {/* TODO: i18n */}全選：完成批改
                   </Button>
                   <Button
                     onClick={() => handleSelectAll("RETURNED")}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700"
+                    className="flex-1 h-12 min-h-12 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    全選：退回訂正
+                    {/* TODO: i18n */}全選：退回訂正
                   </Button>
                   <Button
                     onClick={() => handleSelectAll(null)}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    清除所有選擇
+                    {/* TODO: i18n */}清除所有選擇
                   </Button>
                 </div>
               </div>
@@ -538,10 +538,14 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
+                        aria-label={`標記${result.student_name}為完成批改`}
+                        aria-pressed={
+                          teacherDecisions[result.student_id] === "GRADED"
+                        }
                         className={cn(
-                          "flex-1 text-sm",
+                          "flex-1 text-sm min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
                           teacherDecisions[result.student_id] === "GRADED" &&
-                            "bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 dark:text-white",
+                            "bg-green-700 hover:bg-green-800 text-white dark:bg-green-600 dark:hover:bg-green-700 dark:text-white font-semibold",
                         )}
                         onClick={() =>
                           setTeacherDecisions((prev) => ({
@@ -550,7 +554,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        完成批改
+                        {/* TODO: i18n */}完成批改
                       </Button>
                       <Button
                         variant={
@@ -558,10 +562,14 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
+                        aria-label={`標記${result.student_name}為退回訂正`}
+                        aria-pressed={
+                          teacherDecisions[result.student_id] === "RETURNED"
+                        }
                         className={cn(
-                          "flex-1 text-sm",
+                          "flex-1 text-sm min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
                           teacherDecisions[result.student_id] === "RETURNED" &&
-                            "bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white",
+                            "bg-red-700 hover:bg-red-800 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white font-semibold",
                         )}
                         onClick={() =>
                           setTeacherDecisions((prev) => ({
@@ -570,7 +578,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        退回訂正
+                        {/* TODO: i18n */}退回訂正
                       </Button>
                       <Button
                         variant={
@@ -578,10 +586,14 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
+                        aria-label={`標記${result.student_name}為待定`}
+                        aria-pressed={
+                          teacherDecisions[result.student_id] === null
+                        }
                         className={cn(
-                          "flex-1 text-sm",
+                          "flex-1 text-sm min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
                           teacherDecisions[result.student_id] === null &&
-                            "bg-gray-600 hover:bg-gray-700 text-white dark:bg-gray-500 dark:hover:bg-gray-600 dark:text-white",
+                            "bg-gray-700 hover:bg-gray-800 text-white dark:bg-gray-500 dark:hover:bg-gray-600 dark:text-white font-semibold",
                         )}
                         onClick={() =>
                           setTeacherDecisions((prev) => ({
@@ -590,7 +602,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        待定
+                        {/* TODO: i18n */}待定
                       </Button>
                     </div>
 
@@ -603,9 +615,12 @@ export default function BatchGradingModal({
                         disabled={
                           !teacherDecisions[result.student_id] || isSubmitting
                         }
-                        className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
+                        className={cn(
+                          "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                          "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+                        )}
                       >
-                        送出
+                        {/* TODO: i18n */}送出
                       </Button>
                     </div>
                   </Card>
@@ -620,14 +635,17 @@ export default function BatchGradingModal({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
           >
             {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmitAll}
             disabled={isSubmitting || loading}
-            className="w-full sm:w-auto min-w-[100px]"
+            className={cn(
+              "w-full sm:w-auto min-w-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+              "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+            )}
           >
             {isSubmitting ? (
               <>

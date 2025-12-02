@@ -1062,7 +1062,7 @@ export default function TeacherAssignmentDetailPage() {
                   `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
                 )
               }
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
@@ -1071,7 +1071,10 @@ export default function TeacherAssignmentDetailPage() {
             <Button
               onClick={() => setShowBatchGradingModal(true)}
               disabled={stats.total === 0}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={cn(
+                "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+              )}
             >
               <Sparkles className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.batchGrade")}
