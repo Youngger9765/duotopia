@@ -250,19 +250,31 @@ export default function BatchGradingModal({
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.studentName")}
                       </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("batchGrading.pronunciation")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("batchGrading.accuracy")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("batchGrading.fluency")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("batchGrading.completeness")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.totalScore")}
                       </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.missingItems")}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.decision")}
                       </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.action")}
                       </th>
                     </tr>
@@ -273,10 +285,30 @@ export default function BatchGradingModal({
                         key={result.student_id}
                         className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                       >
-                        <td className="px-4 py-3 text-sm dark:text-gray-300">
+                        <td className="px-3 py-3 text-sm dark:text-gray-300">
                           {result.student_name}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-2 py-3 text-center text-sm">
+                          <span className="text-blue-600 dark:text-blue-400">
+                            {result.avg_pronunciation.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center text-sm">
+                          <span className="text-purple-600 dark:text-purple-400">
+                            {result.avg_accuracy.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center text-sm">
+                          <span className="text-teal-600 dark:text-teal-400">
+                            {result.avg_fluency.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center text-sm">
+                          <span className="text-indigo-600 dark:text-indigo-400">
+                            {result.avg_completeness.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center">
                           <span
                             className={`font-bold ${
                               result.total_score >= 80
@@ -287,7 +319,7 @@ export default function BatchGradingModal({
                             {result.total_score.toFixed(1)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center text-sm dark:text-gray-300">
+                        <td className="px-2 py-3 text-center text-sm dark:text-gray-300">
                           {result.missing_items > 0 ? (
                             <span className="text-red-600 dark:text-red-400 font-medium">
                               {result.missing_items}
