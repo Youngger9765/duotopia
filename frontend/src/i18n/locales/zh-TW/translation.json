@@ -3049,6 +3049,7 @@
       "saveFailed": "儲存失敗，請稍後再試",
       "deleteFailed": "刪除失敗，請稍後再試",
       "emailInUse": "Email已被使用，請使用其他Email",
+      "studentNumberDuplicate": "此學號已存在於該班級中，請使用其他學號",
       "invalidBirthdate": "生日格式錯誤，請使用YYYY-MM-DD格式",
       "requiredFields": "請填寫所有必填欄位",
       "nameRequired": "姓名為必填",

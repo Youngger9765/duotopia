@@ -900,6 +900,26 @@ async def create_student(
     # Email is optional now - can be NULL or shared between students
     email = student_data.email if student_data.email else None
 
+    # 🔥 Issue #31: Validate student_number uniqueness within classroom
+    if student_data.student_number and student_data.classroom_id:
+        existing_student_with_number = (
+            db.query(Student)
+            .join(ClassroomStudent)
+            .filter(
+                ClassroomStudent.classroom_id == student_data.classroom_id,
+                ClassroomStudent.is_active.is_(True),
+                Student.student_number == student_data.student_number,
+                Student.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if existing_student_with_number:
+            raise HTTPException(
+                status_code=409,
+                detail=f"學號 '{student_data.student_number}' 已存在於此班級中",
+            )
+
     # Create student
     student = Student(
         name=student_data.name,
@@ -1066,31 +1086,42 @@ async def update_student(
         student.name = update_data.name
     if update_data.email is not None:
         student.email = update_data.email
+
+    # 🔥 Issue #31: Validate student_number uniqueness within classroom when updating
     if update_data.student_number is not None:
-        # Validate student_number uniqueness within the same classroom
-        if classroom_student:
-            # Use SELECT FOR UPDATE to prevent race conditions
-            existing_student = (
+        # Get student's current classroom
+        current_classroom = (
+            db.query(ClassroomStudent)
+            .filter(
+                ClassroomStudent.student_id == student_id,
+                ClassroomStudent.is_active.is_(True),
+            )
+            .first()
+        )
+
+        # If student has a classroom and student_number is changing, check for duplicates
+        if current_classroom and update_data.student_number != student.student_number:
+            existing_student_with_number = (
                 db.query(Student)
-                .join(ClassroomStudent, ClassroomStudent.student_id == Student.id)
+                .join(ClassroomStudent)
                 .filter(
-                    Student.student_number == update_data.student_number,
-                    Student.id != student_id,  # Exclude current student
-                    ClassroomStudent.classroom_id == classroom_student.classroom_id,
+                    ClassroomStudent.classroom_id == current_classroom.classroom_id,
                     ClassroomStudent.is_active.is_(True),
+                    Student.student_number == update_data.student_number,
                     Student.is_active.is_(True),
+                    Student.id != student_id,  # Exclude current student
                 )
-                .with_for_update()  # Lock rows to prevent concurrent duplicates
                 .first()
             )
 
-            if existing_student:
+            if existing_student_with_number:
                 raise HTTPException(
-                    status_code=400,
-                    detail="此學號在班級中已存在，請使用不同的學號",
+                    status_code=409,
+                    detail=f"學號 '{update_data.student_number}' 已存在於此班級中",
                 )
 
         student.student_number = update_data.student_number
+
     if update_data.phone is not None:
         student.phone = update_data.phone
     if update_data.status is not None:
@@ -1137,6 +1168,27 @@ async def update_student(
 
             if not classroom:
                 raise HTTPException(status_code=404, detail="Classroom not found")
+
+            # 🔥 Issue #31: Check if student_number already exists in target classroom
+            if student.student_number:
+                existing_student_with_number = (
+                    db.query(Student)
+                    .join(ClassroomStudent)
+                    .filter(
+                        ClassroomStudent.classroom_id == update_data.classroom_id,
+                        ClassroomStudent.is_active.is_(True),
+                        Student.student_number == student.student_number,
+                        Student.is_active.is_(True),
+                        Student.id != student_id,  # Exclude current student
+                    )
+                    .first()
+                )
+
+                if existing_student_with_number:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"學號 '{student.student_number}' 已存在於目標班級中",
+                    )
 
             # Create new enrollment
             new_enrollment = ClassroomStudent(
