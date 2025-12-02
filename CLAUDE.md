@@ -48,6 +48,7 @@ Otherwise → Analyze context and choose
 - **[git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)** - PDCA 工作流程、Git 操作、Issue/PR 管理
 - **[test-runner.md](./.claude/agents/test-runner.md)** - 测试指南、覆盖率要求、最佳实践
 - **[code-reviewer.md](./.claude/agents/code-reviewer.md)** - 代码审查、安全检查、性能分析
+- **[cicd-monitor.md](./.claude/agents/cicd-monitor.md)** - CI/CD 管道监控、自动状态更新
 - **[task-router.md](./.claude/agents/task-router.md)** - 任务路由助手
 
 ### Project Documents
@@ -99,6 +100,27 @@ Otherwise → Analyze context and choose
 - Failure analysis
 - Performance benchmarking
 
+### @agent-cicd-monitor 🔍 **[AUTO-TRIGGERED AFTER PUSH]**
+**Auto-trigger**: Automatic after `git push` if PR exists
+- Real-time CI/CD pipeline monitoring
+- Polls checks every 30-60 seconds
+- Failure analysis with logs
+- Maximum 15-minute timeout
+- User-interruptible
+
+**How It Works**:
+1. User runs `git push`
+2. Git post-push hook detects PR
+3. Hook echoes agent trigger message
+4. Claude Code CLI auto-invokes agent
+5. Agent monitors until complete
+6. Reports final results
+
+**Manual Usage**:
+```bash
+@agent-cicd-monitor check PR #55
+```
+
 ### @agent-task-router
 **Internal use only** - AI-powered task routing assistant
 - Suggests appropriate agents based on task
@@ -138,6 +160,13 @@ Auto-formats code after modifications
 
 ### PreToolUse(Bash(git commit*))
 Validates code quality before commits
+
+### post-push (Git Hook)
+Automatically triggers @agent-cicd-monitor after successful push
+- Detects if current branch has a PR
+- Echoes agent trigger message for Claude Code CLI
+- Provides PR and Actions URLs
+- Falls back to legacy deployment monitor for staging/main
 
 ### Stop
 Runs quality checks at end of each turn
