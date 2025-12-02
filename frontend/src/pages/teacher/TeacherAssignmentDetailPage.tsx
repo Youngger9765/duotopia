@@ -1062,7 +1062,7 @@ export default function TeacherAssignmentDetailPage() {
                   `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
                 )
               }
-              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 h-12 min-h-12 w-full sm:w-auto"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 w-full sm:w-auto"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
@@ -1071,7 +1071,7 @@ export default function TeacherAssignmentDetailPage() {
             <Button
               onClick={() => setShowBatchGradingModal(true)}
               disabled={stats.total === 0}
-              className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 h-12 min-h-12 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.batchGrade")}
@@ -2080,7 +2080,7 @@ export default function TeacherAssignmentDetailPage() {
                             <span
                               className={`font-bold ${progress.score && progress.score >= 80 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                             >
-                              {progress.score || 0}
+                              {(progress.score || 0).toFixed(1)}
                             </span>
                           ) : (
                             <span className="text-gray-300 dark:text-gray-600">

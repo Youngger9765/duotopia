@@ -968,7 +968,7 @@ export default function GradingPage() {
                   <Button
                     size="sm"
                     onClick={handleCheckRecordings}
-                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
                   >
                     <Search className="h-4 w-4" />
                     {t("gradingPage.buttons.checkRecording")}
@@ -976,7 +976,7 @@ export default function GradingPage() {
                   <Button
                     size="sm"
                     onClick={handleApplyAISuggestions}
-                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white"
                   >
                     <Sparkles className="h-4 w-4" />
                     {t("gradingPage.buttons.applyAISuggestions")}
@@ -1015,7 +1015,7 @@ export default function GradingPage() {
                         <Button
                           size="sm"
                           onClick={handleCheckRecordings}
-                          className="flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          className="flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
                         >
                           <Search className="h-4 w-4" />
                           {t("gradingPage.labels.examineRecording")}
@@ -1023,7 +1023,7 @@ export default function GradingPage() {
                         <Button
                           size="sm"
                           onClick={handleApplyAISuggestions}
-                          className="flex-1 flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                          className="flex-1 flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white"
                         >
                           <Sparkles className="h-4 w-4" />
                           {t("gradingPage.buttons.applyAISuggestions")}

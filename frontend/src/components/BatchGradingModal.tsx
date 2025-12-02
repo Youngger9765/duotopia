@@ -290,22 +290,22 @@ export default function BatchGradingModal({
                         </td>
                         <td className="px-2 py-3 text-center text-sm">
                           <span className="text-blue-600 dark:text-blue-400">
-                            {result.avg_pronunciation.toFixed(1)}
+                            {result.avg_pronunciation.toFixed(0)}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center text-sm">
                           <span className="text-purple-600 dark:text-purple-400">
-                            {result.avg_accuracy.toFixed(1)}
+                            {result.avg_accuracy.toFixed(0)}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center text-sm">
                           <span className="text-teal-600 dark:text-teal-400">
-                            {result.avg_fluency.toFixed(1)}
+                            {result.avg_fluency.toFixed(0)}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center text-sm">
                           <span className="text-indigo-600 dark:text-indigo-400">
-                            {result.avg_completeness.toFixed(1)}
+                            {result.avg_completeness.toFixed(0)}
                           </span>
                         </td>
                         <td className="px-2 py-3 text-center">
