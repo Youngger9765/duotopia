@@ -1680,7 +1680,7 @@
     },
     "total": "共 {{count}} 位學生",
     "columns": {
-      "id": "ID",
+      "studentNumber": "學號",
       "studentName": "學生姓名",
       "contactInfo": "聯絡資訊",
       "passwordStatus": "密碼狀態",
@@ -1721,7 +1721,8 @@
       "phone": "電話:",
       "classroom": "班級:",
       "password": "密碼:",
-      "lastLogin": "最後登入:"
+      "lastLogin": "最後登入:",
+      "studentNumber": "學號:"
     }
   },
   "subscriptionProgressBanner": {
@@ -3072,6 +3073,7 @@
       "saveFailed": "儲存失敗，請稍後再試",
       "deleteFailed": "刪除失敗，請稍後再試",
       "emailInUse": "Email已被使用，請使用其他Email",
+      "studentNumberDuplicate": "此學號已存在於該班級中，請使用其他學號",
       "invalidBirthdate": "生日格式錯誤，請使用YYYY-MM-DD格式",
       "requiredFields": "請填寫所有必填欄位",
       "nameRequired": "姓名為必填",

@@ -1678,7 +1678,7 @@
     },
     "total": "Total {{count}} students",
     "columns": {
-      "id": "ID",
+      "studentNumber": "Student Number",
       "studentName": "Student Name",
       "contactInfo": "Contact Info",
       "passwordStatus": "Password Status",
@@ -1719,7 +1719,8 @@
       "phone": "Phone:",
       "classroom": "Classroom:",
       "password": "Password:",
-      "lastLogin": "Last Login:"
+      "lastLogin": "Last Login:",
+      "studentNumber": "Student Number:"
     }
   },
   "subscriptionProgressBanner": {
@@ -3068,6 +3069,7 @@
       "saveFailed": "Save failed, please try again later",
       "deleteFailed": "Delete failed, please try again later",
       "emailInUse": "Email already in use, please use another email",
+      "studentNumberDuplicate": "This student number already exists in the classroom, please use another number",
       "invalidBirthdate": "Invalid birthdate format, please use YYYY-MM-DD",
       "requiredFields": "Please fill in all required fields",
       "nameRequired": "Name is required",
