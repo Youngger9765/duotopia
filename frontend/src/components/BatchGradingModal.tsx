@@ -8,26 +8,38 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
-import { Loader2, Pause, X } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
+
+// Teacher's decision for each student
+type TeacherDecision = "RETURNED" | "GRADED" | null;
 
 interface BatchGradingResult {
   student_id: number;
   student_name: string;
   total_score: number;
   missing_items: number;
+  total_items: number;
+  completed_items: number;
   avg_pronunciation: number;
   avg_accuracy: number;
   avg_fluency: number;
   avg_completeness: number;
-  status: "GRADED" | "RETURNED";
+  feedback?: string;
+  status: string;
 }
 
 interface BatchGradingResponse {
   total_students: number;
   results: BatchGradingResult[];
+}
+
+interface BatchGradeFinalizeResponse {
+  returned_count: number;
+  graded_count: number;
+  unchanged_count: number;
+  total_count: number;
 }
 
 interface BatchGradingModalProps {
@@ -52,16 +64,17 @@ export default function BatchGradingModal({
     total: number;
   } | null>(null);
   const [results, setResults] = useState<BatchGradingResult[] | null>(null);
-  const [returnForCorrection, setReturnForCorrection] = useState<
-    Record<number, boolean>
+  const [teacherDecisions, setTeacherDecisions] = useState<
+    Record<number, TeacherDecision>
   >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
       // Reset state when modal opens
       setResults(null);
       setProgress(null);
-      setReturnForCorrection({});
+      setTeacherDecisions({});
       // Automatically start grading
       handleStartGrading();
     }
@@ -76,7 +89,6 @@ export default function BatchGradingModal({
         `/api/teachers/assignments/${assignmentId}/batch-grade`,
         {
           classroom_id: classroomId,
-          return_for_correction: {},
         },
       );
 
@@ -85,6 +97,13 @@ export default function BatchGradingModal({
         current: response.total_students,
         total: response.total_students,
       });
+
+      // Initialize all students' decisions to null (pending)
+      const initialDecisions: Record<number, TeacherDecision> = {};
+      response.results.forEach((r) => {
+        initialDecisions[r.student_id] = null;
+      });
+      setTeacherDecisions(initialDecisions);
 
       toast.success(
         t("batchGrading.messages.success", {
@@ -100,69 +119,78 @@ export default function BatchGradingModal({
     }
   };
 
-  const handleToggleReturn = (studentId: number) => {
-    setReturnForCorrection((prev) => ({
-      ...prev,
-      [studentId]: !prev[studentId],
-    }));
-  };
-
-  const handleClose = async () => {
-    // If there are students marked for return, update their status
-    const studentsToReturn = Object.entries(returnForCorrection)
-      .filter(([, shouldReturn]) => shouldReturn)
-      .map(([id]) => parseInt(id));
-
-    if (studentsToReturn.length > 0) {
-      try {
-        // Call API to update status to RETURNED for selected students
-        await apiClient.post(
-          `/api/teachers/assignments/${assignmentId}/batch-grade`,
-          {
-            classroom_id: classroomId,
-            return_for_correction: returnForCorrection,
-          },
-        );
-        toast.success(
-          t("batchGrading.messages.returnSuccess", {
-            count: studentsToReturn.length,
-          }),
-        );
-      } catch (error) {
-        console.error("Failed to update return status:", error);
-        toast.error(t("batchGrading.messages.returnError"));
-      }
+  const handleSubmitSingleStudent = async (studentId: number) => {
+    const decision = teacherDecisions[studentId];
+    if (!decision) {
+      toast.warning(t("batchGrading.selectDecisionFirst"));
+      return;
     }
 
-    onComplete?.();
-    onOpenChange(false);
-  };
+    setIsSubmitting(true);
+    try {
+      await apiClient.post<BatchGradeFinalizeResponse>(
+        `/api/teachers/assignments/${assignmentId}/finalize-batch-grade`,
+        {
+          classroom_id: classroomId,
+          teacher_decisions: { [studentId]: decision },
+        },
+      );
 
-  const calculateAverageScores = () => {
-    if (!results || results.length === 0) {
-      return {
-        avgAccuracy: 0,
-        avgFluency: 0,
-        avgPronunciation: 0,
-        avgCompleteness: 0,
-      };
+      const studentName =
+        results?.find((r) => r.student_id === studentId)?.student_name || "";
+      toast.success(
+        t("batchGrading.singleSubmitSuccess", { name: studentName }),
+      );
+
+      // Remove student from list
+      setResults(
+        (prev) => prev?.filter((r) => r.student_id !== studentId) || null,
+      );
+    } catch (error) {
+      console.error("Error submitting single student:", error);
+      toast.error(t("batchGrading.errorDescription"));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    return {
-      avgAccuracy:
-        results.reduce((sum, r) => sum + r.avg_accuracy, 0) / results.length,
-      avgFluency:
-        results.reduce((sum, r) => sum + r.avg_fluency, 0) / results.length,
-      avgPronunciation:
-        results.reduce((sum, r) => sum + r.avg_pronunciation, 0) /
-        results.length,
-      avgCompleteness:
-        results.reduce((sum, r) => sum + r.avg_completeness, 0) /
-        results.length,
-    };
   };
 
-  const averages = calculateAverageScores();
+  const handleSubmitAll = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const response = await apiClient.post<BatchGradeFinalizeResponse>(
+        `/api/teachers/assignments/${assignmentId}/finalize-batch-grade`,
+        {
+          classroom_id: classroomId,
+          teacher_decisions: teacherDecisions,
+        },
+      );
+
+      toast.success(
+        t("batchGrading.allSubmitSuccess", {
+          graded: response.graded_count,
+          returned: response.returned_count,
+          unchanged: response.unchanged_count,
+        }),
+      );
+
+      onComplete?.();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error finalizing grading:", error);
+      toast.error(t("batchGrading.errorDescription"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectAll = (decision: TeacherDecision) => {
+    const allDecisions: Record<number, TeacherDecision> = {};
+    results?.forEach((r) => {
+      allDecisions[r.student_id] = decision;
+    });
+    setTeacherDecisions(allDecisions);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,44 +218,35 @@ export default function BatchGradingModal({
           {/* Results Section */}
           {results && (
             <>
-              {/* Average Scores */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("batchGrading.averageAccuracy")}
-                  </span>
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {averages.avgAccuracy.toFixed(1)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("batchGrading.averageFluency")}
-                  </span>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {averages.avgFluency.toFixed(1)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("batchGrading.averagePronunciation")}
-                  </span>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {averages.avgPronunciation.toFixed(1)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("batchGrading.averageCompleteness")}
-                  </span>
-                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {averages.avgCompleteness.toFixed(1)}
-                  </div>
-                </div>
+              {/* Select All Controls */}
+              <div className="flex gap-3 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectAll("GRADED")}
+                >
+                  {t("batchGrading.selectAllGraded")}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectAll("RETURNED")}
+                >
+                  {t("batchGrading.selectAllReturned")}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectAll(null)}
+                >
+                  {t("batchGrading.clearAll")}
+                </Button>
               </div>
 
               {/* Results Table */}
-              <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
+              <div className="border dark:border-gray-700 rounded-lg overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -240,8 +259,11 @@ export default function BatchGradingModal({
                       <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t("batchGrading.missingItems")}
                       </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("batchGrading.decision")}
+                      </th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t("batchGrading.returnForCorrection")}
+                        {t("batchGrading.action")}
                       </th>
                     </tr>
                   </thead>
@@ -276,15 +298,91 @@ export default function BatchGradingModal({
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center">
-                            <Checkbox
-                              checked={returnForCorrection[result.student_id]}
-                              onCheckedChange={() =>
-                                handleToggleReturn(result.student_id)
-                              }
-                            />
+
+                        {/* Radio Button Decision Column */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`decision-${result.student_id}`}
+                                value="GRADED"
+                                checked={
+                                  teacherDecisions[result.student_id] ===
+                                  "GRADED"
+                                }
+                                onChange={() =>
+                                  setTeacherDecisions((prev) => ({
+                                    ...prev,
+                                    [result.student_id]: "GRADED",
+                                  }))
+                                }
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm text-green-600 dark:text-green-400">
+                                ✓ {t("batchGrading.decisionGraded")}
+                              </span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`decision-${result.student_id}`}
+                                value="RETURNED"
+                                checked={
+                                  teacherDecisions[result.student_id] ===
+                                  "RETURNED"
+                                }
+                                onChange={() =>
+                                  setTeacherDecisions((prev) => ({
+                                    ...prev,
+                                    [result.student_id]: "RETURNED",
+                                  }))
+                                }
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm text-red-600 dark:text-red-400">
+                                ↩ {t("batchGrading.decisionReturned")}
+                              </span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`decision-${result.student_id}`}
+                                value=""
+                                checked={
+                                  teacherDecisions[result.student_id] === null
+                                }
+                                onChange={() =>
+                                  setTeacherDecisions((prev) => ({
+                                    ...prev,
+                                    [result.student_id]: null,
+                                  }))
+                                }
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                ⏸ {t("batchGrading.decisionPending")}
+                              </span>
+                            </label>
                           </div>
+                        </td>
+
+                        {/* Single Submit Button */}
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleSubmitSingleStudent(result.student_id)
+                            }
+                            disabled={
+                              !teacherDecisions[result.student_id] ||
+                              isSubmitting
+                            }
+                          >
+                            {t("batchGrading.submitSingle")}
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -295,18 +393,35 @@ export default function BatchGradingModal({
           )}
         </div>
 
-        <DialogFooter className="flex gap-2">
-          {loading ? (
-            <Button variant="outline" disabled>
-              <Pause className="h-4 w-4 mr-2" />
-              {t("batchGrading.pause")}
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleClose}>
-              <X className="h-4 w-4 mr-2" />
-              {t("batchGrading.close")}
-            </Button>
-          )}
+        <DialogFooter className="gap-2 mt-6">
+          <div className="flex w-full justify-end items-center">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleSubmitAll}
+                disabled={isSubmitting || loading}
+                className="min-w-[100px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("batchGrading.processing")}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    {t("batchGrading.submitAll")}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

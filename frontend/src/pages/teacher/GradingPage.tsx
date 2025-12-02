@@ -415,176 +415,68 @@ export default function GradingPage() {
     }
   };
 
-  // 套用 AI 建議（門檻 75 分）- 處理所有題目
+  // 套用 AI 建議 - 調用 batch-grade API
   const handleApplyAISuggestions = async () => {
-    if (!submission) return;
+    if (!submission || !studentId) return;
 
-    let appliedCount = 0;
-    let totalPronunciation = 0;
-    let totalAccuracy = 0;
-    let totalFluency = 0;
-    let totalCompleteness = 0;
-    let scoreCount = 0;
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading(t("gradingPage.messages.aiGrading"));
 
-    const newFeedbacks = { ...itemFeedbacks };
+      // Call batch-grade API with single student
+      interface BatchGradingResult {
+        student_id: number;
+        student_name: string;
+        total_score: number;
+        missing_items: number;
+        total_items: number;
+        completed_items: number;
+        avg_pronunciation: number;
+        avg_accuracy: number;
+        avg_fluency: number;
+        avg_completeness: number;
+        feedback?: string;
+        status: string;
+      }
 
-    // 處理所有題組
-    if (submission.content_groups) {
-      let globalIndex = 0;
-      submission.content_groups.forEach((group) => {
-        group.submissions.forEach((item) => {
-          const aiScores = item.ai_scores;
-          const aiScore = aiScores?.overall_score;
+      interface BatchGradingResponse {
+        total_students: number;
+        processed: number;
+        results: BatchGradingResult[];
+      }
 
-          if (aiScore !== undefined) {
-            // Accumulate scores for average calculation
-            if (aiScores?.pronunciation_score !== undefined) {
-              totalPronunciation += aiScores.pronunciation_score;
-              scoreCount++;
-            }
-            if (aiScores?.accuracy_score !== undefined) {
-              totalAccuracy += aiScores.accuracy_score;
-            }
-            if (aiScores?.fluency_score !== undefined) {
-              totalFluency += aiScores.fluency_score;
-            }
-            if (aiScores?.completeness_score !== undefined) {
-              totalCompleteness += aiScores.completeness_score;
-            }
-
-            if (aiScore >= 75) {
-              // 生成具體的通過評語
-              const strengths = [];
-              if (
-                aiScores?.pronunciation_score &&
-                aiScores.pronunciation_score >= 80
-              ) {
-                strengths.push(t("gradingPage.messages.pronunciationClear"));
-              }
-              if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
-                strengths.push(t("gradingPage.messages.fluencyGood"));
-              }
-              if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
-                strengths.push(t("gradingPage.messages.accuracyHigh"));
-              }
-              if (
-                aiScores?.completeness_score &&
-                aiScores.completeness_score >= 80
-              ) {
-                strengths.push(t("gradingPage.messages.completenessGood"));
-              }
-
-              let feedback = "";
-              if (strengths.length > 0) {
-                feedback = `${t("gradingPage.messages.excellentPerformance")}${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
-              } else {
-                feedback = `${t("gradingPage.messages.goodPerformance")} (AI 評分: ${Math.round(aiScore)})`;
-              }
-
-              newFeedbacks[globalIndex] = {
-                feedback,
-                passed: true,
-              };
-              appliedCount++;
-            } else {
-              newFeedbacks[globalIndex] = {
-                feedback: t("gradingPage.messages.needsMorePractice"),
-                passed: false,
-              };
-              appliedCount++;
-            }
-          }
-          globalIndex++;
-        });
-      });
-    } else if (submission.submissions) {
-      // 處理沒有分組的情況
-      submission.submissions.forEach((item, index) => {
-        const aiScores = item.ai_scores;
-        const aiScore = aiScores?.overall_score;
-
-        if (aiScore !== undefined) {
-          // Accumulate scores for average calculation
-          if (aiScores?.pronunciation_score !== undefined) {
-            totalPronunciation += aiScores.pronunciation_score;
-            scoreCount++;
-          }
-          if (aiScores?.accuracy_score !== undefined) {
-            totalAccuracy += aiScores.accuracy_score;
-          }
-          if (aiScores?.fluency_score !== undefined) {
-            totalFluency += aiScores.fluency_score;
-          }
-          if (aiScores?.completeness_score !== undefined) {
-            totalCompleteness += aiScores.completeness_score;
-          }
-
-          if (aiScore >= 75) {
-            const strengths = [];
-            if (
-              aiScores?.pronunciation_score &&
-              aiScores.pronunciation_score >= 80
-            ) {
-              strengths.push(t("gradingPage.messages.pronunciationClear"));
-            }
-            if (aiScores?.fluency_score && aiScores.fluency_score >= 80) {
-              strengths.push(t("gradingPage.messages.fluencyGood"));
-            }
-            if (aiScores?.accuracy_score && aiScores.accuracy_score >= 80) {
-              strengths.push(t("gradingPage.messages.accuracyHigh"));
-            }
-            if (
-              aiScores?.completeness_score &&
-              aiScores.completeness_score >= 80
-            ) {
-              strengths.push(t("gradingPage.messages.completenessGood"));
-            }
-
-            let feedback = "";
-            if (strengths.length > 0) {
-              feedback = `${t("gradingPage.messages.excellentPerformance")}${strengths.join("、")}。(AI 評分: ${Math.round(aiScore)})`;
-            } else {
-              feedback = `${t("gradingPage.messages.goodPerformance")} (AI 評分: ${Math.round(aiScore)})`;
-            }
-
-            newFeedbacks[index] = {
-              feedback,
-              passed: true,
-            };
-            appliedCount++;
-          } else {
-            newFeedbacks[index] = {
-              feedback: t("gradingPage.messages.needsMorePractice"),
-              passed: false,
-            };
-            appliedCount++;
-          }
-        }
-      });
-    }
-
-    setItemFeedbacks(newFeedbacks);
-
-    // Calculate average score automatically
-    if (scoreCount > 0) {
-      const avgPronunciation = totalPronunciation / scoreCount;
-      const avgAccuracy = totalAccuracy / scoreCount;
-      const avgFluency = totalFluency / scoreCount;
-      const avgCompleteness = totalCompleteness / scoreCount;
-      const calculatedScore = Math.round(
-        (avgPronunciation + avgAccuracy + avgFluency + avgCompleteness) / 4,
+      const response = await apiClient.post<BatchGradingResponse>(
+        `/api/teachers/assignments/${assignmentId}/batch-grade`,
+        {
+          classroom_id: classroomId,
+          student_ids: [parseInt(studentId)],
+        },
       );
-      setScore(calculatedScore);
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      if (response.results.length === 0) {
+        toast.error(t("gradingPage.messages.noStudentToGrade"));
+        return;
+      }
+
+      // Get the result for current student
+      const result = response.results[0];
+
+      // Update score and feedback
+      setScore(Math.round(result.total_score));
+      setFeedback(result.feedback || "");
       setIsAutoCalculatedScore(true);
+
+      // Reload submission to get updated item feedbacks
+      await loadSubmission();
+
+      toast.success(t("gradingPage.messages.aiGradingComplete"));
+    } catch (error) {
+      console.error("AI grading failed:", error);
+      toast.error(t("gradingPage.messages.aiGradingFailed"));
     }
-
-    // 立即儲存 - 傳入最新的 feedbacks
-    await performAutoSave(newFeedbacks);
-
-    toast.success(
-      t("gradingPage.messages.aiApplied", { count: appliedCount }),
-      { duration: 3000 },
-    );
   };
 
   const handleCompleteGrading = async () => {
