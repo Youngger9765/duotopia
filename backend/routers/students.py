@@ -36,7 +36,7 @@ def get_score_with_fallback(
     field_name: str,
     json_key: str,
     db: Session,
-    ai_feedback_data: dict = None
+    ai_feedback_data: dict = None,
 ) -> float:
     """
     Get score from independent field or ai_feedback JSON with automatic backfill.
@@ -516,20 +516,32 @@ async def get_assignment_activities(
                                 # 核心分數從獨立欄位讀取（優化性能），自動 fallback 到 JSON 並回填
                                 item_data["ai_assessment"] = {
                                     "accuracy_score": get_score_with_fallback(
-                                        item_progress, "accuracy_score", "accuracy_score",
-                                        db, ai_feedback_data
+                                        item_progress,
+                                        "accuracy_score",
+                                        "accuracy_score",
+                                        db,
+                                        ai_feedback_data,
                                     ),
                                     "fluency_score": get_score_with_fallback(
-                                        item_progress, "fluency_score", "fluency_score",
-                                        db, ai_feedback_data
+                                        item_progress,
+                                        "fluency_score",
+                                        "fluency_score",
+                                        db,
+                                        ai_feedback_data,
                                     ),
                                     "pronunciation_score": get_score_with_fallback(
-                                        item_progress, "pronunciation_score", "pronunciation_score",
-                                        db, ai_feedback_data
+                                        item_progress,
+                                        "pronunciation_score",
+                                        "pronunciation_score",
+                                        db,
+                                        ai_feedback_data,
                                     ),
                                     "completeness_score": get_score_with_fallback(
-                                        item_progress, "completeness_score", "completeness_score",
-                                        db, ai_feedback_data
+                                        item_progress,
+                                        "completeness_score",
+                                        "completeness_score",
+                                        db,
+                                        ai_feedback_data,
                                     ),
                                     # 冷數據從 JSON 讀取
                                     "prosody_score": ai_feedback_data.get(

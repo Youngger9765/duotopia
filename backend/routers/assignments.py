@@ -43,7 +43,7 @@ def get_score_with_fallback(
     field_name: str,
     json_key: str,
     db: Session,
-    ai_feedback_data: dict = None
+    ai_feedback_data: dict = None,
 ) -> float:
     """
     Get score from independent field or ai_feedback JSON with automatic backfill.
@@ -2167,20 +2167,32 @@ async def get_student_submission(
 
                             # Get scores with fallback (also triggers backfill if needed)
                             accuracy = get_score_with_fallback(
-                                item_progress, "accuracy_score", "accuracy_score",
-                                db, ai_feedback_data
+                                item_progress,
+                                "accuracy_score",
+                                "accuracy_score",
+                                db,
+                                ai_feedback_data,
                             )
                             fluency = get_score_with_fallback(
-                                item_progress, "fluency_score", "fluency_score",
-                                db, ai_feedback_data
+                                item_progress,
+                                "fluency_score",
+                                "fluency_score",
+                                db,
+                                ai_feedback_data,
                             )
                             pronunciation = get_score_with_fallback(
-                                item_progress, "pronunciation_score", "pronunciation_score",
-                                db, ai_feedback_data
+                                item_progress,
+                                "pronunciation_score",
+                                "pronunciation_score",
+                                db,
+                                ai_feedback_data,
                             )
                             completeness = get_score_with_fallback(
-                                item_progress, "completeness_score", "completeness_score",
-                                db, ai_feedback_data
+                                item_progress,
+                                "completeness_score",
+                                "completeness_score",
+                                db,
+                                ai_feedback_data,
                             )
 
                             # Calculate overall score after potential backfill
@@ -2819,32 +2831,36 @@ async def batch_grade_assignment(
                 available_scores = []
 
                 pronunciation = get_score_with_fallback(
-                    item, "pronunciation_score", "pronunciation_score",
-                    db, ai_feedback_data
+                    item,
+                    "pronunciation_score",
+                    "pronunciation_score",
+                    db,
+                    ai_feedback_data,
                 )
                 if pronunciation > 0:
                     available_scores.append(pronunciation)
                     pronunciation_scores.append(pronunciation)
 
                 accuracy = get_score_with_fallback(
-                    item, "accuracy_score", "accuracy_score",
-                    db, ai_feedback_data
+                    item, "accuracy_score", "accuracy_score", db, ai_feedback_data
                 )
                 if accuracy > 0:
                     available_scores.append(accuracy)
                     accuracy_scores.append(accuracy)
 
                 fluency = get_score_with_fallback(
-                    item, "fluency_score", "fluency_score",
-                    db, ai_feedback_data
+                    item, "fluency_score", "fluency_score", db, ai_feedback_data
                 )
                 if fluency > 0:
                     available_scores.append(fluency)
                     fluency_scores.append(fluency)
 
                 completeness = get_score_with_fallback(
-                    item, "completeness_score", "completeness_score",
-                    db, ai_feedback_data
+                    item,
+                    "completeness_score",
+                    "completeness_score",
+                    db,
+                    ai_feedback_data,
                 )
                 if completeness > 0:
                     available_scores.append(completeness)

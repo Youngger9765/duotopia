@@ -1755,7 +1755,9 @@ export default function ClassroomDetail({
                                           }}
                                         >
                                           <Sparkles className="w-4 h-4 mr-1" />
-                                          {t("assignmentDetail.buttons.batchGrade")}
+                                          {t(
+                                            "assignmentDetail.buttons.batchGrade",
+                                          )}
                                         </Button>
                                       </div>
                                     </td>
@@ -2320,7 +2322,11 @@ export default function ClassroomDetail({
         assignmentId={batchGradingModal.assignmentId}
         classroomId={batchGradingModal.classroomId}
         onComplete={() => {
-          setBatchGradingModal({ open: false, assignmentId: 0, classroomId: 0 });
+          setBatchGradingModal({
+            open: false,
+            assignmentId: 0,
+            classroomId: 0,
+          });
           fetchAssignments();
         }}
       />
