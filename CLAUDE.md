@@ -102,23 +102,28 @@ Otherwise → Analyze context and choose
 
 ### @agent-cicd-monitor 🔍 **[AUTO-TRIGGERED AFTER PUSH]**
 **Auto-trigger**: Automatic after `git push` if PR exists
-- Real-time CI/CD pipeline monitoring
-- Polls checks every 30-60 seconds
-- Failure analysis with logs
-- Maximum 15-minute timeout
+- Token-efficient hybrid monitoring (background script + smart checkpoints)
+- Real-time progress in terminal (zero token cost)
+- Claude analyzes initial status and final results only (~5,000 tokens)
+- Maximum 15-minute monitoring with automatic timeout
 - User-interruptible
 
 **How It Works**:
-1. User runs `git push`
-2. Git post-push hook detects PR
-3. Hook echoes agent trigger message
-4. Claude Code CLI auto-invokes agent
-5. Agent monitors until complete
-6. Reports final results
+1. Post-push hook starts background monitoring script
+2. Claude checks initial status and estimates completion
+3. Background script polls GitHub every 45s (displays in terminal)
+4. When complete, script triggers Claude for final analysis
+5. Claude provides detailed results and failure debugging
+
+**Token Efficiency**:
+- Old approach: ~60,000 tokens (continuous polling)
+- New approach: ~5,000 tokens (90% reduction)
+- Background script handles polling (zero token cost)
 
 **Manual Usage**:
 ```bash
-@agent-cicd-monitor check PR #55
+@agent-cicd-monitor check PR #55           # Initial status
+@agent-cicd-monitor analyze-results PR #55 # Final analysis
 ```
 
 ### @agent-task-router
