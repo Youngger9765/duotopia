@@ -12,14 +12,15 @@ exclude =
     migrations,
     .pytest_cache,
     node_modules,
-    backend/scripts
+    backend/scripts,
+    backend/alembic/versions.backup
 
 # Per-file ignores for test files (業界最佳實踐)
 per-file-ignores =
-    # Test files often have unused imports for fixtures and test data setup
-    backend/tests/*/test_*.py: F401, F841
-    backend/tests/*/*/test_*.py: F401, F841
-    backend/tests/*/*/*/test_*.py: F401, F841
+    # Test files often have unused imports for fixtures and test data setup, and may have E402 for SQLite pragma setup
+    backend/tests/*/test_*.py: F401, F841, E402
+    backend/tests/*/*/test_*.py: F401, F841, E402
+    backend/tests/*/*/*/test_*.py: F401, F841, E402
     backend/scripts/test_*.py: F401
     # conftest.py imports fixtures that are auto-discovered by pytest
     backend/tests/conftest.py: E402
@@ -28,3 +29,8 @@ per-file-ignores =
     # Test files with specific issues
     backend/tests/integration/auth/test_auth_comprehensive.py: F401, F811
     backend/tests/integration/api/test_manual_grading.py: E501
+    # Test files with SQLite pragma setup (E402)
+    tests/integration/api/test_assignment_bulk_operations.py: E402
+    tests/integration/api/test_assignment_content_copy_mechanism.py: E402
+    tests/integration/api/test_assignment_permission_filtering.py: E402
+    tests/integration/api/test_student_assignment_end_to_end.py: E402

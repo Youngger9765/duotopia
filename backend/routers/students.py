@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
-from datetime import datetime, timedelta  # noqa: F401
+from datetime import datetime, timedelta, timezone  # noqa: F401
 from database import get_db
 from models import (
     Student,
@@ -164,9 +164,15 @@ async def get_student_assignments(
     student_id = current_user.get("sub")
 
     # Get assignments
+    # 🔥 Fix Issue #34: 只顯示已開始的作業（assigned_at <= 當前時間）
+    current_time = datetime.now(timezone.utc)
+
     assignments = (
         db.query(StudentAssignment)
-        .filter(StudentAssignment.student_id == int(student_id))
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.assigned_at <= current_time,  # 🔥 只顯示已開始的作業
+        )
         .order_by(
             StudentAssignment.due_date.desc()
             if StudentAssignment.due_date
@@ -264,6 +270,21 @@ async def get_assignment_activities(
                 .all()
             )
 
+            # 🔥 批次查詢所有 ContentItem (避免 N+1)
+            content_ids = [ac.content_id for ac in assignment_contents]
+            all_content_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id.in_(content_ids))
+                .order_by(ContentItem.content_id, ContentItem.order_index)
+                .all()
+            )
+            # 建立 content_id -> [items] 的索引
+            content_items_map = {}
+            for item in all_content_items:
+                if item.content_id not in content_items_map:
+                    content_items_map[item.content_id] = []
+                content_items_map[item.content_id].append(item)
+
             # 為每個 assignment_content 創建 StudentContentProgress
             for idx, ac in enumerate(assignment_contents):
                 progress = StudentContentProgress(
@@ -275,13 +296,8 @@ async def get_assignment_activities(
                 db.add(progress)
                 progress_records.append(progress)
 
-                # 同時創建 StudentItemProgress
-                content_items = (
-                    db.query(ContentItem)
-                    .filter(ContentItem.content_id == ac.content_id)
-                    .order_by(ContentItem.order_index)
-                    .all()
-                )
+                # 🔥 使用預載入的 ContentItem (避免 N+1)
+                content_items = content_items_map.get(ac.content_id, [])
 
                 for item in content_items:
                     item_progress = StudentItemProgress(

@@ -5,6 +5,9 @@ on:
     types: [closed]
   pull_request:
     types: [closed]
+  push:  # Explicitly ignore all push events
+    branches-ignore:
+      - '**'
 
 env:
   PROJECT_ID: duotopia-472708
@@ -83,19 +86,40 @@ jobs:
 
           echo "✅ Cleanup completed"
 
-      - name: Cleanup claude branch
+      - name: Cleanup all related branches
         run: |
           ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
 
-          echo "🗑️ Deleting claude branch for Issue #${ISSUE_NUM}..."
+          echo "🗑️ Deleting ALL branches related to Issue #${ISSUE_NUM}..."
 
-          # Check if the exact branch exists: claude/issue-XX
-          BRANCH="claude/issue-${ISSUE_NUM}"
-          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q "${BRANCH}"; then
-            echo "Found branch to delete: $BRANCH"
-            git push origin --delete "$BRANCH" && echo "✅ Claude branch cleaned up" || echo "⚠️ Failed to delete $BRANCH"
+          # Find all branches containing issue-XX pattern
+          # Match: issue-26, issue-26-, issue-26-anything
+          # This catches: fix/issue-26-desc, claude/issue-26-timestamp, feature/issue-26-test
+          BRANCHES=$(git ls-remote --heads origin | grep -E "issue-${ISSUE_NUM}([^0-9]|$)" | sed 's/.*refs\/heads\///' || true)
+          
+          if [ -z "$BRANCHES" ]; then
+            echo "ℹ️ No branches found for Issue #${ISSUE_NUM}"
           else
-            echo "ℹ️ No claude branch found for Issue #${ISSUE_NUM}"
+            echo "Found branches to delete:"
+            echo "$BRANCHES"
+            
+            # Delete each branch
+            DELETED=0
+            FAILED=0
+            while IFS= read -r branch; do
+              if [ -n "$branch" ]; then
+                echo "Deleting branch: $branch"
+                if git push origin --delete "$branch" 2>/dev/null; then
+                  echo "✅ Deleted: $branch"
+                  ((DELETED++))
+                else
+                  echo "⚠️ Failed to delete: $branch"
+                  ((FAILED++))
+                fi
+              fi
+            done <<< "$BRANCHES"
+            
+            echo "📊 Summary: Deleted $DELETED branch(es), Failed $FAILED"
           fi
 
       - name: Comment on issue
@@ -106,7 +130,14 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## 🧹 Per-Issue Test Environment Cleaned Up\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped'
+              body: `## 🧹 Per-Issue Test Environment Cleaned Up
+
+✅ Cloud Run services deleted
+✅ Container images cleaned
+✅ All related branches deleted (智能檢測 issue-${context.issue.number})
+💰 Billing stopped
+
+**Note**: All branches containing \`issue-${context.issue.number}\` pattern have been removed.`
             })
 
   cleanup-on-pr-merge:
@@ -174,20 +205,41 @@ jobs:
 
           echo "✅ Cleanup completed for Issue #${ISSUE_NUM}"
 
-      - name: Cleanup claude branch
+      - name: Cleanup all related branches
         if: steps.extract.outputs.issue_number != ''
         run: |
           ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
 
-          echo "🗑️ Deleting claude branch for Issue #${ISSUE_NUM}..."
+          echo "🗑️ Deleting ALL branches related to Issue #${ISSUE_NUM}..."
 
-          # Check if the exact branch exists: claude/issue-XX
-          BRANCH="claude/issue-${ISSUE_NUM}"
-          if git ls-remote --heads origin "refs/heads/${BRANCH}" | grep -q "${BRANCH}"; then
-            echo "Found branch to delete: $BRANCH"
-            git push origin --delete "$BRANCH" && echo "✅ Claude branch cleaned up" || echo "⚠️ Failed to delete $BRANCH"
+          # Find all branches containing issue-XX pattern
+          # Match: issue-26, issue-26-, issue-26-anything
+          # This catches: fix/issue-26-desc, claude/issue-26-timestamp, feature/issue-26-test
+          BRANCHES=$(git ls-remote --heads origin | grep -E "issue-${ISSUE_NUM}([^0-9]|$)" | sed 's/.*refs\/heads\///' || true)
+          
+          if [ -z "$BRANCHES" ]; then
+            echo "ℹ️ No branches found for Issue #${ISSUE_NUM}"
           else
-            echo "ℹ️ No claude branch found for Issue #${ISSUE_NUM}"
+            echo "Found branches to delete:"
+            echo "$BRANCHES"
+            
+            # Delete each branch
+            DELETED=0
+            FAILED=0
+            while IFS= read -r branch; do
+              if [ -n "$branch" ]; then
+                echo "Deleting branch: $branch"
+                if git push origin --delete "$branch" 2>/dev/null; then
+                  echo "✅ Deleted: $branch"
+                  ((DELETED++))
+                else
+                  echo "⚠️ Failed to delete: $branch"
+                  ((FAILED++))
+                fi
+              fi
+            done <<< "$BRANCHES"
+            
+            echo "📊 Summary: Deleted $DELETED branch(es), Failed $FAILED"
           fi
 
       - name: Comment on related issue
@@ -200,5 +252,14 @@ jobs:
               issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🧹 Per-Issue Test Environment Cleaned Up\n\nPR #${{ github.event.pull_request.number }} merged, cleaning up resources.\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped`
+              body: `## 🧹 Per-Issue Test Environment Cleaned Up
+
+PR #${{ github.event.pull_request.number }} merged, cleaning up resources.
+
+✅ Cloud Run services deleted
+✅ Container images cleaned
+✅ All related branches deleted (智能檢測 issue-${issueNumber})
+💰 Billing stopped
+
+**Note**: All branches containing \`issue-${issueNumber}\` pattern have been removed.`
             })
