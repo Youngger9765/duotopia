@@ -2951,12 +2951,21 @@ async def batch_grade_assignment(
     AI 批次批改作業
 
     批改流程：
-    1. 查找所有「已提交」或「已訂正」的學生
+    1. 查找需要批改的學生：
+       - 批次模式（未指定 student_ids 或多個學生）：僅處理「已提交」或「已訂正」狀態
+       - 單人模式（指定一個 student_id）：處理任何狀態（允許重新批改）
     2. 計算每個學生的分數：
        - 每題分數 = (總體發音 + 準確度 + 流暢度 + 完整度) / 4
        - 總分 = 所有題目平均分
        - 平均成績 = 各項目平均
     3. 更新作業狀態（已批改 或 已退回）
+
+    Modes:
+    - Batch mode (no student_ids or multiple IDs): Only processes SUBMITTED/RESUBMITTED students
+    - Single-student mode (one student_id): Processes ANY status (for manual re-grading)
+
+    The status filter is intentionally skipped in single-student mode to allow
+    teachers to re-grade or apply AI suggestions to any student at any time.
     """
     perf = PerformanceSnapshot(f"Batch_Grade_Assignment_{assignment_id}")
 
@@ -2982,29 +2991,48 @@ async def batch_grade_assignment(
             )
         perf.checkpoint("Permission Check")
 
-    # 2. 查找需要批改的學生（狀態為 SUBMITTED 或 RESUBMITTED）
+    # 2. 查找需要批改的學生
+    # 單人模式：不限狀態（允許重新批改）
+    # 批次模式：僅處理 SUBMITTED 或 RESUBMITTED
     with start_span("Query Students to Grade"):
+        # Build base query
         query = (
             db.query(StudentAssignment)
             .join(Student)
-            .filter(
+            .filter(StudentAssignment.assignment_id == assignment_id)
+        )
+
+        # Apply status filter based on mode
+        is_single_student_mode = request.student_ids and len(request.student_ids) == 1
+
+        if is_single_student_mode:
+            # Single-student mode: Allow grading ANY status
+            query = query.filter(Student.id.in_(request.student_ids))
+        elif request.student_ids:
+            # Multi-student mode with specific IDs: Filter by status + IDs
+            query = query.filter(
                 and_(
-                    StudentAssignment.assignment_id == assignment_id,
                     StudentAssignment.status.in_(
                         [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
                     ),
+                    Student.id.in_(request.student_ids),
                 )
             )
-        )
-
-        # Filter by specific students if provided
-        if request.student_ids:
-            query = query.filter(Student.id.in_(request.student_ids))
+        else:
+            # Batch mode (all students): Only SUBMITTED/RESUBMITTED
+            query = query.filter(
+                StudentAssignment.status.in_(
+                    [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
+                )
+            )
 
         student_assignments = query.options(
             selectinload(StudentAssignment.student)
         ).all()
-        perf.checkpoint(f"Found {len(student_assignments)} Students")
+        perf.checkpoint(
+            f"Found {len(student_assignments)} Students"
+            + (" (single-student mode)" if is_single_student_mode else "")
+        )
 
     # 3. Pre-load all StudentItemProgress records at once (fix N+1 query)
     with start_span("Pre-load Item Progress"):
