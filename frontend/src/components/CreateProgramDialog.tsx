@@ -377,7 +377,7 @@ export default function CreateProgramDialog({
         <DialogHeader>
           <DialogTitle>
             {t("dialogs.createProgramDialog.title", {
-              classroom: classroomName,
+              classroomName: classroomName,
             })}
           </DialogTitle>
           <DialogDescription>
