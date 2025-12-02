@@ -17,7 +17,7 @@ interface BatchGradingResult {
   student_id: number;
   student_name: string;
   total_score: number;
-  missing_items_count: number;
+  missing_items: number;
   avg_pronunciation: number;
   avg_accuracy: number;
   avg_fluency: number;
@@ -266,9 +266,9 @@ export default function BatchGradingModal({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm dark:text-gray-300">
-                          {result.missing_items_count > 0 ? (
+                          {result.missing_items > 0 ? (
                             <span className="text-red-600 dark:text-red-400 font-medium">
-                              {result.missing_items_count}
+                              {result.missing_items}
                             </span>
                           ) : (
                             <span className="text-green-600 dark:text-green-400">
