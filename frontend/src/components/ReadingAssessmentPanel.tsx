@@ -1278,11 +1278,12 @@ export default function ReadingAssessmentPanel({
         // 解析 ApiError 的結構化錯誤訊息
         if (error instanceof ApiError) {
           const detail = error.detail;
-          const errorMessage = typeof detail === 'object' && detail?.message
-            ? detail.message
-            : typeof detail === 'string'
-              ? detail
-              : null;
+          const errorMessage =
+            typeof detail === "object" && detail?.message
+              ? detail.message
+              : typeof detail === "string"
+                ? detail
+                : null;
           toast.error(errorMessage || "移除音檔失敗");
         } else {
           toast.error("移除音檔失敗");
@@ -1399,11 +1400,12 @@ export default function ReadingAssessmentPanel({
             // 解析 ApiError 的結構化錯誤訊息
             if (error instanceof ApiError) {
               const detail = error.detail;
-              const errorMessage = typeof detail === 'object' && detail?.message
-                ? detail.message
-                : typeof detail === 'string'
-                  ? detail
-                  : null;
+              const errorMessage =
+                typeof detail === "object" && detail?.message
+                  ? detail.message
+                  : typeof detail === "string"
+                    ? detail
+                    : null;
               toast.error(errorMessage || "更新失敗，但音檔已生成");
             } else {
               toast.error("更新失敗，但音檔已生成");
@@ -1519,11 +1521,12 @@ export default function ReadingAssessmentPanel({
             // 解析 ApiError 的結構化錯誤訊息
             if (error instanceof ApiError) {
               const detail = error.detail;
-              const errorMessage = typeof detail === 'object' && detail?.message
-                ? detail.message
-                : typeof detail === 'string'
-                  ? detail
-                  : null;
+              const errorMessage =
+                typeof detail === "object" && detail?.message
+                  ? detail.message
+                  : typeof detail === "string"
+                    ? detail
+                    : null;
               toast.error(errorMessage || "儲存失敗，但音檔已生成");
             } else {
               toast.error("儲存失敗，但音檔已生成");
@@ -2057,11 +2060,12 @@ export default function ReadingAssessmentPanel({
                   // 解析 ApiError 的結構化錯誤訊息
                   if (error instanceof ApiError) {
                     const detail = error.detail;
-                    const errorMessage = typeof detail === 'object' && detail?.message
-                      ? detail.message
-                      : typeof detail === 'string'
-                        ? detail
-                        : null;
+                    const errorMessage =
+                      typeof detail === "object" && detail?.message
+                        ? detail.message
+                        : typeof detail === "string"
+                          ? detail
+                          : null;
                     toast.error(errorMessage || "儲存失敗");
                   } else {
                     toast.error("儲存失敗");
@@ -2086,11 +2090,12 @@ export default function ReadingAssessmentPanel({
                   // 解析 ApiError 的結構化錯誤訊息
                   if (error instanceof ApiError) {
                     const detail = error.detail;
-                    const errorMessage = typeof detail === 'object' && detail?.message
-                      ? detail.message
-                      : typeof detail === 'string'
-                        ? detail
-                        : null;
+                    const errorMessage =
+                      typeof detail === "object" && detail?.message
+                        ? detail.message
+                        : typeof detail === "string"
+                          ? detail
+                          : null;
                     toast.error(errorMessage || "創建內容失敗");
                   } else {
                     toast.error("創建內容失敗");

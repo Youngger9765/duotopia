@@ -117,9 +117,10 @@ function RecursiveTreeNode({
     : null;
   // Get children and apply filter if defined in childConfig
   const rawChildren = config.childrenKey ? data[config.childrenKey] : null;
-  const children = rawChildren && config.childConfig?.filterChildren
-    ? rawChildren.filter(config.childConfig.filterChildren)
-    : rawChildren;
+  const children =
+    rawChildren && config.childConfig?.filterChildren
+      ? rawChildren.filter(config.childConfig.filterChildren)
+      : rawChildren;
 
   const accordionValue = `${level}-${itemId}`;
 

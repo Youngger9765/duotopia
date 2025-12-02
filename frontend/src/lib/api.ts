@@ -19,11 +19,12 @@ export class ApiError extends Error {
     public originalError?: unknown,
   ) {
     // Extract message for Error base class
-    const message = typeof detail === 'object' && detail?.message
-      ? detail.message
-      : typeof detail === 'string'
-        ? detail
-        : 'Unknown error';
+    const message =
+      typeof detail === "object" && detail?.message
+        ? detail.message
+        : typeof detail === "string"
+          ? detail
+          : "Unknown error";
     super(message);
     this.name = "ApiError";
 

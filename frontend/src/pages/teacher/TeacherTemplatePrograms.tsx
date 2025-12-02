@@ -214,12 +214,18 @@ export default function TeacherTemplateProgramsNew() {
     const contentType = content.type?.toLowerCase();
 
     // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-    if (contentType === "reading_assessment" || contentType === "example_sentences") {
+    if (
+      contentType === "reading_assessment" ||
+      contentType === "example_sentences"
+    ) {
       setSelectedContent(content);
       setEditorLessonId(content.lesson_id || null);
       setEditorContentId(content.id);
       setShowReadingEditor(true);
-    } else if (contentType === "sentence_making" || contentType === "vocabulary_set") {
+    } else if (
+      contentType === "sentence_making" ||
+      contentType === "vocabulary_set"
+    ) {
       // 編輯句子模組/單字集內容
       setSentenceMakingLessonId(content.lesson_id || null);
       setSentenceMakingContentId(content.id);

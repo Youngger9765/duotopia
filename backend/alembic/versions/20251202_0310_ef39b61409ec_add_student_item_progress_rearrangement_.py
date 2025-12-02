@@ -19,48 +19,60 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ef39b61409ec'
-down_revision: Union[str, None] = '3ee73ce1da44'
+revision: str = "ef39b61409ec"
+down_revision: Union[str, None] = "3ee73ce1da44"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # Add error_count: number of wrong selections
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS error_count INTEGER DEFAULT 0;
-    """)
+    """
+    )
 
     # Add correct_word_count: number of correctly selected words
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS correct_word_count INTEGER DEFAULT 0;
-    """)
+    """
+    )
 
     # Add retry_count: number of times student chose to retry
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
-    """)
+    """
+    )
 
     # Add expected_score: current expected score during answering
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS expected_score DECIMAL(5,2) DEFAULT 0;
-    """)
+    """
+    )
 
     # Add timeout_ended: whether the question ended due to timeout
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS timeout_ended BOOLEAN DEFAULT FALSE;
-    """)
+    """
+    )
 
     # Add rearrangement_data: JSON field to store word selection history
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE student_item_progress
         ADD COLUMN IF NOT EXISTS rearrangement_data JSONB DEFAULT NULL;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

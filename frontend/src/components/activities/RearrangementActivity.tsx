@@ -64,7 +64,9 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<RearrangementQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [questionStates, setQuestionStates] = useState<Map<number, QuestionState>>(new Map());
+  const [questionStates, setQuestionStates] = useState<
+    Map<number, QuestionState>
+  >(new Map());
   const [submitting, setSubmitting] = useState(false);
   const [scoreCategory, setScoreCategory] = useState<string>("writing");
   const [totalScore, setTotalScore] = useState(0);
@@ -204,7 +206,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     const currentQuestion = questions[currentQuestionIndex];
     const currentState = questionStates.get(currentQuestion.content_item_id);
 
-    if (!currentState || currentState.completed || currentState.challengeFailed || submitting) {
+    if (
+      !currentState ||
+      currentState.completed ||
+      currentState.challengeFailed ||
+      submitting
+    ) {
       return;
     }
 
@@ -278,7 +285,11 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       if (response.is_correct) {
         // 正確時不顯示 toast，用 UI 顯示
       } else {
-        toast.error(t("rearrangement.messages.incorrect", { correct: response.correct_word }));
+        toast.error(
+          t("rearrangement.messages.incorrect", {
+            correct: response.correct_word,
+          }),
+        );
       }
 
       // 檢查是否完成或失敗
@@ -288,7 +299,11 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         }
         setTotalScore((prev) => prev + response.expected_score);
         setCompletedQuestions((prev) => prev + 1);
-        toast.success(t("rearrangement.messages.questionComplete", { score: Math.round(response.expected_score) }));
+        toast.success(
+          t("rearrangement.messages.questionComplete", {
+            score: Math.round(response.expected_score),
+          }),
+        );
       } else if (response.challenge_failed) {
         if (timerRef.current) {
           clearInterval(timerRef.current);
@@ -359,10 +374,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       if (onComplete) {
         onComplete(totalScore, questions.length);
       }
-      toast.success(t("rearrangement.messages.allComplete", {
-        score: Math.round(totalScore),
-        total: questions.length * 100,
-      }));
+      toast.success(
+        t("rearrangement.messages.allComplete", {
+          score: Math.round(totalScore),
+          total: questions.length * 100,
+        }),
+      );
     }
   };
 
@@ -409,7 +426,10 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   }
 
   const isLowTime = currentState.timeRemaining <= 10;
-  const progressPercent = ((currentQuestionIndex + (currentState.completed ? 1 : 0)) / questions.length) * 100;
+  const progressPercent =
+    ((currentQuestionIndex + (currentState.completed ? 1 : 0)) /
+      questions.length) *
+    100;
 
   return (
     <div className="rearrangement-activity space-y-4">
@@ -422,18 +442,27 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
               total: questions.length,
             })}
           </Badge>
-          <Badge variant="secondary" className={cn(
-            scoreCategory === "listening" && "bg-purple-100 text-purple-800",
-            scoreCategory === "writing" && "bg-green-100 text-green-800",
-            scoreCategory === "speaking" && "bg-blue-100 text-blue-800",
-          )}>
-            {scoreCategory === "listening" && t("rearrangement.scoreCategories.listening")}
-            {scoreCategory === "writing" && t("rearrangement.scoreCategories.writing")}
-            {scoreCategory === "speaking" && t("rearrangement.scoreCategories.speaking")}
+          <Badge
+            variant="secondary"
+            className={cn(
+              scoreCategory === "listening" && "bg-purple-100 text-purple-800",
+              scoreCategory === "writing" && "bg-green-100 text-green-800",
+              scoreCategory === "speaking" && "bg-blue-100 text-blue-800",
+            )}
+          >
+            {scoreCategory === "listening" &&
+              t("rearrangement.scoreCategories.listening")}
+            {scoreCategory === "writing" &&
+              t("rearrangement.scoreCategories.writing")}
+            {scoreCategory === "speaking" &&
+              t("rearrangement.scoreCategories.speaking")}
           </Badge>
         </div>
         <div className="text-sm text-gray-600">
-          {t("rearrangement.totalScore")}: <span className="font-bold text-blue-600">{Math.round(totalScore)}</span>
+          {t("rearrangement.totalScore")}:{" "}
+          <span className="font-bold text-blue-600">
+            {Math.round(totalScore)}
+          </span>
         </div>
       </div>
 
@@ -444,14 +473,20 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
-              {t("rearrangement.questionTitle", { number: currentQuestionIndex + 1 })}
+              {t("rearrangement.questionTitle", {
+                number: currentQuestionIndex + 1,
+              })}
             </CardTitle>
             <div className="flex items-center gap-3">
               {/* 計時器 */}
-              <div className={cn(
-                "flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium",
-                isLowTime ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-100 text-gray-700"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium",
+                  isLowTime
+                    ? "bg-red-100 text-red-700 animate-pulse"
+                    : "bg-gray-100 text-gray-700",
+                )}
+              >
                 <Clock className="h-4 w-4" />
                 {formatTime(currentState.timeRemaining)}
               </div>
@@ -476,30 +511,39 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           {/* 翻譯提示（如果有且不是聽力模式） */}
           {currentQuestion.translation && !currentQuestion.play_audio && (
             <div className="p-3 bg-blue-50 rounded-lg text-blue-800 text-sm">
-              <span className="font-medium">{t("rearrangement.hint")}:</span> {currentQuestion.translation}
+              <span className="font-medium">{t("rearrangement.hint")}:</span>{" "}
+              {currentQuestion.translation}
             </div>
           )}
 
           {/* 錯誤計數 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {Array.from({ length: currentQuestion.max_errors }).map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "w-3 h-3 rounded-full",
-                    i < currentState.errorCount ? "bg-red-500" : "bg-gray-200"
-                  )}
-                />
-              ))}
+              {Array.from({ length: currentQuestion.max_errors }).map(
+                (_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      i < currentState.errorCount
+                        ? "bg-red-500"
+                        : "bg-gray-200",
+                    )}
+                  />
+                ),
+              )}
               <span className="text-sm text-gray-500 ml-2">
                 {t("rearrangement.errorsRemaining", {
-                  remaining: currentQuestion.max_errors - currentState.errorCount,
+                  remaining:
+                    currentQuestion.max_errors - currentState.errorCount,
                 })}
               </span>
             </div>
             <div className="text-sm">
-              {t("rearrangement.expectedScore")}: <span className="font-bold">{Math.round(currentState.expectedScore)}</span>
+              {t("rearrangement.expectedScore")}:{" "}
+              <span className="font-bold">
+                {Math.round(currentState.expectedScore)}
+              </span>
             </div>
           </div>
 
@@ -548,10 +592,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
 
           {/* 完成或失敗狀態 */}
           {(currentState.completed || currentState.challengeFailed) && (
-            <div className={cn(
-              "p-4 rounded-lg text-center",
-              currentState.completed ? "bg-green-50" : "bg-red-50"
-            )}>
+            <div
+              className={cn(
+                "p-4 rounded-lg text-center",
+                currentState.completed ? "bg-green-50" : "bg-red-50",
+              )}
+            >
               {currentState.completed ? (
                 <>
                   <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
@@ -559,7 +605,9 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                     {t("rearrangement.messages.correct")}
                   </p>
                   <p className="text-green-600">
-                    {t("rearrangement.messages.scoreEarned", { score: Math.round(currentState.expectedScore) })}
+                    {t("rearrangement.messages.scoreEarned", {
+                      score: Math.round(currentState.expectedScore),
+                    })}
                   </p>
                 </>
               ) : (

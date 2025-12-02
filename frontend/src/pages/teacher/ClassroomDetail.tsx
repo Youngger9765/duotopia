@@ -382,7 +382,10 @@ export default function ClassroomDetail({
 
     // For reading_assessment and example_sentences type, use side panel for viewing/editing
     // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-    if (contentType === "reading_assessment" || contentType === "example_sentences") {
+    if (
+      contentType === "reading_assessment" ||
+      contentType === "example_sentences"
+    ) {
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -516,12 +519,15 @@ export default function ClassroomDetail({
       // 解析 ApiError 的結構化錯誤訊息
       if (error instanceof ApiError) {
         const detail = error.detail;
-        const errorMessage = typeof detail === 'object' && detail?.message
-          ? detail.message
-          : typeof detail === 'string'
-            ? detail
-            : null;
-        toast.error(errorMessage || t("classroomDetail.messages.updateContentFailed"));
+        const errorMessage =
+          typeof detail === "object" && detail?.message
+            ? detail.message
+            : typeof detail === "string"
+              ? detail
+              : null;
+        toast.error(
+          errorMessage || t("classroomDetail.messages.updateContentFailed"),
+        );
       } else {
         toast.error(t("classroomDetail.messages.updateContentFailed"));
       }
@@ -1782,8 +1788,8 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {(selectedContent.type?.toLowerCase() === "reading_assessment" ||
-                  selectedContent.type?.toLowerCase() === "example_sentences") ? (
+                {selectedContent.type?.toLowerCase() === "reading_assessment" ||
+                selectedContent.type?.toLowerCase() === "example_sentences" ? (
                   /* ReadingAssessmentPanel has its own save button */
                   /* EXAMPLE_SENTENCES uses the same panel as READING_ASSESSMENT */
                   <ReadingAssessmentPanel
@@ -1798,8 +1804,8 @@ export default function ClassroomDetail({
                     }}
                     onSave={handleSaveContent}
                   />
-                ) : (selectedContent.type?.toLowerCase() === "sentence_making" ||
-                  selectedContent.type?.toLowerCase() === "vocabulary_set") ? (
+                ) : selectedContent.type?.toLowerCase() === "sentence_making" ||
+                  selectedContent.type?.toLowerCase() === "vocabulary_set" ? (
                   /* SentenceMakingPanel has its own save button */
                   <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}

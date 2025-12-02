@@ -2028,7 +2028,9 @@ async def get_rearrangement_questions(
 
     # 取得作業設定
     assignment = (
-        db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
+        db.query(Assignment)
+        .filter(Assignment.id == student_assignment.assignment_id)
+        .first()
     )
 
     if not assignment:
@@ -2161,14 +2163,20 @@ async def submit_rearrangement_answer(
         )
 
     # 記錄選擇歷史
-    selections = progress.rearrangement_data.get("selections", []) if progress.rearrangement_data else []
-    selections.append({
-        "position": current_position,
-        "selected": request.selected_word,
-        "correct": correct_word,
-        "is_correct": is_correct,
-        "timestamp": datetime.now().isoformat(),
-    })
+    selections = (
+        progress.rearrangement_data.get("selections", [])
+        if progress.rearrangement_data
+        else []
+    )
+    selections.append(
+        {
+            "position": current_position,
+            "selected": request.selected_word,
+            "correct": correct_word,
+            "is_correct": is_correct,
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
     progress.rearrangement_data = {"selections": selections}
 
     # 檢查是否達到錯誤上限
@@ -2180,9 +2188,11 @@ async def submit_rearrangement_answer(
     if completed:
         progress.status = "COMPLETED"
         # 確保保底分（完成作答最低分）
-        assignment = db.query(Assignment).filter(
-            Assignment.id == student_assignment.assignment_id
-        ).first()
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
         if assignment:
             # 取得總題數
             total_items = (
@@ -2193,7 +2203,9 @@ async def submit_rearrangement_answer(
                 .count()
             )
             min_score = math.floor(100 / total_items) if total_items > 0 else 1
-            progress.expected_score = max(float(progress.expected_score or 0), min_score)
+            progress.expected_score = max(
+                float(progress.expected_score or 0), min_score
+            )
 
     db.commit()
 

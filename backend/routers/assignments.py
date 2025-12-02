@@ -297,9 +297,7 @@ async def create_assignment(
             return "listening" if play_audio else "writing"
         return "speaking"  # 預設
 
-    score_category = determine_score_category(
-        request.practice_mode, request.play_audio
-    )
+    score_category = determine_score_category(request.practice_mode, request.play_audio)
 
     # 建立 Assignment 主表記錄
     assignment = Assignment(

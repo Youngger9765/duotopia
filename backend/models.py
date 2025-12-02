@@ -135,26 +135,28 @@ class ContentType(str, enum.Enum):
     EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"  # 例句集（原 READING_ASSESSMENT）
 
     # Phase 2 - 暫時禁用（UI 中不顯示）
-    VOCABULARY_SET = "VOCABULARY_SET"        # 單字集（原 SENTENCE_MAKING）
-    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"      # 單選題庫
+    VOCABULARY_SET = "VOCABULARY_SET"  # 單字集（原 SENTENCE_MAKING）
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"  # 單選題庫
     SCENARIO_DIALOGUE = "SCENARIO_DIALOGUE"  # 情境對話
 
     # Legacy values - 保留向後相容性（deprecated，新資料不應使用）
     READING_ASSESSMENT = "READING_ASSESSMENT"  # @deprecated: use EXAMPLE_SENTENCES
-    SENTENCE_MAKING = "SENTENCE_MAKING"        # @deprecated: use VOCABULARY_SET
+    SENTENCE_MAKING = "SENTENCE_MAKING"  # @deprecated: use VOCABULARY_SET
 
 
 class PracticeMode(str, enum.Enum):
     """作答模式（例句集專用）"""
-    READING = "reading"            # 例句朗讀 -> 口說分類
+
+    READING = "reading"  # 例句朗讀 -> 口說分類
     REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
 
 
 class ScoreCategory(str, enum.Enum):
     """分數記錄分類"""
-    SPEAKING = "speaking"    # 口說
+
+    SPEAKING = "speaking"  # 口說
     LISTENING = "listening"  # 聽力
-    WRITING = "writing"      # 寫作
+    WRITING = "writing"  # 寫作
 
 
 # ============ 使用者系統 ============

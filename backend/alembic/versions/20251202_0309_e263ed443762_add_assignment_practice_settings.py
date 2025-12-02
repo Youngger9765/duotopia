@@ -19,8 +19,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e263ed443762'
-down_revision: Union[str, None] = '8ccd904efbd3'
+revision: str = "e263ed443762"
+down_revision: Union[str, None] = "8ccd904efbd3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -30,40 +30,51 @@ def upgrade() -> None:
     # Using IF NOT EXISTS pattern for shared database environments
 
     # practice_mode: 'reading' (例句朗讀) / 'rearrangement' (例句重組)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS practice_mode VARCHAR(20) DEFAULT 'reading';
-    """)
+    """
+    )
 
     # time_limit_per_question: seconds per question (10/20/30/40)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS time_limit_per_question INTEGER DEFAULT 40;
-    """)
+    """
+    )
 
     # shuffle_questions: whether to shuffle question order
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS shuffle_questions BOOLEAN DEFAULT FALSE;
-    """)
+    """
+    )
 
     # play_audio: whether to play audio (for rearrangement mode)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS play_audio BOOLEAN DEFAULT FALSE;
-    """)
+    """
+    )
 
     # score_category: 'speaking' / 'listening' / 'writing'
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE assignments
         ADD COLUMN IF NOT EXISTS score_category VARCHAR(20) DEFAULT NULL;
-    """)
+    """
+    )
 
     # Set default score_category for existing assignments based on content type
     # Existing READING_ASSESSMENT assignments should be 'speaking'
     # Note: Only use existing enum values here (READING_ASSESSMENT)
     # New values (EXAMPLE_SENTENCES) will be handled in later migrations
-    op.execute("""
+    op.execute(
+        """
         UPDATE assignments a
         SET
             practice_mode = 'reading',
@@ -75,7 +86,8 @@ def upgrade() -> None:
             WHERE ac.assignment_id = a.id
             AND c.type = 'READING_ASSESSMENT'
         );
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

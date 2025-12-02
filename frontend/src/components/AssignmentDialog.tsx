@@ -81,14 +81,22 @@ interface AssignmentDialogProps {
 }
 
 // Content types to hide in Phase 1 (SENTENCE_MAKING is disabled)
-const HIDDEN_CONTENT_TYPES = ["SENTENCE_MAKING", "sentence_making", "VOCABULARY_SET", "vocabulary_set"];
+const HIDDEN_CONTENT_TYPES = [
+  "SENTENCE_MAKING",
+  "sentence_making",
+  "VOCABULARY_SET",
+  "vocabulary_set",
+];
 
 // Content type labels - using i18n
 // Map READING_ASSESSMENT and EXAMPLE_SENTENCES both to "例句集"
 const useContentTypeLabel = (type: string, t: (key: string) => string) => {
   // Normalize type for display - both READING_ASSESSMENT and EXAMPLE_SENTENCES show as "例句集"
   const normalizedType = type.toUpperCase();
-  if (normalizedType === "READING_ASSESSMENT" || normalizedType === "EXAMPLE_SENTENCES") {
+  if (
+    normalizedType === "READING_ASSESSMENT" ||
+    normalizedType === "EXAMPLE_SENTENCES"
+  ) {
     return t(`dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES`);
   }
   return t(`dialogs.assignmentDialog.contentTypes.${type}`) || type;
@@ -923,82 +931,88 @@ export function AssignmentDialog({
                                     lesson.contents && (
                                       <div className="ml-6 space-y-1 pb-2 bg-white">
                                         {lesson.contents
-                                          .filter((content) => !HIDDEN_CONTENT_TYPES.includes(content.type))
+                                          .filter(
+                                            (content) =>
+                                              !HIDDEN_CONTENT_TYPES.includes(
+                                                content.type,
+                                              ),
+                                          )
                                           .map((content) => {
-                                          const disabled =
-                                            isContentDisabled(content);
-                                          const selected = selectedContents.has(
-                                            content.id,
-                                          );
+                                            const disabled =
+                                              isContentDisabled(content);
+                                            const selected =
+                                              selectedContents.has(content.id);
 
-                                          return (
-                                            <button
-                                              key={content.id}
-                                              onClick={() =>
-                                                !disabled &&
-                                                toggleContent(content.id)
-                                              }
-                                              disabled={disabled}
-                                              className={cn(
-                                                "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
-                                                disabled
-                                                  ? "opacity-50 cursor-not-allowed bg-gray-100"
-                                                  : "hover:bg-gray-50 cursor-pointer",
-                                                selected &&
+                                            return (
+                                              <button
+                                                key={content.id}
+                                                onClick={() =>
                                                   !disabled &&
-                                                  "bg-blue-50 hover:bg-blue-100",
-                                              )}
-                                            >
-                                              {selected ? (
-                                                <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                              ) : (
-                                                <Circle
-                                                  className={cn(
-                                                    "h-4 w-4 flex-shrink-0",
-                                                    disabled
-                                                      ? "text-gray-300"
-                                                      : "text-gray-400",
-                                                  )}
-                                                />
-                                              )}
-                                              <div className="flex-1">
-                                                <div
-                                                  className={cn(
-                                                    "text-sm font-medium",
-                                                    disabled && "text-gray-400",
-                                                  )}
-                                                >
-                                                  {content.title}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                  <Badge
-                                                    variant="outline"
+                                                  toggleContent(content.id)
+                                                }
+                                                disabled={disabled}
+                                                className={cn(
+                                                  "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
+                                                  disabled
+                                                    ? "opacity-50 cursor-not-allowed bg-gray-100"
+                                                    : "hover:bg-gray-50 cursor-pointer",
+                                                  selected &&
+                                                    !disabled &&
+                                                    "bg-blue-50 hover:bg-blue-100",
+                                                )}
+                                              >
+                                                {selected ? (
+                                                  <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                                ) : (
+                                                  <Circle
                                                     className={cn(
-                                                      "px-1 py-0",
-                                                      disabled && "opacity-50",
+                                                      "h-4 w-4 flex-shrink-0",
+                                                      disabled
+                                                        ? "text-gray-300"
+                                                        : "text-gray-400",
+                                                    )}
+                                                  />
+                                                )}
+                                                <div className="flex-1">
+                                                  <div
+                                                    className={cn(
+                                                      "text-sm font-medium",
+                                                      disabled &&
+                                                        "text-gray-400",
                                                     )}
                                                   >
-                                                    {useContentTypeLabel(
-                                                      content.type,
-                                                      t,
-                                                    )}
-                                                  </Badge>
-                                                  {content.items_count && (
-                                                    <span
-                                                      className={
-                                                        disabled
-                                                          ? "text-gray-400"
-                                                          : ""
-                                                      }
+                                                    {content.title}
+                                                  </div>
+                                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <Badge
+                                                      variant="outline"
+                                                      className={cn(
+                                                        "px-1 py-0",
+                                                        disabled &&
+                                                          "opacity-50",
+                                                      )}
                                                     >
-                                                      {content.items_count} 題
-                                                    </span>
-                                                  )}
+                                                      {useContentTypeLabel(
+                                                        content.type,
+                                                        t,
+                                                      )}
+                                                    </Badge>
+                                                    {content.items_count && (
+                                                      <span
+                                                        className={
+                                                          disabled
+                                                            ? "text-gray-400"
+                                                            : ""
+                                                        }
+                                                      >
+                                                        {content.items_count} 題
+                                                      </span>
+                                                    )}
+                                                  </div>
                                                 </div>
-                                              </div>
-                                            </button>
-                                          );
-                                        })}
+                                              </button>
+                                            );
+                                          })}
                                       </div>
                                     )}
                                 </div>
@@ -1074,7 +1088,9 @@ export function AssignmentDialog({
                             {t("dialogs.assignmentDialog.practiceMode.reading")}
                           </div>
                           <div className="text-sm text-gray-500 mt-1">
-                            {t("dialogs.assignmentDialog.practiceMode.readingDesc")}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.readingDesc",
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1097,10 +1113,14 @@ export function AssignmentDialog({
                         <span className="text-4xl">🔀</span>
                         <div className="text-center">
                           <div className="font-semibold text-lg">
-                            {t("dialogs.assignmentDialog.practiceMode.rearrangement")}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.rearrangement",
+                            )}
                           </div>
                           <div className="text-sm text-gray-500 mt-1">
-                            {t("dialogs.assignmentDialog.practiceMode.rearrangementDesc")}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.rearrangementDesc",
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1110,7 +1130,9 @@ export function AssignmentDialog({
                   {/* 細節設定 */}
                   <Card className="p-4 border-gray-200">
                     <h4 className="text-sm font-medium mb-3 text-gray-700">
-                      {t("dialogs.assignmentDialog.practiceMode.advancedSettings")}
+                      {t(
+                        "dialogs.assignmentDialog.practiceMode.advancedSettings",
+                      )}
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       {/* 時間限制 */}
@@ -1123,22 +1145,41 @@ export function AssignmentDialog({
                           onChange={(e) =>
                             setFormData((prev) => ({
                               ...prev,
-                              time_limit_per_question: Number(e.target.value) as 10 | 20 | 30 | 40,
+                              time_limit_per_question: Number(
+                                e.target.value,
+                              ) as 10 | 20 | 30 | 40,
                             }))
                           }
                           className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
                         >
-                          <option value={10}>10 {t("dialogs.assignmentDialog.practiceMode.seconds")}</option>
-                          <option value={20}>20 {t("dialogs.assignmentDialog.practiceMode.seconds")}</option>
-                          <option value={30}>30 {t("dialogs.assignmentDialog.practiceMode.seconds")}</option>
-                          <option value={40}>40 {t("dialogs.assignmentDialog.practiceMode.seconds")} ({t("dialogs.assignmentDialog.practiceMode.default")})</option>
+                          <option value={10}>
+                            10{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={20}>
+                            20{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={30}>
+                            30{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={40}>
+                            40{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}{" "}
+                            (
+                            {t("dialogs.assignmentDialog.practiceMode.default")}
+                            )
+                          </option>
                         </select>
                       </div>
 
                       {/* 打亂順序 */}
                       <div className="space-y-1.5">
                         <Label className="text-xs text-gray-600">
-                          {t("dialogs.assignmentDialog.practiceMode.shuffleQuestions")}
+                          {t(
+                            "dialogs.assignmentDialog.practiceMode.shuffleQuestions",
+                          )}
                         </Label>
                         <div className="flex items-center h-9">
                           <input
@@ -1153,7 +1194,9 @@ export function AssignmentDialog({
                             className="h-4 w-4 rounded border-gray-300"
                           />
                           <span className="ml-2 text-sm text-gray-600">
-                            {t("dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc")}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc",
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1180,9 +1223,14 @@ export function AssignmentDialog({
                                 : "border-gray-200 hover:border-gray-300"
                             }`}
                           >
-                            🔊 {t("dialogs.assignmentDialog.practiceMode.playAudioYes")}
+                            🔊{" "}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.playAudioYes",
+                            )}
                             <span className="block text-xs text-gray-500 mt-0.5">
-                              {t("dialogs.assignmentDialog.practiceMode.scoreListening")}
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.scoreListening",
+                              )}
                             </span>
                           </button>
                           <button
@@ -1199,9 +1247,14 @@ export function AssignmentDialog({
                                 : "border-gray-200 hover:border-gray-300"
                             }`}
                           >
-                            🔇 {t("dialogs.assignmentDialog.practiceMode.playAudioNo")}
+                            🔇{" "}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.playAudioNo",
+                            )}
                             <span className="block text-xs text-gray-500 mt-0.5">
-                              {t("dialogs.assignmentDialog.practiceMode.scoreWriting")}
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.scoreWriting",
+                              )}
                             </span>
                           </button>
                         </div>
@@ -1211,7 +1264,10 @@ export function AssignmentDialog({
                     {/* 例句朗讀模式提示 */}
                     {formData.practice_mode === "reading" && (
                       <div className="mt-4 pt-4 border-t text-sm text-gray-500 bg-gray-50 p-3 rounded">
-                        ℹ️ {t("dialogs.assignmentDialog.practiceMode.scoreSpeaking")}
+                        ℹ️{" "}
+                        {t(
+                          "dialogs.assignmentDialog.practiceMode.scoreSpeaking",
+                        )}
                       </div>
                     )}
                   </Card>

@@ -3118,7 +3118,9 @@ async def preview_rearrangement_answer(
 
     # 取得內容項目
     content_item = (
-        db.query(ContentItem).filter(ContentItem.id == request.get("content_item_id")).first()
+        db.query(ContentItem)
+        .filter(ContentItem.id == request.get("content_item_id"))
+        .first()
     )
 
     if not content_item:
