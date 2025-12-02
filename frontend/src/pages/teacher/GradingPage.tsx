@@ -464,8 +464,8 @@ export default function GradingPage() {
       // Get the result for current student
       const result = response.results[0];
 
-      // Update score and feedback
-      setScore(Math.round(result.total_score));
+      // Update score and feedback (round to 1 decimal place)
+      setScore(Math.round(result.total_score * 10) / 10);
       setFeedback(result.feedback || "");
       setIsAutoCalculatedScore(true);
 
@@ -1435,8 +1435,8 @@ export default function GradingPage() {
                           if (score !== null) {
                             setScore(0);
                           }
-                        } else if (/^\d+$/.test(value)) {
-                          const numValue = parseInt(value);
+                        } else if (/^\d+(\.\d{0,1})?$/.test(value)) {
+                          const numValue = parseFloat(value);
                           if (numValue >= 0 && numValue <= 100) {
                             setScore(numValue);
                             setIsAutoCalculatedScore(false); // Reset flag when manually changed

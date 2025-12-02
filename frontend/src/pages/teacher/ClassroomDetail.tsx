@@ -1413,25 +1413,42 @@ export default function ClassroomDetail({
                                 key={assignment.id}
                                 className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3"
                               >
-                                {/* Title & Type */}
-                                <div className="flex items-start justify-between gap-3">
+                                {/* Title & AI Batch Grade Button */}
+                                <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {assignment.title}
                                     </h4>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">
-                                      {assignment.instructions ||
-                                        t(
-                                          "classroomDetail.labels.noDescription",
-                                        )}
-                                    </p>
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${typeInfo.color} mt-1`}
+                                    >
+                                      {typeInfo.label}
+                                    </span>
                                   </div>
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${typeInfo.color}`}
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                    onClick={() => {
+                                      setBatchGradingModal({
+                                        open: true,
+                                        assignmentId: assignment.id,
+                                        classroomId: Number(id),
+                                      });
+                                    }}
                                   >
-                                    {typeInfo.label}
-                                  </span>
+                                    <Sparkles className="w-5 h-5" />
+                                    <span className="text-sm font-medium">
+                                      {t("assignmentDetail.buttons.batchGrade")}
+                                    </span>
+                                  </Button>
                                 </div>
+
+                                {/* Description */}
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                  {assignment.instructions ||
+                                    t("classroomDetail.labels.noDescription")}
+                                </p>
 
                                 {/* Details Grid */}
                                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -1482,47 +1499,30 @@ export default function ClassroomDetail({
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                      onClick={() => {
-                                        navigate(
-                                          `/teacher/classroom/${id}/assignment/${assignment.id}`,
-                                        );
-                                      }}
-                                    >
-                                      {t("classroomDetail.buttons.viewDetails")}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                      onClick={() => {
-                                        navigate(
-                                          `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
-                                        );
-                                      }}
-                                    >
-                                      {t("classroomDetail.buttons.previewDemo")}
-                                    </Button>
-                                  </div>
+                                <div className="flex gap-2">
                                   <Button
-                                    variant="default"
+                                    variant="outline"
                                     size="sm"
-                                    className="bg-purple-600 hover:bg-purple-700 text-white h-12 min-h-12"
+                                    className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                     onClick={() => {
-                                      setBatchGradingModal({
-                                        open: true,
-                                        assignmentId: assignment.id,
-                                        classroomId: Number(id),
-                                      });
+                                      navigate(
+                                        `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                      );
                                     }}
                                   >
-                                    <Sparkles className="w-4 h-4 mr-2" />
-                                    {t("assignmentDetail.buttons.batchGrade")}
+                                    {t("classroomDetail.buttons.viewDetails")}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                    onClick={() => {
+                                      navigate(
+                                        `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
+                                      );
+                                    }}
+                                  >
+                                    {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
                                 </div>
                               </div>

@@ -8,9 +8,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Teacher's decision for each student
 type TeacherDecision = "RETURNED" | "GRADED" | null;
@@ -194,9 +196,9 @@ export default function BatchGradingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
+          <DialogTitle className="text-lg sm:text-xl font-bold">
             {t("batchGrading.title")}
           </DialogTitle>
         </DialogHeader>
@@ -204,9 +206,9 @@ export default function BatchGradingModal({
         <div className="space-y-4">
           {/* Progress Section */}
           {loading && progress && (
-            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              <span className="font-medium text-blue-900 dark:text-blue-300">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-blue-600 flex-shrink-0" />
+              <span className="font-medium text-sm sm:text-base text-blue-900 dark:text-blue-300">
                 {t("batchGrading.progress", {
                   current: progress.current,
                   total: progress.total,
@@ -218,63 +220,87 @@ export default function BatchGradingModal({
           {/* Results Section */}
           {results && (
             <>
-              {/* Select All Controls */}
-              <div className="flex gap-3 mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSelectAll("GRADED")}
-                >
-                  {t("batchGrading.selectAllGraded")}
-                </Button>
+              {/* Select All Controls - Responsive 2+1 Layout */}
+              <div className="mb-4">
+                {/* Mobile: 2+1 layout */}
+                <div className="flex flex-col gap-2 sm:hidden">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleSelectAll("GRADED")}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
+                    >
+                      完成批改
+                    </Button>
+                    <Button
+                      onClick={() => handleSelectAll("RETURNED")}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700"
+                    >
+                      退回訂正
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={() => handleSelectAll(null)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    清除所有選擇
+                  </Button>
+                </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSelectAll("RETURNED")}
-                >
-                  {t("batchGrading.selectAllReturned")}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSelectAll(null)}
-                >
-                  {t("batchGrading.clearAll")}
-                </Button>
+                {/* Tablet+: Three buttons in a row */}
+                <div className="hidden sm:flex gap-3">
+                  <Button
+                    onClick={() => handleSelectAll("GRADED")}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
+                  >
+                    全選：完成批改
+                  </Button>
+                  <Button
+                    onClick={() => handleSelectAll("RETURNED")}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700"
+                  >
+                    全選：退回訂正
+                  </Button>
+                  <Button
+                    onClick={() => handleSelectAll(null)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    清除所有選擇
+                  </Button>
+                </div>
               </div>
 
-              {/* Results Table */}
-              <div className="border dark:border-gray-700 rounded-lg overflow-x-auto">
+              {/* Desktop Table View (lg and above) */}
+              <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="px-3 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-4 py-4 text-left text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.studentName")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.pronunciation")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.accuracy")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.fluency")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.completeness")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.totalScore")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.missingItems")}
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-4 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.decision")}
                       </th>
-                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="px-3 py-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300">
                         {t("batchGrading.action")}
                       </th>
                     </tr>
@@ -285,32 +311,32 @@ export default function BatchGradingModal({
                         key={result.student_id}
                         className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                       >
-                        <td className="px-3 py-3 text-sm dark:text-gray-300">
+                        <td className="px-4 py-4 text-base font-medium dark:text-gray-300">
                           {result.student_name}
                         </td>
-                        <td className="px-2 py-3 text-center text-sm">
-                          <span className="text-blue-600 dark:text-blue-400">
+                        <td className="px-3 py-4 text-center">
+                          <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                             {result.avg_pronunciation.toFixed(0)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center text-sm">
-                          <span className="text-purple-600 dark:text-purple-400">
+                        <td className="px-3 py-4 text-center">
+                          <span className="text-lg font-semibold text-purple-600 dark:text-purple-400">
                             {result.avg_accuracy.toFixed(0)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center text-sm">
-                          <span className="text-teal-600 dark:text-teal-400">
+                        <td className="px-3 py-4 text-center">
+                          <span className="text-lg font-semibold text-teal-600 dark:text-teal-400">
                             {result.avg_fluency.toFixed(0)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center text-sm">
-                          <span className="text-indigo-600 dark:text-indigo-400">
+                        <td className="px-3 py-4 text-center">
+                          <span className="text-lg font-semibold text-indigo-600 dark:text-indigo-400">
                             {result.avg_completeness.toFixed(0)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center">
+                        <td className="px-3 py-4 text-center">
                           <span
-                            className={`font-bold ${
+                            className={`text-xl font-bold ${
                               result.total_score >= 80
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-red-600 dark:text-red-400"
@@ -319,85 +345,89 @@ export default function BatchGradingModal({
                             {result.total_score.toFixed(1)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center text-sm dark:text-gray-300">
+                        <td className="px-3 py-4 text-center">
                           {result.missing_items > 0 ? (
-                            <span className="text-red-600 dark:text-red-400 font-medium">
+                            <span className="text-lg font-semibold text-red-600 dark:text-red-400">
                               {result.missing_items}
                             </span>
                           ) : (
-                            <span className="text-green-600 dark:text-green-400">
+                            <span className="text-lg font-semibold text-green-600 dark:text-green-400">
                               0
                             </span>
                           )}
                         </td>
 
-                        {/* Radio Button Decision Column */}
-                        <td className="px-4 py-3">
+                        {/* Button Group Decision Column - Desktop */}
+                        <td className="px-4 py-4">
                           <div className="flex flex-col gap-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name={`decision-${result.student_id}`}
-                                value="GRADED"
-                                checked={
-                                  teacherDecisions[result.student_id] ===
-                                  "GRADED"
-                                }
-                                onChange={() =>
-                                  setTeacherDecisions((prev) => ({
-                                    ...prev,
-                                    [result.student_id]: "GRADED",
-                                  }))
-                                }
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm text-green-600 dark:text-green-400">
-                                ✓ {t("batchGrading.decisionGraded")}
-                              </span>
-                            </label>
+                            <Button
+                              variant={
+                                teacherDecisions[result.student_id] === "GRADED"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              className={cn(
+                                "justify-start text-sm font-medium w-full",
+                                teacherDecisions[result.student_id] ===
+                                  "GRADED" &&
+                                  "bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700",
+                              )}
+                              onClick={() =>
+                                setTeacherDecisions((prev) => ({
+                                  ...prev,
+                                  [result.student_id]: "GRADED",
+                                }))
+                              }
+                            >
+                              ✓ {t("batchGrading.decisionGraded")}
+                            </Button>
 
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name={`decision-${result.student_id}`}
-                                value="RETURNED"
-                                checked={
-                                  teacherDecisions[result.student_id] ===
-                                  "RETURNED"
-                                }
-                                onChange={() =>
-                                  setTeacherDecisions((prev) => ({
-                                    ...prev,
-                                    [result.student_id]: "RETURNED",
-                                  }))
-                                }
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm text-red-600 dark:text-red-400">
-                                ↩ {t("batchGrading.decisionReturned")}
-                              </span>
-                            </label>
+                            <Button
+                              variant={
+                                teacherDecisions[result.student_id] ===
+                                "RETURNED"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              className={cn(
+                                "justify-start text-sm font-medium w-full",
+                                teacherDecisions[result.student_id] ===
+                                  "RETURNED" &&
+                                  "bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700",
+                              )}
+                              onClick={() =>
+                                setTeacherDecisions((prev) => ({
+                                  ...prev,
+                                  [result.student_id]: "RETURNED",
+                                }))
+                              }
+                            >
+                              ↩ {t("batchGrading.decisionReturned")}
+                            </Button>
 
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name={`decision-${result.student_id}`}
-                                value=""
-                                checked={
-                                  teacherDecisions[result.student_id] === null
-                                }
-                                onChange={() =>
-                                  setTeacherDecisions((prev) => ({
-                                    ...prev,
-                                    [result.student_id]: null,
-                                  }))
-                                }
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
-                                ⏸ {t("batchGrading.decisionPending")}
-                              </span>
-                            </label>
+                            <Button
+                              variant={
+                                teacherDecisions[result.student_id] === null
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              className={cn(
+                                "justify-start text-sm font-medium w-full",
+                                teacherDecisions[result.student_id] === null &&
+                                  "bg-gray-600 hover:bg-gray-700 text-white dark:bg-gray-500 dark:hover:bg-gray-600",
+                              )}
+                              onClick={() =>
+                                setTeacherDecisions((prev) => ({
+                                  ...prev,
+                                  [result.student_id]: null,
+                                }))
+                              }
+                            >
+                              ⏸ {t("batchGrading.decisionPending")}
+                            </Button>
                           </div>
                         </td>
 
@@ -421,39 +451,196 @@ export default function BatchGradingModal({
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile/Tablet Card View (below lg) */}
+              <div className="lg:hidden space-y-3">
+                {results.map((result) => (
+                  <Card key={result.student_id} className="p-3 sm:p-4">
+                    {/* Student Name Header */}
+                    <div className="font-medium text-base sm:text-lg mb-3 pb-2 border-b dark:border-gray-700">
+                      {result.student_name}
+                    </div>
+
+                    {/* Score Grid - 2 columns on mobile */}
+                    <div className="grid grid-cols-2 gap-2 mb-3 text-xs sm:text-sm">
+                      <div className="flex justify-between items-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {t("batchGrading.pronunciation")}:
+                        </span>
+                        <span className="text-blue-600 dark:text-blue-400 font-medium">
+                          {result.avg_pronunciation.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {t("batchGrading.accuracy")}:
+                        </span>
+                        <span className="text-purple-600 dark:text-purple-400 font-medium">
+                          {result.avg_accuracy.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-teal-50 dark:bg-teal-900/20 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {t("batchGrading.fluency")}:
+                        </span>
+                        <span className="text-teal-600 dark:text-teal-400 font-medium">
+                          {result.avg_fluency.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {t("batchGrading.completeness")}:
+                        </span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                          {result.avg_completeness.toFixed(0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Total Score and Missing Items - Prominent Display */}
+                    <div className="flex justify-between items-center mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {t("batchGrading.totalScore")}:
+                        </span>
+                        <span
+                          className={`text-2xl font-bold ${
+                            result.total_score >= 80
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {result.total_score.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-gray-600 dark:text-gray-400 block">
+                          {t("batchGrading.missingItems")}
+                        </span>
+                        {result.missing_items > 0 ? (
+                          <span className="text-red-600 dark:text-red-400 font-bold text-lg">
+                            {result.missing_items}
+                          </span>
+                        ) : (
+                          <span className="text-green-600 dark:text-green-400 font-bold text-lg">
+                            0
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Decision and Submit Buttons - Two Row Layout */}
+                    {/* Row 1: Three decision buttons (simplified text) */}
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        variant={
+                          teacherDecisions[result.student_id] === "GRADED"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={cn(
+                          "flex-1 text-sm",
+                          teacherDecisions[result.student_id] === "GRADED" &&
+                            "bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 dark:text-white",
+                        )}
+                        onClick={() =>
+                          setTeacherDecisions((prev) => ({
+                            ...prev,
+                            [result.student_id]: "GRADED",
+                          }))
+                        }
+                      >
+                        完成批改
+                      </Button>
+                      <Button
+                        variant={
+                          teacherDecisions[result.student_id] === "RETURNED"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={cn(
+                          "flex-1 text-sm",
+                          teacherDecisions[result.student_id] === "RETURNED" &&
+                            "bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white",
+                        )}
+                        onClick={() =>
+                          setTeacherDecisions((prev) => ({
+                            ...prev,
+                            [result.student_id]: "RETURNED",
+                          }))
+                        }
+                      >
+                        退回訂正
+                      </Button>
+                      <Button
+                        variant={
+                          teacherDecisions[result.student_id] === null
+                            ? "default"
+                            : "outline"
+                        }
+                        className={cn(
+                          "flex-1 text-sm",
+                          teacherDecisions[result.student_id] === null &&
+                            "bg-gray-600 hover:bg-gray-700 text-white dark:bg-gray-500 dark:hover:bg-gray-600 dark:text-white",
+                        )}
+                        onClick={() =>
+                          setTeacherDecisions((prev) => ({
+                            ...prev,
+                            [result.student_id]: null,
+                          }))
+                        }
+                      >
+                        待定
+                      </Button>
+                    </div>
+
+                    {/* Row 2: Submit button (right-aligned) */}
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() =>
+                          handleSubmitSingleStudent(result.student_id)
+                        }
+                        disabled={
+                          !teacherDecisions[result.student_id] || isSubmitting
+                        }
+                        className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
+                      >
+                        送出
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </>
           )}
         </div>
 
-        <DialogFooter className="gap-2 mt-6">
-          <div className="flex w-full justify-end items-center">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                onClick={handleSubmitAll}
-                disabled={isSubmitting || loading}
-                className="min-w-[100px]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("batchGrading.processing")}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    {t("batchGrading.submitAll")}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+        <DialogFooter className="gap-2 mt-6 flex-col sm:flex-row">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto"
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            onClick={handleSubmitAll}
+            disabled={isSubmitting || loading}
+            className="w-full sm:w-auto min-w-[100px]"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("batchGrading.processing")}
+              </>
+            ) : (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {t("batchGrading.submitAll")}
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -508,7 +508,7 @@
       "title": "作業進度流程",
       "todo": "待完成",
       "submitted": "已提交",
-      "returned": "退回訂正",
+      "returned": "待訂正",
       "resubmitted": "已訂正",
       "graded": "已完成"
     },
@@ -517,7 +517,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
+      "returned": "待訂正",
       "resubmitted": "已訂正"
     },
     "progress": {
@@ -611,7 +611,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
+      "returned": "待訂正",
       "resubmitted": "已訂正"
     },
     "dueDate": {
@@ -929,7 +929,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回"
+      "returned": "待訂正"
     },
     "errors": {
       "loadAssignments": "無法載入作業列表",
@@ -2186,7 +2186,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改",
-      "returned": "已發還",
+      "returned": "待訂正",
       "resubmitted": "已訂正",
       "resubmittedShort": "已訂正",
       "notAssigned": "未指派"
@@ -2276,7 +2276,7 @@
     }
   },
   "batchGrading": {
-    "title": "AI 批次批改",
+    "title": "AI批改",
     "progress": "批改中... ({{current}}/{{total}} 位學生)",
     "studentName": "學生姓名",
     "accuracy": "準確度",
