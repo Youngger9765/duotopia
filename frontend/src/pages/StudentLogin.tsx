@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +57,7 @@ export default function StudentLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasAutoSubmitted = useRef(false);
 
   // Load teacher history from localStorage
   useEffect(() => {
@@ -66,17 +67,8 @@ export default function StudentLogin() {
     }
   }, []);
 
-  // Auto-validate teacher email from URL parameter
-  useEffect(() => {
-    if (urlTeacherEmail && step === 1) {
-      setTeacherEmail(urlTeacherEmail);
-      handleTeacherSubmit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlTeacherEmail]);
-
   // Step 1: Teacher selection
-  const handleTeacherSubmit = async () => {
+  const handleTeacherSubmit = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -112,7 +104,16 @@ export default function StudentLogin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherEmail, teacherHistory, t]);
+
+  // Auto-validate teacher email from URL parameter
+  useEffect(() => {
+    if (urlTeacherEmail && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      setTeacherEmail(urlTeacherEmail);
+      handleTeacherSubmit();
+    }
+  }, [urlTeacherEmail, handleTeacherSubmit]);
 
   // Step 2: Classroom selection
   const handleClassroomSelect = async (classroom: Classroom) => {
