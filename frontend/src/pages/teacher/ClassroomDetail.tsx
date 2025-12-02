@@ -20,6 +20,7 @@ import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
+import BatchGradingModal from "@/components/BatchGradingModal";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
@@ -34,6 +35,7 @@ import {
   Save,
   Mic,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -139,6 +141,11 @@ export default function ClassroomDetail({
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  const [batchGradingModal, setBatchGradingModal] = useState({
+    open: false,
+    assignmentId: 0,
+    classroomId: 0,
+  });
 
   useEffect(() => {
     if (id) {
@@ -1475,30 +1482,47 @@ export default function ClassroomDetail({
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex gap-2">
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                      onClick={() => {
+                                        navigate(
+                                          `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                        );
+                                      }}
+                                    >
+                                      {t("classroomDetail.buttons.viewDetails")}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                      onClick={() => {
+                                        navigate(
+                                          `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
+                                        );
+                                      }}
+                                    >
+                                      {t("classroomDetail.buttons.previewDemo")}
+                                    </Button>
+                                  </div>
                                   <Button
-                                    variant="outline"
+                                    variant="default"
                                     size="sm"
-                                    className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white h-12 min-h-12"
                                     onClick={() => {
-                                      navigate(
-                                        `/teacher/classroom/${id}/assignment/${assignment.id}`,
-                                      );
+                                      setBatchGradingModal({
+                                        open: true,
+                                        assignmentId: assignment.id,
+                                        classroomId: Number(id),
+                                      });
                                     }}
                                   >
-                                    {t("classroomDetail.buttons.viewDetails")}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1 h-12 min-h-12 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                    onClick={() => {
-                                      navigate(
-                                        `/teacher/classroom/${id}/assignment/${assignment.id}/preview`,
-                                      );
-                                    }}
-                                  >
-                                    {t("classroomDetail.buttons.previewDemo")}
+                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    {t("assignmentDetail.buttons.batchGrade")}
                                   </Button>
                                 </div>
                               </div>
@@ -1717,6 +1741,21 @@ export default function ClassroomDetail({
                                           {t(
                                             "classroomDetail.buttons.previewDemo",
                                           )}
+                                        </Button>
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                          onClick={() => {
+                                            setBatchGradingModal({
+                                              open: true,
+                                              assignmentId: assignment.id,
+                                              classroomId: Number(id),
+                                            });
+                                          }}
+                                        >
+                                          <Sparkles className="w-4 h-4 mr-1" />
+                                          {t("assignmentDetail.buttons.batchGrade")}
                                         </Button>
                                       </div>
                                     </td>
@@ -2271,6 +2310,20 @@ export default function ClassroomDetail({
           </div>
         </div>
       )}
+
+      {/* Batch Grading Modal */}
+      <BatchGradingModal
+        open={batchGradingModal.open}
+        onOpenChange={(open) =>
+          setBatchGradingModal({ ...batchGradingModal, open })
+        }
+        assignmentId={batchGradingModal.assignmentId}
+        classroomId={batchGradingModal.classroomId}
+        onComplete={() => {
+          setBatchGradingModal({ open: false, assignmentId: 0, classroomId: 0 });
+          fetchAssignments();
+        }}
+      />
     </TeacherLayout>
   );
 }

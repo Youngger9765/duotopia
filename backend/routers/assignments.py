@@ -4,6 +4,8 @@ Phase 1: 基礎指派功能
 """
 
 import logging
+import json
+from decimal import Decimal
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import datetime, timezone  # noqa: F401
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -34,6 +36,75 @@ from .auth import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/teachers", tags=["assignments"])
+
+
+def get_score_with_fallback(
+    item_progress,
+    field_name: str,
+    json_key: str,
+    db: Session,
+    ai_feedback_data: dict = None
+) -> float:
+    """
+    Get score from independent field or ai_feedback JSON with automatic backfill.
+
+    This handles migration from old data (scores in JSON) to new schema (independent fields).
+    If score is NULL in field but exists in JSON, it backfills the field on-the-fly.
+
+    Args:
+        item_progress: StudentItemProgress instance
+        field_name: Database field name (e.g., 'completeness_score')
+        json_key: JSON key in ai_feedback (e.g., 'completeness_score')
+        db: Database session for backfill commit
+        ai_feedback_data: Parsed ai_feedback dict (optimization to avoid re-parsing)
+
+    Returns:
+        float: Score value (0 if not found in either location)
+    """
+    score = getattr(item_progress, field_name)
+
+    # If field has value, return it
+    if score is not None:
+        return float(score)
+
+    # Field is NULL - try fallback to JSON
+    if not item_progress.ai_feedback:
+        return 0.0
+
+    # Parse JSON if not already provided
+    if ai_feedback_data is None:
+        try:
+            ai_feedback_data = (
+                json.loads(item_progress.ai_feedback)
+                if isinstance(item_progress.ai_feedback, str)
+                else item_progress.ai_feedback
+            )
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(
+                f"Failed to parse ai_feedback JSON for item_progress {item_progress.id}: {e}"
+            )
+            return 0.0
+
+    # Try to get score from JSON
+    json_score = ai_feedback_data.get(json_key)
+    if json_score is None:
+        return 0.0
+
+    # Found score in JSON - backfill the database field
+    try:
+        setattr(item_progress, field_name, Decimal(str(json_score)))
+        db.commit()
+        logger.info(
+            f"Backfilled {field_name}={json_score} for item_progress {item_progress.id} from ai_feedback JSON"
+        )
+        return float(json_score)
+    except Exception as e:
+        logger.error(
+            f"Failed to backfill {field_name} for item_progress {item_progress.id}: {e}"
+        )
+        db.rollback()
+        # Return the JSON value even if backfill failed
+        return float(json_score)
 
 
 # ============ Helper Functions (Mock implementations) ============
@@ -2080,13 +2151,8 @@ async def get_student_submission(
                         if item_progress.status == "SUBMITTED":
                             submission["status"] = "submitted"
 
-                        # 🔥 優化：核心分數從獨立欄位讀取（熱數據）
+                        # 🔥 優化：核心分數從獨立欄位讀取（熱數據），自動 fallback 到 JSON 並回填
                         if item_progress.has_ai_assessment:
-                            import json
-
-                            # 使用 overall_score property（自動從 4 個分數計算）
-                            overall = item_progress.overall_score
-
                             # 冷數據從 JSON 讀取
                             ai_feedback_data = {}
                             if item_progress.ai_feedback:
@@ -2099,20 +2165,33 @@ async def get_student_submission(
                                 except (json.JSONDecodeError, TypeError):
                                     ai_feedback_data = {}
 
+                            # Get scores with fallback (also triggers backfill if needed)
+                            accuracy = get_score_with_fallback(
+                                item_progress, "accuracy_score", "accuracy_score",
+                                db, ai_feedback_data
+                            )
+                            fluency = get_score_with_fallback(
+                                item_progress, "fluency_score", "fluency_score",
+                                db, ai_feedback_data
+                            )
+                            pronunciation = get_score_with_fallback(
+                                item_progress, "pronunciation_score", "pronunciation_score",
+                                db, ai_feedback_data
+                            )
+                            completeness = get_score_with_fallback(
+                                item_progress, "completeness_score", "completeness_score",
+                                db, ai_feedback_data
+                            )
+
+                            # Calculate overall score after potential backfill
+                            overall = item_progress.overall_score
+
                             submission["ai_scores"] = {
-                                # 核心分數從獨立欄位讀取（性能優化）
-                                "accuracy_score": float(
-                                    item_progress.accuracy_score or 0
-                                ),
-                                "fluency_score": float(
-                                    item_progress.fluency_score or 0
-                                ),
-                                "pronunciation_score": float(
-                                    item_progress.pronunciation_score or 0
-                                ),
-                                "completeness_score": float(
-                                    item_progress.completeness_score or 0
-                                ),
+                                # 核心分數從獨立欄位讀取（性能優化），自動 fallback 到 JSON 並回填
+                                "accuracy_score": accuracy,
+                                "fluency_score": fluency,
+                                "pronunciation_score": pronunciation,
+                                "completeness_score": completeness,
                                 "overall_score": float(overall) if overall else 0.0,
                                 # 冷數據從 JSON 讀取
                                 "word_details": ai_feedback_data.get(
@@ -2724,28 +2803,60 @@ async def batch_grade_assignment(
                     missing_count += 1
                     continue
 
-                # 收集有效分數
+                # Parse ai_feedback once for efficiency
+                ai_feedback_data = {}
+                if item.ai_feedback:
+                    try:
+                        ai_feedback_data = (
+                            json.loads(item.ai_feedback)
+                            if isinstance(item.ai_feedback, str)
+                            else item.ai_feedback
+                        )
+                    except (json.JSONDecodeError, TypeError):
+                        ai_feedback_data = {}
+
+                # 收集有效分數（使用 fallback + backfill）
                 available_scores = []
-                if item.pronunciation_score is not None:
-                    available_scores.append(float(item.pronunciation_score))
-                    pronunciation_scores.append(float(item.pronunciation_score))
-                if item.accuracy_score is not None:
-                    available_scores.append(float(item.accuracy_score))
-                    accuracy_scores.append(float(item.accuracy_score))
-                if item.fluency_score is not None:
-                    available_scores.append(float(item.fluency_score))
-                    fluency_scores.append(float(item.fluency_score))
-                if item.completeness_score is not None:
-                    available_scores.append(float(item.completeness_score))
-                    completeness_scores.append(float(item.completeness_score))
+
+                pronunciation = get_score_with_fallback(
+                    item, "pronunciation_score", "pronunciation_score",
+                    db, ai_feedback_data
+                )
+                if pronunciation > 0:
+                    available_scores.append(pronunciation)
+                    pronunciation_scores.append(pronunciation)
+
+                accuracy = get_score_with_fallback(
+                    item, "accuracy_score", "accuracy_score",
+                    db, ai_feedback_data
+                )
+                if accuracy > 0:
+                    available_scores.append(accuracy)
+                    accuracy_scores.append(accuracy)
+
+                fluency = get_score_with_fallback(
+                    item, "fluency_score", "fluency_score",
+                    db, ai_feedback_data
+                )
+                if fluency > 0:
+                    available_scores.append(fluency)
+                    fluency_scores.append(fluency)
+
+                completeness = get_score_with_fallback(
+                    item, "completeness_score", "completeness_score",
+                    db, ai_feedback_data
+                )
+                if completeness > 0:
+                    available_scores.append(completeness)
+                    completeness_scores.append(completeness)
 
                 # 計算該題分數（4 項平均）
                 if available_scores:
                     item_score = sum(available_scores) / len(available_scores)
                     item_scores.append(item_score)
                 else:
+                    # 有錄音和 AI 評分但分數為 0 - 不算缺題，只是得分低
                     item_scores.append(0)
-                    missing_count += 1
 
             # 6. 計算總分和平均分
             total_score = sum(item_scores) / len(item_scores) if item_scores else 0.0

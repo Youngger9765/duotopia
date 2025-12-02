@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta, timezone  # noqa: F401
+from decimal import Decimal
+import json
+import logging
 from database import get_db
 from models import (
     Student,
@@ -24,7 +27,77 @@ from auth import (
     validate_password_strength,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/students", tags=["students"])
+
+
+def get_score_with_fallback(
+    item_progress,
+    field_name: str,
+    json_key: str,
+    db: Session,
+    ai_feedback_data: dict = None
+) -> float:
+    """
+    Get score from independent field or ai_feedback JSON with automatic backfill.
+
+    This handles migration from old data (scores in JSON) to new schema (independent fields).
+    If score is NULL in field but exists in JSON, it backfills the field on-the-fly.
+
+    Args:
+        item_progress: StudentItemProgress instance
+        field_name: Database field name (e.g., 'completeness_score')
+        json_key: JSON key in ai_feedback (e.g., 'completeness_score')
+        db: Database session for backfill commit
+        ai_feedback_data: Parsed ai_feedback dict (optimization to avoid re-parsing)
+
+    Returns:
+        float: Score value (0 if not found in either location)
+    """
+    score = getattr(item_progress, field_name)
+
+    # If field has value, return it
+    if score is not None:
+        return float(score)
+
+    # Field is NULL - try fallback to JSON
+    if not item_progress.ai_feedback:
+        return 0.0
+
+    # Parse JSON if not already provided
+    if ai_feedback_data is None:
+        try:
+            ai_feedback_data = (
+                json.loads(item_progress.ai_feedback)
+                if isinstance(item_progress.ai_feedback, str)
+                else item_progress.ai_feedback
+            )
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(
+                f"Failed to parse ai_feedback JSON for item_progress {item_progress.id}: {e}"
+            )
+            return 0.0
+
+    # Try to get score from JSON
+    json_score = ai_feedback_data.get(json_key)
+    if json_score is None:
+        return 0.0
+
+    # Found score in JSON - backfill the database field
+    try:
+        setattr(item_progress, field_name, Decimal(str(json_score)))
+        db.commit()
+        logger.info(
+            f"Backfilled {field_name}={json_score} for item_progress {item_progress.id} from ai_feedback JSON"
+        )
+        return float(json_score)
+    except Exception as e:
+        logger.error(
+            f"Failed to backfill {field_name} for item_progress {item_progress.id}: {e}"
+        )
+        db.rollback()
+        # Return the JSON value even if backfill failed
+        return float(json_score)
 
 
 class StudentValidateRequest(BaseModel):
@@ -426,8 +499,7 @@ async def get_assignment_activities(
 
                             if item_progress.has_ai_assessment:
                                 # 🔥 優化：核心分數從獨立欄位讀取（熱數據），冷數據從 JSON 讀取
-                                import json
-
+                                # Parse ai_feedback JSON once for efficiency
                                 ai_feedback_data = {}
                                 if item_progress.ai_feedback:
                                     try:
@@ -441,19 +513,23 @@ async def get_assignment_activities(
                                     except (json.JSONDecodeError, TypeError):
                                         ai_feedback_data = {}
 
-                                # 核心分數從獨立欄位讀取（優化性能）
+                                # 核心分數從獨立欄位讀取（優化性能），自動 fallback 到 JSON 並回填
                                 item_data["ai_assessment"] = {
-                                    "accuracy_score": float(
-                                        item_progress.accuracy_score or 0
+                                    "accuracy_score": get_score_with_fallback(
+                                        item_progress, "accuracy_score", "accuracy_score",
+                                        db, ai_feedback_data
                                     ),
-                                    "fluency_score": float(
-                                        item_progress.fluency_score or 0
+                                    "fluency_score": get_score_with_fallback(
+                                        item_progress, "fluency_score", "fluency_score",
+                                        db, ai_feedback_data
                                     ),
-                                    "pronunciation_score": float(
-                                        item_progress.pronunciation_score or 0
+                                    "pronunciation_score": get_score_with_fallback(
+                                        item_progress, "pronunciation_score", "pronunciation_score",
+                                        db, ai_feedback_data
                                     ),
-                                    "completeness_score": float(
-                                        item_progress.completeness_score or 0
+                                    "completeness_score": get_score_with_fallback(
+                                        item_progress, "completeness_score", "completeness_score",
+                                        db, ai_feedback_data
                                     ),
                                     # 冷數據從 JSON 讀取
                                     "prosody_score": ai_feedback_data.get(
