@@ -209,7 +209,7 @@ describe("🚀 Comprehensive API Testing Framework", () => {
     it("should create content successfully", async () => {
       const mockContent = {
         id: 1,
-        type: "reading_assessment",
+        type: "EXAMPLE_SENTENCES",
         title: "朗讀錄音練習",
         lesson_id: 1,
       };
@@ -220,13 +220,13 @@ describe("🚀 Comprehensive API Testing Framework", () => {
       });
 
       const result = await apiClient.createContent(1, {
-        type: "reading_assessment",
+        type: "EXAMPLE_SENTENCES",
         title: "朗讀錄音練習",
         items: [],
       });
 
       expect((result as any).id).toBe(1);
-      expect((result as any).type).toBe("reading_assessment");
+      expect((result as any).type).toBe("EXAMPLE_SENTENCES");
       expect((result as any).lesson_id).toBe(1);
     });
   });
@@ -274,11 +274,11 @@ describe("🚀 Comprehensive API Testing Framework", () => {
 
       // Validate content creation payload
       const contentPayload = {
-        type: "reading_assessment",
+        type: "EXAMPLE_SENTENCES",
         title: "測試內容",
         items: [],
       };
-      expect(["reading_assessment", "writing_task", "quiz"]).toContain(
+      expect(["EXAMPLE_SENTENCES", "writing_task", "quiz"]).toContain(
         contentPayload.type,
       );
       expect(Array.isArray(contentPayload.items)).toBe(true);

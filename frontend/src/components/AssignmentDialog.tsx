@@ -80,7 +80,7 @@ interface AssignmentDialogProps {
   onSuccess?: () => void;
 }
 
-// Content types to hide in Phase 1 (SENTENCE_MAKING is disabled)
+// Content types to hide in Phase 1 (SENTENCE_MAKING/VOCABULARY_SET is disabled)
 const HIDDEN_CONTENT_TYPES = [
   "SENTENCE_MAKING",
   "sentence_making",
@@ -88,16 +88,32 @@ const HIDDEN_CONTENT_TYPES = [
   "vocabulary_set",
 ];
 
+// =============================================================================
+// Content Type Compatibility Helpers
+// =============================================================================
+// 處理新舊 ContentType 的相容性：
+// - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+// - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+const isExampleSentencesType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalizedType);
+};
+
+const isVocabularySetType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalizedType);
+};
+
 // Content type labels - using i18n
 // Map READING_ASSESSMENT and EXAMPLE_SENTENCES both to "例句集"
 const useContentTypeLabel = (type: string, t: (key: string) => string) => {
   // Normalize type for display - both READING_ASSESSMENT and EXAMPLE_SENTENCES show as "例句集"
-  const normalizedType = type.toUpperCase();
-  if (
-    normalizedType === "READING_ASSESSMENT" ||
-    normalizedType === "EXAMPLE_SENTENCES"
-  ) {
+  if (isExampleSentencesType(type)) {
     return t(`dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES`);
+  }
+  if (isVocabularySetType(type)) {
+    return t(`dialogs.assignmentDialog.contentTypes.VOCABULARY_SET`);
   }
   return t(`dialogs.assignmentDialog.contentTypes.${type}`) || type;
 };
@@ -365,10 +381,7 @@ export function AssignmentDialog({
   const handleAnswerModeChange = (mode: "listening" | "writing") => {
     // Only check audio for listening mode in sentence_making
     const selectedType = getSelectedContentType();
-    if (
-      mode === "listening" &&
-      (selectedType === "sentence_making" || selectedType === "SENTENCE_MAKING")
-    ) {
+    if (mode === "listening" && isVocabularySetType(selectedType || "")) {
       const hasAudio = checkAllContentsHaveAudio();
       if (!hasAudio) {
         toast.error("所選內容缺少音檔，請先在內容管理中為所有項目添加音檔");
@@ -1554,8 +1567,7 @@ export function AssignmentDialog({
                           </span>
                         </div>
                       )}
-                      {(getSelectedContentType() === "sentence_making" ||
-                        getSelectedContentType() === "SENTENCE_MAKING") && (
+                      {isVocabularySetType(getSelectedContentType() || "") && (
                         <div className="mt-2 pt-2 border-t border-blue-200">
                           <div className="text-xs font-medium text-blue-900 mb-2">
                             答題模式：

@@ -189,7 +189,7 @@ export default function TeacherAssignmentDetailPage() {
         id: Number(assignmentId),
         title: "作業標題",
         instructions: "作業說明",
-        content_type: "READING_ASSESSMENT",
+        content_type: "EXAMPLE_SENTENCES",
         content_id: 1,
         due_date: "2025-09-30",
         assigned_at: new Date().toISOString(),

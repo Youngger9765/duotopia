@@ -190,6 +190,53 @@ def upgrade() -> None:
 
 ---
 
+## 📝 Content Type 命名規範
+
+### 標準命名（必須使用大寫）
+
+| Content Type | 中文名稱 | 說明 |
+|--------------|----------|------|
+| `EXAMPLE_SENTENCES` | 例句集 | 聽音檔重組句子練習 |
+| `VOCABULARY_SET` | 單字集 | 看單字造句練習 |
+| `MULTIPLE_CHOICE` | 選擇題 | 單選題庫（未來） |
+| `SCENARIO_DIALOGUE` | 情境對話 | 情境對話練習（未來） |
+
+### ⚠️ 命名規則
+
+1. **一律使用全大寫**：`EXAMPLE_SENTENCES` ✅，`example_sentences` ❌
+2. **不要使用舊名稱**：
+   - ❌ `READING_ASSESSMENT` → ✅ `EXAMPLE_SENTENCES`
+   - ❌ `SENTENCE_MAKING` → ✅ `VOCABULARY_SET`
+3. **資料庫已統一為新名稱**，程式碼中不應再使用舊名稱建立新資料
+
+### 範例
+
+```python
+# ✅ 正確
+content = Content(type=ContentType.EXAMPLE_SENTENCES, ...)
+
+# ❌ 錯誤 - 不要使用舊名稱
+content = Content(type=ContentType.READING_ASSESSMENT, ...)
+```
+
+```typescript
+// ✅ 正確
+const contentType = "EXAMPLE_SENTENCES";
+
+// ❌ 錯誤 - 不要使用小寫或舊名稱
+const contentType = "reading_assessment";
+```
+
+### 向後相容
+
+後端的 `normalize_content_type()` 函數會自動將舊名稱轉換為新名稱：
+- `READING_ASSESSMENT` → `EXAMPLE_SENTENCES`
+- `SENTENCE_MAKING` → `VOCABULARY_SET`
+
+但**新程式碼**應該直接使用新名稱。
+
+---
+
 ## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
 
 ### Issue 的内容（给案主看）

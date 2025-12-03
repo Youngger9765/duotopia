@@ -2224,7 +2224,7 @@ async def create_content(
         content_type = ContentType.EXAMPLE_SENTENCES
 
     # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
-    if content_type in [ContentType.EXAMPLE_SENTENCES, ContentType.READING_ASSESSMENT]:
+    if content_type == ContentType.EXAMPLE_SENTENCES:
         invalid_items = []
         validation_details = []
         for idx, item_data in enumerate(content_data.items):
@@ -2412,11 +2412,8 @@ async def update_content(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    # 驗證句子長度（僅對 EXAMPLE_SENTENCES 和 READING_ASSESSMENT 類型）
-    if update_data.items is not None and content.type in [
-        ContentType.EXAMPLE_SENTENCES,
-        ContentType.READING_ASSESSMENT,
-    ]:
+    # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
+    if update_data.items is not None and content.type == ContentType.EXAMPLE_SENTENCES:
         invalid_items = []
         validation_details = []
         for idx, item_data in enumerate(update_data.items):
@@ -2981,7 +2978,7 @@ async def get_assignment_preview(
             activity_data["item_count"] = len(items_data)
 
             # 額外欄位（根據 content type）
-            if content.type == ContentType.READING_ASSESSMENT:
+            if content.type == ContentType.EXAMPLE_SENTENCES:
                 activity_data["target_wpm"] = content.target_wpm
                 activity_data["target_accuracy"] = content.target_accuracy
 

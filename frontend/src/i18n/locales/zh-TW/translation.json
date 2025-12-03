@@ -36,10 +36,13 @@
     "questionTitle": "第 {{number}} 題",
     "hint": "提示",
     "playAudio": "播放音檔",
+    "audioDisabledCompleted": "此題已完成，無法播放音檔",
+    "audioPrompt": "點擊播放音檔開始作答",
     "totalScore": "目前總分",
     "expectedScore": "預期得分",
     "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",
     "selectWordsHint": "請依序點選下方單字組成正確句子",
+    "jumpToQuestion": "跳至第 {{number}} 題",
     "scoreCategories": {
       "listening": "聽力",
       "writing": "寫作",
@@ -2312,8 +2315,11 @@
       "SPEAKING_PRACTICE": "口說練習",
       "SPEAKING_SCENARIO": "情境對話",
       "LISTENING_CLOZE": "聽力填空",
-      "SENTENCE_MAKING": "造句練習",
-      "SPEAKING_QUIZ": "口說測驗"
+      "SENTENCE_MAKING": "單字集",
+      "VOCABULARY_SET": "單字集",
+      "SPEAKING_QUIZ": "口說測驗",
+      "MULTIPLE_CHOICE": "選擇題",
+      "SCENARIO_DIALOGUE": "情境對話"
     }
   },
   "previewPage": {

@@ -692,7 +692,7 @@ class Content(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-    type = Column(Enum(ContentType), default=ContentType.READING_ASSESSMENT)
+    type = Column(Enum(ContentType), default=ContentType.EXAMPLE_SENTENCES)
     title = Column(String(200), nullable=False)
     order_index = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)  # 軟刪除標記

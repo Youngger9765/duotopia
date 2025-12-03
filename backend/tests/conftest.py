@@ -258,7 +258,7 @@ def test_assignment(db_session, demo_teacher, test_classroom):
     for i in range(3):
         content = Content(
             lesson_id=lesson.id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title=f"Test Content {i+1}",
         )
         db_session.add(content)
@@ -348,7 +348,7 @@ def test_student_assignment(db_session, demo_teacher, demo_student, test_classro
     for i in range(5):
         content = Content(
             lesson_id=lesson.id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title=f"Content {i+1}",
         )
         db_session.add(content)
@@ -460,7 +460,7 @@ def test_student_assignment_many_items(
     for i in range(15):
         content = Content(
             lesson_id=lesson.id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title=f"Content {i+1}",
         )
         db_session.add(content)

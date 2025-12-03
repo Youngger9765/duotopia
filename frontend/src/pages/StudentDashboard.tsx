@@ -78,7 +78,7 @@ export default function StudentDashboard() {
           title: "Unit 1: Greetings 問候語練習",
           content_id: 1,
           content: {
-            type: "reading_assessment",
+            type: "EXAMPLE_SENTENCES",
             title: "Greetings",
           },
           status: "NOT_STARTED",
@@ -90,7 +90,7 @@ export default function StudentDashboard() {
           title: "Unit 2: Numbers 數字練習",
           content_id: 2,
           content: {
-            type: "reading_assessment",
+            type: "EXAMPLE_SENTENCES",
             title: "Numbers",
           },
           status: "NOT_STARTED",
@@ -499,7 +499,7 @@ export default function StudentDashboard() {
                         {assignment.content && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             (
-                            {assignment.content.type === "reading_assessment"
+                            {assignment.content.type === "EXAMPLE_SENTENCES"
                               ? t(
                                   "studentDashboard.assignments.readingAssessment",
                                 )

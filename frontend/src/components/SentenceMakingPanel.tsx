@@ -2059,7 +2059,7 @@ export default function SentenceMakingPanel({
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
         await apiClient.createContent(lessonId, {
-          type: "SENTENCE_MAKING",
+          type: "VOCABULARY_SET",
           ...saveData,
         });
         toast.success(`已新增 ${lines.length} 個項目並創建內容`);
@@ -2487,7 +2487,7 @@ export default function SentenceMakingPanel({
                 // 創建模式：新增內容
                 try {
                   const newContent = await apiClient.createContent(lessonId, {
-                    type: "SENTENCE_MAKING",
+                    type: "VOCABULARY_SET",
                     ...saveData,
                   });
                   toast.success("內容已成功創建");

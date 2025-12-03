@@ -1778,7 +1778,7 @@ export default function ReadingAssessmentPanel({
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
         await apiClient.createContent(lessonId, {
-          type: "reading_assessment",
+          type: "EXAMPLE_SENTENCES",
           ...saveData,
         });
         toast.success(`已新增 ${lines.length} 個項目並創建內容`);
@@ -2075,7 +2075,7 @@ export default function ReadingAssessmentPanel({
                 // 創建模式：新增內容
                 try {
                   const newContent = await apiClient.createContent(lessonId, {
-                    type: "reading_assessment",
+                    type: "EXAMPLE_SENTENCES",
                     ...saveData,
                   });
                   toast.success("內容已成功創建");

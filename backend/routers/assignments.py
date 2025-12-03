@@ -299,6 +299,20 @@ async def create_assignment(
 
     score_category = determine_score_category(request.practice_mode, request.play_audio)
 
+    # 根據 practice_mode 計算 legacy answer_mode（數據庫約束只允許 'listening' 或 'writing'）
+    def determine_answer_mode(practice_mode: str, play_audio: bool) -> str:
+        """
+        Legacy answer_mode 欄位：僅供向後相容
+        - reading 模式 -> 'writing'（雖然是口說，但舊系統無此選項）
+        - rearrangement 模式 + play_audio -> 'listening'
+        - rearrangement 模式 + no audio -> 'writing'
+        """
+        if practice_mode == "rearrangement" and play_audio:
+            return "listening"
+        return "writing"
+
+    answer_mode = determine_answer_mode(request.practice_mode, request.play_audio)
+
     # 建立 Assignment 主表記錄
     assignment = Assignment(
         title=request.title,
@@ -306,7 +320,7 @@ async def create_assignment(
         classroom_id=request.classroom_id,
         teacher_id=current_user.id,
         due_date=request.due_date,
-        answer_mode=request.answer_mode,  # Legacy: 保留向後相容
+        answer_mode=answer_mode,  # Legacy: 根據 practice_mode 自動計算
         # ===== 新增：例句集作答模式設定 =====
         practice_mode=request.practice_mode,
         time_limit_per_question=request.time_limit_per_question,
@@ -1815,7 +1829,7 @@ async def get_student_submission(
                     "content_id": content.id,
                     "content_title": content.title,
                     "content_type": (
-                        content.type.value if content.type else "READING_ASSESSMENT"
+                        content.type.value if content.type else "EXAMPLE_SENTENCES"
                     ),
                     "submissions": [],
                 }

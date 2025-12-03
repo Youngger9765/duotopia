@@ -36,10 +36,13 @@
     "questionTitle": "Question {{number}}",
     "hint": "Hint",
     "playAudio": "Play Audio",
+    "audioDisabledCompleted": "This question is completed, audio cannot be played",
+    "audioPrompt": "Click to play audio and start answering",
     "totalScore": "Total Score",
     "expectedScore": "Expected Score",
     "errorsRemaining": "{{remaining}} chances remaining",
     "selectWordsHint": "Click the words below in order to form the correct sentence",
+    "jumpToQuestion": "Jump to question {{number}}",
     "scoreCategories": {
       "listening": "Listening",
       "writing": "Writing",
@@ -2312,8 +2315,11 @@
       "SPEAKING_PRACTICE": "Speaking Practice",
       "SPEAKING_SCENARIO": "Speaking Scenario",
       "LISTENING_CLOZE": "Listening Cloze",
-      "SENTENCE_MAKING": "Sentence Making",
-      "SPEAKING_QUIZ": "Speaking Quiz"
+      "SENTENCE_MAKING": "Vocabulary Set",
+      "VOCABULARY_SET": "Vocabulary Set",
+      "SPEAKING_QUIZ": "Speaking Quiz",
+      "MULTIPLE_CHOICE": "Multiple Choice",
+      "SCENARIO_DIALOGUE": "Scenario Dialogue"
     }
   },
   "previewPage": {

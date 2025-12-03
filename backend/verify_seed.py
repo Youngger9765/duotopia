@@ -9,7 +9,7 @@ students = db.query(Student).count()
 classrooms = db.query(Classroom).count()
 programs = db.query(Program).count()
 sentence_contents = (
-    db.query(Content).filter(Content.type == ContentType.SENTENCE_MAKING).count()
+    db.query(Content).filter(Content.type == ContentType.VOCABULARY_SET).count()
 )
 
 print(f"✅ 教師數量: {teachers}")

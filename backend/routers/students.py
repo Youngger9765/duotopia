@@ -33,6 +33,25 @@ from auth import (
 router = APIRouter(prefix="/api/students", tags=["students"])
 
 
+# =============================================================================
+# Content Type Compatibility Helpers
+# =============================================================================
+# 處理新舊 ContentType 的相容性，API 回傳時統一使用新類型：
+# - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+# - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+
+def normalize_content_type_for_response(content_type: str) -> str:
+    """將舊的 ContentType 值轉換為新值（用於 API 回傳）"""
+    mapping = {
+        "READING_ASSESSMENT": "EXAMPLE_SENTENCES",
+        "reading_assessment": "EXAMPLE_SENTENCES",
+        "SENTENCE_MAKING": "VOCABULARY_SET",
+        "sentence_making": "VOCABULARY_SET",
+    }
+    return mapping.get(content_type, content_type)
+
+
 class StudentValidateRequest(BaseModel):
     email: str
     password: str  # Can be birthdate (YYYYMMDD) or new password if changed
@@ -362,8 +381,8 @@ async def get_assignment_activities(
                     "id": progress.id,
                     "content_id": content.id,
                     "order": len(activities) + 1,
-                    "type": (
-                        content.type.value if content.type else "reading_assessment"
+                    "type": normalize_content_type_for_response(
+                        content.type.value if content.type else "EXAMPLE_SENTENCES"
                     ),
                     "title": content.title,
                     "duration": 60,  # Default duration
@@ -1664,7 +1683,7 @@ async def get_practice_words(
                 JOIN contents c ON c.id = ac.content_id
                 JOIN content_items ci ON ci.content_id = c.id
                 WHERE ac.assignment_id = :assignment_id
-                AND c.type = 'SENTENCE_MAKING'
+                AND c.type = 'VOCABULARY_SET'
                 LIMIT 10
             """
             ),

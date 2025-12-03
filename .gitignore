@@ -108,3 +108,7 @@ mcp-servers/browser/screenshots/
 # Note: .claude/mcp.json should be COMMITTED (team collaboration)
 # Only ignore if it contains secrets (it shouldn't!)
 .develop_secrets_backup.txt
+
+# Development environment
+.dev-pids/
+.dev-logs/

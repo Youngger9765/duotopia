@@ -372,7 +372,7 @@ def create_demo_data(db: Session):
     # 五年級基礎課程內容
     content1_5a = Content(
         lesson_id=lessons_5a_basic[0].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="基礎問候語練習",
         order_index=1,
         is_public=True,
@@ -387,7 +387,7 @@ def create_demo_data(db: Session):
 
     content2_5a = Content(
         lesson_id=lessons_5a_basic[0].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="進階問候語練習",
         order_index=2,
         is_public=True,
@@ -402,7 +402,7 @@ def create_demo_data(db: Session):
 
     content3_5a = Content(
         lesson_id=lessons_5a_basic[1].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="數字 1-10 練習",
         order_index=1,
         is_public=True,
@@ -417,7 +417,7 @@ def create_demo_data(db: Session):
 
     content4_5a = Content(
         lesson_id=lessons_5a_basic[2].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="顏色練習",
         order_index=1,
         is_public=True,
@@ -433,7 +433,7 @@ def create_demo_data(db: Session):
     # 五年級會話課程內容
     content5_5a = Content(
         lesson_id=lessons_5a_conversation[0].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="自我介紹練習",
         order_index=1,
         is_public=False,
@@ -449,7 +449,7 @@ def create_demo_data(db: Session):
     # 六年級進階課程內容
     content1_6b = Content(
         lesson_id=lessons_6b_advanced[0].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="日常對話練習 Part 1",
         order_index=1,
         is_public=False,
@@ -464,7 +464,7 @@ def create_demo_data(db: Session):
 
     content2_6b = Content(
         lesson_id=lessons_6b_advanced[0].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="日常對話練習 Part 2",
         order_index=2,
         is_public=False,
@@ -479,7 +479,7 @@ def create_demo_data(db: Session):
 
     content3_6b = Content(
         lesson_id=lessons_6b_advanced[1].id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="家庭成員練習",
         order_index=1,
         is_public=False,
@@ -671,12 +671,19 @@ def create_demo_data(db: Session):
 
         if items_data:
             for idx, item_data in enumerate(items_data):
+                text = item_data.get("text", "")
+                word_count = len(text.strip().split())
+                # 計算允許錯誤次數：2-10 字 → 3 次，11-25 字 → 5 次
+                max_errors = 3 if word_count <= 10 else 5
+
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
-                    text=item_data.get("text", ""),
+                    text=text,
                     translation=item_data.get("translation", ""),
                     audio_url=item_data.get("audio_url"),
+                    word_count=word_count,
+                    max_errors=max_errors,
                 )
                 content_items.append(content_item)
         # Content 不再有 items 屬性，所有項目都通過 ContentItem 表管理
@@ -1264,7 +1271,7 @@ def create_demo_data(db: Session):
     # 為這個 lesson 創建新的 content
     content_hobby = Content(
         lesson_id=lesson_6b_3.id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="興趣愛好對話",
         order_index=1,
         is_public=False,
@@ -1856,7 +1863,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
     # 2.1 第一個單元的第一個造句練習
     content1_1 = Content(
         lesson_id=lesson1.id,
-        type=ContentType.SENTENCE_MAKING,
+        type=ContentType.VOCABULARY_SET,
         title="學校場所與設施",
         order_index=1,
         level="A1",
@@ -1909,7 +1916,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
     # 2.2 第一個單元的第二個造句練習
     content1_2 = Content(
         lesson_id=lesson1.id,
-        type=ContentType.SENTENCE_MAKING,
+        type=ContentType.VOCABULARY_SET,
         title="學習活動與文具",
         order_index=2,
         level="A1",
@@ -2001,7 +2008,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
     # 3.1 第二個單元的第一個造句練習
     content2_1 = Content(
         lesson_id=lesson2.id,
-        type=ContentType.SENTENCE_MAKING,
+        type=ContentType.VOCABULARY_SET,
         title="家庭成員與房間",
         order_index=1,
         level="A1",
@@ -2063,7 +2070,7 @@ def seed_sentence_making_course(db: Session, classroom_id: int, teacher_id: int)
     # 3.2 第二個單元的第二個造句練習
     content2_2 = Content(
         lesson_id=lesson2.id,
-        type=ContentType.SENTENCE_MAKING,
+        type=ContentType.VOCABULARY_SET,
         title="日常活動與時間",
         order_index=2,
         level="A1",
@@ -2418,7 +2425,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_basic_conv[0].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Basic Greetings 基本問候語",
             order_index=1,
             is_active=True,
@@ -2430,7 +2437,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_basic_conv[1].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="My Daily Routine 我的日常作息",
             order_index=1,
             is_active=True,
@@ -2442,7 +2449,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_basic_conv[2].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Shopping Vocabulary 購物詞彙",
             order_index=1,
             is_active=True,
@@ -2454,7 +2461,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_basic_conv[3].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Restaurant English 餐廳英語",
             order_index=1,
             is_active=True,
@@ -2466,7 +2473,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_reading[0].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Reading Strategies 閱讀策略",
             order_index=1,
             is_active=True,
@@ -2478,7 +2485,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_reading[1].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="News Headlines 新聞標題",
             order_index=1,
             is_active=True,
@@ -2490,7 +2497,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_reading[2].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Story Elements 故事元素",
             order_index=1,
             is_active=True,
@@ -2502,7 +2509,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_pronunciation[0].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Vowel Sounds 母音發音",
             order_index=1,
             is_active=True,
@@ -2514,7 +2521,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_pronunciation[1].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Consonant Sounds 子音發音",
             order_index=1,
             is_active=True,
@@ -2526,7 +2533,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_pronunciation[2].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Word Stress 重音練習",
             order_index=1,
             is_active=True,
@@ -2538,7 +2545,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_business[0].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Business Email Writing 商務郵件",
             order_index=1,
             is_active=True,
@@ -2550,7 +2557,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_business[1].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Meeting English 會議英語",
             order_index=1,
             is_active=True,
@@ -2562,7 +2569,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_business[2].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Presentation Skills 簡報技巧",
             order_index=1,
             is_active=True,
@@ -2574,7 +2581,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_grammar[0].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Be Verbs and Simple Present Be動詞與現在簡單式",
             order_index=1,
             is_active=True,
@@ -2586,7 +2593,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_grammar[1].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Articles and Nouns 冠詞與名詞",
             order_index=1,
             is_active=True,
@@ -2598,7 +2605,7 @@ def seed_template_programs(db: Session):
     template_contents.append(
         Content(
             lesson_id=lessons_grammar[2].id,
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             title="Simple Past Tense 過去簡單式",
             order_index=1,
             is_active=True,
@@ -2740,12 +2747,19 @@ def seed_template_programs(db: Session):
         items_data = content_items_data.get(content.title, [])
         if items_data:
             for idx, item_data in enumerate(items_data):
+                text = item_data.get("text", "")
+                word_count = len(text.strip().split())
+                # 計算允許錯誤次數：2-10 字 → 3 次，11-25 字 → 5 次
+                max_errors = 3 if word_count <= 10 else 5
+
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
-                    text=item_data.get("text", ""),
+                    text=text,
                     translation=item_data.get("translation", ""),
                     audio_url=item_data.get("audio_url"),
+                    word_count=word_count,
+                    max_errors=max_errors,
                 )
                 template_content_items.append(content_item)
 

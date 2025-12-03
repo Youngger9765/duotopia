@@ -1,12 +1,21 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
-import { Brain, Star, Mic } from "lucide-react";
+import { Brain, Star, Mic, Clock, RotateCcw, SkipForward } from "lucide-react";
 import { toast } from "sonner";
 import { retryAIAnalysis } from "@/utils/retryHelper";
 import AudioRecorder from "@/components/shared/AudioRecorder";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface AssessmentResult {
   overallScore: number;
@@ -25,6 +34,10 @@ interface ReadingAssessmentProps {
   exampleAudioUrl?: string;
   progressId?: number;
   readOnly?: boolean; // 唯讀模式
+  timeLimit?: number; // 作答時間限制（秒）
+  onTimeout?: () => void; // 超時回調
+  onRetry?: () => void; // 重試回調
+  onSkip?: () => void; // 跳過回調
 }
 
 export default function ReadingAssessmentTemplate({
@@ -35,6 +48,10 @@ export default function ReadingAssessmentTemplate({
   exampleAudioUrl,
   progressId,
   readOnly = false,
+  timeLimit = 60, // 預設 60 秒
+  onTimeout,
+  onRetry,
+  onSkip,
 }: ReadingAssessmentProps) {
   const { t } = useTranslation();
   const [audioUrl, setAudioUrl] = useState<string | undefined>(
@@ -45,6 +62,84 @@ export default function ReadingAssessmentTemplate({
   const [assessmentResult, setAssessmentResult] =
     useState<AssessmentResult | null>(null);
   const exampleAudioRef = useRef<HTMLAudioElement>(null);
+
+  // 計時器狀態
+  const [timeRemaining, setTimeRemaining] = useState(timeLimit);
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 格式化時間
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  // 啟動計時器
+  const startTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    timerRef.current = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          // 時間到
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          setShowTimeoutDialog(true);
+          onTimeout?.();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [onTimeout]);
+
+  // 重置計時器
+  const resetTimer = useCallback(() => {
+    setTimeRemaining(timeLimit);
+    setShowTimeoutDialog(false);
+    startTimer();
+  }, [timeLimit, startTimer]);
+
+  // 初始化計時器
+  useEffect(() => {
+    if (!readOnly && !audioUrl && timeLimit > 0) {
+      startTimer();
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [readOnly, timeLimit, startTimer]);
+
+  // 錄音完成時停止計時器
+  useEffect(() => {
+    if (audioUrl && timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  }, [audioUrl]);
+
+  // 處理重試
+  const handleRetry = () => {
+    setShowTimeoutDialog(false);
+    setAudioUrl(undefined);
+    setAssessmentResult(null);
+    resetTimer();
+    onRetry?.();
+  };
+
+  // 處理跳過
+  const handleSkip = () => {
+    setShowTimeoutDialog(false);
+    onSkip?.();
+  };
+
+  const isLowTime = timeRemaining <= 10 && timeRemaining > 0;
 
   // const handlePlayExample = () => {
   //   if (!exampleAudioRef.current) return;
@@ -116,8 +211,7 @@ export default function ReadingAssessmentTemplate({
 
           return await apiResponse.json();
         },
-        (attempt, error) => {
-          console.log(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`, error);
+        (attempt) => {
           toast.warning(t("readingAssessment.toast.aiRetrying", { attempt }));
         },
       );
@@ -154,38 +248,56 @@ export default function ReadingAssessmentTemplate({
   };
 
   return (
-    <div className="flex items-start space-x-8 min-h-[500px]">
-      {/* Left Side - Avatar/Icon Circle */}
-      <div className="flex-shrink-0">
-        <div className="w-48 h-48 bg-gray-200 rounded-full flex items-center justify-center">
-          <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center">
-            <Mic className="h-12 w-12 text-gray-600" />
+    <>
+      <div className="flex items-start space-x-8 min-h-[500px]">
+        {/* Left Side - Avatar/Icon Circle */}
+        <div className="flex-shrink-0">
+          <div className="w-48 h-48 bg-gray-200 rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 bg-gray-400 rounded-full flex items-center justify-center">
+              <Mic className="h-12 w-12 text-gray-600" />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Side - Content Area */}
-      <div className="flex-1 space-y-6">
-        {/* Example Audio Section */}
-        {exampleAudioUrl && (
-          <div className="space-y-2">
-            <audio
-              ref={exampleAudioRef}
-              src={exampleAudioUrl}
-              controls
-              className="w-full h-10"
-              onEnded={() => setIsPlayingExample(false)}
-            />
+        {/* Right Side - Content Area */}
+        <div className="flex-1 space-y-6">
+          {/* Timer Display */}
+          {!readOnly && timeLimit > 0 && !audioUrl && (
+            <div className="flex justify-end">
+              <div
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium",
+                  isLowTime
+                    ? "bg-red-100 text-red-700 animate-pulse"
+                    : "bg-gray-100 text-gray-700",
+                )}
+              >
+                <Clock className="h-4 w-4" />
+                <span>{formatTime(timeRemaining)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Example Audio Section */}
+          {exampleAudioUrl && (
+            <div className="space-y-2">
+              <audio
+                ref={exampleAudioRef}
+                src={exampleAudioUrl}
+                controls
+                className="w-full h-10"
+                onEnded={() => setIsPlayingExample(false)}
+              />
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="space-y-4">
+            <h2 className="text-3xl font-medium text-gray-900 leading-relaxed">
+              {targetText}
+            </h2>
+            <p className="text-lg text-gray-600">{content}</p>
           </div>
-        )}
-
-        {/* Main Content */}
-        <div className="space-y-4">
-          <h2 className="text-3xl font-medium text-gray-900 leading-relaxed">
-            {targetText}
-          </h2>
-          <p className="text-lg text-gray-600">{content}</p>
-        </div>
 
         {/* 🎯 錄音元件 - 使用統一的 AudioRecorder */}
         <AudioRecorder
@@ -312,7 +424,42 @@ export default function ReadingAssessmentTemplate({
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+
+      {/* Timeout Dialog */}
+      <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <Clock className="h-5 w-5" />
+              時間到了！
+            </DialogTitle>
+            <DialogDescription>
+              作答時間已結束。您可以選擇重新作答此題，或跳到下一題繼續。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleRetry}
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              重新作答
+            </Button>
+            {onSkip && (
+              <Button
+                onClick={handleSkip}
+                className="flex items-center gap-2"
+              >
+                <SkipForward className="h-4 w-4" />
+                跳到下一題
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

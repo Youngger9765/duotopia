@@ -24,7 +24,10 @@ import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessment
 import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
 import GroupedQuestionsTemplate from "@/components/activities/GroupedQuestionsTemplate";
 import SentenceMakingActivity from "@/components/activities/SentenceMakingActivity";
-import RearrangementActivity from "@/components/activities/RearrangementActivity";
+import RearrangementActivity, {
+  type RearrangementQuestion,
+  type RearrangementQuestionState,
+} from "@/components/activities/RearrangementActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -130,6 +133,31 @@ interface StudentActivityPageContentProps {
   practiceMode?: string | null; // 例句重組/朗讀模式
 }
 
+// =============================================================================
+// Content Type Compatibility Helpers
+// =============================================================================
+// 處理新舊 ContentType 的相容性：
+// - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+// - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+/**
+ * 檢查是否為「例句集」類型（包含新舊類型）
+ * 用於：朗讀練習、例句重組
+ */
+const isExampleSentencesType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalizedType);
+};
+
+/**
+ * 檢查是否為「單字集」類型（包含新舊類型）
+ * 用於：造句練習
+ */
+const isVocabularySetType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalizedType);
+};
+
 export default function StudentActivityPageContent({
   activities: initialActivities,
   assignmentTitle,
@@ -159,6 +187,15 @@ export default function StudentActivityPageContent({
     currentItemLabel: string;
   } | null>(null); // 🔒 批次分析進度
 
+  // 例句重組導航狀態
+  const [rearrangementQuestions, setRearrangementQuestions] = useState<
+    RearrangementQuestion[]
+  >([]);
+  const [rearrangementQuestionStates, setRearrangementQuestionStates] =
+    useState<Map<number, RearrangementQuestionState>>(new Map());
+  const [rearrangementQuestionIndex, setRearrangementQuestionIndex] =
+    useState(0);
+
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
   const isReadOnly =
@@ -181,11 +218,7 @@ export default function StudentActivityPageContent({
     const initialAnswers = new Map<number, Answer>();
     initialActivities.forEach((activity) => {
       let audioUrl: string | undefined = undefined;
-      if (
-        (activity.type === "READING_ASSESSMENT" ||
-          activity.type === "reading_assessment") &&
-        activity.items?.[0]
-      ) {
+      if (isExampleSentencesType(activity.type) && activity.items?.[0]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         audioUrl = (activity.items[0] as any).recording_url || "";
       }
@@ -219,14 +252,12 @@ export default function StudentActivityPageContent({
   const cleanupRecording = () => {
     // 停止舊的 MediaRecorder
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      console.log("🧹 Stopping old MediaRecorder");
       mediaRecorder.stop();
     }
     setMediaRecorder(null);
 
     // 停止舊的 MediaStream
     if (streamRef.current) {
-      console.log("🧹 Stopping old MediaStream tracks");
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
@@ -293,21 +324,15 @@ export default function StudentActivityPageContent({
       const recorder = new MediaRecorder(stream, options);
       const chunks: Blob[] = [];
 
-      console.log(
-        `🎙️ MediaRecorder initialized with MIME type: ${recorder.mimeType} (platform: ${strategy.platformName})`,
-      );
-
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
           hasRecordedData.current = true;
-          console.log("✅ Audio data collected");
         }
       };
 
       recorder.onstop = async () => {
         const actualRecordingDuration = recordingTimeRef.current;
-        console.log("🎙️ 實際錄音時長:", actualRecordingDuration, "秒");
 
         await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -315,13 +340,6 @@ export default function StudentActivityPageContent({
           type: recorder.mimeType || "audio/webm",
         });
         const currentActivity = activities[currentActivityIndex];
-
-        console.log("🎤 Recording completed:", {
-          size: audioBlob.size,
-          type: audioBlob.type,
-          hasData: hasRecordedData.current,
-          chunksCount: chunks.length,
-        });
 
         // 🎯 使用統一驗證策略
         const strategy = strategyRef.current;
@@ -394,10 +412,6 @@ export default function StudentActivityPageContent({
             }
             return;
           }
-
-          console.log(
-            `✅ Recording validation passed (${validationResult.method}): ${validationResult.duration.toFixed(1)}s`,
-          );
 
           if (!isPreviewMode) {
             toast.success(t("studentActivityPage.recording.complete"), {
@@ -490,7 +504,6 @@ export default function StudentActivityPageContent({
           });
         }
 
-        console.log("✅ 錄音完成，可以播放或上傳");
         isReRecording.current = false;
 
         // 🔧 錄音完成後清理所有錄音狀態
@@ -509,7 +522,6 @@ export default function StudentActivityPageContent({
       setRecordingTime(0);
       recordingTimeRef.current = 0;
       hasRecordedData.current = false;
-      console.log("🎙️ Recording started, waiting for audio data...");
 
       // Start recording timer with 45 second limit
       let hasReachedLimit = false;
@@ -610,12 +622,6 @@ export default function StudentActivityPageContent({
       );
       return;
     }
-
-    console.log("📁 File upload:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
 
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
@@ -735,8 +741,6 @@ export default function StudentActivityPageContent({
       toast.success(t("studentActivity.toast.uploadSuccess"), {
         description: `${file.name}（${duration.toFixed(1)} 秒）`,
       });
-
-      console.log("✅ File uploaded successfully");
     } catch (error) {
       console.error("❌ File upload failed:", error);
       toast.error(t("studentActivity.toast.validationFailed"), {
@@ -874,14 +878,6 @@ export default function StudentActivityPageContent({
       }
     });
 
-    // 🔍 Debug: 檢查收集到的資料
-    console.log("📊 Submit validation:", {
-      notRecorded: notRecorded.length,
-      needAnalysis: needAnalysis.length,
-      notRecordedItems: notRecorded,
-      needAnalysisItems: needAnalysis,
-    });
-
     // 🎯 Step 2: 如果有未錄音的題目，顯示警告 dialog
     if (notRecorded.length > 0) {
       const incompleteList = notRecorded.map((item) =>
@@ -947,11 +943,6 @@ export default function StudentActivityPageContent({
 
     // 🎯 如果有需要分析的項目，執行批次分析
     if (needAnalysis.length > 0) {
-      console.log(
-        "🚀 Confirmed submit - Starting batch analysis for",
-        needAnalysis.length,
-        "items",
-      );
       setIsAnalyzing(true);
       const token = useStudentAuthStore.getState().token;
       const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -1028,8 +1019,8 @@ export default function StudentActivityPageContent({
 
                 return await uploadResponse.json();
               },
-              (attempt, error) => {
-                console.log(`Upload retrying (${attempt}):`, error);
+              () => {
+                // Retry callback - silent
               },
             );
 
@@ -1048,13 +1039,6 @@ export default function StudentActivityPageContent({
             });
             continue;
           }
-
-          console.log("🔍 AI評估使用 progress_id:", {
-            itemIndex,
-            answerProgressIds: answer?.progressIds,
-            uploadProgressId: uploadResult?.progress_id,
-            finalProgressId: currentProgressId,
-          });
 
           // 🔍 執行 AI 分析 - 使用與 GroupedQuestionsTemplate 相同的 API
           // 準備 AI 分析的 FormData
@@ -1095,8 +1079,8 @@ export default function StudentActivityPageContent({
 
               return await analysisResponse.json();
             },
-            (attempt, error) => {
-              console.log(`Analysis retrying (${attempt}):`, error);
+            () => {
+              // Retry callback - silent
             },
           );
 
@@ -1148,16 +1132,26 @@ export default function StudentActivityPageContent({
   };
 
   const getActivityTypeBadge = (type: string) => {
+    // 使用 helper functions 處理例句集和單字集類型
+    if (isExampleSentencesType(type)) {
+      return (
+        <Badge variant="outline">
+          {practiceMode === "rearrangement"
+            ? t("studentActivityPage.activityTypes.rearrangement")
+            : t("studentActivityPage.activityTypes.reading")}
+        </Badge>
+      );
+    }
+
+    if (isVocabularySetType(type)) {
+      return (
+        <Badge variant="outline">
+          {t("studentActivityPage.activityTypes.sentence")}
+        </Badge>
+      );
+    }
+
     switch (type) {
-      case "READING_ASSESSMENT":
-      case "reading_assessment":
-        return (
-          <Badge variant="outline">
-            {practiceMode === "rearrangement"
-              ? t("studentActivityPage.activityTypes.rearrangement")
-              : t("studentActivityPage.activityTypes.reading")}
-          </Badge>
-        );
       case "listening_cloze":
         return (
           <Badge variant="outline">
@@ -1174,22 +1168,6 @@ export default function StudentActivityPageContent({
         return (
           <Badge variant="outline">
             {t("studentActivityPage.activityTypes.speaking")}
-          </Badge>
-        );
-      case "SENTENCE_MAKING":
-      case "sentence_making":
-        return (
-          <Badge variant="outline">
-            {t("studentActivityPage.activityTypes.sentence")}
-          </Badge>
-        );
-      case "EXAMPLE_SENTENCES":
-      case "example_sentences":
-        return (
-          <Badge variant="outline">
-            {practiceMode === "rearrangement"
-              ? t("studentActivityPage.activityTypes.rearrangement")
-              : t("studentActivityPage.activityTypes.reading")}
           </Badge>
         );
       case "speaking_quiz":
@@ -1236,20 +1214,15 @@ export default function StudentActivityPageContent({
   const renderActivityContent = (activity: Activity) => {
     const answer = answers.get(activity.id);
 
-    // SENTENCE_MAKING 類型使用新的 SentenceMakingActivity 組件，不要進入舊的 GroupedQuestionsTemplate
-    // READING_ASSESSMENT + rearrangement 模式使用 RearrangementActivity，也不要進入 GroupedQuestionsTemplate
+    // 單字集類型使用新的 SentenceMakingActivity 組件，不要進入舊的 GroupedQuestionsTemplate
+    // 例句集 + rearrangement 模式使用 RearrangementActivity，也不要進入 GroupedQuestionsTemplate
     const isRearrangementMode =
-      (activity.type === "READING_ASSESSMENT" ||
-        activity.type === "reading_assessment" ||
-        activity.type === "EXAMPLE_SENTENCES" ||
-        activity.type === "example_sentences") &&
-      practiceMode === "rearrangement";
+      isExampleSentencesType(activity.type) && practiceMode === "rearrangement";
 
     if (
       activity.items &&
       activity.items.length > 0 &&
-      activity.type !== "SENTENCE_MAKING" &&
-      activity.type !== "sentence_making" &&
+      !isVocabularySetType(activity.type) &&
       !isRearrangementMode
     ) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1366,126 +1339,73 @@ export default function StudentActivityPageContent({
       );
     }
 
-    // DEBUG: 檢查 activity.type 的值
-    console.log(
-      "🔍 [StudentActivityPageContent] activity.type =",
-      activity.type,
-    );
-    console.log(
-      "🔍 [StudentActivityPageContent] typeof activity.type =",
-      typeof activity.type,
-    );
-    console.log(
-      "🔍 [StudentActivityPageContent] activity.type === 'SENTENCE_MAKING' ?",
-      activity.type === "SENTENCE_MAKING",
-    );
-
-    switch (activity.type) {
-      case "READING_ASSESSMENT":
-      case "reading_assessment":
-        console.log(
-          "✅ [StudentActivityPageContent] Rendering READING_ASSESSMENT, practiceMode:",
-          practiceMode,
-        );
-        // 例句集：根據 practiceMode 決定使用哪種練習模式
-        if (practiceMode === "rearrangement") {
-          // 例句重組模式
-          return (
-            <RearrangementActivity
-              studentAssignmentId={assignmentId}
-              isPreviewMode={isPreviewMode}
-              onComplete={(totalScore, totalQuestions) => {
-                toast.success(
-                  t("rearrangement.messages.allComplete", {
-                    score: totalScore,
-                    total: totalQuestions * 100,
-                  }),
-                );
-                if (onSubmit) {
-                  onSubmit();
-                }
-              }}
-            />
-          );
-        } else {
-          // 預設朗讀模式
-          return (
-            <ReadingAssessmentTemplate
-              content={activity.content}
-              targetText={activity.target_text}
-              existingAudioUrl={answer?.audioUrl}
-              onRecordingComplete={handleRecordingComplete}
-              exampleAudioUrl={activity.example_audio_url}
-              progressId={activity.id}
-              readOnly={isReadOnly}
-            />
-          );
-        }
-
-      case "SENTENCE_MAKING":
-      case "sentence_making":
-        console.log(
-          "✅ [StudentActivityPageContent] Rendering SentenceMakingActivity",
-        );
-        // 新版造句練習：使用艾賓浩斯記憶曲線系統
-        // 直接使用 SentenceMakingActivity 組件，它會從 API 獲取練習題目
+    // 使用 helper functions 來處理類型判斷，避免 switch 遺漏新類型
+    // 例句集類型（包含 READING_ASSESSMENT 和 EXAMPLE_SENTENCES）
+    if (isExampleSentencesType(activity.type)) {
+      // 例句集：根據 practiceMode 決定使用哪種練習模式
+      if (practiceMode === "rearrangement") {
+        // 例句重組模式
         return (
-          <SentenceMakingActivity
-            assignmentId={assignmentId}
-            onComplete={() => {
-              // 完成後的處理（可選）
-              toast.success("作業已完成！");
+          <RearrangementActivity
+            studentAssignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            currentQuestionIndex={rearrangementQuestionIndex}
+            onQuestionIndexChange={setRearrangementQuestionIndex}
+            onQuestionsLoaded={(questions, states) => {
+              setRearrangementQuestions(questions);
+              setRearrangementQuestionStates(states);
+            }}
+            onQuestionStateChange={setRearrangementQuestionStates}
+            onComplete={(totalScore, totalQuestions) => {
+              toast.success(
+                t("rearrangement.messages.allComplete", {
+                  score: totalScore,
+                  total: totalQuestions * 100,
+                }),
+              );
+              if (onSubmit) {
+                onSubmit();
+              }
             }}
           />
         );
-
-      // 舊版造句練習（向後兼容）：使用錄音方式
-      // 如果以後需要支援舊版，可以檢查 activity.items 是否存在
-      // if (activity.items && activity.items.length > 0) {
-      //   const smAnswer = answers.get(activity.id);
-      //   ...使用 SentenceMakingTemplate
-      // }
-
-      case "EXAMPLE_SENTENCES":
-      case "example_sentences":
-        console.log(
-          "✅ [StudentActivityPageContent] Rendering EXAMPLE_SENTENCES, practiceMode:",
-          practiceMode,
+      } else {
+        // 預設朗讀模式
+        return (
+          <ReadingAssessmentTemplate
+            content={activity.content}
+            targetText={activity.target_text}
+            existingAudioUrl={answer?.audioUrl}
+            onRecordingComplete={handleRecordingComplete}
+            exampleAudioUrl={activity.example_audio_url}
+            progressId={activity.id}
+            readOnly={isReadOnly}
+            timeLimit={activity.duration || 60}
+            onSkip={
+              currentActivityIndex < activities.length - 1
+                ? () => handleActivitySelect(currentActivityIndex + 1)
+                : undefined
+            }
+          />
         );
-        // 例句集：根據 practiceMode 決定使用哪種練習模式
-        if (practiceMode === "rearrangement") {
-          // 例句重組模式
-          return (
-            <RearrangementActivity
-              studentAssignmentId={assignmentId}
-              isPreviewMode={isPreviewMode}
-              onComplete={(totalScore, totalQuestions) => {
-                toast.success(
-                  t("rearrangement.messages.allComplete", {
-                    score: totalScore,
-                    total: totalQuestions * 100,
-                  }),
-                );
-                if (onSubmit) {
-                  onSubmit();
-                }
-              }}
-            />
-          );
-        } else {
-          // 預設朗讀模式（與 READING_ASSESSMENT 相同邏輯）
-          return (
-            <ReadingAssessmentTemplate
-              content={activity.content}
-              targetText={activity.target_text}
-              existingAudioUrl={answer?.audioUrl}
-              onRecordingComplete={handleRecordingComplete}
-              exampleAudioUrl={activity.example_audio_url}
-              progressId={activity.id}
-              readOnly={isReadOnly}
-            />
-          );
-        }
+      }
+    }
+
+    // 單字集類型（包含 SENTENCE_MAKING 和 VOCABULARY_SET）
+    if (isVocabularySetType(activity.type)) {
+      // 造句練習：使用艾賓浩斯記憶曲線系統
+      return (
+        <SentenceMakingActivity
+          assignmentId={assignmentId}
+          onComplete={() => {
+            toast.success("作業已完成！");
+          }}
+        />
+      );
+    }
+
+    // 其他類型使用 switch 處理
+    switch (activity.type) {
 
       case "listening_cloze":
         return (
@@ -1540,6 +1460,12 @@ export default function StudentActivityPageContent({
             onRecordingComplete={handleRecordingComplete}
             progressId={activity.id}
             readOnly={isReadOnly}
+            timeLimit={activity.duration || 60}
+            onSkip={
+              currentActivityIndex < activities.length - 1
+                ? () => handleActivitySelect(currentActivityIndex + 1)
+                : undefined
+            }
           />
         );
     }
@@ -1653,11 +1579,53 @@ export default function StudentActivityPageContent({
 
           {/* Activity navigation */}
           <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {activities.map((activity, activityIndex) => {
-              const answer = answers.get(activity.id);
-              const isActiveActivity = activityIndex === currentActivityIndex;
+            {/* 例句重組模式：所有題目合併顯示，不分 activity */}
+            {practiceMode === "rearrangement" &&
+            rearrangementQuestions.length > 0 ? (
+              <div className="flex gap-0.5 sm:gap-1 flex-wrap">
+                {rearrangementQuestions.map((q, qIndex) => {
+                  const state = rearrangementQuestionStates.get(
+                    q.content_item_id,
+                  );
+                  const isActiveItem = rearrangementQuestionIndex === qIndex;
+                  const isCompleted = state?.completed;
+                  const isFailed = state?.challengeFailed;
 
-              if (activity.items && activity.items.length > 0) {
+                  return (
+                    <button
+                      key={q.content_item_id}
+                      onClick={() => setRearrangementQuestionIndex(qIndex)}
+                      className={cn(
+                        "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                        "flex items-center justify-center text-sm sm:text-xs font-medium",
+                        "min-w-[32px] sm:min-w-[32px]",
+                        isCompleted
+                          ? "bg-green-100 text-green-800 border-green-400"
+                          : isFailed
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                        isActiveItem && "border-2 border-blue-600",
+                      )}
+                      title={
+                        isCompleted
+                          ? "已完成"
+                          : isFailed
+                            ? "挑戰失敗"
+                            : "未完成"
+                      }
+                    >
+                      {qIndex + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* 其他模式：保持原來的 activities.map 邏輯 */
+              activities.map((activity, activityIndex) => {
+                const answer = answers.get(activity.id);
+                const isActiveActivity = activityIndex === currentActivityIndex;
+
+                if (activity.items && activity.items.length > 0) {
                 return (
                   <div
                     key={activity.id}
@@ -1777,7 +1745,8 @@ export default function StudentActivityPageContent({
                   </div>
                 </Button>
               );
-            })}
+            })
+            )}
           </div>
 
           <Progress value={progress} className="h-1 mt-1" />
@@ -1811,10 +1780,7 @@ export default function StudentActivityPageContent({
                   currentActivity.items[currentSubQuestionIndex];
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isAssessed = !!(currentItem as any)?.ai_assessment;
-              } else if (
-                currentActivity.type === "READING_ASSESSMENT" ||
-                currentActivity.type === "reading_assessment"
-              ) {
+              } else if (isExampleSentencesType(currentActivity.type)) {
                 isAssessed = !!currentActivity.ai_scores;
               } else if (currentActivity.type === "listening_cloze") {
                 const answer = answers.get(currentActivity.id);
@@ -1827,16 +1793,90 @@ export default function StudentActivityPageContent({
                 return null;
               }
 
+              // 檢查是否為例句重組模式
+              const isRearrangementMode =
+                isExampleSentencesType(currentActivity.type) &&
+                practiceMode === "rearrangement" &&
+                rearrangementQuestions.length > 0;
+
+              // 例句重組模式：檢查是否有未完成的題目
+              let hasPrevUnanswered = false;
+              let hasNextUnanswered = false;
+
+              if (isRearrangementMode) {
+                // 檢查當前題目之前是否有未完成的
+                for (let i = 0; i < rearrangementQuestionIndex; i++) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    hasPrevUnanswered = true;
+                    break;
+                  }
+                }
+                // 檢查當前題目之後是否有未完成的
+                for (
+                  let i = rearrangementQuestionIndex + 1;
+                  i < rearrangementQuestions.length;
+                  i++
+                ) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    hasNextUnanswered = true;
+                    break;
+                  }
+                }
+              }
+
+              // 例句重組模式的上一題/下一題處理函數
+              const handleRearrangementPrev = () => {
+                // 從當前位置向前找第一個未完成的題目
+                for (let i = rearrangementQuestionIndex - 1; i >= 0; i--) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    setRearrangementQuestionIndex(i);
+                    return;
+                  }
+                }
+              };
+
+              const handleRearrangementNext = () => {
+                // 從當前位置向後找第一個未完成的題目
+                for (
+                  let i = rearrangementQuestionIndex + 1;
+                  i < rearrangementQuestions.length;
+                  i++
+                ) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    setRearrangementQuestionIndex(i);
+                    return;
+                  }
+                }
+              };
+
               return (
                 <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 pt-4 border-t border-gray-200">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handlePreviousActivity}
+                    onClick={
+                      isRearrangementMode
+                        ? handleRearrangementPrev
+                        : handlePreviousActivity
+                    }
                     disabled={
                       isAnalyzing || // 🔒 分析中禁用
-                      (currentActivityIndex === 0 &&
-                        currentSubQuestionIndex === 0)
+                      (isRearrangementMode
+                        ? !hasPrevUnanswered
+                        : currentActivityIndex === 0 &&
+                          currentSubQuestionIndex === 0)
                     }
                     className="flex-1 sm:flex-none min-w-0"
                   >
@@ -1885,8 +1925,15 @@ export default function StudentActivityPageContent({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleNextActivity}
-                        disabled={isAnalyzing} // 🔒 分析中禁用
+                        onClick={
+                          isRearrangementMode
+                            ? handleRearrangementNext
+                            : handleNextActivity
+                        }
+                        disabled={
+                          isAnalyzing || // 🔒 分析中禁用
+                          (isRearrangementMode ? !hasNextUnanswered : false)
+                        }
                         className="flex-1 sm:flex-none min-w-0"
                       >
                         <span className="hidden sm:inline">

@@ -28,7 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
-interface RearrangementQuestion {
+export interface RearrangementQuestion {
   content_item_id: number;
   shuffled_words: string[];
   word_count: number;
@@ -43,9 +43,19 @@ interface RearrangementActivityProps {
   studentAssignmentId: number;
   onComplete?: (totalScore: number, totalQuestions: number) => void;
   isPreviewMode?: boolean;
+  // 受控導航 props（由父組件控制題目切換）
+  currentQuestionIndex?: number;
+  onQuestionIndexChange?: (index: number) => void;
+  onQuestionsLoaded?: (
+    questions: RearrangementQuestion[],
+    questionStates: Map<number, RearrangementQuestionState>,
+  ) => void;
+  onQuestionStateChange?: (
+    questionStates: Map<number, RearrangementQuestionState>,
+  ) => void;
 }
 
-interface QuestionState {
+export interface RearrangementQuestionState {
   selectedWords: string[]; // 已選擇的單字（按順序）
   remainingWords: string[]; // 剩餘可選的單字
   errorCount: number;
@@ -55,15 +65,22 @@ interface QuestionState {
   timeRemaining: number;
 }
 
+// 內部使用的別名
+type QuestionState = RearrangementQuestionState;
+
 const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   studentAssignmentId,
   onComplete,
   isPreviewMode = false,
+  currentQuestionIndex: controlledIndex,
+  onQuestionIndexChange,
+  onQuestionsLoaded,
+  onQuestionStateChange,
 }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<RearrangementQuestion[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [internalQuestionIndex, setInternalQuestionIndex] = useState(0);
   const [questionStates, setQuestionStates] = useState<
     Map<number, QuestionState>
   >(new Map());
@@ -71,12 +88,35 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const [scoreCategory, setScoreCategory] = useState<string>("writing");
   const [totalScore, setTotalScore] = useState(0);
   const [, setCompletedQuestions] = useState(0);
+  // 追蹤第一題音檔是否因瀏覽器限制而無法自動播放
+  const [showAudioPrompt, setShowAudioPrompt] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // 使用受控或內部索引
+  const currentQuestionIndex = controlledIndex ?? internalQuestionIndex;
+  const setCurrentQuestionIndex = (index: number) => {
+    if (onQuestionIndexChange) {
+      onQuestionIndexChange(index);
+    } else {
+      setInternalQuestionIndex(index);
+    }
+  };
+
+  // 通知父組件題目狀態變更
+  useEffect(() => {
+    if (onQuestionStateChange && questionStates.size > 0) {
+      onQuestionStateChange(questionStates);
+    }
+  }, [questionStates, onQuestionStateChange]);
+
+  // 追蹤是否已播放第一題音檔
+  const hasPlayedFirstAudioRef = useRef(false);
+
   // 載入題目
   useEffect(() => {
+    hasPlayedFirstAudioRef.current = false; // 重置狀態
     loadQuestions();
     return () => {
       if (timerRef.current) {
@@ -84,6 +124,35 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       }
     };
   }, [studentAssignmentId]);
+
+  // 第一題音檔自動播放（題目載入完成後）
+  useEffect(() => {
+    if (
+      questions.length > 0 &&
+      !hasPlayedFirstAudioRef.current &&
+      !loading
+    ) {
+      const firstQuestion = questions[0];
+      if (firstQuestion.play_audio && firstQuestion.audio_url) {
+        // 延遲播放，確保 UI 渲染完成
+        const timer = setTimeout(async () => {
+          try {
+            await playAudioAsync(firstQuestion.audio_url!);
+            hasPlayedFirstAudioRef.current = true;
+            setShowAudioPrompt(false);
+          } catch (error) {
+            // 瀏覽器阻擋自動播放，顯示提示讓用戶點擊
+            if (error instanceof Error && error.name === "NotAllowedError") {
+              setShowAudioPrompt(true);
+            }
+            hasPlayedFirstAudioRef.current = true;
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+      hasPlayedFirstAudioRef.current = true;
+    }
+  }, [questions, loading]);
 
   const loadQuestions = async () => {
     try {
@@ -119,9 +188,15 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       });
       setQuestionStates(initialStates);
 
-      // 開始計時
+      // 通知父組件題目已載入
+      if (onQuestionsLoaded) {
+        onQuestionsLoaded(response.questions, initialStates);
+      }
+
+      // 開始計時（音檔播放由 useEffect 處理，避免重複播放）
       if (response.questions.length > 0) {
-        startTimer(response.questions[0].content_item_id);
+        const firstQuestion = response.questions[0];
+        startTimer(firstQuestion.content_item_id);
       }
     } catch (error) {
       console.error("Failed to load rearrangement questions:", error);
@@ -165,6 +240,28 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     // 取得目前狀態（在 try 之前取得，避免變數重複宣告）
     const currentState = questionStates.get(contentItemId);
 
+    // 找到當前題目
+    const currentQuestion = questions.find(
+      (q) => q.content_item_id === contentItemId
+    );
+
+    // 計算實際分數：根據已正確回答的單字數量
+    // 如果沒有回答任何單字，給予最低分（100 - max_errors * 每字分數）
+    const correctWordCount = currentState?.selectedWords.length || 0;
+    const totalWordCount = currentQuestion?.word_count || currentQuestion?.shuffled_words.length || 1;
+    const maxErrors = currentQuestion?.max_errors || 3;
+    const pointsPerWord = Math.floor(100 / totalWordCount);
+
+    // 計算實際分數
+    let actualScore: number;
+    if (correctWordCount > 0) {
+      // 有回答一些單字：計算已回答的分數
+      actualScore = Math.floor((correctWordCount / totalWordCount) * 100);
+    } else {
+      // 完全沒有回答：給予最低分（如同錯了 max_errors 次）
+      actualScore = Math.max(0, 100 - maxErrors * pointsPerWord);
+    }
+
     try {
       // 根據是否為預覽模式選擇不同的 API
       const completeUrl = isPreviewMode
@@ -174,7 +271,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       await apiClient.post(completeUrl, {
         content_item_id: contentItemId,
         timeout: true,
-        expected_score: currentState?.expectedScore || 0,
+        expected_score: actualScore,
       });
 
       setQuestionStates((prev) => {
@@ -185,6 +282,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
             ...stateInMap,
             completed: true,
             timeRemaining: 0,
+            expectedScore: actualScore, // 更新為實際分數
           });
         }
         return newStates;
@@ -192,11 +290,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
 
       toast.warning(t("rearrangement.messages.timeout"));
 
-      // 計算並更新分數
-      if (currentState) {
-        setTotalScore((prev) => prev + Math.max(0, currentState.expectedScore));
-        setCompletedQuestions((prev) => prev + 1);
-      }
+      // 計算並更新分數（使用實際分數）
+      setTotalScore((prev) => prev + actualScore);
+      setCompletedQuestions((prev) => prev + 1);
+
+      // 時間到後顯示分數和下一題按鈕，讓用戶自行點擊
+      // （不自動進入下一題）
     } catch (error) {
       console.error("Failed to complete on timeout:", error);
     }
@@ -359,9 +458,79 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     }
   };
 
+  // 處理受控索引變更（當父組件改變 currentQuestionIndex 時）
+  const prevControlledIndexRef = useRef<number | undefined>(controlledIndex);
+  useEffect(() => {
+    // 只有在 controlledIndex 真正改變時才處理
+    if (
+      controlledIndex !== undefined &&
+      controlledIndex !== prevControlledIndexRef.current &&
+      questions.length > 0
+    ) {
+      const targetIndex = controlledIndex;
+      if (targetIndex < 0 || targetIndex >= questions.length) return;
+
+      // 判斷是否是初始載入（從 undefined 變成 0）
+      const isInitialLoad =
+        prevControlledIndexRef.current === undefined && targetIndex === 0;
+
+      // 停止當前計時器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
+      const targetQuestion = questions[targetIndex];
+      const targetState = questionStates.get(targetQuestion.content_item_id);
+
+      // 如果目標題目尚未完成，啟動計時器
+      if (targetState && !targetState.completed && !targetState.challengeFailed) {
+        startTimer(targetQuestion.content_item_id);
+      }
+
+      // 播放音檔（如果需要）
+      // 跳過初始載入時的第一題（由 useEffect 處理）
+      // 跳過已完成的題目（不自動播放）
+      if (
+        targetQuestion.play_audio &&
+        targetQuestion.audio_url &&
+        !isInitialLoad &&
+        targetState &&
+        !targetState.completed &&
+        !targetState.challengeFailed
+      ) {
+        playAudio(targetQuestion.audio_url);
+      }
+
+      prevControlledIndexRef.current = controlledIndex;
+    }
+  }, [controlledIndex, questions, questionStates]);
+
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      const nextIndex = currentQuestionIndex + 1;
+    // 找到下一個尚未完成的題目（跳過已完成或挑戰失敗的題目）
+    let nextIndex = -1;
+
+    // 先從當前題目之後找
+    for (let i = currentQuestionIndex + 1; i < questions.length; i++) {
+      const state = questionStates.get(questions[i].content_item_id);
+      if (state && !state.completed && !state.challengeFailed) {
+        nextIndex = i;
+        break;
+      }
+    }
+
+    // 如果後面沒有，從頭開始找（到當前題目為止）
+    if (nextIndex === -1) {
+      for (let i = 0; i < currentQuestionIndex; i++) {
+        const state = questionStates.get(questions[i].content_item_id);
+        if (state && !state.completed && !state.challengeFailed) {
+          nextIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (nextIndex !== -1) {
+      // 找到下一個未完成的題目
       setCurrentQuestionIndex(nextIndex);
       startTimer(questions[nextIndex].content_item_id);
 
@@ -370,7 +539,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         playAudio(questions[nextIndex].audio_url!);
       }
     } else {
-      // 所有題目完成
+      // 所有題目都已完成
       if (onComplete) {
         onComplete(totalScore, questions.length);
       }
@@ -383,15 +552,21 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     }
   };
 
-  const playAudio = useCallback((url: string) => {
+  // 異步播放音檔（返回 Promise，可以捕捉錯誤）
+  const playAudioAsync = useCallback(async (url: string): Promise<void> => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
     audioRef.current = new Audio(url);
-    audioRef.current.play().catch((e) => {
+    await audioRef.current.play();
+  }, []);
+
+  // 同步播放音檔（忽略錯誤）
+  const playAudio = useCallback((url: string) => {
+    playAudioAsync(url).catch((e) => {
       console.error("Failed to play audio:", e);
     });
-  }, []);
+  }, [playAudioAsync]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -468,6 +643,32 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
 
       <Progress value={progressPercent} className="h-2" />
 
+      {/* 音檔自動播放被阻擋時顯示的提示 */}
+      {showAudioPrompt && currentQuestion.play_audio && currentQuestion.audio_url && (
+        <div className="mt-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5 text-purple-600" />
+              <span className="text-purple-800 font-medium">
+                {t("rearrangement.audioPrompt")}
+              </span>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => {
+                playAudio(currentQuestion.audio_url!);
+                setShowAudioPrompt(false);
+              }}
+            >
+              <Volume2 className="h-4 w-4 mr-1" />
+              {t("rearrangement.playAudio")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* 題目卡片 */}
       <Card className="mt-4">
         <CardHeader className="pb-2">
@@ -491,13 +692,14 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                 {formatTime(currentState.timeRemaining)}
               </div>
 
-              {/* 音檔按鈕 */}
+              {/* 音檔按鈕 - 已完成的題目不能播放 */}
               {currentQuestion.play_audio && currentQuestion.audio_url && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => playAudio(currentQuestion.audio_url!)}
-                  disabled={submitting}
+                  disabled={submitting || currentState.completed || currentState.challengeFailed}
+                  title={currentState.completed || currentState.challengeFailed ? t("rearrangement.audioDisabledCompleted") : undefined}
                 >
                   <Volume2 className="h-4 w-4 mr-1" />
                   {t("rearrangement.playAudio")}
@@ -595,21 +797,35 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
             <div
               className={cn(
                 "p-4 rounded-lg text-center",
-                currentState.completed ? "bg-green-50" : "bg-red-50",
+                currentState.completed && currentState.expectedScore === 100
+                  ? "bg-green-50"
+                  : currentState.completed
+                    ? "bg-blue-50"
+                    : "bg-red-50",
               )}
             >
               {currentState.completed ? (
-                <>
-                  <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
-                  <p className="text-lg font-bold text-green-800">
-                    {t("rearrangement.messages.correct")}
-                  </p>
-                  <p className="text-green-600">
+                currentState.expectedScore === 100 ? (
+                  // 全對：顯示打勾和「答對了！」
+                  <>
+                    <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
+                    <p className="text-lg font-bold text-green-800">
+                      {t("rearrangement.messages.correct")}
+                    </p>
+                    <p className="text-green-600">
+                      {t("rearrangement.messages.scoreEarned", {
+                        score: Math.round(currentState.expectedScore),
+                      })}
+                    </p>
+                  </>
+                ) : (
+                  // 非全對：只顯示分數
+                  <p className="text-lg font-bold text-blue-800">
                     {t("rearrangement.messages.scoreEarned", {
                       score: Math.round(currentState.expectedScore),
                     })}
                   </p>
-                </>
+                )
               ) : (
                 <>
                   <XCircle className="h-12 w-12 mx-auto mb-2 text-red-600" />
@@ -636,7 +852,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                 onClick={handleNextQuestion}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {currentQuestionIndex < questions.length - 1 ? (
+                {/* 檢查是否還有未完成的題目（排除當前題目） */}
+                {questions.some((q, idx) => {
+                  if (idx === currentQuestionIndex) return false;
+                  const state = questionStates.get(q.content_item_id);
+                  return state && !state.completed && !state.challengeFailed;
+                }) ? (
                   <>
                     {t("rearrangement.buttons.next")}
                     <ChevronRight className="h-4 w-4 ml-1" />
