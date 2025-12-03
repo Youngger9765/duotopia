@@ -154,7 +154,7 @@ export default function StudentTable({
         {onAddStudent && (
           <Button className="mt-4" size="sm" onClick={onAddStudent}>
             <Plus className="h-4 w-4 mr-2" />
-            {t("studentTable.addFirstStudent")}
+            {t("studentTable.emptyState.addFirst")}
           </Button>
         )}
       </div>
