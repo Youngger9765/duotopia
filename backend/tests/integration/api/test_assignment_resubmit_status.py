@@ -18,8 +18,8 @@ TDD Test Coverage:
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 from main import app
 from database import Base, get_db
@@ -32,11 +32,8 @@ from models import (
     Lesson,
     Content,
     ContentItem,
-    Assignment,
-    AssignmentContent,
     StudentAssignment,
     StudentContentProgress,
-    StudentItemProgress,
     ContentType,
     AssignmentStatus,
     SubscriptionPeriod,
@@ -52,7 +49,6 @@ engine = create_engine(
 )
 
 # 啟用 SQLite 外鍵約束
-from sqlalchemy import event
 
 
 @event.listens_for(engine, "connect")
@@ -267,7 +263,9 @@ class TestIssue58ResubmitStatus:
                 "classroom_id": test_data["classroom_id"],
                 "content_ids": [test_data["content_id"]],
                 "student_ids": [test_data["student_id"]],
-                "due_date": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+                "due_date": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
             },
         )
         assert create_response.status_code == 200
@@ -285,7 +283,10 @@ class TestIssue58ResubmitStatus:
         )
         assert student_assignment is not None
         # Note: Initial status might be NOT_STARTED instead of IN_PROGRESS
-        assert student_assignment.status in [AssignmentStatus.IN_PROGRESS, AssignmentStatus.NOT_STARTED]
+        assert student_assignment.status in [
+            AssignmentStatus.IN_PROGRESS,
+            AssignmentStatus.NOT_STARTED,
+        ]
         student_assignment_id = student_assignment.id
         db.close()
 
@@ -339,7 +340,9 @@ class TestIssue58ResubmitStatus:
                 "classroom_id": test_data["classroom_id"],
                 "content_ids": [test_data["content_id"]],
                 "student_ids": [test_data["student_id"]],
-                "due_date": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+                "due_date": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
             },
         )
         assignment_id = create_response.json()["assignment_id"]
@@ -439,7 +442,9 @@ class TestIssue58ResubmitStatus:
                 "classroom_id": test_data["classroom_id"],
                 "content_ids": [test_data["content_id"]],
                 "student_ids": [test_data["student_id"]],
-                "due_date": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+                "due_date": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
             },
         )
         assignment_id = create_response.json()["assignment_id"]
@@ -490,6 +495,7 @@ class TestIssue58ResubmitStatus:
 
         # Step 6: 第二次訂正提交
         import time
+
         time.sleep(0.1)  # 確保時間戳不同
 
         client.post(
@@ -534,7 +540,9 @@ class TestIssue58ResubmitStatus:
                 "classroom_id": test_data["classroom_id"],
                 "content_ids": [test_data["content_id"]],
                 "student_ids": [test_data["student_id"]],
-                "due_date": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+                "due_date": (
+                    datetime.now(timezone.utc) + timedelta(days=7)
+                ).isoformat(),
             },
         )
         assignment_id = create_response.json()["assignment_id"]
@@ -553,13 +561,18 @@ class TestIssue58ResubmitStatus:
         # Step 2: 驗證有 StudentContentProgress 記錄
         progress_records = (
             db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == student_assignment_id)
+            .filter(
+                StudentContentProgress.student_assignment_id == student_assignment_id
+            )
             .all()
         )
         assert len(progress_records) > 0
         # Note: Initial status might be NOT_STARTED instead of IN_PROGRESS
         for progress in progress_records:
-            assert progress.status in [AssignmentStatus.IN_PROGRESS, AssignmentStatus.NOT_STARTED]
+            assert progress.status in [
+                AssignmentStatus.IN_PROGRESS,
+                AssignmentStatus.NOT_STARTED,
+            ]
         db.close()
 
         # Step 3: 提交作業
@@ -572,7 +585,9 @@ class TestIssue58ResubmitStatus:
         db = TestingSessionLocal()
         progress_records = (
             db.query(StudentContentProgress)
-            .filter(StudentContentProgress.student_assignment_id == student_assignment_id)
+            .filter(
+                StudentContentProgress.student_assignment_id == student_assignment_id
+            )
             .all()
         )
 
@@ -584,7 +599,10 @@ class TestIssue58ResubmitStatus:
             if progress.status == AssignmentStatus.SUBMITTED:
                 assert progress.completed_at is not None
             # Both SUBMITTED and NOT_STARTED are acceptable after submission
-            assert progress.status in [AssignmentStatus.SUBMITTED, AssignmentStatus.NOT_STARTED]
+            assert progress.status in [
+                AssignmentStatus.SUBMITTED,
+                AssignmentStatus.NOT_STARTED,
+            ]
 
         db.close()
 
