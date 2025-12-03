@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import TeacherLayout from "@/components/TeacherLayout";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import BatchGradingModal from "@/components/BatchGradingModal";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -30,6 +31,7 @@ import {
   ChevronRight,
   Search,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { Student, Assignment } from "@/types";
 import { cn } from "@/lib/utils";
@@ -318,6 +320,7 @@ export default function TeacherAssignmentDetailPage() {
     Record<number, ContentDetail>
   >({});
   const [activeDragId, setActiveDragId] = useState<number | null>(null); // 追蹤正在拖拽的項目
+  const [showBatchGradingModal, setShowBatchGradingModal] = useState(false);
 
   // 🔥 追蹤正在載入的內容 ID，避免重複請求（Race Condition 保護）
   const loadingRef = useRef<Set<number>>(new Set());
@@ -1051,7 +1054,7 @@ export default function TeacherAssignmentDetailPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-row gap-2 sm:gap-3">
             {/* 批改作業按鈕 */}
             <Button
               onClick={() =>
@@ -1059,10 +1062,22 @@ export default function TeacherAssignmentDetailPage() {
                   `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
                 )
               }
-              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 h-12 min-h-12 w-full sm:w-auto"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
+            </Button>
+            {/* AI批改按鈕 */}
+            <Button
+              onClick={() => setShowBatchGradingModal(true)}
+              disabled={stats.total === 0}
+              className={cn(
+                "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+              )}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {t("assignmentDetail.buttons.batchGrade")}
             </Button>
           </div>
         </div>
@@ -2068,7 +2083,7 @@ export default function TeacherAssignmentDetailPage() {
                             <span
                               className={`font-bold ${progress.score && progress.score >= 80 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                             >
-                              {progress.score || 0}
+                              {(progress.score || 0).toFixed(1)}
                             </span>
                           ) : (
                             <span className="text-gray-300 dark:text-gray-600">
@@ -2164,6 +2179,18 @@ export default function TeacherAssignmentDetailPage() {
             </table>
           </div>
         </Card>
+
+        {/* Batch Grading Modal */}
+        <BatchGradingModal
+          open={showBatchGradingModal}
+          onOpenChange={setShowBatchGradingModal}
+          assignmentId={Number(assignmentId)}
+          classroomId={Number(classroomId)}
+          onComplete={() => {
+            // Refresh student progress after batch grading
+            fetchStudentProgress();
+          }}
+        />
       </div>
     </TeacherLayout>
   );

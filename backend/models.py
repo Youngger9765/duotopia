@@ -958,6 +958,7 @@ class StudentItemProgress(Base):
     accuracy_score = Column(DECIMAL(5, 2))
     fluency_score = Column(DECIMAL(5, 2))
     pronunciation_score = Column(DECIMAL(5, 2))
+    completeness_score = Column(DECIMAL(5, 2))
     ai_feedback = Column(Text)
     ai_assessed_at = Column(DateTime(timezone=True))
 
@@ -1000,7 +1001,12 @@ class StudentItemProgress(Base):
         """Calculate overall score from all components"""
         scores = [
             s
-            for s in [self.accuracy_score, self.fluency_score, self.pronunciation_score]
+            for s in [
+                self.accuracy_score,
+                self.fluency_score,
+                self.pronunciation_score,
+                self.completeness_score,
+            ]
             if s is not None
         ]
         return sum(scores) / len(scores) if scores else None

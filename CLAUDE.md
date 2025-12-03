@@ -48,6 +48,7 @@ Otherwise → Analyze context and choose
 - **[git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)** - PDCA 工作流程、Git 操作、Issue/PR 管理
 - **[test-runner.md](./.claude/agents/test-runner.md)** - 测试指南、覆盖率要求、最佳实践
 - **[code-reviewer.md](./.claude/agents/code-reviewer.md)** - 代码审查、安全检查、性能分析
+- **[cicd-monitor.md](./.claude/agents/cicd-monitor.md)** - CI/CD 管道监控、自动状态更新
 - **[task-router.md](./.claude/agents/task-router.md)** - 任务路由助手
 
 ### Project Documents
@@ -99,6 +100,32 @@ Otherwise → Analyze context and choose
 - Failure analysis
 - Performance benchmarking
 
+### @agent-cicd-monitor 🔍 **[AUTO-TRIGGERED AFTER PUSH]**
+**Auto-trigger**: Automatic after `git push` if PR exists
+- Token-efficient hybrid monitoring (background script + smart checkpoints)
+- Real-time progress in terminal (zero token cost)
+- Claude analyzes initial status and final results only (~5,000 tokens)
+- Maximum 15-minute monitoring with automatic timeout
+- User-interruptible
+
+**How It Works**:
+1. Post-push hook starts background monitoring script
+2. Claude checks initial status and estimates completion
+3. Background script polls GitHub every 45s (displays in terminal)
+4. When complete, script triggers Claude for final analysis
+5. Claude provides detailed results and failure debugging
+
+**Token Efficiency**:
+- Old approach: ~60,000 tokens (continuous polling)
+- New approach: ~5,000 tokens (90% reduction)
+- Background script handles polling (zero token cost)
+
+**Manual Usage**:
+```bash
+@agent-cicd-monitor check PR #55           # Initial status
+@agent-cicd-monitor analyze-results PR #55 # Final analysis
+```
+
 ### @agent-task-router
 **Internal use only** - AI-powered task routing assistant
 - Suggests appropriate agents based on task
@@ -138,6 +165,13 @@ Auto-formats code after modifications
 
 ### PreToolUse(Bash(git commit*))
 Validates code quality before commits
+
+### post-push (Git Hook)
+Automatically triggers @agent-cicd-monitor after successful push
+- Detects if current branch has a PR
+- Echoes agent trigger message for Claude Code CLI
+- Provides PR and Actions URLs
+- Falls back to legacy deployment monitor for staging/main
 
 ### Stop
 Runs quality checks at end of each turn

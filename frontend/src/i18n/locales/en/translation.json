@@ -2122,6 +2122,7 @@
       "questions": "questions",
       "giveScore": "Give Score",
       "scoreRange": "0-100 points",
+      "usingAverageScore": "(Using Average Score)",
       "selectGradingStatus": "Select Grading Status",
       "referenceAudio": "Reference Audio",
       "transcription": "Speech Recognition Result",
@@ -2172,7 +2173,11 @@
       "pronunciationClear": "Clear pronunciation",
       "fluencyGood": "Good fluency",
       "accuracyHigh": "High accuracy",
-      "completenessGood": "Good completeness"
+      "completenessGood": "Good completeness",
+      "aiGrading": "AI is grading...",
+      "aiGradingComplete": "AI grading completed!",
+      "aiGradingFailed": "AI grading failed, please try again",
+      "noStudentToGrade": "No student to grade (status must be Submitted or Resubmitted)"
     },
     "status": {
       "notStarted": "Not Started",
@@ -2204,6 +2209,7 @@
     "buttons": {
       "backToList": "Back to Assignment List",
       "gradeAssignment": "Grade Assignment",
+      "batchGrade": "AI Batch Grade",
       "cancel": "Cancel",
       "save": "Save",
       "edit": "Edit",
@@ -2264,6 +2270,57 @@
       "speakingQuiz": "Speaking Quiz",
       "speaking_quiz": "Speaking Quiz",
       "SPEAKING_QUIZ": "Speaking Quiz"
+    }
+  },
+  "batchGrading": {
+    "title": "AI Batch Grading",
+    "progress": "Grading... ({{current}}/{{total}} students)",
+    "studentName": "Student Name",
+    "accuracy": "Accuracy",
+    "fluency": "Fluency",
+    "pronunciation": "Pronunciation",
+    "completeness": "Completeness",
+    "totalScore": "Total Score",
+    "missingItems": "Missing Items",
+    "decision": "Decision",
+    "action": "Action",
+    "decisionGraded": "Complete Grading",
+    "decisionReturned": "Return for Correction",
+    "decisionPending": "Pending",
+    "submitSingle": "Submit",
+    "submitAll": "Submit All",
+    "selectAllGraded": "Select All: Complete",
+    "selectAllReturned": "Select All: Return",
+    "clearAll": "Clear All Selections",
+    "selectDecisionFirst": "Please select a decision first (return or complete)",
+    "singleSubmitSuccess": "Grading completed: {{name}}",
+    "allSubmitSuccess": "Grading completed: {{graded}} completed, {{returned}} returned, {{unchanged}} pending",
+    "returnForCorrection": "Return for Correction",
+    "averageAccuracy": "Average Accuracy",
+    "averageFluency": "Average Fluency",
+    "averagePronunciation": "Average Pronunciation",
+    "averageCompleteness": "Average Completeness",
+    "pause": "Pause",
+    "close": "Close",
+    "selectedForReturn": "Selected {{count}} students for return",
+    "confirmButton": "Confirm",
+    "confirmGrading": "Confirm Grading",
+    "processing": "Processing...",
+    "helperText": "After clicking 'Confirm', only checked students will be returned, others will keep their status",
+    "successReturned": "Returned {{count}} students for correction",
+    "successNoAction": "No students processed",
+    "successDescription": "Graded {{graded}} students, returned {{returned}} for correction",
+    "errorDescription": "Failed to finalize grading, please try again",
+    "messages": {
+      "success": "Successfully graded {{count}} students",
+      "error": "Grading failed, please try again later",
+      "returnSuccess": "Marked {{count}} students for correction",
+      "returnError": "Failed to update correction status"
+    },
+    "aria": {
+      "markAsGraded": "Mark {{name}} as grading complete",
+      "markAsReturned": "Mark {{name}} as return for correction",
+      "markAsPending": "Mark {{name}} as pending"
     }
   },
   "previewPage": {
