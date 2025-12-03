@@ -20,8 +20,14 @@ jobs:
             const comment = context.payload.comment.body;
             const author = context.payload.comment.user.login;
 
+            // Exclude bot comments
+            if (author.includes('[bot]') || author === 'github-actions') {
+              console.log(`Comment from ${author} - bot account excluded`);
+              return;
+            }
+
             // Only from authorized users
-            const authorizedUsers = ['kaddy-eunice', 'Youngger9765'];
+            const authorizedUsers = ['kaddy-eunice'];
             if (!authorizedUsers.includes(author)) {
               console.log(`Comment from ${author} - not authorized for approval`);
               return;
