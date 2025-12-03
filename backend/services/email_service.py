@@ -12,6 +12,7 @@ import smtplib
 from sqlalchemy.orm import Session
 
 from models import Student, Teacher, SubscriptionPeriod
+from services.onboarding_service import onboarding_service
 
 logger = logging.getLogger(__name__)
 
@@ -453,6 +454,14 @@ class EmailService:
                 status="active",
             )
             db.add(new_period)
+
+            # 🎯 重要：創建預設的 onboarding 資料（班級、學生、課程、作業）
+            onboarding_success = onboarding_service.create_onboarding_data(db, teacher)
+            if not onboarding_success:
+                logger.warning(
+                    f"Onboarding data creation failed for teacher {teacher.id}, but verification continues"
+                )
+                # 不因 onboarding 失敗而回滾整個驗證流程
 
             db.commit()
 
