@@ -412,14 +412,21 @@ export default function StudentLogin() {
               </div>
 
               <div className="space-y-4">
-                <Input
-                  type="password"
-                  placeholder={t("studentLogin.step4.placeholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="text-lg py-6"
-                  onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-                />
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder={t("studentLogin.step4.placeholder")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="text-lg py-6"
+                    onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                  {/* Password hint - always visible */}
+                  <div className="text-sm text-gray-600 space-y-1 px-1">
+                    <p>💡 {t("studentLogin.step4.passwordHint")}</p>
+                    <p>🔑 {t("studentLogin.step4.forgotPassword")}</p>
+                  </div>
+                </div>
 
                 <Button
                   onClick={handleLogin}

@@ -5,6 +5,9 @@ on:
     types: [closed]
   pull_request:
     types: [closed]
+  push:  # Explicitly ignore all push events
+    branches-ignore:
+      - '**'
 
 env:
   PROJECT_ID: duotopia-472708
@@ -12,13 +15,16 @@ env:
 
 permissions:
   issues: write
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
   cleanup-on-issue-close:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Extract issue number
         id: extract
         run: |
@@ -70,15 +76,51 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed"
+
+      - name: Cleanup all related branches
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting ALL branches related to Issue #${ISSUE_NUM}..."
+
+          # Find all branches containing issue-XX pattern
+          # Match: issue-26, issue-26-, issue-26-anything
+          # This catches: fix/issue-26-desc, claude/issue-26-timestamp, feature/issue-26-test
+          BRANCHES=$(git ls-remote --heads origin | grep -E "issue-${ISSUE_NUM}([^0-9]|$)" | sed 's/.*refs\/heads\///' || true)
+          
+          if [ -z "$BRANCHES" ]; then
+            echo "ℹ️ No branches found for Issue #${ISSUE_NUM}"
+          else
+            echo "Found branches to delete:"
+            echo "$BRANCHES"
+            
+            # Delete each branch
+            DELETED=0
+            FAILED=0
+            while IFS= read -r branch; do
+              if [ -n "$branch" ]; then
+                echo "Deleting branch: $branch"
+                if git push origin --delete "$branch" 2>/dev/null; then
+                  echo "✅ Deleted: $branch"
+                  ((DELETED++))
+                else
+                  echo "⚠️ Failed to delete: $branch"
+                  ((FAILED++))
+                fi
+              fi
+            done <<< "$BRANCHES"
+            
+            echo "📊 Summary: Deleted $DELETED branch(es), Failed $FAILED"
+          fi
 
       - name: Comment on issue
         uses: actions/github-script@v7
@@ -88,7 +130,14 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## 🧹 Per-Issue Test Environment Cleaned Up\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped'
+              body: `## 🧹 Per-Issue Test Environment Cleaned Up
+
+✅ Cloud Run services deleted
+✅ Container images cleaned
+✅ All related branches deleted (智能檢測 issue-${context.issue.number})
+💰 Billing stopped
+
+**Note**: All branches containing \`issue-${context.issue.number}\` pattern have been removed.`
             })
 
   cleanup-on-pr-merge:
@@ -100,10 +149,10 @@ jobs:
       - name: Extract issue number from PR
         id: extract
         run: |
-          # Extract issue number from branch name (fix/issue-X-xxx)
+          # Extract issue number from branch name (fix/issue-X-xxx, feature/issue-X-xxx, claude/issue-X-xxx)
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          if [[ "$BRANCH" =~ fix/issue-([0-9]+) ]]; then
-            ISSUE_NUM="${BASH_REMATCH[1]}"
+          if [[ "$BRANCH" =~ (fix|feature|claude)/issue-([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[2]}"
             echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
             echo "✅ Found issue number: $ISSUE_NUM from branch: $BRANCH"
           else
@@ -146,15 +195,52 @@ jobs:
 
           # Delete frontend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/frontend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-frontend \
             --quiet 2>/dev/null || echo "ℹ️ Frontend images not found"
 
           # Delete backend images
           gcloud artifacts docker images delete \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/backend-preview-issue-${ISSUE_NUM} \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/duotopia-repo/duotopia-preview-issue-${ISSUE_NUM}-backend \
             --quiet 2>/dev/null || echo "ℹ️ Backend images not found"
 
           echo "✅ Cleanup completed for Issue #${ISSUE_NUM}"
+
+      - name: Cleanup all related branches
+        if: steps.extract.outputs.issue_number != ''
+        run: |
+          ISSUE_NUM=${{ steps.extract.outputs.issue_number }}
+
+          echo "🗑️ Deleting ALL branches related to Issue #${ISSUE_NUM}..."
+
+          # Find all branches containing issue-XX pattern
+          # Match: issue-26, issue-26-, issue-26-anything
+          # This catches: fix/issue-26-desc, claude/issue-26-timestamp, feature/issue-26-test
+          BRANCHES=$(git ls-remote --heads origin | grep -E "issue-${ISSUE_NUM}([^0-9]|$)" | sed 's/.*refs\/heads\///' || true)
+          
+          if [ -z "$BRANCHES" ]; then
+            echo "ℹ️ No branches found for Issue #${ISSUE_NUM}"
+          else
+            echo "Found branches to delete:"
+            echo "$BRANCHES"
+            
+            # Delete each branch
+            DELETED=0
+            FAILED=0
+            while IFS= read -r branch; do
+              if [ -n "$branch" ]; then
+                echo "Deleting branch: $branch"
+                if git push origin --delete "$branch" 2>/dev/null; then
+                  echo "✅ Deleted: $branch"
+                  ((DELETED++))
+                else
+                  echo "⚠️ Failed to delete: $branch"
+                  ((FAILED++))
+                fi
+              fi
+            done <<< "$BRANCHES"
+            
+            echo "📊 Summary: Deleted $DELETED branch(es), Failed $FAILED"
+          fi
 
       - name: Comment on related issue
         if: steps.extract.outputs.issue_number != ''
@@ -166,5 +252,14 @@ jobs:
               issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🧹 Per-Issue Test Environment Cleaned Up\n\nPR #${{ github.event.pull_request.number }} merged, cleaning up resources.\n\n✅ Cloud Run services deleted\n✅ Container images cleaned\n💰 Billing stopped`
+              body: `## 🧹 Per-Issue Test Environment Cleaned Up
+
+PR #${{ github.event.pull_request.number }} merged, cleaning up resources.
+
+✅ Cloud Run services deleted
+✅ Container images cleaned
+✅ All related branches deleted (智能檢測 issue-${issueNumber})
+💰 Billing stopped
+
+**Note**: All branches containing \`issue-${issueNumber}\` pattern have been removed.`
             })

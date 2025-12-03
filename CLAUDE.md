@@ -145,6 +145,168 @@ Runs quality checks at end of each turn
 ### error-reflection.py (Stop hook)
 Automatically detects errors and triggers learning reflection
 
+## 🤖 @claude GitHub Bot 使用指南
+
+### ⚠️ CRITICAL: Git Branch Naming Convention (MANDATORY FOR @claude bot)
+
+**When @claude bot works on GitHub Issues, it MUST follow these EXACT rules:**
+
+#### Branch Name Format
+- **REQUIRED FORMAT**: `claude/issue-<NUMBER>` (WITHOUT any timestamp or date suffix)
+- **Examples**:
+  - ✅ CORRECT: `claude/issue-26`
+  - ✅ CORRECT: `claude/issue-99`
+  - ❌ WRONG: `claude/issue-26-20251129-1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-20251129_1655` (has timestamp - FORBIDDEN)
+  - ❌ WRONG: `claude/issue-26-password-hint` (has description - FORBIDDEN)
+
+#### Branch Reuse Rule
+**Before creating a new branch, @claude bot MUST:**
+1. Check if branch `claude/issue-<NUMBER>` already exists
+2. If exists: Checkout and pull latest changes
+3. If not exists: Create new branch with EXACT format above
+
+**Example workflow @claude bot should follow:**
+```bash
+# Step 1: Check if branch exists
+if git ls-remote --heads origin claude/issue-26 | grep -q claude/issue-26; then
+  # Branch exists - reuse it
+  git fetch origin claude/issue-26:claude/issue-26
+  git checkout claude/issue-26
+  git pull origin claude/issue-26
+else
+  # Branch doesn't exist - create it
+  git checkout -b claude/issue-26
+fi
+
+# Step 2: Make changes and commit
+# ... (work on the issue)
+
+# Step 3: Push to the SAME branch
+git push origin claude/issue-26
+```
+
+#### Why This Matters
+1. **No Branch Accumulation** - Reusing branches prevents hundreds of abandoned branches
+2. **Automatic Cleanup** - When issue closes, only ONE branch needs cleanup
+3. **CI/CD Integration** - Per-Issue Test Environment expects fixed branch names
+4. **Kubernetes Compatibility** - Underscore timestamps break K8s namespace naming
+
+#### Enforcement
+- **Issue will be rejected** if @claude creates timestamped branches
+- **User will manually delete** all timestamped branches and request re-work
+- **Only fixed format branches** will be reviewed and merged
+
+---
+
+### 如何让 @claude 遵循项目流程
+
+当在 GitHub Issue 中使用 @claude bot 时，必须提供明确指示以确保遵循 git-issue-pr-flow 流程。
+
+#### ✅ 正确的指示格式
+
+```
+@claude 请按照以下步骤修复此 Issue：
+
+1. **使用固定分支**: 在 `claude/issue-26` 分支上工作
+   - ⚠️ CRITICAL: 分支名必须是 `claude/issue-26`，不能有任何时间戳或日期后缀
+   - 如果分支已存在，必须先 checkout 并 pull 最新代码
+   - 绝对禁止创建 `claude/issue-26-YYYYMMDD-HHMM` 格式的分支
+2. **检查既有分支**: 如果分支已存在，请先 pull 最新代码再修改
+3. **遵循 PDCA 流程**:
+   - Plan: 分析问题根因，提出修复方案
+   - Do: 实施修复并编写测试
+   - Check: 推送到分支触发 Per-Issue Test Environment
+   - Act: 等待测试反馈，必要时迭代改进
+4. **不要自动创建 PR**: 推送代码后等待人工审查再创建 PR
+
+参考文档: .claude/agents/git-issue-pr-flow.md
+```
+
+#### ❌ 错误的指示（会导致分支堆积）
+
+**Example 1: Too vague**
+```
+@claude 请修复此问题
+```
+结果：创建 `claude/issue-26-20251129-1639` ❌
+
+**Example 2: Missing branch name requirement**
+```
+@claude 请按照 PDCA 流程修复
+```
+结果：创建 `claude/issue-26-20251129-1655` ❌
+
+**Example 3: Not emphasizing NO TIMESTAMP**
+```
+@claude 请在 claude/issue-26 分支上修复
+```
+结果：仍可能创建带时间戳的分支 ❌
+
+**Correct approach: Be EXTREMELY explicit**
+```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
+
+⚠️ CRITICAL BRANCH NAMING RULE:
+- Branch name MUST be exactly: claude/issue-26
+- DO NOT add any timestamp (no YYYYMMDD-HHMM suffix)
+- DO NOT add any date suffix
+- If branch exists, checkout and pull it first
+
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程工作。
+```
+结果：使用 `claude/issue-26` ✅
+
+#### 🔑 关键要点
+
+1. **明确指定分支名**: 告诉 @claude 使用 `claude/issue-XX` 格式
+2. **要求检查既有分支**: 避免重复创建
+3. **引用 git-issue-pr-flow.md**: 确保 @claude 知道遵循 PDCA 流程
+4. **分步骤指示**: 明确每个阶段的产出要求
+
+### @claude 分支清理
+
+如果 @claude 已经创建了多个带时间戳的分支，可以手动清理：
+
+```bash
+# 列出所有 claude/issue-XX-* 分支
+git fetch --prune
+git branch -r | grep "claude/issue-26-"
+
+# 删除多余的旧分支（保留最新的）
+git push origin --delete claude/issue-26-20251129-1546
+git push origin --delete claude/issue-26-20251129-1613
+git push origin --delete claude/issue-26-20251129-1626
+```
+
+当 Issue 关闭时，cleanup workflow 会自动删除所有相关分支。
+
+### 最佳实践示例
+
+#### 初次修复
+```
+@claude 请在 `claude/issue-26` 分支上修复此 Issue。
+
+请按照 .claude/agents/git-issue-pr-flow.md 中的 PDCA 流程：
+1. Plan: 分析所有留言反馈，理解需求（保留上方提示，移除下方重复提示）
+2. Do: 实施修复
+3. Check: 推送到 claude/issue-26 触发部署
+4. Act: 等待测试反馈
+
+不要创建带时间戳的分支，不要自动创建 PR。
+```
+
+#### 后续迭代
+```
+@claude 请在既有的 `claude/issue-26` 分支上继续修复。
+
+根据最新反馈：
+- Preview 环境也要隐藏测试提示
+- 检查代码是否 clean
+
+请 pull 最新代码后再修改，然后推送触发重新部署。
+```
+
 ## 🚨 Quick Reference
 
 ### Must Follow Rules
@@ -155,6 +317,7 @@ Automatically detects errors and triggers learning reflection
 5. **Use feature branches, not staging** - Never commit directly to staging
 6. **Check README/CLAUDE.md/package.json first** - Understand project standards
 7. **Learn from every error** - Use error reflection system to prevent recurrence
+8. **指导 @claude bot** - 在 Issue 中使用 @claude 时，明确指定使用固定分支和遵循 PDCA 流程
 
 ### Command Shortcuts
 ```bash
@@ -164,11 +327,21 @@ npm run typecheck
 npm run lint
 npm run build
 
-# Git workflow (via agent)
-create-feature-fix <issue> <desc>
-deploy-feature <issue>
-update-release-pr
-check-approvals
+# Git workflow
+git checkout -b fix/issue-<NUM>-<description>  # Create feature branch
+gh pr create --base staging                     # Create PR
+gh pr checks <PR>                               # Check CI/CD status
+gh pr merge <PR> --squash                       # Merge PR
+update-release-pr                               # Create staging→main PR (complex, consider automating)
+
+# Templates
+.claude/templates/pdca-plan.md                  # PDCA Plan template
+.claude/templates/pdca-act.md                   # PDCA Act completion template
+
+# Automated workflows (no manual commands needed)
+# - Auto-Approval Detection: Monitors Issue comments
+# - Per-Issue Deploy: Deploys on branch push
+# - Cleanup: Deletes resources on Issue close
 ```
 
 ## 🎯 Agent Selection Matrix

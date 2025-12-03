@@ -198,16 +198,11 @@ export default function StudentAssignmentDetail() {
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
       case "NOT_STARTED":
-        return {
-          text: t("studentAssignmentDetail.status.notStarted"),
-          color: "bg-gray-100 text-gray-800",
-          icon: <Clock className="h-4 w-4" />,
-        };
       case "IN_PROGRESS":
         return {
           text: t("studentAssignmentDetail.status.inProgress"),
           color: "bg-blue-100 text-blue-800",
-          icon: <Play className="h-4 w-4" />,
+          icon: <Clock className="h-4 w-4" />,
         };
       case "SUBMITTED":
         return {

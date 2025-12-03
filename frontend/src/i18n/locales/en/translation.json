@@ -516,8 +516,7 @@
     },
     "flowStatus": {
       "title": "Assignment Progress Flow",
-      "notStarted": "Not Started",
-      "inProgress": "In Progress",
+      "todo": "To Do",
       "submitted": "Submitted",
       "returned": "Returned for Revision",
       "resubmitted": "Resubmitted",
@@ -554,13 +553,9 @@
       "resubmit": "Resubmit"
     },
     "emptyStates": {
-      "notStarted": {
-        "title": "No assignments to start",
-        "description": "All assignments have been started!"
-      },
-      "inProgress": {
-        "title": "No assignments in progress",
-        "description": "Start practicing your assignments!"
+      "todo": {
+        "title": "No pending assignments",
+        "description": "All assignments have been completed or submitted!"
       },
       "submitted": {
         "title": "No assignments pending grading",
@@ -1079,11 +1074,6 @@
   "dialogs": {
     "assignmentDialog": {
       "title": "Assign New Assignment",
-      "steps": {
-        "selectContent": "Select Content",
-        "selectStudents": "Select Students",
-        "assignmentDetails": "Assignment Details"
-      },
       "quota": {
         "remaining": "Quota Remaining",
         "remainingColon": "Quota Remaining:",
@@ -1157,6 +1147,8 @@
         "noStudentSelected": "Please select at least one student",
         "createFailed": "Failed to create assignment",
         "loadProgramsFailed": "Failed to load programs",
+        "loadTemplateFailed": "Failed to load template programs",
+        "loadClassroomProgramsFailed": "Failed to load classroom programs",
         "loadLessonsFailed": "Failed to load lessons",
         "loadContentsFailed": "Failed to load contents",
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
@@ -1696,7 +1688,7 @@
     },
     "total": "Total {{count}} students",
     "columns": {
-      "id": "ID",
+      "studentNumber": "Student Number",
       "studentName": "Student Name",
       "contactInfo": "Contact Info",
       "passwordStatus": "Password Status",
@@ -1737,7 +1729,8 @@
       "phone": "Phone:",
       "classroom": "Classroom:",
       "password": "Password:",
-      "lastLogin": "Last Login:"
+      "lastLogin": "Last Login:",
+      "studentNumber": "Student Number:"
     }
   },
   "subscriptionProgressBanner": {
@@ -1873,7 +1866,12 @@
       "delete": "Delete",
       "addItem": "Add Item",
       "maxRowsReached": "Maximum 15 rows allowed",
-      "minRowsRequired": "At least 1 row required"
+      "minRowsRequired": "At least 1 row required",
+      "cannotDeleteWithProgress": "This item has student progress and cannot be deleted"
+    },
+    "assignmentCopyWarning": {
+      "title": "Notice: This is an assignment copy",
+      "message": "Items with student progress cannot be deleted (delete buttons are disabled). You can modify item content, but cannot remove items that have been answered."
     },
     "ttsModal": {
       "title": "Audio Settings",
@@ -2084,11 +2082,23 @@
     },
     "contentTypes": {
       "readingAssessment": "Reading Assessment",
+      "reading_assessment": "Reading Assessment",
+      "READING_ASSESSMENT": "Reading Assessment",
       "speakingPractice": "Speaking Practice",
+      "speaking_practice": "Speaking Practice",
+      "SPEAKING_PRACTICE": "Speaking Practice",
       "speakingScenario": "Speaking Scenario",
+      "speaking_scenario": "Speaking Scenario",
+      "SPEAKING_SCENARIO": "Speaking Scenario",
       "listeningCloze": "Listening Cloze",
+      "listening_cloze": "Listening Cloze",
+      "LISTENING_CLOZE": "Listening Cloze",
       "sentenceMaking": "Sentence Making",
+      "sentence_making": "Sentence Making",
+      "SENTENCE_MAKING": "Sentence Making",
       "speakingQuiz": "Speaking Quiz",
+      "speaking_quiz": "Speaking Quiz",
+      "SPEAKING_QUIZ": "Speaking Quiz",
       "readingRecordingPractice": "Reading Recording Practice",
       "newContent": "New Content"
     },
@@ -2246,11 +2256,23 @@
       "people": "people"
     },
     "contentTypes": {
+      "readingAssessment": "Reading Assessment",
+      "reading_assessment": "Reading Assessment",
       "READING_ASSESSMENT": "Reading Assessment",
+      "speakingPractice": "Speaking Practice",
+      "speaking_practice": "Speaking Practice",
       "SPEAKING_PRACTICE": "Speaking Practice",
+      "speakingScenario": "Speaking Scenario",
+      "speaking_scenario": "Speaking Scenario",
       "SPEAKING_SCENARIO": "Speaking Scenario",
+      "listeningCloze": "Listening Cloze",
+      "listening_cloze": "Listening Cloze",
       "LISTENING_CLOZE": "Listening Cloze",
+      "sentenceMaking": "Sentence Making",
+      "sentence_making": "Sentence Making",
       "SENTENCE_MAKING": "Sentence Making",
+      "speakingQuiz": "Speaking Quiz",
+      "speaking_quiz": "Speaking Quiz",
       "SPEAKING_QUIZ": "Speaking Quiz"
     }
   },
@@ -3057,6 +3079,7 @@
       "saveFailed": "Save failed, please try again later",
       "deleteFailed": "Delete failed, please try again later",
       "emailInUse": "Email already in use, please use another email",
+      "studentNumberDuplicate": "This student number already exists in the classroom, please use another number",
       "invalidBirthdate": "Invalid birthdate format, please use YYYY-MM-DD",
       "requiredFields": "Please fill in all required fields",
       "nameRequired": "Name is required",

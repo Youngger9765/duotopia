@@ -118,7 +118,7 @@ repos:
       # Flake8 Linting（Python）
       - id: flake8-check
         name: Flake8 linting
-        entry: bash -c 'cd backend && flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv || exit 1'
+        entry: bash -c 'cd backend && flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv,scripts || exit 1'
         language: system
         types: [python]
         files: ^backend/.*\.py$

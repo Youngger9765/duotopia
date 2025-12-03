@@ -1548,7 +1548,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                                   },
+                                  reading_assessment: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.readingAssessment",
+                                    ),
+                                    color:
+                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                  },
                                   SPEAKING_PRACTICE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingPractice",
+                                    ),
+                                    color:
+                                      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                  },
+                                  speaking_practice: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingPractice",
                                     ),
@@ -1562,7 +1576,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
                                   },
+                                  speaking_scenario: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingScenario",
+                                    ),
+                                    color:
+                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                  },
                                   LISTENING_CLOZE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.listeningCloze",
+                                    ),
+                                    color:
+                                      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                  },
+                                  listening_cloze: {
                                     label: t(
                                       "classroomDetail.contentTypes.listeningCloze",
                                     ),
@@ -1576,7 +1604,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
                                   },
+                                  sentence_making: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.sentenceMaking",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  },
                                   SPEAKING_QUIZ: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingQuiz",
+                                    ),
+                                    color:
+                                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                  },
+                                  speaking_quiz: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingQuiz",
                                     ),

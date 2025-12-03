@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import TeacherLayout from "@/components/TeacherLayout";
+import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -16,14 +24,36 @@ import {
   X,
   Calendar,
   Users,
-  FileText,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ChevronRight,
   Search,
+  BookOpen,
 } from "lucide-react";
 import { Student, Assignment } from "@/types";
+import { cn } from "@/lib/utils";
+// dnd-kit imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 
 // Extended assignment interface for this specific page
 interface AssignmentDetail extends Assignment {
@@ -76,6 +106,181 @@ interface StudentProgress {
   };
 }
 
+// Content detail type for assignment content items
+interface ContentDetail {
+  id?: number;
+  title?: string;
+  items?: Array<{
+    id: number;
+    text: string;
+    translation?: string;
+    audio_url?: string;
+    definition: string;
+    english_definition?: string;
+    selectedLanguage?: "chinese" | "english";
+    has_student_progress?: boolean;
+  }>;
+  type?: string;
+  audio_urls?: string[];
+}
+
+// 可排序的內容項目組件（移到函數外部）
+interface SortableContentItemProps {
+  content: {
+    id: number;
+    title: string;
+    type?: string;
+    order_index: number;
+  };
+  index: number;
+  totalItems: number; // 總項目數，用於判斷是否可以上下移動
+  expandedContentId: number | null;
+  contentDetails: Record<number, ContentDetail>;
+  onExpand: (id: number) => void;
+  onEdit: (id: number) => void;
+  onMoveUp: (id: number) => void; // 向上移動
+  onMoveDown: (id: number) => void; // 向下移動
+  getContentTypeLabel: (type: string) => string;
+}
+
+function SortableContentItem({
+  content,
+  index,
+  totalItems,
+  expandedContentId,
+  contentDetails,
+  onExpand,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
+  getContentTypeLabel,
+}: SortableContentItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: content.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className="p-3 sm:p-4 hover:shadow-md transition-shadow">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* 移動端上下按鈕 - 只在移動端顯示 */}
+            <div className="flex flex-col gap-1 sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onMoveUp(content.id)}
+                disabled={index === 0}
+                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="向上移動"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onMoveDown(content.id)}
+                disabled={index === totalItems - 1}
+                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="向下移動"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* 拖拽手柄 - 桌面端顯示，移動端隱藏 */}
+            <button
+              {...attributes}
+              {...listeners}
+              className="hidden sm:flex cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 active:text-gray-700 touch-manipulation flex-shrink-0 p-1"
+              aria-label="拖拽排序"
+            >
+              <GripVertical className="h-5 w-5" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
+                <span className="text-xs sm:text-sm font-bold text-blue-600 flex-shrink-0">
+                  #{index + 1}
+                </span>
+                <span className="font-medium text-sm sm:text-base truncate">
+                  {content.title}
+                </span>
+                <Badge variant="outline" className="text-xs flex-shrink-0">
+                  {getContentTypeLabel(content.type || "")}
+                </Badge>
+              </div>
+              {expandedContentId === content.id &&
+                contentDetails[content.id] && (
+                  <div className="mt-3 space-y-2 p-2 sm:p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="text-xs sm:text-sm">
+                      <span className="text-gray-600 dark:text-gray-300">
+                        題目數量：
+                      </span>
+                      <span className="font-medium ml-2">
+                        {contentDetails[content.id].items?.length || 0} 題
+                      </span>
+                    </div>
+                    {contentDetails[content.id].items?.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="text-xs p-2 bg-white dark:bg-gray-800 rounded break-words"
+                      >
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {idx + 1}.
+                        </span>{" "}
+                        <span className="font-medium">{item.text}</span>
+                        {item.translation && (
+                          <span className="text-gray-500 ml-2">
+                            ({item.translation})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
+          </div>
+          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onExpand(content.id)}
+              className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm px-2 sm:px-3"
+            >
+              <ChevronRight
+                className={cn(
+                  "h-3 w-3 sm:h-4 sm:w-4 transition-transform",
+                  expandedContentId === content.id && "rotate-90",
+                )}
+              />
+              <span className="hidden sm:inline ml-1">展開</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(content.id)}
+              className="text-orange-600 hover:text-orange-700 border-orange-200 hover:bg-orange-50 text-xs sm:text-sm px-2 sm:px-3"
+            >
+              <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+              <span className="hidden sm:inline">編輯</span>
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function TeacherAssignmentDetailPage() {
   const { t } = useTranslation();
   const { classroomId, assignmentId } = useParams<{
@@ -83,6 +288,10 @@ export default function TeacherAssignmentDetailPage() {
     assignmentId: string;
   }>();
   const navigate = useNavigate();
+
+  // 檢查是否有 editContent 查詢參數
+  const searchParams = new URLSearchParams(window.location.search);
+  const shouldEditContent = searchParams.get("editContent") === "true";
 
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -92,7 +301,41 @@ export default function TeacherAssignmentDetailPage() {
   const [editingData, setEditingData] = useState<Partial<AssignmentDetail>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [expandedContent, setExpandedContent] = useState(false);
+  const [expandedContent, setExpandedContent] = useState(shouldEditContent); // 如果有 editContent 參數，自動展開
+  const [assignmentContents, setAssignmentContents] = useState<
+    Array<{
+      id: number;
+      title: string;
+      type?: string;
+      order_index: number;
+    }>
+  >([]);
+  const [expandedContentId, setExpandedContentId] = useState<number | null>(
+    null,
+  );
+  const [editingContentId, setEditingContentId] = useState<number | null>(null);
+  const [contentDetails, setContentDetails] = useState<
+    Record<number, ContentDetail>
+  >({});
+  const [activeDragId, setActiveDragId] = useState<number | null>(null); // 追蹤正在拖拽的項目
+
+  // 🔥 追蹤正在載入的內容 ID，避免重複請求（Race Condition 保護）
+  const loadingRef = useRef<Set<number>>(new Set());
+
+  // dnd-kit sensors - 優化移動端拖拽體驗
+  // PointerSensor 同時支持鼠標和觸摸事件
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        // 移動端：需要按住一段時間或移動一定距離才開始拖拽（避免與滾動衝突）
+        delay: 150, // 150ms 延遲，給滾動留出時間
+        tolerance: 8, // 允許 8px 的移動容差（避免輕微觸摸就觸發拖拽）
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -154,20 +397,35 @@ export default function TeacherAssignmentDetailPage() {
             (sp: { is_assigned?: boolean; student_number: number }) =>
               sp.is_assigned === true,
           )
-          .map(
-            (sp: { is_assigned?: boolean; student_number: number }) =>
-              sp.student_number,
-          )
+          .map((sp: { student_number: number }) => sp.student_number)
           .filter((id) => id !== null);
       }
 
       // Process assigned students
+
+      // 獲取作業的副本內容列表
+      const contents =
+        (
+          response as {
+            contents?: Array<{
+              id: number;
+              title: string;
+              type?: string;
+              order_index: number;
+            }>;
+          }
+        ).contents || [];
+      setAssignmentContents(contents);
+
+      // 從 contents 陣列取得第一個內容的類型
+      const firstContentType = contents.length > 0 ? contents[0].type : null;
 
       const assignmentData = {
         ...response,
         assigned_at: assignedDate,
         students: studentIds,
         student_count: studentIds.length,
+        content_type: firstContentType || "", // 🔥 從 contents 陣列取得類型
         instructions:
           (response as AssignmentDetail & { description?: string })
             .description || response.instructions, // API returns 'description'
@@ -390,6 +648,36 @@ export default function TeacherAssignmentDetailPage() {
     });
   };
 
+  const loadContentDetail = async (contentId: number, forceReload = false) => {
+    // 🔥 如果已有緩存且不強制重載，直接返回（避免重複請求）
+    if (!forceReload && contentDetails[contentId]) {
+      return;
+    }
+
+    // 🔥 正在載入中，避免重複請求（Race Condition 保護）
+    if (loadingRef.current.has(contentId)) {
+      return;
+    }
+
+    loadingRef.current.add(contentId);
+
+    try {
+      const detail = await apiClient.getContentDetail(contentId);
+      setContentDetails((prev) => ({
+        ...prev,
+        [contentId]: detail as ContentDetail,
+      }));
+    } catch (error) {
+      console.error("Failed to load content detail:", error);
+      toast.error(
+        t("assignmentDetail.messages.loadContentError") || "無法載入內容詳情",
+      );
+    } finally {
+      // 🔥 請求完成後移除標記（無論成功或失敗）
+      loadingRef.current.delete(contentId);
+    }
+  };
+
   const handleAssignStudent = async (studentId: number) => {
     try {
       // Get current assigned students from studentProgress
@@ -519,9 +807,148 @@ export default function TeacherAssignmentDetailPage() {
     }
   };
 
+  // 處理拖拽開始
+  const handleContentDragStart = (event: DragStartEvent) => {
+    setActiveDragId(Number(event.active.id));
+  };
+
+  // 處理拖拽排序
+  const handleContentDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null); // 清除拖拽狀態
+
+    if (over && active.id !== over.id) {
+      const oldIndex = assignmentContents.findIndex(
+        (c) => c.id === Number(active.id),
+      );
+      const newIndex = assignmentContents.findIndex(
+        (c) => c.id === Number(over.id),
+      );
+
+      // 🔥 保存舊順序（用於錯誤恢復）
+      const oldContents = [...assignmentContents];
+
+      // 立即更新 UI（樂觀更新）
+      const newContents = arrayMove(assignmentContents, oldIndex, newIndex);
+      setAssignmentContents(newContents);
+
+      // 🔥 背景保存順序（不刷新頁面）
+      try {
+        const orderData = newContents.map((content, index) => ({
+          content_id: content.id,
+          order_index: index + 1,
+        }));
+
+        await apiClient.put(
+          `/api/teachers/assignments/${assignmentId}/contents/reorder`,
+          orderData,
+        );
+
+        // 靜默成功，不顯示 toast（用戶已經看到順序改變）
+      } catch (error) {
+        console.error("Failed to reorder contents:", error);
+        // 恢復原順序
+        setAssignmentContents(oldContents);
+        toast.error("更新順序失敗，已恢復原順序");
+      }
+    }
+  };
+
+  // 處理向上移動（移動端按鈕）
+  const handleMoveUp = async (contentId: number) => {
+    const currentIndex = assignmentContents.findIndex(
+      (c) => c.id === contentId,
+    );
+    if (currentIndex <= 0) return; // 已經是最上面
+
+    const newIndex = currentIndex - 1;
+    const oldContents = [...assignmentContents];
+    const newContents = arrayMove(assignmentContents, currentIndex, newIndex);
+    setAssignmentContents(newContents);
+
+    try {
+      const orderData = newContents.map((content, index) => ({
+        content_id: content.id,
+        order_index: index + 1,
+      }));
+
+      await apiClient.put(
+        `/api/teachers/assignments/${assignmentId}/contents/reorder`,
+        orderData,
+      );
+    } catch (error) {
+      console.error("Failed to move content up:", error);
+      setAssignmentContents(oldContents);
+      toast.error("移動失敗，請重試");
+    }
+  };
+
+  // 處理向下移動（移動端按鈕）
+  const handleMoveDown = async (contentId: number) => {
+    const currentIndex = assignmentContents.findIndex(
+      (c) => c.id === contentId,
+    );
+    if (currentIndex >= assignmentContents.length - 1) return; // 已經是最下面
+
+    const newIndex = currentIndex + 1;
+    const oldContents = [...assignmentContents];
+    const newContents = arrayMove(assignmentContents, currentIndex, newIndex);
+    setAssignmentContents(newContents);
+
+    try {
+      const orderData = newContents.map((content, index) => ({
+        content_id: content.id,
+        order_index: index + 1,
+      }));
+
+      await apiClient.put(
+        `/api/teachers/assignments/${assignmentId}/contents/reorder`,
+        orderData,
+      );
+    } catch (error) {
+      console.error("Failed to move content down:", error);
+      setAssignmentContents(oldContents);
+      toast.error("移動失敗，請重試");
+    }
+  };
+
   const getContentTypeLabel = (type: string) => {
-    const typeKey = `assignmentDetail.contentTypes.${type}`;
-    return t(typeKey, type);
+    // 將 snake_case 轉換為 camelCase，或直接使用原值
+    // API 可能返回: reading_assessment, READING_ASSESSMENT, 或 readingAssessment
+    let normalizedType = type;
+
+    // 如果是大寫的 SNAKE_CASE，轉為小寫
+    if (type === type.toUpperCase() && type.includes("_")) {
+      normalizedType = type.toLowerCase();
+    }
+
+    // 如果是 snake_case，轉為 camelCase
+    if (normalizedType.includes("_")) {
+      normalizedType = normalizedType.replace(/_([a-z])/g, (_, letter) =>
+        letter.toUpperCase(),
+      );
+    }
+
+    // 嘗試翻譯鍵值
+    const typeKey = `assignmentDetail.contentTypes.${normalizedType}`;
+    const translated = t(typeKey);
+
+    // 如果翻譯失敗（返回鍵值本身），嘗試其他格式
+    if (translated === typeKey) {
+      // 嘗試使用 gradingPage.contentTypes（大寫格式）
+      const upperType = type.toUpperCase();
+      const gradingKey = `gradingPage.contentTypes.${upperType}`;
+      const gradingTranslated = t(gradingKey);
+
+      if (gradingTranslated !== gradingKey) {
+        return gradingTranslated;
+      }
+
+      // 如果都失敗，返回原始值（至少顯示原始類型）
+      return type;
+    }
+
+    return translated;
   };
 
   // Calculate statistics (only for assigned students)
@@ -637,39 +1064,58 @@ export default function TeacherAssignmentDetailPage() {
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
             </Button>
-            {isEditing ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleCancel}
-                  className="h-12 min-h-12 w-full sm:w-auto"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  {t("assignmentDetail.buttons.cancel")}
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  className="h-12 min-h-12 w-full sm:w-auto"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {t("assignmentDetail.buttons.save")}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                className="h-12 min-h-12 w-full sm:w-auto"
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                {t("assignmentDetail.buttons.edit")}
-              </Button>
-            )}
           </div>
         </div>
 
         {/* Assignment Info Card */}
-        <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
+        <Card className="relative p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
+          {/* 編輯按鈕 - 右上角 */}
+          {isEditing ? (
+            <div className="absolute top-4 right-4 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCancel();
+                }}
+                className="text-gray-600 hover:text-gray-700 border-gray-200 hover:bg-gray-50"
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t("assignmentDetail.buttons.cancel")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSave();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {t("assignmentDetail.buttons.save")}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="absolute top-4 right-4 text-orange-600 hover:text-orange-700 border-orange-200 hover:bg-orange-50"
+            >
+              <Edit2 className="h-4 w-4 mr-1" />
+              {t("assignmentDetail.buttons.edit")}
+            </Button>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-2 block">
@@ -780,17 +1226,17 @@ export default function TeacherAssignmentDetailPage() {
           </div>
         </Card>
 
-        {/* Content Details (Expandable) */}
-        {assignment.content && (
+        {/* 作業單元內容列表 (Assignment Copy Contents) */}
+        {assignmentContents.length > 0 && (
           <Card className="p-6 dark:bg-gray-800 dark:border-gray-700">
             <div
               className="flex items-center justify-between cursor-pointer"
               onClick={() => setExpandedContent(!expandedContent)}
             >
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-lg font-semibold dark:text-gray-100">
-                  {t("assignmentDetail.labels.contentDetails")}
+                  作業單元內容 ({assignmentContents.length})
                 </h3>
               </div>
               {expandedContent ? (
@@ -801,50 +1247,129 @@ export default function TeacherAssignmentDetailPage() {
             </div>
 
             {expandedContent && (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {t("assignmentDetail.labels.contentTitle")}
-                  </span>
-                  <span className="font-medium ml-2 dark:text-gray-100">
-                    {assignment.content.title}
-                  </span>
-                </div>
-                {assignment.content.items &&
-                  assignment.content.items.length > 0 && (
-                    <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {t("assignmentDetail.labels.itemCount")}
-                      </span>
-                      <span className="font-medium ml-2 dark:text-gray-100">
-                        {assignment.content.items.length}{" "}
-                        {t("assignmentDetail.labels.items")}
-                      </span>
-                    </div>
-                  )}
-                {assignment.content.target_wpm && (
-                  <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("assignmentDetail.labels.targetSpeed")}
-                    </span>
-                    <span className="font-medium ml-2 dark:text-gray-100">
-                      {assignment.content.target_wpm} WPM
-                    </span>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleContentDragStart}
+                onDragEnd={handleContentDragEnd}
+              >
+                <SortableContext
+                  items={assignmentContents.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="mt-4 space-y-2">
+                    {assignmentContents.map((content, index) => (
+                      <SortableContentItem
+                        key={content.id}
+                        content={content}
+                        index={index}
+                        totalItems={assignmentContents.length}
+                        expandedContentId={expandedContentId}
+                        contentDetails={contentDetails}
+                        onExpand={(id) => {
+                          if (expandedContentId === id) {
+                            setExpandedContentId(null);
+                          } else {
+                            setExpandedContentId(id);
+                            loadContentDetail(id);
+                          }
+                        }}
+                        onEdit={(id) => {
+                          setEditingContentId(id);
+                          loadContentDetail(id);
+                        }}
+                        onMoveUp={handleMoveUp}
+                        onMoveDown={handleMoveDown}
+                        getContentTypeLabel={getContentTypeLabel}
+                      />
+                    ))}
                   </div>
-                )}
-                {assignment.content.target_accuracy && (
-                  <div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t("assignmentDetail.labels.targetAccuracy")}
-                    </span>
-                    <span className="font-medium ml-2 dark:text-gray-100">
-                      {Math.round(assignment.content.target_accuracy * 100)}%
-                    </span>
-                  </div>
-                )}
-              </div>
+                </SortableContext>
+                {/* 拖拽視覺反饋 - 移動端優化 */}
+                <DragOverlay>
+                  {activeDragId ? (
+                    <Card className="p-4 shadow-lg opacity-90 bg-white dark:bg-gray-800 border-2 border-blue-500">
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-5 w-5 text-gray-400" />
+                        <span className="font-medium">
+                          {assignmentContents.find((c) => c.id === activeDragId)
+                            ?.title || "移動中..."}
+                        </span>
+                      </div>
+                    </Card>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </Card>
+        )}
+
+        {/* 編輯副本內容對話框 */}
+        {editingContentId && contentDetails[editingContentId] && (
+          <Dialog
+            open={editingContentId !== null}
+            onOpenChange={(open) => !open && setEditingContentId(null)}
+          >
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {t("assignmentDetail.labels.editContent") || "編輯作業內容"}
+                </DialogTitle>
+                <p className="text-sm text-amber-600 mt-2">
+                  ⚠️ 注意：此為作業副本。刪除已有學生進度的題目將被阻止。
+                </p>
+              </DialogHeader>
+              <div className="mt-4">
+                <ReadingAssessmentPanel
+                  content={{
+                    id: editingContentId,
+                    title: contentDetails[editingContentId].title || "",
+                  }}
+                  editingContent={contentDetails[editingContentId]}
+                  onUpdateContent={async () => {
+                    // 🔥 只更新本地狀態，不觸發保存
+                    // onUpdateContent 會在載入時自動觸發，所以不應該直接保存
+                    // 保存應該由用戶點擊「儲存」按鈕觸發
+                  }}
+                  onSave={async () => {
+                    // onSave 在 ReadingAssessmentPanel 內部會自動調用 handleEditContent
+                    // 關閉編輯對話框
+                    const savedContentId = editingContentId;
+                    setEditingContentId(null);
+
+                    // 🔥 重新載入內容詳情以更新題目區塊
+                    if (savedContentId) {
+                      // 清除舊的內容詳情，強制重新載入
+                      setContentDetails((prev) => {
+                        const updated = { ...prev };
+                        delete updated[savedContentId];
+                        return updated;
+                      });
+
+                      // 重新載入內容詳情（無論是否展開都會重新載入）
+                      await loadContentDetail(savedContentId, true); // 🔥 強制重載以獲取最新數據
+
+                      // 如果該內容已展開，確保展開狀態保持
+                      if (expandedContentId === savedContentId) {
+                        // 內容詳情已重新載入，組件會自動重新渲染
+                      }
+                    }
+                  }}
+                  lessonId={0} // 作業副本不需要 lessonId
+                  isCreating={false}
+                  isAssignmentCopy={true} // 🔥 標記為作業副本
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingContentId(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Progress Overview */}
