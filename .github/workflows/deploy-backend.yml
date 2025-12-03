@@ -322,12 +322,20 @@ jobs:
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
         fi
 
-        # 💰 成本優化：最大化節省費用，使用按需計費
-        # min-instances=0 避免 24/7 運行成本 (~$1,185/月 → $0.54/月)
-        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本 (冷啟動 3-5秒)
-        MEMORY="256Mi"       # 輕量配置：30人/天低流量，外部 Azure API 處理音檔
-        CPU=1                # 1 CPU 足夠處理併發請求
-        CONCURRENCY=20       # 降低並發減少資源競爭
+        # 💰 成本優化：根據環境設定不同資源配置
+        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
+
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Production: 保持性能，用戶體驗優先
+          MEMORY="256Mi"
+          CPU=1
+          CONCURRENCY=20
+        else
+          # Staging: 測試環境，最小化成本
+          MEMORY="256Mi"
+          CPU="500m"         # 0.5 CPU
+          CONCURRENCY=1      # CPU < 1 時必須設為 1
+        fi
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \
