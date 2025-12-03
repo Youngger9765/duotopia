@@ -299,131 +299,133 @@ export default function ReadingAssessmentTemplate({
             <p className="text-lg text-gray-600">{content}</p>
           </div>
 
-        {/* 🎯 錄音元件 - 使用統一的 AudioRecorder */}
-        <AudioRecorder
-          existingAudioUrl={audioUrl}
-          onRecordingComplete={(blob, url) => {
-            setAudioUrl(url);
-            onRecordingComplete?.(blob, url);
-          }}
-          readOnly={readOnly}
-          autoStop={45}
-          variant="default"
-          showProgress={true}
-          showTimer={true}
-        />
+          {/* 🎯 錄音元件 - 使用統一的 AudioRecorder */}
+          <AudioRecorder
+            existingAudioUrl={audioUrl}
+            onRecordingComplete={(blob, url) => {
+              setAudioUrl(url);
+              onRecordingComplete?.(blob, url);
+            }}
+            readOnly={readOnly}
+            autoStop={45}
+            variant="default"
+            showProgress={true}
+            showTimer={true}
+          />
 
-        {/* Bottom Buttons */}
-        <div className="flex space-x-4 pt-6">
-          {audioUrl && !readOnly && (
-            <>
-              {!assessmentResult && (
-                <Button
-                  onClick={handleAssessment}
-                  disabled={isAssessing}
-                  className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white"
-                >
-                  {isAssessing ? (
-                    <>
-                      <Brain className="h-4 w-4 mr-2 animate-spin" />
-                      AI 評估中...
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="h-4 w-4 mr-2" />
-                      上傳與評測
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Assessment Results */}
-        {assessmentResult && (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-6 space-y-6 mt-6">
-            <div className="text-center">
-              <h4 className="text-xl font-bold text-blue-900 mb-4 flex items-center justify-center gap-2">
-                <Brain className="h-6 w-6" />
-                AI 評估結果
-              </h4>
-
-              {/* Overall Score */}
-              <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
-                <div className="text-4xl font-bold text-blue-600 mb-2">
-                  {assessmentResult.overallScore}分
-                </div>
-                <Badge
-                  variant={getScoreBadgeVariant(assessmentResult.overallScore)}
-                  className="text-sm px-3 py-1"
-                >
-                  總體評分
-                </Badge>
-              </div>
-            </div>
-
-            {/* Detailed Scores */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">準確度</div>
-                <div
-                  className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}
-                >
-                  {assessmentResult.accuracyScore}分
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">流暢度</div>
-                <div
-                  className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}
-                >
-                  {assessmentResult.fluencyScore}分
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">完整度</div>
-                <div
-                  className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}
-                >
-                  {assessmentResult.completenessScore}分
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">發音分數</div>
-                <div
-                  className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}
-                >
-                  {assessmentResult.pronunciationScore}分
-                </div>
-              </div>
-            </div>
-
-            {/* AI Feedback */}
-            {assessmentResult.feedback && (
-              <div className="bg-white rounded-lg p-4">
-                <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  AI 建議
-                </h5>
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  {assessmentResult.feedback}
-                </p>
-              </div>
+          {/* Bottom Buttons */}
+          <div className="flex space-x-4 pt-6">
+            {audioUrl && !readOnly && (
+              <>
+                {!assessmentResult && (
+                  <Button
+                    onClick={handleAssessment}
+                    disabled={isAssessing}
+                    className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white"
+                  >
+                    {isAssessing ? (
+                      <>
+                        <Brain className="h-4 w-4 mr-2 animate-spin" />
+                        AI 評估中...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4 mr-2" />
+                        上傳與評測
+                      </>
+                    )}
+                  </Button>
+                )}
+              </>
             )}
-
-            <div className="text-center">
-              <Button
-                onClick={() => setAssessmentResult(null)}
-                variant="outline"
-                size="sm"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50"
-              >
-                重新評估
-              </Button>
-            </div>
           </div>
-        )}
+
+          {/* Assessment Results */}
+          {assessmentResult && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-6 space-y-6 mt-6">
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-blue-900 mb-4 flex items-center justify-center gap-2">
+                  <Brain className="h-6 w-6" />
+                  AI 評估結果
+                </h4>
+
+                {/* Overall Score */}
+                <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
+                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                    {assessmentResult.overallScore}分
+                  </div>
+                  <Badge
+                    variant={getScoreBadgeVariant(
+                      assessmentResult.overallScore,
+                    )}
+                    className="text-sm px-3 py-1"
+                  >
+                    總體評分
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Detailed Scores */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">準確度</div>
+                  <div
+                    className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}
+                  >
+                    {assessmentResult.accuracyScore}分
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">流暢度</div>
+                  <div
+                    className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}
+                  >
+                    {assessmentResult.fluencyScore}分
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">完整度</div>
+                  <div
+                    className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}
+                  >
+                    {assessmentResult.completenessScore}分
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">發音分數</div>
+                  <div
+                    className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}
+                  >
+                    {assessmentResult.pronunciationScore}分
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Feedback */}
+              {assessmentResult.feedback && (
+                <div className="bg-white rounded-lg p-4">
+                  <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    AI 建議
+                  </h5>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    {assessmentResult.feedback}
+                  </p>
+                </div>
+              )}
+
+              <div className="text-center">
+                <Button
+                  onClick={() => setAssessmentResult(null)}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  重新評估
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -449,10 +451,7 @@ export default function ReadingAssessmentTemplate({
               重新作答
             </Button>
             {onSkip && (
-              <Button
-                onClick={handleSkip}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleSkip} className="flex items-center gap-2">
                 <SkipForward className="h-4 w-4" />
                 跳到下一題
               </Button>

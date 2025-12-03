@@ -1406,7 +1406,6 @@ export default function StudentActivityPageContent({
 
     // 其他類型使用 switch 處理
     switch (activity.type) {
-
       case "listening_cloze":
         return (
           <ListeningClozeTemplate
@@ -1626,126 +1625,131 @@ export default function StudentActivityPageContent({
                 const isActiveActivity = activityIndex === currentActivityIndex;
 
                 if (activity.items && activity.items.length > 0) {
-                return (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
-                        {activity.title}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
-                      >
-                        {t("studentActivityPage.labels.itemCount", {
-                          count: activity.items.length,
-                        })}
-                      </Badge>
-                    </div>
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                          {activity.title}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
+                        >
+                          {t("studentActivityPage.labels.itemCount", {
+                            count: activity.items.length,
+                          })}
+                        </Badge>
+                      </div>
 
-                    <div className="flex gap-0.5 sm:gap-1">
-                      {activity.items.map((item, itemIndex) => {
-                        const isActiveItem =
-                          isActiveActivity &&
-                          currentSubQuestionIndex === itemIndex;
+                      <div className="flex gap-0.5 sm:gap-1">
+                        {activity.items.map((item, itemIndex) => {
+                          const isActiveItem =
+                            isActiveActivity &&
+                            currentSubQuestionIndex === itemIndex;
 
-                        const isCompleted =
-                          ("recording_url" in item && item.recording_url) ||
-                          activity.answers?.[itemIndex];
-                        const teacherFeedback =
-                          "teacher_feedback" in item
-                            ? item.teacher_feedback
-                            : undefined;
-                        const teacherPassed =
-                          "teacher_passed" in item
-                            ? item.teacher_passed
-                            : undefined;
+                          const isCompleted =
+                            ("recording_url" in item && item.recording_url) ||
+                            activity.answers?.[itemIndex];
+                          const teacherFeedback =
+                            "teacher_feedback" in item
+                              ? item.teacher_feedback
+                              : undefined;
+                          const teacherPassed =
+                            "teacher_passed" in item
+                              ? item.teacher_passed
+                              : undefined;
 
-                        const hasTeacherGraded =
-                          teacherFeedback !== undefined &&
-                          teacherFeedback !== null;
-                        const isTeacherPassed =
-                          hasTeacherGraded && teacherPassed === true;
-                        const needsCorrection =
-                          hasTeacherGraded && teacherPassed === false;
+                          const hasTeacherGraded =
+                            teacherFeedback !== undefined &&
+                            teacherFeedback !== null;
+                          const isTeacherPassed =
+                            hasTeacherGraded && teacherPassed === true;
+                          const needsCorrection =
+                            hasTeacherGraded && teacherPassed === false;
 
-                        return (
-                          <button
-                            key={itemIndex}
-                            onClick={() => {
-                              if (isAnalyzing) return; // 🔒 分析中禁止切換
-                              if (activityIndex !== currentActivityIndex) {
-                                handleActivitySelect(activityIndex, itemIndex);
-                              } else {
-                                setCurrentSubQuestionIndex(itemIndex);
-                              }
-                            }}
-                            disabled={isAnalyzing} // 🔒 分析中禁用
-                            className={cn(
-                              "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
-                              "flex items-center justify-center text-sm sm:text-xs font-medium",
-                              "min-w-[32px] sm:min-w-[32px]",
-                              // 保持學生原本的完成狀態樣式
-                              isCompleted
-                                ? "bg-green-100 text-green-800 border-green-400"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
-                              isActiveItem && "border-2 border-blue-600",
-                            )}
-                            title={
-                              needsCorrection
-                                ? "老師要求訂正"
-                                : isTeacherPassed
-                                  ? "老師已通過"
-                                  : isCompleted
-                                    ? "已完成"
-                                    : "未完成"
-                            }
-                          >
-                            {itemIndex + 1}
-                            {/* 老師評分圖標 - 右上角圓點徽章 */}
-                            {hasTeacherGraded && (
-                              <span
-                                className={cn(
-                                  "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
-                                  teacherPassed ? "bg-green-500" : "bg-red-500",
-                                )}
-                                aria-label={
-                                  teacherPassed
-                                    ? t("studentActivityPage.feedback.passed")
-                                    : t("studentActivityPage.feedback.failed")
+                          return (
+                            <button
+                              key={itemIndex}
+                              onClick={() => {
+                                if (isAnalyzing) return; // 🔒 分析中禁止切換
+                                if (activityIndex !== currentActivityIndex) {
+                                  handleActivitySelect(
+                                    activityIndex,
+                                    itemIndex,
+                                  );
+                                } else {
+                                  setCurrentSubQuestionIndex(itemIndex);
                                 }
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
+                              }}
+                              disabled={isAnalyzing} // 🔒 分析中禁用
+                              className={cn(
+                                "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                                "flex items-center justify-center text-sm sm:text-xs font-medium",
+                                "min-w-[32px] sm:min-w-[32px]",
+                                // 保持學生原本的完成狀態樣式
+                                isCompleted
+                                  ? "bg-green-100 text-green-800 border-green-400"
+                                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                isActiveItem && "border-2 border-blue-600",
+                              )}
+                              title={
+                                needsCorrection
+                                  ? "老師要求訂正"
+                                  : isTeacherPassed
+                                    ? "老師已通過"
+                                    : isCompleted
+                                      ? "已完成"
+                                      : "未完成"
+                              }
+                            >
+                              {itemIndex + 1}
+                              {/* 老師評分圖標 - 右上角圓點徽章 */}
+                              {hasTeacherGraded && (
+                                <span
+                                  className={cn(
+                                    "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
+                                    teacherPassed
+                                      ? "bg-green-500"
+                                      : "bg-red-500",
+                                  )}
+                                  aria-label={
+                                    teacherPassed
+                                      ? t("studentActivityPage.feedback.passed")
+                                      : t("studentActivityPage.feedback.failed")
+                                  }
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {activityIndex < activities.length - 1 && (
+                        <div className="w-px h-8 bg-gray-300 ml-2" />
+                      )}
                     </div>
+                  );
+                }
 
-                    {activityIndex < activities.length - 1 && (
-                      <div className="w-px h-8 bg-gray-300 ml-2" />
-                    )}
-                  </div>
+                return (
+                  <Button
+                    key={activity.id}
+                    variant={isActiveActivity ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleActivitySelect(activityIndex)}
+                    disabled={isAnalyzing} // 🔒 分析中禁用
+                    className="flex-shrink-0 h-8"
+                  >
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(activity, answer)}
+                      <span className="text-xs">{activity.title}</span>
+                    </div>
+                  </Button>
                 );
-              }
-
-              return (
-                <Button
-                  key={activity.id}
-                  variant={isActiveActivity ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleActivitySelect(activityIndex)}
-                  disabled={isAnalyzing} // 🔒 分析中禁用
-                  className="flex-shrink-0 h-8"
-                >
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(activity, answer)}
-                    <span className="text-xs">{activity.title}</span>
-                  </div>
-                </Button>
-              );
-            })
+              })
             )}
           </div>
 

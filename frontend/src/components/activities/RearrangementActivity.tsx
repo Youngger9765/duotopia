@@ -93,6 +93,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // 用 ref 存儲 questions，確保 handleTimeout 能同步獲取到最新數據
+  const questionsRef = useRef<RearrangementQuestion[]>([]);
 
   // 使用受控或內部索引
   const currentQuestionIndex = controlledIndex ?? internalQuestionIndex;
@@ -127,11 +129,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
 
   // 第一題音檔自動播放（題目載入完成後）
   useEffect(() => {
-    if (
-      questions.length > 0 &&
-      !hasPlayedFirstAudioRef.current &&
-      !loading
-    ) {
+    if (questions.length > 0 && !hasPlayedFirstAudioRef.current && !loading) {
       const firstQuestion = questions[0];
       if (firstQuestion.play_audio && firstQuestion.audio_url) {
         // 延遲播放，確保 UI 渲染完成
@@ -171,6 +169,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       }>(apiUrl);
 
       setQuestions(response.questions);
+      questionsRef.current = response.questions; // 同步設置 ref，確保 handleTimeout 能立即獲取
       setScoreCategory(response.score_category || "writing");
 
       // 初始化每題狀態
@@ -240,15 +239,18 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     // 取得目前狀態（在 try 之前取得，避免變數重複宣告）
     const currentState = questionStates.get(contentItemId);
 
-    // 找到當前題目
-    const currentQuestion = questions.find(
-      (q) => q.content_item_id === contentItemId
+    // 找到當前題目（使用 ref 確保第一題 timeout 時也能正確獲取）
+    const currentQuestion = questionsRef.current.find(
+      (q) => q.content_item_id === contentItemId,
     );
 
     // 計算實際分數：根據已正確回答的單字數量
     // 如果沒有回答任何單字，給予最低分（100 - max_errors * 每字分數）
     const correctWordCount = currentState?.selectedWords.length || 0;
-    const totalWordCount = currentQuestion?.word_count || currentQuestion?.shuffled_words.length || 1;
+    const totalWordCount =
+      currentQuestion?.word_count ||
+      currentQuestion?.shuffled_words.length ||
+      1;
     const maxErrors = currentQuestion?.max_errors || 3;
     const pointsPerWord = Math.floor(100 / totalWordCount);
 
@@ -483,7 +485,11 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       const targetState = questionStates.get(targetQuestion.content_item_id);
 
       // 如果目標題目尚未完成，啟動計時器
-      if (targetState && !targetState.completed && !targetState.challengeFailed) {
+      if (
+        targetState &&
+        !targetState.completed &&
+        !targetState.challengeFailed
+      ) {
         startTimer(targetQuestion.content_item_id);
       }
 
@@ -562,11 +568,14 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   }, []);
 
   // 同步播放音檔（忽略錯誤）
-  const playAudio = useCallback((url: string) => {
-    playAudioAsync(url).catch((e) => {
-      console.error("Failed to play audio:", e);
-    });
-  }, [playAudioAsync]);
+  const playAudio = useCallback(
+    (url: string) => {
+      playAudioAsync(url).catch((e) => {
+        console.error("Failed to play audio:", e);
+      });
+    },
+    [playAudioAsync],
+  );
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -644,30 +653,32 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       <Progress value={progressPercent} className="h-2" />
 
       {/* 音檔自動播放被阻擋時顯示的提示 */}
-      {showAudioPrompt && currentQuestion.play_audio && currentQuestion.audio_url && (
-        <div className="mt-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-5 w-5 text-purple-600" />
-              <span className="text-purple-800 font-medium">
-                {t("rearrangement.audioPrompt")}
-              </span>
+      {showAudioPrompt &&
+        currentQuestion.play_audio &&
+        currentQuestion.audio_url && (
+          <div className="mt-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-5 w-5 text-purple-600" />
+                <span className="text-purple-800 font-medium">
+                  {t("rearrangement.audioPrompt")}
+                </span>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => {
+                  playAudio(currentQuestion.audio_url!);
+                  setShowAudioPrompt(false);
+                }}
+              >
+                <Volume2 className="h-4 w-4 mr-1" />
+                {t("rearrangement.playAudio")}
+              </Button>
             </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700"
-              onClick={() => {
-                playAudio(currentQuestion.audio_url!);
-                setShowAudioPrompt(false);
-              }}
-            >
-              <Volume2 className="h-4 w-4 mr-1" />
-              {t("rearrangement.playAudio")}
-            </Button>
           </div>
-        </div>
-      )}
+        )}
 
       {/* 題目卡片 */}
       <Card className="mt-4">
@@ -698,8 +709,16 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => playAudio(currentQuestion.audio_url!)}
-                  disabled={submitting || currentState.completed || currentState.challengeFailed}
-                  title={currentState.completed || currentState.challengeFailed ? t("rearrangement.audioDisabledCompleted") : undefined}
+                  disabled={
+                    submitting ||
+                    currentState.completed ||
+                    currentState.challengeFailed
+                  }
+                  title={
+                    currentState.completed || currentState.challengeFailed
+                      ? t("rearrangement.audioDisabledCompleted")
+                      : undefined
+                  }
                 >
                   <Volume2 className="h-4 w-4 mr-1" />
                   {t("rearrangement.playAudio")}

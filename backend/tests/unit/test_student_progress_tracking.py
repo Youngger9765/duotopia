@@ -452,8 +452,7 @@ class TestProgressReporting:
         assert weekly_report["total_activities"] == 4
         assert weekly_report["average_score"] == Decimal("85.8")  # (85+78+92+88)/4
         assert (
-            weekly_report["most_practiced_type"]
-            == ActivityType.EXAMPLE_SENTENCES.value
+            weekly_report["most_practiced_type"] == ActivityType.EXAMPLE_SENTENCES.value
         )  # 第一個活動類型（按字母排序）
 
     def test_monthly_progress_summary(self):

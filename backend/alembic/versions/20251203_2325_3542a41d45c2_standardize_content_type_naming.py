@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3542a41d45c2'
-down_revision: Union[str, None] = 'df36fccbe04c'
+revision: str = "3542a41d45c2"
+down_revision: Union[str, None] = "df36fccbe04c"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -24,29 +24,37 @@ def upgrade() -> None:
     # SENTENCE_MAKING → VOCABULARY_SET
 
     # 更新 contents 表
-    op.execute("""
+    op.execute(
+        """
         UPDATE contents
         SET type = 'EXAMPLE_SENTENCES'
         WHERE type = 'READING_ASSESSMENT'
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         UPDATE contents
         SET type = 'VOCABULARY_SET'
         WHERE type = 'SENTENCE_MAKING'
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
     # 回滾（如果需要）
-    op.execute("""
+    op.execute(
+        """
         UPDATE contents
         SET type = 'READING_ASSESSMENT'
         WHERE type = 'EXAMPLE_SENTENCES'
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         UPDATE contents
         SET type = 'SENTENCE_MAKING'
         WHERE type = 'VOCABULARY_SET'
-    """)
+    """
+    )
