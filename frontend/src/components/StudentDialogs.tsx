@@ -126,12 +126,13 @@ export function StudentDialogs({
     try {
       if (dialogType === "create") {
         // Create new student - ensure required fields are present
+        // Normalize empty strings to undefined for optional fields
         const createData = {
           name: formData.name || "",
-          email: formData.email || undefined, // 如果沒有填寫，傳 undefined 而非空字串
+          email: formData.email?.trim() || undefined,
           birthdate: formData.birthdate || "",
-          student_number: formData.student_number,
-          phone: formData.phone,
+          student_number: formData.student_number?.trim() || undefined,
+          phone: formData.phone?.trim() || undefined,
           classroom_id: formData.classroom_id,
         };
 
@@ -194,7 +195,7 @@ export function StudentDialogs({
           id: response.id as number,
           name: response.name as string,
           email: response.email as string,
-          student_number: response.student_id as string | undefined,
+          student_number: response.student_number as string | undefined,
           birthdate: response.birthdate as string | undefined,
           password_changed: response.password_changed as boolean | undefined,
           classroom_id: response.classroom_id as number | undefined,
@@ -266,24 +267,33 @@ export function StudentDialogs({
         }
       }
 
-      // Handle specific error cases
-      if (typeof errorMessage === "string") {
-        if (errorMessage.includes("already registered")) {
-          errorMessage = t("studentDialogs.errors.emailInUse");
-          setErrors({ email: errorMessage });
-        } else if (errorMessage.includes("Invalid birthdate format")) {
-          errorMessage = t("studentDialogs.errors.invalidBirthdate");
-          setErrors({ birthdate: errorMessage });
-        } else if (errorMessage.includes("Field required")) {
-          errorMessage = t("studentDialogs.errors.requiredFields");
-        }
-      }
+      // Handle specific error cases - ensure errorMessage is always a string
+      const finalErrorMessage =
+        typeof errorMessage === "string"
+          ? errorMessage
+          : t("studentDialogs.errors.saveFailed");
 
-      // Ensure errorMessage is a string before showing toast
-      if (typeof errorMessage === "string") {
-        toast.error(errorMessage);
+      if (finalErrorMessage.includes("already registered")) {
+        const emailError = t("studentDialogs.errors.emailInUse");
+        setErrors({ email: emailError });
+        toast.error(emailError);
+      } else if (finalErrorMessage.includes("Invalid birthdate format")) {
+        const birthdateError = t("studentDialogs.errors.invalidBirthdate");
+        setErrors({ birthdate: birthdateError });
+        toast.error(birthdateError);
+      } else if (finalErrorMessage.includes("Field required")) {
+        const requiredError = t("studentDialogs.errors.requiredFields");
+        toast.error(requiredError);
+      } else if (
+        finalErrorMessage.includes("在班級中已存在") ||
+        finalErrorMessage.includes("在此班級中已存在")
+      ) {
+        // Handle duplicate student number error (updated error message)
+        setErrors({ student_number: finalErrorMessage });
+        toast.error(finalErrorMessage);
       } else {
-        toast.error(t("studentDialogs.errors.saveFailed"));
+        // Default error message
+        toast.error(finalErrorMessage);
       }
     } finally {
       setLoading(false);
@@ -375,14 +385,9 @@ export function StudentDialogs({
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{student.name}</h3>
                 <p className="text-sm text-gray-500">
-                  {t("studentDialogs.view.fields.id")}: {student.id}
+                  {t("studentDialogs.view.fields.studentNumber")}:{" "}
+                  {student.student_number || "-"}
                 </p>
-                {student.student_number && (
-                  <p className="text-sm text-gray-500">
-                    {t("studentDialogs.view.fields.studentNumber")}:{" "}
-                    {student.student_number}
-                  </p>
-                )}
               </div>
               <div>{getStatusBadge(student.status)}</div>
             </div>
@@ -551,11 +556,16 @@ export function StudentDialogs({
                   onChange={(e) =>
                     setFormData({ ...formData, student_number: e.target.value })
                   }
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  className={`w-full mt-1 px-3 py-2 border rounded-md ${errors.student_number ? "border-red-500" : ""}`}
                   placeholder={t(
                     "studentDialogs.form.studentNumberPlaceholder",
                   )}
                 />
+                {errors.student_number && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.student_number}
+                  </p>
+                )}
               </div>
             </div>
 

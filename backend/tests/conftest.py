@@ -160,6 +160,12 @@ def db_session(test_engine):
             session.close()
 
 
+@pytest.fixture(scope="function")
+def test_db_session(shared_test_session):
+    """Alias for shared_test_session to support integration tests"""
+    return shared_test_session
+
+
 # Auth test fixtures
 @pytest.fixture
 def demo_teacher(shared_test_session):

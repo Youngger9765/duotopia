@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, text
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from database import get_db
 from schemas import ProgramUpdate
 from models import (
@@ -356,7 +356,7 @@ async def get_teacher_classrooms(
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
-                    "student_id": cs.student.student_number,
+                    "student_number": cs.student.student_number,
                     "birthdate": (
                         cs.student.birthdate.isoformat()
                         if cs.student.birthdate
@@ -649,20 +649,104 @@ class StudentCreate(BaseModel):
     email: Optional[str] = None  # Email（選填，可以是真實 email）
     birthdate: str  # YYYY-MM-DD format
     classroom_id: Optional[int] = None  # 班級改為選填，可以之後再分配
-    student_number: Optional[str] = None
+    student_number: Optional[str] = Field(None, max_length=50)
     phone: Optional[str] = None  # 新增 phone 欄位
+
+    @field_validator("student_number")
+    @classmethod
+    def validate_student_number(cls, v: Optional[str]) -> Optional[str]:
+        """Validate student_number to prevent SQL injection and ensure safe format"""
+        if v is None:
+            return v
+
+        # Strip whitespace
+        v = v.strip()
+
+        # Convert empty string to None
+        if not v:
+            return None
+
+        # Max length check (already enforced by Field, but double-check)
+        if len(v) > 50:
+            raise ValueError("學號長度不能超過 50 個字符")
+
+        # Only allow alphanumeric, hyphen, and underscore (prevent SQL injection)
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError("學號只能包含字母、數字、連字號和底線")
+
+        return v
+
+    @field_validator("email", "phone")
+    @classmethod
+    def normalize_empty_strings(cls, v: Optional[str]) -> Optional[str]:
+        """Convert empty strings to None for optional fields"""
+        if v is None:
+            return v
+
+        # Strip whitespace
+        v = v.strip()
+
+        # Convert empty string to None
+        if not v:
+            return None
+
+        return v
 
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None  # 可更新為真實 email
-    student_number: Optional[str] = None
+    student_number: Optional[str] = Field(None, max_length=50)
     birthdate: Optional[str] = None
     phone: Optional[str] = None
     status: Optional[str] = None
     target_wpm: Optional[int] = None
     target_accuracy: Optional[float] = None
     classroom_id: Optional[int] = None  # 新增班級分配功能
+
+    @field_validator("student_number")
+    @classmethod
+    def validate_student_number(cls, v: Optional[str]) -> Optional[str]:
+        """Validate student_number to prevent SQL injection and ensure safe format"""
+        if v is None:
+            return v
+
+        # Strip whitespace
+        v = v.strip()
+
+        # Convert empty string to None
+        if not v:
+            return None
+
+        # Max length check (already enforced by Field, but double-check)
+        if len(v) > 50:
+            raise ValueError("學號長度不能超過 50 個字符")
+
+        # Only allow alphanumeric, hyphen, and underscore (prevent SQL injection)
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError("學號只能包含字母、數字、連字號和底線")
+
+        return v
+
+    @field_validator("email", "phone")
+    @classmethod
+    def normalize_empty_strings(cls, v: Optional[str]) -> Optional[str]:
+        """Convert empty strings to None for optional fields"""
+        if v is None:
+            return v
+
+        # Strip whitespace
+        v = v.strip()
+
+        # Convert empty string to None
+        if not v:
+            return None
+
+        return v
 
 
 class BatchStudentCreate(BaseModel):
@@ -819,6 +903,26 @@ async def create_student(
     # Email is optional now - can be NULL or shared between students
     email = student_data.email if student_data.email else None
 
+    # 🔥 Issue #31: Validate student_number uniqueness within classroom
+    if student_data.student_number and student_data.classroom_id:
+        existing_student_with_number = (
+            db.query(Student)
+            .join(ClassroomStudent)
+            .filter(
+                ClassroomStudent.classroom_id == student_data.classroom_id,
+                ClassroomStudent.is_active.is_(True),
+                Student.student_number == student_data.student_number,
+                Student.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if existing_student_with_number:
+            raise HTTPException(
+                status_code=409,
+                detail=f"學號 '{student_data.student_number}' 已存在於此班級中",
+            )
+
     # Create student
     student = Student(
         name=student_data.name,
@@ -863,7 +967,7 @@ async def create_student(
         "default_password": default_password,
         "password_changed": False,
         "classroom_id": student_data.classroom_id,
-        "student_id": student.student_number,
+        "student_number": student.student_number,
         "phone": student_data.phone,
         "email_verified": False,  # 新建立的學生 email 未驗證
     }
@@ -924,7 +1028,7 @@ async def get_student(
         "email": student.email,
         "birthdate": student.birthdate.isoformat(),
         "password_changed": student.password_changed,
-        "student_id": student.student_number,
+        "student_number": student.student_number,
     }
 
 
@@ -985,8 +1089,42 @@ async def update_student(
         student.name = update_data.name
     if update_data.email is not None:
         student.email = update_data.email
+
+    # 🔥 Issue #31: Validate student_number uniqueness within classroom when updating
     if update_data.student_number is not None:
+        # Get student's current classroom
+        current_classroom = (
+            db.query(ClassroomStudent)
+            .filter(
+                ClassroomStudent.student_id == student_id,
+                ClassroomStudent.is_active.is_(True),
+            )
+            .first()
+        )
+
+        # If student has a classroom and student_number is changing, check for duplicates
+        if current_classroom and update_data.student_number != student.student_number:
+            existing_student_with_number = (
+                db.query(Student)
+                .join(ClassroomStudent)
+                .filter(
+                    ClassroomStudent.classroom_id == current_classroom.classroom_id,
+                    ClassroomStudent.is_active.is_(True),
+                    Student.student_number == update_data.student_number,
+                    Student.is_active.is_(True),
+                    Student.id != student_id,  # Exclude current student
+                )
+                .first()
+            )
+
+            if existing_student_with_number:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"學號 '{update_data.student_number}' 已存在於此班級中",
+                )
+
         student.student_number = update_data.student_number
+
     if update_data.phone is not None:
         student.phone = update_data.phone
     if update_data.status is not None:
@@ -1034,6 +1172,27 @@ async def update_student(
             if not classroom:
                 raise HTTPException(status_code=404, detail="Classroom not found")
 
+            # 🔥 Issue #31: Check if student_number already exists in target classroom
+            if student.student_number:
+                existing_student_with_number = (
+                    db.query(Student)
+                    .join(ClassroomStudent)
+                    .filter(
+                        ClassroomStudent.classroom_id == update_data.classroom_id,
+                        ClassroomStudent.is_active.is_(True),
+                        Student.student_number == student.student_number,
+                        Student.is_active.is_(True),
+                        Student.id != student_id,  # Exclude current student
+                    )
+                    .first()
+                )
+
+                if existing_student_with_number:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"學號 '{student.student_number}' 已存在於目標班級中",
+                    )
+
             # Create new enrollment
             new_enrollment = ClassroomStudent(
                 classroom_id=update_data.classroom_id,
@@ -1049,7 +1208,7 @@ async def update_student(
         "id": student.id,
         "name": student.name,
         "email": student.email,
-        "student_id": student.student_number,
+        "student_number": student.student_number,
     }
 
 

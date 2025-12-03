@@ -279,6 +279,10 @@ jobs:
     permissions:
       issues: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - uses: actions/github-script@v7
         env:
           ISSUE: ${{ needs.extract.outputs.issue_number }}
@@ -293,10 +297,56 @@ jobs:
             const branch = context.ref.replace('refs/heads/', '');
             const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
 
-            const body = [
+            // Get commit message
+            const { execSync } = require('child_process');
+            const commitMsg = execSync(`git log -1 --pretty=format:"%s"`, { encoding: 'utf-8' });
+            const commitBody = execSync(`git log -1 --pretty=format:"%b"`, { encoding: 'utf-8' }).trim();
+
+            // Generate smart change summary based on commit type
+            let changeSummary = '';
+            if (commitMsg.match(/^fix/i)) {
+              changeSummary = `🔧 本次修復：${commitMsg.replace(/^fix[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^feat/i)) {
+              changeSummary = `✨ 新功能：${commitMsg.replace(/^feat[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^refactor/i)) {
+              changeSummary = `♻️ 重構：${commitMsg.replace(/^refactor[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^style/i)) {
+              changeSummary = `💄 樣式調整：${commitMsg.replace(/^style[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^perf/i)) {
+              changeSummary = `⚡ 性能優化：${commitMsg.replace(/^perf[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^test/i)) {
+              changeSummary = `✅ 測試更新：${commitMsg.replace(/^test[:(]\s*/i, '')}`;
+            } else if (commitMsg.match(/^docs/i)) {
+              changeSummary = `📝 文檔更新：${commitMsg.replace(/^docs[:(]\s*/i, '')}`;
+            } else {
+              changeSummary = `📝 ${commitMsg}`;
+            }
+
+            // Build comment body
+            const bodyParts = [
               '✅ **部署完成！**',
               '',
-              '測試環境已更新：',
+              changeSummary
+            ];
+
+            // Add commit body if exists (detailed description)
+            if (commitBody && commitBody.length > 0) {
+              // Filter out common markers
+              const cleanBody = commitBody
+                .split('\n')
+                .filter(line => !line.includes('Generated with') && !line.includes('Co-Authored-By'))
+                .join('\n')
+                .trim();
+
+              if (cleanBody) {
+                bodyParts.push('');
+                bodyParts.push(cleanBody);
+              }
+            }
+
+            bodyParts.push(
+              '',
+              '**測試環境已更新**：',
               `- 🌐 **Frontend**: ${frontend}`,
               `- ⚙️ **Backend**: ${backend}`,
               '',
@@ -309,7 +359,9 @@ jobs:
               '',
               '💡 Min instances = 0 (閒置時不產生費用)',
               '✍️ 測試完成後請回覆「測試通過」'
-            ].join('\n');
+            );
+
+            const body = bodyParts.join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
