@@ -64,14 +64,19 @@ function App() {
           path="/teacher/verify-email-prompt"
           element={<TeacherVerifyEmail />}
         />
-        <Route
-          path="/teacher/dashboard-old"
-          element={<TeacherDashboardWithSidebar />}
-        />
-
-        {/* New Teacher Routes with separate pages */}
+        {/* Main Teacher Dashboard with Share Button */}
         <Route
           path="/teacher/dashboard"
+          element={
+            <ProtectedRoute>
+              <TeacherDashboardWithSidebar />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Legacy Teacher Dashboard (fallback) */}
+        <Route
+          path="/teacher/dashboard-old"
           element={
             <ProtectedRoute>
               <TeacherDashboard />
