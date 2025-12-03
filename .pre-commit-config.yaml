@@ -152,3 +152,10 @@ repos:
         files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
         stages: [push]
+
+  # ==========================================
+  # 🤖 POST-PUSH: CI/CD Monitoring
+  # ==========================================
+  # Note: CI/CD monitoring is handled by .git/hooks/post-push
+  # The hook automatically triggers @agent-cicd-monitor after successful push
+  # See: .claude/agents/cicd-monitor.md for details

@@ -508,7 +508,7 @@
       "title": "作業進度流程",
       "todo": "待完成",
       "submitted": "已提交",
-      "returned": "退回訂正",
+      "returned": "待訂正",
       "resubmitted": "已訂正",
       "graded": "已完成"
     },
@@ -517,7 +517,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
+      "returned": "待訂正",
       "resubmitted": "已訂正"
     },
     "progress": {
@@ -611,7 +611,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
+      "returned": "待訂正",
       "resubmitted": "已訂正"
     },
     "dueDate": {
@@ -929,7 +929,7 @@
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回"
+      "returned": "待訂正"
     },
     "errors": {
       "loadAssignments": "無法載入作業列表",
@@ -2125,6 +2125,7 @@
       "questions": "題",
       "giveScore": "給分",
       "scoreRange": "0-100 分",
+      "usingAverageScore": "（採用平均分數）",
       "selectGradingStatus": "選擇批改狀態",
       "referenceAudio": "參考音檔",
       "transcription": "語音辨識結果",
@@ -2175,14 +2176,18 @@
       "pronunciationClear": "發音清晰",
       "fluencyGood": "流暢度佳",
       "accuracyHigh": "準確度高",
-      "completenessGood": "完整度好"
+      "completenessGood": "完整度好",
+      "aiGrading": "AI 批改中...",
+      "aiGradingComplete": "AI 批改完成！",
+      "aiGradingFailed": "AI 批改失敗，請稍後再試",
+      "noStudentToGrade": "沒有可批改的學生（狀態須為已提交或已訂正）"
     },
     "status": {
       "notStarted": "未開始",
       "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改",
-      "returned": "已發還",
+      "returned": "待訂正",
       "resubmitted": "已訂正",
       "resubmittedShort": "已訂正",
       "notAssigned": "未指派"
@@ -2207,6 +2212,7 @@
     "buttons": {
       "backToList": "返回作業列表",
       "gradeAssignment": "批改作業",
+      "batchGrade": "AI批改",
       "cancel": "取消",
       "save": "儲存",
       "edit": "編輯",
@@ -2268,6 +2274,57 @@
       "speakingQuiz": "口說測驗",
       "speaking_quiz": "口說測驗",
       "SPEAKING_QUIZ": "口說測驗"
+    }
+  },
+  "batchGrading": {
+    "title": "AI批改",
+    "progress": "批改中... ({{current}}/{{total}} 位學生)",
+    "studentName": "學生姓名",
+    "accuracy": "準確度",
+    "fluency": "流暢度",
+    "pronunciation": "總體發音",
+    "completeness": "完整度",
+    "totalScore": "總分",
+    "missingItems": "缺漏題數",
+    "decision": "狀態決定",
+    "action": "操作",
+    "decisionGraded": "完成批改",
+    "decisionReturned": "退回訂正",
+    "decisionPending": "待決定",
+    "submitSingle": "送出",
+    "submitAll": "全部送出",
+    "selectAllGraded": "全選：完成批改",
+    "selectAllReturned": "全選：退回訂正",
+    "clearAll": "清除所有選擇",
+    "selectDecisionFirst": "請先選擇狀態（退回或完成）",
+    "singleSubmitSuccess": "已完成批改：{{name}}",
+    "allSubmitSuccess": "已完成批改：{{graded}} 位完成，{{returned}} 位退回，{{unchanged}} 位待決定",
+    "returnForCorrection": "退回訂正",
+    "averageAccuracy": "平均準確度",
+    "averageFluency": "平均流暢度",
+    "averagePronunciation": "平均總體發音",
+    "averageCompleteness": "平均完整度",
+    "pause": "暫停",
+    "close": "關閉",
+    "selectedForReturn": "已選擇 {{count}} 位學生退回訂正",
+    "confirmButton": "確認",
+    "confirmGrading": "確認批改",
+    "processing": "處理中...",
+    "helperText": "點擊「確認」後，僅將勾選的學生退回訂正，其餘保持原狀態",
+    "successReturned": "已退回 {{count}} 位學生訂正",
+    "successNoAction": "未處理任何學生",
+    "successDescription": "已批改 {{graded}} 位學生，退回 {{returned}} 位學生訂正",
+    "errorDescription": "批改失敗，請稍後重試",
+    "messages": {
+      "success": "成功批改 {{count}} 位學生",
+      "error": "批改失敗，請稍後再試",
+      "returnSuccess": "已標記 {{count}} 位學生為待訂正",
+      "returnError": "更新訂正狀態失敗"
+    },
+    "aria": {
+      "markAsGraded": "標記{{name}}為完成批改",
+      "markAsReturned": "標記{{name}}為退回訂正",
+      "markAsPending": "標記{{name}}為待定"
     }
   },
   "previewPage": {

@@ -409,6 +409,7 @@ def save_assessment_result(
     progress.accuracy_score = assessment_result["accuracy_score"]
     progress.fluency_score = assessment_result["fluency_score"]
     progress.pronunciation_score = assessment_result["pronunciation_score"]
+    progress.completeness_score = assessment_result["completeness_score"]
 
     # 將完整評估結果和詞彙細節儲存為 JSON 格式的 ai_feedback
     # 這個 JSON 包含完整的 Word→Syllable→Phoneme 層級資訊
@@ -888,6 +889,7 @@ async def delete_item_recording_and_assessment(
     progress.accuracy_score = None
     progress.fluency_score = None
     progress.pronunciation_score = None
+    progress.completeness_score = None
     progress.ai_feedback = None
     progress.ai_assessed_at = None
     progress.submitted_at = None
