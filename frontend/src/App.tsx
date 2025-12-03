@@ -8,7 +8,6 @@ import { TeacherVerifyEmail } from "./pages/TeacherVerifyEmail";
 import { TeacherEmailVerification } from "./pages/TeacherEmailVerification";
 import TeacherForgotPassword from "./pages/TeacherForgotPassword";
 import TeacherResetPassword from "./pages/TeacherResetPassword";
-import TeacherDashboardWithSidebar from "./pages/TeacherDashboardWithSidebar";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherClassrooms from "./pages/teacher/TeacherClassrooms";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
@@ -64,19 +63,8 @@ function App() {
           path="/teacher/verify-email-prompt"
           element={<TeacherVerifyEmail />}
         />
-        {/* Main Teacher Dashboard with Share Button */}
         <Route
           path="/teacher/dashboard"
-          element={
-            <ProtectedRoute>
-              <TeacherDashboardWithSidebar />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Legacy Teacher Dashboard (fallback) */}
-        <Route
-          path="/teacher/dashboard-old"
           element={
             <ProtectedRoute>
               <TeacherDashboard />
