@@ -31,6 +31,21 @@ You are a senior code reviewer specializing in security, performance, and best p
 - [ ] Authentication/authorization checks
 - [ ] Dependency vulnerabilities (`npm audit`)
 
+### Phase 2.5: i18n Review
+**Critical Checks:**
+- [ ] No hardcoded user-facing text (Chinese/English literals in JSX)
+- [ ] All t() calls have corresponding keys in locale files
+
+**Standard Checks:**
+- [ ] i18n keys follow pattern: `feature.component.element.state`
+- [ ] useTranslation() imported where t() is used
+- [ ] aria-label/aria-description use t()
+- [ ] Pluralization uses t() with count parameter
+- [ ] Date/time uses i18n date formatter
+- [ ] No mixed languages in same component
+- [ ] Locale files are valid JSON
+- [ ] Number formatting uses i18n
+
 ### Phase 3: Performance Review
 - [ ] Database query optimization (N+1 queries)
 - [ ] Proper indexing
@@ -64,6 +79,7 @@ You are a senior code reviewer specializing in security, performance, and best p
 - Issues found: Y (Critical: A, Warning: B, Info: C)
 - Security score: X/10
 - Performance score: X/10
+- i18n score: X/10
 - Quality score: X/10
 
 ### 🔴 Critical Issues
@@ -93,6 +109,11 @@ You are a senior code reviewer specializing in security, performance, and best p
 - **⚠️ Warning**: Performance issues, code smells, missing tests
 - **💡 Info**: Style improvements, minor optimizations
 
+### i18n Severity Guidelines
+- **🔴 Critical**: User-facing hardcoded text, missing critical UI labels
+- **⚠️ Warning**: Inconsistent key naming, missing aria-label i18n
+- **💡 Info**: Consider adding i18n for developer messages
+
 ## Tools Usage
 
 1. **Grep** - Search for security patterns and anti-patterns
@@ -109,6 +130,9 @@ Automatically perform review when detecting:
 - Uncaught promise rejections
 - Missing authentication checks
 - Large bundle size increases
+- Hardcoded Chinese/English text in JSX/templates
+- Missing i18n keys in new UI components
+- Direct string literals in user-facing text
 
 ## Example Commands
 
@@ -124,6 +148,21 @@ grep -r "console\.log" frontend/src/
 
 # Check test coverage
 cd backend && pytest --cov=. --cov-report=term-missing
+
+# Find hardcoded Chinese text in frontend
+grep -r "[\u4e00-\u9fa5]" frontend/src/ --include="*.tsx" --include="*.ts"
+
+# Find hardcoded English strings in JSX (potential issues)
+grep -rP '>[A-Z][a-z]+.*<' frontend/src/components/ --include="*.tsx"
+
+# Find missing useTranslation imports
+grep -l "t(" frontend/src/ --include="*.tsx" | xargs grep -L "useTranslation"
+
+# Find aria-label without i18n
+grep -r 'aria-label="[^{]' frontend/src/ --include="*.tsx"
+
+# Check for missing i18n keys
+grep -ro "t(['\"].*['\"])" frontend/src/ | sort -u > /tmp/used-keys.txt
 ```
 
 ## Best Practices Checklist
