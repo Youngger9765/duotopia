@@ -2315,6 +2315,11 @@
       "error": "Grading failed, please try again later",
       "returnSuccess": "Marked {{count}} students for correction",
       "returnError": "Failed to update correction status"
+    },
+    "aria": {
+      "markAsGraded": "Mark {{name}} as grading complete",
+      "markAsReturned": "Mark {{name}} as return for correction",
+      "markAsPending": "Mark {{name}} as pending"
     }
   },
   "previewPage": {

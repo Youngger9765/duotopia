@@ -229,13 +229,13 @@ export default function BatchGradingModal({
                       onClick={() => handleSelectAll("GRADED")}
                       className="flex-1 h-12 min-h-12 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                     >
-                      {/* TODO: i18n */}完成批改
+                      {t("batchGrading.decisionGraded")}
                     </Button>
                     <Button
                       onClick={() => handleSelectAll("RETURNED")}
                       className="flex-1 h-12 min-h-12 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                     >
-                      {/* TODO: i18n */}退回訂正
+                      {t("batchGrading.decisionReturned")}
                     </Button>
                   </div>
                   <Button
@@ -243,7 +243,7 @@ export default function BatchGradingModal({
                     variant="outline"
                     className="w-full h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    {/* TODO: i18n */}清除所有選擇
+                    {t("batchGrading.clearAll")}
                   </Button>
                 </div>
 
@@ -253,20 +253,20 @@ export default function BatchGradingModal({
                     onClick={() => handleSelectAll("GRADED")}
                     className="flex-1 h-12 min-h-12 bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    {/* TODO: i18n */}全選：完成批改
+                    {t("batchGrading.selectAllGraded")}
                   </Button>
                   <Button
                     onClick={() => handleSelectAll("RETURNED")}
                     className="flex-1 h-12 min-h-12 bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    {/* TODO: i18n */}全選：退回訂正
+                    {t("batchGrading.selectAllReturned")}
                   </Button>
                   <Button
                     onClick={() => handleSelectAll(null)}
                     variant="outline"
                     className="flex-1 h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
                   >
-                    {/* TODO: i18n */}清除所有選擇
+                    {t("batchGrading.clearAll")}
                   </Button>
                 </div>
               </div>
@@ -538,7 +538,9 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
-                        aria-label={`標記${result.student_name}為完成批改`}
+                        aria-label={t("batchGrading.aria.markAsGraded", {
+                          name: result.student_name,
+                        })}
                         aria-pressed={
                           teacherDecisions[result.student_id] === "GRADED"
                         }
@@ -554,7 +556,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        {/* TODO: i18n */}完成批改
+                        {t("batchGrading.decisionGraded")}
                       </Button>
                       <Button
                         variant={
@@ -562,7 +564,9 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
-                        aria-label={`標記${result.student_name}為退回訂正`}
+                        aria-label={t("batchGrading.aria.markAsReturned", {
+                          name: result.student_name,
+                        })}
                         aria-pressed={
                           teacherDecisions[result.student_id] === "RETURNED"
                         }
@@ -578,7 +582,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        {/* TODO: i18n */}退回訂正
+                        {t("batchGrading.decisionReturned")}
                       </Button>
                       <Button
                         variant={
@@ -586,7 +590,9 @@ export default function BatchGradingModal({
                             ? "default"
                             : "outline"
                         }
-                        aria-label={`標記${result.student_name}為待定`}
+                        aria-label={t("batchGrading.aria.markAsPending", {
+                          name: result.student_name,
+                        })}
                         aria-pressed={
                           teacherDecisions[result.student_id] === null
                         }
@@ -602,7 +608,7 @@ export default function BatchGradingModal({
                           }))
                         }
                       >
-                        {/* TODO: i18n */}待定
+                        {t("batchGrading.decisionPending")}
                       </Button>
                     </div>
 
@@ -620,7 +626,7 @@ export default function BatchGradingModal({
                           "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
                         )}
                       >
-                        {/* TODO: i18n */}送出
+                        {t("batchGrading.submitSingle")}
                       </Button>
                     </div>
                   </Card>

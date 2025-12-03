@@ -2319,6 +2319,11 @@
       "error": "批改失敗，請稍後再試",
       "returnSuccess": "已標記 {{count}} 位學生為待訂正",
       "returnError": "更新訂正狀態失敗"
+    },
+    "aria": {
+      "markAsGraded": "標記{{name}}為完成批改",
+      "markAsReturned": "標記{{name}}為退回訂正",
+      "markAsPending": "標記{{name}}為待定"
     }
   },
   "previewPage": {
