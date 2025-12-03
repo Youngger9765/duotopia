@@ -1531,7 +1531,7 @@ export default function TeacherAssignmentDetailPage() {
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
 
-                {/* 重新提交 */}
+                {/* 已訂正 */}
                 <div className="flex flex-col items-center flex-1">
                   <div
                     className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
@@ -1832,7 +1832,7 @@ export default function TeacherAssignmentDetailPage() {
                     待訂正
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    重新提交
+                    已訂正
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     已完成
