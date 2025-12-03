@@ -45,8 +45,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "test_teacher@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "測試教師",
             },
         )
@@ -66,7 +65,7 @@ class TestTeacherRegistrationEmail:
         assert data["verification_required"] is True
         assert "check your email" in data["message"].lower()
 
-    @patch("services.email_service.EmailService.send_teacher_verification_email")
+    @patch("routers.auth.email_service.send_teacher_verification_email")
     def test_registration_sends_verification_email(self, mock_send_email):
         """測試註冊時是否發送驗證 email"""
         mock_send_email.return_value = True
@@ -75,8 +74,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "verify_test@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "驗證測試",
             },
         )
@@ -93,8 +91,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "unverified@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "未驗證教師",
             },
         )
@@ -104,14 +101,14 @@ class TestTeacherRegistrationEmail:
         # 嘗試登入
         login_response = client.post(
             "/api/auth/teacher/login",
-            json={"email": "unverified@example.com", "password": "password123"},
+            json={"email": "unverified@example.com", "password": "SecurePassword123!"},
         )
 
         # 應該被拒絕
-        assert login_response.status_code == 401
+        assert login_response.status_code == 403
         assert "verify your email" in login_response.json()["detail"].lower()
 
-    @patch("services.email_service.EmailService.send_teacher_verification_email")
+    @patch("routers.auth.email_service.send_teacher_verification_email")
     def test_registration_handles_email_failure_gracefully(self, mock_send_email):
         """測試 email 發送失敗時的處理"""
         mock_send_email.return_value = False
@@ -120,8 +117,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "email_fail@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "Email失敗測試",
             },
         )
@@ -137,8 +133,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "duplicate@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "第一個",
             },
         )
@@ -150,8 +145,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "duplicate@example.com",
-                "password": "password456",
-                "password_confirm": "password456",
+                "password": "DifferentPassword456!",
                 "name": "第二個",
             },
         )
@@ -165,8 +159,7 @@ class TestTeacherRegistrationEmail:
             "/api/auth/teacher/register",
             json={
                 "email": "inactive_test@example.com",
-                "password": "password123",
-                "password_confirm": "password123",
+                "password": "SecurePassword123!",
                 "name": "未啟用測試",
             },
         )
@@ -188,15 +181,14 @@ class TestTeacherRegistrationEmail:
 
         db.close()
 
-    def test_password_mismatch_validation(self):
-        """測試密碼不一致的驗證"""
+    def test_weak_password_validation(self):
+        """測試弱密碼的驗證"""
         response = client.post(
             "/api/auth/teacher/register",
             json={
-                "email": "mismatch@example.com",
-                "password": "password123",
-                "password_confirm": "different456",
-                "name": "密碼不一致",
+                "email": "weakpwd@example.com",
+                "password": "weak",
+                "name": "弱密碼測試",
             },
         )
 
