@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ export default function StudentLogin() {
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);
   const isDemoMode = searchParams.get("is_demo") === "true";
+  const urlTeacherEmail = searchParams.get("teacher_email");
 
   // 檢查環境
   const isProduction = import.meta.env.VITE_ENVIRONMENT === "production";
@@ -56,6 +57,7 @@ export default function StudentLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasAutoSubmitted = useRef(false);
 
   // Load teacher history from localStorage
   useEffect(() => {
@@ -66,43 +68,62 @@ export default function StudentLogin() {
   }, []);
 
   // Step 1: Teacher selection
-  const handleTeacherSubmit = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      // Validate teacher email exists
-      const response = await teacherService.validateTeacher(teacherEmail);
-      if (response.valid) {
-        const teacher = {
-          email: teacherEmail,
-          name: response.name,
-          lastUsed: new Date(),
-        };
+  const handleTeacherSubmit = useCallback(
+    async (emailToValidate?: string) => {
+      const email = emailToValidate || teacherEmail;
+      if (!email) return;
 
-        // Save to history
-        const updatedHistory = [
-          teacher,
-          ...teacherHistory.filter((t) => t.email !== teacherEmail),
-        ].slice(0, 5); // Keep last 5 teachers
+      setLoading(true);
+      setError("");
+      try {
+        // Validate teacher email exists
+        const response = await teacherService.validateTeacher(email);
+        if (response.valid) {
+          const teacher = {
+            email: email,
+            name: response.name,
+            lastUsed: new Date(),
+          };
 
-        localStorage.setItem("teacherHistory", JSON.stringify(updatedHistory));
-        setTeacherHistory(updatedHistory);
-        setSelectedTeacher(teacher);
+          // Save to history
+          const updatedHistory = [
+            teacher,
+            ...teacherHistory.filter((t) => t.email !== email),
+          ].slice(0, 5); // Keep last 5 teachers
 
-        // Load classrooms for this teacher
-        const classroomsData =
-          await teacherService.getPublicClassrooms(teacherEmail);
-        setClassrooms(classroomsData);
-        setStep(2);
-      } else {
-        setError(t("studentLogin.errors.teacherNotFound"));
+          localStorage.setItem(
+            "teacherHistory",
+            JSON.stringify(updatedHistory),
+          );
+          setTeacherHistory(updatedHistory);
+          setSelectedTeacher(teacher);
+
+          // Load classrooms for this teacher
+          const classroomsData =
+            await teacherService.getPublicClassrooms(email);
+          setClassrooms(classroomsData);
+          setStep(2);
+        } else {
+          setError(t("studentLogin.errors.teacherNotFound"));
+        }
+      } catch {
+        setError(t("studentLogin.errors.teacherValidationFailed"));
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setError(t("studentLogin.errors.teacherValidationFailed"));
-    } finally {
-      setLoading(false);
+    },
+    [teacherEmail, teacherHistory, t],
+  );
+
+  // Auto-validate teacher email from URL parameter
+  useEffect(() => {
+    if (urlTeacherEmail && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      setTeacherEmail(urlTeacherEmail);
+      // Pass the URL email directly to avoid stale state issue
+      handleTeacherSubmit(urlTeacherEmail);
     }
-  };
+  }, [urlTeacherEmail, handleTeacherSubmit]);
 
   // Step 2: Classroom selection
   const handleClassroomSelect = async (classroom: Classroom) => {
@@ -257,7 +278,7 @@ export default function StudentLogin() {
                 />
 
                 <Button
-                  onClick={handleTeacherSubmit}
+                  onClick={() => handleTeacherSubmit()}
                   disabled={!teacherEmail || loading}
                   className="w-full py-6 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
@@ -311,7 +332,7 @@ export default function StudentLogin() {
                           className="w-full justify-start py-4"
                           onClick={() => {
                             setTeacherEmail(teacher.email);
-                            handleTeacherSubmit();
+                            handleTeacherSubmit(teacher.email);
                           }}
                         >
                           {teacher.email}
