@@ -48,7 +48,7 @@ def generate_audio_url(text: str) -> str | None:
         return None
 
 
-from models import (
+from models import (  # noqa: E402
     Teacher,
     Student,
     Classroom,
@@ -67,7 +67,7 @@ from models import (
     AssignmentStatus,
     SubscriptionPeriod,
 )
-from auth import get_password_hash
+from auth import get_password_hash  # noqa: E402
 
 
 def create_content_copy_for_assignment(
