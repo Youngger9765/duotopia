@@ -43,7 +43,7 @@ jobs:
         run: |
           echo "🔍 測試資料庫連線..."
           cd backend
-          python3 -c "from database import engine; engine.connect(); print('✅ 資料庫連線成功')"
+          python3 -c "from database import get_engine; get_engine().connect(); print('✅ 資料庫連線成功')"
 
       - name: ⚠️ Show warning
         run: |
