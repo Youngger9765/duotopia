@@ -764,20 +764,27 @@ async def save_activity_progress(
 
 
 def calculate_assignment_score(
-    student_assignment_id: int, db: Session
+    student_assignment_id: int, db: Session, practice_mode: Optional[str] = None
 ) -> Optional[float]:
     """
-    Calculate assignment total score from StudentItemProgress AI scores
+    Calculate assignment total score from StudentItemProgress scores
 
-    Logic (per Issue #53):
-    1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
-    2. For assignment: total_score = sum(all_item_scores) / total_items
-    3. If item has no AI scores: count as 0
-    4. If no items exist: return None
+    Logic:
+    - For reading mode (Issue #53):
+      1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
+      2. For assignment: total_score = sum(all_item_scores) / total_items
+      3. If item has no AI scores: count as 0
+      4. If no items exist: return None
+
+    - For rearrangement mode:
+      1. For each item: use expected_score field
+      2. For assignment: total_score = sum(all_expected_scores) / total_items
+      3. Round to 1 decimal place
 
     Args:
         student_assignment_id: StudentAssignment ID
         db: Database session
+        practice_mode: Optional practice mode ("reading" or "rearrangement")
 
     Returns:
         Calculated score (0-100) or None if cannot calculate
@@ -795,12 +802,20 @@ def calculate_assignment_score(
     # Calculate each item's score
     item_scores = []
     for item in items:
-        # Use the overall_score property which handles partial scores
-        if item.overall_score is not None:
-            item_scores.append(float(item.overall_score))
+        # 🆕 rearrangement 模式使用 expected_score
+        if practice_mode == "rearrangement":
+            # Use expected_score for rearrangement mode
+            if item.expected_score is not None:
+                item_scores.append(float(item.expected_score))
+            else:
+                item_scores.append(0.0)
         else:
-            # No AI scores, count as 0 (per Issue #53 requirement)
-            item_scores.append(0.0)
+            # Use the overall_score property which handles partial scores (for reading mode)
+            if item.overall_score is not None:
+                item_scores.append(float(item.overall_score))
+            else:
+                # No AI scores, count as 0 (per Issue #53 requirement)
+                item_scores.append(0.0)
 
     # Calculate average of all item scores
     total_score = sum(item_scores) / len(item_scores)
@@ -808,6 +823,9 @@ def calculate_assignment_score(
     # Clamp score to valid range [0, 100]
     total_score = max(0.0, min(100.0, total_score))
 
+    # 🆕 rearrangement 模式取到小數第一位
+    if practice_mode == "rearrangement":
+        return round(total_score, 1)
     return round(total_score, 2)
 
 
@@ -841,6 +859,13 @@ async def submit_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
 
+    # 取得父作業以檢查 practice_mode
+    assignment = db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
+
+    # 🆕 rearrangement 模式自動完成：跳過 SUBMITTED → RETURNED → RESUBMITTED 階段，直接到 GRADED
+    is_rearrangement = assignment and assignment.practice_mode == "rearrangement"
+    final_status = AssignmentStatus.GRADED if is_rearrangement else AssignmentStatus.SUBMITTED
+
     # 更新所有進度為已完成
     progress_records = (
         db.query(StudentContentProgress)
@@ -850,25 +875,43 @@ async def submit_assignment(
 
     for progress in progress_records:
         if progress.status == AssignmentStatus.IN_PROGRESS:
-            progress.status = AssignmentStatus.SUBMITTED
+            progress.status = final_status
             progress.completed_at = datetime.now()
 
     # 更新作業狀態
-    student_assignment.status = AssignmentStatus.SUBMITTED
+    student_assignment.status = final_status
     student_assignment.submitted_at = datetime.now()
 
+    # 🆕 rearrangement 模式：同時設定 graded_at
+    if is_rearrangement:
+        student_assignment.graded_at = datetime.now()
+
     # 🆕 Auto-calculate score from StudentItemProgress AI scores (Issue #53)
-    calculated_score = calculate_assignment_score(student_assignment.id, db)
+    # 🆕 傳入 practice_mode 讓函數知道使用哪種計分方式
+    calculated_score = calculate_assignment_score(
+        student_assignment.id, db, assignment.practice_mode if assignment else None
+    )
     if calculated_score is not None:
         student_assignment.score = calculated_score
 
     db.commit()
 
-    return {
-        "message": "Assignment submitted successfully",
-        "submitted_at": student_assignment.submitted_at.isoformat(),
-        "score": student_assignment.score,  # Include calculated score in response
-    }
+    # 根據模式回傳不同訊息
+    if is_rearrangement:
+        return {
+            "message": "Assignment completed successfully",
+            "status": "GRADED",
+            "submitted_at": student_assignment.submitted_at.isoformat(),
+            "graded_at": student_assignment.graded_at.isoformat() if student_assignment.graded_at else None,
+            "score": student_assignment.score,
+        }
+    else:
+        return {
+            "message": "Assignment submitted successfully",
+            "status": "SUBMITTED",
+            "submitted_at": student_assignment.submitted_at.isoformat(),
+            "score": student_assignment.score,
+        }
 
 
 # ========== Email 驗證相關 API ==========

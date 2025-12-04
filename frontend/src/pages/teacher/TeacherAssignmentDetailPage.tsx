@@ -63,6 +63,8 @@ interface AssignmentDetail extends Assignment {
   content_id: number;
   assigned_date?: string; // Alternative field name
   students?: number[]; // Alternative field name
+  // 🆕 練習模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+  practice_mode?: "reading" | "rearrangement";
   content?: {
     title: string;
     type: string;
@@ -916,6 +918,13 @@ export default function TeacherAssignmentDetailPage() {
   };
 
   const getContentTypeLabel = (type: string) => {
+    // 🆕 優先嘗試 assignmentDetail.contentTypes 下的原始格式（如 EXAMPLE_SENTENCES）
+    const originalKey = `assignmentDetail.contentTypes.${type}`;
+    const originalTranslated = t(originalKey);
+    if (originalTranslated !== originalKey) {
+      return originalTranslated;
+    }
+
     // 將 snake_case 轉換為 camelCase，或直接使用原值
     // API 可能返回: reading_assessment, READING_ASSESSMENT, 或 readingAssessment
     let normalizedType = type;
@@ -1053,33 +1062,35 @@ export default function TeacherAssignmentDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-row gap-2 sm:gap-3">
-            {/* 批改作業按鈕 */}
-            <Button
-              onClick={() =>
-                navigate(
-                  `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                )
-              }
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.gradeAssignment")}
-            </Button>
-            {/* AI批改按鈕 */}
-            <Button
-              onClick={() => setShowBatchGradingModal(true)}
-              disabled={stats.total === 0}
-              className={cn(
-                "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
-                "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
-              )}
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.batchGrade")}
-            </Button>
-          </div>
+          {/* Action Buttons - 🆕 rearrangement 模式不顯示批改按鈕 */}
+          {assignment?.practice_mode !== "rearrangement" && (
+            <div className="flex flex-row gap-2 sm:gap-3">
+              {/* 批改作業按鈕 */}
+              <Button
+                onClick={() =>
+                  navigate(
+                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                  )
+                }
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.gradeAssignment")}
+              </Button>
+              {/* AI批改按鈕 */}
+              <Button
+                onClick={() => setShowBatchGradingModal(true)}
+                disabled={stats.total === 0}
+                className={cn(
+                  "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                  "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+                )}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.batchGrade")}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Assignment Info Card */}
@@ -1413,7 +1424,8 @@ export default function TeacherAssignmentDetailPage() {
 
           {/* Status Progress */}
           <div className="relative overflow-x-auto pb-4">
-            <div className="min-w-[800px] relative">
+            {/* 🆕 rearrangement 模式：簡化進度顯示（只有 已指派→未開始→進行中→已完成） */}
+            <div className={assignment?.practice_mode === "rearrangement" ? "min-w-[400px]" : "min-w-[800px]"} style={{ position: "relative" }}>
               {/* Progress Line */}
               <div
                 className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"
@@ -1484,68 +1496,73 @@ export default function TeacherAssignmentDetailPage() {
                   </div>
                 </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 已提交 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
-                    >
-                      {stats.submitted}
+                {/* 🆕 以下三個狀態只在非 rearrangement 模式顯示 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.submitted")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 待訂正 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
-                    >
-                      {stats.returned}
+                    {/* 已提交 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
+                        >
+                          {stats.submitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.submitted")}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.returned")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 重新提交 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
-                    >
-                      {stats.resubmitted}
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.resubmitted")}
-                  </div>
-                </div>
+
+                    {/* 待訂正 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
+                        >
+                          {stats.returned}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.returned")}
+                      </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+
+                    {/* 重新提交 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
+                        >
+                          {stats.resubmitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.resubmitted")}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Arrow */}
                 <div className="flex-shrink-0 flex items-center pt-6">
@@ -1616,7 +1633,7 @@ export default function TeacherAssignmentDetailPage() {
                 />
               </div>
 
-              {/* Status Filter */}
+              {/* Status Filter - 🆕 rearrangement 模式隱藏部分選項 */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -1634,15 +1651,20 @@ export default function TeacherAssignmentDetailPage() {
                 <option value="IN_PROGRESS">
                   {t("assignmentDetail.labels.inProgress")}
                 </option>
-                <option value="SUBMITTED">
-                  {t("assignmentDetail.labels.submitted")}
-                </option>
-                <option value="RETURNED">
-                  {t("assignmentDetail.labels.returned")}
-                </option>
-                <option value="RESUBMITTED">
-                  {t("assignmentDetail.labels.resubmitted")}
-                </option>
+                {/* 🆕 以下選項只在非 rearrangement 模式顯示 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    <option value="SUBMITTED">
+                      {t("assignmentDetail.labels.submitted")}
+                    </option>
+                    <option value="RETURNED">
+                      {t("assignmentDetail.labels.returned")}
+                    </option>
+                    <option value="RESUBMITTED">
+                      {t("assignmentDetail.labels.resubmitted")}
+                    </option>
+                  </>
+                )}
                 <option value="GRADED">
                   {t("assignmentDetail.labels.graded")}
                 </option>
@@ -1752,10 +1774,12 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex-shrink-0">
                         {isAssigned ? (
                           <>
-                            {(upperStatus === "SUBMITTED" ||
-                              upperStatus === "RESUBMITTED" ||
-                              upperStatus === "GRADED" ||
-                              upperStatus === "RETURNED") && (
+                            {/* 🆕 rearrangement 模式不顯示批改按鈕 */}
+                            {assignment?.practice_mode !== "rearrangement" &&
+                              (upperStatus === "SUBMITTED" ||
+                                upperStatus === "RESUBMITTED" ||
+                                upperStatus === "GRADED" ||
+                                upperStatus === "RETURNED") && (
                               <Button
                                 variant="outline"
                                 className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
@@ -1825,15 +1849,20 @@ export default function TeacherAssignmentDetailPage() {
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     進行中
                   </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    已提交
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    待訂正
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    重新提交
-                  </th>
+                  {/* 🆕 以下三個欄位只在非 rearrangement 模式顯示 */}
+                  {assignment?.practice_mode !== "rearrangement" && (
+                    <>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        已提交
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        待訂正
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        重新提交
+                      </th>
+                    </>
+                  )}
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     已完成
                   </th>
@@ -2064,15 +2093,20 @@ export default function TeacherAssignmentDetailPage() {
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("IN_PROGRESS")}
                         </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("SUBMITTED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RETURNED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RESUBMITTED")}
-                        </td>
+                        {/* 🆕 以下三個欄位只在非 rearrangement 模式顯示 */}
+                        {assignment?.practice_mode !== "rearrangement" && (
+                          <>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("SUBMITTED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RETURNED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RESUBMITTED")}
+                            </td>
+                          </>
+                        )}
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("GRADED")}
                         </td>
@@ -2100,12 +2134,13 @@ export default function TeacherAssignmentDetailPage() {
                                   const upperStatus =
                                     progress.status?.toUpperCase();
 
-                                  // 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕
+                                  // 🆕 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕（rearrangement 模式不顯示）
                                   if (
-                                    upperStatus === "SUBMITTED" ||
-                                    upperStatus === "RESUBMITTED" ||
-                                    upperStatus === "GRADED" ||
-                                    upperStatus === "RETURNED"
+                                    assignment?.practice_mode !== "rearrangement" &&
+                                    (upperStatus === "SUBMITTED" ||
+                                      upperStatus === "RESUBMITTED" ||
+                                      upperStatus === "GRADED" ||
+                                      upperStatus === "RETURNED")
                                   ) {
                                     return (
                                       <Button
@@ -2168,7 +2203,7 @@ export default function TeacherAssignmentDetailPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={assignment?.practice_mode === "rearrangement" ? 7 : 10}
                       className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                     >
                       沒有符合條件的學生
