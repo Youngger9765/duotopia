@@ -1425,7 +1425,14 @@ export default function TeacherAssignmentDetailPage() {
           {/* Status Progress */}
           <div className="relative overflow-x-auto pb-4">
             {/* 🆕 rearrangement 模式：簡化進度顯示（只有 已指派→未開始→進行中→已完成） */}
-            <div className={assignment?.practice_mode === "rearrangement" ? "min-w-[400px]" : "min-w-[800px]"} style={{ position: "relative" }}>
+            <div
+              className={
+                assignment?.practice_mode === "rearrangement"
+                  ? "min-w-[400px]"
+                  : "min-w-[800px]"
+              }
+              style={{ position: "relative" }}
+            >
               {/* Progress Line */}
               <div
                 className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"
@@ -1780,18 +1787,18 @@ export default function TeacherAssignmentDetailPage() {
                                 upperStatus === "RESUBMITTED" ||
                                 upperStatus === "GRADED" ||
                                 upperStatus === "RETURNED") && (
-                              <Button
-                                variant="outline"
-                                className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                                onClick={() =>
-                                  navigate(
-                                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                                  )
-                                }
-                              >
-                                批改
-                              </Button>
-                            )}
+                                <Button
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                                  onClick={() =>
+                                    navigate(
+                                      `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                    )
+                                  }
+                                >
+                                  批改
+                                </Button>
+                              )}
                             {(upperStatus === "NOT_STARTED" ||
                               upperStatus === "IN_PROGRESS") && (
                               <Button
@@ -2136,7 +2143,8 @@ export default function TeacherAssignmentDetailPage() {
 
                                   // 🆕 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕（rearrangement 模式不顯示）
                                   if (
-                                    assignment?.practice_mode !== "rearrangement" &&
+                                    assignment?.practice_mode !==
+                                      "rearrangement" &&
                                     (upperStatus === "SUBMITTED" ||
                                       upperStatus === "RESUBMITTED" ||
                                       upperStatus === "GRADED" ||
@@ -2203,7 +2211,9 @@ export default function TeacherAssignmentDetailPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={assignment?.practice_mode === "rearrangement" ? 7 : 10}
+                      colSpan={
+                        assignment?.practice_mode === "rearrangement" ? 7 : 10
+                      }
                       className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                     >
                       沒有符合條件的學生

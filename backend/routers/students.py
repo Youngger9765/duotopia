@@ -860,11 +860,17 @@ async def submit_assignment(
         )
 
     # 取得父作業以檢查 practice_mode
-    assignment = db.query(Assignment).filter(Assignment.id == student_assignment.assignment_id).first()
+    assignment = (
+        db.query(Assignment)
+        .filter(Assignment.id == student_assignment.assignment_id)
+        .first()
+    )
 
     # 🆕 rearrangement 模式自動完成：跳過 SUBMITTED → RETURNED → RESUBMITTED 階段，直接到 GRADED
     is_rearrangement = assignment and assignment.practice_mode == "rearrangement"
-    final_status = AssignmentStatus.GRADED if is_rearrangement else AssignmentStatus.SUBMITTED
+    final_status = (
+        AssignmentStatus.GRADED if is_rearrangement else AssignmentStatus.SUBMITTED
+    )
 
     # 更新所有進度為已完成
     progress_records = (
@@ -902,7 +908,9 @@ async def submit_assignment(
             "message": "Assignment completed successfully",
             "status": "GRADED",
             "submitted_at": student_assignment.submitted_at.isoformat(),
-            "graded_at": student_assignment.graded_at.isoformat() if student_assignment.graded_at else None,
+            "graded_at": student_assignment.graded_at.isoformat()
+            if student_assignment.graded_at
+            else None,
             "score": student_assignment.score,
         }
     else:

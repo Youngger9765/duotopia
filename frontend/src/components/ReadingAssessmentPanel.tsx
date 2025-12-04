@@ -1001,9 +1001,7 @@ function SortableRowInner({
               : "hover:bg-gray-200"
           }`}
           title={
-            row.has_student_progress
-              ? "此題目有學生進度，無法刪除"
-              : "刪除"
+            row.has_student_progress ? "此題目有學生進度，無法刪除" : "刪除"
           }
           disabled={rowsLength <= 1 || row.has_student_progress}
         >
@@ -1159,8 +1157,13 @@ export default function ReadingAssessmentPanel({
             // Convert legacy "english" to "chinese" (default)
             const rawLang = item.selectedLanguage || "chinese";
             const savedLang: TranslationLanguage =
-              rawLang === "english" || rawLang === "chinese" || rawLang === "japanese" || rawLang === "korean"
-                ? (rawLang === "english" ? "chinese" : rawLang)
+              rawLang === "english" ||
+              rawLang === "chinese" ||
+              rawLang === "japanese" ||
+              rawLang === "korean"
+                ? rawLang === "english"
+                  ? "chinese"
+                  : rawLang
                 : "chinese";
 
             return {
@@ -1173,8 +1176,10 @@ export default function ReadingAssessmentPanel({
               japanese_translation: item.japanese_translation || "",
               korean_translation: item.korean_translation || "",
               example_sentence: item.example_sentence || "",
-              example_sentence_translation: item.example_sentence_translation || "",
-              example_sentence_definition: item.example_sentence_definition || "",
+              example_sentence_translation:
+                item.example_sentence_translation || "",
+              example_sentence_definition:
+                item.example_sentence_definition || "",
               has_student_progress: item.has_student_progress || false, // 🔥 保留學生進度狀態
             };
           },

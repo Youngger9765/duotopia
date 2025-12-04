@@ -733,7 +733,9 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                   {/* 語速選單 */}
                   <select
                     value={playbackRate}
-                    onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      setPlaybackRate(parseFloat(e.target.value))
+                    }
                     className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-white dark:bg-gray-800 dark:text-gray-200"
                     title={t("rearrangement.playbackRate")}
                     disabled={

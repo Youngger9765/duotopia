@@ -1492,7 +1492,8 @@ export default function ClassroomDetail({
                                     </span>
                                   </div>
                                   {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕（提交後直接完成） */}
-                                  {assignment.practice_mode !== "rearrangement" && (
+                                  {assignment.practice_mode !==
+                                    "rearrangement" && (
                                     <Button
                                       variant="default"
                                       size="sm"
@@ -1507,7 +1508,9 @@ export default function ClassroomDetail({
                                     >
                                       <Sparkles className="w-5 h-5" />
                                       <span className="text-sm font-medium">
-                                        {t("assignmentDetail.buttons.batchGrade")}
+                                        {t(
+                                          "assignmentDetail.buttons.batchGrade",
+                                        )}
                                       </span>
                                     </Button>
                                   )}
@@ -1812,7 +1815,8 @@ export default function ClassroomDetail({
                                           )}
                                         </Button>
                                         {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕 */}
-                                        {assignment.practice_mode !== "rearrangement" && (
+                                        {assignment.practice_mode !==
+                                          "rearrangement" && (
                                           <Button
                                             variant="default"
                                             size="sm"
