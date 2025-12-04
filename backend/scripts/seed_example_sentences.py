@@ -34,15 +34,23 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv()
 
 # TTS 服務（可選，若環境變數未設置則跳過音檔生成）
-try:
-    from services.tts import get_tts_service
-
-    tts_service = get_tts_service()
-    TTS_ENABLED = True
-    print("✅ TTS 服務已啟用")
-except Exception as e:
+# 先檢查必要的環境變數是否存在
+AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
+if not AZURE_SPEECH_KEY:
     TTS_ENABLED = False
-    print(f"⚠️ TTS 服務未啟用 (原因: {e})，將跳過音檔生成")
+    tts_service = None
+    print("⚠️ TTS 服務未啟用 (AZURE_SPEECH_KEY 未設置)，將跳過音檔生成")
+else:
+    try:
+        from services.tts import get_tts_service  # noqa: E402
+
+        tts_service = get_tts_service()
+        TTS_ENABLED = True
+        print("✅ TTS 服務已啟用")
+    except Exception as e:
+        TTS_ENABLED = False
+        tts_service = None
+        print(f"⚠️ TTS 服務未啟用 (原因: {e})，將跳過音檔生成")
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL")
