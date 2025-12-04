@@ -75,6 +75,8 @@ jobs:
       - name: 🌱 Run seed_example_sentences.py
         env:
           DATABASE_URL: ${{ secrets.DEVELOP_DATABASE_POOLER_URL }}
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
         run: |
           echo "🌱 開始執行 seed_example_sentences.py..."
           cd backend
