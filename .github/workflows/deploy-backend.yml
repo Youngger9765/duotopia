@@ -327,7 +327,8 @@ jobs:
 
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           # Production: 保持性能，用戶體驗優先
-          MEMORY="256Mi"
+          # Memory 升級到 1GB 以應付全班同時上傳錄音分析
+          MEMORY="1Gi"
           CPU=1
           CONCURRENCY=20
         else
