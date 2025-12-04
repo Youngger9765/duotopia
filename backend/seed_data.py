@@ -6,49 +6,9 @@ Seed data for Duotopia - 新作業系統架構
 
 from datetime import datetime, date, timedelta  # noqa: F401
 import random
-import os
-import asyncio
 from sqlalchemy.orm import Session
 from database import get_engine, Base
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# TTS 服務（可選，若環境變數未設置則跳過音檔生成）
-AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
-if not AZURE_SPEECH_KEY:
-    TTS_ENABLED = False
-    tts_service = None
-    print("⚠️ TTS 服務未啟用 (AZURE_SPEECH_KEY 未設置)，將跳過音檔生成")
-else:
-    try:
-        from services.tts import get_tts_service
-
-        tts_service = get_tts_service()
-        TTS_ENABLED = True
-        print("✅ TTS 服務已啟用")
-    except Exception as e:
-        TTS_ENABLED = False
-        tts_service = None
-        print(f"⚠️ TTS 服務未啟用 (原因: {e})，將跳過音檔生成")
-
-
-def generate_audio_url(text: str) -> str | None:
-    """生成音檔 URL（如果 TTS 服務可用）"""
-    if not TTS_ENABLED or not tts_service:
-        return None
-    try:
-        # 使用 asyncio 執行異步 TTS 生成
-        audio_url = asyncio.get_event_loop().run_until_complete(
-            tts_service.generate_tts(text, voice="en-US-JennyNeural")
-        )
-        return audio_url
-    except Exception as e:
-        print(f"⚠️ 音檔生成失敗: {text[:30]}... - {e}")
-        return None
-
-
-from models import (  # noqa: E402
+from models import (
     Teacher,
     Student,
     Classroom,
@@ -764,7 +724,6 @@ def create_demo_data(db: Session):
 
     # 建立 ContentItem 記錄
     content_items = []
-    audio_generated_count = 0
     for content in contents:
         # 根據 title 找對應的 items
         items_data = content_items_data.get(content.title, [])
@@ -776,19 +735,12 @@ def create_demo_data(db: Session):
                 # 計算允許錯誤次數：2-10 字 → 3 次，11-25 字 → 5 次
                 max_errors = 3 if word_count <= 10 else 5
 
-                # 生成音檔 URL（如果 TTS 服務可用）
-                audio_url = generate_audio_url(text)
-                if audio_url:
-                    audio_generated_count += 1
-                    if audio_generated_count % 10 == 0:
-                        print(f"  🔊 已生成 {audio_generated_count} 個音檔...")
-
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
                     text=text,
                     translation=item_data.get("translation", ""),
-                    audio_url=audio_url,
+                    audio_url=item_data.get("audio_url"),
                     word_count=word_count,
                     max_errors=max_errors,
                 )
@@ -799,8 +751,6 @@ def create_demo_data(db: Session):
         db.add_all(content_items)
         db.commit()
         print(f"✅ 建立 {len(content_items)} 個 ContentItem 記錄")
-        if audio_generated_count > 0:
-            print(f"  🔊 共生成 {audio_generated_count} 個音檔")
 
     # ============ 6.5 句子模組測試課程 ============
     seed_sentence_making_course(db, classroom_a.id, demo_teacher.id)
@@ -2895,7 +2845,6 @@ def seed_template_programs(db: Session):
 
     # 建立 ContentItem 記錄
     template_content_items = []
-    template_audio_count = 0
     for content in template_contents:
         items_data = content_items_data.get(content.title, [])
         if items_data:
@@ -2905,19 +2854,12 @@ def seed_template_programs(db: Session):
                 # 計算允許錯誤次數：2-10 字 → 3 次，11-25 字 → 5 次
                 max_errors = 3 if word_count <= 10 else 5
 
-                # 生成音檔 URL（如果 TTS 服務可用）
-                audio_url = generate_audio_url(text)
-                if audio_url:
-                    template_audio_count += 1
-                    if template_audio_count % 10 == 0:
-                        print(f"  🔊 模板課程已生成 {template_audio_count} 個音檔...")
-
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
                     text=text,
                     translation=item_data.get("translation", ""),
-                    audio_url=audio_url,
+                    audio_url=item_data.get("audio_url"),
                     word_count=word_count,
                     max_errors=max_errors,
                 )
@@ -2927,8 +2869,6 @@ def seed_template_programs(db: Session):
         db.add_all(template_content_items)
         db.commit()
         print(f"✅ 為模板課程建立了 {len(template_content_items)} 個 ContentItem")
-        if template_audio_count > 0:
-            print(f"  🔊 共生成 {template_audio_count} 個模板課程音檔")
 
     # ============ 4. 顯示結果摘要 ============
     template_count = (
