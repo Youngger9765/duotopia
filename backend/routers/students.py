@@ -2177,9 +2177,12 @@ async def submit_rearrangement_answer(
         progress.correct_word_count = current_position + 1
     else:
         progress.error_count = (progress.error_count or 0) + 1
-        progress.expected_score = max(
-            0, float(progress.expected_score or 100) - points_per_word
-        )
+
+    # 修正：每次回答後都計算 expected_score（與老師預覽端一致）
+    # 這樣即使 progress 記錄已存在，分數也會正確計算
+    progress.expected_score = max(
+        0, 100 - ((progress.error_count or 0) * points_per_word)
+    )
 
     # 記錄選擇歷史
     selections = (
