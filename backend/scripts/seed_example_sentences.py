@@ -25,11 +25,11 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database import Base  # noqa: F401
-from models import Program, Lesson, Content, ContentItem, ContentType, ProgramLevel
-from dotenv import load_dotenv
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from database import Base  # noqa: F401, E402
+from models import Program, Lesson, Content, ContentItem, ContentType, ProgramLevel  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()
 
@@ -339,10 +339,10 @@ def create_example_sentences_course():
             + len(sentences_set2_2)
         )
         print("\n🎉 完成！例句集課程已成功創建！")
-        print(f"\n📊 總結：")
-        print(f"  - 課程數量: 1")
-        print(f"  - 單元數量: 2")
-        print(f"  - 例句集: 4")
+        print("\n📊 總結：")
+        print("  - 課程數量: 1")
+        print("  - 單元數量: 2")
+        print("  - 例句集: 4")
         print(f"  - 句子總數: {total_sentences}")
 
         return program
