@@ -1206,7 +1206,9 @@
         "loadLessonsFailed": "載入單元失敗",
         "loadContentsFailed": "載入內容失敗",
         "quotaExceeded": "配額不足，無法派發作業",
-        "quotaExceededDesc": "請升級方案或等待下個計費週期"
+        "quotaExceededDesc": "請升級方案或等待下個計費週期",
+        "missingAudio": "選擇的內容缺少音檔",
+        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"

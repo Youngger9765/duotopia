@@ -69,12 +69,21 @@ interface Student {
   email?: string; // Make email optional to match global Student type
 }
 
+// ContentItem 包含 audio_url 資訊，用於驗證音檔是否存在
+interface ContentItemData {
+  id: number;
+  text: string;
+  translation?: string;
+  audio_url?: string | null;
+}
+
 interface Content {
   id: number;
   title: string;
   type: string;
   lesson_id: number;
   items_count?: number;
+  items?: ContentItemData[]; // 包含音檔資訊的項目列表
   level?: string;
 }
 
@@ -148,6 +157,7 @@ interface CartItem {
   contentType: string;
   itemsCount?: number;
   order: number; // 用於排序
+  hasMissingAudio: boolean; // 是否有缺少音檔的項目
 }
 
 // 可拖曳的購物車項目組件
@@ -489,7 +499,10 @@ export function AssignmentDialog({
         // 移除
         return prev.filter((item) => item.contentId !== contentId);
       } else {
-        // 添加
+        // 添加 - 檢查是否有缺少音檔的項目
+        const hasMissingAudio = content.items
+          ? content.items.some((item) => !item.audio_url)
+          : false;
         return [
           ...prev,
           {
@@ -500,6 +513,7 @@ export function AssignmentDialog({
             contentType: content.type,
             itemsCount: content.items_count,
             order: prev.length, // 順序為當前數量
+            hasMissingAudio,
           },
         ];
       }
@@ -571,6 +585,9 @@ export function AssignmentDialog({
             contentType: content.type,
             itemsCount: content.items_count,
             order: prev.length + idx,
+            hasMissingAudio: content.items
+              ? content.items.some((item) => !item.audio_url)
+              : false,
           }));
         return [...prev, ...newItems];
       });
@@ -756,6 +773,43 @@ export function AssignmentDialog({
       default:
         return false;
     }
+  };
+
+  // 檢查是否需要音檔但有缺少音檔的內容
+  const checkAudioRequirement = (): boolean => {
+    // 判斷練習模式是否需要音檔
+    const needsAudio =
+      formData.practice_mode === "reading" || // 例句朗讀需要音檔
+      (formData.practice_mode === "rearrangement" && formData.play_audio); // 例句重組 + 播放音檔需要音檔
+
+    if (!needsAudio) {
+      return true; // 不需要音檔，直接通過
+    }
+
+    // 檢查是否有缺少音檔的內容
+    const hasContentWithMissingAudio = cartItems.some(
+      (item) => item.hasMissingAudio,
+    );
+
+    if (hasContentWithMissingAudio) {
+      toast.error(t("dialogs.assignmentDialog.errors.missingAudio"), {
+        description: t("dialogs.assignmentDialog.errors.missingAudioDesc"),
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  // 處理下一步按鈕點擊
+  const handleNextStep = () => {
+    // 從 step 2 移動到 step 3 時，檢查音檔需求
+    if (currentStep === 2) {
+      if (!checkAudioRequirement()) {
+        return; // 驗證失敗，不繼續
+      }
+    }
+    setCurrentStep(currentStep + 1);
   };
 
   const steps = [
@@ -2028,10 +2082,7 @@ export function AssignmentDialog({
 
             <div className="flex items-center gap-2">
               {currentStep < 4 ? (
-                <Button
-                  onClick={() => setCurrentStep(currentStep + 1)}
-                  disabled={!canProceed()}
-                >
+                <Button onClick={handleNextStep} disabled={!canProceed()}>
                   {t("dialogs.assignmentDialog.buttons.next")}
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>

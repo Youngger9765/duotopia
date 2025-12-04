@@ -1199,7 +1199,9 @@
         "loadLessonsFailed": "Failed to load lessons",
         "loadContentsFailed": "Failed to load contents",
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
-        "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle"
+        "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
+        "missingAudio": "Selected content is missing audio",
+        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first"
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
