@@ -38,6 +38,7 @@
     "playAudio": "播放音檔",
     "audioDisabledCompleted": "此題已完成，無法播放音檔",
     "audioPrompt": "點擊播放音檔開始作答",
+    "playbackRate": "播放速度",
     "totalScore": "目前總分",
     "expectedScore": "預期得分",
     "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",

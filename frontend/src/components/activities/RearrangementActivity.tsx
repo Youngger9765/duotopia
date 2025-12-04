@@ -90,6 +90,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const [, setCompletedQuestions] = useState(0);
   // 追蹤第一題音檔是否因瀏覽器限制而無法自動播放
   const [showAudioPrompt, setShowAudioPrompt] = useState(false);
+  // 音檔播放速度
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -559,13 +561,17 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   };
 
   // 異步播放音檔（返回 Promise，可以捕捉錯誤）
-  const playAudioAsync = useCallback(async (url: string): Promise<void> => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    audioRef.current = new Audio(url);
-    await audioRef.current.play();
-  }, []);
+  const playAudioAsync = useCallback(
+    async (url: string): Promise<void> => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioRef.current = new Audio(url);
+      audioRef.current.playbackRate = playbackRate;
+      await audioRef.current.play();
+    },
+    [playbackRate],
+  );
 
   // 同步播放音檔（忽略錯誤）
   const playAudio = useCallback(
@@ -703,26 +709,44 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                 {formatTime(currentState.timeRemaining)}
               </div>
 
-              {/* 音檔按鈕 - 已完成的題目不能播放 */}
+              {/* 音檔按鈕與語速選單 - 已完成的題目不能播放 */}
               {currentQuestion.play_audio && currentQuestion.audio_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => playAudio(currentQuestion.audio_url!)}
-                  disabled={
-                    submitting ||
-                    currentState.completed ||
-                    currentState.challengeFailed
-                  }
-                  title={
-                    currentState.completed || currentState.challengeFailed
-                      ? t("rearrangement.audioDisabledCompleted")
-                      : undefined
-                  }
-                >
-                  <Volume2 className="h-4 w-4 mr-1" />
-                  {t("rearrangement.playAudio")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => playAudio(currentQuestion.audio_url!)}
+                    disabled={
+                      submitting ||
+                      currentState.completed ||
+                      currentState.challengeFailed
+                    }
+                    title={
+                      currentState.completed || currentState.challengeFailed
+                        ? t("rearrangement.audioDisabledCompleted")
+                        : undefined
+                    }
+                  >
+                    <Volume2 className="h-4 w-4 mr-1" />
+                    {t("rearrangement.playAudio")}
+                  </Button>
+                  {/* 語速選單 */}
+                  <select
+                    value={playbackRate}
+                    onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                    className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-white dark:bg-gray-800 dark:text-gray-200"
+                    title={t("rearrangement.playbackRate")}
+                    disabled={
+                      currentState.completed || currentState.challengeFailed
+                    }
+                  >
+                    <option value={0.5}>0.5x</option>
+                    <option value={0.75}>0.75x</option>
+                    <option value={1}>1x</option>
+                    <option value={1.25}>1.25x</option>
+                    <option value={1.5}>1.5x</option>
+                  </select>
+                </div>
               )}
             </div>
           </div>

@@ -38,6 +38,7 @@
     "playAudio": "Play Audio",
     "audioDisabledCompleted": "This question is completed, audio cannot be played",
     "audioPrompt": "Click to play audio and start answering",
+    "playbackRate": "Playback Speed",
     "totalScore": "Total Score",
     "expectedScore": "Expected Score",
     "errorsRemaining": "{{remaining}} chances remaining",
