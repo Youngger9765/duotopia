@@ -38,6 +38,9 @@ class TTSService:
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
         self.storage_client = None
 
+        # Backend URL（用於生成完整的音檔 URL）
+        self.backend_url = os.getenv("BACKEND_URL", "").rstrip("/")
+
         # 本地儲存目錄（當不使用 GCS 時）
         self.local_audio_dir = os.path.join(
             os.path.dirname(__file__), "..", "static", "tts"
@@ -199,8 +202,11 @@ class TTSService:
 
                         shutil.move(tmp_file_path, local_path)
 
-                        # 返回本地 URL
-                        return f"/static/tts/{filename}"
+                        # 返回本地 URL（如果有 BACKEND_URL 則返回完整 URL）
+                        relative_url = f"/static/tts/{filename}"
+                        if self.backend_url:
+                            return f"{self.backend_url}{relative_url}"
+                        return relative_url
                 else:
                     cancellation_details = speechsdk.CancellationDetails(result)
                     error_msg = f"Azure TTS failed: {result.reason}"
