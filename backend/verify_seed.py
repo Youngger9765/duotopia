@@ -1,7 +1,8 @@
 """驗證 seed data 是否成功建立"""
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher, Student, Classroom, Program, Content, ContentType
 
+SessionLocal = get_session_local()
 db = SessionLocal()
 
 teachers = db.query(Teacher).count()
