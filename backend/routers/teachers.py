@@ -3395,6 +3395,13 @@ async def get_assignment_preview(
             if content.type == ContentType.EXAMPLE_SENTENCES:
                 activity_data["target_wpm"] = content.target_wpm
                 activity_data["target_accuracy"] = content.target_accuracy
+                # 🔧 修復：為 reading 模式添加 example_audio_url（取第一個 item 的 audio_url）
+                if content_items and len(content_items) > 0:
+                    first_item = content_items[0]
+                    activity_data["example_audio_url"] = first_item.audio_url
+                    # 同時設置 content 和 target_text（ReadingAssessmentTemplate 需要）
+                    activity_data["content"] = first_item.translation or ""
+                    activity_data["target_text"] = first_item.text or ""
 
             activities.append(activity_data)
 

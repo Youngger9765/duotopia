@@ -540,7 +540,11 @@ export function AssignmentDialog({
   ) => {
     if (!lesson.contents) return;
 
-    const lessonContentIds = lesson.contents.map((c) => c.id);
+    // 過濾掉 VOCABULARY_SET 類型的內容
+    const filteredContents = lesson.contents.filter(
+      (c) => !isVocabularySetType(c.type),
+    );
+    const lessonContentIds = filteredContents.map((c) => c.id);
     const allSelected = lessonContentIds.every((id) =>
       cartItems.some((item) => item.contentId === id),
     );
@@ -557,8 +561,8 @@ export function AssignmentDialog({
       // 添加所有
       setCartItems((prev) => {
         const existingIds = new Set(prev.map((item) => item.contentId));
-        const newItems = lesson
-          .contents!.filter((content) => !existingIds.has(content.id))
+        const newItems = filteredContents
+          .filter((content) => !existingIds.has(content.id))
           .map((content, idx) => ({
             contentId: content.id,
             programName,
@@ -1065,7 +1069,10 @@ export function AssignmentDialog({
                                               </span>
                                             )}
                                             {lesson.contents &&
-                                              lesson.contents.length > 0 &&
+                                              lesson.contents.filter(
+                                                (c) =>
+                                                  !isVocabularySetType(c.type),
+                                              ).length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1078,12 +1085,20 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents.every((c) =>
-                                                    cartItems.some(
-                                                      (item) =>
-                                                        item.contentId === c.id,
-                                                    ),
-                                                  )
+                                                  {lesson.contents
+                                                    .filter(
+                                                      (c) =>
+                                                        !isVocabularySetType(
+                                                          c.type,
+                                                        ),
+                                                    )
+                                                    .every((c) =>
+                                                      cartItems.some(
+                                                        (item) =>
+                                                          item.contentId ===
+                                                          c.id,
+                                                      ),
+                                                    )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1098,8 +1113,14 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents.map(
-                                                (content) => {
+                                              {lesson.contents
+                                                .filter(
+                                                  (c) =>
+                                                    !isVocabularySetType(
+                                                      c.type,
+                                                    ),
+                                                )
+                                                .map((content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
@@ -1156,8 +1177,7 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                },
-                                              )}
+                                                })}
                                             </div>
                                           )}
                                       </div>
@@ -1271,7 +1291,10 @@ export function AssignmentDialog({
                                               )}
                                             </span>
                                             {lesson.contents &&
-                                              lesson.contents.length > 0 &&
+                                              lesson.contents.filter(
+                                                (c) =>
+                                                  !isVocabularySetType(c.type),
+                                              ).length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1284,12 +1307,20 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents.every((c) =>
-                                                    cartItems.some(
-                                                      (item) =>
-                                                        item.contentId === c.id,
-                                                    ),
-                                                  )
+                                                  {lesson.contents
+                                                    .filter(
+                                                      (c) =>
+                                                        !isVocabularySetType(
+                                                          c.type,
+                                                        ),
+                                                    )
+                                                    .every((c) =>
+                                                      cartItems.some(
+                                                        (item) =>
+                                                          item.contentId ===
+                                                          c.id,
+                                                      ),
+                                                    )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1304,8 +1335,14 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents.map(
-                                                (content) => {
+                                              {lesson.contents
+                                                .filter(
+                                                  (c) =>
+                                                    !isVocabularySetType(
+                                                      c.type,
+                                                    ),
+                                                )
+                                                .map((content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
@@ -1362,8 +1399,7 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                },
-                                              )}
+                                                })}
                                             </div>
                                           )}
                                       </div>

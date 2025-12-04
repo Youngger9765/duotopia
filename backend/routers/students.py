@@ -15,6 +15,7 @@ from models import (
     StudentAssignment,
     Content,
     ContentItem,
+    ContentType,
     StudentItemProgress,
     AssignmentStatus,
     AssignmentContent,
@@ -625,6 +626,24 @@ async def get_assignment_activities(
 
                 activity_data["content"] = ""
                 activity_data["target_text"] = ""
+
+                # 🔧 修復：為 EXAMPLE_SENTENCES 類型添加 example_audio_url（取第一個 item 的 audio_url）
+                # 檢查 content type（處理新舊類型）
+                is_example_sentences = (
+                    content.type
+                    in [
+                        ContentType.EXAMPLE_SENTENCES,
+                        ContentType.READING_ASSESSMENT,
+                    ]
+                    if content.type
+                    else False
+                )
+                if is_example_sentences and content_items and len(content_items) > 0:
+                    first_item = content_items[0]
+                    activity_data["example_audio_url"] = first_item.audio_url
+                    # 同時設置 content 和 target_text（ReadingAssessmentTemplate 需要）
+                    activity_data["content"] = first_item.translation or ""
+                    activity_data["target_text"] = first_item.text or ""
 
                 # 現在統一使用 StudentItemProgress 的資料，不再從 response_data 讀取
                 # recordings 和 AI 評分都應該從 items 的 recording_url 和 ai_assessment 取得
