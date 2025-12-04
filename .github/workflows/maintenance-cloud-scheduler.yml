@@ -126,7 +126,7 @@ jobs:
           --http-method=POST \
           --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
           --attempt-deadline=300s \
-          --max-retry-attempts=2 \
+          --max-retry-attempts=0 \
           --description="每 4 小時檢查 BigQuery 錄音錯誤並發送報告到 myduotopia@gmail.com - production only"
 
         echo "✅ Recording error report job 創建成功"
