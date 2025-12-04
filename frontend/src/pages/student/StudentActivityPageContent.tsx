@@ -301,7 +301,7 @@ export default function StudentActivityPageContent({
         const actualRecordingDuration = recordingTimeRef.current;
         console.log("🎙️ 實際錄音時長:", actualRecordingDuration, "秒");
 
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 800)); // 500→800ms
 
         const audioBlob = new Blob(chunks, {
           type: recorder.mimeType || "audio/webm",
@@ -319,23 +319,27 @@ export default function StudentActivityPageContent({
         const strategy = strategyRef.current;
         const localAudioUrl = URL.createObjectURL(audioBlob);
 
-        // 先檢查檔案大小（快速失敗）
-        if (audioBlob.size < strategy.minFileSize) {
+        // 🔍 雙重檢查：chunks 和 blob 都太小才報錯
+        const chunksSize = chunks.reduce((sum, chunk) => sum + chunk.size, 0);
+        const blobSize = audioBlob.size;
+
+        if (
+          chunksSize < strategy.minFileSize &&
+          blobSize < strategy.minFileSize
+        ) {
           console.error(
-            "⚠️ Recording file too small:",
-            audioBlob.size,
-            `(min: ${strategy.minFileSize})`,
+            `⚠️ Recording file too small (both checks failed): chunks=${chunksSize}B, blob=${blobSize}B, min=${strategy.minFileSize}B`,
           );
 
           const { logAudioError } = await import("@/utils/audioErrorLogger");
           await logAudioError({
             errorType: "recording_too_small",
             audioUrl: localAudioUrl,
-            audioSize: audioBlob.size,
+            audioSize: blobSize,
             audioDuration: actualRecordingDuration,
             contentType: audioBlob.type,
             assignmentId: assignmentId,
-            errorMessage: `File size ${audioBlob.size} below minimum ${strategy.minFileSize}`,
+            errorMessage: `Both chunks (${chunksSize}B) and blob (${blobSize}B) below minimum ${strategy.minFileSize}B`,
           });
 
           toast.error(t("studentActivityPage.recording.failed"), {
@@ -352,6 +356,11 @@ export default function StudentActivityPageContent({
           setRecordingTime(0);
           return;
         }
+
+        // ✅ 至少一個通過 - 記錄診斷資訊
+        console.log(
+          `✅ Recording size check passed: chunks=${chunksSize}B, blob=${blobSize}B (min: ${strategy.minFileSize}B)`,
+        );
 
         // 使用策略驗證 duration
         try {
