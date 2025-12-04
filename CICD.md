@@ -10,6 +10,33 @@
 - **本地開發**: Docker PostgreSQL
 - **成本**: $0/月（完全免費）
 
+## 📋 分支命名規則
+
+### Issue 修復分支
+- **格式**: `claude/issue-XX`（固定，不含時間戳或描述）
+- **範例**: `claude/issue-28`
+- **創建**: `create-feature-fix 28`
+- **重用**: 再次執行 `create-feature-fix 28` 會切換到現有分支
+
+**優點**:
+1. ✅ 統一命名（與 @claude bot 一致）
+2. ✅ 避免分支堆積（可重用）
+3. ✅ 觸發 Per-Issue Test Environment
+4. ✅ Issue 關閉時自動清理
+
+### Feature 開發分支
+- **格式**: `feat/description`
+- **範例**: `feat/audio-playback-refactor`
+- **創建**: `create-feature description`
+
+### 分支命名對照表
+| 分支類型 | 命名格式 | 範例 | 用途 |
+|---------|---------|------|------|
+| Issue 修復 | `claude/issue-XX` | `claude/issue-28` | GitHub Issue 修復 |
+| Feature 開發 | `feat/description` | `feat/audio-playback` | 新功能開發 |
+| Staging | `staging` | `staging` | 測試環境部署 |
+| Production | `main` | `main` | 正式環境 |
+
 ## 📋 部署前檢查清單
 
 ### 1. 配置檢查

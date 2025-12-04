@@ -388,6 +388,16 @@
     },
     "error": {
       "loadFailed": "Load failed"
+    },
+    "share": {
+      "button": "Share to Students",
+      "title": "Share Student Login Link",
+      "description": "Students can scan the QR code or use the link to login directly",
+      "copy": "Copy",
+      "copied": "Copied",
+      "instructions": "How to share:",
+      "instruction1": "Scan QR Code: Students can scan the QR code with their phone to go directly to the login page",
+      "instruction2": "Copy Link: Click the 'Copy' button to share the link with students"
     }
   },
   "admin": {
@@ -548,8 +558,7 @@
     },
     "flowStatus": {
       "title": "Assignment Progress Flow",
-      "notStarted": "Not Started",
-      "inProgress": "In Progress",
+      "todo": "To Do",
       "submitted": "Submitted",
       "returned": "Returned for Revision",
       "resubmitted": "Resubmitted",
@@ -586,13 +595,9 @@
       "resubmit": "Resubmit"
     },
     "emptyStates": {
-      "notStarted": {
-        "title": "No assignments to start",
-        "description": "All assignments have been started!"
-      },
-      "inProgress": {
-        "title": "No assignments in progress",
-        "description": "Start practicing your assignments!"
+      "todo": {
+        "title": "No pending assignments",
+        "description": "All assignments have been completed or submitted!"
       },
       "submitted": {
         "title": "No assignments pending grading",
@@ -1115,11 +1120,6 @@
   "dialogs": {
     "assignmentDialog": {
       "title": "Assign New Assignment",
-      "steps": {
-        "selectContent": "Select Content",
-        "selectStudents": "Select Students",
-        "assignmentDetails": "Assignment Details"
-      },
       "quota": {
         "remaining": "Quota Remaining",
         "remainingColon": "Quota Remaining:",
@@ -1194,6 +1194,8 @@
         "noStudentSelected": "Please select at least one student",
         "createFailed": "Failed to create assignment",
         "loadProgramsFailed": "Failed to load programs",
+        "loadTemplateFailed": "Failed to load template programs",
+        "loadClassroomProgramsFailed": "Failed to load classroom programs",
         "loadLessonsFailed": "Failed to load lessons",
         "loadContentsFailed": "Failed to load contents",
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
@@ -1760,7 +1762,7 @@
     },
     "total": "Total {{count}} students",
     "columns": {
-      "id": "ID",
+      "studentNumber": "Student Number",
       "studentName": "Student Name",
       "contactInfo": "Contact Info",
       "passwordStatus": "Password Status",
@@ -1801,7 +1803,8 @@
       "phone": "Phone:",
       "classroom": "Classroom:",
       "password": "Password:",
-      "lastLogin": "Last Login:"
+      "lastLogin": "Last Login:",
+      "studentNumber": "Student Number:"
     }
   },
   "subscriptionProgressBanner": {
@@ -1937,7 +1940,12 @@
       "delete": "Delete",
       "addItem": "Add Item",
       "maxRowsReached": "Maximum 15 rows allowed",
-      "minRowsRequired": "At least 1 row required"
+      "minRowsRequired": "At least 1 row required",
+      "cannotDeleteWithProgress": "This item has student progress and cannot be deleted"
+    },
+    "assignmentCopyWarning": {
+      "title": "Notice: This is an assignment copy",
+      "message": "Items with student progress cannot be deleted (delete buttons are disabled). You can modify item content, but cannot remove items that have been answered."
     },
     "ttsModal": {
       "title": "Audio Settings",
@@ -2149,11 +2157,23 @@
     },
     "contentTypes": {
       "readingAssessment": "Reading Assessment",
+      "reading_assessment": "Reading Assessment",
+      "READING_ASSESSMENT": "Reading Assessment",
       "speakingPractice": "Speaking Practice",
+      "speaking_practice": "Speaking Practice",
+      "SPEAKING_PRACTICE": "Speaking Practice",
       "speakingScenario": "Speaking Scenario",
+      "speaking_scenario": "Speaking Scenario",
+      "SPEAKING_SCENARIO": "Speaking Scenario",
       "listeningCloze": "Listening Cloze",
+      "listening_cloze": "Listening Cloze",
+      "LISTENING_CLOZE": "Listening Cloze",
       "sentenceMaking": "Sentence Making",
+      "sentence_making": "Sentence Making",
+      "SENTENCE_MAKING": "Sentence Making",
       "speakingQuiz": "Speaking Quiz",
+      "speaking_quiz": "Speaking Quiz",
+      "SPEAKING_QUIZ": "Speaking Quiz",
       "readingRecordingPractice": "Reading Recording Practice",
       "newContent": "New Content"
     },
@@ -2187,6 +2207,7 @@
       "questions": "questions",
       "giveScore": "Give Score",
       "scoreRange": "0-100 points",
+      "usingAverageScore": "(Using Average Score)",
       "selectGradingStatus": "Select Grading Status",
       "referenceAudio": "Reference Audio",
       "transcription": "Speech Recognition Result",
@@ -2237,7 +2258,11 @@
       "pronunciationClear": "Clear pronunciation",
       "fluencyGood": "Good fluency",
       "accuracyHigh": "High accuracy",
-      "completenessGood": "Good completeness"
+      "completenessGood": "Good completeness",
+      "aiGrading": "AI is grading...",
+      "aiGradingComplete": "AI grading completed!",
+      "aiGradingFailed": "AI grading failed, please try again",
+      "noStudentToGrade": "No student to grade (status must be Submitted or Resubmitted)"
     },
     "status": {
       "notStarted": "Not Started",
@@ -2269,6 +2294,7 @@
     "buttons": {
       "backToList": "Back to Assignment List",
       "gradeAssignment": "Grade Assignment",
+      "batchGrade": "AI Batch Grade",
       "cancel": "Cancel",
       "save": "Save",
       "edit": "Edit",
@@ -2311,16 +2337,79 @@
       "people": "people"
     },
     "contentTypes": {
+      "readingAssessment": "Example Sentences",
+      "reading_assessment": "Example Sentences",
       "READING_ASSESSMENT": "Example Sentences",
       "EXAMPLE_SENTENCES": "Example Sentences",
+      "speakingPractice": "Speaking Practice",
+      "speaking_practice": "Speaking Practice",
       "SPEAKING_PRACTICE": "Speaking Practice",
+      "speakingScenario": "Speaking Scenario",
+      "speaking_scenario": "Speaking Scenario",
       "SPEAKING_SCENARIO": "Speaking Scenario",
+      "listeningCloze": "Listening Cloze",
+      "listening_cloze": "Listening Cloze",
       "LISTENING_CLOZE": "Listening Cloze",
+      "sentenceMaking": "Vocabulary Set",
+      "sentence_making": "Vocabulary Set",
       "SENTENCE_MAKING": "Vocabulary Set",
       "VOCABULARY_SET": "Vocabulary Set",
+      "speakingQuiz": "Speaking Quiz",
+      "speaking_quiz": "Speaking Quiz",
       "SPEAKING_QUIZ": "Speaking Quiz",
       "MULTIPLE_CHOICE": "Multiple Choice",
       "SCENARIO_DIALOGUE": "Scenario Dialogue"
+    }
+  },
+  "batchGrading": {
+    "title": "AI Batch Grading",
+    "progress": "Grading... ({{current}}/{{total}} students)",
+    "studentName": "Student Name",
+    "accuracy": "Accuracy",
+    "fluency": "Fluency",
+    "pronunciation": "Pronunciation",
+    "completeness": "Completeness",
+    "totalScore": "Total Score",
+    "missingItems": "Missing Items",
+    "decision": "Decision",
+    "action": "Action",
+    "decisionGraded": "Complete Grading",
+    "decisionReturned": "Return for Correction",
+    "decisionPending": "Pending",
+    "submitSingle": "Submit",
+    "submitAll": "Submit All",
+    "selectAllGraded": "Select All: Complete",
+    "selectAllReturned": "Select All: Return",
+    "clearAll": "Clear All Selections",
+    "selectDecisionFirst": "Please select a decision first (return or complete)",
+    "singleSubmitSuccess": "Grading completed: {{name}}",
+    "allSubmitSuccess": "Grading completed: {{graded}} completed, {{returned}} returned, {{unchanged}} pending",
+    "returnForCorrection": "Return for Correction",
+    "averageAccuracy": "Average Accuracy",
+    "averageFluency": "Average Fluency",
+    "averagePronunciation": "Average Pronunciation",
+    "averageCompleteness": "Average Completeness",
+    "pause": "Pause",
+    "close": "Close",
+    "selectedForReturn": "Selected {{count}} students for return",
+    "confirmButton": "Confirm",
+    "confirmGrading": "Confirm Grading",
+    "processing": "Processing...",
+    "helperText": "After clicking 'Confirm', only checked students will be returned, others will keep their status",
+    "successReturned": "Returned {{count}} students for correction",
+    "successNoAction": "No students processed",
+    "successDescription": "Graded {{graded}} students, returned {{returned}} for correction",
+    "errorDescription": "Failed to finalize grading, please try again",
+    "messages": {
+      "success": "Successfully graded {{count}} students",
+      "error": "Grading failed, please try again later",
+      "returnSuccess": "Marked {{count}} students for correction",
+      "returnError": "Failed to update correction status"
+    },
+    "aria": {
+      "markAsGraded": "Mark {{name}} as grading complete",
+      "markAsReturned": "Mark {{name}} as return for correction",
+      "markAsPending": "Mark {{name}} as pending"
     }
   },
   "previewPage": {
@@ -3127,6 +3216,7 @@
       "saveFailed": "Save failed, please try again later",
       "deleteFailed": "Delete failed, please try again later",
       "emailInUse": "Email already in use, please use another email",
+      "studentNumberDuplicate": "This student number already exists in the classroom, please use another number",
       "invalidBirthdate": "Invalid birthdate format, please use YYYY-MM-DD",
       "requiredFields": "Please fill in all required fields",
       "nameRequired": "Name is required",

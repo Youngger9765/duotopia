@@ -182,7 +182,8 @@ export default function StudentDashboard() {
   };
 
   const handleStartAssignment = (assignmentId: number) => {
-    navigate(`/student/assignment/${assignmentId}/detail`);
+    // Navigate directly to activity page, skipping the confirmation screen (Issue #28)
+    navigate(`/student/assignment/${assignmentId}/activity`);
   };
 
   const handleViewAllAssignments = () => {
@@ -245,10 +246,9 @@ export default function StudentDashboard() {
         return "bg-green-100 text-green-800";
       case "SUBMITTED":
         return "bg-yellow-100 text-yellow-800";
+      case "NOT_STARTED":
       case "IN_PROGRESS":
         return "bg-blue-100 text-blue-800";
-      case "NOT_STARTED":
-        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -257,7 +257,6 @@ export default function StudentDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "NOT_STARTED":
-        return t("studentDashboard.status.notStarted");
       case "IN_PROGRESS":
         return t("studentDashboard.status.inProgress");
       case "SUBMITTED":

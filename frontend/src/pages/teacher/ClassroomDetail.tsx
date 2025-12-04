@@ -21,6 +21,7 @@ import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import SentenceMakingPanel from "@/components/SentenceMakingPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
+import BatchGradingModal from "@/components/BatchGradingModal";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
@@ -35,6 +36,7 @@ import {
   Save,
   Mic,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
@@ -150,6 +152,11 @@ export default function ClassroomDetail({
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  const [batchGradingModal, setBatchGradingModal] = useState({
+    open: false,
+    assignmentId: 0,
+    classroomId: 0,
+  });
 
   useEffect(() => {
     if (id) {
@@ -1472,25 +1479,42 @@ export default function ClassroomDetail({
                                 key={assignment.id}
                                 className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3"
                               >
-                                {/* Title & Type */}
-                                <div className="flex items-start justify-between gap-3">
+                                {/* Title & AI Batch Grade Button */}
+                                <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {assignment.title}
                                     </h4>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">
-                                      {assignment.instructions ||
-                                        t(
-                                          "classroomDetail.labels.noDescription",
-                                        )}
-                                    </p>
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${typeInfo.color} mt-1`}
+                                    >
+                                      {typeInfo.label}
+                                    </span>
                                   </div>
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${typeInfo.color}`}
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                    onClick={() => {
+                                      setBatchGradingModal({
+                                        open: true,
+                                        assignmentId: assignment.id,
+                                        classroomId: Number(id),
+                                      });
+                                    }}
                                   >
-                                    {typeInfo.label}
-                                  </span>
+                                    <Sparkles className="w-5 h-5" />
+                                    <span className="text-sm font-medium">
+                                      {t("assignmentDetail.buttons.batchGrade")}
+                                    </span>
+                                  </Button>
                                 </div>
+
+                                {/* Description */}
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                  {assignment.instructions ||
+                                    t("classroomDetail.labels.noDescription")}
+                                </p>
 
                                 {/* Details Grid */}
                                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -1614,7 +1638,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
                                   },
+                                  reading_assessment: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.readingAssessment",
+                                    ),
+                                    color:
+                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                  },
                                   SPEAKING_PRACTICE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingPractice",
+                                    ),
+                                    color:
+                                      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                  },
+                                  speaking_practice: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingPractice",
                                     ),
@@ -1628,7 +1666,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
                                   },
+                                  speaking_scenario: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingScenario",
+                                    ),
+                                    color:
+                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                  },
                                   LISTENING_CLOZE: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.listeningCloze",
+                                    ),
+                                    color:
+                                      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                  },
+                                  listening_cloze: {
                                     label: t(
                                       "classroomDetail.contentTypes.listeningCloze",
                                     ),
@@ -1642,7 +1694,21 @@ export default function ClassroomDetail({
                                     color:
                                       "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
                                   },
+                                  sentence_making: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.sentenceMaking",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  },
                                   SPEAKING_QUIZ: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.speakingQuiz",
+                                    ),
+                                    color:
+                                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                  },
+                                  speaking_quiz: {
                                     label: t(
                                       "classroomDetail.contentTypes.speakingQuiz",
                                     ),
@@ -1740,6 +1806,23 @@ export default function ClassroomDetail({
                                         >
                                           {t(
                                             "classroomDetail.buttons.previewDemo",
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                          onClick={() => {
+                                            setBatchGradingModal({
+                                              open: true,
+                                              assignmentId: assignment.id,
+                                              classroomId: Number(id),
+                                            });
+                                          }}
+                                        >
+                                          <Sparkles className="w-4 h-4 mr-1" />
+                                          {t(
+                                            "assignmentDetail.buttons.batchGrade",
                                           )}
                                         </Button>
                                       </div>
@@ -2321,7 +2404,7 @@ export default function ClassroomDetail({
             <div className="flex-1 overflow-hidden">
               <SentenceMakingPanel
                 content={undefined}
-                editingContent={{ id: sentenceMakingContentId || undefined }}
+                editingContent={{ id: sentenceMakingContentId ?? undefined }}
                 lessonId={sentenceMakingLessonId}
                 onUpdateContent={(updatedContent) => {
                   // Handle content update if needed
@@ -2347,6 +2430,24 @@ export default function ClassroomDetail({
           </div>
         </div>
       )}
+
+      {/* Batch Grading Modal */}
+      <BatchGradingModal
+        open={batchGradingModal.open}
+        onOpenChange={(open) =>
+          setBatchGradingModal({ ...batchGradingModal, open })
+        }
+        assignmentId={batchGradingModal.assignmentId}
+        classroomId={batchGradingModal.classroomId}
+        onComplete={() => {
+          setBatchGradingModal({
+            open: false,
+            assignmentId: 0,
+            classroomId: 0,
+          });
+          fetchAssignments();
+        }}
+      />
     </TeacherLayout>
   );
 }

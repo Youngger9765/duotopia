@@ -110,7 +110,7 @@
     "dueDate": "截止日期",
     "status": "狀態",
     "notStarted": "未開始",
-    "inProgress": "進行中",
+    "inProgress": "待完成",
     "completed": "已完成",
     "submitted": "已提交",
     "graded": "已評分",
@@ -388,6 +388,16 @@
     },
     "error": {
       "loadFailed": "載入失敗"
+    },
+    "share": {
+      "button": "分享給學生",
+      "title": "分享學生登入連結",
+      "description": "學生可以掃描 QR 碼或使用連結直接登入",
+      "copy": "複製",
+      "copied": "已複製",
+      "instructions": "分享方式：",
+      "instruction1": "掃描 QR 碼：學生可以用手機掃描 QR 碼直接進入登入頁面",
+      "instruction2": "複製連結：點擊「複製」按鈕，將連結分享給學生"
     }
   },
   "admin": {
@@ -548,20 +558,19 @@
     },
     "flowStatus": {
       "title": "作業進度流程",
-      "notStarted": "未開始",
-      "inProgress": "進行中",
+      "todo": "待完成",
       "submitted": "已提交",
-      "returned": "退回訂正",
-      "resubmitted": "重新提交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
       "graded": "已完成"
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
-      "resubmitted": "重新提交"
+      "returned": "待訂正",
+      "resubmitted": "已訂正"
     },
     "progress": {
       "title": "完成進度",
@@ -586,13 +595,9 @@
       "resubmit": "開始訂正"
     },
     "emptyStates": {
-      "notStarted": {
-        "title": "沒有未開始的作業",
-        "description": "所有作業都已經開始了！"
-      },
-      "inProgress": {
-        "title": "沒有進行中的作業",
-        "description": "開始練習作業吧！"
+      "todo": {
+        "title": "沒有待完成的作業",
+        "description": "所有作業都已完成或提交！"
       },
       "submitted": {
         "title": "沒有待批改的作業",
@@ -607,8 +612,8 @@
         "description": "需要重做的作業會顯示在這裡。"
       },
       "resubmitted": {
-        "title": "沒有重新提交的作業",
-        "description": "重新提交的作業會顯示在這裡。"
+        "title": "沒有已訂正的作業",
+        "description": "已訂正的作業會顯示在這裡。"
       }
     }
   },
@@ -655,11 +660,11 @@
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
-      "resubmitted": "重新提交"
+      "returned": "待訂正",
+      "resubmitted": "已訂正"
     },
     "dueDate": {
       "overdue": "已逾期 {{days}} 天",
@@ -899,6 +904,8 @@
       "placeholder": "請輸入你的密碼",
       "login": "登入",
       "selectOther": "選擇其他學生",
+      "passwordHint": "首次登入請輸入西元生日年月日，如: 2012 年 1 月 1 日，密碼為 20120101",
+      "forgotPassword": "若忘記密碼，請聯繫教師恢復預設密碼",
       "demoHint": "💡 測試提示",
       "demoPassword": "Demo 學生預設密碼：",
       "passwordFormat": "正式使用時，密碼為學生的生日 (格式：YYYYMMDD)"
@@ -975,10 +982,10 @@
     },
     "status": {
       "notStarted": "待完成",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回"
+      "returned": "待訂正"
     },
     "errors": {
       "loadAssignments": "無法載入作業列表",
@@ -1118,7 +1125,7 @@
       "steps": {
         "selectContent": "選擇內容",
         "selectStudents": "選擇學生",
-        "assignmentDetails": "作業詳情"
+        "details": "作業詳情"
       },
       "quota": {
         "remaining": "配額餘額",
@@ -1194,6 +1201,8 @@
         "noStudentSelected": "請至少選擇一位學生",
         "createFailed": "創建作業失敗",
         "loadProgramsFailed": "載入課程失敗",
+        "loadTemplateFailed": "載入公版課程失敗",
+        "loadClassroomProgramsFailed": "載入班級課程失敗",
         "loadLessonsFailed": "載入單元失敗",
         "loadContentsFailed": "載入內容失敗",
         "quotaExceeded": "配額不足，無法派發作業",
@@ -1718,7 +1727,7 @@
     "summary": {
       "total": "總人數",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改"
     },
@@ -1728,7 +1737,7 @@
     "statusFilter": {
       "all": "全部狀態",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改"
     },
@@ -1760,7 +1769,7 @@
     },
     "total": "共 {{count}} 位學生",
     "columns": {
-      "id": "ID",
+      "studentNumber": "學號",
       "studentName": "學生姓名",
       "contactInfo": "聯絡資訊",
       "passwordStatus": "密碼狀態",
@@ -1801,7 +1810,8 @@
       "phone": "電話:",
       "classroom": "班級:",
       "password": "密碼:",
-      "lastLogin": "最後登入:"
+      "lastLogin": "最後登入:",
+      "studentNumber": "學號:"
     }
   },
   "subscriptionProgressBanner": {
@@ -1937,7 +1947,12 @@
       "delete": "刪除",
       "addItem": "新增項目",
       "maxRowsReached": "最多只能新增 15 列",
-      "minRowsRequired": "至少需要保留 1 列"
+      "minRowsRequired": "至少需要保留 1 列",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除"
+    },
+    "assignmentCopyWarning": {
+      "title": "注意：此為作業副本",
+      "message": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
     },
     "ttsModal": {
       "title": "音檔設定",
@@ -2084,6 +2099,7 @@
       "createProgram": "建立課程",
       "assignNewHomework": "指派新作業",
       "viewDetails": "查看詳情",
+      "editContent": "編輯內容",
       "previewDemo": "預覽示範",
       "viewSubmissions": "查看學生提交",
       "editAssignment": "編輯作業",
@@ -2099,7 +2115,7 @@
       "level": "等級",
       "totalAssignments": "總作業數",
       "completedAssignments": "已完成",
-      "inProgressAssignments": "進行中",
+      "inProgressAssignments": "待完成",
       "overdueAssignments": "已逾期"
     },
     "tabs": {
@@ -2149,11 +2165,23 @@
     },
     "contentTypes": {
       "readingAssessment": "朗讀評測",
+      "reading_assessment": "朗讀評測",
+      "READING_ASSESSMENT": "朗讀評測",
       "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
+      "SPEAKING_PRACTICE": "口說練習",
       "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
+      "SPEAKING_SCENARIO": "情境對話",
       "listeningCloze": "聽力填空",
+      "listening_cloze": "聽力填空",
+      "LISTENING_CLOZE": "聽力填空",
       "sentenceMaking": "造句練習",
+      "sentence_making": "造句練習",
+      "SENTENCE_MAKING": "造句練習",
       "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
+      "SPEAKING_QUIZ": "口說測驗",
       "readingRecordingPractice": "朗讀錄音練習",
       "newContent": "新內容"
     },
@@ -2187,6 +2215,7 @@
       "questions": "題",
       "giveScore": "給分",
       "scoreRange": "0-100 分",
+      "usingAverageScore": "（採用平均分數）",
       "selectGradingStatus": "選擇批改狀態",
       "referenceAudio": "參考音檔",
       "transcription": "語音辨識結果",
@@ -2237,16 +2266,20 @@
       "pronunciationClear": "發音清晰",
       "fluencyGood": "流暢度佳",
       "accuracyHigh": "準確度高",
-      "completenessGood": "完整度好"
+      "completenessGood": "完整度好",
+      "aiGrading": "AI 批改中...",
+      "aiGradingComplete": "AI 批改完成！",
+      "aiGradingFailed": "AI 批改失敗，請稍後再試",
+      "noStudentToGrade": "沒有可批改的學生（狀態須為已提交或已訂正）"
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改",
-      "returned": "已發還",
-      "resubmitted": "重新提交",
-      "resubmittedShort": "重交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
+      "resubmittedShort": "已訂正",
       "notAssigned": "未指派"
     }
   },
@@ -2269,6 +2302,7 @@
     "buttons": {
       "backToList": "返回作業列表",
       "gradeAssignment": "批改作業",
+      "batchGrade": "AI批改",
       "cancel": "取消",
       "save": "儲存",
       "edit": "編輯",
@@ -2294,10 +2328,10 @@
       "studentName": "學生姓名",
       "assigned": "已指派",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "returned": "待訂正",
-      "resubmitted": "重新提交",
+      "resubmitted": "已訂正",
       "graded": "已完成",
       "score": "分數",
       "actions": "操作",
@@ -2308,19 +2342,83 @@
       "instructionsPlaceholder": "輸入作業說明...",
       "noInstructions": "無說明",
       "notSet": "未設定",
-      "people": "人"
+      "people": "人",
+      "editContent": "編輯內容"
     },
     "contentTypes": {
+      "readingAssessment": "例句集",
+      "reading_assessment": "例句集",
       "READING_ASSESSMENT": "例句集",
       "EXAMPLE_SENTENCES": "例句集",
+      "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
+      "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
       "SPEAKING_SCENARIO": "情境對話",
+      "listeningCloze": "聽力填空",
+      "listening_cloze": "聽力填空",
       "LISTENING_CLOZE": "聽力填空",
+      "sentenceMaking": "單字集",
+      "sentence_making": "單字集",
       "SENTENCE_MAKING": "單字集",
       "VOCABULARY_SET": "單字集",
+      "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
       "SPEAKING_QUIZ": "口說測驗",
       "MULTIPLE_CHOICE": "選擇題",
       "SCENARIO_DIALOGUE": "情境對話"
+    }
+  },
+  "batchGrading": {
+    "title": "AI批改",
+    "progress": "批改中... ({{current}}/{{total}} 位學生)",
+    "studentName": "學生姓名",
+    "accuracy": "準確度",
+    "fluency": "流暢度",
+    "pronunciation": "總體發音",
+    "completeness": "完整度",
+    "totalScore": "總分",
+    "missingItems": "缺漏題數",
+    "decision": "狀態決定",
+    "action": "操作",
+    "decisionGraded": "完成批改",
+    "decisionReturned": "退回訂正",
+    "decisionPending": "待決定",
+    "submitSingle": "送出",
+    "submitAll": "全部送出",
+    "selectAllGraded": "全選：完成批改",
+    "selectAllReturned": "全選：退回訂正",
+    "clearAll": "清除所有選擇",
+    "selectDecisionFirst": "請先選擇狀態（退回或完成）",
+    "singleSubmitSuccess": "已完成批改：{{name}}",
+    "allSubmitSuccess": "已完成批改：{{graded}} 位完成，{{returned}} 位退回，{{unchanged}} 位待決定",
+    "returnForCorrection": "退回訂正",
+    "averageAccuracy": "平均準確度",
+    "averageFluency": "平均流暢度",
+    "averagePronunciation": "平均總體發音",
+    "averageCompleteness": "平均完整度",
+    "pause": "暫停",
+    "close": "關閉",
+    "selectedForReturn": "已選擇 {{count}} 位學生退回訂正",
+    "confirmButton": "確認",
+    "confirmGrading": "確認批改",
+    "processing": "處理中...",
+    "helperText": "點擊「確認」後，僅將勾選的學生退回訂正，其餘保持原狀態",
+    "successReturned": "已退回 {{count}} 位學生訂正",
+    "successNoAction": "未處理任何學生",
+    "successDescription": "已批改 {{graded}} 位學生，退回 {{returned}} 位學生訂正",
+    "errorDescription": "批改失敗，請稍後重試",
+    "messages": {
+      "success": "成功批改 {{count}} 位學生",
+      "error": "批改失敗，請稍後再試",
+      "returnSuccess": "已標記 {{count}} 位學生為待訂正",
+      "returnError": "更新訂正狀態失敗"
+    },
+    "aria": {
+      "markAsGraded": "標記{{name}}為完成批改",
+      "markAsReturned": "標記{{name}}為退回訂正",
+      "markAsPending": "標記{{name}}為待定"
     }
   },
   "previewPage": {
@@ -3127,6 +3225,7 @@
       "saveFailed": "儲存失敗，請稍後再試",
       "deleteFailed": "刪除失敗，請稍後再試",
       "emailInUse": "Email已被使用，請使用其他Email",
+      "studentNumberDuplicate": "此學號已存在於該班級中，請使用其他學號",
       "invalidBirthdate": "生日格式錯誤，請使用YYYY-MM-DD格式",
       "requiredFields": "請填寫所有必填欄位",
       "nameRequired": "姓名為必填",

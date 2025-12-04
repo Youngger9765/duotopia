@@ -201,9 +201,11 @@ jobs:
 
     - name: Deploy frontend to Cloud Run
       run: |
-        # 設定 min-instances = 0 最大化節省成本
-        # Production/Staging/Develop 都設為 0 節省成本
-        MIN_INSTANCES=0
+        # 💰 成本優化：所有環境使用較小機器配置
+        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
+        MEMORY="256Mi"
+        CPU="500m"           # 0.5 CPU
+        CONCURRENCY=1        # CPU < 1 時必須設為 1
 
         gcloud run deploy ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA \
@@ -211,12 +213,12 @@ jobs:
           --region $REGION \
           --allow-unauthenticated \
           --port 80 \
-          --memory 512Mi \
-          --cpu 1 \
+          --memory $MEMORY \
+          --cpu $CPU \
           --max-instances 3 \
           --min-instances $MIN_INSTANCES \
           --cpu-throttling \
-          --concurrency 50 \
+          --concurrency $CONCURRENCY \
           --no-cpu-boost \
           --set-env-vars BACKEND_URL=${{ steps.backend_url.outputs.BACKEND_URL }}
 

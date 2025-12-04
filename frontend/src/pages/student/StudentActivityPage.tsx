@@ -175,7 +175,8 @@ export default function StudentActivityPage() {
 
       toast.success(t("studentActivityPage.messages.submitSuccess"));
       setTimeout(() => {
-        window.location.href = `/student/assignment/${assignmentId}/detail`;
+        // Issue #28: Navigate directly to assignment list instead of detail page
+        navigate("/student/assignments");
       }, 500);
     } catch (error) {
       console.error("Failed to submit:", error);

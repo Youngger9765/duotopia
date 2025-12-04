@@ -95,4 +95,36 @@ test.describe('Student Login Flow', () => {
 
     console.log('✅ 李小美 login successful!');
   });
+
+  test('URL parameter flow: auto-validate teacher email', async ({ page }) => {
+    // Navigate to student login page with teacher_email parameter
+    await page.goto('http://localhost:5173/student/login?teacher_email=demo@duotopia.com');
+
+    // Should automatically skip step 1 and go to step 2 (classroom selection)
+    // Wait for classroom selection to appear (step 1 should be skipped)
+    await page.waitForSelector('button:has-text("五年級A班")', { timeout: 5000 });
+    await expect(page.locator('h2')).toContainText('請選擇你的班級');
+    await page.screenshot({ path: `${screenshotDir}/08-url-param-classroom-selection.png` });
+
+    // Select classroom
+    await page.click('button:has-text("五年級A班")');
+
+    // Step 3: Select student
+    await page.waitForSelector('button:has-text("王小明")', { timeout: 5000 });
+    await page.click('button:has-text("王小明")');
+
+    // Step 4: Enter password
+    await page.fill('input[type="password"]', '20120101');
+    await page.screenshot({ path: `${screenshotDir}/09-url-param-password-entry.png` });
+    await page.click('button:has-text("登入")');
+
+    // Wait for navigation to dashboard
+    await page.waitForURL('**/student/dashboard', { timeout: 5000 });
+
+    // Verify successful login
+    await expect(page).toHaveURL(/.*\/student\/dashboard/);
+    await page.screenshot({ path: `${screenshotDir}/10-url-param-dashboard.png` });
+
+    console.log('✅ URL parameter login successful! Step 1 was skipped.');
+  });
 });

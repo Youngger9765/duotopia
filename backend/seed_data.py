@@ -30,6 +30,65 @@ from models import (
 from auth import get_password_hash
 
 
+def create_content_copy_for_assignment(
+    db: Session, original_content: Content, assignment_id: int
+) -> Content:
+    """
+    為作業創建 Content 副本（符合新的副本機制設計）
+
+    Args:
+        db: 資料庫 session
+        original_content: 原始模板 Content
+        assignment_id: 作業 ID（用於標記，但實際關聯透過 AssignmentContent）
+
+    Returns:
+        創建的副本 Content
+    """
+    # 複製 Content
+    content_copy = Content(
+        lesson_id=original_content.lesson_id,
+        type=original_content.type,
+        title=original_content.title,
+        order_index=original_content.order_index,
+        is_active=True,
+        target_wpm=original_content.target_wpm,
+        target_accuracy=original_content.target_accuracy,
+        time_limit_seconds=original_content.time_limit_seconds,
+        level=original_content.level,
+        tags=original_content.tags.copy() if original_content.tags else [],
+        is_public=False,  # 副本不公開
+        # 作業副本欄位
+        is_assignment_copy=True,
+        source_content_id=original_content.id,
+    )
+    db.add(content_copy)
+    db.flush()  # 取得 content_copy.id
+
+    # 複製所有 ContentItem
+    original_items = (
+        db.query(ContentItem)
+        .filter(ContentItem.content_id == original_content.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    for original_item in original_items:
+        item_copy = ContentItem(
+            content_id=content_copy.id,  # 指向副本 Content
+            order_index=original_item.order_index,
+            text=original_item.text,
+            translation=original_item.translation,
+            audio_url=original_item.audio_url,
+            item_metadata=original_item.item_metadata.copy()
+            if original_item.item_metadata
+            else {},
+        )
+        db.add(item_copy)
+
+    db.flush()
+    return content_copy
+
+
 def create_demo_data(db: Session):
     """建立完整的 demo 資料 - 新作業系統架構"""
 
@@ -712,8 +771,12 @@ def create_demo_data(db: Session):
     db.flush()
 
     # 關聯內容
+    # 🔥 創建 Content 副本
+    content1_copy = create_content_copy_for_assignment(db, content1_5a, assignment1.id)
     assignment1_content = AssignmentContent(
-        assignment_id=assignment1.id, content_id=content1_5a.id, order_index=1
+        assignment_id=assignment1.id,
+        content_id=content1_copy.id,
+        order_index=1,  # ✅ 使用副本
     )
     db.add(assignment1_content)
 
@@ -914,10 +977,14 @@ def create_demo_data(db: Session):
     db.add(assignment2)
     db.flush()
 
-    # 關聯多個內容
+    # 🔥 關聯多個內容（使用副本機制）
     for idx, content in enumerate([content2_5a, content3_5a], 1):
+        # 創建 Content 副本
+        content_copy = create_content_copy_for_assignment(db, content, assignment2.id)
         assignment_content = AssignmentContent(
-            assignment_id=assignment2.id, content_id=content.id, order_index=idx
+            assignment_id=assignment2.id,
+            content_id=content_copy.id,
+            order_index=idx,  # ✅ 使用副本
         )
         db.add(assignment_content)
 
@@ -1011,8 +1078,12 @@ def create_demo_data(db: Session):
     db.add(assignment3)
     db.flush()
 
+    # 🔥 創建 Content 副本
+    content5_copy = create_content_copy_for_assignment(db, content5_5a, assignment3.id)
     assignment3_content = AssignmentContent(
-        assignment_id=assignment3.id, content_id=content5_5a.id, order_index=1
+        assignment_id=assignment3.id,
+        content_id=content5_copy.id,
+        order_index=1,  # ✅ 使用副本
     )
     db.add(assignment3_content)
 
@@ -1074,10 +1145,14 @@ def create_demo_data(db: Session):
     db.add(assignment4)
     db.flush()
 
-    # 關聯兩個內容
+    # 🔥 關聯兩個內容（使用副本機制）
     for idx, content in enumerate([content1_6b, content2_6b], 1):
+        # 創建 Content 副本
+        content_copy = create_content_copy_for_assignment(db, content, assignment4.id)
         assignment_content = AssignmentContent(
-            assignment_id=assignment4.id, content_id=content.id, order_index=idx
+            assignment_id=assignment4.id,
+            content_id=content_copy.id,
+            order_index=idx,  # ✅ 使用副本
         )
         db.add(assignment_content)
 
@@ -1174,8 +1249,14 @@ def create_demo_data(db: Session):
     db.add(assignment5)
     db.flush()
 
+    # 🔥 創建 Content 副本
+    content3_6b_copy = create_content_copy_for_assignment(
+        db, content3_6b, assignment5.id
+    )
     assignment5_content = AssignmentContent(
-        assignment_id=assignment5.id, content_id=content3_6b.id, order_index=1
+        assignment_id=assignment5.id,
+        content_id=content3_6b_copy.id,
+        order_index=1,  # ✅ 使用副本
     )
     db.add(assignment5_content)
 
@@ -1214,8 +1295,14 @@ def create_demo_data(db: Session):
     db.add(assignment6)
     db.flush()
 
+    # 🔥 創建 Content 副本
+    content3_5a_copy = create_content_copy_for_assignment(
+        db, content3_5a, assignment6.id
+    )
     assignment6_content = AssignmentContent(
-        assignment_id=assignment6.id, content_id=content3_5a.id, order_index=1
+        assignment_id=assignment6.id,
+        content_id=content3_5a_copy.id,
+        order_index=1,  # ✅ 使用副本
     )
     db.add(assignment6_content)
 
@@ -1355,11 +1442,17 @@ def create_demo_data(db: Session):
     db.add_all(additional_assignments_5a)
     db.flush()
 
-    # 關聯基本內容
+    # 🔥 關聯基本內容（使用副本機制）
     for assignment in additional_assignments_5a:
+        # 創建 Content 副本
+        content_copy = create_content_copy_for_assignment(
+            db, content1_5a, assignment.id
+        )
+
+        # 創建 AssignmentContent（指向副本）
         assignment_content = AssignmentContent(
             assignment_id=assignment.id,
-            content_id=content1_5a.id,  # 使用基礎問候語練習
+            content_id=content_copy.id,  # ✅ 使用副本 ID
             order_index=1,
         )
         db.add(assignment_content)
@@ -1474,11 +1567,17 @@ def create_demo_data(db: Session):
     db.add_all(additional_assignments_6b)
     db.flush()
 
-    # 關聯內容
+    # 🔥 關聯內容（使用副本機制）
     for assignment in additional_assignments_6b:
+        # 創建 Content 副本
+        content_copy = create_content_copy_for_assignment(
+            db, content1_6b, assignment.id
+        )
+
+        # 創建 AssignmentContent（指向副本）
         assignment_content = AssignmentContent(
             assignment_id=assignment.id,
-            content_id=content1_6b.id,  # 使用日常對話練習
+            content_id=content_copy.id,  # ✅ 使用副本 ID
             order_index=1,
         )
         db.add(assignment_content)
@@ -1619,10 +1718,13 @@ def create_demo_data(db: Session):
             db.add(new_assignment)
             db.flush()  # 取得 ID
 
-            # 關聯內容
+            # 🔥 關聯內容（使用副本機制）
+            content_copy = create_content_copy_for_assignment(
+                db, content1_5a, new_assignment.id
+            )
             assignment_content = AssignmentContent(
                 assignment_id=new_assignment.id,
-                content_id=content1_5a.id,
+                content_id=content_copy.id,  # ✅ 使用副本
                 order_index=1,
             )
             db.add(assignment_content)

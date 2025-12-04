@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
-from datetime import datetime, timedelta  # noqa: F401
+from datetime import datetime, timedelta, timezone  # noqa: F401
+from decimal import Decimal
+import json
+import logging
 from database import get_db
 from models import (
     Student,
@@ -30,6 +33,7 @@ from auth import (
     get_current_student_or_teacher,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/students", tags=["students"])
 
 
@@ -50,6 +54,75 @@ def normalize_content_type_for_response(content_type: str) -> str:
         "sentence_making": "VOCABULARY_SET",
     }
     return mapping.get(content_type, content_type)
+
+
+def get_score_with_fallback(
+    item_progress,
+    field_name: str,
+    json_key: str,
+    db: Session,
+    ai_feedback_data: dict = None,
+) -> float:
+    """
+    Get score from independent field or ai_feedback JSON with automatic backfill.
+
+    This handles migration from old data (scores in JSON) to new schema (independent fields).
+    If score is NULL in field but exists in JSON, it backfills the field on-the-fly.
+
+    Args:
+        item_progress: StudentItemProgress instance
+        field_name: Database field name (e.g., 'completeness_score')
+        json_key: JSON key in ai_feedback (e.g., 'completeness_score')
+        db: Database session for backfill commit
+        ai_feedback_data: Parsed ai_feedback dict (optimization to avoid re-parsing)
+
+    Returns:
+        float: Score value (0 if not found in either location)
+    """
+    score = getattr(item_progress, field_name)
+
+    # If field has value, return it
+    if score is not None:
+        return float(score)
+
+    # Field is NULL - try fallback to JSON
+    if not item_progress.ai_feedback:
+        return 0.0
+
+    # Parse JSON if not already provided
+    if ai_feedback_data is None:
+        try:
+            ai_feedback_data = (
+                json.loads(item_progress.ai_feedback)
+                if isinstance(item_progress.ai_feedback, str)
+                else item_progress.ai_feedback
+            )
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(
+                f"Failed to parse ai_feedback JSON for item_progress {item_progress.id}: {e}"
+            )
+            return 0.0
+
+    # Try to get score from JSON
+    json_score = ai_feedback_data.get(json_key)
+    if json_score is None:
+        return 0.0
+
+    # Found score in JSON - backfill the database field
+    try:
+        setattr(item_progress, field_name, Decimal(str(json_score)))
+        db.commit()
+        logger.info(
+            f"Backfilled {field_name}={json_score} for item_progress {item_progress.id} from ai_feedback JSON"
+        )
+        return float(json_score)
+    except Exception as e:
+        logger.error(
+            f"Failed to backfill {field_name} for item_progress {item_progress.id}: {e}"
+        )
+        db.rollback()
+        # Return the JSON value even if backfill failed
+        return float(json_score)
 
 
 class StudentValidateRequest(BaseModel):
@@ -189,9 +262,15 @@ async def get_student_assignments(
     student_id = current_user.get("sub")
 
     # Get assignments
+    # 🔥 Fix Issue #34: 只顯示已開始的作業（assigned_at <= 當前時間）
+    current_time = datetime.now(timezone.utc)
+
     assignments = (
         db.query(StudentAssignment)
-        .filter(StudentAssignment.student_id == int(student_id))
+        .filter(
+            StudentAssignment.student_id == int(student_id),
+            StudentAssignment.assigned_at <= current_time,  # 🔥 只顯示已開始的作業
+        )
         .order_by(
             StudentAssignment.due_date.desc()
             if StudentAssignment.due_date
@@ -300,6 +379,21 @@ async def get_assignment_activities(
                 .all()
             )
 
+            # 🔥 批次查詢所有 ContentItem (避免 N+1)
+            content_ids = [ac.content_id for ac in assignment_contents]
+            all_content_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id.in_(content_ids))
+                .order_by(ContentItem.content_id, ContentItem.order_index)
+                .all()
+            )
+            # 建立 content_id -> [items] 的索引
+            content_items_map = {}
+            for item in all_content_items:
+                if item.content_id not in content_items_map:
+                    content_items_map[item.content_id] = []
+                content_items_map[item.content_id].append(item)
+
             # 為每個 assignment_content 創建 StudentContentProgress
             for idx, ac in enumerate(assignment_contents):
                 progress = StudentContentProgress(
@@ -311,13 +405,8 @@ async def get_assignment_activities(
                 db.add(progress)
                 progress_records.append(progress)
 
-                # 同時創建 StudentItemProgress
-                content_items = (
-                    db.query(ContentItem)
-                    .filter(ContentItem.content_id == ac.content_id)
-                    .order_by(ContentItem.order_index)
-                    .all()
-                )
+                # 🔥 使用預載入的 ContentItem (避免 N+1)
+                content_items = content_items_map.get(ac.content_id, [])
 
                 for item in content_items:
                     item_progress = StudentItemProgress(
@@ -444,60 +533,76 @@ async def get_assignment_activities(
                             )
                             item_data["review_status"] = item_progress.review_status
 
-                            if (
-                                item_progress.has_ai_assessment
-                                and item_progress.ai_feedback
-                            ):
-                                # 從 ai_feedback JSON 中取得分數
-                                import json
+                            if item_progress.has_ai_assessment:
+                                # 🔥 優化：核心分數從獨立欄位讀取（熱數據），冷數據從 JSON 讀取
+                                # Parse ai_feedback JSON once for efficiency
+                                ai_feedback_data = {}
+                                if item_progress.ai_feedback:
+                                    try:
+                                        ai_feedback_data = (
+                                            json.loads(item_progress.ai_feedback)
+                                            if isinstance(
+                                                item_progress.ai_feedback, str
+                                            )
+                                            else item_progress.ai_feedback
+                                        )
+                                    except (json.JSONDecodeError, TypeError):
+                                        ai_feedback_data = {}
 
-                                try:
-                                    ai_feedback = (
-                                        json.loads(item_progress.ai_feedback)
-                                        if isinstance(item_progress.ai_feedback, str)
-                                        else item_progress.ai_feedback
-                                    )
-                                    item_data["ai_assessment"] = {
-                                        "accuracy_score": float(
-                                            ai_feedback.get("accuracy_score", 0)
-                                        ),
-                                        "fluency_score": float(
-                                            ai_feedback.get("fluency_score", 0)
-                                        ),
-                                        "pronunciation_score": float(
-                                            ai_feedback.get("pronunciation_score", 0)
-                                        ),
-                                        "completeness_score": float(
-                                            ai_feedback.get("completeness_score", 0)
-                                        ),
-                                        "prosody_score": ai_feedback.get(
-                                            "prosody_score"
-                                        ),
-                                        # 舊版相容性
-                                        "word_details": ai_feedback.get(
-                                            "word_details", []
-                                        ),
-                                        # 🔥 新版詳細分析資料
-                                        "detailed_words": ai_feedback.get(
-                                            "detailed_words", []
-                                        ),
-                                        "reference_text": ai_feedback.get(
-                                            "reference_text", ""
-                                        ),
-                                        "recognized_text": ai_feedback.get(
-                                            "recognized_text", ""
-                                        ),
-                                        "analysis_summary": ai_feedback.get(
-                                            "analysis_summary", {}
-                                        ),
-                                        "ai_feedback": item_progress.ai_feedback,
-                                        "assessed_at": item_progress.ai_assessed_at.isoformat()
-                                        if item_progress.ai_assessed_at
-                                        else None,
-                                    }
-                                except (json.JSONDecodeError, TypeError):
-                                    # 如果 JSON 解析失敗，設為 None
-                                    item_data["ai_assessment"] = None
+                                # 核心分數從獨立欄位讀取（優化性能），自動 fallback 到 JSON 並回填
+                                item_data["ai_assessment"] = {
+                                    "accuracy_score": get_score_with_fallback(
+                                        item_progress,
+                                        "accuracy_score",
+                                        "accuracy_score",
+                                        db,
+                                        ai_feedback_data,
+                                    ),
+                                    "fluency_score": get_score_with_fallback(
+                                        item_progress,
+                                        "fluency_score",
+                                        "fluency_score",
+                                        db,
+                                        ai_feedback_data,
+                                    ),
+                                    "pronunciation_score": get_score_with_fallback(
+                                        item_progress,
+                                        "pronunciation_score",
+                                        "pronunciation_score",
+                                        db,
+                                        ai_feedback_data,
+                                    ),
+                                    "completeness_score": get_score_with_fallback(
+                                        item_progress,
+                                        "completeness_score",
+                                        "completeness_score",
+                                        db,
+                                        ai_feedback_data,
+                                    ),
+                                    # 冷數據從 JSON 讀取
+                                    "prosody_score": ai_feedback_data.get(
+                                        "prosody_score"
+                                    ),
+                                    "word_details": ai_feedback_data.get(
+                                        "word_details", []
+                                    ),
+                                    "detailed_words": ai_feedback_data.get(
+                                        "detailed_words", []
+                                    ),
+                                    "reference_text": ai_feedback_data.get(
+                                        "reference_text", ""
+                                    ),
+                                    "recognized_text": ai_feedback_data.get(
+                                        "recognized_text", ""
+                                    ),
+                                    "analysis_summary": ai_feedback_data.get(
+                                        "analysis_summary", {}
+                                    ),
+                                    "ai_feedback": item_progress.ai_feedback,
+                                    "assessed_at": item_progress.ai_assessed_at.isoformat()
+                                    if item_progress.ai_assessed_at
+                                    else None,
+                                }
 
                         items_with_ids.append(item_data)
 
@@ -658,6 +763,54 @@ async def save_activity_progress(
     return {"message": "Progress saved successfully"}
 
 
+def calculate_assignment_score(
+    student_assignment_id: int, db: Session
+) -> Optional[float]:
+    """
+    Calculate assignment total score from StudentItemProgress AI scores
+
+    Logic (per Issue #53):
+    1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
+    2. For assignment: total_score = sum(all_item_scores) / total_items
+    3. If item has no AI scores: count as 0
+    4. If no items exist: return None
+
+    Args:
+        student_assignment_id: StudentAssignment ID
+        db: Database session
+
+    Returns:
+        Calculated score (0-100) or None if cannot calculate
+    """
+    # Get all item progress records
+    items = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.student_assignment_id == student_assignment_id)
+        .all()
+    )
+
+    if not items:
+        return None  # No items, cannot calculate
+
+    # Calculate each item's score
+    item_scores = []
+    for item in items:
+        # Use the overall_score property which handles partial scores
+        if item.overall_score is not None:
+            item_scores.append(float(item.overall_score))
+        else:
+            # No AI scores, count as 0 (per Issue #53 requirement)
+            item_scores.append(0.0)
+
+    # Calculate average of all item scores
+    total_score = sum(item_scores) / len(item_scores)
+
+    # Clamp score to valid range [0, 100]
+    total_score = max(0.0, min(100.0, total_score))
+
+    return round(total_score, 2)
+
+
 @router.post("/assignments/{assignment_id}/submit")
 async def submit_assignment(
     assignment_id: int,
@@ -704,11 +857,17 @@ async def submit_assignment(
     student_assignment.status = AssignmentStatus.SUBMITTED
     student_assignment.submitted_at = datetime.now()
 
+    # 🆕 Auto-calculate score from StudentItemProgress AI scores (Issue #53)
+    calculated_score = calculate_assignment_score(student_assignment.id, db)
+    if calculated_score is not None:
+        student_assignment.score = calculated_score
+
     db.commit()
 
     return {
         "message": "Assignment submitted successfully",
         "submitted_at": student_assignment.submitted_at.isoformat(),
+        "score": student_assignment.score,  # Include calculated score in response
     }
 
 
@@ -1220,6 +1379,7 @@ async def upload_student_recording(
                     existing_item_progress.accuracy_score = None
                     existing_item_progress.fluency_score = None
                     existing_item_progress.pronunciation_score = None
+                    existing_item_progress.completeness_score = None
                     existing_item_progress.ai_feedback = None
                     existing_item_progress.ai_assessed_at = None
                     print("Cleared AI scores for re-recording")

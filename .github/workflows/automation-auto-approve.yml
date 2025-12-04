@@ -1,0 +1,74 @@
+name: Auto Approve Detection
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  detect-approval:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request == null  # Only for Issues, not PRs
+    steps:
+      - name: Check for approval keywords
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const author = context.payload.comment.user.login;
+
+            // Exclude bot comments
+            if (author.includes('[bot]') || author === 'github-actions') {
+              console.log(`Comment from ${author} - bot account excluded`);
+              return;
+            }
+
+            // Only from authorized users
+            const authorizedUsers = ['kaddy-eunice'];
+            if (!authorizedUsers.includes(author)) {
+              console.log(`Comment from ${author} - not authorized for approval`);
+              return;
+            }
+
+            // Check for approval keywords (Chinese + English)
+            const approvalKeywords = [
+              '測試通過', '测试通过',
+              'approved', 'LGTM', 'looks good',
+              '沒問題', '没问题',
+              '可以了', '可以',
+              '看起來不錯', '看起来不错'
+            ];
+
+            const hasApproval = approvalKeywords.some(keyword =>
+              comment.toLowerCase().includes(keyword.toLowerCase())
+            );
+
+            // Check for checkmark emoji
+            const hasCheckmark = comment.includes('✅') || comment.includes('👍');
+
+            if (hasApproval || hasCheckmark) {
+              console.log(`✅ Approval detected from ${author}`);
+
+              // Add label to issue
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['✅ tested-in-staging']
+              });
+
+              // Post confirmation comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `🤖 **Auto-Approval Detected**\n\nApproval from @${author} has been recorded.\nLabel \`✅ tested-in-staging\` added.\n\nThis issue is ready for Release PR.`
+              });
+
+              console.log('Label added and confirmation posted');
+            } else {
+              console.log('No approval keywords found');
+            }

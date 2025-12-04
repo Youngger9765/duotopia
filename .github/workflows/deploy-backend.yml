@@ -348,17 +348,11 @@ jobs:
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
         fi
 
-        # 🚀 效能優化：提升資源配置以支援 10+ 學生同時使用
-        # Production & Staging 都設定 min-instances=1 避免冷啟動
-        # Develop 設定 min-instances=0 節省成本
-        if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-          MIN_INSTANCES=0    # Develop: 節省成本
-        else
-          MIN_INSTANCES=1    # Production/Staging: 避免冷啟動延遲 (10-15秒)
-        fi
-        MEMORY="1Gi"         # 翻倍記憶體處理多個音檔轉換 (pydub + ffmpeg)
-        CPU=2                # 翻倍 CPU 加速音檔轉碼
-        CONCURRENCY=20       # 降低並發減少資源競爭
+        # 💰 成本優化：所有環境使用較小機器配置
+        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
+        MEMORY="256Mi"
+        CPU="500m"           # 0.5 CPU
+        CONCURRENCY=1        # CPU < 1 時必須設為 1
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \
