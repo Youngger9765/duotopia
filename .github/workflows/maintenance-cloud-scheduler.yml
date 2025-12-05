@@ -120,18 +120,18 @@ jobs:
         echo "✨ 創建錄音錯誤報告 job..."
         gcloud scheduler jobs create http $JOB_NAME \
           --location=${{ env.REGION }} \
-          --schedule="0 */4 * * *" \
+          --schedule="0 12,18 * * *" \
           --time-zone="Asia/Taipei" \
           --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/recording-error-report" \
           --http-method=POST \
           --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
           --attempt-deadline=300s \
           --max-retry-attempts=0 \
-          --description="每 4 小時檢查 BigQuery 錄音錯誤並發送報告到 myduotopia@gmail.com - production only"
+          --description="每天中午 12:00 和晚上 18:00 (台北時間) 檢查 BigQuery 錄音錯誤並發送報告到 myduotopia@gmail.com - production only"
 
         echo "✅ Recording error report job 創建成功"
         echo ""
-        echo "📊 此 job 每 4 小時執行一次，統計過去 24H 和 1H 的錄音錯誤"
+        echo "📊 此 job 每天中午 12:00 和晚上 18:00 執行，統計過去 24H 和 1H 的錄音錯誤"
         echo "📧 報告會發送到 myduotopia@gmail.com"
         echo "🤖 包含 OpenAI AI 分析摘要"
 
@@ -178,10 +178,10 @@ jobs:
           echo "- Cloud Scheduler: 3 個 jobs × USD 0.10/月 = USD 0.30/月"
           echo "  - Monthly Renewal (每月 1 次 - production only)"
           echo "  - Renewal Reminder (每天 1 次 - production only)"
-          echo "  - Recording Error Report (每 4 小時 1 次 = 6×30 = 180 次/月 - production only)"
+          echo "  - Recording Error Report (每天 2 次 = 2×30 = 60 次/月 - production only)"
           echo "- HTTP 請求成本: 免費（在 Cloud Run 免費額度內）"
-          echo "- BigQuery 查詢成本: ~USD 0.005/月（每 4 小時查詢兩次，每次 < 10 MB）"
-          echo "- OpenAI API 成本: ~USD 0.003/月（gpt-4o-mini, 每次 300 tokens, 每 4 小時）"
+          echo "- BigQuery 查詢成本: ~USD 0.002/月（每天 2 次查詢，每次 < 10 MB）"
+          echo "- OpenAI API 成本: ~USD 0.001/月（gpt-4o-mini, 每次 300 tokens, 每天 2 次）"
         fi
 
     - name: Test Jobs
@@ -234,7 +234,7 @@ jobs:
           echo "   ⚠️ 會發送真實提醒給用戶"
           echo ""
           echo "📅 Job 3: recording-error-report-production (僅 production)"
-          echo "   排程: 每 4 小時 (台北時間)"
+          echo "   排程: 每天中午 12:00 和晚上 18:00 (台北時間)"
           echo "   URL: ${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/recording-error-report"
           echo "   📊 查詢 BigQuery 錄音錯誤（24H + 1H）"
           echo "   🤖 使用 OpenAI 生成錯誤分析摘要"
