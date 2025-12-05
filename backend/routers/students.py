@@ -815,9 +815,15 @@ async def submit_assignment(
             progress.status = AssignmentStatus.SUBMITTED
             progress.completed_at = datetime.now()
 
-    # 更新作業狀態
-    student_assignment.status = AssignmentStatus.SUBMITTED
-    student_assignment.submitted_at = datetime.now()
+    # 🔥 Fix Issue #58: 判斷是否為訂正後提交
+    # 如果當前狀態是 RETURNED (待訂正)，提交後應該是 RESUBMITTED (已訂正)
+    # 否則就是第一次提交，狀態為 SUBMITTED (已提交)
+    if student_assignment.status == AssignmentStatus.RETURNED:
+        student_assignment.status = AssignmentStatus.RESUBMITTED
+        student_assignment.resubmitted_at = datetime.now(timezone.utc)
+    else:
+        student_assignment.status = AssignmentStatus.SUBMITTED
+        student_assignment.submitted_at = datetime.now(timezone.utc)
 
     # 🆕 Auto-calculate score from StudentItemProgress AI scores (Issue #53)
     calculated_score = calculate_assignment_score(student_assignment.id, db)
