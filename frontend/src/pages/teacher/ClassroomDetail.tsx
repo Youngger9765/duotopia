@@ -1065,39 +1065,39 @@ export default function ClassroomDetail({
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <div className="border-b bg-gray-50 px-3 sm:px-6 py-3">
+              <div className="bg-white dark:bg-gray-900 px-3 sm:px-6 pt-2">
                 {isTemplateMode ? (
                   /* Template mode - no tabs, just show programs */
                   <div className="h-12" />
                 ) : (
-                  <TabsList className="grid w-full max-w-[700px] grid-cols-3 h-auto sm:h-12 bg-white dark:bg-gray-800 border dark:border-gray-700 gap-2 p-2">
+                  <TabsList className="inline-flex h-auto bg-transparent p-0 gap-0">
                     <TabsTrigger
                       value="students"
-                      className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                      className="relative px-4 sm:px-6 py-3 text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 bg-transparent data-[state=active]:bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 transition-colors flex items-center gap-2"
                     >
-                      <Users className="h-5 w-5 sm:h-5 sm:w-5" />
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                       <span className="hidden sm:inline">
                         {t("classroomDetail.tabs.studentList")}
                       </span>
-                      <span className="sm:hidden text-[10px]">
+                      <span className="sm:hidden">
                         {t("classroomDetail.tabs.students")}
                       </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="programs"
-                      className="data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                      className="relative px-4 sm:px-6 py-3 text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 bg-transparent data-[state=active]:bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 transition-colors flex items-center gap-2"
                     >
-                      <BookOpen className="h-5 w-5 sm:h-5 sm:w-5" />
+                      <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
                       <span className="hidden sm:inline">
                         {t("classroomDetail.tabs.programList")}
                       </span>
-                      <span className="sm:hidden text-[10px]">
+                      <span className="sm:hidden">
                         {t("classroomDetail.tabs.programs")}
                       </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="assignments"
-                      className={`data-[state=active]:bg-blue-500 data-[state=active]:text-white dark:data-[state=active]:bg-blue-600 dark:text-gray-300 dark:data-[state=active]:text-white text-xs sm:text-base font-medium py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
+                      className={`relative px-4 sm:px-6 py-3 text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 bg-transparent data-[state=active]:bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 transition-colors flex items-center gap-2 ${
                         !canAssignHomework
                           ? "opacity-50 cursor-not-allowed"
                           : ""
@@ -1114,29 +1114,27 @@ export default function ClassroomDetail({
                         }
                       }}
                     >
-                      <FileText className="h-5 w-5 sm:h-5 sm:w-5" />
+                      <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                       <span className="hidden sm:inline">
                         {t("classroomDetail.tabs.assignmentManagement")}
                       </span>
-                      <span className="sm:hidden text-[10px]">
+                      <span className="sm:hidden">
                         {t("classroomDetail.tabs.assignments")}
                       </span>
                     </TabsTrigger>
                   </TabsList>
                 )}
+                {/* 底部分隔線 */}
+                <div className="border-b border-gray-200 dark:border-gray-700 -mx-3 sm:-mx-6" />
               </div>
 
               {/* Students Tab - only show for classroom mode */}
               {!isTemplateMode && (
                 <TabsContent value="students" className="p-3 sm:p-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
-                    <h3 className="text-base sm:text-lg font-semibold">
-                      {t("classroomDetail.sections.classStudents")}
-                    </h3>
+                  <div className="flex items-center mb-4">
                     <Button
-                      size="sm"
                       onClick={handleCreateStudent}
-                      className="w-full sm:w-auto"
+                      className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1157,17 +1155,11 @@ export default function ClassroomDetail({
 
               {/* Programs Tab */}
               <TabsContent value="programs" className="p-3 sm:p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-                  <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                    {isTemplateMode
-                      ? t("classroomDetail.sections.templateContent")
-                      : t("classroomDetail.sections.classPrograms")}
-                  </h3>
+                <div className="flex items-center mb-4">
                   {!isTemplateMode && (
                     <Button
-                      size="sm"
                       onClick={() => setShowCopyDialog(true)}
-                      className="w-full sm:w-auto"
+                      className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.createProgram")}
@@ -1247,52 +1239,45 @@ export default function ClassroomDetail({
                 <TabsContent value="assignments" className="p-3 sm:p-6">
                   <div className="space-y-4 sm:space-y-6">
                     {/* Header with Create Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <h3 className="text-base sm:text-lg font-semibold dark:text-gray-100">
-                        {t("classroomDetail.sections.assignmentList")}
-                      </h3>
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                        {!canAssignHomework && teacherData && (
-                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                            <span className="font-medium">
-                              {t(
-                                "classroomDetail.labels.subscriptionExpiredWarning",
-                              )}
-                            </span>
-                            <span className="text-xs ml-2">
-                              {teacherData.subscription_status === "subscribed"
-                                ? t("classroomDetail.labels.daysRemaining", {
-                                    days: teacherData.days_remaining || 0,
-                                  })
-                                : t(
-                                    "classroomDetail.labels.requiresSubscription",
-                                  )}
-                            </span>
-                          </div>
-                        )}
-                        <Button
-                          onClick={() => {
-                            if (!canAssignHomework) {
-                              toast.error(
-                                t(
-                                  "classroomDetail.messages.subscriptionExpired",
-                                ),
-                              );
-                              return;
-                            }
-                            setShowAssignmentDialog(true);
-                          }}
-                          disabled={!canAssignHomework}
-                          className={`w-full sm:w-auto h-12 min-h-12 ${
-                            canAssignHomework
-                              ? "bg-blue-500 hover:bg-blue-600 text-white"
-                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          }`}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          {t("classroomDetail.buttons.assignNewHomework")}
-                        </Button>
-                      </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <Button
+                        onClick={() => {
+                          if (!canAssignHomework) {
+                            toast.error(
+                              t("classroomDetail.messages.subscriptionExpired"),
+                            );
+                            return;
+                          }
+                          setShowAssignmentDialog(true);
+                        }}
+                        disabled={!canAssignHomework}
+                        className={`h-10 ${
+                          canAssignHomework
+                            ? "bg-blue-500 hover:bg-blue-600 text-white"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t("classroomDetail.buttons.assignNewHomework")}
+                      </Button>
+                      {!canAssignHomework && teacherData && (
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                          <span className="font-medium">
+                            {t(
+                              "classroomDetail.labels.subscriptionExpiredWarning",
+                            )}
+                          </span>
+                          <span className="text-xs ml-2">
+                            {teacherData.subscription_status === "subscribed"
+                              ? t("classroomDetail.labels.daysRemaining", {
+                                  days: teacherData.days_remaining || 0,
+                                })
+                              : t(
+                                  "classroomDetail.labels.requiresSubscription",
+                                )}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Assignment Stats - Using Real Data */}
