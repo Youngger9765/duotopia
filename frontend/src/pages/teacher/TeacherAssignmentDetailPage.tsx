@@ -1531,7 +1531,7 @@ export default function TeacherAssignmentDetailPage() {
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
 
-                {/* 重新提交 */}
+                {/* 已訂正 */}
                 <div className="flex flex-col items-center flex-1">
                   <div
                     className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
@@ -1584,7 +1584,7 @@ export default function TeacherAssignmentDetailPage() {
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-600" />
                   <span className="text-gray-600 dark:text-gray-400">
-                    未達到
+                    {t("gradingPage.labels.notReached")}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -1593,13 +1593,13 @@ export default function TeacherAssignmentDetailPage() {
                     <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 animate-ping" />
                   </div>
                   <span className="text-gray-600 dark:text-gray-400">
-                    當前狀態
+                    {t("gradingPage.labels.currentStatus")}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                   <span className="text-gray-600 dark:text-gray-400">
-                    已完成
+                    {t("gradingPage.labels.completed")}
                   </span>
                 </div>
               </div>
@@ -1765,7 +1765,7 @@ export default function TeacherAssignmentDetailPage() {
                                   )
                                 }
                               >
-                                批改
+                                {t("assignmentDetail.buttons.grade")}
                               </Button>
                             )}
                             {(upperStatus === "NOT_STARTED" ||
@@ -1781,7 +1781,7 @@ export default function TeacherAssignmentDetailPage() {
                                   )
                                 }
                               >
-                                取消指派
+                                {t("assignmentDetail.buttons.unassign")}
                               </Button>
                             )}
                           </>
@@ -1793,7 +1793,7 @@ export default function TeacherAssignmentDetailPage() {
                               handleAssignStudent(progress.student_id)
                             }
                           >
-                            指派
+                            {t("assignmentDetail.buttons.assign")}
                           </Button>
                         )}
                       </div>
@@ -1803,7 +1803,7 @@ export default function TeacherAssignmentDetailPage() {
               })
             ) : (
               <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
-                沒有符合條件的學生
+                {t("assignmentDetail.messages.noMatchingStudents")}
               </div>
             )}
           </div>
@@ -1814,34 +1814,34 @@ export default function TeacherAssignmentDetailPage() {
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[150px]">
-                    學生姓名
+                    {t("assignmentDetail.labels.studentName")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    已指派
+                    {t("assignmentDetail.labels.assigned")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    未開始
+                    {t("assignmentDetail.labels.notStarted")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    進行中
+                    {t("assignmentDetail.labels.inProgress")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    已提交
+                    {t("assignmentDetail.labels.submitted")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    待訂正
+                    {t("assignmentDetail.labels.returned")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    重新提交
+                    {t("assignmentDetail.labels.resubmitted")}
                   </th>
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    已完成
+                    {t("assignmentDetail.labels.graded")}
                   </th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    分數
+                    {t("assignmentDetail.labels.score")}
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[120px]">
-                    操作
+                    {t("assignmentDetail.labels.actions")}
                   </th>
                 </tr>
               </thead>
@@ -2118,7 +2118,7 @@ export default function TeacherAssignmentDetailPage() {
                                           );
                                         }}
                                       >
-                                        批改
+                                        {t("assignmentDetail.buttons.grade")}
                                       </Button>
                                     );
                                   }
@@ -2140,7 +2140,7 @@ export default function TeacherAssignmentDetailPage() {
                                           )
                                         }
                                       >
-                                        取消指派
+                                        {t("assignmentDetail.buttons.unassign")}
                                       </Button>
                                     );
                                   }
@@ -2157,7 +2157,7 @@ export default function TeacherAssignmentDetailPage() {
                                   handleAssignStudent(progress.student_id)
                                 }
                               >
-                                指派
+                                {t("assignmentDetail.buttons.assign")}
                               </Button>
                             )}
                           </div>
@@ -2171,7 +2171,7 @@ export default function TeacherAssignmentDetailPage() {
                       colSpan={10}
                       className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                     >
-                      沒有符合條件的學生
+                      {t("assignmentDetail.messages.noMatchingStudents")}
                     </td>
                   </tr>
                 )}
