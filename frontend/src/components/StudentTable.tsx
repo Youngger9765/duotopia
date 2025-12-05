@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -318,17 +317,11 @@ export default function StudentTable({
             </div>
           ))}
         </div>
-        <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
-          {t("studentTable.total", { count: students.length })}
-        </div>
       </div>
 
       {/* Desktop Table View */}
       <div className="hidden md:block">
         <Table>
-          <TableCaption>
-            {t("studentTable.total", { count: students.length })}
-          </TableCaption>
           <TableHeader>
             <TableRow>
               {onBulkAction && (
@@ -555,9 +548,6 @@ export default function StudentTable({
             ))}
           </TableBody>
         </Table>
-        <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
-          {t("studentTable.totalStudents", { count: students.length })}
-        </div>
       </div>
     </>
   );
