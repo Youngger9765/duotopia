@@ -121,7 +121,7 @@ interface ContentDetail {
     audio_url?: string;
     definition: string;
     english_definition?: string;
-    selectedLanguage?: "chinese" | "english";
+    selectedLanguage?: "chinese" | "japanese" | "korean"; // 與 ReadingAssessmentPanel 的 TranslationLanguage 一致
     has_student_progress?: boolean;
   }>;
   type?: string;
