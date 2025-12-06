@@ -1006,12 +1006,12 @@ export default function StudentActivityPageContent({
 
       const currentItem = activity.items[itemIndex];
       const itemKey = getItemKey(activityId, itemIndex);
-      const hasRecording = currentItem.recording_url && currentItem.recording_url !== "";
+      const hasRecording =
+        currentItem.recording_url && currentItem.recording_url !== "";
       const currentState = itemAnalysisStates.get(itemKey);
       const hasAiAssessment =
         currentItem.ai_assessment ||
-        (activity.ai_scores?.items &&
-          activity.ai_scores.items[itemIndex]);
+        (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
 
       // 只有在有錄音、未分析、且未在背景分析中時，才觸發背景分析
       if (
@@ -1033,7 +1033,10 @@ export default function StudentActivityPageContent({
 
     // 🎯 觸發背景分析（使用共用 helper）
     if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(currentActivity.id, currentSubQuestionIndex);
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
 
       // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
@@ -1057,7 +1060,10 @@ export default function StudentActivityPageContent({
 
     // 🎯 觸發背景分析（使用共用 helper）
     if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(currentActivity.id, currentSubQuestionIndex);
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
 
       if (currentSubQuestionIndex > 0) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
@@ -1089,7 +1095,10 @@ export default function StudentActivityPageContent({
     // 🎯 觸發背景分析（使用共用 helper）- 離開當前題目前
     const currentActivity = activities[currentActivityIndex];
     if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(currentActivity.id, currentSubQuestionIndex);
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
     }
 
     setCurrentActivityIndex(index);
@@ -1120,9 +1129,7 @@ export default function StudentActivityPageContent({
       setIsAnalyzing(true);
 
       try {
-        await Promise.all(
-          Array.from(pendingAnalysisRef.current.values()),
-        );
+        await Promise.all(Array.from(pendingAnalysisRef.current.values()));
         toast.success(
           t("studentActivityPage.messages.analysisComplete") ||
             "所有分析已完成！",
@@ -1887,7 +1894,10 @@ export default function StudentActivityPageContent({
                                 handleActivitySelect(activityIndex, itemIndex);
                               } else {
                                 // 🎯 同一 activity 內切換，需觸發背景分析
-                                checkAndTriggerBackgroundAnalysis(activity.id, currentSubQuestionIndex);
+                                checkAndTriggerBackgroundAnalysis(
+                                  activity.id,
+                                  currentSubQuestionIndex,
+                                );
                                 setCurrentSubQuestionIndex(itemIndex);
                               }
                             }}
