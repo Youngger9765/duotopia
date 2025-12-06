@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from io import BytesIO
 import tempfile
-import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -699,7 +698,11 @@ async def assess_pronunciation_endpoint(
 
                 # 📊 記錄到 BigQuery
                 bigquery_logger = get_bigquery_logger()
-                error_detail = e.detail if isinstance(e.detail, dict) else {"message": str(e.detail)}
+                error_detail = (
+                    e.detail
+                    if isinstance(e.detail, dict)
+                    else {"message": str(e.detail)}
+                )
                 await bigquery_logger.log_audio_error(
                     {
                         "timestamp": datetime.utcnow().isoformat(),

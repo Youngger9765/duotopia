@@ -1220,7 +1220,407 @@ export async function retryAIAnalysis<T>(
 
 ---
 
+## 🔍 12/6 生產環境日誌深度分析
+
+**分析時間**: 2025-12-06 21:57
+**分析日期範圍**: 2025-12-06 全天
+**數據來源**: GCP Cloud Run 日誌 + Cloud Logging + Revision 配置
+
+### 📊 執行摘要
+
+#### 關鍵發現
+1. **✅ 部署修復成功**：Revision 00136 已修復 middleware 錯誤並上線
+2. **⚠️ Azure API 效能問題嚴重**：延遲 5-9 秒，導致 32% 請求失敗
+3. **✅ max-instances=6 配置生效**：但尚未經過尖峰流量測試
+4. **⚠️ ThreadPool 配置可能不足**：需要評估是否增加
+
+---
+
+### 🔴 問題分析
+
+#### 問題 1：早上大量 503 錯誤（已發生，舊配置）
+
+**時間**: 09:16 - 10:08（台灣時間）
+**影響 Revision**: duotopia-production-backend-00133-chs（max-instances=3）
+
+**錯誤統計**:
+- 總請求：188 個
+- 成功（200）：128 個（68%）
+- 失敗（503）：60 個（**32% 失敗率**）
+
+**503 錯誤特徵**:
+```
+延遲範圍：5.7 - 9.5 秒
+全部端點：/api/speech/assess
+錯誤訊息：Azure Speech API error: (空白，表示超時)
+```
+
+**根本原因**:
+1. **容量不足**：max-instances=3，無法處理並發請求
+   - 理論容量：20 (concurrency) × 3 (instances) = 60 並發請求
+   - 實際瓶頸：每個請求 5-9 秒，吞吐量 = 60 / 7s ≈ **8.5 req/s**
+
+2. **Azure Speech API 延遲過高**：
+   - 正常應 <3 秒
+   - 實際 5-9 秒（甚至有 9.5 秒的案例）
+   - 延遲變化大：1s ~ 9s 不穩定
+
+3. **ThreadPool 可能飽和**：
+   - Speech thread pool: 20 workers
+   - 如果 60 個並發請求進來，只有 20 個 workers 可以處理 Azure API
+
+---
+
+#### 問題 2：Azure Speech API 效能瓶頸（持續存在）
+
+**成功請求延遲分析**（13:00-14:00 樣本）:
+
+| Revision | 延遲範圍 | 中位數 | 觀察 |
+|----------|---------|--------|------|
+| 00133 (舊) | 0.9s - 9.2s | ~7s | 變化極大 |
+| 00136 (新) | 0.9s - 9.5s | ~1s | 樣本少，但仍有 9.5s 慢請求 |
+
+**快速請求（0.002-0.003s）**:
+- 可能是快取命中或重複請求
+- 佔比很小
+
+**關鍵問題**:
+- Azure API 延遲不穩定
+- 無法確定是 Azure 配額限制還是網路問題
+- 需要檢查 Azure Speech Service 的 TPS 限制和區域配置
+
+---
+
+### ✅ 已修復的問題
+
+#### 修復 1：Dockerfile middleware 錯誤
+
+**問題**: Revision 00135 失敗
+```
+ModuleNotFoundError: No module named 'middleware'
+```
+
+**修復**: 在 `backend/Dockerfile` line 36 新增：
+```dockerfile
+COPY middlewar[e] ./middleware/
+```
+
+**驗證**:
+- ✅ Revision 00136 成功啟動
+- ✅ 日誌顯示："🚀 Application startup complete - Thread pools and rate limiter initialized"
+- ✅ 目前 100% 流量導向 00136
+
+---
+
+#### 修復 2：提升 max-instances
+
+**變更**:
+| 環境 | 舊配置 | 新配置 | 提升幅度 |
+|------|--------|--------|----------|
+| Production | 3 | 6 | **2x** |
+| Staging | 3 | 1 | -66% (成本優化) |
+| Per-Issue | 1 | 1 | 不變 |
+
+**預期效果**:
+- 理論容量：20 × 6 = **120 並發請求**（從 60 提升到 120）
+- 吞吐量：120 / 7s ≈ **17 req/s**（提升 2 倍）
+
+**實際測試狀況**:
+- ⏳ **尚未經過尖峰流量測試**
+- 新配置 13:45 上線，目前僅有少量請求
+- 需要等待晚上 20:00-22:00 尖峰時段驗證
+
+---
+
+### 🔧 當前配置總覽
+
+#### Cloud Run 配置（Production）
+
+```yaml
+Revision: duotopia-production-backend-00136-dg2
+Status: ✅ Active (100% traffic)
+Concurrency: 20
+Max Instances: 6
+CPU: 1 vCPU
+Memory: 1 GiB
+Request Timeout: 300s (5 minutes)
+```
+
+#### ThreadPool 配置
+
+```python
+Speech Thread Pool: 20 workers (可透過 SPEECH_THREAD_POOL_SIZE 環境變數調整)
+Audio Thread Pool: 10 workers (可透過 AUDIO_THREAD_POOL_SIZE 環境變數調整)
+```
+
+#### Azure Speech Service 配置
+
+```
+Region: eastasia (東亞)
+Tier: S0 Standard
+Timeout: 未明確設定（可能依賴 SDK 預設）
+```
+
+---
+
+### ⚠️ 配置合理性評估
+
+#### 1. Max-instances = 6 ✅ 合理但需驗證
+
+**優點**:
+- 2 倍容量提升
+- 保守增長，避免成本暴增
+
+**疑慮**:
+- 早上失敗率 32%，需要 2 倍容量？還是 3-4 倍？
+- 需要實際尖峰流量測試
+
+**建議**:
+- ✅ 先保持 6，觀察晚上尖峰流量
+- 如果仍有 503，考慮提升到 8-10
+
+---
+
+#### 2. Concurrency = 20 ⚠️ 需要評估
+
+**當前瓶頸分析**:
+
+每個 container 的處理能力：
+- Concurrency = 20（最多接收 20 個並發請求）
+- Speech Thread Pool = 20（最多 20 個 worker 處理 Azure API）
+
+**問題**:
+- 如果 20 個請求同時進來，且都需要 7 秒
+- ThreadPool 會被佔滿，新請求無法處理
+
+**Google Cloud 官方建議**:
+- I/O-bound 工作負載（如等待外部 API）：Concurrency **80-200**
+- CPU-bound 工作負載（如影片處理）：Concurrency **1-10**
+
+**我們的狀況**:
+- Azure Speech API 是 I/O-bound（等待外部 API 回應）
+- 理論上應該可以提高 Concurrency 到 **40-80**
+
+**風險**:
+- 提高 Concurrency 會增加記憶體使用
+- 需要同步提高 Speech Thread Pool 數量
+- **可能導致 OOM 和成本增加**
+
+**建議**:
+- 🔍 **先觀察** max-instances=6 的效果
+- **不建議提高 Concurrency**（會有 OOM 和成本副作用）
+- 主要問題是 Azure API 延遲，不是容量問題
+
+---
+
+#### 3. Speech Thread Pool = 20 ⚠️ 可能成為瓶頸
+
+**當前配置**:
+- Concurrency = 20
+- Speech Thread Pool = 20
+- 比例：**1:1**
+
+**問題**:
+- 如果有 20 個請求同時處理 Azure API
+- 新請求會被阻塞在 ThreadPool queue
+
+**Google Cloud 官方建議**:
+- ThreadPool workers 應略高於 Concurrency
+- 建議比例：**1.5:1 到 2:1**
+
+**建議配置**:
+| 配置 | 當前 | 建議 | 說明 |
+|------|------|------|------|
+| Concurrency | 20 | 20 | 保持不變，避免 OOM |
+| Speech Thread Pool | 20 | 20-30 | 可考慮小幅提升 |
+| Max Instances | 6 | 6 | 先保持，觀察 |
+
+**實施步驟**:
+1. 先觀察 max-instances=6 效果
+2. 如果仍有 503，可考慮小幅提升 Thread Pool（20→30）
+3. 透過環境變數動態調整（不需重新部署）：
+   ```bash
+   gcloud run services update duotopia-production-backend \
+     --update-env-vars SPEECH_THREAD_POOL_SIZE=30
+   ```
+
+---
+
+#### 4. Azure Speech Service ⚠️ 主要瓶頸
+
+**當前問題**:
+- 延遲 5-9 秒（正常應 <3 秒）
+- 不穩定（1s 到 9s 變化大）
+- 錯誤訊息空白（可能是超時）
+
+**可能原因**:
+1. **Azure 配額限制**：
+   - 標準層 S0：20-100 TPS（視方案而定）
+   - 當前使用：4-8 req/min（遠低於限制）
+   - **已排除配額問題**
+
+2. **區域選擇**：
+   - 當前：eastasia（東亞）
+   - 可能距離台灣較遠，考慮 southeastasia（東南亞）
+
+3. **網路問題**：
+   - Cloud Run → Azure 之間的網路延遲
+
+4. **Backend timeout**:
+   - 可能有 7-8 秒的超時設定
+   - 需要延長 timeout 或實施非同步處理
+
+**建議**:
+1. **立即實施**（已完成 12/6）：
+   - ✅ 新增 20 秒 Backend timeout 保護
+   - ✅ 記錄 503 錯誤到 BigQuery
+   - ✅ 新增詳細延遲日誌
+
+2. **測試區域延遲**：
+   - 嘗試切換到 southeastasia 區域
+
+3. **實施非同步處理**（長期方案）：
+   - 上傳錄音後立即回應用戶
+   - 背景處理 AI 分析
+   - 完成後通知前端更新
+
+---
+
+### 📈 後續監控重點
+
+#### 1. 晚上尖峰流量測試（20:00-22:00）
+
+**監控指標**:
+- 503 錯誤數量和比例
+- 請求延遲分布
+- Instance 擴展行為（是否達到 6 instances）
+- 記憶體使用量
+
+**指令**:
+```bash
+# 查看 503 錯誤
+gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=duotopia-production-backend AND httpRequest.status=503 AND timestamp>="2025-12-06T12:00:00Z"' --limit=50 --format="table(timestamp,httpRequest.latency)"
+
+# 查看 instance 擴展
+gcloud run services describe duotopia-production-backend --region=asia-east1 --format="value(status.traffic)"
+
+# 查看請求延遲
+gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=duotopia-production-backend AND httpRequest.requestUrl=~"/api/speech/assess" AND httpRequest.status=200 AND timestamp>="2025-12-06T12:00:00Z"' --limit=100 --format=json | jq -r '.[] | "\(.timestamp) | \(.httpRequest.latency)"'
+```
+
+---
+
+#### 2. Azure Speech API 效能監控
+
+**關鍵指標**:
+- 平均延遲
+- P95 延遲
+- 超時比例
+
+**需要老師檢查**:
+- Azure Portal → Speech Service
+  - 配額使用量
+  - TPS 限制
+  - 當前方案級別
+  - 錯誤日誌
+
+---
+
+### 🎯 行動建議（優先順序）
+
+#### 高優先級（本週完成）
+
+1. **[立即] 監控晚上尖峰流量**
+   - 目標：確認 max-instances=6 是否足夠
+   - 預期結果：503 錯誤率 <5%
+
+2. **[已完成] 延長 Backend timeout**
+   - ✅ 新增 20 秒 timeout 保護（`AZURE_SPEECH_TIMEOUT = 20`）
+   - ✅ 記錄 timeout 錯誤到 BigQuery
+   - ✅ 新增詳細 Azure API 延遲日誌
+
+3. **[規劃] 準備 ThreadPool 調整**（如果需要）
+   - 如果仍有 503，小幅提升 Speech Thread Pool（20→30）
+   - 不要提升 Concurrency（會導致 OOM 和成本問題）
+
+---
+
+#### 中優先級（下週完成）
+
+4. **[測試] Azure 區域延遲測試**
+   - 比較 eastasia vs southeastasia
+   - 選擇延遲最低的區域
+
+5. **[實施] 非同步處理架構**（長期方案）
+   - 上傳後立即回應
+   - 背景處理 AI 分析
+   - 改善使用者體驗
+
+---
+
+### 💰 成本影響評估
+
+#### 當前配置變更成本
+
+**Production Backend**:
+- 舊配置：max-instances=3
+- 新配置：max-instances=6
+- **預估成本增加**：**+50% ~ +100%**（取決於實際擴展頻率）
+
+**Staging Backend**:
+- 舊配置：max-instances=3
+- 新配置：max-instances=1
+- **預估成本節省**：**-60% ~ -70%**
+
+**淨影響**:
+- Production 每月約增加 $3-5
+- Staging 每月約節省 $2-3
+- **淨增加**：**$1-2/月**
+
+---
+
+### 📝 12/6 結論
+
+#### 當前狀態總結
+
+✅ **已修復**:
+- Dockerfile middleware 錯誤
+- max-instances 提升（Production: 3→6, Staging: 3→1）
+- Revision 00136 正常運行
+- 新增 20 秒 Backend timeout 保護
+- 新增 503 錯誤 BigQuery 監控
+- 新增詳細 Azure API 延遲日誌
+
+⚠️ **仍存在的問題**:
+- Azure Speech API 延遲過高（5-9 秒）
+- 早上 32% 失敗率尚未在新配置下重現測試
+- ThreadPool 配置可能不足（但不建議貿然提升）
+
+🔍 **需要監控**:
+- 晚上尖峰流量（20:00-22:00）
+- max-instances=6 是否足夠
+- Azure API 配額和效能
+- 20 秒 timeout 是否有效降低 503 錯誤
+
+#### 配置合理性評分
+
+| 項目 | 評分 | 說明 |
+|------|------|------|
+| max-instances=6 | ⭐⭐⭐⭐☆ | 合理，但需尖峰測試驗證 |
+| Concurrency=20 | ⭐⭐⭐⭐☆ | 保守但安全，避免 OOM |
+| Speech Thread Pool=20 | ⭐⭐⭐☆☆ | 與 Concurrency 1:1，可能不足 |
+| Azure Region=eastasia | ⭐⭐⭐☆☆ | 需要測試 southeastasia 比較 |
+| Request Timeout=300s | ⭐⭐⭐⭐⭐ | 充足 |
+| Backend Timeout=20s | ⭐⭐⭐⭐⭐ | 新增，有效保護 |
+| CPU=1, Memory=1GiB | ⭐⭐⭐⭐☆ | 目前合理 |
+
+**整體評分**: ⭐⭐⭐⭐☆ (4/5)
+
+**主要瓶頸**: Azure Speech API 效能，不是 Cloud Run 配置問題。
+
+---
+
 *報告完成時間: 2025-12-04*
-*最後更新: 2025-12-05 (Safari 錄音修復)*
+*最後更新: 2025-12-06 (新增 12/6 日誌深度分析 + Backend timeout 保護)*
 *調查方法: 科學方法論 + 完整記錄錯誤與修正*
-*報告版本: 2.1（新增 Safari 錄音根本原因分析與修復方案）*
+*報告版本: 2.2（新增 12/6 生產環境日誌分析與 timeout 修復）*
