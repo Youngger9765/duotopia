@@ -246,25 +246,16 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       (q) => q.content_item_id === contentItemId,
     );
 
-    // 計算實際分數：根據已正確回答的單字數量
-    // 如果沒有回答任何單字，給予最低分（100 - max_errors * 每字分數）
+    // 計算實際分數：有作答則依比例計算，完全沒作答則給 0 分
     const correctWordCount = currentState?.selectedWords.length || 0;
     const totalWordCount =
       currentQuestion?.word_count ||
       currentQuestion?.shuffled_words.length ||
       1;
-    const maxErrors = currentQuestion?.max_errors || 3;
-    const pointsPerWord = Math.floor(100 / totalWordCount);
-
-    // 計算實際分數
-    let actualScore: number;
-    if (correctWordCount > 0) {
-      // 有回答一些單字：計算已回答的分數
-      actualScore = Math.floor((correctWordCount / totalWordCount) * 100);
-    } else {
-      // 完全沒有回答：給予最低分（如同錯了 max_errors 次）
-      actualScore = Math.max(0, 100 - maxErrors * pointsPerWord);
-    }
+    const actualScore =
+      correctWordCount > 0
+        ? Math.floor((correctWordCount / totalWordCount) * 100)
+        : 0;
 
     try {
       // 根據是否為預覽模式選擇不同的 API
