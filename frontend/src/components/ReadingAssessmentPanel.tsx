@@ -1081,7 +1081,6 @@ export default function ReadingAssessmentPanel({
   const [batchPasteText, setBatchPasteText] = useState("");
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
-  const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 🔥 標記是否為初始載入
 
   // dnd-kit sensors
