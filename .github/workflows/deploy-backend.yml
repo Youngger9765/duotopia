@@ -331,11 +331,13 @@ jobs:
           MEMORY="1Gi"
           CPU=1
           CONCURRENCY=20
+          MAX_INSTANCES=6    # 尖峰時段避免 503 錯誤
         else
           # Staging: 測試環境，最小化成本
           MEMORY="256Mi"
           CPU="500m"         # 0.5 CPU
           CONCURRENCY=1      # CPU < 1 時必須設為 1
+          MAX_INSTANCES=3    # Staging 維持原設定
         fi
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
@@ -346,7 +348,7 @@ jobs:
           --port 8080 \
           --memory $MEMORY \
           --cpu $CPU \
-          --max-instances 3 \
+          --max-instances $MAX_INSTANCES \
           --min-instances $MIN_INSTANCES \
           --cpu-throttling \
           --concurrency $CONCURRENCY \
