@@ -337,7 +337,7 @@ jobs:
           MEMORY="256Mi"
           CPU="500m"         # 0.5 CPU
           CONCURRENCY=1      # CPU < 1 時必須設為 1
-          MAX_INSTANCES=3    # Staging 維持原設定
+          MAX_INSTANCES=1    # Staging 流量低，降為 1 節省成本
         fi
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \

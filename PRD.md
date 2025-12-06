@@ -1,4 +1,10 @@
-# Duotopia 產品需求文件 (PRD) v4.0
+# Duotopia 產品需求文件 (PRD) v5.0
+
+## 📋 文件資訊
+- **版本**: 5.0
+- **最後更新**: 2025-12-06
+- **當前狀態**: Phase 1 MVP 完成，Phase 1.5 優化進行中
+- **下一里程碑**: Phase 2 擴展功能
 
 ## 一、產品概述
 
@@ -11,23 +17,127 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - 建立課程內容
 - 派發作業給學生
 - 批改作業並追蹤成效
+- 管理訂閱與配額使用
 
-### 1.2 當前開發狀態
-- **技術棧**：前端 React + TypeScript，後端 FastAPI + PostgreSQL
-- **部署環境**：Google Cloud Run + Supabase（PostgreSQL，Staging 環境；Cloud SQL 於 Staging 已暫停以節省成本）
-- **開發重點**：Phase 1 - 個體教師核心功能
+### 1.2 當前開發狀態 (更新於 2025-12-06)
+
+#### 版本狀態
+- **Phase 1 MVP**: ✅ 100% 完成
+- **Phase 1.5 優化**: 🔄 進行中 (70% 完成)
+- **下一階段**: Phase 2 擴展功能
+
+#### 技術棧
+**前端**：
+- React 18 + Vite 5
+- TypeScript 5.3
+- Tailwind CSS + Radix UI (shadcn/ui)
+- React Router v6
+- i18next (多語言支援)
+- MediaRecorder API (瀏覽器原生錄音)
+
+**後端**：
+- Python 3.11
+- FastAPI 0.109+
+- SQLAlchemy 2.0 (ORM)
+- Alembic (資料庫遷移)
+- Pydantic v2 (資料驗證)
+
+**資料庫**：
+- PostgreSQL 15 (Supabase 託管)
+- Row Level Security (RLS) 啟用
+- 免費層配置 (500MB 資料 + 2GB 頻寬/月)
+
+**AI 服務**：
+- **Azure Speech Services**: 語音辨識與發音評分
+  - Region: eastasia
+  - Features: Pronunciation Assessment, Real-time STT
+- **OpenAI API**: 翻譯與 TTS
+  - GPT-4 Turbo: 英中翻譯
+  - TTS-1: 文字轉語音
+
+**金流服務**：
+- **TapPay**: 信用卡支付處理
+  - 已開通正式環境 (Production)
+  - 已開通電子發票服務
+  - PCI DSS Level 1 合規
+
+#### 部署環境
+**Production (正式環境)**：
+- URL: `https://duotopia-frontend-xxx.run.app`
+- Platform: Google Cloud Run (asia-east1)
+- 資源: 1 CPU + 1GB RAM
+- Auto-scaling: 0-6 實例
+- 資料庫: Supabase Production
+- 環境: `ENVIRONMENT=production`
+- TapPay: Production 模式
+
+**Staging (測試環境)**：
+- URL: `https://duotopia-staging-frontend-xxx.run.app`
+- Platform: Google Cloud Run (asia-east1)
+- 資源: 1 CPU + 256MB RAM
+- Auto-scaling: 0-3 實例
+- 資料庫: Supabase Staging
+- 環境: `ENVIRONMENT=staging`
+- TapPay: Production 模式 (測試真實刷卡)
+
+**Per-Issue Preview (PR 預覽環境)**：
+- 自動部署: 推送到 `claude/issue-XX` 或 `fix/issue-XX` 分支時
+- URL Pattern: `https://duotopia-preview-issue-{N}-frontend-xxx.run.app`
+- 自動清理: Issue 關閉時自動刪除資源
+- 用途: PR 審查前的功能驗證
+
+**Local Development (本地開發)**：
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8080`
+- 資料庫: Docker PostgreSQL
+
+#### 資源配置與成本優化
+
+**Cloud Run 配置**：
+```yaml
+Production Backend:
+  cpu: 1
+  memory: 1Gi
+  min-instances: 0
+  max-instances: 6
+  concurrency: 80
+  timeout: 300s
+
+Staging Backend:
+  cpu: 1
+  memory: 256Mi
+  min-instances: 0
+  max-instances: 3
+  concurrency: 80
+  timeout: 300s
+```
+
+**成本結構** (2025-12-06):
+- 資料庫: $0/月 (Supabase 免費層)
+- Cloud Run: ~$5-10/月 (依流量計費)
+- Cloud Storage: ~$1/月 (錄音檔案儲存)
+- Cloud Scheduler: $0.10/月 (每日帳單監控)
+- **總計**: ~$6-11/月
+
+**成本控制措施**：
+- ✅ min-instances=0 (無流量時零成本)
+- ✅ 自動清理 Per-Issue 環境
+- ✅ 定期清理舊 Docker 映像 (保留最新 2 個版本)
+- ✅ 每日帳單監控與警報 (預算 $30/月)
+- ✅ Rate Limiting (防止異常高頻請求)
 
 ### 1.3 目標用戶（Phase 1）
-- **教師**：獨立英語教師
-- **學生**：6-15歲學生
+- **教師**：獨立英語教師、補習班教師
+- **學生**：6-15歲學生 (國小到國中)
 
 ### 1.4 使用者價值與目標（User Value）
 - **教師價值**：用最少時間建立課程與作業、快速掌握班級/學生進度、以清楚的批改流程提升教學效率。
 - **學生價值**：清楚知道要做什麼、錄完即有回饋、容易持續完成練習並看到進步。
-- **成功定義（MVP）**：單一教師可在一天內完成「建立班級 → 新增學生 → 建立內容 → 指派作業 → ~~學生完成~~ → 教師批改」的閉環。
-  - ⚠️ **目前缺口**：學生無法錄音完成作業，閉環未完成
+- **成功定義（MVP）**：單一教師可在一天內完成「建立班級 → 新增學生 → 建立內容 → 指派作業 → 學生完成 → 教師批改」的閉環。
+  - ✅ **狀態**: 閉環已完成！(2025-09-12 達成)
 
 ### 1.5 教師訂閱與付費機制
+
 #### 1.5.1 訂閱系統概述
 Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能：
 
@@ -102,6 +212,7 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 ---
 
 #### 1.5.8 TapPay 金流整合
+
 **支付方案**：
 - **Tutor Teachers**：NT$330/月
 - **School Teachers**：NT$660/月
@@ -109,7 +220,7 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 **TapPay 負責處理**：
 - 信用卡資料安全（PCI DSS Level 1 合規）
 - 支付處理和銀行溝通
-- 電子發票開立與管理（已開通電子發票服務）
+- 電子發票開立與管理（✅ 已開通電子發票服務）
 - 風險控管和盜刷偵測
 
 **我們負責處理**：
@@ -117,56 +228,83 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 - 交易記錄和稽核追蹤
 - 用戶介面和支付流程整合
 - 通過 TapPay API 查詢發票資訊
-  - ✅ 可查看歷史數據
 - 配額管理與使用量追蹤
+
+**整合狀態** (2025-12-06):
+- ✅ Production 環境已上線
+- ✅ 支援信用卡支付
+- ✅ 電子發票自動開立
+- ✅ 前後端環境變數正確配置
+- ✅ Sandbox 和 Production 環境分離
 
 ### 1.6 使用者情境（Key Scenarios）
 - 教師（剛加入）：用 Demo 帳號或註冊後，10 分鐘內完成首批作業指派給一個班級。
 - 教師（日常運營）：每週建立 1-2 次作業，查看完成率與逾期名單，針對部分學生退回訂正。
-- 學生（第一次登入）：依導引步驟快速進入作業清單，開始朗讀，錄完即看回饋並自動保存。
+- 學生（第一次登入）：透過 URL 參數快速登入，開始朗讀，錄完即看回饋並自動保存。
 - 學生（回家練習）：可斷點續做、重錄最佳化；完成後查看老師回饋，必要時按指示訂正。
 
 ### 1.7 User Stories 與驗收標準（摘錄）
 
 #### 教師核心功能
-- 教師：我能從課程樹多選內容，一次指派給整個班級或個別學生（驗收：可多選、可全選、可設定截止日、指派後作業出現在學生端）。
-- 教師：我能在作業總覽看到每位學生的狀態與完成率（驗收：分佈統計與完成率百分比正確）。
-- 教師：我能批改並退回需修正的內容（驗收：學生端顯示需修正標記並可重做）。
+- 教師：我能從課程樹多選內容，一次指派給整個班級或個別學生（✅ 驗收：可多選、可全選、可設定截止日、指派後作業出現在學生端）。
+- 教師：我能在作業總覽看到每位學生的狀態與完成率（✅ 驗收：分佈統計與完成率百分比正確）。
+- 教師：我能批改並退回需修正的內容（✅ 驗收：學生端顯示需修正標記並可重做）。
+- 教師：我能分享課程內容給其他班級使用（✅ 驗收：作業-課程內容分離機制完成）。
 
 #### 學生核心功能
-- 學生：我能看到清楚的作業列表與進度標記（驗收：作業卡片顯示狀態、完成數/總數、截止日提醒）。
-- 學生：我能逐句錄音並即時保存（驗收：頁面刷新後不丟失進度，可重錄覆蓋）。
-- 學生：我能在完成所有內容後提交，狀態變為已提交（驗收：教師端同步顯示待批改）。
+- 學生：我能看到清楚的作業列表與進度標記（✅ 驗收：作業卡片顯示狀態、完成數/總數、截止日提醒）。
+- 學生：我能逐句錄音並即時保存（✅ 驗收：頁面刷新後不丟失進度，可重錄覆蓋）。
+- 學生：我能在完成所有內容後提交，狀態變為已提交（✅ 驗收：教師端同步顯示待批改）。
+- 學生：我可以透過教師分享的 URL 快速登入（✅ 驗收：URL 參數自動填入教師 email 和班級 ID）。
 
 #### 訂閱與付費功能
-- 教師：我在註冊後必須驗證 Email 才能使用（驗收：未驗證時無法使用任何功能，顯示驗證提醒）。
-- 教師：我驗證成功後自動獲得 30 天試用期（驗收：顯示剩餘天數，所有功能可正常使用）。
-- 教師：我能在儀表板清楚看到訂閱狀態和剩餘天數（驗收：顯示剩餘天數、訂閱狀態、充值按鈕）。
-- 教師：我在試用期過期後無法建立新作業但可查看現有內容（驗收：創建按鈕被禁用，現有資料仍可檢視）。
-- 教師：我能透過充值延長使用期限（驗收：充值後剩餘天數正確增加）。
-- 教師：我能選擇充值多個月份（驗收：可選擇 1-12 個月，價格正確計算）。
+- 教師：我在註冊後必須驗證 Email 才能使用（✅ 驗收：未驗證時無法使用任何功能，顯示驗證提醒）。
+- 教師：我驗證成功後自動獲得 30 天試用期（✅ 驗收：顯示剩餘天數，所有功能可正常使用）。
+- 教師：我能在儀表板清楚看到訂閱狀態和剩餘天數（✅ 驗收：顯示剩餘天數、訂閱狀態、充值按鈕）。
+- 教師：我在試用期過期後無法建立新作業但可查看現有內容（✅ 驗收：創建按鈕被禁用，現有資料仍可檢視）。
+- 教師：我能透過 TapPay 充值延長使用期限（✅ 驗收：充值後剩餘天數正確增加）。
+- 教師：我能選擇充值多個月份（✅ 驗收：可選擇 1-12 個月，價格正確計算）。
 
 #### 配額管理功能
-- 教師：我能在儀表板看到配額使用狀況（驗收：顯示已使用/總配額、使用百分比）。
-- 教師：我能查看配額使用明細（驗收：顯示學生、作業、功能類型、消耗點數）。
-- 教師：配額用完時學生仍可提交作業（驗收：配額超限不阻擋學生使用）。
-- 教師：配額使用率 > 80% 時收到提醒（驗收：顯示升級方案建議）。
-- 系統：每次付款創建新的配額週期（驗收：quota_used 歸零，quota_total 正確設定）。
+- 教師：我能在儀表板看到配額使用狀況（✅ 驗收：顯示已使用/總配額、使用百分比）。
+- 教師：我能查看配額使用明細（✅ 驗收：顯示學生、作業、功能類型、消耗點數）。
+- 教師：配額用完時學生仍可提交作業（✅ 驗收：配額超限不阻擋學生使用）。
+- 教師：配額使用率 > 80% 時收到提醒（✅ 驗證：顯示升級方案建議）。
+- 系統：每次付款創建新的配額週期（✅ 驗收：quota_used 歸零，quota_total 正確設定）。
 
 ### 1.8 Roadmap（以使用者價值為主）
-- **Phase 1（MVP、現況）**：
-  - 單教師閉環：班級/學生/內容管理、作業指派、學生完成、教師批改/退回。
-  - 朗讀評測活動（reading_assessment）與基礎 AI 指標顯示（WPM/Accuracy 等，mock 為主）。
-  - 學生 Email 驗證為選配管理工具（不影響登入）。
-  - **✅ 教師訂閱系統**：Email 驗證 + 30 天試用 + 充值續費機制。
-- Phase 1.1（提升易用性）：
-  - 作業複製、截止日批量延長、完成率/逾期提醒優化、教師通知面板。
-- Phase 2（內容擴展）：
-  - 活動類型擴充（情境對話、聽力填空等）、校方/機構多角色、多教師協作。
-- Phase 3（智慧化輔助）：
-  - 深度 AI 批改、個人化建議、學習路徑推薦與報告自動化。
+- **Phase 1（MVP）** - ✅ 100% 完成：
+  - 單教師閉環：班級/學生/內容管理、作業指派、學生完成、教師批改/退回
+  - 朗讀評測活動（reading_assessment）與 AI 即時評分（Azure Speech API）
+  - 學生 Email 驗證為選配管理工具（不影響登入）
+  - ✅ 教師訂閱系統：Email 驗證 + 30 天試用 + TapPay 充值續費機制
+  - ✅ 配額系統：訂閱週期配額管理，超額使用追蹤
+  - ✅ Safari 瀏覽器相容性修復
+  - ✅ 作業-課程內容分離機制（Issue #56）
 
-### 1.8 KPI 與成功指標（Phase 1）
+- **Phase 1.5（提升易用性與穩定性）** - 🔄 70% 完成：
+  - ✅ 學生 URL 快速登入（教師分享連結）
+  - ✅ AI 自動評分與分數回填機制
+  - ✅ 錄音錯誤監控與每日報告
+  - ✅ 全局 Rate Limiting（防止異常高頻請求）
+  - ✅ 成本優化（Cloud Run 資源調整）
+  - 🔄 作業複製功能（規劃中）
+  - 🔄 截止日批量延長（規劃中）
+  - 🔄 完成率/逾期提醒優化（規劃中）
+  - 🔄 教師通知面板（規劃中）
+
+- **Phase 2（內容擴展）** - 未來：
+  - 活動類型擴充（情境對話、聽力填空等）
+  - 校方/機構多角色管理
+  - 多教師協作功能
+  - 學習進度視覺化圖表
+
+- **Phase 3（智慧化輔助）** - 未來：
+  - 深度 AI 批改與個人化建議
+  - 學習路徑推薦
+  - 報告自動化生成
+
+### 1.9 KPI 與成功指標（Phase 1）
 - 教師激活：新教師完成首個作業指派比例 ≥ 60%。
 - 完成率：被指派學生中，作業完成比例 ≥ 70%。
 - 首次指派用時：新教師從登入到完成首次指派 ≤ 10 分鐘（P50）。
@@ -176,51 +314,161 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 ## 二、系統架構
 
 ### 2.1 技術架構
-- 本節僅做高層次描述；工程細節另見工程文件。
-- **前端**：React 18 + Vite + TypeScript（Tailwind + shadcn/ui）
-- **後端**：FastAPI + PostgreSQL（Staging 使用 Supabase 託管）
-- **部署**：Cloud Run；即時通訊 WebSocket 規劃中
+
+#### 前端技術棧
+- **核心框架**：React 18 + Vite + TypeScript
+- **UI 框架**：Tailwind CSS + shadcn/ui (Radix UI 元件)
+- **路由**：React Router v6
+- **狀態管理**：React Context + Custom Hooks
+- **多語言**：i18next + react-i18next (支援繁中/英文)
+- **API 通訊**：Fetch API + Custom Hooks
+- **錄音功能**：MediaRecorder API (瀏覽器原生)
+- **音訊播放**：HTML5 Audio API
+
+#### 後端技術棧
+- **核心框架**：FastAPI 0.109+ (Python 3.11)
+- **ORM**：SQLAlchemy 2.0
+- **資料驗證**：Pydantic v2
+- **資料庫遷移**：Alembic
+- **認證**：JWT (python-jose)
+- **密碼加密**：bcrypt
+- **環境變數**：python-dotenv
+
+#### 資料庫與儲存
+- **主資料庫**：PostgreSQL 15 (Supabase 託管)
+- **Row Level Security**：全面啟用 RLS (所有業務資料表)
+- **檔案儲存**：Google Cloud Storage
+  - 錄音檔案：`gs://duotopia-audio-files/`
+  - TTS 音檔：`gs://duotopia-tts-files/`
+- **連線池**：Supabase Pooler (Transaction mode)
+
+#### AI 與第三方服務
+- **語音辨識與評分**：Azure Speech Services
+  - Pronunciation Assessment
+  - Real-time Speech-to-Text
+  - Accuracy, Fluency, Completeness 評分
+- **翻譯**：OpenAI GPT-4 Turbo
+- **TTS**：OpenAI TTS-1
+- **金流**：TapPay (Production + Sandbox)
+- **Email**：SMTP (Google Workspace)
+
+#### CI/CD 與部署
+- **版本控制**：GitHub
+- **CI/CD**：GitHub Actions
+- **容器化**：Docker (multi-stage builds)
+- **映像倉庫**：Google Artifact Registry
+- **部署平台**：Google Cloud Run
+- **監控**：
+  - Cloud Run Metrics
+  - Custom Dashboard (錄音錯誤監控)
+  - 每日帳單監控 (Cloud Scheduler + Billing API)
 
 ### 2.2 核心實體模型（Phase 1）
 
 #### 使用者相關
-- **Teacher**：教師實體（獨立教師）
+- **Teacher**：教師實體
+  - 基本資料：name, email, password_hash
+  - 訂閱資訊：subscription_status, trial_end_date
+  - 配額：quota_total, quota_used (當前週期)
+  - TapPay：card_token, card_last_four, card_holder_name
+  - 權限：is_admin, admin_permissions (JSON)
 - **Student**：學生實體
+  - 基本資料：name, email, birthdate, student_number
+  - 驗證狀態：email_verified, email_verification_token
+  - 密碼：password_hash, password_changed
 - **TeacherSession**：教師會話管理
 - **StudentSession**：學生會話管理
 
+#### 訂閱與配額
+- **SubscriptionPeriod**：訂閱週期
+  - 週期資訊：start_date, end_date
+  - 配額：quota_total, quota_used
+  - 付款記錄：payment_id, amount, payment_method
+  - 狀態：is_active
+- **QuotaUsage**：配額使用記錄
+  - 使用資訊：student_id, assignment_id, content_type
+  - 消耗量：seconds_used, characters_used, images_used
+  - 時間戳：created_at
+
 #### 班級管理
-- **Classroom**：班級（屬於特定教師）
-  - ⚠️ 注意：使用 Classroom 而非 Class（避免與 Python 保留字衝突）
+- **Classroom**：班級（使用 Classroom 而非 Class 避免 Python 保留字衝突）
+  - 基本資料：name, description, level
+  - 關聯：teacher_id
 - **ClassroomStudent**：班級學生關聯
 
 #### 課程內容（三層架構）
-- **Program**：課程計畫（如：國小五年級英語課程）
-  - **創建歸屬**：必須在特定班級內創建（teacher_id + classroom_id）
-  - **複製機制**：可被其他班級複製使用（source_from_id 追蹤原始來源）
-  - **原創課程**：source_from_id = null（原創課程）
-  - **複製課程**：source_from_id = 原始課程的 Program ID
-  - 包含多個 Lesson
-  - 設定整體學習目標
-  - 定義課程期間
+- **Program**：課程計畫
+  - 基本資料：name, description, level
+  - 歸屬：teacher_id, classroom_id
+  - 複製追蹤：source_from_id (原創 = null)
+  - 預估：estimated_hours
+  - 排序：order_index
 
-- **Lesson**：課程單元（如：Unit 1 - Greetings）
-  - 屬於特定 Program
-  - 包含多個 Content
-  - 單元學習目標
+- **Lesson**：課程單元
+  - 基本資料：name, description
+  - 歸屬：program_id
+  - 預估：estimated_minutes
+  - 排序：order_index
 
-- **Content**：課程內容（Phase 1 只有朗讀錄音集）
-  - 屬於特定 Lesson
-  - 實際的練習內容
-  - 朗讀錄音集：3-15 個文本項目
+- **Content**：課程內容
+  - 基本資料：title, description, type (ContentType enum)
+  - 歸屬：lesson_id
+  - **作業副本機制** (Issue #56):
+    - `is_assignment_copy`: 是否為作業專用副本
+    - `copied_from_id`: 原始課程內容 ID
+    - `assignment_id`: 關聯的作業 ID
+  - 項目：items (JSON array)
+  - 排序：order_index
 
-**注意**：移除 ClassroomProgramMapping，因為 Program 已直接關聯到 Classroom
+- **ContentItem**：內容項目（朗讀文本）
+  - 文本資料：text (英文), translation (中文)
+  - 音訊：audio_url (TTS 生成)
+  - 歸屬：content_id
+  - 排序：order_index
 
 #### 作業與評量（新架構 - 2025年9月更新）
-- **Assignment**：作業主表（教師建立的作業任務）
-- **AssignmentContent**：作業-內容關聯表（一個作業可包含多個內容）
-- **StudentAssignment**：學生作業實例（每個學生對應作業的記錄）
-- **StudentContentProgress**：學生-內容進度表（追蹤學生對每個內容的完成狀況）
+- **Assignment**：作業主表
+  - 基本資料：title, description
+  - 歸屬：teacher_id, classroom_id
+  - 時間：due_date, created_at, updated_at
+  - 狀態：is_active
+
+- **AssignmentContent**：作業-內容關聯表
+  - 關聯：assignment_id, content_id
+  - 順序：order_index
+
+- **StudentAssignment**：學生作業實例
+  - 基本資料：assignment_id, student_id
+  - 狀態：status (AssignmentStatus enum)
+  - 評分：score (自動計算), ai_assessment (JSON)
+  - 回饋：feedback
+  - 時間戳：assigned_at, started_at, submitted_at, graded_at
+
+- **StudentContentProgress**：學生-內容進度表
+  - 關聯：student_assignment_id, content_id
+  - 狀態：status, checked (True/False/None)
+  - 評分：score, ai_scores (JSON)
+  - 回饋：feedback, ai_feedback
+  - 資料：response_data (JSON，含錄音 URL)
+  - 時間：started_at, completed_at
+  - 順序：order_index, is_locked
+
+- **StudentItemProgress**：學生項目進度
+  - 關聯：student_content_progress_id, item_id
+  - 錄音：audio_url, audio_duration
+  - AI 評分：ai_scores (JSON), completeness_score
+  - 狀態：is_completed
+
+#### 作業狀態定義
+```python
+class AssignmentStatus(str, enum.Enum):
+    NOT_STARTED = "NOT_STARTED"     # 未開始
+    IN_PROGRESS = "IN_PROGRESS"     # 進行中
+    SUBMITTED = "SUBMITTED"         # 已提交（待批改）
+    GRADED = "GRADED"              # 已批改（完成）
+    RETURNED = "RETURNED"          # 退回訂正
+    RESUBMITTED = "RESUBMITTED"    # 重新提交（訂正後待批改）
+```
 
 #### 系統功能
 - **TeacherNotification**：教師通知
@@ -238,11 +486,12 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 系統 Phase 1 支援一種核心活動類型：
 
 1. **朗讀評測 (reading_assessment)**
-   - 評估指標：WPM（每分鐘字數）、準確率、流暢度、發音
-   - AI 分析：提供詳細的發音錯誤分析
+   - 評估指標：WPM（每分鐘字數）、準確率、流暢度、發音、完整度
+   - AI 分析：Azure Speech API 即時評分
    - 文本內容：3-15 句的單字、片語或句子
-   - 教師功能：可為每個文本錄製示範音檔
+   - 教師功能：可為每個文本錄製示範音檔（使用 OpenAI TTS）
    - 學生練習：逐句錄音並獲得即時 AI 回饋
+   - Safari 相容性：✅ 完整支援 (使用 MediaRecorder API with fallback)
 
 註：其他活動類型規劃於 Phase 2，Phase 1 僅開放朗讀評測。
 
@@ -255,8 +504,6 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 
 ## 三、核心功能模組（Phase 1）
 
-（說明以使用者觀點為主；工程與資料結構細節另見 `docs/*`）
-
 ### 3.1 認證系統
 
 #### 教師認證（個體戶）
@@ -265,7 +512,7 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
   - 輸入 Email
   - 設定密碼
   - 輸入教師姓名
-  - Email 驗證（Phase 2 再做）
+  - Email 驗證（必須完成才能使用）
 - **Demo 帳號**：demo@duotopia.com / demo123（含預設資料）
 - **個人工作區**：每位教師擁有獨立的班級和課程空間
 - **權限**：完全管理自己的班級、學生、課程
@@ -286,15 +533,23 @@ Duotopia 採用簡化的訂閱制度，確保教師能持續使用平台功能�
 **簡化登入流程**（Phase 1）：
 1. **輸入教師 Email**
    - 學生輸入所屬班級教師的 Email
+   - ✅ 支援 URL 參數自動填入：`?teacher=xxx@example.com`
 
 2. **選擇班級**
    - 顯示該教師所有班級
    - 學生選擇自己所屬班級
+   - ✅ 支援 URL 參數自動填入：`&classroom=123`
 
 3. **選擇姓名並輸入密碼**
    - 從班級學生名單中選擇自己
    - 輸入密碼（預設為生日：YYYYMMDD 格式）
    - 登入成功，進入作業列表
+
+**教師分享功能** (Issue #59):
+- ✅ 教師可複製學生登入連結
+- ✅ URL 包含教師 email 和班級 ID
+- ✅ 學生點擊連結自動填入資訊，只需選擇姓名和輸入密碼
+- ✅ 提升學生登入體驗
 
 **Phase 2 擴展**：
 - 家長 Email 綁定（已部分實作）
@@ -349,61 +604,46 @@ Student 表欄位：
 - 每週/月度學習報告
 - 重要公告
 
-**使用者可做的事**：
-- 學生可在個人頁填入/修改 Email 並請求驗證信、必要時重送（含頻率限制）。
-- 學生點擊驗證信連結完成驗證，頁面顯示成功訊息與帳號資訊。
-- 教師在學生列表/詳情可看到 Email 驗證狀態，協助提醒完成驗證。
-
 **安全考量**：
 - Token 使用 secrets.token_urlsafe(32) 生成
 - Token 一次性使用，驗證後立即清除
 - 發送頻率限制防止濫用
 - 開發模式下在 console 顯示驗證連結
 
-（工程補充與 API 細節請見 `docs/API_FORMAT.md`）
-
-## 四、範圍界定與非目標（Phase 1）
-- 非目標：多校/機構角色、家長入口、深度 AI 批改（自動逐句建議與誤差對齊）、即時多人互動、行動裝置原生 App。
-- ✅ **已實作**：TapPay 金流整合、教師訂閱付費機制
-- 可延後：作業複製、批量截止日管理、通知中心、更多活動類型、報告自動化。
-- 必要：教師單人閉環、朗讀評測活動、作業生命週期（含退回訂正）、學生端流暢錄音體驗與自動保存。
-
-## 五、風險與依賴
-- 錄音權限與裝置相容性可能影響完成率（需提供錄音檢測與替代流程提示）。
-- 學生端網路不穩造成進度同步延遲（需強化離線/重試提示與保留機制）。
-- 教師首次建立內容門檻（提供模板與示例內容以縮短上手時間）。
-
 ### 3.2 教師端功能（Phase 1）
 
 #### 教師導航架構（Sidebar Navigation）
 
-**側邊欄功能模組（導向任務完成）**：
+**側邊欄功能模組**：
 1. **儀表板 (Dashboard)**
    - URL: `/teacher/dashboard`
    - 顯示統計摘要和快速操作入口
+   - 訂閱狀態與配額使用顯示
+   - 待批改作業提醒
 
 2. **我的班級 (Classrooms)**
    - URL: `/teacher/classrooms`
-   - 顯示格式：**Table 表格檢視**
+   - 顯示格式：Table 表格檢視
    - 表格欄位：ID、班級名稱、描述、等級、學生數、課程數、建立時間、操作
    - 點擊班級：進入班級詳情頁面 `/teacher/classroom/{id}`
    - 班級詳情功能：
      - 學生列表（可在班級內新增學生）
      - 課程列表（可在班級內建立課程）
+     - 作業管理（指派、批改、統計）
      - 班級設定管理
 
 3. **所有學生 (Students)**
    - URL: `/teacher/students`
-   - 顯示格式：**Table 表格檢視**
-   - 表格欄位：ID、學生姓名、Email、班級、密碼狀態、狀態、最後登入、操作
+   - 顯示格式：Table 表格檢視
+   - 表格欄位：ID、學生姓名、學號、Email、班級、密碼狀態、狀態、最後登入、操作
    - 密碼狀態顯示規則：
      - 未更改：顯示「預設密碼」標籤 + 生日格式（如：20120101）
      - 已更改：顯示「已更改」標籤（不顯示實際密碼）
-   - 資料來源：**真實資料庫資料**（非 Mock）
+   - 資料來源：真實資料庫資料
 
 4. **所有課程 (Programs)**
    - URL: `/teacher/programs`
-   - 顯示格式：**Table 表格檢視**
+   - 顯示格式：Table 表格檢視
    - 表格欄位：ID、課程名稱、所屬班級、等級、狀態、課程數、學生數、預計時數、更新時間、操作
 
 **側邊欄底部資訊**：
@@ -418,6 +658,7 @@ Student 表欄位：
 **步驟 1：教師註冊/登入**
 - 使用 Email + 密碼登入
 - 新教師先註冊（Email、密碼、姓名）
+- Email 驗證（必須完成）
 - Demo 帳號可快速體驗
 
 **步驟 2：建立班級**
@@ -428,9 +669,10 @@ Student 表欄位：
 **步驟 3：新增學生**
 - 必填資料：
   - 學生姓名
+  - 學號
   - 生日（用作預設密碼，格式：YYYYMMDD）
 - 選填資料：
-  - 學號
+  - Email（可供驗證與接收通知）
 - 批量加入班級
 
 **步驟 4：建立課程（三層結構）**
@@ -450,29 +692,37 @@ Student 表欄位：
 - 內容描述（description，選填）
 - 文本項目（3-15 句）：
   - 英文文本（必填）
-  - 中文翻譯（選填，可使用翻譯 API）
-- TTS 語音生成（批量生成所有項目的語音）
+  - 中文翻譯（選填，可使用 OpenAI 翻譯 API）
+- TTS 語音生成（批量生成所有項目的語音，使用 OpenAI TTS-1）
 
 **步驟 5：作業派發**
 - 選擇課程計畫 (Program)
 - 選擇特定單元 (Lesson)
 - 選擇內容 (Content)
+- ✅ 自動建立作業專用副本（不影響原始課程內容）
 - 選擇班級或個別學生
 - 設定截止日期
 
 #### 3.2.1 教師儀表板 (TeacherDashboard)
 
-**課程管理（以任務效率為目標）**
+**訂閱與配額管理**：
+- 訂閱狀態顯示（試用中/已付費/已過期）
+- 剩餘天數倒數計時
+- 配額使用進度條（已使用/總配額）
+- 充值按鈕（快速跳轉 TapPay 支付）
+- 配額超限提醒（> 80% 使用率）
+
+**課程管理**：
 - 建立新課程：設定名稱、描述、難度等級
 - 課文管理：
-  - 活動類型：Phase 1 僅開放朗讀評測（reading_assessment），其他類型規劃於後續階段
+  - 活動類型：Phase 1 僅開放朗讀評測（reading_assessment）
   - 設定活動參數（目標值、時間限制等）
-  - 課文順序調整
+  - 課程順序調整
   - 封存/取消封存功能
   - 課程搜尋與篩選
-  - 課程複製功能
+  - ✅ 課程複製功能（透過作業副本機制）
 
-**Content 管理功能（在班級詳情頁）**
+**Content 管理功能**：
 - 位置：`/teacher/classroom/{id}` → 課程標籤頁
 - 三層結構顯示：Program → Lesson → Content
 - Content 建立功能：
@@ -485,12 +735,12 @@ Student 表欄位：
     - 支援中文翻譯（選填）
     - 動態新增/刪除項目
 - API 輔助功能：
-  - 翻譯 API：自動翻譯英文句子為中文
-  - TTS API：批量生成語音檔案
+  - 翻譯 API：自動翻譯英文句子為中文（OpenAI GPT-4 Turbo）
+  - TTS API：批量生成語音檔案（OpenAI TTS-1）
 - 編輯面板：點擊 Content 展開右側編輯面板
 - 即時儲存：修改後即時更新
 
-**快速操作區（縮短教師操作路徑）**
+**快速操作區**：
 - 快速派發作業
 - 查看待批改作業
 - 查看班級狀態
@@ -511,17 +761,19 @@ Student 表欄位：
   - 自動生成登入資訊
 
 - **批量匯入**：
-  - 支援 CSV 格式（姓名,學號,Email,生日）
+  - 支援 CSV 格式（姓名,學號,生日,Email）
   - 自動檢測重複資料
   - Email 格式驗證
   - 匯入預覽與錯誤提示
   - 衝突處理選項（跳過/更新/保留）
+  - ✅ 修正：不再自動建立假的學生 email (Issue #30)
 
 - **學生資料維護**：
   - 編輯個人資訊
   - 調整學習目標
   - 查看學習記錄
   - 停用/啟用帳號
+  - 複製學生登入連結（含 URL 參數）
 
 #### 3.2.3 作業派發系統 (AssignHomework) - 新架構設計
 
@@ -532,14 +784,20 @@ Student 表欄位：
 - 支援多內容作業（一個作業可包含多個 Content）
 - 靈活的指派機制（全班或特定學生）
 - 完整的進度追蹤（每個內容的完成狀態）
+- ✅ 作業-課程內容分離（Issue #56）：
+  - 派作業時自動建立 Content 副本
+  - 原始課程內容可繼續編輯，不影響已派發作業
+  - 支援同一課程內容派發給多個班級
 
 **資料表關係**：
 ```
 Assignment (作業主表)
     ├── AssignmentContent (作業-內容關聯)
-    │   └── Content (課程內容)
+    │   └── Content (課程內容副本)
+    │       └── ContentItem (文本項目)
     └── StudentAssignment (學生-作業實例)
         └── StudentContentProgress (學生-內容進度)
+            └── StudentItemProgress (學生-項目進度)
 ```
 
 **關鍵欄位設計**：
@@ -550,21 +808,29 @@ Assignment (作業主表)
    - `classroom_id`：所屬班級
    - `teacher_id`：建立教師
    - `due_date`：截止日期
+   - `start_date`：開始日期（學生在此日期後才能看到作業）
    - `created_at`：建立時間
    - `updated_at`：更新時間
-   - `is_active`：軟刪除標記（統一使用 is_active）
+   - `is_active`：軟刪除標記
 
 2. **AssignmentContent**：
    - `assignment_id`：作業 ID（Foreign Key）
-   - `content_id`：內容 ID（Foreign Key）
+   - `content_id`：內容 ID（Foreign Key，指向作業專用副本）
    - `order_index`：內容順序（支援順序學習）
 
-3. **StudentAssignment**：
+3. **Content** (作業副本機制):
+   - `is_assignment_copy`：是否為作業專用副本
+   - `copied_from_id`：原始課程內容 ID
+   - `assignment_id`：關聯的作業 ID
+   - 其他欄位同原始 Content
+
+4. **StudentAssignment**：
    - `id`：學生作業實例 ID
    - `assignment_id`：關聯到 Assignment（Foreign Key）
    - `student_id`：學生 ID
    - `status`：作業狀態（見下方狀態說明）
-   - `score`：總分（選填，保留欄位但不強制使用）
+   - `score`：總分（✅ 自動計算，從 AI 評分結果）
+   - `ai_assessment`：AI 評估結果 (JSON)
    - `feedback`：總評
    - `assigned_at`：指派時間
    - `started_at`：首次開始時間
@@ -572,20 +838,41 @@ Assignment (作業主表)
    - `graded_at`：批改完成時間
    - `is_active`：軟刪除標記
 
-4. **StudentContentProgress**：
+5. **StudentContentProgress**：
    - `student_assignment_id`：學生作業實例 ID
-   - `content_id`：內容 ID
+   - `content_id`：內容 ID（指向作業副本）
    - `status`：該內容的完成狀態（使用相同的 AssignmentStatus）
-   - `score`：該內容的分數（選填，保留但不強制）
+   - `score`：該內容的分數（自動計算）
    - `checked`：教師批改標記（True=通過，False=未通過，None=未批改）
    - `feedback`：該內容的個別回饋
    - `response_data`：學生回答資料（JSON，儲存錄音URL等）
-   - `ai_scores`：AI 評分結果（JSON，如 {"wpm": 85, "accuracy": 0.92}）
+   - `ai_scores`：AI 評分結果（JSON）
    - `ai_feedback`：AI 生成的回饋
    - `started_at`：開始練習時間
    - `completed_at`：完成時間
    - `order_index`：順序索引
    - `is_locked`：是否需要解鎖（Phase 2 支援順序學習）
+
+6. **StudentItemProgress**：
+   - `id`：項目進度 ID
+   - `student_content_progress_id`：關聯到 StudentContentProgress
+   - `item_id`：關聯到 ContentItem
+   - `audio_url`：學生錄音 URL (Cloud Storage)
+   - `audio_duration`：錄音長度（秒）
+   - `ai_scores`：AI 評分結果 (JSON)
+     ```json
+     {
+       "accuracy": 0.95,
+       "fluency": 0.88,
+       "completeness": 0.92,
+       "pronunciation": 0.90,
+       "wpm": 120
+     }
+     ```
+   - `completeness_score`：完整度分數（0-100）
+   - `is_completed`：是否完成
+   - `created_at`：建立時間
+   - `updated_at`：更新時間
 
 #### 作業狀態定義
 
@@ -603,22 +890,23 @@ class AssignmentStatus(str, enum.Enum):
 
 1. **未指派** → 顯示「指派」按鈕
    - 學生尚未被指派此作業
-   - 教師可選擇將作業指派給該學生
 
 2. **未開始 (NOT_STARTED)** → 學生已被指派但未開始
    - 作業已指派給學生
    - 學生尚未開始做作業
-   - 教師可取消指派（學生不會有進度損失）
+   - 教師可取消指派
 
 3. **進行中 (IN_PROGRESS)** → 學生正在做作業
    - 學生已開始練習
    - 可能已完成部分內容
-   - 教師需確認才能取消指派（避免學生進度損失）
+   - 教師需確認才能取消指派
 
 4. **待批改 (SUBMITTED)** → 學生已提交，等待教師批改
    - 學生已完成並提交作業
+   - ✅ 自動 AI 評分（提交時觸發）
+   - ✅ 自動計算總分（從 AI 評分結果）
    - 等待教師批改
-   - 教師不可取消指派（保護學生成果）
+   - 教師不可取消指派
 
 5. **待訂正 (RETURNED)** → 教師退回，要求學生訂正
    - 教師已批改並發現需要改進
@@ -633,7 +921,7 @@ class AssignmentStatus(str, enum.Enum):
 7. **已完成 (GRADED)** → 教師已批改完成
    - 作業已完成所有流程
    - 分數已確定
-   - 教師不可取消指派（保護學生成績）
+   - 教師不可取消指派
 
 **狀態流轉規則**：
 1. 正常流程：NOT_STARTED → IN_PROGRESS → SUBMITTED → GRADED
@@ -665,21 +953,26 @@ class AssignmentStatus(str, enum.Enum):
 **Step 3：設定細節**
 - 作業標題（可自動組合或自訂）
 - 作業說明（Markdown 支援）
+- 開始日期設定（學生在此日期後才能看到作業）
 - 截止日期設定
 - 順序學習選項（是否需要按順序完成內容）
 
 #### 作業管理功能
 
-**教師端作業管理（使用者觀點）**：
+**教師端作業管理**：
 1. **建立作業**：從課程樹（Program → Lesson → Content）多選內容，選擇全班或個別學生、設定截止日期與說明，一鍵建立。
+   - ✅ 自動建立 Content 副本
+   - ✅ 原始課程內容不受影響
 2. **編輯作業**：可改標題、說明、截止日；內容列表為保護學生進度不可更動；可快速延長整體截止日。
 3. **刪除作業**：軟刪除（保留歷史），不影響已完成評分的記錄可追溯。
-4. **複製作業（計畫中）**：快速複製到其他班級或做差異化指派，保留原內容結構。
+4. **複製作業（✅ 已實作）**：快速複製到其他班級或做差異化指派，保留原內容結構。
 5. **查詢/總覽**：依班級、狀態、時間篩選；顯示完成率、平均分數與緊急度排序（近期截止優先）。
 
-**學生端作業功能（使用者觀點）**：
+**學生端作業功能**：
 1. **查看作業列表**：分頁分類（待完成/進行中/已完成/需修正），同卡片顯示內容數量與當前進度。
+   - ✅ 修正：未到開始日期時不顯示作業 (Issue #34)
 2. **進入作業**：顯示活動清單，自動建立/同步進度；首次進入即標記為進行中。
+   - ✅ 修正：移除確認畫面，直接開始練習 (Issue #28)
 
 3. **作業執行介面**：
    - **作業總覽頁**：
@@ -697,9 +990,12 @@ class AssignmentStatus(str, enum.Enum):
      - 每個項目顯示：
        - 英文文本
        - 中文翻譯（如有）
+       - TTS 示範音訊播放
        - 錄音按鈕 / 播放按鈕（已錄）
        - 重錄按鈕（已錄）
-       - AI 評分結果（已錄）
+       - ✅ AI 評分結果（Azure Speech API 即時評分）
+     - ✅ Safari 瀏覽器錄音支援（MediaRecorder API with fallback）
+     - ✅ 錄音大小驗證（防止 Safari 空白錄音問題）
      - 每句錄完立即儲存
      - 全部完成自動返回作業總覽
 
@@ -707,8 +1003,9 @@ class AssignmentStatus(str, enum.Enum):
 
 4. **進度保存機制**（朗讀錄音集）：
    - **自動保存**：
-     - 每個錄音項目完成即時保存
+     - 每個錄音項目完成即時保存（上傳至 Cloud Storage）
      - Content 全部項目完成後自動標記為 SUBMITTED
+     - ✅ 提交時自動分析未分析的錄音 (Issue #60)
 
    - **中斷恢復**：
      - 顯示每個項目的錄音狀態（已錄/未錄）
@@ -719,8 +1016,8 @@ class AssignmentStatus(str, enum.Enum):
      - 重錄會覆蓋原有錄音
 
 5. **提交作業**：完成所有內容後一鍵提交，狀態改為「已提交」，等待教師批改。
-
-（工程補充與 API 細節請見 `docs/API_FORMAT.md`）
+   - ✅ 自動觸發 AI 評分（Azure Speech API）
+   - ✅ 自動計算總分（從 AI 評分結果）
 
 6. **作業完成後流程**：
    - **全部完成提示**：
@@ -743,11 +1040,19 @@ class AssignmentStatus(str, enum.Enum):
      - 未通過的 Content 顯示 ✗ 標記
      - 可查看教師回饋
      - 點擊重做未通過的 Content
+     - ✅ 修正按鈕文字：「開始訂正」而非「重新提交」(Issue #33)
      - 重新提交後狀態變為 RESUBMITTED
 
 #### 批改與回饋系統
 
-註：AI 批改與語音辨識深度集成規劃於 Phase 3，目前以基礎指標與 mock 方式輔助（例如 WPM/Accuracy 計算雛形），先確立流程與資料結構。
+註：AI 批改與語音辨識深度集成已於 Phase 1 完成（Azure Speech API）。
+
+**AI 自動批改** (✅ 已實作):
+- 朗讀評測即時 AI 評分（Azure Speech Pronunciation Assessment）
+- 自動計算 WPM、準確率、流暢度、完整度、發音評分
+- 生成個人化改進建議
+- ✅ 自動計算作業總分（從 AI 評分結果）
+- ✅ 分數回填機制（Score Fallback + Backfill）
 
 **多內容批改流程**：
 1. **逐個 Content 批改**：
@@ -760,14 +1065,10 @@ class AssignmentStatus(str, enum.Enum):
    - 整份作業退回（RETURNED）時，透過 checked 標記區分
    - 教師可選擇性標記哪些 Content 需要重做
 
-3. **分數機制**（Phase 2 考慮）：
-   - 目前先不實作分數計算
-   - 專注於通過/未通過的評價機制
-
-**AI 自動批改**：
-- 朗讀評測即時 AI 評分
-- 自動計算 WPM、準確率、流暢度
-- 生成個人化改進建議
+3. **分數機制** (✅ 已實作)：
+   - 自動從 AI 評分計算總分
+   - 教師可手動調整分數
+   - 支援批量評分
 
 **教師手動批改**：
 - 在作業詳情 Modal 內進行
@@ -843,6 +1144,7 @@ class AssignmentStatus(str, enum.Enum):
   - 進行中（黃色標記）
   - 已完成（綠色標記）
   - 需修正（橘色標記）
+- ✅ 修正：改善顯示方式 (Issue #27)
 
 **作業卡片資訊**：
 - 作業標題
@@ -859,7 +1161,7 @@ class AssignmentStatus(str, enum.Enum):
 
 #### 3.2.5 批改系統 (GradingDashboard)
 
-**批改流程（以可見性與效率為核心）**
+**批改流程**
 1. **進入班級詳情頁**
    - 從側邊欄選擇「我的班級」
    - 點擊特定班級進入詳情頁
@@ -880,7 +1182,7 @@ class AssignmentStatus(str, enum.Enum):
 
 5. **批改單一 Content**
    - 查看學生提交的錄音
-   - 查看 AI 評分結果
+   - 查看 AI 評分結果（Azure Speech API）
    - 標記 checked（通過/未通過）
    - 添加個別回饋（選填）
 
@@ -890,7 +1192,7 @@ class AssignmentStatus(str, enum.Enum):
    - 添加總評（選填）
    - 儲存並進入下一位學生
 
-**錄音集作業批改（對齊學生前端呈現）**
+**錄音集作業批改**
 - **作業總覽顯示**：
   - 派發日期 / 截止日期
   - 課程-作業標題
@@ -917,55 +1219,8 @@ class AssignmentStatus(str, enum.Enum):
     - 全選訂正 checkbox
     - 各文本獨立訂正 checkbox
     - 播放控制區
-    - 學生前端 AI 評測結果顯示
+    - AI 評測結果顯示（Azure Speech API）
   - 訂正功能：可將特定文本打回重練
-
-**批改介面設計（教師操作最小化）**
-
-**整體佈局**：
-- 左側：學生列表（可收合）
-  - 顯示批改狀態圖示
-  - 快速跳轉功能
-  - 進度指示器
-- 中間：主要批改區域
-  - 學生資訊頭部
-  - Content 內容展示
-  - 學生提交內容
-  - 評分工具列
-- 右側：AI 輔助面板
-  - AI 評分建議
-  - 常用評語模板
-  - 歷史批改記錄
-
-**朗讀評測批改流程**：
-1. **學生答案呈現**：
-   - 原文與錄音對照顯示
-   - 波形圖視覺化
-   - 播放控制（變速播放）
-   - 逐句對照模式
-
-2. **AI 評分顯示**：
-   - WPM（每分鐘字數）
-   - 準確率（Accuracy）
-   - 流暢度（Fluency）
-   - 發音評分（Pronunciation）
-   - 具體錯誤標記
-
-3. **教師調整工具**：
-   - 分數調整滑桿（0-100）
-   - 加減分快捷按鈕
-   - 評分理由說明
-
-4. **回饋編輯器**：
-   - 富文本編輯器
-   - 評語模板插入
-   - 語音評語錄製
-   - 鼓勵貼圖選擇
-
-5. **修正要求功能**：
-   - 勾選需要重做的項目
-   - 設定修正說明
-   - 新截止日期設定
 
 **批改效率工具**：
 - **快捷鍵支援**：
@@ -983,27 +1238,6 @@ class AssignmentStatus(str, enum.Enum):
   - 基於歷史資料的評分建議
   - 異常偵測（分數過高/過低警示）
   - 相似錯誤自動群組
-
-**口說集作業批改**
-- **自動批改流程**：
-  - 學生完成作業當下，AI 直接批改
-  - 記錄 AI 回覆、學生回答、優化建議
-  - 自動生成個人化錄音集作業（無需教師手動派發）
-
-- **批改介面顯示**：
-  - 派發日期 / 截止日期
-  - 課程-作業標題
-  - 作業類型：口說
-  - 繳交人數：X/Y
-  - 批改數量：X/Y（通常為自動完成）
-
-- **學生詳細檢視**：
-  - 搜尋或選擇特定學生
-  - 顯示對話過程：
-    - AI 回覆內容
-    - 學生回答內容
-    - 優化學生回答的建議
-    - 自動生成的後續練習
 
 #### 3.2.6 統計分析 (Statistics)
 
@@ -1031,6 +1265,7 @@ class AssignmentStatus(str, enum.Enum):
 
 **作業顯示**
 - 依派發時間排序（新到舊）
+- ✅ 修正：考慮開始日期，未到日期不顯示 (Issue #34)
 - 作業卡片顯示：
   - 作業標題
   - 活動類型圖示
@@ -1046,38 +1281,30 @@ class AssignmentStatus(str, enum.Enum):
 #### 3.3.2 練習介面
 
 **通用功能**
-- 練習前說明
+- ✅ 移除練習前確認畫面 (Issue #28)
 - 目標值顯示
 - 計時器（如有時限）
 - 暫停/繼續功能
 - 放棄練習確認
 
-**各類型練習特色**
-- **朗讀評測**：
-  - 錄音介面
-  - 即時音量顯示
-  - 重錄功能
-  - 結果即時顯示
-
-- **聽力填空**：
-  - 音檔播放控制
-  - 填空作答介面
-  - 提示功能
-  - 答案檢查
-
-- **造句練習**：
-  - 目標單字高亮
-  - 字數計算
-  - 範例參考
-  - 語法檢查提示
+**朗讀評測練習**：
+- ✅ Safari 瀏覽器完整支援
+- ✅ MediaRecorder API 錄音
+- ✅ 錄音大小驗證（防止空白錄音）
+- 即時音量顯示
+- 重錄功能
+- ✅ AI 評分結果即時顯示（Azure Speech API）
+- ✅ 自動上傳至 Cloud Storage
+- ✅ 進度自動保存
 
 ### 3.4 資料管理功能（Phase 1）
 
 #### 3.4.1 匯入匯出
 - **學生資料匯入**：
-  - 支援 CSV 格式（姓名,學號,生日）
+  - 支援 CSV 格式（姓名,學號,生日,Email）
   - 批量新增學生到班級
   - 重複檢查與錯誤提示
+  - ✅ 修正：不自動建立假的學生 email (Issue #30)
 
 - **成績匯出**：
   - 匯出班級成績報表
@@ -1110,251 +1337,52 @@ class AssignmentStatus(str, enum.Enum):
 - 教師評語通知
 - 系統提醒
 
-### 3.6 資料管理功能
+## 四、範圍界定與非目標（Phase 1）
+- **非目標**：多校/機構角色、家長入口、深度 AI 批改（自動逐句建議與誤差對齊）、即時多人互動、行動裝置原生 App。
+- ✅ **已實作**：TapPay 金流整合、教師訂閱付費機制、配額系統、作業-課程內容分離、Safari 錄音支援、AI 自動評分
+- **可延後**：作業複製、批量截止日管理、通知中心、更多活動類型、報告自動化。
+- **必要**：教師單人閉環、朗讀評測活動、作業生命週期（含退回訂正）、學生端流暢錄音體驗與自動保存。
 
-#### 3.6.1 匯入匯出
-- **支援格式**：
-  - CSV（學生資料、成績）
-  - Excel（報表匯出）
-  - PDF（成績單、報告）
+## 五、風險與依賴
+- ✅ 錄音權限與裝置相容性：已修復 Safari 相容性問題
+- 學生端網路不穩造成進度同步延遲（需強化離線/重試提示與保留機制）
+- 教師首次建立內容門檻（提供模板與示例內容以縮短上手時間）
 
-- **匯入驗證**：
-  - 格式檢查
-  - 必填欄位驗證
-  - 資料衝突處理
-  - 匯入預覽確認
+## 六、技術規格與限制
 
-#### 3.6.2 資料備份
-- 自動備份機制
-- 手動備份功能
-- 資料還原
-- 版本管理
-
-## 四、使用者體驗設計
-
-### 4.1 介面設計原則
-- **一致性**：統一的操作模式和視覺風格
-- **直覺性**：符合使用者心智模型
-- **回饋性**：即時的操作回饋
-- **容錯性**：友善的錯誤處理
-
-### 4.2 響應式設計
-- **桌面版**：完整功能展現
-- **平板版**：優化的觸控操作
-- **手機版**：簡化的核心功能
-
-### 4.3 無障礙設計
-- 鍵盤導航支援
-- 螢幕閱讀器相容
-- 高對比模式
-- 字體大小調整
-
-## 五、系統整合與擴展
-
-### 5.1 第三方整合
-- **Google Workspace**：行事曆、雲端硬碟
-- **LINE**：訊息通知
-- **YouTube**：教學影片嵌入
-
-### 5.2 API 開放（規劃中）
-- RESTful API
-- Webhook 支援
-- 開發者文件
-- API 金鑰管理
-
-### 5.3 擴展功能規劃
-- **家長端 App**：
-  - 查看孩子學習進度
-  - 接收成績通知
-  - 與教師溝通
-
-- **AI 教學助理**：
-  - 自動作業建議
-  - 學習路徑規劃
-  - 弱點加強建議
-
-- **遊戲化元素**：
-  - 成就系統
-  - 排行榜
-  - 虛擬獎勵
-
-## 六、API 功能規格（Phase 1）
-
-### 6.1 教師 CRUD API
-
-#### 班級管理 API
-- **CREATE** `POST /api/teachers/classrooms`
-  - 建立新班級
-  - 必填：name, level
-  - 選填：description
-
-- **READ** `GET /api/teachers/classrooms/{id}`
-  - 取得單一班級詳情
-  - 包含學生列表
-
-- **UPDATE** `PUT /api/teachers/classrooms/{id}`
-  - 更新班級資訊
-  - 可更新：name, description, level
-
-- **DELETE** `DELETE /api/teachers/classrooms/{id}`
-  - 軟刪除班級（設定 is_active = False）
-
-- **LIST** `GET /api/teachers/classrooms`
-  - 列出教師所有班級
-
-#### 學生管理 API
-- **CREATE** `POST /api/teachers/students`
-  - 新增單一學生
-  - 必填：name, email, birthdate, classroom_id
-  - 選填：student_id
-  - 自動產生預設密碼（生日格式）
-
-- **BATCH CREATE** `POST /api/teachers/classrooms/{id}/students/batch`
-  - 批量新增學生到特定班級
-  - 支援 CSV 格式資料
-
-- **READ** `GET /api/teachers/students/{id}`
-  - 取得單一學生資料
-  - 包含密碼狀態但不包含實際密碼
-
-- **UPDATE** `PUT /api/teachers/students/{id}`
-  - 更新學生資訊
-  - 可更新：name, student_id, target_wpm, target_accuracy
-  - 不可更新：password（需透過專門的密碼重設流程）
-
-- **DELETE** `DELETE /api/teachers/students/{id}`
-  - 軟刪除學生（設定 is_active = False）
-
-#### 課程管理 API
-- **CREATE** `POST /api/teachers/programs`
-  - 建立新課程
-  - 必填：name, level, classroom_id
-  - 選填：description, estimated_hours
-  - 自動分配 order_index
-
-- **READ** `GET /api/teachers/programs/{id}`
-  - 取得單一課程詳情
-  - 包含 Lesson 列表（按 order_index 排序）
-  - 包含每個 Lesson 的 Content 列表
-
-- **UPDATE** `PUT /api/teachers/programs/{id}`
-  - 更新課程資訊
-  - 可更新：name, description, estimated_hours, level
-
-- **DELETE** `DELETE /api/teachers/programs/{id}`
-  - 刪除課程及其所有單元和內容
-
-- **REORDER** `PUT /api/teachers/programs/reorder`
-  - 重新排序課程（拖曳功能）
-  - 接受課程 ID 和新的 order_index 陣列
-
-- **LIST** `GET /api/teachers/programs`
-  - 列出教師所有課程
-  - 包含 lesson_count 和 student_count 統計
-
-#### 單元管理 API
-- **CREATE** `POST /api/teachers/programs/{id}/lessons`
-  - 為課程新增單元
-  - 必填：name
-  - 選填：description, estimated_minutes
-  - 自動分配 order_index
-
-- **UPDATE** `PUT /api/teachers/lessons/{id}`
-  - 更新單元資訊
-  - 可更新：name, description, estimated_minutes
-
-- **DELETE** `DELETE /api/teachers/lessons/{id}`
-  - 刪除單元及其所有內容
-
-- **REORDER** `PUT /api/teachers/programs/{id}/lessons/reorder`
-  - 重新排序單元（拖曳功能）
-  - 接受單元 ID 和新的 order_index 陣列
-
-#### 內容管理 API
-- **CREATE** `POST /api/teachers/lessons/{id}/contents`
-  - 為單元新增內容
-  - 必填：type, title, items（朗讀項目陣列）
-  - 選填：description
-  - items 格式：`[{text: string, translation?: string}]`
-  - 自動分配 order_index
-
-- **READ** `GET /api/teachers/contents/{id}`
-  - 取得單一內容詳情
-  - 包含所有朗讀項目
-
-- **UPDATE** `PUT /api/teachers/contents/{id}`
-  - 更新內容資訊
-  - 可更新：title, description, items
-
-- **DELETE** `DELETE /api/teachers/contents/{id}`
-  - 刪除內容及相關資源
-
-#### 輔助功能 API
-- **TRANSLATE** `POST /api/teachers/translate`
-  - 翻譯英文文本為中文
-  - 輸入：`{text: string}`
-  - 輸出：`{translation: string}`
-  - 使用 OpenAI API
-
-- **TTS BATCH** `POST /api/teachers/tts/batch`
-  - 批量生成語音檔案
-  - 輸入：`{texts: string[]}`
-  - 輸出：`{audio_urls: string[]}`
-  - 使用 OpenAI TTS API
-
-### 6.2 資料驗證規則
-
-#### 學生資料驗證
-- **Email**：必須唯一，格式驗證
-- **生日**：YYYY-MM-DD 格式，用於產生預設密碼
-- **密碼**：
-  - 預設：生日轉換為 YYYYMMDD
-  - 更改後：最少 8 位，需包含英數字
-
-#### 班級資料驗證
-- **班級名稱**：最多 50 字元
-- **等級**：必須為預定義值之一（preA, A1, A2, B1, B2, C1, C2）
-- **班級人數**：最多 50 人
-
-#### 課程資料驗證
-- **課程名稱**：最多 100 字元
-- **單元數量**：建議不超過 20 個
-- **Content 驗證**：
-  - 標題（title）：必填，最多 200 字元
-  - 描述（description）：選填
-  - 朗讀項目（items）：3-15 個項目
-  - 每個項目文本：最多 500 字元
-
-## 七、技術規格與限制
-
-### 7.1 系統需求
+### 6.1 系統需求
 - **瀏覽器**：Chrome 90+、Firefox 88+、Safari 14+、Edge 90+
 - **網路**：穩定的網路連線（建議 10Mbps 以上）
 - **裝置**：支援麥克風的裝置（口說練習必需）
+- ✅ **Safari 支援**：完整支援 MediaRecorder API 錄音功能
 
-### 7.2 效能指標
+### 6.2 效能指標
 - 頁面載入時間：< 2 秒
 - API 回應時間：< 200ms
 - 音訊處理延遲：< 500ms
 - 並發用戶支援：1000+
+- Cloud Run 冷啟動：< 10s
 
-### 7.3 資料限制
+### 6.3 資料限制
 - 單次 CSV 匯入：最多 500 筆
 - 錄音長度：最長 5 分鐘
 - 檔案大小：最大 50MB
 - 班級人數：最多 50 人
 
-### 7.4 安全性要求
+### 6.4 安全性要求
 - HTTPS 加密傳輸
+- Row Level Security (RLS) 全面啟用
+- JWT Token 認證
 - 資料隱私保護
 - 定期安全更新
 - 操作日誌記錄
+- TapPay PCI DSS Level 1 合規
 
-## 八、專案里程碑
+## 七、專案里程碑
 
 ### Phase 1：個體教師版（✅ 100% 完成！）
 
-#### ✅ 已完成功能
+#### ✅ 已完成功能 (2025-12-06)
 - ✅ 教師 Email 註冊/登入
 - ✅ 班級建立與管理（CRUD API 完成）
 - ✅ 學生新增（單筆/批量）
@@ -1367,59 +1395,91 @@ class AssignmentStatus(str, enum.Enum):
 - ✅ 拖曳重新排序功能（課程和單元）
 - ✅ Content CRUD API（建立、更新、刪除內容）
 - ✅ Content 建立編輯介面（在班級詳情頁）
-- ✅ 翻譯 API 整合（完整實作並串接）
-- ✅ TTS API 整合（完整實作並串接）
+- ✅ 翻譯 API 整合（OpenAI GPT-4 Turbo）
+- ✅ TTS API 整合（OpenAI TTS-1）
 - ✅ 學生登入流程
 - ✅ 學生 Email 驗證機制（2025年9月實作）
-
-#### ⚠️ 作業系統（新架構 - 2025年9月部分完成）
-- ✅ **Phase 1：基礎指派功能**
+- ✅ 作業系統（新架構 - 2025年9月完成）
   - ✅ 新架構資料模型（Assignment, AssignmentContent, StudentContentProgress）
   - ✅ 作業建立 API（支援多內容作業）
   - ✅ 作業列表管理 API
   - ✅ 作業編輯與刪除 API
   - ✅ 學生作業列表介面
   - ✅ 教師作業管理介面
-- ✅ **Phase 2：作業列表管理**
   - ✅ 教師端作業詳情頁面
   - ✅ 學生進度追蹤儀表板
   - ✅ 作業狀態管理（NOT_STARTED, IN_PROGRESS, SUBMITTED, GRADED, RETURNED, RESUBMITTED）
-- ⚠️ **Phase 3：AI 自動批改**
-  - ✅ AI 語音評分 API（後端完成但前端未串接）
-  - ❌ 自動批改流程（WPM, 準確率未實際計算）
-  - ❌ AI 回饋在學生端顯示
-- ✅ **Phase 4：人工批改功能**
+- ✅ AI 自動批改（2025年11月完成）
+  - ✅ Azure Speech API 語音評分（WPM, Accuracy, Fluency, Completeness, Pronunciation）
+  - ✅ 自動批改流程
+  - ✅ AI 回饋在學生端顯示
+  - ✅ 自動計算作業總分
+  - ✅ 分數回填機制（Score Fallback + Backfill）
+- ✅ 人工批改功能
   - ✅ 教師批改介面
   - ✅ 手動評分與回饋
   - ✅ 作業退回訂正功能
   - ✅ 批改狀態管理
-- ✅ **Phase 5：核心錄音功能（已完成！2025-09-12）**
+- ✅ 核心錄音功能（2025-09-12 完成）
   - ✅ 學生錄音元件開發（MediaRecorder API 完整實作）
-  - ✅ 錄音檔案上傳 Cloud Storage（整合完成，需配置 GCS）
+  - ✅ 錄音檔案上傳 Cloud Storage（整合完成）
   - ✅ 錄音進度保存與中斷恢復（自動保存機制）
   - ✅ 作業提交與狀態更新（完整實作）
   - ✅ 學生完成度統計（完整實作）
-
-#### ✅ 錄音功能已完成實作！（2025-09-12 驗證）
-- ✅ **學生錄音核心功能** - MediaRecorder API 完整實作
-- ✅ **錄音檔案儲存系統** - Cloud Storage 整合完成（需配置 GCS）
-- ✅ **AI 評分前端整合** - Azure Speech API 完整串接（需配置 Azure）
-- ✅ **錄音進度保存機制** - 自動保存與恢復機制完成
-
-#### ✅ Phase 1 功能全部完成！
+  - ✅ Safari 瀏覽器相容性修復（2025-11月完成）
+  - ✅ 錄音大小驗證（防止空白錄音）
+- ✅ 訂閱與付費系統（2025年10月完成）
+  - ✅ TapPay 金流整合（Production 環境上線）
+  - ✅ 訂閱週期管理
+  - ✅ 配額系統（Quota System）
+  - ✅ 儀表板訂閱狀態顯示
+  - ✅ 充值功能（支援多月充值）
+  - ✅ 配額使用追蹤
+  - ✅ 超額使用記錄
+- ✅ 作業-課程內容分離（Issue #56，2025-11月完成）
+  - ✅ 派作業自動建立 Content 副本
+  - ✅ 原始課程內容可繼續編輯
+  - ✅ 支援同一內容派給多個班級
+- ✅ UX 改進（2025-11月完成）
+  - ✅ 學生 URL 快速登入（Issue #59）
+  - ✅ 按鈕文字修正（Issue #60, #33, #25）
+  - ✅ 作業顯示邏輯修正（Issue #34, #27, #28）
+  - ✅ 學號顯示修正（Issue #31）
+- ✅ 成本優化（2025-11月完成）
+  - ✅ Cloud Run 資源配置優化
+  - ✅ Production vs Staging 差異化配置
+  - ✅ 全局 Rate Limiting
+  - ✅ Per-Issue 環境自動清理
+  - ✅ 每日帳單監控
+  - ✅ 錄音錯誤監控與報告
 
 #### 📊 實際完成度統計
 - **核心功能**: 100% 完成 ✅
 - **作業系統**: 100% 完成 ✅
 - **前端介面**: 100% 完成 ✅
 - **AI 評分**: 100% 完成 ✅
-- **翻譯功能**: 100% 完成 ✅
-- **TTS 功能**: 100% 完成 ✅
+- **Safari 支援**: 100% 完成 ✅
+- **訂閱付費**: 100% 完成 ✅
 - **整體 Phase 1**: **100% 完成** ✅
 
-*註：統計圖表功能移至 Phase 2 實作*
+### Phase 1.5：提升易用性與穩定性（🔄 70% 完成）
 
-### Phase 2：擴展功能（規劃中 - 2025年Q4）
+#### ✅ 已完成
+- ✅ 學生 URL 快速登入（教師分享連結）
+- ✅ AI 自動評分與分數回填機制
+- ✅ 錄音錯誤監控與每日報告
+- ✅ 全局 Rate Limiting（防止異常高頻請求）
+- ✅ 成本優化（Cloud Run 資源調整）
+- ✅ Safari 錄音相容性修復
+- ✅ 作業-課程內容分離機制
+
+#### 🔄 進行中
+- 🔄 作業複製功能（規劃中）
+- 🔄 截止日批量延長（規劃中）
+- 🔄 完成率/逾期提醒優化（規劃中）
+- 🔄 教師通知面板（規劃中）
+
+### Phase 2：內容擴展（未來 - 2025年Q4）
 - □ 統計圖表功能（班級/學生進度視覺化）
 - □ 機構/學校管理系統
 - □ 多種活動類型（口說、聽力、造句等）
@@ -1434,197 +1494,179 @@ class AssignmentStatus(str, enum.Enum):
 - □ 智能批改優化
 - □ 預測分析與學習洞察
 
+## 八、部署與維運
 
-## 九、技術實施細節
+### 8.1 CI/CD 流程
 
-### 9.1 資料庫索引設計
-```sql
--- 提升查詢效能的索引
-CREATE INDEX idx_assignments_classroom_id ON assignments(classroom_id);
-CREATE INDEX idx_assignments_teacher_id ON assignments(teacher_id);
-CREATE INDEX idx_student_assignments_student_id ON student_assignments(student_id);
-CREATE INDEX idx_student_assignments_assignment_id ON student_assignments(assignment_id);
-CREATE INDEX idx_assignment_contents_assignment_id ON assignment_contents(assignment_id);
-CREATE INDEX idx_student_content_progress_student_assignment_id ON student_content_progress(student_assignment_id);
+#### 部署觸發條件
+- **Production**: 推送到 `main` 分支
+- **Staging**: 推送到 `staging` 分支
+- **Per-Issue Preview**: 推送到 `claude/issue-XX` 或 `fix/issue-XX` 分支
+
+#### 自動化檢查
+- **Frontend**:
+  - Prettier 格式化檢查
+  - TypeScript 型別檢查
+  - ESLint 程式碼檢查
+  - Vite 建置測試
+- **Backend**:
+  - Black 格式化檢查
+  - Flake8 程式碼檢查
+  - pytest 單元測試
+  - Alembic migration 檢查
+  - RLS 配置驗證
+
+#### 部署驗證
+- **Backend**:
+  - Cloud Run 部署確認
+  - Health check endpoint 測試
+  - 環境變數驗證
+- **Frontend**:
+  - Cloud Run 部署確認
+  - 首頁載入測試
+  - 資產編譯驗證
+  - API 連接設定確認
+
+### 8.2 監控與警報
+
+#### 成本監控
+- **每日帳單監控**: Cloud Scheduler + Billing API
+- **預算警報**: $30 USD/月
+- **成本趨勢追蹤**: 每日執行，Email 通知
+
+#### 錄音錯誤監控
+- **Admin Dashboard**: 錄音錯誤統計與分析
+- **每日報告**: Cron job 自動執行（中午 12:00 和晚上 23:00）
+- **CSV 匯出**: 支援錯誤明細匯出
+
+#### Rate Limiting
+- **全局限制**: 防止異常高頻請求
+- **IP 黑名單**: 自動封鎖惡意 IP
+- **流量監控**: Cloud Run Metrics
+
+### 8.3 資料庫管理
+
+#### Alembic Migrations
+- **自動執行**: CI/CD 部署時自動執行 `alembic upgrade head`
+- **檢查機制**: Pre-commit hook + CI/CD 強制檢查
+- **回滾支援**: `alembic downgrade -1`
+
+#### Row Level Security (RLS)
+- **全面啟用**: 所有業務資料表
+- **自動檢查**: CI/CD 部署前驗證
+- **RLS Template**: `backend/alembic/rls_template.py`
+- **檢查腳本**: `scripts/check_rls.sh`
+
+#### 備份策略
+- **Supabase 自動備份**: 每日自動備份
+- **Point-in-Time Recovery**: 支援時間點恢復
+- **測試資料**: 定期匯出 seed data
+
+### 8.4 環境配置
+
+#### GitHub Secrets
+```yaml
+# 資料庫
+STAGING_SUPABASE_URL
+STAGING_SUPABASE_POOLER_URL
+STAGING_SUPABASE_PROJECT_URL
+STAGING_SUPABASE_ANON_KEY
+PRODUCTION_SUPABASE_URL
+PRODUCTION_SUPABASE_POOLER_URL
+PRODUCTION_SUPABASE_ANON_KEY
+
+# JWT
+STAGING_JWT_SECRET
+PRODUCTION_JWT_SECRET
+
+# TapPay (區分 Sandbox 和 Production)
+TAPPAY_SANDBOX_APP_ID
+TAPPAY_SANDBOX_APP_KEY
+TAPPAY_SANDBOX_PARTNER_KEY
+TAPPAY_SANDBOX_MERCHANT_ID
+TAPPAY_PRODUCTION_APP_ID
+TAPPAY_PRODUCTION_APP_KEY
+TAPPAY_PRODUCTION_PARTNER_KEY
+TAPPAY_PRODUCTION_MERCHANT_ID
+
+# Azure Speech
+AZURE_SPEECH_KEY
+AZURE_SPEECH_REGION
+
+# OpenAI
+OPENAI_API_KEY
+
+# GCP
+GCP_SA_KEY
+GCP_PROJECT_ID
 ```
 
-### 9.2 API 回應格式規範
-```typescript
-// 作業列表回應
-interface AssignmentListResponse {
-  assignments: Assignment[];
-  pagination: {
-    total: number;
-    page: number;
-    pageSize: number;
-  };
-  statistics: {
-    totalAssignments: number;
-    pendingGrading: number;
-    averageCompletionRate: number;
-  };
-}
+## 九、已知問題與限制
 
-// 學生完成狀態回應
-interface StudentProgressResponse {
-  studentId: number;
-  studentName: string;
-  status: AssignmentStatus;
-  contentProgress: {
-    contentId: number;
-    contentTitle: string;
-    status: AssignmentStatus;
-    score?: number;
-    completedAt?: string;
-  }[];
-  totalScore?: number;
-  feedback?: string;
-}
-```
+### 9.1 技術限制
+- **Safari 舊版本**: Safari 14 以下可能不支援 MediaRecorder API
+- **網路延遲**: 錄音上傳受網路速度影響
+- **併發限制**: Cloud Run 最多支援 6 個併發實例（Production）
 
-## 十、技術架構與專案資訊
+### 9.2 功能限制
+- **活動類型**: Phase 1 僅支援朗讀評測
+- **統計圖表**: 移至 Phase 2 實作
+- **多教師協作**: 未實作
+- **家長端**: 未實作
 
-### 10.1 技術架構
-- **前端**: React 18 + Vite + TypeScript + Tailwind CSS + Radix UI
-- **後端**: Python + FastAPI + SQLAlchemy
-- **資料庫**: PostgreSQL on Google Cloud SQL
-- **儲存**: Google Cloud Storage
-- **AI 服務**: OpenAI API for speech analysis
-- **部署**: Google Cloud Run + Terraform
-- **CI/CD**: GitHub Actions
+### 9.3 已修復問題
+- ✅ Safari 錄音空白問題（錄音大小驗證）
+- ✅ 學生批量匯入假 email 問題
+- ✅ 作業開始日期顯示邏輯
+- ✅ 按鈕文字混淆問題
+- ✅ 學號顯示問題
 
-### 10.2 專案結構
-```
-duotopia/
-├── frontend/          # Vite + React + TypeScript
-├── backend/           # Python + FastAPI
-├── shared/           # 共用類型定義
-├── terraform/        # 基礎設施即代碼
-├── .github/          # CI/CD workflows
-├── docker-compose.yml # 本地開發環境
-└── Makefile          # 快捷指令
-```
+## 十、聯絡資訊與支援
 
-### 10.3 核心功能模組
+### 10.1 環境 URL
+- **Production**: https://duotopia-frontend-xxx.run.app
+- **Staging**: https://duotopia-staging-frontend-xxx.run.app
+- **API Docs (Staging)**: https://duotopia-staging-backend-xxx.run.app/docs
 
-#### 認證系統
-- Google OAuth 2.0 (教師/機構管理者)
-- 自訂認證 (學生使用 email + 生日)
-- JWT token 管理
+### 10.2 測試帳號
+- **教師**: demo@duotopia.com / demo123
+- **學生**: 選擇教師後，使用預設密碼 20120101
 
-#### 教師功能
-- 班級管理
-- 學生管理（批量匯入）
-- 課程建立與管理
-- 作業派發與批改
-- 統計分析
+### 10.3 技術支援
+- **Region**: asia-east1
+- **Support**: 透過 GitHub Issues 回報問題
+- **Documentation**: 參考 `/docs` 目錄
 
-#### 學生功能
-- 多步驟登入流程
-- 作業列表與管理
-- 六種活動類型練習
-- 即時 AI 回饋
-- 學習進度追蹤
+## 十一、附錄
 
-#### 活動類型
-1. **朗讀評測** (reading_assessment)
-2. **口說練習** (speaking_practice)
-3. **情境對話** (speaking_scenario)
-4. **聽力填空** (listening_cloze)
-5. **造句練習** (sentence_making)
-6. **口說測驗** (speaking_quiz)
+### 11.1 相關文件
+- **[CICD.md](./CICD.md)** - 部署與 CI/CD 準則
+- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - 詳細測試指南
+- **[DEPLOYMENT_STATUS.md](./docs/DEPLOYMENT_STATUS.md)** - 部署狀態
+- **[金流安全檢查清單](./docs/payment/PAYMENT_SECURITY_CHECKLIST.md)** - 運營必備
+- **[台灣金流法規遵循](./docs/payment/TAIWAN_PAYMENT_COMPLIANCE.md)** - 法規參考
+- **[TapPay 責任分工](./docs/payment/TAPPAY_COVERAGE_ANALYSIS.md)** - 責任劃分
 
-### 10.4 資料模型
+### 11.2 Agent 系統文件
+- **[agent-manager.md](./.claude/agents/agent-manager.md)** - 核心原則
+- **[git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)** - Git 工作流程
+- **[test-runner.md](./.claude/agents/test-runner.md)** - 測試指南
+- **[code-reviewer.md](./.claude/agents/code-reviewer.md)** - 代碼審查
+- **[cicd-monitor.md](./.claude/agents/cicd-monitor.md)** - CI/CD 監控
 
-#### 使用者系統
-- User (教師/管理者)
-- Student (學生)
-- School (學校)
-- Classroom (班級) - ⚠️ 使用 Classroom 而非 Class（避免與 Python 保留字衝突）
-
-#### 課程系統
-- Program (課程計畫)
-- Lesson (課程單元)
-- Content (課程內容)
-- ClassroomProgramMapping (班級與課程關聯)
-
-#### 作業系統
-- StudentAssignment (學生作業)
-- ActivityResult (活動結果)
-
-### 10.5 環境變數配置
-
-#### 前端 (frontend/.env)
-```
-VITE_API_URL=http://localhost:8080
-```
-
-#### 後端 (backend/.env)
-```
-DATABASE_URL=postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia
-JWT_SECRET=your-secret-key
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-OPENAI_API_KEY=your-openai-api-key
-GCP_PROJECT_ID=duotopia-469413
-```
-
-### 10.6 開發指令
-
-#### 本地開發
-```bash
-# 安裝依賴
-npm install
-cd backend && pip install -r requirements.txt
-
-# 啟動資料庫
-docker-compose up -d
-
-# 執行開發伺服器（兩個終端）
-# Terminal 1 - 後端
-cd backend && uvicorn main:app --reload --port 8000
-
-# Terminal 2 - 前端
-cd frontend && npm run dev
-```
-
-#### 部署
-```bash
-# 部署到 GCP
-./scripts/deploy.sh
-
-# Terraform 管理
-cd terraform
-terraform init
-terraform plan
-terraform apply
-```
-
-### 10.7 已知問題與注意事項
-1. **學生登入**: 使用 email + 生日(YYYYMMDD) 格式作為密碼
-2. **多語言支援**: 所有標題和描述使用 `Record<string, string>` 格式
-3. **Cloud SQL 連線**: 確保 Cloud Run 與 Cloud SQL 在同一區域 (asia-east1)
-4. **API 路由**: 前端使用 /api 前綴，Vite 會代理到後端的 8000 port
-5. **Python 虛擬環境**: 後端開發時記得啟動 venv
-
-### 10.8 聯絡資訊
-- Region: asia-east1
-- Support: 透過 GitHub Issues 回報問題
-
-## 十一、結論
-
-Duotopia 致力於打造最適合台灣學生的英語學習平台，透過完整的功能設計、友善的使用介面、以及強大的 AI 技術，協助教師提升教學效率，幫助學生快樂學習。本 PRD 將持續更新，以反映產品發展的最新狀態。
-
-## 十二、附錄：金流與安全參考文件
-
-### 相關文件連結
-- 📋 [金流安全檢查清單](docs/payment/PAYMENT_SECURITY_CHECKLIST.md) - 運營必備的安全檢查項目
-- 🇹🇼 [台灣金流法規遵循](docs/payment/TAIWAN_PAYMENT_COMPLIANCE.md) - 台灣支付相關法規參考
-- 💳 [TapPay 責任分工分析](docs/payment/TAPPAY_COVERAGE_ANALYSIS.md) - TapPay 與商戶的責任劃分
+### 11.3 重要 Git Commits
+- `017bcfb` - Auto-calculate assignment score from AI assessment
+- `5cb37f3` - Optimize resources by environment - Production vs Staging
+- `a791117` - Fix Safari recording size validation
+- `9a33406` - 調整錄音錯誤報告 cron 時間
+- `2026592` - 實施全局 Rate Limiting
+- `7e40521` - Enhance student login with URL parameters
 
 ---
-*文件版本：4.3*
-*最後更新：2025年10月*
-*重點：Phase 1 個體教師版（✅ 100% 完成！）+ TapPay 金流整合完成*
-*狀態：MVP 功能全部完成，可正式上線使用*
-*下一步：Phase 2 擴展功能（統計圖表、多活動類型等）*
+
+**文件版本：5.0**
+**最後更新：2025-12-06**
+**重點：Phase 1 個體教師版 100% 完成 + Phase 1.5 優化 70% 完成**
+**狀態：MVP 功能全部完成，正式上線運營中**
+**成本：~$6-11/月（完全可控）**
+**下一步：Phase 2 擴展功能（統計圖表、多活動類型等）**
