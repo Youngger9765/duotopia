@@ -333,7 +333,8 @@ describe("StudentActivityPageContent - Background Analysis", () => {
       await waitFor(
         () => {
           const uploadCalls = (global.fetch as Mock).mock.calls.filter(
-            (call: unknown[]) => (call[0] as string).includes("upload-recording"),
+            (call: unknown[]) =>
+              (call[0] as string).includes("upload-recording"),
           );
           expect(uploadCalls.length).toBeGreaterThanOrEqual(2);
         },
@@ -412,7 +413,8 @@ describe("StudentActivityPageContent - Background Analysis", () => {
       await waitFor(
         () => {
           const uploadCalls = (global.fetch as Mock).mock.calls.filter(
-            (call: unknown[]) => (call[0] as string).includes("upload-recording"),
+            (call: unknown[]) =>
+              (call[0] as string).includes("upload-recording"),
           );
           expect(uploadCalls.length).toBeGreaterThanOrEqual(1);
         },
