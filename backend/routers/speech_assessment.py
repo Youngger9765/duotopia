@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from io import BytesIO
 import tempfile
+import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -28,10 +29,14 @@ from models import (
     Assignment,
 )
 from services.quota_service import QuotaService
+from services.bigquery_logger import get_bigquery_logger
 from sqlalchemy.orm import joinedload
 
 # 設定 logger
 logger = logging.getLogger(__name__)
+
+# 🕐 Azure Speech API Timeout 設定（秒）
+AZURE_SPEECH_TIMEOUT = 20  # Azure Speech API timeout in seconds
 
 router = APIRouter(
     prefix="/api/speech",
@@ -160,6 +165,7 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         評估結果字典（包含詳細的音節和音素資訊）
     """
     import azure.cognitiveservices.speech as speechsdk
+    import time
 
     # 取得 Azure 設定
     speech_key = os.getenv("AZURE_SPEECH_KEY")
@@ -173,6 +179,9 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
     if not speech_key:
         logger.error("AZURE_SPEECH_KEY not configured!")
         raise ValueError("AZURE_SPEECH_KEY not configured")
+
+    # 🕐 記錄開始時間（用於計算 Azure API 延遲）
+    start_time = time.time()
 
     try:
         # 設定 Speech SDK
@@ -215,8 +224,22 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         audio_stream.write(audio_data)
         audio_stream.close()
 
+        # 🕐 記錄 Azure API 呼叫開始時間
+        azure_api_start = time.time()
+
         # 執行識別
         result = speech_recognizer.recognize_once()
+
+        # 🕐 計算 Azure API 延遲
+        azure_api_latency = time.time() - azure_api_start
+        logger.info(f"⏱️ Azure Speech API latency: {azure_api_latency:.2f}s")
+
+        # ⚠️ 如果 Azure API 延遲超過 5 秒，記錄警告
+        if azure_api_latency > 5.0:
+            logger.warning(
+                f"⚠️ Azure Speech API slow response detected! "
+                f"Latency: {azure_api_latency:.2f}s (threshold: 5s)"
+            )
 
         if result.reason == speechsdk.ResultReason.RecognizedSpeech:
             # 取得評估結果
@@ -366,13 +389,22 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             )
 
     except Exception as e:
+        # 🕐 計算總處理時間（包含失敗的情況）
+        total_latency = time.time() - start_time
+
         logger.error(f"Azure Speech API error: {str(e)}")
+        logger.error(f"Total processing time before failure: {total_latency:.2f}s")
         logger.debug(f"Error type: {type(e)}")
         import traceback
 
         logger.debug(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
-            status_code=503, detail="Service unavailable. Please try again later."
+            status_code=503,
+            detail={
+                "error": "SERVICE_UNAVAILABLE",
+                "message": "Azure Speech API unavailable. Please try again later.",
+                "latency_seconds": round(total_latency, 2),
+            },
         )
 
 
@@ -519,11 +551,16 @@ async def assess_pronunciation_endpoint(
     # 轉換音檔格式為 WAV（Azure Speech SDK 需要）
     # ⚡ 音檔轉換也可能耗時，使用自訂線程池避免阻塞
     with start_span("Convert Audio to WAV"):
+        import time
+
+        conversion_start = time.time()
         loop = asyncio.get_event_loop()
         audio_pool = get_audio_thread_pool()
         wav_audio_data = await loop.run_in_executor(
             audio_pool, convert_audio_to_wav, audio_data, audio_file.content_type
         )
+        conversion_time = time.time() - conversion_start
+        logger.info(f"⏱️ Audio conversion time: {conversion_time:.2f}s")
         perf.checkpoint("Audio Conversion Complete")
 
     # 🎯 找到學生的 assignment 與老師（配額檢查）
@@ -603,15 +640,82 @@ async def assess_pronunciation_endpoint(
 
     # 進行發音評估（Azure Speech SDK）
     # ⚡ 使用自訂語音線程池避免阻塞 event loop
+    # 🕐 加入 timeout 保護避免長時間阻塞
     with start_span(
         "Azure Speech API Call", {"reference_text_length": len(reference_text)}
     ):
         loop = asyncio.get_event_loop()
         speech_pool = get_speech_thread_pool()
-        assessment_result = await loop.run_in_executor(
-            speech_pool, assess_pronunciation, wav_audio_data, reference_text
-        )
-        perf.checkpoint("Azure Speech Assessment Complete")
+
+        try:
+            # 🕐 使用 asyncio.wait_for 加入 timeout（預設 20 秒）
+            assessment_result = await asyncio.wait_for(
+                loop.run_in_executor(
+                    speech_pool, assess_pronunciation, wav_audio_data, reference_text
+                ),
+                timeout=AZURE_SPEECH_TIMEOUT,
+            )
+            perf.checkpoint("Azure Speech Assessment Complete")
+
+        except asyncio.TimeoutError:
+            # 🕐 Azure API timeout - 記錄到 BigQuery
+            timeout_duration = AZURE_SPEECH_TIMEOUT
+            logger.error(
+                f"❌ Azure Speech API timeout after {timeout_duration}s "
+                f"for student {current_student.id}"
+            )
+
+            # 📊 記錄到 BigQuery
+            bigquery_logger = get_bigquery_logger()
+            await bigquery_logger.log_audio_error(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "error_type": "api_timeout",
+                    "error_message": f"Azure Speech API timeout after {timeout_duration}s",
+                    "student_id": current_student.id,
+                    "assignment_id": assignment_id,
+                    "audio_size_bytes": len(audio_data),
+                    "reference_text": reference_text,
+                    "timeout_seconds": timeout_duration,
+                    "environment": os.getenv("ENVIRONMENT", "unknown"),
+                }
+            )
+
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "API_TIMEOUT",
+                    "message": f"語音評估服務處理超時（{timeout_duration} 秒），請稍後再試",
+                    "timeout_seconds": timeout_duration,
+                },
+            )
+
+        except HTTPException as e:
+            # 🔥 捕捉 assess_pronunciation 內部的 503 錯誤並記錄到 BigQuery
+            if e.status_code == 503:
+                logger.error(
+                    f"❌ Azure Speech API error (503) for student {current_student.id}: {e.detail}"
+                )
+
+                # 📊 記錄到 BigQuery
+                bigquery_logger = get_bigquery_logger()
+                error_detail = e.detail if isinstance(e.detail, dict) else {"message": str(e.detail)}
+                await bigquery_logger.log_audio_error(
+                    {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "error_type": "api_error_503",
+                        "error_message": error_detail.get("message", str(e.detail)),
+                        "student_id": current_student.id,
+                        "assignment_id": assignment_id,
+                        "audio_size_bytes": len(audio_data),
+                        "reference_text": reference_text,
+                        "latency_seconds": error_detail.get("latency_seconds"),
+                        "environment": os.getenv("ENVIRONMENT", "unknown"),
+                    }
+                )
+
+            # 重新拋出原始 HTTPException
+            raise
 
     # 📊 評分成功後扣除配額
     if teacher and assignment:
