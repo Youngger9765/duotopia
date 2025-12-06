@@ -155,6 +155,27 @@ export default function StudentActivityPageContent({
     currentItemLabel: string;
   } | null>(null); // 🔒 批次分析進度
 
+  // 🎯 背景分析狀態管理
+  type ItemAnalysisStatus =
+    | "not_recorded"
+    | "recorded"
+    | "analyzing"
+    | "analyzed"
+    | "failed";
+
+  interface ItemAnalysisState {
+    status: ItemAnalysisStatus;
+    error?: string;
+    retryCount?: number;
+  }
+
+  const [itemAnalysisStates, setItemAnalysisStates] = useState<
+    Map<string, ItemAnalysisState>
+  >(new Map());
+  const [pendingAnalysisCount, setPendingAnalysisCount] = useState(0); // 🔒 追蹤背景分析數量以觸發 UI 更新
+  const pendingAnalysisRef = useRef<Map<string, Promise<void>>>(new Map());
+  const failedItemsRef = useRef<Set<string>>(new Set());
+
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
   const isReadOnly =
@@ -752,10 +773,272 @@ export default function StudentActivityPageContent({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // 🎯 生成項目唯一 key (activityId-itemIndex)
+  const getItemKey = (activityId: number, itemIndex: number) =>
+    `${activityId}-${itemIndex}`;
+
+  // 🎯 背景分析函數
+  const analyzeInBackground = useCallback(
+    async (activityId: number, itemIndex: number) => {
+      const itemKey = getItemKey(activityId, itemIndex);
+      const activity = activities.find((a) => a.id === activityId);
+      if (!activity || !activity.items || !activity.items[itemIndex]) {
+        console.error("Activity or item not found for background analysis");
+        return;
+      }
+
+      const item = activity.items[itemIndex];
+      const audioUrl = item.recording_url;
+      const referenceText = item.text;
+      const contentItemId = item.id;
+
+      if (!audioUrl || !referenceText || !contentItemId) {
+        console.warn("Missing data for background analysis:", {
+          audioUrl,
+          referenceText,
+          contentItemId,
+        });
+        return;
+      }
+
+      // 檢查是否已經在分析中或已完成
+      const currentState = itemAnalysisStates.get(itemKey);
+      if (
+        currentState?.status === "analyzing" ||
+        currentState?.status === "analyzed"
+      ) {
+        console.log(`Item ${itemKey} already ${currentState.status}, skipping`);
+        return;
+      }
+
+      // 更新狀態為 analyzing
+      setItemAnalysisStates((prev) => {
+        const next = new Map(prev);
+        next.set(itemKey, { status: "analyzing", retryCount: 0 });
+        return next;
+      });
+
+      const token = useStudentAuthStore.getState().token;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+
+      const analysisPromise = (async () => {
+        try {
+          let gcsAudioUrl = audioUrl as string;
+          const answer = answers.get(activityId);
+          let currentProgressId =
+            answer?.progressIds && answer.progressIds[itemIndex]
+              ? answer.progressIds[itemIndex]
+              : item.progress_id || null;
+
+          // 🔍 上傳音檔（如果是 blob URL）
+          if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
+            const response = await fetch(audioUrl);
+            const audioBlob = await response.blob();
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const uploadResult = await retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  const error = new Error(
+                    `Upload failed: ${uploadResponse.status}`,
+                  );
+                  throw error;
+                }
+
+                return await uploadResponse.json();
+              },
+              (attempt, error) => {
+                console.log(`Background upload retrying (${attempt}):`, error);
+              },
+            );
+
+            if (uploadResult) {
+              gcsAudioUrl = uploadResult.audio_url;
+              currentProgressId = uploadResult.progress_id;
+            }
+          }
+
+          if (!currentProgressId) {
+            throw new Error("No progress_id available for analysis");
+          }
+
+          // 🤖 AI 分析
+          const aiFormData = new FormData();
+          const audioResponse = await fetch(gcsAudioUrl);
+          const audioBlob = await audioResponse.blob();
+          const fileExtension = audioBlob.type.includes("mp4")
+            ? "recording.mp4"
+            : audioBlob.type.includes("webm")
+              ? "recording.webm"
+              : "recording.audio";
+          aiFormData.append("audio_file", audioBlob, fileExtension);
+          aiFormData.append("reference_text", referenceText!);
+          aiFormData.append("progress_id", String(currentProgressId));
+          aiFormData.append("item_index", String(itemIndex));
+          if (assignmentId) {
+            aiFormData.append("assignment_id", String(assignmentId));
+          }
+
+          const analysisResult = await retryAIAnalysis(
+            async () => {
+              const analysisResponse = await fetch(
+                `${apiUrl}/api/speech/assess`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: aiFormData,
+                },
+              );
+
+              if (!analysisResponse.ok) {
+                throw new Error(`Analysis failed: ${analysisResponse.status}`);
+              }
+
+              return await analysisResponse.json();
+            },
+            (attempt, error) => {
+              console.log(`Background analysis retrying (${attempt}):`, error);
+            },
+          );
+
+          // 更新 activity 的 ai_scores
+          setActivities((prevActivities) => {
+            const newActivities = [...prevActivities];
+            const activityIndex = newActivities.findIndex(
+              (a) => a.id === activityId,
+            );
+            if (activityIndex !== -1) {
+              const updatedActivity = { ...newActivities[activityIndex] };
+              if (!updatedActivity.ai_scores) {
+                updatedActivity.ai_scores = { items: {} };
+              }
+              if (!updatedActivity.ai_scores.items) {
+                updatedActivity.ai_scores.items = {};
+              }
+              updatedActivity.ai_scores.items[itemIndex] = analysisResult;
+
+              // Also update item's ai_assessment
+              if (updatedActivity.items && updatedActivity.items[itemIndex]) {
+                const newItems = [...updatedActivity.items];
+                newItems[itemIndex] = {
+                  ...newItems[itemIndex],
+                  ai_assessment: analysisResult,
+                };
+                updatedActivity.items = newItems;
+              }
+
+              newActivities[activityIndex] = updatedActivity;
+            }
+            return newActivities;
+          });
+
+          // 更新狀態為 analyzed
+          setItemAnalysisStates((prev) => {
+            const next = new Map(prev);
+            next.set(itemKey, { status: "analyzed" });
+            return next;
+          });
+
+          pendingAnalysisRef.current.delete(itemKey);
+          failedItemsRef.current.delete(itemKey);
+          setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+
+          console.log(`✅ Background analysis completed for ${itemKey}`);
+        } catch (error) {
+          console.error(`❌ Background analysis failed for ${itemKey}:`, error);
+
+          // 更新狀態為 failed
+          setItemAnalysisStates((prev) => {
+            const next = new Map(prev);
+            const current = next.get(itemKey) || {
+              status: "failed" as const,
+              retryCount: 0,
+            };
+            next.set(itemKey, {
+              status: "failed",
+              error: error instanceof Error ? error.message : String(error),
+              retryCount: (current.retryCount || 0) + 1,
+            });
+            return next;
+          });
+
+          failedItemsRef.current.add(itemKey);
+          pendingAnalysisRef.current.delete(itemKey);
+          setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+        }
+      })();
+
+      pendingAnalysisRef.current.set(itemKey, analysisPromise);
+      setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+    },
+    [activities, answers, assignmentId, itemAnalysisStates],
+  );
+
+  // 🎯 共用 helper function - 檢查並觸發背景分析
+  const checkAndTriggerBackgroundAnalysis = useCallback(
+    (activityId: number, itemIndex: number) => {
+      const activity = activities.find((a) => a.id === activityId);
+      if (!activity || !activity.items || !activity.items[itemIndex]) {
+        return;
+      }
+
+      const currentItem = activity.items[itemIndex];
+      const itemKey = getItemKey(activityId, itemIndex);
+      const hasRecording =
+        currentItem.recording_url && currentItem.recording_url !== "";
+      const currentState = itemAnalysisStates.get(itemKey);
+      const hasAiAssessment =
+        currentItem.ai_assessment ||
+        (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
+
+      // 只有在有錄音、未分析、且未在背景分析中時，才觸發背景分析
+      if (
+        hasRecording &&
+        !hasAiAssessment &&
+        currentState?.status !== "analyzing" &&
+        currentState?.status !== "analyzed" &&
+        !isPreviewMode // 預覽模式不執行分析
+      ) {
+        console.log(`🚀 Triggering background analysis for ${itemKey}`);
+        analyzeInBackground(activityId, itemIndex);
+      }
+    },
+    [activities, itemAnalysisStates, isPreviewMode, analyzeInBackground],
+  );
+
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
+    // 🎯 觸發背景分析（使用共用 helper）
     if (currentActivity.items && currentActivity.items.length > 0) {
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
+
+      // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex + 1);
         setRecordingTime(0);
@@ -775,7 +1058,13 @@ export default function StudentActivityPageContent({
   const handlePreviousActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
+    // 🎯 觸發背景分析（使用共用 helper）
     if (currentActivity.items && currentActivity.items.length > 0) {
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
+
       if (currentSubQuestionIndex > 0) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
         setRecordingTime(0);
@@ -803,6 +1092,15 @@ export default function StudentActivityPageContent({
     index: number,
     subQuestionIndex: number = 0,
   ) => {
+    // 🎯 觸發背景分析（使用共用 helper）- 離開當前題目前
+    const currentActivity = activities[currentActivityIndex];
+    if (currentActivity.items && currentActivity.items.length > 0) {
+      checkAndTriggerBackgroundAnalysis(
+        currentActivity.id,
+        currentSubQuestionIndex,
+      );
+    }
+
     setCurrentActivityIndex(index);
     setCurrentSubQuestionIndex(subQuestionIndex);
     setRecordingTime(0);
@@ -818,6 +1116,30 @@ export default function StudentActivityPageContent({
     if (isPreviewMode) {
       toast.info(t("studentActivityPage.preview.cannotSubmit"));
       return;
+    }
+
+    // 🎯 Step 0: 等待所有背景分析完成
+    const pendingCount = pendingAnalysisRef.current.size;
+    if (pendingCount > 0) {
+      toast.info(
+        t("studentActivityPage.messages.waitingForAnalysis", {
+          count: pendingCount,
+        }) || `還有 ${pendingCount} 題正在分析中，請稍候...`,
+      );
+      setIsAnalyzing(true);
+
+      try {
+        await Promise.all(Array.from(pendingAnalysisRef.current.values()));
+        toast.success(
+          t("studentActivityPage.messages.analysisComplete") ||
+            "所有分析已完成！",
+        );
+      } catch (error) {
+        console.error("Some background analyses failed:", error);
+        // 繼續，因為失敗項目會在下一步處理
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
 
     // 🎯 Step 1: 收集所有未錄音和未分析的題目
@@ -1568,8 +1890,14 @@ export default function StudentActivityPageContent({
                             onClick={() => {
                               if (isAnalyzing) return; // 🔒 分析中禁止切換
                               if (activityIndex !== currentActivityIndex) {
+                                // 切換 activity，handleActivitySelect 已處理背景分析
                                 handleActivitySelect(activityIndex, itemIndex);
                               } else {
+                                // 🎯 同一 activity 內切換，需觸發背景分析
+                                checkAndTriggerBackgroundAnalysis(
+                                  activity.id,
+                                  currentSubQuestionIndex,
+                                );
                                 setCurrentSubQuestionIndex(itemIndex);
                               }
                             }}
@@ -1893,6 +2221,24 @@ export default function StudentActivityPageContent({
             </p>
             <p className="text-sm text-gray-500">
               {t("studentActivityPage.messages.doNotLeave")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 背景分析進度指示器（輕量版，右下角浮動提示） */}
+      {!isAnalyzing && pendingAnalysisCount > 0 && (
+        <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-40 flex items-center gap-3 max-w-xs">
+          <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {t("studentActivityPage.messages.backgroundAnalyzing") ||
+                "背景分析中"}
+            </p>
+            <p className="text-xs text-blue-100">
+              {t("studentActivityPage.messages.backgroundAnalyzingCount", {
+                count: pendingAnalysisCount,
+              }) || `${pendingAnalysisCount} 題進行中...`}
             </p>
           </div>
         </div>
