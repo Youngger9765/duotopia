@@ -537,11 +537,11 @@ jobs:
 
         DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
 
-        # Check backend health
+        # Check backend health (use HTTPS and follow redirects)
         if [[ "$DEPLOY_COMPONENT" == "backend" || "$DEPLOY_COMPONENT" == "both" ]]; then
           echo "🔍 Checking backend health..."
           for i in {1..10}; do
-            if curl -f "http://$VM_IP/api/health" --max-time 10; then
+            if curl -fkL "https://$VM_IP/api/health" --max-time 10; then
               echo "✅ Backend health check passed!"
               break
             else
@@ -555,11 +555,11 @@ jobs:
           done
         fi
 
-        # Check frontend health
+        # Check frontend health (use HTTPS and follow redirects)
         if [[ "$DEPLOY_COMPONENT" == "frontend" || "$DEPLOY_COMPONENT" == "both" ]]; then
           echo "🔍 Checking frontend health..."
           for i in {1..10}; do
-            if curl -f "http://$VM_IP/" --max-time 10 | grep -q "<!DOCTYPE html>"; then
+            if curl -fkL "https://$VM_IP/" --max-time 10 | grep -q "<!DOCTYPE html>"; then
               echo "✅ Frontend health check passed!"
               break
             else
