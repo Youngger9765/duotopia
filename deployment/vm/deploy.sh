@@ -209,7 +209,7 @@ deploy() {
             docker run -d \
                 --name duotopia-backend \
                 --restart unless-stopped \
-                -p 8080:8080 \
+                --network=host \
                 --env-file /tmp/backend.env \
                 $ARTIFACT_REGISTRY/$BACKEND_IMAGE:latest
         fi
@@ -226,7 +226,7 @@ deploy() {
             docker run -d \
                 --name duotopia-frontend \
                 --restart unless-stopped \
-                -p 3000:80 \
+                --network=host \
                 -e BACKEND_URL=http://localhost:8080 \
                 $ARTIFACT_REGISTRY/$FRONTEND_IMAGE:latest
         fi
@@ -240,7 +240,7 @@ deploy() {
             docker run -d \
                 --name duotopia-nginx \
                 --restart unless-stopped \
-                -p 80:80 \
+                --network=host \
                 -v /tmp/nginx.conf:/etc/nginx/nginx.conf:ro \
                 nginx:alpine
         fi

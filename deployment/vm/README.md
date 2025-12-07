@@ -9,29 +9,48 @@ This deployment configuration allows you to run the complete Duotopia product (f
 ```
 Internet (port 80)
     ↓
-[Nginx Reverse Proxy Container]
+[Nginx Reverse Proxy Container] --network=host
     ↓
-    ├─→ / → [Frontend Container:3000]
-    └─→ /api → [Backend Container:8080]
+    ├─→ / → localhost:3000 → [Frontend Container] --network=host
+    └─→ /api → localhost:8080 → [Backend Container] --network=host
 ```
+
+**Network Mode**: All containers use `--network=host` to share the VM's network stack. This allows containers to communicate via `localhost` without Docker bridge networking overhead.
 
 ### Components
 
-1. **Nginx Container** (port 80)
+1. **Nginx Container** (listens on port 80)
    - Acts as reverse proxy
-   - Routes `/` to frontend
-   - Routes `/api` to backend
+   - Routes `/` to frontend (localhost:3000)
+   - Routes `/api` to backend (localhost:8080)
    - Handles CORS and security headers
+   - Uses `--network=host` for direct host network access
 
-2. **Frontend Container** (port 3000)
+2. **Frontend Container** (listens on port 3000)
    - Built with Vite/React
    - Pre-configured with `VITE_API_URL=/api`
-   - Static files served by Nginx
+   - Static files served by Nginx (via localhost)
+   - Uses `--network=host` to bind directly to VM port 3000
 
-3. **Backend Container** (port 8080)
+3. **Backend Container** (listens on port 8080)
    - FastAPI application
    - Connected to Supabase database
    - All environment variables via `.env` file
+   - Uses `--network=host` to bind directly to VM port 8080
+
+### Why --network=host?
+
+Docker containers are isolated by default, each with their own network namespace. Using `127.0.0.1` or `localhost` in the default bridge network mode would fail because:
+- Each container sees `127.0.0.1` as its own loopback, not the host's
+- Containers cannot communicate via `127.0.0.1` in bridge mode
+
+The `--network=host` mode:
+- ✅ Removes network isolation - containers share the VM's network stack
+- ✅ Containers can bind directly to host ports (3000, 8080, 80)
+- ✅ Communication via `localhost` works as expected
+- ✅ No port mapping needed (`-p` flag not required)
+- ✅ Better performance (no NAT overhead)
+- ⚠️ Less isolation (acceptable for single-tenant VM deployment)
 
 ## Deployment
 
@@ -197,7 +216,9 @@ gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
 
 ### Port Already in Use
 
-**Symptoms:** Container fails to start with "port already allocated"
+**Symptoms:** Container fails to start with "address already in use"
+
+**Cause:** When using `--network=host`, containers bind directly to VM ports. If a port is already in use (by another container or process), the new container will fail to start.
 
 **Solution:**
 ```bash
@@ -208,6 +229,31 @@ gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
 # Stop conflicting container
 gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
   --command='docker stop <container-name>'
+```
+
+### Nginx Shows "Connection Refused" to Backend/Frontend
+
+**Symptoms:** Nginx logs show `connect() failed (111: Connection refused) while connecting to upstream`
+
+**Cause:** Backend or Frontend container is not running or not listening on expected port.
+
+**Solution:**
+```bash
+# Check if all containers are running
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
+  --command='docker ps -a --filter name=duotopia'
+
+# Verify ports are listening on the VM
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
+  --command='sudo netstat -tlnp | grep ":3000\|:8080"'
+
+# Check backend logs for startup errors
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
+  --command='docker logs --tail=100 duotopia-backend'
+
+# Check frontend logs for startup errors
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
+  --command='docker logs --tail=100 duotopia-frontend'
 ```
 
 ## Firewall Configuration
@@ -310,7 +356,7 @@ gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b \
     docker run -d \
       --name duotopia-backend \
       --restart unless-stopped \
-      -p 8080:8080 \
+      --network=host \
       --env-file /tmp/backend.env \
       asia-east1-docker.pkg.dev/duotopia-472708/duotopia-repo/duotopia-backend-vm:PREVIOUS_SHA
   '
