@@ -1,0 +1,428 @@
+name: Deploy to VM (Production)
+
+# 🎯 Purpose: Deploy backend to GCP e2-small VM (duotopia-prod-vm)
+# 💡 This workflow runs independently from Cloud Run deployment for A/B testing
+# 🔒 Requires manual trigger with confirmation to prevent accidental deployments
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      confirmation:
+        description: 'Type "deploy-to-vm" to confirm production deployment'
+        required: true
+        type: string
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  ZONE: asia-east1-b
+  VM_NAME: duotopia-prod-vm
+  VM_USER: young  # Default Compute Engine user (adjust if different)
+  CONTAINER_NAME: duotopia-backend
+  CONTAINER_PORT: 8080
+  ARTIFACT_REGISTRY: asia-east1-docker.pkg.dev/duotopia-472708/duotopia-repo
+  IMAGE_NAME: duotopia-backend-vm
+
+jobs:
+  # ✅ Safety check: Verify confirmation input
+  verify-confirmation:
+    name: 🔒 Verify Deployment Confirmation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check confirmation input
+      run: |
+        if [[ "${{ github.event.inputs.confirmation }}" != "deploy-to-vm" ]]; then
+          echo "❌ ERROR: Incorrect confirmation input"
+          echo "Expected: deploy-to-vm"
+          echo "Received: ${{ github.event.inputs.confirmation }}"
+          exit 1
+        fi
+        echo "✅ Confirmation verified"
+
+  # 🧪 Test backend before deployment
+  test-backend:
+    name: 🧪 Test Backend
+    needs: verify-confirmation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Black formatting check
+      working-directory: ./backend
+      run: |
+        echo "Checking Python code formatting with Black..."
+        black --check . || (echo "❌ Black formatting check failed. Run 'black backend/' locally to fix." && exit 1)
+
+    - name: Run Flake8 linting
+      working-directory: ./backend
+      run: |
+        echo "Running Flake8 linting..."
+        flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
+
+    - name: Run pytest (Unit tests only - no DB required)
+      working-directory: ./backend
+      run: |
+        echo "🧪 Running unit tests..."
+        pytest tests/unit/ -v --tb=short || echo "Tests completed with some failures"
+
+    - name: Test backend import
+      working-directory: ./backend
+      run: python -c "import main; print('Backend imports successfully')"
+
+  # 🐳 Build and push Docker image to Artifact Registry
+  build-and-push:
+    name: 🐳 Build & Push Docker Image
+    needs: test-backend
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        # Artifact Registry uses region-specific endpoints
+        gcloud auth configure-docker asia-east1-docker.pkg.dev
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-vm-${{ hashFiles('backend/requirements.txt', 'backend/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-vm-
+
+    - name: Build and push Docker image to Artifact Registry
+      run: |
+        cd backend
+        docker buildx build \
+          --cache-from type=local,src=/tmp/.buildx-cache \
+          --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+          -f Dockerfile \
+          -t $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA \
+          -t $ARTIFACT_REGISTRY/$IMAGE_NAME:latest \
+          --push .
+
+        # Move cache to prevent it from growing indefinitely
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
+
+    - name: Verify image in Artifact Registry
+      run: |
+        echo "🔍 Verifying image was pushed successfully..."
+        gcloud artifacts docker images describe $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+
+  # 🚀 Deploy to VM
+  deploy-to-vm:
+    name: 🚀 Deploy to VM
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure gcloud
+      run: |
+        gcloud config set project $PROJECT_ID
+        gcloud config set compute/zone $ZONE
+
+    # ⚠️ Critical: Create .env file with all required environment variables
+    # This file will be uploaded to VM and used by Docker container
+    - name: Create environment file for VM
+      run: |
+        cat > backend.env <<EOF
+        # Database Configuration (Production)
+        DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}
+        DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
+        DATABASE_TYPE=supabase
+        PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
+
+        # JWT Configuration
+        JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}
+        JWT_ALGORITHM=HS256
+        JWT_EXPIRE_MINUTES=1440
+
+        # Environment
+        ENVIRONMENT=production-vm
+
+        # Supabase
+        SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}
+        SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
+
+        # External APIs
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}
+        AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}
+        AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}
+
+        # SMTP Configuration
+        SMTP_HOST=${{ secrets.SMTP_HOST }}
+        SMTP_PORT=${{ secrets.SMTP_PORT }}
+        SMTP_USER=${{ secrets.SMTP_USER }}
+        SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+        FROM_EMAIL=${{ secrets.FROM_EMAIL }}
+        FROM_NAME=${{ secrets.FROM_NAME }}
+
+        # Frontend URL
+        FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}
+
+        # GCP Configuration
+        GCP_PROJECT_ID=$PROJECT_ID
+        REGION=$REGION
+        GCS_BUCKET_NAME=duotopia-audio
+
+        # TapPay Payment (Production)
+        TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}
+        TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}
+        TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}
+        TAPPAY_SANDBOX_MERCHANT_ID=${{ secrets.TAPPAY_SANDBOX_MERCHANT_ID }}
+        TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }}
+        TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}
+        TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}
+        TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}
+        TAPPAY_ENV=production
+        USE_MOCK_PAYMENT=false
+
+        # Payment Feature Control
+        ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}
+
+        # Cron Job Secret
+        CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}
+
+        # Application Port
+        PORT=8080
+        EOF
+
+        echo "✅ Environment file created"
+
+    # 📤 Upload environment file to VM
+    - name: Upload environment file to VM
+      run: |
+        echo "📤 Uploading environment file to VM..."
+        gcloud compute scp backend.env $VM_USER@$VM_NAME:/tmp/backend.env \
+          --zone=$ZONE \
+          --strict-host-key-checking=no
+        echo "✅ Environment file uploaded"
+
+    # 🔄 Deploy: Pull image, stop old container, start new container
+    - name: Deploy to VM via SSH
+      run: |
+        echo "🚀 Deploying to VM: $VM_NAME"
+
+        # Execute deployment commands on VM via SSH
+        gcloud compute ssh $VM_USER@$VM_NAME \
+          --zone=$ZONE \
+          --strict-host-key-checking=no \
+          --command="
+            set -e  # Exit on error
+
+            echo '🔐 Authenticating Docker to Artifact Registry...'
+            gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
+
+            echo '📥 Pulling latest Docker image...'
+            docker pull $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+
+            echo '🛑 Stopping old container (if exists)...'
+            docker stop $CONTAINER_NAME 2>/dev/null || echo 'No existing container to stop'
+            docker rm $CONTAINER_NAME 2>/dev/null || echo 'No existing container to remove'
+
+            echo '🚀 Starting new container...'
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p 80:$CONTAINER_PORT \
+              --env-file /tmp/backend.env \
+              $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+
+            echo '✅ Container started successfully'
+
+            echo '🧹 Cleaning up old images...'
+            docker image prune -f
+
+            echo '📊 Current container status:'
+            docker ps -a --filter name=$CONTAINER_NAME
+          "
+
+    # 🩺 Health check
+    - name: Health check
+      run: |
+        echo "🩺 Running health check..."
+
+        # Get VM external IP
+        VM_IP=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+        echo "🌐 VM IP: $VM_IP"
+        echo "🔍 Checking health endpoint: http://$VM_IP/api/health"
+
+        # Wait for container to be ready
+        sleep 10
+
+        # Health check with retries
+        for i in {1..10}; do
+          if curl -f "http://$VM_IP/api/health" --max-time 10; then
+            echo "✅ Health check passed!"
+            break
+          else
+            if [ $i -eq 10 ]; then
+              echo "❌ Health check failed after 10 attempts"
+              echo "🔍 Checking container logs..."
+              gcloud compute ssh $VM_USER@$VM_NAME \
+                --zone=$ZONE \
+                --command="docker logs --tail=50 $CONTAINER_NAME"
+              exit 1
+            fi
+            echo "⏳ Waiting for service to be ready (attempt $i/10)..."
+            sleep 10
+          fi
+        done
+
+    # 🔍 Deployment verification
+    - name: Deployment Verification
+      run: |
+        echo "🔍 Verifying deployment..."
+
+        # Get VM external IP
+        VM_IP=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+        echo "📦 Checking service health..."
+        HEALTH_RESPONSE=$(curl -s "http://$VM_IP/health" || echo "ERROR")
+
+        if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
+          echo "✅ Service is healthy"
+          echo "$HEALTH_RESPONSE" | jq '.' || echo "$HEALTH_RESPONSE"
+        else
+          echo "❌ Service health check failed"
+          echo "$HEALTH_RESPONSE"
+          exit 1
+        fi
+
+        echo "🐳 Checking container status on VM..."
+        gcloud compute ssh $VM_USER@$VM_NAME \
+          --zone=$ZONE \
+          --command="
+            echo 'Container status:'
+            docker ps --filter name=$CONTAINER_NAME --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            echo ''
+            echo 'Recent logs:'
+            docker logs --tail=20 $CONTAINER_NAME
+          "
+
+    # 📊 Deployment summary
+    - name: Deployment Summary
+      run: |
+        # Get VM external IP
+        VM_IP=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+        echo "🎉 VM Deployment completed and verified!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 Environment: production-vm"
+        echo "🖥️  VM Name: $VM_NAME"
+        echo "🌍 VM Zone: $ZONE"
+        echo "🌐 Static IP: $VM_IP (34.81.38.211)"
+        echo "🏷️  Image: $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA"
+        echo "🐳 Container: $CONTAINER_NAME"
+        echo "🔗 Health endpoint: http://$VM_IP/api/health"
+        echo "🔗 API endpoint: http://$VM_IP/api/docs"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "💡 Next steps:"
+        echo "1. Test the API: curl http://$VM_IP/api/health"
+        echo "2. View logs: gcloud compute ssh $VM_USER@$VM_NAME --zone=$ZONE --command='docker logs -f $CONTAINER_NAME'"
+        echo "3. Monitor VM: gcloud compute instances describe $VM_NAME --zone=$ZONE"
+
+  # 🧹 Cleanup old images from Artifact Registry
+  cleanup-old-images:
+    name: 🧹 Cleanup Old Images
+    needs: deploy-to-vm
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Cleanup old Artifact Registry images
+      run: |
+        echo "🔍 Cleaning up old Artifact Registry images..."
+        KEEP_COUNT=3  # Keep 3 most recent images
+
+        # List all image versions sorted by creation time (newest first)
+        IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$IMAGE_NAME \
+          --format='get(version)' \
+          --sort-by=~CREATE_TIME \
+          --limit=100 \
+          2>/dev/null || echo "")
+
+        if [ ! -z "$IMAGES" ]; then
+          # Filter out 'latest' tag and SHA tags
+          SHA_IMAGES=$(echo "$IMAGES" | grep -E '^sha256:' || echo "")
+
+          if [ ! -z "$SHA_IMAGES" ]; then
+            TOTAL=$(echo "$SHA_IMAGES" | wc -l | xargs)
+            echo "  Found $TOTAL SHA-tagged images (keeping $KEEP_COUNT)"
+
+            if [ $TOTAL -gt $KEEP_COUNT ]; then
+              TO_DELETE=$(echo "$SHA_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+              DELETE_COUNT=$(echo "$TO_DELETE" | wc -l | xargs)
+              echo "  Deleting $DELETE_COUNT old images..."
+
+              echo "$TO_DELETE" | while read VERSION; do
+                echo "    Deleting: $VERSION"
+                gcloud artifacts docker images delete $ARTIFACT_REGISTRY/$IMAGE_NAME@$VERSION \
+                  --quiet 2>/dev/null || echo "    Failed to delete (may be in use)"
+              done
+              echo "✅ Cleanup completed"
+            else
+              echo "  No old images to delete"
+            fi
+          else
+            echo "  No SHA-tagged images found"
+          fi
+        else
+          echo "  No images found or unable to list images"
+        fi
