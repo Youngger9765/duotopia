@@ -773,6 +773,9 @@ class Assignment(Base):
     # 是否播放音檔（例句重組專用）
     play_audio = Column(Boolean, default=False)
 
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer = Column(Boolean, default=False)
+
     # 分數記錄分類：'speaking' / 'listening' / 'writing'
     score_category = Column(String(20), default=None)
 

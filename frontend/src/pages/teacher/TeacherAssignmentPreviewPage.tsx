@@ -26,6 +26,7 @@ interface ActivityResponse {
   status?: string;
   practice_mode?: string | null;
   score_category?: string | null;
+  show_answer?: boolean; // 例句重組：答題結束後是否顯示正確答案
   total_activities: number;
   activities: Activity[];
 }
@@ -134,6 +135,7 @@ export default function TeacherAssignmentPreviewPage() {
         assignmentTitle={activityData.title}
         assignmentId={parseInt(assignmentId!)}
         practiceMode={activityData.practice_mode || null}
+        showAnswer={activityData.show_answer || false}
         isPreviewMode={true}
         authToken={token || undefined}
         onBack={() =>

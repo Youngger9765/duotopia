@@ -131,6 +131,7 @@ interface StudentActivityPageContentProps {
   onSubmit?: () => void;
   assignmentStatus?: string;
   practiceMode?: string | null; // 例句重組/朗讀模式
+  showAnswer?: boolean; // 例句重組：答題結束後是否顯示正確答案
 }
 
 // =============================================================================
@@ -168,6 +169,7 @@ export default function StudentActivityPageContent({
   onSubmit,
   assignmentStatus = "",
   practiceMode = null,
+  showAnswer = false,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
 
@@ -1349,6 +1351,7 @@ export default function StudentActivityPageContent({
           <RearrangementActivity
             studentAssignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            showAnswer={showAnswer}
             currentQuestionIndex={rearrangementQuestionIndex}
             onQuestionIndexChange={setRearrangementQuestionIndex}
             onQuestionsLoaded={(questions, states) => {

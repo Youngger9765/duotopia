@@ -347,6 +347,7 @@ async def get_assignment_activities(
     activities = []
     assignment_practice_mode = None
     assignment_score_category = None
+    assignment_show_answer = False
 
     if student_assignment.assignment_id:
         # 獲取 Assignment 的 practice_mode 設定
@@ -358,6 +359,7 @@ async def get_assignment_activities(
         if assignment:
             assignment_practice_mode = assignment.practice_mode
             assignment_score_category = assignment.score_category
+            assignment_show_answer = assignment.show_answer or False
         # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
         progress_records = (
             db.query(StudentContentProgress)
@@ -693,6 +695,7 @@ async def get_assignment_activities(
         "status": student_assignment.status.value,  # 返回作業狀態
         "practice_mode": assignment_practice_mode,  # 例句重組/朗讀模式
         "score_category": assignment_score_category,  # 計分類別
+        "show_answer": assignment_show_answer,  # 答題結束後是否顯示正確答案
         "total_activities": len(activities),
         "activities": activities,
     }
@@ -2216,6 +2219,7 @@ class RearrangementQuestionResponse(BaseModel):
     play_audio: bool  # 是否播放音檔
     audio_url: Optional[str] = None
     translation: Optional[str] = None
+    original_text: Optional[str] = None  # 正確答案（用於顯示答案功能）
 
 
 class RearrangementAnswerRequest(BaseModel):
@@ -2322,6 +2326,7 @@ async def get_rearrangement_questions(
                 play_audio=assignment.play_audio or False,
                 audio_url=item.audio_url,
                 translation=item.translation,
+                original_text=item.text.strip(),  # 正確答案
             )
         )
 

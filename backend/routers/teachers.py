@@ -3411,6 +3411,7 @@ async def get_assignment_preview(
         "status": "preview",  # 特殊標記表示這是預覽模式
         "practice_mode": assignment.practice_mode,  # 例句重組/朗讀模式
         "score_category": assignment.score_category,  # 計分類別
+        "show_answer": assignment.show_answer or False,  # 答題結束後是否顯示正確答案
         "total_activities": len(activities),
         "activities": activities,
     }
@@ -3441,6 +3442,7 @@ async def preview_rearrangement_questions(
         play_audio: bool
         audio_url: Optional[str] = None
         translation: Optional[str] = None
+        original_text: Optional[str] = None  # 正確答案（用於顯示答案功能）
 
     # 取得作業（確認老師有權限）
     assignment = (
@@ -3493,6 +3495,7 @@ async def preview_rearrangement_questions(
                 play_audio=assignment.play_audio or False,
                 audio_url=item.audio_url,
                 translation=item.translation,
+                original_text=item.text.strip(),  # 正確答案
             )
         )
 

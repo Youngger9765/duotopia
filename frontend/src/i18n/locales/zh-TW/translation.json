@@ -43,6 +43,7 @@
     "expectedScore": "預期得分",
     "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",
     "selectWordsHint": "請依序點選下方單字組成正確句子",
+    "correctAnswer": "正確答案",
     "jumpToQuestion": "跳至第 {{number}} 題",
     "scoreCategories": {
       "listening": "聽力",
@@ -52,6 +53,7 @@
     "messages": {
       "timeout": "時間到！本題已自動結算",
       "incorrect": "錯誤！正確答案是「{{correct}}」",
+      "incorrectSimple": "答案錯誤，請再試一次",
       "questionComplete": "答對了！本題得 {{score}} 分",
       "challengeFailed": "錯誤次數過多，挑戰失敗",
       "correct": "答對了！",
@@ -1246,6 +1248,8 @@
         "default": "預設",
         "shuffleQuestions": "隨機題目順序",
         "shuffleQuestionsDesc": "每次練習時隨機排列題目順序",
+        "showAnswer": "顯示答案",
+        "showAnswerDesc": "答題結束後顯示正確答案",
         "playAudio": "播放音檔",
         "playAudioYes": "是（聽力練習）",
         "playAudioNo": "否（寫作練習）",

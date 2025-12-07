@@ -37,12 +37,14 @@ export interface RearrangementQuestion {
   play_audio: boolean;
   audio_url?: string;
   translation?: string;
+  original_text?: string; // 正確答案（用於顯示答案功能）
 }
 
 interface RearrangementActivityProps {
   studentAssignmentId: number;
   onComplete?: (totalScore: number, totalQuestions: number) => void;
   isPreviewMode?: boolean;
+  showAnswer?: boolean; // 答題結束後是否顯示正確答案
   // 受控導航 props（由父組件控制題目切換）
   currentQuestionIndex?: number;
   onQuestionIndexChange?: (index: number) => void;
@@ -72,6 +74,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   studentAssignmentId,
   onComplete,
   isPreviewMode = false,
+  showAnswer = false,
   currentQuestionIndex: controlledIndex,
   onQuestionIndexChange,
   onQuestionsLoaded,
@@ -84,7 +87,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const [questionStates, setQuestionStates] = useState<
     Map<number, QuestionState>
   >(new Map());
-  const [submitting, setSubmitting] = useState(false);
+  // 🚀 移除 submitting 狀態 - 驗證現在是即時的，不需要 loading 狀態
   const [scoreCategory, setScoreCategory] = useState<string>("writing");
   const [totalScore, setTotalScore] = useState(0);
   const [, setCompletedQuestions] = useState(0);
@@ -246,53 +249,67 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       (q) => q.content_item_id === contentItemId,
     );
 
-    // 計算實際分數：有作答則依比例計算，完全沒作答則給 0 分
+    // ✅ 時間到計分邏輯（最終版）
+    // - 完全沒作答 (correct = 0 && error = 0) → 0 分（無保底）
+    // - 有作答（不管完成多少）→ max(計算分數, 保底分)
     const correctWordCount = currentState?.selectedWords.length || 0;
+    const errorCount = currentState?.errorCount || 0;
+    const currentExpectedScore = currentState?.expectedScore || 100;
     const totalWordCount =
       currentQuestion?.word_count ||
       currentQuestion?.shuffled_words.length ||
       1;
-    const actualScore =
-      correctWordCount > 0
-        ? Math.floor((correctWordCount / totalWordCount) * 100)
-        : 0;
+    const pointsPerWord = Math.floor(100 / totalWordCount);
+    const unansweredWords = totalWordCount - correctWordCount;
 
-    try {
-      // 根據是否為預覽模式選擇不同的 API
-      const completeUrl = isPreviewMode
-        ? `/api/teachers/assignments/${studentAssignmentId}/preview/rearrangement-complete`
-        : `/api/students/assignments/${studentAssignmentId}/rearrangement-complete`;
+    let actualScore: number;
+    if (correctWordCount === 0 && errorCount === 0) {
+      // 完全沒作答 → 0 分（唯一沒有保底的情況）
+      actualScore = 0;
+    } else {
+      // 有作答 → 預期分數 - 未答數 × 每字分數，有保底分
+      const unansweredPenalty = unansweredWords * pointsPerWord;
+      const calculatedScore = Math.max(0, currentExpectedScore - unansweredPenalty);
+      actualScore = Math.max(calculatedScore, pointsPerWord); // ✅ 套用保底分
+    }
 
-      await apiClient.post(completeUrl, {
-        content_item_id: contentItemId,
-        timeout: true,
-        expected_score: actualScore,
-      });
+    // 🚀 直接更新本地狀態（不等待 API）
+    setQuestionStates((prev) => {
+      const newStates = new Map(prev);
+      const stateInMap = newStates.get(contentItemId);
+      if (stateInMap) {
+        newStates.set(contentItemId, {
+          ...stateInMap,
+          completed: true,
+          timeRemaining: 0,
+          expectedScore: actualScore, // 更新為實際分數
+        });
+      }
+      return newStates;
+    });
 
-      setQuestionStates((prev) => {
-        const newStates = new Map(prev);
-        const stateInMap = newStates.get(contentItemId);
-        if (stateInMap) {
-          newStates.set(contentItemId, {
-            ...stateInMap,
-            completed: true,
-            timeRemaining: 0,
-            expectedScore: actualScore, // 更新為實際分數
-          });
-        }
-        return newStates;
-      });
+    toast.warning(t("rearrangement.messages.timeout"));
 
-      toast.warning(t("rearrangement.messages.timeout"));
+    // 計算並更新分數（使用實際分數）
+    setTotalScore((prev) => prev + actualScore);
+    setCompletedQuestions((prev) => prev + 1);
 
-      // 計算並更新分數（使用實際分數）
-      setTotalScore((prev) => prev + actualScore);
-      setCompletedQuestions((prev) => prev + 1);
-
-      // 時間到後顯示分數和下一題按鈕，讓用戶自行點擊
-      // （不自動進入下一題）
-    } catch (error) {
-      console.error("Failed to complete on timeout:", error);
+    // 學生模式：呼叫 API 儲存 timeout 分數
+    if (!isPreviewMode) {
+      try {
+        await apiClient.post(
+          `/api/students/assignments/${studentAssignmentId}/rearrangement-complete`,
+          {
+            content_item_id: contentItemId,
+            timeout: true,
+            expected_score: actualScore,
+            error_count: errorCount,
+          },
+        );
+      } catch (error) {
+        console.error("Failed to save timeout completion:", error);
+        // 不影響 UI，靜默失敗
+      }
     }
   };
 
@@ -303,153 +320,147 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     if (
       !currentState ||
       currentState.completed ||
-      currentState.challengeFailed ||
-      submitting
+      currentState.challengeFailed
     ) {
       return;
     }
 
-    setSubmitting(true);
+    // 🚀 前端驗證：使用 original_text 做本地驗證，不需要呼叫 API
+    const correctWords =
+      currentQuestion.original_text?.trim().split(/\s+/) || [];
+    const currentPosition = currentState.selectedWords.length;
+    const correctWord = correctWords[currentPosition] || "";
+    const isCorrect = word.trim() === correctWord.trim();
 
-    try {
-      // 根據是否為預覽模式選擇不同的 API
-      const answerUrl = isPreviewMode
-        ? `/api/teachers/assignments/${studentAssignmentId}/preview/rearrangement-answer`
-        : `/api/students/assignments/${studentAssignmentId}/rearrangement-answer`;
+    // 計算新的錯誤次數
+    const newErrorCount = isCorrect
+      ? currentState.errorCount
+      : currentState.errorCount + 1;
 
-      const response = await apiClient.post<{
-        is_correct: boolean;
-        correct_word?: string;
-        error_count: number;
-        max_errors: number;
-        expected_score: number;
-        correct_word_count: number;
-        total_word_count: number;
-        challenge_failed: boolean;
-        completed: boolean;
-      }>(answerUrl, {
-        content_item_id: currentQuestion.content_item_id,
-        selected_word: word,
-        current_position: currentState.selectedWords.length,
-        // 預覽模式需要傳遞目前的 error_count（因為後端不存儲狀態）
-        error_count: isPreviewMode ? currentState.errorCount : undefined,
-      });
+    // 計算分數（完整版 v2 計分邏輯）
+    const wordCount = currentQuestion.word_count || correctWords.length;
+    const maxErrors = currentQuestion.max_errors || (wordCount <= 10 ? 3 : 5);
+    const pointsPerWord = Math.floor(100 / wordCount);
+    const newExpectedScore = Math.max(0, 100 - newErrorCount * pointsPerWord);
 
-      // 更新狀態
-      setQuestionStates((prev) => {
-        const newStates = new Map(prev);
-        const state = newStates.get(currentQuestion.content_item_id)!;
+    // 計算正確單字數和完成狀態
+    const newCorrectWordCount = isCorrect
+      ? currentPosition + 1
+      : currentPosition;
+    const isCompleted = newCorrectWordCount >= wordCount;
+    const isChallengeFailed = newErrorCount >= maxErrors;
 
-        let newSelectedWords = [...state.selectedWords];
-        let newRemainingWords = [...state.remainingWords];
+    // ✅ 正常完成時：套用保底分（每字分數）
+    // 保底分 = floor(100 / 該題單字數) = pointsPerWord
+    const finalScore = isCompleted
+      ? Math.max(newExpectedScore, pointsPerWord)
+      : newExpectedScore;
 
-        if (response.is_correct) {
-          // 正確：加入已選擇列表，從剩餘移除
-          newSelectedWords.push(word);
-          newRemainingWords = newRemainingWords.filter((w, i) => {
-            // 只移除第一個匹配的
-            if (w === word) {
-              newRemainingWords.splice(i, 1);
-              return false;
-            }
-            return true;
-          });
-          // 重新過濾（因為上面的邏輯可能有問題）
-          const firstIndex = state.remainingWords.indexOf(word);
-          if (firstIndex !== -1) {
-            newRemainingWords = [...state.remainingWords];
-            newRemainingWords.splice(firstIndex, 1);
-          }
-        }
+    // 更新狀態
+    let newSelectedWords = [...currentState.selectedWords];
+    let newRemainingWords = [...currentState.remainingWords];
 
-        newStates.set(currentQuestion.content_item_id, {
-          ...state,
-          selectedWords: newSelectedWords,
-          remainingWords: newRemainingWords,
-          errorCount: response.error_count,
-          expectedScore: response.expected_score,
-          completed: response.completed,
-          challengeFailed: response.challenge_failed,
-        });
-
-        return newStates;
-      });
-
-      // 顯示回饋
-      if (response.is_correct) {
-        // 正確時不顯示 toast，用 UI 顯示
-      } else {
-        toast.error(
-          t("rearrangement.messages.incorrect", {
-            correct: response.correct_word,
-          }),
-        );
+    if (isCorrect) {
+      // 正確：加入已選擇列表，從剩餘移除
+      newSelectedWords.push(word);
+      const firstIndex = currentState.remainingWords.indexOf(word);
+      if (firstIndex !== -1) {
+        newRemainingWords = [...currentState.remainingWords];
+        newRemainingWords.splice(firstIndex, 1);
       }
+    }
 
-      // 檢查是否完成或失敗
-      if (response.completed) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-        setTotalScore((prev) => prev + response.expected_score);
-        setCompletedQuestions((prev) => prev + 1);
-        toast.success(
-          t("rearrangement.messages.questionComplete", {
-            score: Math.round(response.expected_score),
-          }),
-        );
-      } else if (response.challenge_failed) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-        toast.error(t("rearrangement.messages.challengeFailed"));
+    setQuestionStates((prev) => {
+      const newStates = new Map(prev);
+      newStates.set(currentQuestion.content_item_id, {
+        ...currentState,
+        selectedWords: newSelectedWords,
+        remainingWords: newRemainingWords,
+        errorCount: newErrorCount,
+        expectedScore: finalScore, // 使用 finalScore（含保底分）
+        completed: isCompleted,
+        challengeFailed: isChallengeFailed,
+      });
+      return newStates;
+    });
+
+    // 顯示回饋
+    if (!isCorrect) {
+      toast.error(t("rearrangement.messages.incorrectSimple"));
+    }
+
+    // 檢查是否完成或失敗
+    if (isCompleted) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
-    } catch (error) {
-      console.error("Failed to submit answer:", error);
-      toast.error(t("rearrangement.errors.submitFailed"));
-    } finally {
-      setSubmitting(false);
+      setTotalScore((prev) => prev + finalScore);
+      setCompletedQuestions((prev) => prev + 1);
+      toast.success(
+        t("rearrangement.messages.questionComplete", {
+          score: Math.round(finalScore),
+        }),
+      );
+
+      // 學生模式：完成時呼叫 API 儲存分數
+      if (!isPreviewMode) {
+        try {
+          await apiClient.post(
+            `/api/students/assignments/${studentAssignmentId}/rearrangement-complete`,
+            {
+              content_item_id: currentQuestion.content_item_id,
+              expected_score: finalScore,
+              error_count: newErrorCount,
+            },
+          );
+        } catch (error) {
+          console.error("Failed to save completion:", error);
+          // 不影響 UI，靜默失敗
+        }
+      }
+    } else if (isChallengeFailed) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      toast.error(t("rearrangement.messages.challengeFailed"));
     }
   };
 
   const handleRetry = async () => {
     const currentQuestion = questions[currentQuestionIndex];
 
-    try {
-      setSubmitting(true);
-
-      // 根據是否為預覽模式選擇不同的 API
-      const retryUrl = isPreviewMode
-        ? `/api/teachers/assignments/${studentAssignmentId}/preview/rearrangement-retry`
-        : `/api/students/assignments/${studentAssignmentId}/rearrangement-retry`;
-
-      await apiClient.post(retryUrl, {
-        content_item_id: currentQuestion.content_item_id,
+    // 🚀 重置狀態（本地操作，不需要 API）
+    setQuestionStates((prev) => {
+      const newStates = new Map(prev);
+      newStates.set(currentQuestion.content_item_id, {
+        selectedWords: [],
+        remainingWords: [...currentQuestion.shuffled_words],
+        errorCount: 0,
+        expectedScore: 100,
+        completed: false,
+        challengeFailed: false,
+        timeRemaining: currentQuestion.time_limit,
       });
+      return newStates;
+    });
 
-      // 重置狀態
-      setQuestionStates((prev) => {
-        const newStates = new Map(prev);
-        newStates.set(currentQuestion.content_item_id, {
-          selectedWords: [],
-          remainingWords: [...currentQuestion.shuffled_words],
-          errorCount: 0,
-          expectedScore: 100,
-          completed: false,
-          challengeFailed: false,
-          timeRemaining: currentQuestion.time_limit,
-        });
-        return newStates;
-      });
+    // 重新開始計時
+    startTimer(currentQuestion.content_item_id);
+    toast.info(t("rearrangement.messages.retryStarted"));
 
-      // 重新開始計時
-      startTimer(currentQuestion.content_item_id);
-      toast.info(t("rearrangement.messages.retryStarted"));
-    } catch (error) {
-      console.error("Failed to retry:", error);
-      toast.error(t("rearrangement.errors.retryFailed"));
-    } finally {
-      setSubmitting(false);
+    // 學生模式：通知後端重試（用於記錄 retry_count）
+    if (!isPreviewMode) {
+      try {
+        await apiClient.post(
+          `/api/students/assignments/${studentAssignmentId}/rearrangement-retry`,
+          {
+            content_item_id: currentQuestion.content_item_id,
+          },
+        );
+      } catch (error) {
+        console.error("Failed to record retry:", error);
+        // 不影響 UI，靜默失敗
+      }
     }
   };
 
@@ -708,7 +719,6 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                     size="sm"
                     onClick={() => playAudio(currentQuestion.audio_url!)}
                     disabled={
-                      submitting ||
                       currentState.completed ||
                       currentState.challengeFailed
                     }
@@ -820,7 +830,6 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                   variant="outline"
                   size="lg"
                   onClick={() => handleWordSelect(word)}
-                  disabled={submitting}
                   className="text-lg font-medium hover:bg-blue-50 hover:border-blue-400"
                 >
                   {word}
@@ -872,7 +881,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                   <p className="text-red-600 mb-4">
                     {t("rearrangement.messages.tryAgain")}
                   </p>
-                  <Button onClick={handleRetry} disabled={submitting}>
+                  <Button onClick={handleRetry}>
                     <RotateCcw className="h-4 w-4 mr-2" />
                     {t("rearrangement.buttons.retry")}
                   </Button>
@@ -880,6 +889,20 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
               )}
             </div>
           )}
+
+          {/* 顯示正確答案 - 只在 completed 且 showAnswer 啟用時顯示 */}
+          {currentState.completed &&
+            showAnswer &&
+            currentQuestion.original_text && (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-500 mb-2">
+                  {t("rearrangement.correctAnswer")}
+                </p>
+                <p className="text-lg font-medium text-gray-800">
+                  {currentQuestion.original_text}
+                </p>
+              </div>
+            )}
 
           {/* 下一題按鈕 */}
           {currentState.completed && (

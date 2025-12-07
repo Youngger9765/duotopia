@@ -43,6 +43,7 @@
     "expectedScore": "Expected Score",
     "errorsRemaining": "{{remaining}} chances remaining",
     "selectWordsHint": "Click the words below in order to form the correct sentence",
+    "correctAnswer": "Correct Answer",
     "jumpToQuestion": "Jump to question {{number}}",
     "scoreCategories": {
       "listening": "Listening",
@@ -52,6 +53,7 @@
     "messages": {
       "timeout": "Time's up! Question auto-submitted",
       "incorrect": "Incorrect! The correct word is \"{{correct}}\"",
+      "incorrectSimple": "Incorrect, please try again",
       "questionComplete": "Correct! You earned {{score}} points",
       "challengeFailed": "Too many errors, challenge failed",
       "correct": "Correct!",
@@ -1239,6 +1241,8 @@
         "default": "Default",
         "shuffleQuestions": "Shuffle Questions",
         "shuffleQuestionsDesc": "Randomize question order for each practice session",
+        "showAnswer": "Show Answer",
+        "showAnswerDesc": "Show correct answer after completing each question",
         "playAudio": "Play Audio",
         "playAudioYes": "Yes (Listening Practice)",
         "playAudioNo": "No (Writing Practice)",

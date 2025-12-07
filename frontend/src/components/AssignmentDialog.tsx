@@ -290,6 +290,7 @@ export function AssignmentDialog({
     practice_mode: "reading" as "reading" | "rearrangement", // 作答模式
     time_limit_per_question: 40 as 10 | 20 | 30 | 40, // 每題時間限制
     shuffle_questions: false, // 是否打亂順序
+    show_answer: false, // 答題結束後是否顯示正確答案（例句重組專用）
     play_audio: false, // 是否播放音檔（例句重組專用）
   });
 
@@ -310,6 +311,7 @@ export function AssignmentDialog({
         practice_mode: "reading", // 預設為例句朗讀模式
         time_limit_per_question: 40,
         shuffle_questions: false,
+        show_answer: false,
         play_audio: false,
       });
       setCurrentStep(1);
@@ -683,6 +685,7 @@ export function AssignmentDialog({
         practice_mode: formData.practice_mode,
         time_limit_per_question: formData.time_limit_per_question,
         shuffle_questions: formData.shuffle_questions,
+        show_answer: formData.show_answer,
         play_audio: formData.play_audio,
       };
 
@@ -750,6 +753,7 @@ export function AssignmentDialog({
       practice_mode: "reading",
       time_limit_per_question: 40,
       shuffle_questions: false,
+      show_answer: false,
       play_audio: false,
     });
     setCartItems([]);
@@ -1670,6 +1674,35 @@ export function AssignmentDialog({
                           </span>
                         </div>
                       </div>
+
+                      {/* 例句重組專用選項 - 顯示答案 */}
+                      {formData.practice_mode === "rearrangement" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-gray-600">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.showAnswer",
+                            )}
+                          </Label>
+                          <div className="flex items-center h-9">
+                            <input
+                              type="checkbox"
+                              checked={formData.show_answer}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  show_answer: e.target.checked,
+                                }))
+                              }
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="ml-2 text-sm text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.showAnswerDesc",
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* 例句重組專用選項 - 播放音檔 */}

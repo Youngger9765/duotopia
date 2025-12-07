@@ -426,6 +426,9 @@ class CreateAssignmentRequest(BaseModel):
     # 是否播放音檔（例句重組專用）
     play_audio: bool = False
 
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer: bool = False
+
 
 class UpdateAssignmentRequest(BaseModel):
     """更新作業請求（部分更新）"""
@@ -667,6 +670,7 @@ async def create_assignment(
             time_limit_per_question=request.time_limit_per_question,
             shuffle_questions=request.shuffle_questions,
             play_audio=request.play_audio,
+            show_answer=request.show_answer,
             score_category=score_category,
             is_active=True,
         )
