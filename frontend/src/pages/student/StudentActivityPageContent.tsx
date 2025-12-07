@@ -525,8 +525,112 @@ export default function StudentActivityPageContent({
           });
         }
 
-        console.log("✅ 錄音完成，可以播放或上傳");
+        console.log("✅ 錄音完成，開始上傳到 GCS");
         isReRecording.current = false;
+
+        // 🎯 Issue #75: 立即上傳到 GCS (不觸發自動分析)
+        if (
+          !isPreviewMode &&
+          currentActivity.items &&
+          currentActivity.items.length > 0
+        ) {
+          const contentItemId =
+            currentActivity.items[currentSubQuestionIndex]?.id;
+
+          if (contentItemId) {
+            console.log("🚀 開始上傳錄音到 GCS...");
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            const authToken = useStudentAuthStore.getState().token;
+
+            retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${authToken}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+
+                return await uploadResponse.json();
+              },
+              (attempt, error) => {
+                console.log(`上傳重試 (${attempt}):`, error);
+              },
+            )
+              .then((uploadResult) => {
+                console.log("✅ 上傳成功:", uploadResult.audio_url);
+
+                // 更新為 GCS URL
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === currentActivity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [...newActivities[activityIndex].items!];
+                    if (newItems[currentSubQuestionIndex]) {
+                      newItems[currentSubQuestionIndex] = {
+                        ...newItems[currentSubQuestionIndex],
+                        recording_url: uploadResult.audio_url,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+
+                // 更新 progressIds
+                setAnswers((prev) => {
+                  const newAnswers = new Map(prev);
+                  const answer = newAnswers.get(currentActivity.id);
+                  if (answer) {
+                    if (!answer.progressIds) answer.progressIds = [];
+                    while (
+                      answer.progressIds.length <= currentSubQuestionIndex
+                    ) {
+                      answer.progressIds.push(0);
+                    }
+                    answer.progressIds[currentSubQuestionIndex] =
+                      uploadResult.progress_id;
+                    answer.status = "completed";
+                  }
+                  newAnswers.set(currentActivity.id, answer!);
+                  return newAnswers;
+                });
+              })
+              .catch((error) => {
+                console.error("❌ 上傳失敗:", error);
+                toast.error("上傳錄音失敗", {
+                  description: "請檢查網路連接後重試",
+                });
+              });
+          }
+        }
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
@@ -790,7 +894,9 @@ export default function StudentActivityPageContent({
   const getItemKey = (activityId: number, itemIndex: number) =>
     `${activityId}-${itemIndex}`;
 
-  // 🎯 背景分析函數
+  // 🎯 Issue #75: 背景分析函數已停用 - 改用手動分析
+  // @ts-expect-error - Function disabled for Issue #75 manual analysis workflow
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const analyzeInBackground = useCallback(
     async (activityId: number, itemIndex: number) => {
       const itemKey = getItemKey(activityId, itemIndex);
@@ -1009,48 +1115,13 @@ export default function StudentActivityPageContent({
     [activities, answers, assignmentId, itemAnalysisStates],
   );
 
-  // 🎯 共用 helper function - 檢查並觸發背景分析
-  const checkAndTriggerBackgroundAnalysis = useCallback(
-    (activityId: number, itemIndex: number) => {
-      const activity = activities.find((a) => a.id === activityId);
-      if (!activity || !activity.items || !activity.items[itemIndex]) {
-        return;
-      }
-
-      const currentItem = activity.items[itemIndex];
-      const itemKey = getItemKey(activityId, itemIndex);
-      const hasRecording =
-        currentItem.recording_url && currentItem.recording_url !== "";
-      const currentState = itemAnalysisStates.get(itemKey);
-      const hasAiAssessment =
-        currentItem.ai_assessment ||
-        (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
-
-      // 只有在有錄音、未分析、且未在背景分析中時，才觸發背景分析
-      if (
-        hasRecording &&
-        !hasAiAssessment &&
-        currentState?.status !== "analyzing" &&
-        currentState?.status !== "analyzed" &&
-        !isPreviewMode // 預覽模式不執行分析
-      ) {
-        console.log(`🚀 Triggering background analysis for ${itemKey}`);
-        analyzeInBackground(activityId, itemIndex);
-      }
-    },
-    [activities, itemAnalysisStates, isPreviewMode, analyzeInBackground],
-  );
+  // 🎯 Issue #75: checkAndTriggerBackgroundAnalysis 已移除 - 不再自動分析
 
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
-    // 🎯 觸發背景分析（使用共用 helper）
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(
-        currentActivity.id,
-        currentSubQuestionIndex,
-      );
-
       // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex + 1);
@@ -1071,13 +1142,8 @@ export default function StudentActivityPageContent({
   const handlePreviousActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
-    // 🎯 觸發背景分析（使用共用 helper）
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(
-        currentActivity.id,
-        currentSubQuestionIndex,
-      );
-
       if (currentSubQuestionIndex > 0) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
         setRecordingTime(0);
@@ -1105,15 +1171,7 @@ export default function StudentActivityPageContent({
     index: number,
     subQuestionIndex: number = 0,
   ) => {
-    // 🎯 觸發背景分析（使用共用 helper）- 離開當前題目前
-    const currentActivity = activities[currentActivityIndex];
-    if (currentActivity.items && currentActivity.items.length > 0) {
-      checkAndTriggerBackgroundAnalysis(
-        currentActivity.id,
-        currentSubQuestionIndex,
-      );
-    }
-
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     setCurrentActivityIndex(index);
     setCurrentSubQuestionIndex(subQuestionIndex);
     setRecordingTime(0);
@@ -1675,14 +1733,10 @@ export default function StudentActivityPageContent({
                             onClick={() => {
                               if (isAnalyzing) return; // 🔒 分析中禁止切換
                               if (activityIndex !== currentActivityIndex) {
-                                // 切換 activity，handleActivitySelect 已處理背景分析
+                                // 切換 activity
                                 handleActivitySelect(activityIndex, itemIndex);
                               } else {
-                                // 🎯 同一 activity 內切換，需觸發背景分析
-                                checkAndTriggerBackgroundAnalysis(
-                                  activity.id,
-                                  currentSubQuestionIndex,
-                                );
+                                // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
                                 setCurrentSubQuestionIndex(itemIndex);
                               }
                             }}
@@ -2004,7 +2058,8 @@ export default function StudentActivityPageContent({
               />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {t("studentActivityPage.messages.submittingAssignment") || "正在提交作業..."}
+              {t("studentActivityPage.messages.submittingAssignment") ||
+                "正在提交作業..."}
             </h3>
             <p className="text-gray-600 mb-4">
               {t("studentActivityPage.messages.pleaseWait") || "請稍候"}

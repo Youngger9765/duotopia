@@ -134,7 +134,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
       }
 
-      window.MediaRecorder = MockMediaRecorder as unknown as typeof MediaRecorder;
+      window.MediaRecorder =
+        MockMediaRecorder as unknown as typeof MediaRecorder;
 
       Object.defineProperty(navigator, "mediaDevices", {
         value: {
@@ -159,7 +160,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
         return Promise.resolve({
           ok: true,
-          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+          blob: () =>
+            Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
         });
       });
 
@@ -263,7 +265,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
         return Promise.resolve({
           ok: true,
-          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+          blob: () =>
+            Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
         });
       });
 
@@ -408,7 +411,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
         return Promise.resolve({
           ok: true,
-          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+          blob: () =>
+            Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
         });
       });
 
@@ -466,16 +470,22 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
       const user = userEvent.setup();
 
       // Mock slow upload
-      let uploadResolve: ((value: { ok: boolean; json: () => Promise<unknown> }) => void) | null = null;
+      let uploadResolve:
+        | ((value: { ok: boolean; json: () => Promise<unknown> }) => void)
+        | null = null;
       (global.fetch as Mock).mockImplementation((url: string) => {
         if (url.includes("upload-recording")) {
           return new Promise((resolve) => {
-            uploadResolve = resolve as (value: { ok: boolean; json: () => Promise<unknown> }) => void;
+            uploadResolve = resolve as (value: {
+              ok: boolean;
+              json: () => Promise<unknown>;
+            }) => void;
           });
         }
         return Promise.resolve({
           ok: true,
-          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+          blob: () =>
+            Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
         });
       });
 
@@ -527,7 +537,12 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
 
       // Upload should continue
       if (uploadResolve) {
-        (uploadResolve as (value: { ok: boolean; json: () => Promise<unknown> }) => void)({
+        (
+          uploadResolve as (value: {
+            ok: boolean;
+            json: () => Promise<unknown>;
+          }) => void
+        )({
           ok: true,
           json: () =>
             Promise.resolve({
@@ -908,7 +923,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
       }
 
-      window.MediaRecorder = MockMediaRecorder as unknown as typeof MediaRecorder;
+      window.MediaRecorder =
+        MockMediaRecorder as unknown as typeof MediaRecorder;
 
       Object.defineProperty(navigator, "mediaDevices", {
         value: {
@@ -934,7 +950,8 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
         }
         return Promise.resolve({
           ok: true,
-          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+          blob: () =>
+            Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
         });
       });
 
@@ -1062,9 +1079,9 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
       // AI scores should be cleared
       await waitFor(() => {
         const newBodyText = document.body.textContent || "";
-        expect(
-          newBodyText.includes("85") || newBodyText.includes("90"),
-        ).toBe(false);
+        expect(newBodyText.includes("85") || newBodyText.includes("90")).toBe(
+          false,
+        );
       });
     });
   });
