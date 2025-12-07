@@ -459,6 +459,7 @@ jobs:
                 --restart unless-stopped \
                 --network=host \
                 -v /tmp/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /etc/ssl/duotopia:/etc/ssl/duotopia:ro \
                 nginx:alpine
 
               echo '✅ Nginx reverse proxy started'
