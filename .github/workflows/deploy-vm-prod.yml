@@ -443,6 +443,19 @@ jobs:
             sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
             echo '✅ Firewall configured'
 
+            echo '🔒 Generating self-signed SSL certificate...'
+            sudo mkdir -p /etc/ssl/duotopia
+            if [ ! -f /etc/ssl/duotopia/server.crt ] || [ ! -f /etc/ssl/duotopia/server.key ]; then
+              sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout /etc/ssl/duotopia/server.key \
+                -out /etc/ssl/duotopia/server.crt \
+                -subj '/C=TW/ST=Taipei/L=Taipei/O=Duotopia/OU=IT/CN=duotopia.co/emailAddress=admin@duotopia.co' \
+                -addext 'subjectAltName=DNS:duotopia.co,DNS:www.duotopia.co,IP:34.81.38.211'
+              echo '✅ New SSL certificate generated'
+            else
+              echo '✅ SSL certificate already exists'
+            fi
+
             # Deploy backend if needed
             if [[ '$DEPLOY_COMPONENT' == 'backend' || '$DEPLOY_COMPONENT' == 'both' ]]; then
               echo '📥 Pulling backend image...'
