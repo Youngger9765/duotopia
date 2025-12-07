@@ -16,6 +16,8 @@ import {
   Languages,
   X,
   Upload,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { retryAIAnalysis, retryAudioUpload } from "@/utils/retryHelper";
 
@@ -80,6 +82,19 @@ interface AssessmentResult {
   error_type?: string;
 }
 
+type ItemAnalysisStatus =
+  | "not_recorded"
+  | "recorded"
+  | "analyzing"
+  | "analyzed"
+  | "failed";
+
+interface ItemAnalysisState {
+  status: ItemAnalysisStatus;
+  error?: string;
+  retryCount?: number;
+}
+
 interface GroupedQuestionsTemplateProps {
   items: Question[];
   // answers?: string[]; // 目前未使用
@@ -98,6 +113,7 @@ interface GroupedQuestionsTemplateProps {
   assignmentId?: string; // 作業 ID，用於上傳錄音
   isPreviewMode?: boolean; // 預覽模式（老師端預覽）
   authToken?: string; // 認證 token（預覽模式用 teacher token）
+  itemAnalysisState?: ItemAnalysisState; // 🎯 當前項目的分析狀態
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
   onAssessmentComplete?: (
     index: number,
@@ -125,6 +141,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   assignmentId,
   isPreviewMode = false, // 預覽模式
   authToken, // 認證 token
+  itemAnalysisState, // 🎯 當前項目的分析狀態
   onUploadSuccess,
   onAssessmentComplete,
   onAnalyzingStateChange, // 🔒 分析狀態變化回調
@@ -1102,15 +1119,41 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   ref={uploadButtonRef}
                   size="lg"
                   onClick={handleAssessment}
-                  disabled={isAssessing}
-                  className="relative bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all"
+                  disabled={
+                    isAssessing || itemAnalysisState?.status === "analyzing"
+                  }
+                  className={`relative h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl transition-all ${
+                    itemAnalysisState?.status === "analyzing"
+                      ? "bg-gradient-to-r from-purple-600 to-purple-700 cursor-not-allowed opacity-70"
+                      : itemAnalysisState?.status === "analyzed"
+                        ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 cursor-not-allowed"
+                        : itemAnalysisState?.status === "failed"
+                          ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:shadow-red-500/50"
+                          : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:shadow-purple-500/50"
+                  }`}
                   style={{
-                    animation: isAssessing
-                      ? "none"
-                      : "pulse-scale 1.5s ease-in-out infinite",
+                    animation:
+                      isAssessing || itemAnalysisState?.status === "analyzing"
+                        ? "none"
+                        : "pulse-scale 1.5s ease-in-out infinite",
                   }}
                 >
-                  {isAssessing ? (
+                  {itemAnalysisState?.status === "analyzing" ? (
+                    <>
+                      <Loader2 className="w-7 h-7 mr-3 animate-spin" />
+                      {t("groupedQuestionsTemplate.labels.analyzing")}
+                    </>
+                  ) : itemAnalysisState?.status === "analyzed" ? (
+                    <>
+                      <CheckCircle2 className="w-7 h-7 mr-3" />
+                      {t("groupedQuestionsTemplate.labels.analyzed")}
+                    </>
+                  ) : itemAnalysisState?.status === "failed" ? (
+                    <>
+                      <XCircle className="w-7 h-7 mr-3" />
+                      {t("groupedQuestionsTemplate.labels.analysisFailed")}
+                    </>
+                  ) : isAssessing ? (
                     <>
                       <Loader2 className="w-7 h-7 mr-3 animate-spin" />
                       {t("groupedQuestionsTemplate.labels.analyzing")}

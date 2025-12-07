@@ -638,6 +638,7 @@
     "messages": {
       "noActivities": "此作業尚無題目",
       "submitSuccess": "作業提交成功！",
+      "submittingWithPending": "作業已提交！還有 {{count}} 題正在背景分析中，請稍後查看完整結果。",
       "analyzingRecording": "正在分析錄音",
       "batchAnalyzing": "正在分析第 {{current}}/{{total}} 題",
       "pleaseWait": "請稍候...",
@@ -666,6 +667,7 @@
       "title": "尚未完成的項目",
       "incompleteItems": "以下項目尚未錄音，請先完成後再提交：",
       "notRecorded": "（未錄音）",
+      "notUploaded": "（尚未完成上傳）",
       "notAnalyzed": "（未分析）",
       "itemNumber": "第 {{number}} 題"
     },
@@ -3278,7 +3280,9 @@
       "passed": "通過",
       "notPassed": "未通過",
       "uploadAndAnalyze": "上傳並分析",
-      "analyzing": "上傳並分析中",
+      "analyzing": "分析中...",
+      "analyzed": "已分析",
+      "analysisFailed": "分析失敗（點擊重試）",
       "aiAnalyzing": "AI 正在分析中...",
       "pleaseWait": "請稍候片刻",
       "clickToAssess": "點擊上方按鈕開始評估",

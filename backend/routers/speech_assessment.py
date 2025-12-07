@@ -88,6 +88,14 @@ class AssessmentResponse(BaseModel):
     created_at: Optional[datetime] = None
 
 
+# Commented out - no longer using Cloud Tasks for background analysis
+# class AssessAsyncRequest(BaseModel):
+#     """非同步發音評估請求 schema (Cloud Tasks)"""
+#     progress_id: int
+#     audio_url: str
+#     reference_text: str
+
+
 def convert_audio_to_wav(audio_data: bytes, content_type: str) -> bytes:
     """
     將音檔轉換為 WAV 格式（16000Hz, 16bit, mono）
@@ -1045,3 +1053,19 @@ async def test_thread_pool_concurrent():
         "elapsed_seconds": round(elapsed, 2),
         "thread_pool": {"max_workers": 20, "type": "speech_pool"},
     }
+
+
+# Commented out - no longer using Cloud Tasks for background analysis
+# This endpoint can be re-enabled later for teacher-triggered batch analysis
+# @router.post("/assess-async")
+# async def assess_async(
+#     request: AssessAsyncRequest,
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     非同步發音評估端點 (Cloud Task 呼叫)
+#
+#     此端點由 Cloud Tasks 呼叫，不需要認證 token，因為是內部服務呼叫。
+#     如果需要加強安全性，可以檢查請求來源 IP 或使用服務帳號認證。
+#     """
+#     pass
