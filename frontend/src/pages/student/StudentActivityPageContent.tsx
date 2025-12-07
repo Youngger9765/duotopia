@@ -163,10 +163,10 @@ export default function StudentActivityPageContent({
   const [currentSubQuestionIndex, setCurrentSubQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [saving] = useState(false);
-  const [submitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState<string[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false); // 🔒 錄音分析中狀態
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // 🔒 GroupedQuestionsTemplate 錄音分析中狀態
 
   // 🎯 背景分析狀態管理
   type ItemAnalysisStatus =
@@ -1120,6 +1120,15 @@ export default function StudentActivityPageContent({
     recordingTimeRef.current = 0;
   };
 
+  /**
+   * Issue #75: 提交邏輯說明
+   *
+   * 當學生點擊「提交」時：
+   * 1. 只檢查所有題目是否有錄音檔案
+   * 2. 直接上傳所有錄音檔案並標記作業為已提交
+   * 3. 不等待 AI 分析完成，也不觸發分析
+   * 4. 背景分析可以繼續執行（不影響提交）
+   */
   const handleSubmit = async (e?: React.MouseEvent, force = false) => {
     if (e) {
       e.preventDefault();
@@ -1200,17 +1209,17 @@ export default function StudentActivityPageContent({
     // 🎯 立即提交（只上傳音檔，不執行分析）
     if (onSubmit) {
       try {
-        setIsAnalyzing(true);
+        setSubmitting(true);
         await onSubmit({
           answers: [], // Will be filled by parent component
         });
-        setIsAnalyzing(false);
+        setSubmitting(false);
 
         toast.success(
           t("studentActivityPage.messages.submitSuccess") || "提交成功！",
         );
       } catch (error) {
-        setIsAnalyzing(false);
+        setSubmitting(false);
         console.error("Submission error:", error);
         const errorMessage =
           error instanceof Error ? error.message : "提交失敗";
@@ -1823,7 +1832,7 @@ export default function StudentActivityPageContent({
                           variant="default"
                           size="sm"
                           onClick={handleSubmit}
-                          disabled={isAnalyzing || submitting} // 🔒 分析中禁用
+                          disabled={submitting} // 🔒 提交中禁用
                           className="flex-1 sm:flex-none min-w-0"
                         >
                           <span className="hidden sm:inline">
@@ -1954,7 +1963,7 @@ export default function StudentActivityPageContent({
         </DialogContent>
       </Dialog>
 
-      {/* 🔒 全屏分析遮罩 */}
+      {/* 🔒 全屏分析遮罩 (GroupedQuestionsTemplate 使用) */}
       {isAnalyzing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
@@ -1977,6 +1986,31 @@ export default function StudentActivityPageContent({
             </p>
             <p className="text-sm text-gray-500">
               {t("studentActivityPage.messages.doNotLeave")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🔒 提交中遮罩 */}
+      {submitting && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full bg-blue-100 animate-ping opacity-75"></div>
+              <div className="absolute inset-2 rounded-full bg-blue-200 animate-pulse"></div>
+              <Loader2
+                className="w-24 h-24 absolute inset-0 animate-spin text-blue-600"
+                style={{ animationDuration: "1.5s" }}
+              />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {t("studentActivityPage.messages.submittingAssignment") || "正在提交作業..."}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {t("studentActivityPage.messages.pleaseWait") || "請稍候"}
+            </p>
+            <p className="text-sm text-gray-500">
+              {t("studentActivityPage.messages.doNotLeave") || "請勿離開此頁面"}
             </p>
           </div>
         </div>
