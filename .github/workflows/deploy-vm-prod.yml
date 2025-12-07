@@ -251,8 +251,8 @@ jobs:
           --command="
             set -e  # Exit on error
 
-            echo '🔐 Authenticating Docker to Artifact Registry...'
-            gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
+            echo '🔐 Configuring Docker for Artifact Registry...'
+            docker-credential-gcr configure-docker --registries=asia-east1-docker.pkg.dev
 
             echo '📥 Pulling latest Docker image...'
             docker pull $ARTIFACT_REGISTRY/$IMAGE_NAME:$GITHUB_SHA
