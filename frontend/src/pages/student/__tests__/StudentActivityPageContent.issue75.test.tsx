@@ -817,4 +817,255 @@ describe("Issue #75: Manual Analysis Workflow (TDD)", () => {
       });
     });
   });
+
+  describe("Feature 6: Edge Case - Delete and Re-record", () => {
+    test("🔴 SHOULD clear recording state when Delete button is clicked", async () => {
+      const user = userEvent.setup();
+
+      const mockActivities = [
+        {
+          id: 1,
+          content_id: 1,
+          order: 1,
+          type: "grouped_questions",
+          title: "Test",
+          content: "Test",
+          target_text: "Test",
+          duration: 300,
+          points: 10,
+          status: "IN_PROGRESS",
+          score: null,
+          completed_at: null,
+          items: [
+            {
+              id: 101,
+              text: "Item 1",
+              recording_url: "https://storage.googleapis.com/test-v1.webm", // Has recording
+              ai_assessment: {
+                accuracy_score: 85,
+                fluency_score: 90,
+              },
+            },
+          ],
+        },
+      ];
+
+      render(
+        <StudentActivityPageContent
+          activities={mockActivities}
+          assignmentTitle="Test"
+          assignmentId={1}
+        />,
+      );
+
+      // Should show Delete button (AI results rendered)
+      const deleteButton = await screen.findByTitle(/delete|清除/i);
+      expect(deleteButton).toBeTruthy();
+
+      // Click Delete button
+      await user.click(deleteButton);
+
+      // Recording should be cleared
+      await waitFor(() => {
+        expect(screen.queryByTitle(/delete|清除/i)).not.toBeInTheDocument();
+      });
+
+      // Should show record button again (no recording)
+      const recordButtons = screen.getAllByRole("button");
+      const hasMicButton = recordButtons.some(
+        (btn) =>
+          btn.innerHTML.includes("Mic") || btn.innerHTML.includes("錄音"),
+      );
+      expect(hasMicButton).toBe(true);
+    });
+
+    test("🔴 SHOULD upload new file after delete (backend deletes old file)", async () => {
+      const user = userEvent.setup();
+
+      // Track upload calls
+      const uploadCalls: string[] = [];
+
+      // Mock MediaRecorder
+      class MockMediaRecorder {
+        state = "inactive";
+        mimeType = "audio/webm";
+        ondataavailable: ((e: { data: Blob }) => void) | null = null;
+        onstop: (() => void) | null = null;
+
+        start() {
+          this.state = "recording";
+          setTimeout(() => {
+            const blob = new Blob(["audio data"], { type: "audio/webm" });
+            this.ondataavailable?.({ data: blob });
+          }, 100);
+        }
+
+        stop() {
+          this.state = "inactive";
+          setTimeout(() => {
+            this.onstop?.();
+          }, 500);
+        }
+      }
+
+      window.MediaRecorder = MockMediaRecorder as unknown as typeof MediaRecorder;
+
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: {
+          getUserMedia: vi.fn().mockResolvedValue({
+            getTracks: () => [{ stop: () => {} }],
+          }),
+        },
+        writable: true,
+      });
+
+      // Mock fetch for upload
+      (global.fetch as Mock).mockImplementation((url: string) => {
+        if (url.includes("upload-recording")) {
+          uploadCalls.push(`upload-${uploadCalls.length + 1}`);
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                audio_url: `https://storage.googleapis.com/test-v${uploadCalls.length}.webm`,
+                progress_id: 1000 + uploadCalls.length,
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          blob: () => Promise.resolve(new Blob(["audio"], { type: "audio/webm" })),
+        });
+      });
+
+      const mockActivities = [
+        {
+          id: 1,
+          content_id: 1,
+          order: 1,
+          type: "grouped_questions",
+          title: "Test",
+          content: "Test",
+          target_text: "Test",
+          duration: 300,
+          points: 10,
+          status: "IN_PROGRESS",
+          score: null,
+          completed_at: null,
+          items: [
+            {
+              id: 101,
+              text: "Item 1",
+              recording_url: "https://storage.googleapis.com/test-v1.webm", // Old recording
+              ai_assessment: {
+                accuracy_score: 85,
+              },
+            },
+          ],
+        },
+      ];
+
+      render(
+        <StudentActivityPageContent
+          activities={mockActivities}
+          assignmentTitle="Test"
+          assignmentId={1}
+        />,
+      );
+
+      // Delete old recording
+      const deleteButton = await screen.findByTitle(/delete|清除/i);
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.queryByTitle(/delete|清除/i)).not.toBeInTheDocument();
+      });
+
+      // Re-record
+      const recordButton = screen.getAllByRole("button")[0];
+      await user.click(recordButton);
+
+      await waitFor(
+        () => {
+          const stopButton = screen.queryByText(/stopping/i);
+          expect(stopButton).toBeTruthy();
+        },
+        { timeout: 2000 },
+      );
+
+      const stopButton = screen.getByText(/stopping/i);
+      await user.click(stopButton);
+
+      // New file uploaded (backend deletes old file automatically)
+      await waitFor(
+        () => {
+          expect(uploadCalls.length).toBe(1); // Second upload (first was initial state)
+        },
+        { timeout: 2000 },
+      );
+
+      // Backend would have deleted test-v1.webm and saved test-v2.webm
+      // We verify the upload call was made (backend handles deletion)
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("upload-recording"),
+        expect.anything(),
+      );
+    });
+
+    test("🔴 SHOULD clear AI scores when re-recording", async () => {
+      const user = userEvent.setup();
+
+      const mockActivities = [
+        {
+          id: 1,
+          content_id: 1,
+          order: 1,
+          type: "grouped_questions",
+          title: "Test",
+          content: "Test",
+          target_text: "Test",
+          duration: 300,
+          points: 10,
+          status: "IN_PROGRESS",
+          score: null,
+          completed_at: null,
+          items: [
+            {
+              id: 101,
+              text: "Item 1",
+              recording_url: "https://storage.googleapis.com/test-v1.webm",
+              ai_assessment: {
+                accuracy_score: 85,
+                fluency_score: 90,
+              },
+            },
+          ],
+        },
+      ];
+
+      render(
+        <StudentActivityPageContent
+          activities={mockActivities}
+          assignmentTitle="Test"
+          assignmentId={1}
+        />,
+      );
+
+      // Has AI scores initially
+      const bodyText = document.body.textContent || "";
+      expect(bodyText.includes("85") || bodyText.includes("90")).toBe(true);
+
+      // Delete recording
+      const deleteButton = await screen.findByTitle(/delete|清除/i);
+      await user.click(deleteButton);
+
+      // AI scores should be cleared
+      await waitFor(() => {
+        const newBodyText = document.body.textContent || "";
+        expect(
+          newBodyText.includes("85") || newBodyText.includes("90"),
+        ).toBe(false);
+      });
+    });
+  });
 });

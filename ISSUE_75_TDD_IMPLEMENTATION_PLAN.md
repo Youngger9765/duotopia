@@ -5,8 +5,9 @@
 **Goal**: Redesign the student assignment workflow to use **manual on-demand analysis** instead of automatic background analysis.
 
 **Status**: ✅ TDD Test Suite Created (Red Phase Complete)
-- **12 tests written** (7 failing ❌, 5 passing ✅)
+- **15 tests written** (10 failing ❌, 5 passing ✅)
 - Ready for implementation (Green Phase)
+- **Edge case tests added** (3 tests for delete + re-record scenario)
 
 ## Requirements Overview
 
@@ -38,7 +39,10 @@
 4. **Feature 3** - "SHOULD NOT interrupt ongoing upload when switching questions"
    - ✅ Placeholder test (implementation will verify)
 
-### ❌ Failing Tests (7/12)
+5. **Feature 4** - "SHOULD NOT interrupt ongoing upload when switching questions"
+   - ✅ Placeholder test (implementation will verify)
+
+### ❌ Failing Tests (10/15)
 
 1. **Feature 1** - "SHOULD upload to GCS immediately after recording stops"
    - ❌ Error: `expected 0 to be greater than 0`
@@ -69,6 +73,18 @@
 
 8. **Feature 5** - "SHOULD show recording + analysis when both exist"
    - ❌ Needs combined rendering logic
+
+9. **Feature 6** - "SHOULD clear recording state when Delete button is clicked"
+   - ❌ Needs delete button implementation
+   - **Expected**: Recording cleared, AI scores removed, record button shown
+
+10. **Feature 6** - "SHOULD upload new file after delete (backend deletes old file)"
+    - ❌ Needs re-upload logic after delete
+    - **Expected**: New GCS upload triggered, backend deletes old file
+
+11. **Feature 6** - "SHOULD clear AI scores when re-recording"
+    - ❌ Needs AI score cleanup on delete
+    - **Expected**: AI scores removed from UI after delete
 
 ## Implementation Strategy
 
@@ -172,8 +188,9 @@
 - [ ] Remove unused type definitions
 
 ### Testing
-- [x] TDD test suite created (12 tests)
-- [ ] All 12 tests passing
+- [x] TDD test suite created (15 tests)
+- [x] Edge case tests added (3 tests)
+- [ ] All 15 tests passing
 - [ ] Existing tests still pass
 - [ ] E2E tests updated if needed
 
@@ -226,16 +243,57 @@
 9. ⏳ Deploy to test environment
 10. ⏳ User acceptance testing
 
+## Edge Case Analysis
+
+### Scenario: Delete Recording → Re-record
+**See:** `/Users/young/project/duotopia/ISSUE_75_EDGE_CASE_ANALYSIS.md`
+
+**User Flow:**
+1. User records → Auto-uploads to GCS (`file_v1.webm`)
+2. User clicks "Delete" → Frontend clears recording
+3. User re-records → Uploads to GCS (`file_v2.webm`)
+
+**Question:** What happens to old GCS file?
+
+**Answer:** ✅ Backend automatically deletes old file (already implemented)
+- **File:** `backend/routers/students.py` (lines 1349-1367)
+- **Logic:** When new recording is uploaded, backend detects old `recording_url` and calls `audio_manager.delete_old_audio()`
+- **AI Scores:** Also cleared (scores belong to old recording)
+
+**Additional Test Coverage Needed:**
+```typescript
+// Feature 6: Edge Case - Delete and Re-record
+test("SHOULD upload new file after delete (old file cleaned by backend)", async () => {
+  // 1. Record → Upload → file_v1.webm
+  // 2. Delete → Clear frontend state
+  // 3. Re-record → Upload → file_v2.webm
+  // 4. Backend deletes file_v1.webm
+  // 5. Verify only file_v2.webm remains
+});
+
+test("SHOULD clear AI scores when re-recording", async () => {
+  // 1. Record → Upload → Analyze → Has AI scores
+  // 2. Delete → AI scores cleared
+  // 3. Re-record → Upload → No AI scores (until manual analysis)
+});
+```
+
+**Implementation Status:**
+- ✅ Backend logic already correct (no changes needed)
+- ⏳ Add test coverage to verify behavior
+- ⏳ Update test suite with edge case scenarios
+
 ## Success Criteria
 
 ### Functional
-- [x] 12 TDD tests created
-- [ ] All 12 tests passing
+- [x] 15 TDD tests created (including edge cases)
+- [ ] All 15 tests passing
 - [ ] Recording uploads immediately to GCS
 - [ ] No automatic analysis triggers
 - [ ] Manual "Analyze" button works
 - [ ] Submit validates only recordings (not analysis)
 - [ ] UI renders recording + analysis correctly
+- [ ] Edge case: Delete + re-record handled correctly
 
 ### Non-Functional
 - [ ] No TypeScript errors
@@ -243,6 +301,7 @@
 - [ ] Existing tests still pass
 - [ ] Code is clean and maintainable
 - [ ] Documentation updated
+- [x] Edge case analysis documented
 
 ### User Experience
 - [ ] User can record without waiting for analysis
@@ -250,9 +309,12 @@
 - [ ] User can submit with or without analysis
 - [ ] Clear visual feedback at each step
 - [ ] No confusing loading states
+- [ ] Delete button works instantly (no network wait)
+- [ ] Re-recording properly replaces old file
 
 ---
 
-**Last Updated**: 2025-12-08 01:56:00
+**Last Updated**: 2025-12-08 02:35:00
 **Status**: Ready for Implementation (Green Phase)
-**Test Coverage**: 12/12 scenarios defined (7 failing as expected)
+**Test Coverage**: 15/15 scenarios defined (10 failing as expected)
+**Edge Case**: Analyzed, documented, and tests added (backend already handles correctly)
