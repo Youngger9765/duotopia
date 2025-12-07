@@ -559,7 +559,7 @@ jobs:
         if [[ "$DEPLOY_COMPONENT" == "frontend" || "$DEPLOY_COMPONENT" == "both" ]]; then
           echo "🔍 Checking frontend health..."
           for i in {1..10}; do
-            if curl -fkL "https://$VM_IP/" --max-time 10 | grep -q "<!DOCTYPE html>"; then
+            if curl -fkL "https://$VM_IP/" --max-time 10 | grep -iq "<!doctype html>"; then
               echo "✅ Frontend health check passed!"
               break
             else
