@@ -167,7 +167,8 @@ jobs:
       run: |
         cat > backend.env <<EOF
         # Database Configuration (Production)
-        DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}
+        # Use pooler URL for VM to avoid IPv6 connectivity issues
+        DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
         DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
         DATABASE_TYPE=supabase
         PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
