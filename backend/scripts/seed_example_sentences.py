@@ -26,14 +26,14 @@ sys.path.insert(0, str(backend_dir))
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from database import Base  # noqa: F401, E402
-from models import (
+from models import (  # noqa: E402
     Program,
     Lesson,
     Content,
     ContentItem,
     ContentType,
     ProgramLevel,
-)  # noqa: E402
+)
 from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()

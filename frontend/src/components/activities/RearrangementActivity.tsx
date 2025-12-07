@@ -269,7 +269,10 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     } else {
       // 有作答 → 預期分數 - 未答數 × 每字分數，有保底分
       const unansweredPenalty = unansweredWords * pointsPerWord;
-      const calculatedScore = Math.max(0, currentExpectedScore - unansweredPenalty);
+      const calculatedScore = Math.max(
+        0,
+        currentExpectedScore - unansweredPenalty,
+      );
       actualScore = Math.max(calculatedScore, pointsPerWord); // ✅ 套用保底分
     }
 
@@ -719,8 +722,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
                     size="sm"
                     onClick={() => playAudio(currentQuestion.audio_url!)}
                     disabled={
-                      currentState.completed ||
-                      currentState.challengeFailed
+                      currentState.completed || currentState.challengeFailed
                     }
                     title={
                       currentState.completed || currentState.challengeFailed
