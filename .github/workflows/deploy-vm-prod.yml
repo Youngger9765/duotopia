@@ -368,6 +368,14 @@ jobs:
             echo '🔐 Configuring Docker for Artifact Registry...'
             docker-credential-gcr configure-docker --registries=asia-east1-docker.pkg.dev
 
+            echo '🔥 Configuring iptables firewall...'
+            sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+            sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+            sudo iptables -C INPUT -p tcp --dport 8080 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 8080 -j ACCEPT
+            sudo mkdir -p /etc/iptables
+            sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
+            echo '✅ Firewall configured'
+
             # Deploy backend if needed
             if [[ '$DEPLOY_COMPONENT' == 'backend' || '$DEPLOY_COMPONENT' == 'both' ]]; then
               echo '📥 Pulling backend image...'
