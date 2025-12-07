@@ -2,17 +2,29 @@ name: Deploy to VM (Production)
 
 # 🎯 Purpose: Deploy frontend, backend, or both to GCP e2-small VM (duotopia-prod-vm)
 # 🏗️ Architecture: Nginx reverse proxy + Frontend container + Backend container
-# 💡 This workflow runs independently from Cloud Run deployment for A/B testing
-# 🔒 Requires manual trigger with confirmation to prevent accidental deployments
+# 💡 NEW STRATEGY: Auto-deploy to VM on main branch push (production)
+# 🚀 Trigger: Automatic on push to main branch
 # 💰 Cost: ~$16/month (vs $240/month for Cloud Run) = 93% savings
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  # Automatic deployment on push to main branch
+  push:
+    branches:
+      - main
+    paths:
+      # Trigger on backend or frontend changes
+      - 'backend/**'
+      - 'frontend/**'
+      - 'deployment/vm/**'
+      - '.github/workflows/deploy-vm-prod.yml'
+      # Exclude documentation and tests
+      - '!**/*.md'
+      - '!backend/tests/**'
+      - '!frontend/tests/**'
+
+  # Manual trigger for emergencies or partial deployments
+  workflow_dispatch:
     inputs:
-      confirmation:
-        description: 'Type "deploy-to-vm" to confirm production deployment'
-        required: true
-        type: string
       deploy_component:
         description: 'Component to deploy (frontend, backend, or both)'
         required: true
@@ -47,28 +59,47 @@ env:
   ARTIFACT_REGISTRY: asia-east1-docker.pkg.dev/duotopia-472708/duotopia-repo
 
 jobs:
-  # ✅ Safety check: Verify confirmation input
-  verify-confirmation:
-    name: 🔒 Verify Deployment Confirmation
+  # 🎯 Determine deployment component
+  determine-component:
+    name: 🎯 Determine Component to Deploy
     runs-on: ubuntu-latest
+    outputs:
+      component: ${{ steps.component.outputs.value }}
+      deploy_backend: ${{ steps.component.outputs.backend }}
+      deploy_frontend: ${{ steps.component.outputs.frontend }}
     steps:
-    - name: Check confirmation input
+    - name: Determine what to deploy
+      id: component
       run: |
-        if [[ "${{ github.event.inputs.confirmation }}" != "deploy-to-vm" ]]; then
-          echo "❌ ERROR: Incorrect confirmation input"
-          echo "Expected: deploy-to-vm"
-          echo "Received: ${{ github.event.inputs.confirmation }}"
-          exit 1
+        # If manual trigger, use input; otherwise deploy both
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          COMPONENT="${{ github.event.inputs.deploy_component }}"
+        else
+          COMPONENT="both"
         fi
-        echo "✅ Confirmation verified"
-        echo "📦 Deploying: ${{ github.event.inputs.deploy_component }}"
+
+        echo "value=$COMPONENT" >> $GITHUB_OUTPUT
+
+        if [[ "$COMPONENT" == "backend" || "$COMPONENT" == "both" ]]; then
+          echo "backend=true" >> $GITHUB_OUTPUT
+        else
+          echo "backend=false" >> $GITHUB_OUTPUT
+        fi
+
+        if [[ "$COMPONENT" == "frontend" || "$COMPONENT" == "both" ]]; then
+          echo "frontend=true" >> $GITHUB_OUTPUT
+        else
+          echo "frontend=false" >> $GITHUB_OUTPUT
+        fi
+
+        echo "📦 Deploying: $COMPONENT"
 
   # 🧪 Test backend before deployment
   test-backend:
     name: 🧪 Test Backend
-    needs: verify-confirmation
+    needs: determine-component
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.deploy_component == 'backend' || github.event.inputs.deploy_component == 'both' }}
+    if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -112,9 +143,9 @@ jobs:
   # 🧪 Test frontend before deployment
   test-frontend:
     name: 🧪 Test Frontend
-    needs: verify-confirmation
+    needs: determine-component
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.deploy_component == 'frontend' || github.event.inputs.deploy_component == 'both' }}
+    if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -147,9 +178,9 @@ jobs:
   # 🐳 Build and push backend Docker image
   build-backend:
     name: 🐳 Build & Push Backend Image
-    needs: test-backend
+    needs: [determine-component, test-backend]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.deploy_component == 'backend' || github.event.inputs.deploy_component == 'both' }}
+    if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -194,9 +225,9 @@ jobs:
   # 🐳 Build and push frontend Docker image
   build-frontend:
     name: 🐳 Build & Push Frontend Image
-    needs: test-frontend
+    needs: [determine-component, test-frontend]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.deploy_component == 'frontend' || github.event.inputs.deploy_component == 'both' }}
+    if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
     steps:
     - uses: actions/checkout@v4
 
@@ -245,7 +276,7 @@ jobs:
   # 🚀 Deploy to VM
   deploy-to-vm:
     name: 🚀 Deploy to VM
-    needs: [build-backend, build-frontend]
+    needs: [determine-component, build-backend, build-frontend]
     if: |
       always() &&
       (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
@@ -344,7 +375,7 @@ jobs:
           --strict-host-key-checking=no
 
         # Upload nginx configuration (only if deploying both components)
-        if [[ "${{ github.event.inputs.deploy_component }}" == "both" ]]; then
+        if [[ "${{ needs.determine-component.outputs.component }}" == "both" ]]; then
           gcloud compute scp deployment/vm/nginx.conf $VM_USER@$VM_NAME:/tmp/nginx.conf \
             --zone=$ZONE \
             --strict-host-key-checking=no
@@ -357,7 +388,7 @@ jobs:
       run: |
         echo "🚀 Deploying to VM: $VM_NAME"
 
-        DEPLOY_COMPONENT="${{ github.event.inputs.deploy_component }}"
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
 
         gcloud compute ssh $VM_USER@$VM_NAME \
           --zone=$ZONE \
@@ -454,7 +485,7 @@ jobs:
         # Wait for containers to be ready
         sleep 15
 
-        DEPLOY_COMPONENT="${{ github.event.inputs.deploy_component }}"
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
 
         # Check backend health
         if [[ "$DEPLOY_COMPONENT" == "backend" || "$DEPLOY_COMPONENT" == "both" ]]; then
@@ -499,7 +530,7 @@ jobs:
           --zone=$ZONE \
           --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
 
-        DEPLOY_COMPONENT="${{ github.event.inputs.deploy_component }}"
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
 
         echo "🎉 VM Deployment completed!"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -524,7 +555,7 @@ jobs:
   # 🧹 Cleanup old images from Artifact Registry
   cleanup-old-images:
     name: 🧹 Cleanup Old Images
-    needs: deploy-to-vm
+    needs: [determine-component, deploy-to-vm]
     runs-on: ubuntu-latest
     if: success()
     steps:
@@ -537,7 +568,7 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
 
     - name: Cleanup old backend images
-      if: ${{ github.event.inputs.deploy_component == 'backend' || github.event.inputs.deploy_component == 'both' }}
+      if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
       run: |
         echo "🔍 Cleaning up old backend images..."
         KEEP_COUNT=3
@@ -570,7 +601,7 @@ jobs:
         fi
 
     - name: Cleanup old frontend images
-      if: ${{ github.event.inputs.deploy_component == 'frontend' || github.event.inputs.deploy_component == 'both' }}
+      if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
       run: |
         echo "🔍 Cleaning up old frontend images..."
         KEEP_COUNT=3
