@@ -1209,10 +1209,13 @@ export default function StudentActivityPageContent({
         toast.success(
           t("studentActivityPage.messages.submitSuccess") || "提交成功！",
         );
-      } catch {
+      } catch (error) {
         setIsAnalyzing(false);
+        console.error("Submission error:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "提交失敗";
         toast.error(
-          t("studentActivityPage.messages.submitError") || "提交失敗",
+          t("studentActivityPage.messages.submitError") || errorMessage,
         );
       }
     }
