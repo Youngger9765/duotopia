@@ -1120,7 +1120,7 @@ export default function StudentActivityPageContent({
     recordingTimeRef.current = 0;
   };
 
-  const handleSubmit = async (e?: React.MouseEvent) => {
+  const handleSubmit = async (e?: React.MouseEvent, force = false) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -1131,68 +1131,70 @@ export default function StudentActivityPageContent({
       return;
     }
 
-    // 🎯 收集所有未錄音的題目（警告）
-    const notRecorded: {
-      activity: Activity;
-      itemIndex?: number;
-      itemLabel: string;
-    }[] = [];
+    // 🎯 收集所有未錄音的題目（警告） - 只在未強制提交時檢查
+    if (!force) {
+      const notRecorded: {
+        activity: Activity;
+        itemIndex?: number;
+        itemLabel: string;
+      }[] = [];
 
-    activities.forEach((activity) => {
-      // 檢查是否是需要錄音的題型
-      const needsRecording = [
-        "reading_assessment",
-        "grouped_questions",
-        "speaking",
-      ].includes(activity.type);
+      activities.forEach((activity) => {
+        // 檢查是否是需要錄音的題型
+        const needsRecording = [
+          "reading_assessment",
+          "grouped_questions",
+          "speaking",
+        ].includes(activity.type);
 
-      if (needsRecording && activity.items && activity.items.length > 0) {
-        // 逐題檢查
-        activity.items.forEach((item, itemIndex) => {
-          const hasRecording = item.recording_url && item.recording_url !== "";
+        if (needsRecording && activity.items && activity.items.length > 0) {
+          // 逐題檢查
+          activity.items.forEach((item, itemIndex) => {
+            const hasRecording =
+              item.recording_url && item.recording_url !== "";
+            const isBlob =
+              hasRecording && item.recording_url!.startsWith("blob:");
+            const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
+
+            if (!hasRecording || isBlob) {
+              const warning = isBlob
+                ? `${itemLabel}${t("studentActivityPage.validation.notUploaded")}`
+                : `${itemLabel}${t("studentActivityPage.validation.notRecorded")}`;
+
+              notRecorded.push({
+                activity,
+                itemIndex,
+                itemLabel: warning,
+              });
+            }
+          });
+        } else if (needsRecording && !activity.items) {
+          // 單一錄音題目（如 reading_assessment）
+          const hasRecording = activity.audio_url && activity.audio_url !== "";
           const isBlob =
-            hasRecording && item.recording_url!.startsWith("blob:");
-          const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
+            hasRecording && activity.audio_url!.startsWith("blob:");
 
           if (!hasRecording || isBlob) {
             const warning = isBlob
-              ? `${itemLabel}${t("studentActivityPage.validation.notUploaded")}`
-              : `${itemLabel}${t("studentActivityPage.validation.notRecorded")}`;
+              ? `${activity.title}${t("studentActivityPage.validation.notUploaded")}`
+              : activity.title;
 
             notRecorded.push({
               activity,
-              itemIndex,
               itemLabel: warning,
             });
           }
-        });
-      } else if (needsRecording && !activity.items) {
-        // 單一錄音題目（如 reading_assessment）
-        const hasRecording = activity.audio_url && activity.audio_url !== "";
-        const isBlob = hasRecording && activity.audio_url!.startsWith("blob:");
-
-        if (!hasRecording || isBlob) {
-          const warning = isBlob
-            ? `${activity.title}${t("studentActivityPage.validation.notUploaded")}`
-            : activity.title;
-
-          notRecorded.push({
-            activity,
-            itemLabel: warning,
-          });
         }
-      }
-    });
+      });
 
-    // 🎯 如果有未錄音的題目，顯示警告 dialog
-    if (notRecorded.length > 0) {
-      const incompleteList = notRecorded.map(
-        (item) =>
-          `${item.itemLabel}${t("studentActivityPage.validation.notRecorded")}`,
-      );
-      setIncompleteItems(incompleteList);
-      setShowSubmitDialog(true);
-      return;
+      // 🎯 如果有未錄音的題目，顯示警告 dialog
+      if (notRecorded.length > 0) {
+        // itemLabel already contains the complete warning message
+        const incompleteList = notRecorded.map((item) => item.itemLabel);
+        setIncompleteItems(incompleteList);
+        setShowSubmitDialog(true);
+        return;
+      }
     }
 
     // 🎯 立即提交（只上傳音檔，不執行分析）
@@ -1218,8 +1220,8 @@ export default function StudentActivityPageContent({
 
   const handleConfirmSubmit = async () => {
     setShowSubmitDialog(false);
-    // 用戶確認提交，直接執行 handleSubmit（會自動處理 pending analyses）
-    await handleSubmit();
+    // 用戶確認提交，強制提交跳過驗證（已經在 dialog 確認過了）
+    await handleSubmit(undefined, true);
   };
 
   const getStatusIcon = (activity: Activity, answer?: Answer) => {
