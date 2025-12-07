@@ -151,7 +151,8 @@ export default function StudentActivityPage() {
   };
 
   // Handle final submission
-  const handleSubmit = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  const handleSubmit = async (_data?: { answers: any[] }) => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || "";
       const response = await fetch(
