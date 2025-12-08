@@ -2255,6 +2255,8 @@ class RearrangementCompleteRequest(BaseModel):
 
     content_item_id: int
     timeout: bool = False  # 是否因超時完成
+    expected_score: Optional[float] = None  # 最終分數
+    error_count: Optional[int] = None  # 錯誤次數
 
 
 @router.get("/assignments/{assignment_id}/rearrangement-questions")
@@ -2562,14 +2564,26 @@ async def complete_rearrangement(
     )
 
     if not progress:
-        raise HTTPException(status_code=404, detail="Progress not found")
+        # 防禦性：建立新記錄（正常情況下應該已存在）
+        progress = StudentItemProgress(
+            student_assignment_id=student_assignment_id,
+            content_item_id=request.content_item_id,
+            status="COMPLETED",
+            timeout_ended=request.timeout,
+            expected_score=request.expected_score or 0,
+            error_count=request.error_count or 0,
+        )
+        db.add(progress)
+    else:
+        # 標記完成狀態
+        progress.status = "COMPLETED"
+        progress.timeout_ended = request.timeout
 
-    # 標記完成狀態
-    progress.status = "COMPLETED"
-    progress.timeout_ended = request.timeout
-
-    # 如果是超時，當下預期分數就是最終分數
-    # 如果是正常完成且分數為 0（未作答完），設為 0 分
+        # 更新分數（如果前端有提供）
+        if request.expected_score is not None:
+            progress.expected_score = request.expected_score
+        if request.error_count is not None:
+            progress.error_count = request.error_count
 
     db.commit()
 

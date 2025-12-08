@@ -17,6 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Volume2,
   Clock,
@@ -65,6 +72,8 @@ export interface RearrangementQuestionState {
   completed: boolean;
   challengeFailed: boolean;
   timeRemaining: number;
+  hasSeenAnswer: boolean; // 是否已看過答案（用於計算重試後滿分）
+  maxScore: number; // 該題滿分（初始 100，看過答案後變 60）
 }
 
 // 內部使用的別名
@@ -95,6 +104,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const [showAudioPrompt, setShowAudioPrompt] = useState(false);
   // 音檔播放速度
   const [playbackRate, setPlaybackRate] = useState(1.0);
+  // 結果 Modal 開關狀態
+  const [resultModalOpen, setResultModalOpen] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -188,6 +199,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           completed: false,
           challengeFailed: false,
           timeRemaining: q.time_limit,
+          hasSeenAnswer: false,
+          maxScore: 100,
         });
       });
       setQuestionStates(initialStates);
@@ -249,31 +262,37 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       (q) => q.content_item_id === contentItemId,
     );
 
-    // ✅ 時間到計分邏輯（最終版）
-    // - 完全沒作答 (correct = 0 && error = 0) → 0 分（無保底）
+    // ✅ 時間到計分邏輯（最終版 + maxScore 上限）
+    // - 首次作答且完全沒作答 (correct = 0 && error = 0 && !hasSeenAnswer) → 0 分（無保底）
+    // - 重試後（hasSeenAnswer=true）不管有沒動作 → 都有保底分（因為之前已有作答）
     // - 有作答（不管完成多少）→ max(計算分數, 保底分)
     const correctWordCount = currentState?.selectedWords.length || 0;
     const errorCount = currentState?.errorCount || 0;
     const currentExpectedScore = currentState?.expectedScore || 100;
+    const currentMaxScore = currentState?.maxScore || 100;
+    const hasSeenAnswer = currentState?.hasSeenAnswer || false;
     const totalWordCount =
       currentQuestion?.word_count ||
       currentQuestion?.shuffled_words.length ||
       1;
     const pointsPerWord = Math.floor(100 / totalWordCount);
+    const minimumScore = pointsPerWord; // 保底分始終為 floor(100/N)
     const unansweredWords = totalWordCount - correctWordCount;
 
     let actualScore: number;
-    if (correctWordCount === 0 && errorCount === 0) {
-      // 完全沒作答 → 0 分（唯一沒有保底的情況）
+    // 首次作答且完全沒作答 → 0 分（唯一沒有保底的情況）
+    if (correctWordCount === 0 && errorCount === 0 && !hasSeenAnswer) {
       actualScore = 0;
     } else {
-      // 有作答 → 預期分數 - 未答數 × 每字分數，有保底分
+      // 有作答 或 重試後 → 預期分數 - 未答數 × 每字分數，有保底分
       const unansweredPenalty = unansweredWords * pointsPerWord;
       const calculatedScore = Math.max(
         0,
         currentExpectedScore - unansweredPenalty,
       );
-      actualScore = Math.max(calculatedScore, pointsPerWord); // ✅ 套用保底分
+      // 套用 maxScore 上限，再套用保底分
+      const cappedScore = Math.min(currentMaxScore, calculatedScore);
+      actualScore = Math.max(cappedScore, minimumScore); // ✅ 套用保底分
     }
 
     // 🚀 直接更新本地狀態（不等待 API）
@@ -291,11 +310,10 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       return newStates;
     });
 
-    toast.warning(t("rearrangement.messages.timeout"));
-
     // 計算並更新分數（使用實際分數）
     setTotalScore((prev) => prev + actualScore);
     setCompletedQuestions((prev) => prev + 1);
+    setResultModalOpen(true); // 打開結果 Modal（時間到也顯示結果）
 
     // 學生模式：呼叫 API 儲存 timeout 分數
     if (!isPreviewMode) {
@@ -344,7 +362,16 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     const wordCount = currentQuestion.word_count || correctWords.length;
     const maxErrors = currentQuestion.max_errors || (wordCount <= 10 ? 3 : 5);
     const pointsPerWord = Math.floor(100 / wordCount);
-    const newExpectedScore = Math.max(0, 100 - newErrorCount * pointsPerWord);
+    const minimumScore = pointsPerWord; // 保底分始終為 floor(100/N)
+
+    // 計算基礎分數（100 為基準，不受 maxScore 影響）
+    const baseScore = Math.max(0, 100 - newErrorCount * pointsPerWord);
+
+    // 取得當前 maxScore（看過答案後為 60，否則為 100）
+    const currentMaxScore = currentState.maxScore;
+
+    // 套用 maxScore 上限，再套用保底分
+    const cappedScore = Math.min(currentMaxScore, baseScore);
 
     // 計算正確單字數和完成狀態
     const newCorrectWordCount = isCorrect
@@ -353,11 +380,11 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     const isCompleted = newCorrectWordCount >= wordCount;
     const isChallengeFailed = newErrorCount >= maxErrors;
 
-    // ✅ 正常完成時：套用保底分（每字分數）
+    // ✅ 完成時：套用保底分
     // 保底分 = floor(100 / 該題單字數) = pointsPerWord
     const finalScore = isCompleted
-      ? Math.max(newExpectedScore, pointsPerWord)
-      : newExpectedScore;
+      ? Math.max(cappedScore, minimumScore)
+      : cappedScore;
 
     // 更新狀態
     let newSelectedWords = [...currentState.selectedWords];
@@ -373,6 +400,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       }
     }
 
+    // 當錯誤過多且 showAnswer=true 時，設定 hasSeenAnswer 和 maxScore
+    const newHasSeenAnswer =
+      isChallengeFailed && showAnswer ? true : currentState.hasSeenAnswer;
+    const newMaxScore =
+      isChallengeFailed && showAnswer ? 60 : currentState.maxScore;
+
     setQuestionStates((prev) => {
       const newStates = new Map(prev);
       newStates.set(currentQuestion.content_item_id, {
@@ -383,6 +416,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         expectedScore: finalScore, // 使用 finalScore（含保底分）
         completed: isCompleted,
         challengeFailed: isChallengeFailed,
+        hasSeenAnswer: newHasSeenAnswer,
+        maxScore: newMaxScore,
       });
       return newStates;
     });
@@ -392,18 +427,14 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       toast.error(t("rearrangement.messages.incorrectSimple"));
     }
 
-    // 檢查是否完成或失敗
+    // 檢查是否完成或失敗 → 打開結果 Modal
     if (isCompleted) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
       setTotalScore((prev) => prev + finalScore);
       setCompletedQuestions((prev) => prev + 1);
-      toast.success(
-        t("rearrangement.messages.questionComplete", {
-          score: Math.round(finalScore),
-        }),
-      );
+      setResultModalOpen(true); // 打開結果 Modal
 
       // 學生模式：完成時呼叫 API 儲存分數
       if (!isPreviewMode) {
@@ -425,24 +456,29 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      toast.error(t("rearrangement.messages.challengeFailed"));
+      setResultModalOpen(true); // 打開結果 Modal
     }
   };
 
   const handleRetry = async () => {
     const currentQuestion = questions[currentQuestionIndex];
+    setResultModalOpen(false); // 關閉結果 Modal
 
     // 🚀 重置狀態（本地操作，不需要 API）
+    // 保留 hasSeenAnswer 和 maxScore（一旦看過答案就永不重置）
     setQuestionStates((prev) => {
       const newStates = new Map(prev);
+      const prevState = prev.get(currentQuestion.content_item_id);
       newStates.set(currentQuestion.content_item_id, {
         selectedWords: [],
         remainingWords: [...currentQuestion.shuffled_words],
         errorCount: 0,
-        expectedScore: 100,
+        expectedScore: prevState?.maxScore || 100, // 使用 maxScore 而非固定 100
         completed: false,
         challengeFailed: false,
         timeRemaining: currentQuestion.time_limit,
+        hasSeenAnswer: prevState?.hasSeenAnswer || false, // 保留
+        maxScore: prevState?.maxScore || 100, // 保留
       });
       return newStates;
     });
@@ -519,6 +555,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   }, [controlledIndex, questions, questionStates]);
 
   const handleNextQuestion = () => {
+    setResultModalOpen(false); // 關閉結果 Modal
+
     // 找到下一個尚未完成的題目（跳過已完成或挑戰失敗的題目）
     let nextIndex = -1;
 
@@ -556,10 +594,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       if (onComplete) {
         onComplete(totalScore, questions.length);
       }
+      // 計算平均分數（總分 / 題數，四捨五入到小數點一位）
+      const averageScore =
+        Math.round((totalScore / questions.length) * 10) / 10;
       toast.success(
         t("rearrangement.messages.allComplete", {
-          score: Math.round(totalScore),
-          total: questions.length * 100,
+          score: averageScore,
         }),
       );
     }
@@ -840,96 +880,84 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
             </div>
           )}
 
-          {/* 完成或失敗狀態 */}
-          {(currentState.completed || currentState.challengeFailed) && (
-            <div
-              className={cn(
-                "p-4 rounded-lg text-center",
-                currentState.completed && currentState.expectedScore === 100
-                  ? "bg-green-50"
-                  : currentState.completed
-                    ? "bg-blue-50"
-                    : "bg-red-50",
-              )}
-            >
-              {currentState.completed ? (
-                currentState.expectedScore === 100 ? (
-                  // 全對：顯示打勾和「答對了！」
-                  <>
-                    <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
-                    <p className="text-lg font-bold text-green-800">
-                      {t("rearrangement.messages.correct")}
-                    </p>
-                    <p className="text-green-600">
-                      {t("rearrangement.messages.scoreEarned", {
-                        score: Math.round(currentState.expectedScore),
-                      })}
-                    </p>
-                  </>
-                ) : (
-                  // 非全對：只顯示分數
-                  <p className="text-lg font-bold text-blue-800">
+          {/* 結果 Modal */}
+          <Dialog open={resultModalOpen} onOpenChange={setResultModalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-center">
+                  {currentState.completed ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle className="h-16 w-16 text-green-600" />
+                      <span className="text-green-800">
+                        {t("rearrangement.messages.correct")}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <XCircle className="h-16 w-16 text-red-600" />
+                      <span className="text-red-800">
+                        {t("rearrangement.messages.tooManyErrors")}
+                      </span>
+                    </div>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* 分數顯示 - 只在完成時顯示 */}
+                {currentState.completed && (
+                  <p className="text-center text-lg font-semibold text-gray-700">
                     {t("rearrangement.messages.scoreEarned", {
                       score: Math.round(currentState.expectedScore),
                     })}
                   </p>
-                )
-              ) : (
-                <>
-                  <XCircle className="h-12 w-12 mx-auto mb-2 text-red-600" />
-                  <p className="text-lg font-bold text-red-800">
-                    {t("rearrangement.messages.tooManyErrors")}
-                  </p>
-                  <p className="text-red-600 mb-4">
-                    {t("rearrangement.messages.tryAgain")}
-                  </p>
-                  <Button onClick={handleRetry}>
+                )}
+
+                {/* 正確答案 - 根據 showAnswer 設定顯示 */}
+                {showAnswer && currentQuestion.original_text && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-2">
+                      {t("rearrangement.correctAnswer")}
+                    </p>
+                    <p className="text-lg font-medium text-gray-800">
+                      {currentQuestion.original_text}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="sm:justify-center">
+                {currentState.completed ? (
+                  <Button
+                    size="lg"
+                    onClick={handleNextQuestion}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {/* 檢查是否還有未完成的題目 */}
+                    {questions.some((q, idx) => {
+                      if (idx === currentQuestionIndex) return false;
+                      const state = questionStates.get(q.content_item_id);
+                      return (
+                        state && !state.completed && !state.challengeFailed
+                      );
+                    }) ? (
+                      <>
+                        {t("rearrangement.buttons.next")}
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </>
+                    ) : (
+                      t("rearrangement.buttons.finish")
+                    )}
+                  </Button>
+                ) : (
+                  <Button size="lg" onClick={handleRetry}>
                     <RotateCcw className="h-4 w-4 mr-2" />
                     {t("rearrangement.buttons.retry")}
                   </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* 顯示正確答案 - 只在 completed 且 showAnswer 啟用時顯示 */}
-          {currentState.completed &&
-            showAnswer &&
-            currentQuestion.original_text && (
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-500 mb-2">
-                  {t("rearrangement.correctAnswer")}
-                </p>
-                <p className="text-lg font-medium text-gray-800">
-                  {currentQuestion.original_text}
-                </p>
-              </div>
-            )}
-
-          {/* 下一題按鈕 */}
-          {currentState.completed && (
-            <div className="flex justify-center pt-4">
-              <Button
-                size="lg"
-                onClick={handleNextQuestion}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {/* 檢查是否還有未完成的題目（排除當前題目） */}
-                {questions.some((q, idx) => {
-                  if (idx === currentQuestionIndex) return false;
-                  const state = questionStates.get(q.content_item_id);
-                  return state && !state.completed && !state.challengeFailed;
-                }) ? (
-                  <>
-                    {t("rearrangement.buttons.next")}
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </>
-                ) : (
-                  t("rearrangement.buttons.finish")
                 )}
-              </Button>
-            </div>
-          )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

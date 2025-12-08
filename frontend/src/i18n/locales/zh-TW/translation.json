@@ -60,7 +60,8 @@
       "scoreEarned": "本題得分：{{score}} 分",
       "tooManyErrors": "錯誤次數過多",
       "tryAgain": "點擊下方按鈕重新挑戰",
-      "allComplete": "全部完成！總得分 {{score}}/{{total}}"
+      "retryPenalty": "因已看過答案，重試後滿分為 60 分",
+      "allComplete": "全部完成！得 {{score}} 分"
     },
     "buttons": {
       "retry": "重新挑戰",

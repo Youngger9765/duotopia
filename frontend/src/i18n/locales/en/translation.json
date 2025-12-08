@@ -60,7 +60,8 @@
       "scoreEarned": "Score earned: {{score}} points",
       "tooManyErrors": "Too many errors",
       "tryAgain": "Click the button below to try again",
-      "allComplete": "All done! Total score: {{score}}/{{total}}"
+      "retryPenalty": "Since you've seen the answer, the maximum score after retry is 60 points",
+      "allComplete": "All done! Score: {{score}} points"
     },
     "buttons": {
       "retry": "Try Again",
