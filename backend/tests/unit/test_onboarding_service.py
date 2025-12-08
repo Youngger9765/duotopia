@@ -15,12 +15,12 @@ Test Coverage:
 import os
 import sys
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-import pytest
-from sqlalchemy.orm import Session
+import pytest  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
 # Models will be imported after service exists
 # from models import Teacher, Classroom, Student, Program, Lesson, Content, Assignment
@@ -37,12 +37,12 @@ class TestOnboardingServiceInit:
         service = OnboardingService()
 
         # Service should have a database session dependency
-        assert hasattr(service, 'db')
+        assert hasattr(service, "db")
         # Service should define default classroom name
-        assert hasattr(service, 'DEFAULT_CLASSROOM_NAME')
+        assert hasattr(service, "DEFAULT_CLASSROOM_NAME")
         assert service.DEFAULT_CLASSROOM_NAME == "My First Class"
         # Service should define default student name
-        assert hasattr(service, 'DEFAULT_STUDENT_NAME')
+        assert hasattr(service, "DEFAULT_STUDENT_NAME")
         assert service.DEFAULT_STUDENT_NAME == "Bruce"
 
 
@@ -63,7 +63,7 @@ class TestCheckOnboardingNeeded:
             email="new@teacher.com",
             name="New Teacher",
             onboarding_completed=False,
-            onboarding_started_at=None
+            onboarding_started_at=None,
         )
 
         result = service._check_if_onboarding_needed(teacher)
@@ -84,7 +84,7 @@ class TestCheckOnboardingNeeded:
             email="existing@teacher.com",
             name="Existing Teacher",
             onboarding_completed=True,
-            onboarding_started_at=datetime.now(timezone.utc)
+            onboarding_started_at=datetime.now(timezone.utc),
         )
 
         result = service._check_if_onboarding_needed(teacher)
@@ -105,7 +105,7 @@ class TestCheckOnboardingNeeded:
             email="inprogress@teacher.com",
             name="In Progress Teacher",
             onboarding_completed=False,
-            onboarding_started_at=datetime.now(timezone.utc)
+            onboarding_started_at=datetime.now(timezone.utc),
         )
 
         result = service._check_if_onboarding_needed(teacher)
@@ -119,7 +119,7 @@ class TestCreateDefaultClassroom:
     def test_create_default_classroom_success(self):
         """Test creating default classroom"""
         from services.onboarding import OnboardingService
-        from models import Teacher, Classroom
+        from models import Teacher  # noqa: F401
 
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
@@ -161,7 +161,7 @@ class TestCreateDefaultStudent:
     def test_create_default_student_success(self):
         """Test creating default student named Bruce"""
         from services.onboarding import OnboardingService
-        from models import Classroom, Student, ClassroomStudent
+        from models import Classroom  # noqa: F401
         from datetime import date
 
         mock_db = Mock(spec=Session)
@@ -253,16 +253,16 @@ class TestGenerateQuestionAudio:
         questions = [
             Mock(spec=ContentItem, id=1, text="Hello", audio_url=None),
             Mock(spec=ContentItem, id=2, text="How are you", audio_url=None),
-            Mock(spec=ContentItem, id=3, text="Nice to meet you", audio_url=None)
+            Mock(spec=ContentItem, id=3, text="Nice to meet you", audio_url=None),
         ]
 
         # Mock TTS service
-        with patch('services.onboarding.get_tts_service') as mock_tts:
+        with patch("services.onboarding.get_tts_service") as mock_tts:
             mock_tts_instance = AsyncMock()
             mock_tts_instance.generate_tts.side_effect = [
                 "https://storage.googleapis.com/audio1.mp3",
                 "https://storage.googleapis.com/audio2.mp3",
-                "https://storage.googleapis.com/audio3.mp3"
+                "https://storage.googleapis.com/audio3.mp3",
             ]
             mock_tts.return_value = mock_tts_instance
 
@@ -290,7 +290,7 @@ class TestGenerateQuestionAudio:
 
         questions = [Mock(spec=ContentItem, id=1, text="Hello", audio_url=None)]
 
-        with patch('services.onboarding.get_tts_service') as mock_tts:
+        with patch("services.onboarding.get_tts_service") as mock_tts:
             mock_tts_instance = AsyncMock()
             mock_tts_instance.generate_tts.side_effect = Exception("TTS error")
             mock_tts.return_value = mock_tts_instance
@@ -316,7 +316,9 @@ class TestCreateAndAssignDefaultAssignment:
         program = Mock(spec=Program, id=1)
         classroom = Mock(spec=Classroom, id=1)
 
-        assignment = service._create_and_assign_default_assignment(teacher, program, classroom)
+        assignment = service._create_and_assign_default_assignment(
+            teacher, program, classroom
+        )
 
         # Verify assignment properties
         assert assignment.title == "My First Assignment"
@@ -336,7 +338,7 @@ class TestSimulateStudentSubmission:
     async def test_simulate_submission_with_ai_results(self):
         """Test simulating student submission with AI assessment"""
         from services.onboarding import OnboardingService
-        from models import Assignment, Student, StudentAssignment
+        from models import Assignment, Student  # noqa: F401
 
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
@@ -345,17 +347,19 @@ class TestSimulateStudentSubmission:
         student = Mock(spec=Student, id=1)
 
         # Mock AI assessment service
-        with patch('services.onboarding.AssessmentService') as mock_assessment:
+        with patch("services.onboarding.AssessmentService") as mock_assessment:
             mock_assessment_instance = AsyncMock()
             mock_assessment_instance.assess_recording.return_value = {
                 "accuracy_score": 85.0,
                 "fluency_score": 80.0,
                 "pronunciation_score": 90.0,
-                "completeness_score": 95.0
+                "completeness_score": 95.0,
             }
             mock_assessment.return_value = mock_assessment_instance
 
-            student_assignment = await service._simulate_student_submission(assignment, student)
+            student_assignment = await service._simulate_student_submission(
+                assignment, student
+            )
 
             # Verify student assignment created
             assert student_assignment is not None
@@ -405,24 +409,44 @@ class TestTriggerOnboarding:
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
 
-        teacher = Mock(spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None)
+        teacher = Mock(
+            spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None
+        )
 
         # Mock all internal methods
-        with patch.object(service, '_check_if_onboarding_needed', return_value=True):
-            with patch.object(service, '_create_default_classroom') as mock_classroom:
-                with patch.object(service, '_create_default_student') as mock_student:
-                    with patch.object(service, '_create_welcome_program') as mock_program:
-                        with patch.object(service, '_generate_question_audio') as mock_audio:
-                            with patch.object(service, '_create_and_assign_default_assignment') as mock_assignment:
-                                with patch.object(service, '_simulate_student_submission') as mock_submission:
-                                    with patch.object(service, '_mark_onboarding_complete') as mock_complete:
-
+        with patch.object(service, "_check_if_onboarding_needed", return_value=True):
+            with patch.object(service, "_create_default_classroom") as mock_classroom:
+                with patch.object(service, "_create_default_student") as mock_student:
+                    with patch.object(
+                        service, "_create_welcome_program"
+                    ) as mock_program:
+                        with patch.object(
+                            service, "_generate_question_audio"
+                        ) as mock_audio:
+                            with patch.object(
+                                service,
+                                "_create_and_assign_default_assignment",
+                            ) as mock_assignment:
+                                with patch.object(
+                                    service, "_simulate_student_submission"
+                                ) as mock_submission:
+                                    with patch.object(
+                                        service,
+                                        "_mark_onboarding_complete",
+                                    ) as mock_complete:
                                         mock_classroom.return_value = Mock(id=1)
                                         mock_student.return_value = Mock(id=1)
-                                        mock_program.return_value = Mock(id=1, lessons=[Mock(contents=[Mock(content_items=[])])])
+                                        mock_program.return_value = Mock(
+                                            id=1,
+                                            lessons=[
+                                                Mock(contents=[Mock(content_items=[])])
+                                            ],
+                                        )
                                         mock_assignment.return_value = Mock(id=1)
 
-                                        result = await service.trigger_onboarding(teacher.id)
+                                        result = await service.trigger_onboarding(
+                                            teacher.id
+                                        )
 
                                         # Verify all steps executed
                                         mock_classroom.assert_called_once()
@@ -451,7 +475,7 @@ class TestTriggerOnboarding:
 
         teacher = Mock(spec=Teacher, id=1, onboarding_completed=True)
 
-        with patch.object(service, '_check_if_onboarding_needed', return_value=False):
+        with patch.object(service, "_check_if_onboarding_needed", return_value=False):
             result = await service.trigger_onboarding(teacher.id)
 
             # Should return early without executing workflow
@@ -481,11 +505,16 @@ class TestTriggerOnboarding:
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
 
-        teacher = Mock(spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None)
+        teacher = Mock(
+            spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None
+        )
 
-        with patch.object(service, '_check_if_onboarding_needed', return_value=True):
-            with patch.object(service, '_create_default_classroom', side_effect=Exception("Database error")):
-
+        with patch.object(service, "_check_if_onboarding_needed", return_value=True):
+            with patch.object(
+                service,
+                "_create_default_classroom",
+                side_effect=Exception("Database error"),
+            ):
                 with pytest.raises(Exception) as exc_info:
                     await service.trigger_onboarding(teacher.id)
 

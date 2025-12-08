@@ -14,14 +14,14 @@ Test Coverage:
 """
 import os
 import sys
-from datetime import datetime, timezone, date
+from datetime import date
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-import pytest
-from sqlalchemy.orm import Session
+import pytest  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
-from models import (
+from models import (  # noqa: E402
     Teacher,
     Classroom,
     Student,
@@ -32,7 +32,7 @@ from models import (
     ContentItem,
     Assignment,
     StudentAssignment,
-    StudentItemProgress
+    StudentItemProgress,
 )
 
 
@@ -52,7 +52,7 @@ class TestOnboardingIntegrationBasic:
             name="Integration Test Teacher",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -67,9 +67,11 @@ class TestOnboardingIntegrationBasic:
         assert "classroom_id" in result
 
         # Verify classroom created in database
-        classroom = test_session.query(Classroom).filter(
-            Classroom.id == result["classroom_id"]
-        ).first()
+        classroom = (
+            test_session.query(Classroom)
+            .filter(Classroom.id == result["classroom_id"])
+            .first()
+        )
 
         assert classroom is not None
         assert classroom.name == "My First Class"
@@ -89,7 +91,7 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Two",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -102,25 +104,33 @@ class TestOnboardingIntegrationBasic:
         # Verify student created
         assert "student_id" in result
 
-        student = test_session.query(Student).filter(
-            Student.id == result["student_id"]
-        ).first()
+        student = (
+            test_session.query(Student)
+            .filter(Student.id == result["student_id"])
+            .first()
+        )
 
         assert student is not None
         assert student.name == "Bruce"
         assert student.birthdate == date(2010, 1, 1)
 
         # Verify student enrolled in classroom
-        enrollment = test_session.query(ClassroomStudent).filter(
-            ClassroomStudent.student_id == student.id,
-            ClassroomStudent.classroom_id == result["classroom_id"]
-        ).first()
+        enrollment = (
+            test_session.query(ClassroomStudent)
+            .filter(
+                ClassroomStudent.student_id == student.id,
+                ClassroomStudent.classroom_id == result["classroom_id"],
+            )
+            .first()
+        )
 
         assert enrollment is not None
         assert enrollment.is_active is True
 
     @pytest.mark.asyncio
-    async def test_onboarding_creates_program_with_three_questions(self, test_session: Session):
+    async def test_onboarding_creates_program_with_three_questions(
+        self, test_session: Session
+    ):
         """Test that onboarding creates welcome program with exactly 3 questions"""
         from services.onboarding import OnboardingService
         from auth import get_password_hash
@@ -132,7 +142,7 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Three",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -145,9 +155,11 @@ class TestOnboardingIntegrationBasic:
         # Verify program created
         assert "program_id" in result
 
-        program = test_session.query(Program).filter(
-            Program.id == result["program_id"]
-        ).first()
+        program = (
+            test_session.query(Program)
+            .filter(Program.id == result["program_id"])
+            .first()
+        )
 
         assert program is not None
         assert program.name == "Welcome to Duotopia"
@@ -155,25 +167,28 @@ class TestOnboardingIntegrationBasic:
         assert program.is_template is False
 
         # Verify lesson exists
-        lessons = test_session.query(Lesson).filter(
-            Lesson.program_id == program.id
-        ).all()
+        lessons = (
+            test_session.query(Lesson).filter(Lesson.program_id == program.id).all()
+        )
 
         assert len(lessons) == 1
         assert lessons[0].name == "My First Lesson"
 
         # Verify content exists
-        contents = test_session.query(Content).filter(
-            Content.lesson_id == lessons[0].id
-        ).all()
+        contents = (
+            test_session.query(Content).filter(Content.lesson_id == lessons[0].id).all()
+        )
 
         assert len(contents) == 1
         assert contents[0].title == "Reading Practice"
 
         # Verify exactly 3 questions
-        questions = test_session.query(ContentItem).filter(
-            ContentItem.content_id == contents[0].id
-        ).order_by(ContentItem.order_index).all()
+        questions = (
+            test_session.query(ContentItem)
+            .filter(ContentItem.content_id == contents[0].id)
+            .order_by(ContentItem.order_index)
+            .all()
+        )
 
         assert len(questions) == 3
         assert "Hello" in questions[0].text
@@ -181,7 +196,9 @@ class TestOnboardingIntegrationBasic:
         assert "Nice to meet you" in questions[2].text
 
     @pytest.mark.asyncio
-    async def test_onboarding_generates_audio_for_questions(self, test_session: Session):
+    async def test_onboarding_generates_audio_for_questions(
+        self, test_session: Session
+    ):
         """Test that onboarding generates TTS audio for all questions"""
         from services.onboarding import OnboardingService
         from auth import get_password_hash
@@ -194,16 +211,18 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Four",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
         test_session.refresh(teacher)
 
         # Mock TTS service
-        with patch('services.onboarding.get_tts_service') as mock_tts:
+        with patch("services.onboarding.get_tts_service") as mock_tts:
             mock_tts_instance = AsyncMock()
-            mock_tts_instance.generate_tts.return_value = "https://storage.googleapis.com/test_audio.mp3"
+            mock_tts_instance.generate_tts.return_value = (
+                "https://storage.googleapis.com/test_audio.mp3"
+            )
             mock_tts.return_value = mock_tts_instance
 
             # Trigger onboarding
@@ -214,15 +233,19 @@ class TestOnboardingIntegrationBasic:
             assert mock_tts_instance.generate_tts.call_count == 3
 
             # Verify audio URLs assigned
-            program = test_session.query(Program).filter(
-                Program.id == result["program_id"]
-            ).first()
+            program = (
+                test_session.query(Program)
+                .filter(Program.id == result["program_id"])
+                .first()
+            )
 
             lesson = program.lessons[0]
             content = lesson.contents[0]
-            questions = test_session.query(ContentItem).filter(
-                ContentItem.content_id == content.id
-            ).all()
+            questions = (
+                test_session.query(ContentItem)
+                .filter(ContentItem.content_id == content.id)
+                .all()
+            )
 
             for question in questions:
                 assert question.audio_url is not None
@@ -241,7 +264,7 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Five",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -254,9 +277,11 @@ class TestOnboardingIntegrationBasic:
         # Verify assignment created
         assert "assignment_id" in result
 
-        assignment = test_session.query(Assignment).filter(
-            Assignment.id == result["assignment_id"]
-        ).first()
+        assignment = (
+            test_session.query(Assignment)
+            .filter(Assignment.id == result["assignment_id"])
+            .first()
+        )
 
         assert assignment is not None
         assert assignment.title == "My First Assignment"
@@ -282,20 +307,20 @@ class TestOnboardingIntegrationAdvanced:
             name="Teacher Six",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
         test_session.refresh(teacher)
 
         # Mock AI assessment
-        with patch('services.onboarding.AssessmentService') as mock_assessment:
+        with patch("services.onboarding.AssessmentService") as mock_assessment:
             mock_assessment_instance = AsyncMock()
             mock_assessment_instance.assess_recording.return_value = {
                 "accuracy_score": 85.0,
                 "fluency_score": 80.0,
                 "pronunciation_score": 90.0,
-                "completeness_score": 95.0
+                "completeness_score": 95.0,
             }
             mock_assessment.return_value = mock_assessment_instance
 
@@ -304,17 +329,25 @@ class TestOnboardingIntegrationAdvanced:
             result = await service.trigger_onboarding(teacher.id)
 
             # Verify student assignment created
-            student_assignment = test_session.query(StudentAssignment).filter(
-                StudentAssignment.student_id == result["student_id"],
-                StudentAssignment.assignment_id == result["assignment_id"]
-            ).first()
+            student_assignment = (
+                test_session.query(StudentAssignment)
+                .filter(
+                    StudentAssignment.student_id == result["student_id"],
+                    StudentAssignment.assignment_id == result["assignment_id"],
+                )
+                .first()
+            )
 
             assert student_assignment is not None
 
             # Verify item progress with AI scores
-            item_progress = test_session.query(StudentItemProgress).filter(
-                StudentItemProgress.student_assignment_id == student_assignment.id
-            ).all()
+            item_progress = (
+                test_session.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == student_assignment.id
+                )
+                .all()
+            )
 
             # Should have 3 item progress (one for each question)
             assert len(item_progress) == 3
@@ -340,7 +373,7 @@ class TestOnboardingIntegrationAdvanced:
             email_verified=True,
             is_active=True,
             onboarding_completed=False,
-            onboarding_started_at=None
+            onboarding_started_at=None,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -372,7 +405,7 @@ class TestOnboardingIntegrationAdvanced:
             name="Teacher Eight",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -385,9 +418,11 @@ class TestOnboardingIntegrationAdvanced:
         assert result1["success"] is True
 
         # Count entities created
-        classroom_count = test_session.query(Classroom).filter(
-            Classroom.teacher_id == teacher.id
-        ).count()
+        classroom_count = (
+            test_session.query(Classroom)
+            .filter(Classroom.teacher_id == teacher.id)
+            .count()
+        )
         student_count = test_session.query(Student).count()
 
         # Second trigger - should skip (idempotency)
@@ -396,16 +431,20 @@ class TestOnboardingIntegrationAdvanced:
         assert "already completed" in result2.get("message", "").lower()
 
         # Verify no duplicate entities created
-        new_classroom_count = test_session.query(Classroom).filter(
-            Classroom.teacher_id == teacher.id
-        ).count()
+        new_classroom_count = (
+            test_session.query(Classroom)
+            .filter(Classroom.teacher_id == teacher.id)
+            .count()
+        )
         new_student_count = test_session.query(Student).count()
 
         assert new_classroom_count == classroom_count
         assert new_student_count == student_count
 
     @pytest.mark.asyncio
-    async def test_onboarding_triggered_on_first_login(self, test_client, test_session: Session):
+    async def test_onboarding_triggered_on_first_login(
+        self, test_client, test_session: Session
+    ):
         """Test that onboarding is automatically triggered on first login"""
         from auth import get_password_hash
 
@@ -416,7 +455,7 @@ class TestOnboardingIntegrationAdvanced:
             name="New Teacher",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -424,10 +463,7 @@ class TestOnboardingIntegrationAdvanced:
         # Login
         response = test_client.post(
             "/api/auth/teacher/login",
-            json={
-                "email": "newteacher@test.com",
-                "password": "password123"
-            }
+            json={"email": "newteacher@test.com", "password": "password123"},
         )
 
         assert response.status_code == 200
@@ -437,9 +473,11 @@ class TestOnboardingIntegrationAdvanced:
         assert teacher.onboarding_completed is True
 
         # Verify entities created
-        classroom = test_session.query(Classroom).filter(
-            Classroom.teacher_id == teacher.id
-        ).first()
+        classroom = (
+            test_session.query(Classroom)
+            .filter(Classroom.teacher_id == teacher.id)
+            .first()
+        )
         assert classroom is not None
         assert classroom.name == "My First Class"
 
@@ -456,7 +494,7 @@ class TestOnboardingIntegrationAdvanced:
             name="Full Workflow Teacher",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -470,46 +508,60 @@ class TestOnboardingIntegrationAdvanced:
         assert result["success"] is True
 
         # 1. Verify classroom
-        classroom = test_session.query(Classroom).filter(
-            Classroom.id == result["classroom_id"]
-        ).first()
+        classroom = (
+            test_session.query(Classroom)
+            .filter(Classroom.id == result["classroom_id"])
+            .first()
+        )
         assert classroom is not None
         assert classroom.name == "My First Class"
         assert classroom.teacher_id == teacher.id
 
         # 2. Verify student
-        student = test_session.query(Student).filter(
-            Student.id == result["student_id"]
-        ).first()
+        student = (
+            test_session.query(Student)
+            .filter(Student.id == result["student_id"])
+            .first()
+        )
         assert student is not None
         assert student.name == "Bruce"
 
         # 3. Verify student enrolled
-        enrollment = test_session.query(ClassroomStudent).filter(
-            ClassroomStudent.student_id == student.id,
-            ClassroomStudent.classroom_id == classroom.id
-        ).first()
+        enrollment = (
+            test_session.query(ClassroomStudent)
+            .filter(
+                ClassroomStudent.student_id == student.id,
+                ClassroomStudent.classroom_id == classroom.id,
+            )
+            .first()
+        )
         assert enrollment is not None
 
         # 4. Verify program structure
-        program = test_session.query(Program).filter(
-            Program.id == result["program_id"]
-        ).first()
+        program = (
+            test_session.query(Program)
+            .filter(Program.id == result["program_id"])
+            .first()
+        )
         assert program is not None
         assert len(program.lessons) == 1
         assert len(program.lessons[0].contents) == 1
 
         # 5. Verify questions
         content = program.lessons[0].contents[0]
-        questions = test_session.query(ContentItem).filter(
-            ContentItem.content_id == content.id
-        ).all()
+        questions = (
+            test_session.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .all()
+        )
         assert len(questions) == 3
 
         # 6. Verify assignment
-        assignment = test_session.query(Assignment).filter(
-            Assignment.id == result["assignment_id"]
-        ).first()
+        assignment = (
+            test_session.query(Assignment)
+            .filter(Assignment.id == result["assignment_id"])
+            .first()
+        )
         assert assignment is not None
 
         # 7. Verify teacher completion

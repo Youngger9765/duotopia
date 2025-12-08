@@ -83,6 +83,27 @@ async def teacher_login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
             )
 
+    # Trigger onboarding for new teachers (Issue #61)
+    if not teacher.onboarding_completed and teacher.onboarding_started_at is None:
+        try:
+            from services.onboarding import OnboardingService
+            import logging
+
+            logger = logging.getLogger(__name__)
+
+            logger.info(f"Triggering onboarding for teacher {teacher.id}")
+            onboarding_service = OnboardingService(db=db)
+            await onboarding_service.trigger_onboarding(teacher.id)
+            logger.info(f"Onboarding completed for teacher {teacher.id}")
+
+        except Exception as e:
+            # Log error but don't block login
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Onboarding failed for teacher {teacher.id}: {e}")
+            # Continue with login process
+
     # Create token
     access_token = create_access_token(
         data={

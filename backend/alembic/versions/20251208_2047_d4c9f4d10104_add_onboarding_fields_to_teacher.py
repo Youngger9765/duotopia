@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd4c9f4d10104'
-down_revision: Union[str, None] = '288ad5a75206'
+revision: str = "d4c9f4d10104"
+down_revision: Union[str, None] = "288ad5a75206"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,7 +23,9 @@ def upgrade() -> None:
     # Issue #61: New user onboarding automation
     op.add_column(
         "teachers",
-        sa.Column("onboarding_completed", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "onboarding_completed", sa.Boolean(), nullable=False, server_default="false"
+        ),
     )
     op.add_column(
         "teachers",
