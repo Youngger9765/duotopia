@@ -120,6 +120,12 @@ class UpdatePasswordRequest(BaseModel):
     new_password: str
 
 
+class SubmitAssignmentRequest(BaseModel):
+    """Assignment submission request"""
+
+    answers: Optional[List[Dict[str, Any]]] = []
+
+
 @router.post("/validate", response_model=StudentLoginResponse)
 async def validate_student(
     request: StudentValidateRequest, db: Session = Depends(get_db)
@@ -773,13 +779,17 @@ def calculate_assignment_score(
     return round(total_score, 2)
 
 
+# Removed Cloud Tasks scheduling - submissions now only upload audio without executing analysis
+
+
 @router.post("/assignments/{assignment_id}/submit")
 async def submit_assignment(
     assignment_id: int,
+    request: SubmitAssignmentRequest = SubmitAssignmentRequest(),
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """提交作業"""
+    """提交作業（只儲存，不執行分析）"""
     if current_user.get("type") != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
