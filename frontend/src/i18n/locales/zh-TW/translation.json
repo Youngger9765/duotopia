@@ -645,7 +645,8 @@
       "doNotSwitchQuestions": "請勿切換題目",
       "doNotLeave": "請勿離開此頁面",
       "batchAnalysisComplete": "已完成 {{count}} 題分析",
-      "batchAnalysisFailed": "自動分析失敗，請稍後再試"
+      "batchAnalysisFailed": "自動分析失敗，請稍後再試",
+      "submittingAssignment": "正在提交作業..."
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",

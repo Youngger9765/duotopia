@@ -645,7 +645,8 @@
       "doNotSwitchQuestions": "Please do not switch questions",
       "doNotLeave": "Please do not leave this page",
       "batchAnalysisComplete": "Completed {{count}} analyses",
-      "batchAnalysisFailed": "Auto-analysis failed, please try again later"
+      "batchAnalysisFailed": "Auto-analysis failed, please try again later",
+      "submittingAssignment": "Submitting Assignment..."
     },
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
