@@ -1750,7 +1750,9 @@ export default function StudentActivityPageContent({
                           currentSubQuestionIndex === itemIndex;
 
                         const isCompleted =
-                          ("recording_url" in item && item.recording_url && !item.recording_url.startsWith("blob:")) ||
+                          ("recording_url" in item &&
+                            item.recording_url &&
+                            !item.recording_url.startsWith("blob:")) ||
                           activity.answers?.[itemIndex];
                         const teacherFeedback =
                           "teacher_feedback" in item

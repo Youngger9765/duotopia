@@ -762,7 +762,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     onClick={onStopRecording}
                     title={t("groupedQuestionsTemplate.labels.stopping")}
                   >
-                    <Square className="w-7 h-7 text-[#ff3131]" fill="currentColor" />
+                    <Square
+                      className="w-7 h-7 text-[#ff3131]"
+                      fill="currentColor"
+                    />
                   </button>
                 ) : items[currentQuestionIndex]?.recording_url ? (
                   // 重置按鈕 (有錄音)
@@ -795,14 +798,18 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           }
 
                           toast.success(
-                            t("groupedQuestionsTemplate.messages.deletionSuccess"),
+                            t(
+                              "groupedQuestionsTemplate.messages.deletionSuccess",
+                            ),
                           );
                         } catch (error) {
                           console.error("刪除 DB 記錄失敗:", error);
                           // 🎯 測試環境下不報錯，允許繼續清除前端狀態
                           if (!import.meta.env.VITE_TEST_MODE) {
                             toast.error(
-                              t("groupedQuestionsTemplate.messages.deletionFailed"),
+                              t(
+                                "groupedQuestionsTemplate.messages.deletionFailed",
+                              ),
                             );
                           }
                           // 繼續執行前端清除（測試環境需要）
@@ -813,17 +820,24 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       setAssessmentResults((prev) => {
                         // Remove the key using destructuring
                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { [currentQuestionIndex]: _, ...newResults } = prev;
+                        const { [currentQuestionIndex]: _, ...newResults } =
+                          prev;
                         return newResults;
                       });
 
                       // 清空 items 中的 recording_url，觸發學生作答區塊 reset
-                      if (onUpdateItemRecording && currentQuestionIndex !== undefined) {
+                      if (
+                        onUpdateItemRecording &&
+                        currentQuestionIndex !== undefined
+                      ) {
                         onUpdateItemRecording(currentQuestionIndex, "");
                       }
 
                       // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
-                      if (onAssessmentComplete && currentQuestionIndex !== undefined) {
+                      if (
+                        onAssessmentComplete &&
+                        currentQuestionIndex !== undefined
+                      ) {
                         onAssessmentComplete(currentQuestionIndex, null);
                       }
                     }}
@@ -882,14 +896,26 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   </button>
                   <select
                     value={playbackRate}
-                    onChange={(e) => updatePlaybackRate(parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      updatePlaybackRate(parseFloat(e.target.value))
+                    }
                     className="text-xs bg-white/10 text-white border-none rounded px-2 py-1"
                   >
-                    <option value={0.5} className="text-gray-900">0.5x</option>
-                    <option value={0.75} className="text-gray-900">0.75x</option>
-                    <option value={1.0} className="text-gray-900">1.0x</option>
-                    <option value={1.5} className="text-gray-900">1.5x</option>
-                    <option value={2.0} className="text-gray-900">2.0x</option>
+                    <option value={0.5} className="text-gray-900">
+                      0.5x
+                    </option>
+                    <option value={0.75} className="text-gray-900">
+                      0.75x
+                    </option>
+                    <option value={1.0} className="text-gray-900">
+                      1.0x
+                    </option>
+                    <option value={1.5} className="text-gray-900">
+                      1.5x
+                    </option>
+                    <option value={2.0} className="text-gray-900">
+                      2.0x
+                    </option>
                   </select>
                 </div>
               )}
@@ -1128,11 +1154,15 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       result?.accuracy_score,
                       result?.fluency_score,
                       result?.completeness_score,
-                    ].filter((score): score is number => typeof score === "number");
+                    ].filter(
+                      (score): score is number => typeof score === "number",
+                    );
 
-                    const averageScore = scores.length > 0
-                      ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-                      : 0;
+                    const averageScore =
+                      scores.length > 0
+                        ? scores.reduce((sum, score) => sum + score, 0) /
+                          scores.length
+                        : 0;
 
                     // 根據平均分數確定星星數量
                     let filledStars = 0;
