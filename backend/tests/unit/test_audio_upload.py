@@ -119,10 +119,11 @@ class TestAudioUploadService:
         mock_client.bucket.return_value = mock_bucket
         mock_bucket.blob.return_value = mock_blob
 
-        # Mock upload file
+        # Mock upload file (需要至少 5KB)
         mock_file = Mock(spec=UploadFile)
         mock_file.content_type = "audio/webm"
-        mock_file.read = AsyncMock(return_value=b"test audio")
+        mock_file.filename = "test.webm"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)  # ~10KB
 
         result = await service.upload_audio(mock_file, duration_seconds=20)
 
@@ -133,9 +134,9 @@ class TestAudioUploadService:
         assert result == expected_url
 
         mock_blob.upload_from_string.assert_called_once_with(
-            b"test audio", content_type="audio/webm"
+            b"test audio" * 1000, content_type="audio/webm"
         )
-        mock_blob.make_public.assert_called_once()
+        # make_public() 已移除，bucket 已預設為 public
 
     @pytest.mark.asyncio
     async def test_upload_audio_no_gcs_client(self, service):

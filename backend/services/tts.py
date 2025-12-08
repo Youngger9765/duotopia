@@ -177,9 +177,8 @@ class TTSService:
                     blob = bucket.blob(f"tts/{filename}")
 
                     blob.upload_from_filename(tmp_file_path)
-                    blob.make_public()
 
-                    # 返回公開 URL
+                    # 返回公開 URL (bucket 已設定為 public，無需 make_public())
                     return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
                 else:
                     cancellation_details = speechsdk.CancellationDetails(result)

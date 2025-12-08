@@ -41,7 +41,12 @@ jobs:
       id: check
       run: |
         # 檢查變更的檔案
-        CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+        # Handle manual trigger where HEAD^ may not exist
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-tree --name-only -r HEAD)
+        else
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+        fi
         echo "Changed files:"
         echo "$CHANGED_FILES"
 
@@ -62,10 +67,28 @@ jobs:
         echo "backend=$DEPLOY_BACKEND" >> $GITHUB_OUTPUT
         echo "frontend=$DEPLOY_FRONTEND" >> $GITHUB_OUTPUT
 
+  trigger-vm-prod:
+    name: 🔄 Trigger VM Production Deployment
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger VM Deployment
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-vm-prod.yml',
+            ref: '${{ github.ref }}'
+          });
+          console.log('✅ Triggered VM production deployment');
+
   trigger-backend:
-    name: 🔄 Trigger Backend Deployment
+    name: 🔄 Trigger Backend Deployment (Cloud Run)
     needs: detect-required-deployments
-    if: needs.detect-required-deployments.outputs.deploy-backend == 'true'
+    if: github.ref == 'refs/heads/staging' && needs.detect-required-deployments.outputs.deploy-backend == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Trigger Backend Workflow
@@ -79,12 +102,12 @@ jobs:
             workflow_id: 'deploy-backend.yml',
             ref: '${{ github.ref }}'
           });
-          console.log('✅ Triggered backend deployment');
+          console.log('✅ Triggered backend deployment (Cloud Run)');
 
   trigger-frontend:
-    name: 🔄 Trigger Frontend Deployment
+    name: 🔄 Trigger Frontend Deployment (Cloud Run)
     needs: detect-required-deployments
-    if: needs.detect-required-deployments.outputs.deploy-frontend == 'true'
+    if: github.ref == 'refs/heads/staging' && needs.detect-required-deployments.outputs.deploy-frontend == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Trigger Frontend Workflow
@@ -98,7 +121,7 @@ jobs:
             workflow_id: 'deploy-frontend.yml',
             ref: '${{ github.ref }}'
           });
-          console.log('✅ Triggered frontend deployment');
+          console.log('✅ Triggered frontend deployment (Cloud Run)');
 
   security-scan:
     name: 🛡️ Security Scan
@@ -125,7 +148,7 @@ jobs:
 
   notify-deployment:
     name: 📢 Notify Deployment
-    needs: [trigger-backend, trigger-frontend]
+    needs: [trigger-vm-prod, trigger-backend, trigger-frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -136,11 +159,29 @@ jobs:
         echo "🏷️ Commit: ${{ github.sha }}"
         echo "👤 Author: ${{ github.actor }}"
         echo "💬 Message: ${{ github.event.head_commit.message }}"
+        echo ""
 
-        if [[ "${{ needs.trigger-backend.result }}" == "success" ]]; then
-          echo "✅ Backend deployment triggered"
-        fi
+        # Check which deployment path was taken
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "🎯 Deployment Target: VM Production"
+          if [[ "${{ needs.trigger-vm-prod.result }}" == "success" ]]; then
+            echo "✅ VM production deployment triggered"
+          elif [[ "${{ needs.trigger-vm-prod.result }}" == "skipped" ]]; then
+            echo "⏭️ VM production deployment skipped"
+          else
+            echo "❌ VM production deployment failed"
+          fi
+        elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+          echo "🎯 Deployment Target: Cloud Run (Staging)"
+          if [[ "${{ needs.trigger-backend.result }}" == "success" ]]; then
+            echo "✅ Backend deployment triggered (Cloud Run)"
+          elif [[ "${{ needs.trigger-backend.result }}" == "skipped" ]]; then
+            echo "⏭️ Backend deployment skipped"
+          fi
 
-        if [[ "${{ needs.trigger-frontend.result }}" == "success" ]]; then
-          echo "✅ Frontend deployment triggered"
+          if [[ "${{ needs.trigger-frontend.result }}" == "success" ]]; then
+            echo "✅ Frontend deployment triggered (Cloud Run)"
+          elif [[ "${{ needs.trigger-frontend.result }}" == "skipped" ]]; then
+            echo "⏭️ Frontend deployment skipped"
+          fi
         fi

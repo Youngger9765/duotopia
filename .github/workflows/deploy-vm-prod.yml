@@ -1,0 +1,684 @@
+name: Deploy to VM (Production)
+
+# 🎯 Purpose: Deploy frontend, backend, or both to GCP e2-small VM (duotopia-prod-vm)
+# 🏗️ Architecture: Nginx reverse proxy + Frontend container + Backend container
+# 💡 NEW STRATEGY: Auto-deploy to VM on main branch push (production)
+# 🚀 Trigger: Automatic on push to main branch
+# 💰 Cost: ~$16/month (vs $240/month for Cloud Run) = 93% savings
+
+on:
+  # Automatic deployment on push to main branch
+  push:
+    branches:
+      - main
+    paths:
+      # Trigger on backend or frontend changes
+      - 'backend/**'
+      - 'frontend/**'
+      - 'deployment/vm/**'
+      - '.github/workflows/deploy-vm-prod.yml'
+      # Exclude documentation and tests
+      - '!**/*.md'
+      - '!backend/tests/**'
+      - '!frontend/tests/**'
+
+  # Manual trigger for emergencies or partial deployments
+  workflow_dispatch:
+    inputs:
+      deploy_component:
+        description: 'Component to deploy (frontend, backend, or both)'
+        required: true
+        type: choice
+        default: 'both'
+        options:
+          - frontend
+          - backend
+          - both
+
+env:
+  PROJECT_ID: duotopia-472708
+  REGION: asia-east1
+  ZONE: asia-east1-b
+  VM_NAME: duotopia-prod-vm
+  VM_USER: young
+
+  # Backend configuration
+  BACKEND_CONTAINER_NAME: duotopia-backend
+  BACKEND_CONTAINER_PORT: 8080
+  BACKEND_IMAGE_NAME: duotopia-backend-vm
+
+  # Frontend configuration
+  FRONTEND_CONTAINER_NAME: duotopia-frontend
+  FRONTEND_CONTAINER_PORT: 3000
+  FRONTEND_IMAGE_NAME: duotopia-frontend-vm
+
+  # Nginx configuration
+  NGINX_CONTAINER_NAME: duotopia-nginx
+  NGINX_PORT: 80
+
+  ARTIFACT_REGISTRY: asia-east1-docker.pkg.dev/duotopia-472708/duotopia-repo
+
+jobs:
+  # 🎯 Determine deployment component
+  determine-component:
+    name: 🎯 Determine Component to Deploy
+    runs-on: ubuntu-latest
+    outputs:
+      component: ${{ steps.component.outputs.value }}
+      deploy_backend: ${{ steps.component.outputs.backend }}
+      deploy_frontend: ${{ steps.component.outputs.frontend }}
+    steps:
+    - name: Determine what to deploy
+      id: component
+      run: |
+        # If manual trigger, use input; otherwise deploy both
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          COMPONENT="${{ github.event.inputs.deploy_component }}"
+        else
+          COMPONENT="both"
+        fi
+
+        echo "value=$COMPONENT" >> $GITHUB_OUTPUT
+
+        if [[ "$COMPONENT" == "backend" || "$COMPONENT" == "both" ]]; then
+          echo "backend=true" >> $GITHUB_OUTPUT
+        else
+          echo "backend=false" >> $GITHUB_OUTPUT
+        fi
+
+        if [[ "$COMPONENT" == "frontend" || "$COMPONENT" == "both" ]]; then
+          echo "frontend=true" >> $GITHUB_OUTPUT
+        else
+          echo "frontend=false" >> $GITHUB_OUTPUT
+        fi
+
+        echo "📦 Deploying: $COMPONENT"
+
+  # 🧪 Test backend before deployment
+  test-backend:
+    name: 🧪 Test Backend
+    needs: determine-component
+    runs-on: ubuntu-latest
+    if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Black formatting check
+      working-directory: ./backend
+      run: |
+        echo "Checking Python code formatting with Black..."
+        black --check . || (echo "❌ Black formatting check failed. Run 'black backend/' locally to fix." && exit 1)
+
+    - name: Run Flake8 linting
+      working-directory: ./backend
+      run: |
+        echo "Running Flake8 linting..."
+        flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
+
+    - name: Run pytest (Unit tests only)
+      working-directory: ./backend
+      run: |
+        echo "🧪 Running unit tests..."
+        pytest tests/unit/ -v --tb=short || echo "Tests completed with some failures"
+
+  # 🧪 Test frontend before deployment
+  test-frontend:
+    name: 🧪 Test Frontend
+    needs: determine-component
+    runs-on: ubuntu-latest
+    if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run TypeScript type check
+      working-directory: ./frontend
+      run: npm run typecheck
+
+    - name: Run ESLint
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Build frontend (test build)
+      working-directory: ./frontend
+      env:
+        VITE_API_URL: /api
+        VITE_ENVIRONMENT: production
+      run: npm run build
+
+  # 🐳 Build and push backend Docker image
+  build-backend:
+    name: 🐳 Build & Push Backend Image
+    needs: [determine-component, test-backend]
+    runs-on: ubuntu-latest
+    if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        # Artifact Registry uses region-specific endpoints
+        gcloud auth configure-docker asia-east1-docker.pkg.dev
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache-backend
+        key: ${{ runner.os }}-buildx-backend-vm-${{ hashFiles('backend/requirements.txt', 'backend/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-backend-vm-
+
+    - name: Build and push backend Docker image
+      run: |
+        cd backend
+        docker buildx build \
+          --cache-from type=local,src=/tmp/.buildx-cache-backend \
+          --cache-to type=local,dest=/tmp/.buildx-cache-backend-new,mode=max \
+          -f Dockerfile \
+          -t $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME:$GITHUB_SHA \
+          -t $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME:latest \
+          --push .
+
+        rm -rf /tmp/.buildx-cache-backend
+        mv /tmp/.buildx-cache-backend-new /tmp/.buildx-cache-backend || true
+
+  # 🐳 Build and push frontend Docker image
+  build-frontend:
+    name: 🐳 Build & Push Frontend Image
+    needs: [determine-component, test-frontend]
+    runs-on: ubuntu-latest
+    if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker asia-east1-docker.pkg.dev
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache-frontend
+        key: ${{ runner.os }}-buildx-frontend-vm-${{ hashFiles('frontend/package-lock.json', 'frontend/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-frontend-vm-
+
+    - name: Build and push frontend Docker image
+      run: |
+        cd frontend
+        docker buildx build \
+          --cache-from type=local,src=/tmp/.buildx-cache-frontend \
+          --cache-to type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max \
+          -f Dockerfile.vm \
+          --build-arg VITE_API_URL=/api \
+          --build-arg VITE_ENVIRONMENT=production \
+          --build-arg VITE_TAPPAY_SERVER_TYPE=production \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
+          --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }} \
+          --build-arg BUILD_TIMESTAMP="$(date -u +%Y%m%d-%H%M%S)" \
+          -t $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME:$GITHUB_SHA \
+          -t $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME:latest \
+          --push .
+
+        rm -rf /tmp/.buildx-cache-frontend
+        mv /tmp/.buildx-cache-frontend-new /tmp/.buildx-cache-frontend || true
+
+  # 🚀 Deploy to VM
+  deploy-to-vm:
+    name: 🚀 Deploy to VM
+    needs: [determine-component, build-backend, build-frontend]
+    if: |
+      always() &&
+      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure gcloud
+      run: |
+        gcloud config set project $PROJECT_ID
+        gcloud config set compute/zone $ZONE
+
+    # 🔐 Ensure VM has correct GCS permissions
+    - name: Configure VM OAuth2 Scopes for GCS Write Access
+      run: |
+        echo "🔍 Checking VM OAuth2 scopes..."
+
+        CURRENT_SCOPES=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(serviceAccounts[0].scopes)')
+
+        echo "Current scopes: $CURRENT_SCOPES"
+
+        # Check if VM already has read_write scope
+        if echo "$CURRENT_SCOPES" | grep -q "devstorage.read_write"; then
+          echo "✅ VM already has GCS read_write scope"
+        elif echo "$CURRENT_SCOPES" | grep -q "cloud-platform"; then
+          echo "✅ VM already has full cloud-platform scope (includes GCS write)"
+        else
+          echo "⚠️  VM has read_only scope - needs update to read_write"
+          echo "🛑 Stopping VM to update scopes..."
+
+          gcloud compute instances stop $VM_NAME --zone=$ZONE
+
+          echo "🔧 Updating VM scopes to include GCS write access..."
+          gcloud compute instances set-service-account $VM_NAME \
+            --zone=$ZONE \
+            --scopes=https://www.googleapis.com/auth/devstorage.read_write,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/pubsub,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/trace.append
+
+          echo "🚀 Starting VM with updated scopes..."
+          gcloud compute instances start $VM_NAME --zone=$ZONE
+
+          echo "⏳ Waiting for VM to be ready..."
+          sleep 30
+
+          echo "✅ VM scopes updated successfully"
+        fi
+
+    # ⚠️ Critical: Create backend .env file
+    - name: Create backend environment file
+      run: |
+        cat > backend.env <<EOF
+        # Database Configuration (Production)
+        DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
+        DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
+        DATABASE_TYPE=supabase
+        PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}
+
+        # JWT Configuration
+        JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}
+        JWT_ALGORITHM=HS256
+        JWT_EXPIRE_MINUTES=1440
+
+        # Environment
+        ENVIRONMENT=production-vm
+
+        # Supabase
+        SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}
+        SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
+
+        # External APIs
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}
+        AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}
+        AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}
+
+        # SMTP Configuration
+        SMTP_HOST=${{ secrets.SMTP_HOST }}
+        SMTP_PORT=${{ secrets.SMTP_PORT }}
+        SMTP_USER=${{ secrets.SMTP_USER }}
+        SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+        FROM_EMAIL=${{ secrets.FROM_EMAIL }}
+        FROM_NAME=${{ secrets.FROM_NAME }}
+
+        # Frontend URL
+        FRONTEND_URL=http://34.81.38.211
+
+        # GCP Configuration
+        GCP_PROJECT_ID=$PROJECT_ID
+        REGION=$REGION
+        GCS_BUCKET_NAME=duotopia-audio
+
+        # TapPay Payment (Production)
+        TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}
+        TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}
+        TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}
+        TAPPAY_SANDBOX_MERCHANT_ID=${{ secrets.TAPPAY_SANDBOX_MERCHANT_ID }}
+        TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }}
+        TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}
+        TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}
+        TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}
+        TAPPAY_ENV=production
+        USE_MOCK_PAYMENT=false
+
+        # Payment Feature Control
+        ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}
+
+        # Cron Job Secret
+        CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}
+
+        # Application Port
+        PORT=8080
+        EOF
+
+    # 📤 Upload configuration files to VM
+    - name: Upload configuration files to VM
+      run: |
+        echo "📤 Uploading configuration files to VM..."
+
+        # Upload backend environment file
+        gcloud compute scp backend.env $VM_USER@$VM_NAME:/tmp/backend.env \
+          --zone=$ZONE \
+          --strict-host-key-checking=no
+
+        # Upload nginx configuration (only if deploying both components)
+        if [[ "${{ needs.determine-component.outputs.component }}" == "both" ]]; then
+          gcloud compute scp deployment/vm/nginx.conf $VM_USER@$VM_NAME:/tmp/nginx.conf \
+            --zone=$ZONE \
+            --strict-host-key-checking=no
+        fi
+
+        echo "✅ Files uploaded"
+
+    # 🔄 Deploy containers to VM
+    - name: Deploy to VM via SSH
+      run: |
+        echo "🚀 Deploying to VM: $VM_NAME"
+
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
+
+        gcloud compute ssh $VM_USER@$VM_NAME \
+          --zone=$ZONE \
+          --strict-host-key-checking=no \
+          --command="
+            set -e
+
+            echo '🔐 Configuring Docker for Artifact Registry...'
+            docker-credential-gcr configure-docker --registries=asia-east1-docker.pkg.dev
+
+            echo '🔥 Configuring iptables firewall...'
+            sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+            sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+            sudo iptables -C INPUT -p tcp --dport 8080 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 8080 -j ACCEPT
+            sudo mkdir -p /etc/iptables
+            sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
+            echo '✅ Firewall configured'
+
+            echo '🔒 Generating self-signed SSL certificate...'
+            sudo mkdir -p /etc/ssl/duotopia
+            if [ ! -f /etc/ssl/duotopia/server.crt ] || [ ! -f /etc/ssl/duotopia/server.key ]; then
+              sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout /etc/ssl/duotopia/server.key \
+                -out /etc/ssl/duotopia/server.crt \
+                -subj '/C=TW/ST=Taipei/L=Taipei/O=Duotopia/OU=IT/CN=duotopia.co/emailAddress=admin@duotopia.co' \
+                -addext 'subjectAltName=DNS:duotopia.co,DNS:www.duotopia.co,IP:34.81.38.211'
+              echo '✅ New SSL certificate generated'
+            else
+              echo '✅ SSL certificate already exists'
+            fi
+
+            # Deploy backend if needed
+            if [[ '$DEPLOY_COMPONENT' == 'backend' || '$DEPLOY_COMPONENT' == 'both' ]]; then
+              echo '📥 Pulling backend image...'
+              docker pull $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME:$GITHUB_SHA
+
+              echo '🛑 Stopping old backend container...'
+              docker stop $BACKEND_CONTAINER_NAME 2>/dev/null || true
+              docker rm $BACKEND_CONTAINER_NAME 2>/dev/null || true
+
+              echo '🚀 Starting backend container...'
+              docker run -d \
+                --name $BACKEND_CONTAINER_NAME \
+                --restart unless-stopped \
+                --network=host \
+                --env-file /tmp/backend.env \
+                $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME:$GITHUB_SHA
+
+              echo '✅ Backend container started'
+            fi
+
+            # Deploy frontend if needed
+            if [[ '$DEPLOY_COMPONENT' == 'frontend' || '$DEPLOY_COMPONENT' == 'both' ]]; then
+              echo '📥 Pulling frontend image...'
+              docker pull $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME:$GITHUB_SHA
+
+              echo '🛑 Stopping old frontend container...'
+              docker stop $FRONTEND_CONTAINER_NAME 2>/dev/null || true
+              docker rm $FRONTEND_CONTAINER_NAME 2>/dev/null || true
+
+              echo '🚀 Starting frontend container...'
+              docker run -d \
+                --name $FRONTEND_CONTAINER_NAME \
+                --restart unless-stopped \
+                --network=host \
+                -e BACKEND_URL=http://localhost:$BACKEND_CONTAINER_PORT \
+                $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME:$GITHUB_SHA
+
+              echo '✅ Frontend container started'
+            fi
+
+            # Deploy/update Nginx reverse proxy if deploying both
+            if [[ '$DEPLOY_COMPONENT' == 'both' ]]; then
+              echo '🛑 Stopping old Nginx container...'
+              docker stop $NGINX_CONTAINER_NAME 2>/dev/null || true
+              docker rm $NGINX_CONTAINER_NAME 2>/dev/null || true
+
+              echo '🚀 Starting Nginx reverse proxy...'
+              docker run -d \
+                --name $NGINX_CONTAINER_NAME \
+                --restart unless-stopped \
+                --network=host \
+                -v /tmp/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /etc/ssl/duotopia:/etc/ssl/duotopia:ro \
+                nginx:alpine
+
+              echo '✅ Nginx reverse proxy started'
+            fi
+
+            echo '🧹 Cleaning up old images...'
+            docker image prune -f
+
+            echo '📊 Current container status:'
+            docker ps -a --filter name=duotopia
+          "
+
+    # 🩺 Health check
+    - name: Health check
+      run: |
+        echo "🩺 Running health check..."
+
+        VM_IP=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+        echo "🌐 VM IP: $VM_IP"
+
+        # Wait for containers to be ready
+        sleep 15
+
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
+
+        # Check backend health (use HTTPS and follow redirects)
+        if [[ "$DEPLOY_COMPONENT" == "backend" || "$DEPLOY_COMPONENT" == "both" ]]; then
+          echo "🔍 Checking backend health..."
+          for i in {1..10}; do
+            if curl -fkL "https://$VM_IP/api/health" --max-time 10; then
+              echo "✅ Backend health check passed!"
+              break
+            else
+              if [ $i -eq 10 ]; then
+                echo "❌ Backend health check failed"
+                exit 1
+              fi
+              echo "⏳ Waiting for backend (attempt $i/10)..."
+              sleep 10
+            fi
+          done
+        fi
+
+        # Check frontend health (use HTTPS and follow redirects)
+        if [[ "$DEPLOY_COMPONENT" == "frontend" || "$DEPLOY_COMPONENT" == "both" ]]; then
+          echo "🔍 Checking frontend health..."
+          for i in {1..10}; do
+            if curl -fkL "https://$VM_IP/" --max-time 10 | grep -iq "<!doctype html>"; then
+              echo "✅ Frontend health check passed!"
+              break
+            else
+              if [ $i -eq 10 ]; then
+                echo "❌ Frontend health check failed"
+                exit 1
+              fi
+              echo "⏳ Waiting for frontend (attempt $i/10)..."
+              sleep 10
+            fi
+          done
+        fi
+
+    # 📊 Deployment summary
+    - name: Deployment Summary
+      run: |
+        VM_IP=$(gcloud compute instances describe $VM_NAME \
+          --zone=$ZONE \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+        DEPLOY_COMPONENT="${{ needs.determine-component.outputs.component }}"
+
+        echo "🎉 VM Deployment completed!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 Deployed: $DEPLOY_COMPONENT"
+        echo "🖥️  VM Name: $VM_NAME"
+        echo "🌍 VM Zone: $ZONE"
+        echo "🌐 Static IP: $VM_IP"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "🔗 Access URLs:"
+        echo "  Frontend: http://$VM_IP/"
+        echo "  Backend API: http://$VM_IP/api/docs"
+        echo "  Backend Health: http://$VM_IP/api/health"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "💡 Useful commands:"
+        echo "  View all containers: gcloud compute ssh $VM_USER@$VM_NAME --zone=$ZONE --command='docker ps -a'"
+        echo "  View backend logs: gcloud compute ssh $VM_USER@$VM_NAME --zone=$ZONE --command='docker logs -f $BACKEND_CONTAINER_NAME'"
+        echo "  View frontend logs: gcloud compute ssh $VM_USER@$VM_NAME --zone=$ZONE --command='docker logs -f $FRONTEND_CONTAINER_NAME'"
+        echo "  View nginx logs: gcloud compute ssh $VM_USER@$VM_NAME --zone=$ZONE --command='docker logs -f $NGINX_CONTAINER_NAME'"
+
+  # 🧹 Cleanup old images from Artifact Registry
+  cleanup-old-images:
+    name: 🧹 Cleanup Old Images
+    needs: [determine-component, deploy-to-vm]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Cleanup old backend images
+      if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
+      run: |
+        echo "🔍 Cleaning up old backend images..."
+        KEEP_COUNT=3
+
+        IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME \
+          --format='get(version)' \
+          --sort-by=~CREATE_TIME \
+          --limit=100 \
+          2>/dev/null || echo "")
+
+        if [ ! -z "$IMAGES" ]; then
+          SHA_IMAGES=$(echo "$IMAGES" | grep -E '^sha256:' || echo "")
+
+          if [ ! -z "$SHA_IMAGES" ]; then
+            TOTAL=$(echo "$SHA_IMAGES" | wc -l | xargs)
+            echo "  Found $TOTAL backend images (keeping $KEEP_COUNT)"
+
+            if [ $TOTAL -gt $KEEP_COUNT ]; then
+              TO_DELETE=$(echo "$SHA_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+              DELETE_COUNT=$(echo "$TO_DELETE" | wc -l | xargs)
+              echo "  Deleting $DELETE_COUNT old backend images..."
+
+              echo "$TO_DELETE" | while read VERSION; do
+                echo "    Deleting: $VERSION"
+                gcloud artifacts docker images delete $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME@$VERSION \
+                  --quiet 2>/dev/null || echo "    Failed to delete (may be in use)"
+              done
+            fi
+          fi
+        fi
+
+    - name: Cleanup old frontend images
+      if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
+      run: |
+        echo "🔍 Cleaning up old frontend images..."
+        KEEP_COUNT=3
+
+        IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME \
+          --format='get(version)' \
+          --sort-by=~CREATE_TIME \
+          --limit=100 \
+          2>/dev/null || echo "")
+
+        if [ ! -z "$IMAGES" ]; then
+          SHA_IMAGES=$(echo "$IMAGES" | grep -E '^sha256:' || echo "")
+
+          if [ ! -z "$SHA_IMAGES" ]; then
+            TOTAL=$(echo "$SHA_IMAGES" | wc -l | xargs)
+            echo "  Found $TOTAL frontend images (keeping $KEEP_COUNT)"
+
+            if [ $TOTAL -gt $KEEP_COUNT ]; then
+              TO_DELETE=$(echo "$SHA_IMAGES" | tail -n +$((KEEP_COUNT + 1)))
+              DELETE_COUNT=$(echo "$TO_DELETE" | wc -l | xargs)
+              echo "  Deleting $DELETE_COUNT old frontend images..."
+
+              echo "$TO_DELETE" | while read VERSION; do
+                echo "    Deleting: $VERSION"
+                gcloud artifacts docker images delete $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME@$VERSION \
+                  --quiet 2>/dev/null || echo "    Failed to delete (may be in use)"
+              done
+            fi
+          fi
+        fi

@@ -96,7 +96,7 @@ class TestTTSService:
         )
         mock_comm.save.assert_called_once_with("/tmp/test.mp3")
         mock_blob.upload_from_filename.assert_called_once_with("/tmp/test.mp3")
-        mock_blob.make_public.assert_called_once()
+        # make_public() 已移除，bucket 已預設為 public
         mock_unlink.assert_called_once_with("/tmp/test.mp3")
 
         expected_url = "https://storage.googleapis.com/duotopia-audio/tts/tts_20240101_120000_test-uuid.mp3"
