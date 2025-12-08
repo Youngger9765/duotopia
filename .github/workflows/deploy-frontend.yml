@@ -1,9 +1,17 @@
-name: Deploy Frontend
+name: Deploy Frontend (Cloud Run)
+
+# 🎯 NEW STRATEGY: Deploy to Cloud Run for staging/other branches
+# 📝 Main branch → VM (see deploy-vm-prod.yml)
+# 📝 Staging/other branches → Cloud Run (this workflow)
 
 on:
   workflow_dispatch:  # 手動觸發
   push:
-    branches: [ main, staging ]
+    branches:
+      - staging
+      # Exclude main branch (uses VM deployment instead)
+    branches-ignore:
+      - main
     paths:
       # 前端相關檔案
       - 'frontend/**'
@@ -92,17 +100,18 @@ jobs:
     - name: Set Environment Variables
       id: env_vars
       run: |
+        # This workflow should NOT run on main branch (VM deployment instead)
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "ENV_NAME=production" >> $GITHUB_OUTPUT
-          echo "FRONTEND_SERVICE=${{ secrets.PRODUCTION_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
-          echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
-          echo "🚀 Deploying to PRODUCTION"
-        else
-          echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-          echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
-          echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
-          echo "🧪 Deploying to STAGING"
+          echo "❌ ERROR: This workflow should not run on main branch!"
+          echo "Main branch uses VM deployment (deploy-vm-prod.yml)"
+          exit 1
         fi
+
+        # Default to staging for all non-main branches
+        echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+        echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
+        echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+        echo "🧪 Deploying to STAGING (Cloud Run)"
 
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
@@ -116,17 +125,12 @@ jobs:
       run: |
         gcloud auth configure-docker $REGION-docker.pkg.dev
 
-    - name: Clear Docker cache (production only)
-      if: github.ref == 'refs/heads/main'
-      run: |
-        echo "🧹 Clearing all Docker build cache to fix RWD issue..."
-        docker system prune -a -f --volumes
-        docker builder prune -a -f
+    # No cache clearing needed for staging (only production needed this)
 
     - name: Get backend URL
       id: backend_url
       run: |
-        # 獲取後端服務的實際 URL
+        # 獲取後端服務的實際 URL (staging only)
         BACKEND_URL=$(gcloud run services describe ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --platform managed \
           --region $REGION \
@@ -134,11 +138,7 @@ jobs:
 
         if [ -z "$BACKEND_URL" ]; then
           echo "⚠️ Backend service not found, using fallback URL"
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            BACKEND_URL="${{ secrets.PRODUCTION_BACKEND_URL }}"
-          else
-            BACKEND_URL="${{ secrets.STAGING_BACKEND_URL }}"
-          fi
+          BACKEND_URL="${{ secrets.STAGING_BACKEND_URL }}"
         fi
 
         echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_OUTPUT
@@ -157,32 +157,15 @@ jobs:
       run: |
         echo "Building frontend with API URL: ${{ steps.backend_url.outputs.BACKEND_URL }}"
 
-        # 使用 --build-arg 傳遞 API URL
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          DOCKERFILE="Dockerfile"
-          CACHE_FLAG="--no-cache --pull"  # Force clean rebuild + pull base images
-          BUILD_TIMESTAMP="--build-arg BUILD_TIMESTAMP=$(date +%s)"  # Break cache
-        else
-          DOCKERFILE="Dockerfile.staging"
-          CACHE_FLAG=""
-          BUILD_TIMESTAMP=""
-        fi
+        # Staging always uses Dockerfile.staging
+        DOCKERFILE="Dockerfile.staging"
 
-        # TapPay build args - 根據環境動態設定
-        # ⚠️ Staging also uses production TapPay for real payments
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          TAPPAY_SERVER_TYPE="production"
-          TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
-          TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
-        else
-          TAPPAY_SERVER_TYPE="production"  # Staging uses production TapPay
-          TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
-          TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
-        fi
+        # TapPay build args - Staging uses production TapPay for real payments
+        TAPPAY_SERVER_TYPE="production"
+        TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
+        TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
 
         docker build -f $DOCKERFILE \
-          $CACHE_FLAG \
-          $BUILD_TIMESTAMP \
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
           --build-arg VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }} \
           --build-arg VITE_TAPPAY_SERVER_TYPE=$TAPPAY_SERVER_TYPE \
@@ -194,22 +177,12 @@ jobs:
 
     - name: Deploy frontend to Cloud Run
       run: |
-        # 💰 成本優化：根據環境設定不同資源配置
+        # 💰 成本優化：Staging 環境最小化成本
         MIN_INSTANCES=0  # Scale-to-Zero 最大化節省成本
-
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          # Production: 保持性能，用戶體驗優先
-          MEMORY="256Mi"
-          CPU=1
-          CONCURRENCY=50
-          MAX_INSTANCES=6    # 尖峰時段避免 503 錯誤
-        else
-          # Staging: 測試環境，最小化成本
-          MEMORY="256Mi"
-          CPU="500m"         # 0.5 CPU
-          CONCURRENCY=1      # CPU < 1 時必須設為 1
-          MAX_INSTANCES=1    # Staging 流量低，降為 1 節省成本
-        fi
+        MEMORY="256Mi"
+        CPU="500m"       # 0.5 CPU
+        CONCURRENCY=1    # CPU < 1 時必須設為 1
+        MAX_INSTANCES=1  # Staging 流量低，降為 1 節省成本
 
         gcloud run deploy ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA \

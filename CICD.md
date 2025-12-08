@@ -150,6 +150,113 @@ curl https://duotopia-backend-staging-xxx.run.app/health
 gh run watch
 ```
 
+### VM 部署（實驗性 - Production A/B Testing）
+
+**🎯 目的**: 部署到 GCP e2-small VM (duotopia-prod-vm) 進行成本與效能測試
+
+**📋 部署前確認**:
+- VM 已建立: `duotopia-prod-vm`
+- Zone: `asia-east1-b`
+- Static IP: `34.81.38.211`
+- Docker 已安裝在 VM 上
+
+**🚀 觸發 VM 部署**:
+```bash
+# 1. 前往 GitHub Actions
+# 2. 選擇 "Deploy to VM (Production)" workflow
+# 3. 點擊 "Run workflow"
+# 4. 輸入確認文字: deploy-to-vm
+# 5. 點擊 "Run workflow" 開始部署
+```
+
+**🔍 部署流程說明**:
+1. **安全確認**: 需輸入 `deploy-to-vm` 才能繼續
+2. **程式碼測試**: 執行完整的單元測試與格式檢查
+3. **構建映像**: Build Docker image 並推送到 GCR (gcr.io)
+4. **上傳環境變數**: 將生產環境變數上傳到 VM
+5. **部署容器**:
+   - 在 VM 上拉取最新 Docker image
+   - 停止舊容器
+   - 啟動新容器 (port 80)
+6. **健康檢查**: 驗證服務正常運作
+7. **清理舊映像**: 保留最近 3 個映像，刪除其他舊映像
+
+**🛠️ VM 管理命令**:
+```bash
+# SSH 連線到 VM
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b
+
+# 查看容器狀態
+docker ps -a --filter name=duotopia-backend
+
+# 查看容器日誌
+docker logs -f duotopia-backend
+
+# 重啟容器
+docker restart duotopia-backend
+
+# 停止容器
+docker stop duotopia-backend
+
+# 檢查 VM 資源使用
+top
+free -h
+df -h
+```
+
+**📊 測試 VM 部署的 API**:
+```bash
+# Health check
+curl http://34.81.38.211/api/health
+
+# API 文檔
+curl http://34.81.38.211/api/docs
+
+# 完整測試
+curl -X POST http://34.81.38.211/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"test123"}'
+```
+
+**💡 VM vs Cloud Run 比較**:
+
+| 項目 | VM (e2-small) | Cloud Run |
+|------|--------------|-----------|
+| 成本 | ~$13/月（固定） | 按使用量計費（Scale-to-Zero） |
+| 冷啟動 | 無 | 有（~3秒） |
+| 自動擴展 | 無 | 有（0-6 instances） |
+| 維護 | 需手動管理 Docker | 全託管 |
+| 適用場景 | 穩定流量 | 變動流量 |
+| 測試目的 | 成本優化實驗 | 生產主力 |
+
+**⚠️ 注意事項**:
+1. VM 部署是**獨立於 Cloud Run** 的實驗性部署
+2. 兩個部署可以**同時存在**，用於 A/B 測試
+3. VM 部署需要**手動觸發**，不會自動部署
+4. 環境變數使用 GitHub Secrets，不使用 Cloud Secret Manager
+5. 部署失敗時會顯示容器日誌，方便除錯
+
+**🔄 回滾 VM 部署**:
+```bash
+# 1. SSH 到 VM
+gcloud compute ssh young@duotopia-prod-vm --zone=asia-east1-b
+
+# 2. 查看可用的映像版本
+gcloud container images list-tags gcr.io/duotopia-472708/duotopia-backend-vm
+
+# 3. 停止當前容器
+docker stop duotopia-backend
+docker rm duotopia-backend
+
+# 4. 啟動舊版本（替換 <OLD_SHA> 為舊版 commit SHA）
+docker run -d \
+  --name duotopia-backend \
+  --restart unless-stopped \
+  -p 80:8080 \
+  --env-file /tmp/backend.env \
+  gcr.io/duotopia-472708/duotopia-backend-vm:<OLD_SHA>
+```
+
 ## 🔍 部署監控
 
 ### 即時監控命令

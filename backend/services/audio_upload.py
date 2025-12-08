@@ -199,10 +199,7 @@ class AudioUploadService:
                 # 上傳檔案並設定正確的 content type
                 blob.upload_from_string(content, content_type=file.content_type)
 
-                # 設為公開
-                blob.make_public()
-
-                # 返回公開 URL
+                # 返回公開 URL (bucket 已設定為 public，無需 make_public())
                 return f"https://storage.googleapis.com/{self.bucket_name}/recordings/{filename}"
 
             except Exception as e:
