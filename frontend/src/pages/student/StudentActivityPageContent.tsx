@@ -740,7 +740,11 @@ export default function StudentActivityPageContent({
     [activities, currentActivityIndex, currentSubQuestionIndex],
   );
 
-  const handleFileUpload = async (file: File) => {
+  // 🎯 Issue #74: handleFileUpload no longer used after Zone D redesign
+  // Kept for potential future use, but currently unused
+  // @ts-ignore - Unused function kept for backward compatibility
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleFileUpload = async (file: File) => {
     if (isReadOnly) {
       toast.warning(
         isPreviewMode
@@ -1419,7 +1423,6 @@ export default function StudentActivityPageContent({
           onUpdateItemRecording={(index, url) =>
             handleUpdateItemRecording(activity.id, index, url)
           }
-          onFileUpload={handleFileUpload}
           formatTime={formatTime}
           progressIds={
             answer?.progressIds ||
@@ -1583,6 +1586,34 @@ export default function StudentActivityPageContent({
   const currentActivity = activities[currentActivityIndex];
   const progress = ((currentActivityIndex + 1) / activities.length) * 100;
 
+  // 🎯 Issue #74: Calculate completed items for progress bar
+  const calculateProgress = () => {
+    let total = 0;
+    let completed = 0;
+
+    activities.forEach((activity) => {
+      if (activity.items && activity.items.length > 0) {
+        total += activity.items.length;
+        activity.items.forEach((item) => {
+          if (item.recording_url && !item.recording_url.startsWith("blob:")) {
+            completed++;
+          }
+        });
+      } else {
+        total++;
+        const answer = answers.get(activity.id);
+        if (answer?.audioUrl && !answer.audioUrl.startsWith("blob:")) {
+          completed++;
+        }
+      }
+    });
+
+    return { completed, total };
+  };
+
+  const { completed: completedCount, total: totalCount } = calculateProgress();
+  const isAllCompleted = completedCount === totalCount && totalCount > 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Read-only mode banner */}
@@ -1641,13 +1672,24 @@ export default function StudentActivityPageContent({
                   </span>
                 </div>
               )}
+              {/* 🎯 Issue #74: Progress indicator */}
+              {!isReadOnly && !isPreviewMode && (
+                <div className="flex items-center gap-2 text-sm font-medium text-[#545454]">
+                  <span>
+                    {completedCount} / {totalCount}
+                  </span>
+                </div>
+              )}
               {!isReadOnly && !isPreviewMode && (
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting}
                   size="sm"
                   variant="default"
-                  className="px-2 sm:px-3"
+                  className="px-2 sm:px-3 bg-[#5170ff] hover:bg-[#5170ff]/90 text-[#545454]"
+                  style={{
+                    opacity: isAllCompleted ? 1 : 0.3,
+                  }}
                 >
                   {submitting ? (
                     <>
@@ -1708,7 +1750,7 @@ export default function StudentActivityPageContent({
                           currentSubQuestionIndex === itemIndex;
 
                         const isCompleted =
-                          ("recording_url" in item && item.recording_url) ||
+                          ("recording_url" in item && item.recording_url && !item.recording_url.startsWith("blob:")) ||
                           activity.answers?.[itemIndex];
                         const teacherFeedback =
                           "teacher_feedback" in item
@@ -1742,14 +1784,14 @@ export default function StudentActivityPageContent({
                             }}
                             disabled={isAnalyzing} // 🔒 分析中禁用
                             className={cn(
-                              "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                              "relative w-8 h-8 sm:w-8 sm:h-8 rounded transition-all",
                               "flex items-center justify-center text-sm sm:text-xs font-medium",
                               "min-w-[32px] sm:min-w-[32px]",
-                              // 保持學生原本的完成狀態樣式
+                              // 🎯 Issue #74 Zone A: 完成題目背景色 #94b9ff，無框
                               isCompleted
-                                ? "bg-green-100 text-green-800 border-green-400"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
-                              isActiveItem && "border-2 border-blue-600",
+                                ? "bg-[#94b9ff] text-white"
+                                : "bg-white text-gray-600 border border-gray-300 hover:border-blue-400",
+                              isActiveItem && "ring-2 ring-blue-600",
                             )}
                             title={
                               needsCorrection

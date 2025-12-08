@@ -7,15 +7,12 @@ import AIScoreDisplay from "@/components/shared/AIScoreDisplay";
 import {
   Mic,
   Square,
-  Play,
-  Pause,
   Volume2,
   Brain,
   Loader2,
   MessageSquare,
   Languages,
   X,
-  Upload,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
@@ -104,7 +101,7 @@ interface GroupedQuestionsTemplateProps {
   onStartRecording?: () => void;
   onStopRecording?: () => void;
   onUpdateItemRecording?: (index: number, recordingUrl: string) => void; // 更新單一 item 的錄音
-  onFileUpload?: (file: File) => void; // 🎯 檔案上傳回調
+  // onFileUpload?: (file: File) => void; // 🎯 Issue #74: Removed - no longer used after UI redesign
   formatTime?: (seconds: number) => string;
   progressId?: number | string;
   progressIds?: number[]; // 每個子問題的 progress_id 數組
@@ -131,7 +128,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onStartRecording,
   onStopRecording,
   onUpdateItemRecording,
-  onFileUpload,
+  // onFileUpload, // 🎯 Issue #74: Removed
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
   progressId,
@@ -149,9 +146,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  // 🎯 Issue #74: Removed unused playback state (moved to Zone D redesign)
+  // const [isPlaying, setIsPlaying] = useState(false);
+  // const [currentTime, setCurrentTime] = useState(0);
+  // const [duration, setDuration] = useState(0);
   const [isAssessing, setIsAssessing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0); // 播放倍速
   const questionAudioRef = useRef<HTMLAudioElement | null>(null); // 題目音檔播放器
@@ -191,8 +189,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
     return {};
   });
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // 🎯 Issue #74: Removed unused refs (audioRef, progressIntervalRef) after Zone D redesign
   const uploadButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // 使用傳入的 token（預覽模式）或從 student store 取得（正常模式）
@@ -258,109 +255,16 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
   }, [items, currentQuestionIndex, assessmentResults, isAssessing]);
 
-  // 檢查題目是否已完成 - 目前未使用
-  // const isQuestionCompleted = (index: number) => {
-  //   const recording = items[index]?.recording_url;
-  //   return recording || answers[index];
-  // };
-
-  // 播放/暫停音檔
-  const togglePlayback = () => {
-    const currentRecording = items[currentQuestionIndex]?.recording_url;
-    if (!currentRecording) return;
-
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-
-      const audio = new Audio(currentRecording as string);
-      audioRef.current = audio;
-
-      audio.addEventListener("loadedmetadata", () => {
-        const dur = audio.duration;
-        if (dur && isFinite(dur) && !isNaN(dur)) {
-          setDuration(dur);
-        }
-      });
-
-      audio.addEventListener("ended", () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-        }
-      });
-
-      // 設定播放速度
-      audio.playbackRate = playbackRate;
-      audio.play();
-      setIsPlaying(true);
-
-      progressIntervalRef.current = setInterval(() => {
-        if (audioRef.current) {
-          setCurrentTime(audioRef.current.currentTime);
-        }
-      }, 100);
-    }
-  };
+  // 🎯 Issue #74: Removed togglePlayback - no longer needed after Zone D redesign
 
   // 更新播放速度
   const updatePlaybackRate = (newRate: number) => {
     setPlaybackRate(newRate);
-    if (audioRef.current && isPlaying) {
-      audioRef.current.playbackRate = newRate;
+    // 🎯 Issue #74: Updated to use questionAudioRef instead of removed audioRef
+    if (questionAudioRef.current && !questionAudioRef.current.paused) {
+      questionAudioRef.current.playbackRate = newRate;
     }
   };
-
-  // 清理音檔播放和重置狀態
-  useEffect(() => {
-    // Reset states when switching questions
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-
-    // Clean up previous audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-
-    // Preload duration for current recording if it exists
-    const currentRecording = items[currentQuestionIndex]?.recording_url;
-    if (currentRecording) {
-      const tempAudio = new Audio(currentRecording as string);
-      tempAudio.addEventListener("loadedmetadata", () => {
-        const dur = tempAudio.duration;
-        if (dur && isFinite(dur) && !isNaN(dur)) {
-          setDuration(dur);
-        } else {
-          setDuration(0);
-        }
-      });
-      // Trigger load
-      tempAudio.load();
-    }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, [currentQuestionIndex, items]);
 
   // 自動播放題目音檔
   useEffect(() => {
@@ -390,17 +294,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         questionAudioRef.current = null;
       }
     };
-  }, [currentQuestionIndex, currentQuestion?.audio_url, playbackRate]);
+  }, [currentQuestionIndex, currentQuestion?.audio_url, playbackRate, t]);
 
-  // 格式化時間
-  const formatAudioTime = (seconds: number) => {
-    if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
-      return "0:00";
-    }
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  // 🎯 Issue #74: Removed formatAudioTime - no longer needed after Zone D redesign
 
   // AI 發音評估
   const handleAssessment = async () => {
@@ -765,8 +661,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 <Volume2 className="w-4 h-4" />
               </button>
 
-              {/* 題目文字 - 響應式字體大小 */}
-              <div className="text-base sm:text-lg font-medium text-gray-800 flex-1">
+              {/* 🎯 Issue #74 Zone C: 題目文字 - 主文本顏色 #000000 */}
+              <div className="text-base sm:text-lg font-medium text-[#000000] flex-1">
                 {currentQuestion?.text ? (
                   <div className="flex flex-wrap gap-1">
                     {currentQuestion.text.split(" ").map((word, index) => (
@@ -819,233 +715,183 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
               </select>
             </div>
 
-            {/* 翻譯 - 響應式字體和內距 */}
+            {/* 🎯 Issue #74 Zone C: 翻譯文本顏色 #545454 */}
             {currentQuestion?.translation && (
-              <div className="flex items-center gap-2 text-sm sm:text-base text-purple-600 bg-purple-50 rounded px-2 sm:px-3 py-1.5 sm:py-2">
+              <div className="flex items-center gap-2 text-sm sm:text-base text-[#545454] bg-gray-50 rounded px-2 sm:px-3 py-1.5 sm:py-2">
                 <Languages className="w-4 h-4" />
                 <span>{currentQuestion.translation}</span>
               </div>
             )}
           </div>
 
-          {/* 學生錄音區 - 超精簡版 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">
+          {/* 🎯 Issue #74 Zone D: 學生錄音區 - 重新設計 */}
+          <div className="bg-[#f0f0f0] rounded-t-lg p-4">
+            <div className="text-sm sm:text-base font-medium text-gray-700 mb-3">
               {t("groupedQuestionsTemplate.labels.studentAnswer")}
             </div>
 
-            {/* 錄音控制 - 一行搞定 */}
-            <div className="flex items-center gap-2">
-              {!isRecording ? (
-                <>
-                  {/* 錄音按鈕或播放控制 */}
-                  {items[currentQuestionIndex]?.recording_url ? (
-                    <>
-                      {/* 播放控制 */}
-                      <button
-                        onClick={togglePlayback}
-                        className="w-8 h-8 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center text-white flex-shrink-0"
-                      >
-                        {isPlaying ? (
-                          <Pause className="w-3 h-3" fill="currentColor" />
-                        ) : (
-                          <Play
-                            className="w-3 h-3 ml-0.5"
-                            fill="currentColor"
-                          />
-                        )}
-                      </button>
-
-                      {/* 時間軸 */}
-                      <div className="flex-1">
-                        <div className="h-1.5 bg-green-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 rounded-full transition-all duration-100"
-                            style={{
-                              width:
-                                duration > 0
-                                  ? `${(currentTime / duration) * 100}%`
-                                  : "0%",
-                            }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {formatAudioTime(duration || 0)}
-                        </div>
-                      </div>
-
-                      {/* 清除錄音按鈕 */}
-                      <button
-                        onClick={async () => {
-                          // 停止播放
-                          if (audioRef.current) audioRef.current.pause();
-                          setIsPlaying(false);
-                          setCurrentTime(0);
-                          setDuration(0);
-
-                          // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
-                          if (
-                            !isPreviewMode &&
-                            assignmentId &&
-                            currentQuestionIndex !== undefined
-                          ) {
-                            try {
-                              const apiUrl = import.meta.env.VITE_API_URL || "";
-                              const token =
-                                useStudentAuthStore.getState().token;
-
-                              const response = await fetch(
-                                `${apiUrl}/api/speech/assessment/${assignmentId}/item/${currentQuestionIndex}`,
-                                {
-                                  method: "DELETE",
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                    "Content-Type": "application/json",
-                                  },
-                                },
-                              );
-
-                              if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}`);
-                              }
-
-                              toast.success(
-                                t(
-                                  "groupedQuestionsTemplate.messages.deletionSuccess",
-                                ),
-                              );
-                            } catch (error) {
-                              console.error("刪除 DB 記錄失敗:", error);
-                              // 🎯 測試環境下不報錯，允許繼續清除前端狀態
-                              if (!import.meta.env.VITE_TEST_MODE) {
-                                toast.error(
-                                  t(
-                                    "groupedQuestionsTemplate.messages.deletionFailed",
-                                  ),
-                                );
-                              }
-                              // 繼續執行前端清除（測試環境需要）
-                            }
-                          }
-
-                          // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
-                          setAssessmentResults((prev) => {
-                            // Remove the key using destructuring
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const { [currentQuestionIndex]: _, ...newResults } =
-                              prev;
-                            return newResults;
-                          });
-
-                          // 清空 items 中的 recording_url，觸發學生作答區塊 reset
-                          if (
-                            onUpdateItemRecording &&
-                            currentQuestionIndex !== undefined
-                          ) {
-                            onUpdateItemRecording(currentQuestionIndex, "");
-                          }
-
-                          // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
-                          if (
-                            onAssessmentComplete &&
-                            currentQuestionIndex !== undefined
-                          ) {
-                            onAssessmentComplete(currentQuestionIndex, null);
-                          }
-                        }}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                        title={t(
-                          "groupedQuestionsTemplate.labels.clearRecording",
-                        )}
-                      >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="w-12 h-12 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
-                        disabled={readOnly}
-                        onClick={() => {
-                          setAssessmentResults((prev) => {
-                            const newResults = { ...prev };
-                            delete newResults[currentQuestionIndex];
-                            return newResults;
-                          });
-                          onStartRecording?.();
-                        }}
-                        title={
-                          readOnly
-                            ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                            : t(
-                                "groupedQuestionsTemplate.labels.startRecording",
-                              )
-                        }
-                      >
-                        <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
-                      </button>
-                      <button
-                        className="w-12 h-12 sm:w-16 sm:h-16 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
-                        disabled={readOnly}
-                        onClick={() => {
-                          const input = document.createElement("input");
-                          input.type = "file";
-                          input.accept =
-                            "audio/*,.mp3,.m4a,.mp4,.wav,.webm,.ogg,.aac";
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement)
-                              .files?.[0];
-                            if (file && onFileUpload) onFileUpload(file);
-                          };
-                          input.click();
-                        }}
-                        title={
-                          readOnly
-                            ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                            : t("groupedQuestionsTemplate.labels.uploadAudio")
-                        }
-                      >
-                        <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
-                      </button>
-                      <span className="text-sm sm:text-base text-gray-600">
-                        {readOnly
-                          ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
-                          : t(
-                              "groupedQuestionsTemplate.labels.startRecordingOrUpload",
-                            )}
-                      </span>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* 錄音中狀態 */}
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                  <span className="text-base font-medium text-red-600">
-                    {formatTime(recordingTime)} / 0:45
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onStopRecording}
-                    className="border-red-600 text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+            {/* 🎯 Issue #74: 錄音控制區 - 左側錄音按鈕 + 右側播放控制 */}
+            <div className="flex items-center gap-4">
+              {/* 左側: 錄音控制按鈕 (重疊邏輯) */}
+              <div className="flex items-center gap-2">
+                {!isRecording && !items[currentQuestionIndex]?.recording_url ? (
+                  // 錄音按鈕 (初始狀態)
+                  <button
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[#cdffd8] to-[#94b9ff] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+                    disabled={readOnly}
+                    onClick={() => {
+                      setAssessmentResults((prev) => {
+                        const newResults = { ...prev };
+                        delete newResults[currentQuestionIndex];
+                        return newResults;
+                      });
+                      onStartRecording?.();
+                    }}
+                    title={
+                      readOnly
+                        ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
+                        : t("groupedQuestionsTemplate.labels.startRecording")
+                    }
                   >
-                    <Square className="w-3 h-3 mr-1" />
-                    {t("groupedQuestionsTemplate.labels.stopping")}
-                  </Button>
-                </>
+                    <Mic className="w-7 h-7 text-[#545454]" />
+                  </button>
+                ) : isRecording ? (
+                  // 停止按鈕 (錄音中)
+                  <button
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[#cdffd8] to-[#94b9ff] flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+                    onClick={onStopRecording}
+                    title={t("groupedQuestionsTemplate.labels.stopping")}
+                  >
+                    <Square className="w-7 h-7 text-[#ff3131]" fill="currentColor" />
+                  </button>
+                ) : items[currentQuestionIndex]?.recording_url ? (
+                  // 重置按鈕 (有錄音)
+                  <button
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[#cdffd8] to-[#94b9ff] flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+                    onClick={async () => {
+                      // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
+                      if (
+                        !isPreviewMode &&
+                        assignmentId &&
+                        currentQuestionIndex !== undefined
+                      ) {
+                        try {
+                          const apiUrl = import.meta.env.VITE_API_URL || "";
+                          const token = useStudentAuthStore.getState().token;
+
+                          const response = await fetch(
+                            `${apiUrl}/api/speech/assessment/${assignmentId}/item/${currentQuestionIndex}`,
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                            },
+                          );
+
+                          if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                          }
+
+                          toast.success(
+                            t("groupedQuestionsTemplate.messages.deletionSuccess"),
+                          );
+                        } catch (error) {
+                          console.error("刪除 DB 記錄失敗:", error);
+                          // 🎯 測試環境下不報錯，允許繼續清除前端狀態
+                          if (!import.meta.env.VITE_TEST_MODE) {
+                            toast.error(
+                              t("groupedQuestionsTemplate.messages.deletionFailed"),
+                            );
+                          }
+                          // 繼續執行前端清除（測試環境需要）
+                        }
+                      }
+
+                      // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
+                      setAssessmentResults((prev) => {
+                        // Remove the key using destructuring
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { [currentQuestionIndex]: _, ...newResults } = prev;
+                        return newResults;
+                      });
+
+                      // 清空 items 中的 recording_url，觸發學生作答區塊 reset
+                      if (onUpdateItemRecording && currentQuestionIndex !== undefined) {
+                        onUpdateItemRecording(currentQuestionIndex, "");
+                      }
+
+                      // 也要清空 items 的 ai_assessment，確保重新整理後不會殘留
+                      if (onAssessmentComplete && currentQuestionIndex !== undefined) {
+                        onAssessmentComplete(currentQuestionIndex, null);
+                      }
+                    }}
+                    title={t("groupedQuestionsTemplate.labels.clearRecording")}
+                  >
+                    <svg
+                      className="w-7 h-7 text-[#545454]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
+
+                {/* 錄音時間顯示 */}
+                {isRecording && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-base font-medium text-red-600">
+                      {formatTime(recordingTime)} / 0:45
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 右側: 題目音檔播放控制 */}
+              {currentQuestion?.audio_url && (
+                <div className="flex-1 flex items-center gap-2 bg-[#273755] rounded-lg px-3 py-2">
+                  <button
+                    onClick={() => {
+                      if (questionAudioRef.current) {
+                        // 如果已有音檔，直接播放或暫停
+                        if (questionAudioRef.current.paused) {
+                          questionAudioRef.current.play();
+                        } else {
+                          questionAudioRef.current.pause();
+                        }
+                      } else if (currentQuestion?.audio_url) {
+                        // 如果沒有音檔引用，創建新的
+                        const audio = new Audio(currentQuestion.audio_url);
+                        audio.playbackRate = playbackRate;
+                        questionAudioRef.current = audio;
+                        audio.play();
+                      }
+                    }}
+                    className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-colors"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                  <select
+                    value={playbackRate}
+                    onChange={(e) => updatePlaybackRate(parseFloat(e.target.value))}
+                    className="text-xs bg-white/10 text-white border-none rounded px-2 py-1"
+                  >
+                    <option value={0.5} className="text-gray-900">0.5x</option>
+                    <option value={0.75} className="text-gray-900">0.75x</option>
+                    <option value={1.0} className="text-gray-900">1.0x</option>
+                    <option value={1.5} className="text-gray-900">1.5x</option>
+                    <option value={2.0} className="text-gray-900">2.0x</option>
+                  </select>
+                </div>
               )}
             </div>
           </div>
@@ -1116,7 +962,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         >
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            {/* 🎯 Issue #75: 只為 GCS URL 顯示 Analyze 按鈕 (不為 blob URL 顯示) */}
+            {/* 🎯 Issue #74 Zone C-1: 分析按鈕 + Issue #75: 只為 GCS URL 顯示 (不為 blob URL 顯示) */}
             {items[currentQuestionIndex]?.recording_url &&
             !assessmentResults[currentQuestionIndex] &&
             !(items[currentQuestionIndex]?.recording_url as string).startsWith(
@@ -1132,12 +978,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   }
                   className={`relative h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl transition-all ${
                     itemAnalysisState?.status === "analyzing"
-                      ? "bg-gradient-to-r from-purple-600 to-purple-700 cursor-not-allowed opacity-70"
+                      ? "bg-[#5e17eb] cursor-not-allowed opacity-70"
                       : itemAnalysisState?.status === "analyzed"
-                        ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 cursor-not-allowed"
+                        ? "bg-green-600 hover:bg-green-700 cursor-not-allowed"
                         : itemAnalysisState?.status === "failed"
-                          ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:shadow-red-500/50"
-                          : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:shadow-purple-500/50"
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-[#5e17eb] hover:bg-[#5e17eb]/90 text-white"
                   }`}
                   style={{
                     animation:
@@ -1272,6 +1118,69 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   >
                     <X className="w-4 h-4" />
                   </button>
+
+                  {/* 🎯 Issue #74 Zone C-1: 星級評分顯示 */}
+                  {(() => {
+                    const result = assessmentResults[currentQuestionIndex];
+                    // 計算平均分數
+                    const scores = [
+                      result?.pronunciation_score,
+                      result?.accuracy_score,
+                      result?.fluency_score,
+                      result?.completeness_score,
+                    ].filter((score): score is number => typeof score === "number");
+
+                    const averageScore = scores.length > 0
+                      ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+                      : 0;
+
+                    // 根據平均分數確定星星數量
+                    let filledStars = 0;
+                    let emptyStars = 3;
+
+                    if (averageScore > 90) {
+                      filledStars = 3;
+                      emptyStars = 0;
+                    } else if (averageScore >= 60) {
+                      filledStars = 2;
+                      emptyStars = 1;
+                    } else if (averageScore >= 40) {
+                      filledStars = 1;
+                      emptyStars = 2;
+                    } else {
+                      filledStars = 0;
+                      emptyStars = 3;
+                    }
+
+                    return (
+                      <div className="flex items-center justify-center gap-1 mb-4">
+                        {[...Array(filledStars)].map((_, i) => (
+                          <svg
+                            key={`filled-${i}`}
+                            className="w-8 h-8 text-yellow-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                        {[...Array(emptyStars)].map((_, i) => (
+                          <svg
+                            key={`empty-${i}`}
+                            className="w-8 h-8 text-gray-300"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                        <span className="ml-2 text-sm font-medium text-gray-600">
+                          ({averageScore.toFixed(0)}分)
+                        </span>
+                      </div>
+                    );
+                  })()}
+
                   <AIScoreDisplay
                     key={`assessment-${currentQuestionIndex}`}
                     scores={assessmentResults[currentQuestionIndex]}
