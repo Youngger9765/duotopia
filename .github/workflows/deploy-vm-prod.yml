@@ -621,7 +621,7 @@ jobs:
       if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
       run: |
         echo "🔍 Cleaning up old backend images..."
-        KEEP_COUNT=3
+        KEEP_COUNT=2
 
         IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME \
           --format='get(version)' \
@@ -654,7 +654,7 @@ jobs:
       if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
       run: |
         echo "🔍 Cleaning up old frontend images..."
-        KEEP_COUNT=3
+        KEEP_COUNT=2
 
         IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME \
           --format='get(version)' \
