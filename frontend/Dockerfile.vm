@@ -17,7 +17,7 @@ RUN npm ci
 COPY . .
 
 # Build-time API URL configuration
-ARG VITE_API_URL=/api
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
 # Environment (determines if test accounts are shown)

@@ -260,7 +260,7 @@ jobs:
           --cache-from type=local,src=/tmp/.buildx-cache-frontend \
           --cache-to type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max \
           -f Dockerfile.vm \
-          --build-arg VITE_API_URL=/api \
+          --build-arg VITE_API_URL="" \
           --build-arg VITE_ENVIRONMENT=production \
           --build-arg VITE_TAPPAY_SERVER_TYPE=production \
           --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
