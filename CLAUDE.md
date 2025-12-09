@@ -560,6 +560,20 @@ git push origin --delete claude/issue-26-20251129-1626
 6. **Check README/CLAUDE.md/package.json first** - Understand project standards
 7. **Learn from every error** - Use error reflection system to prevent recurrence
 8. **指导 @claude bot** - 在 Issue 中使用 @claude 时，明确指定使用固定分支和遵循 PDCA 流程
+9. **Run formatting before commit** - Always run Prettier/Black before pushing to avoid CI failures
+
+### ⚠️ Pre-Commit Checklist (MUST DO before `git push`)
+```bash
+# Frontend - Run Prettier formatting
+cd frontend && npx prettier --write src/
+
+# Backend - Run Black formatting
+cd backend && python3 -m black .
+
+# Verify no formatting issues
+npm run typecheck  # Frontend
+python3 -m flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv  # Backend
+```
 
 ### Command Shortcuts
 ```bash

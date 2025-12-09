@@ -1875,7 +1875,10 @@ export default function StudentActivityPageContent({
                                 if (isAnalyzing) return; // 🔒 分析中禁止切換
                                 if (activityIndex !== currentActivityIndex) {
                                   // 切換 activity
-                                  handleActivitySelect(activityIndex, itemIndex);
+                                  handleActivitySelect(
+                                    activityIndex,
+                                    itemIndex,
+                                  );
                                 } else {
                                   // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
                                   setCurrentSubQuestionIndex(itemIndex);
