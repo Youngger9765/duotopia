@@ -842,133 +842,188 @@ export function AssignmentDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl h-[92vh] flex flex-col p-0">
-        {/* Compact Header with Clear Steps */}
+        {/* Compact Header with Clear Steps - 響應式方案 C */}
         <div className="px-6 py-3 border-b bg-gray-50">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <DialogTitle className="text-lg font-semibold">
-                {t("dialogs.assignmentDialog.title")}
-              </DialogTitle>
-              {/* Quota display */}
-              {quotaInfo && (
-                <div className="mt-1 flex items-center gap-2 text-xs">
-                  <Gauge
-                    className={cn(
-                      "h-3 w-3",
-                      quotaInfo.quota_remaining <= 0
-                        ? "text-red-500"
-                        : "text-gray-500",
-                    )}
-                  />
-                  <span className="text-gray-600">
-                    {t("dialogs.assignmentDialog.quota.remainingColon")}
-                    <span
-                      className={cn(
-                        "font-semibold ml-1",
-                        quotaInfo.quota_remaining > 300
-                          ? "text-green-600"
-                          : quotaInfo.quota_remaining > 100
-                            ? "text-orange-600"
-                            : quotaInfo.quota_remaining > 0
-                              ? "text-red-600"
-                              : "text-red-700",
-                      )}
-                    >
-                      {quotaInfo.quota_remaining}
-                    </span>
-                    <span className="text-gray-500">
-                      {" "}
-                      / {quotaInfo.quota_total}{" "}
-                      {t("dialogs.assignmentDialog.quota.seconds")}
-                    </span>
-                  </span>
-                  {quotaInfo.quota_remaining <= 0 ? (
-                    <Badge
-                      variant="destructive"
-                      className="text-xs py-0 px-1.5 animate-pulse"
-                    >
-                      {t("dialogs.assignmentDialog.quota.exhausted")}
-                    </Badge>
-                  ) : (
-                    quotaInfo.quota_remaining <= 100 && (
-                      <Badge
-                        variant="destructive"
-                        className="text-xs py-0 px-1.5"
+          {/* 大螢幕 (≥1024px)：標題 + 步驟同一行 */}
+          {/* 小螢幕 (<1024px)：標題 → 配額 → 步驟 三行 */}
+
+          {/* 第一行：標題（小螢幕單獨一行，大螢幕與步驟同行） */}
+          <div className="flex items-center justify-between lg:mb-2">
+            <DialogTitle className="text-lg font-semibold">
+              {t("dialogs.assignmentDialog.title")}
+            </DialogTitle>
+
+            {/* 大螢幕：步驟顯示在標題右側（預留空間給 X 按鈕） */}
+            <div className="hidden lg:flex items-center gap-3 pr-8">
+              {steps.map((s, index) => {
+                const Icon = s.icon;
+                const isActive = s.number === currentStep;
+                const isCompleted = s.number < currentStep;
+
+                return (
+                  <React.Fragment key={s.number}>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all shrink-0",
+                          isActive && "bg-blue-600 text-white shadow-sm",
+                          isCompleted && "bg-green-500 text-white",
+                          !isActive &&
+                            !isCompleted &&
+                            "bg-gray-200 text-gray-500",
+                        )}
                       >
-                        {t("dialogs.assignmentDialog.quota.low")}
-                      </Badge>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Centered Step Indicator with Icons */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center gap-4">
-                {steps.map((s, index) => {
-                  const Icon = s.icon;
-                  const isActive = s.number === currentStep;
-                  const isCompleted = s.number < currentStep;
-
-                  return (
-                    <React.Fragment key={s.number}>
-                      <div className="flex items-center gap-2">
-                        <div
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <span className="text-sm">{s.number}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Icon
                           className={cn(
-                            "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all",
-                            isActive && "bg-blue-600 text-white shadow-sm",
-                            isCompleted && "bg-green-500 text-white",
-                            !isActive &&
-                              !isCompleted &&
-                              "bg-gray-200 text-gray-500",
+                            "h-4 w-4 shrink-0",
+                            isActive && "text-blue-600",
+                            isCompleted && "text-green-600",
+                            !isActive && !isCompleted && "text-gray-400",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-sm whitespace-nowrap",
+                            isActive && "text-gray-900 font-semibold",
+                            isCompleted && "text-green-700 font-medium",
+                            !isActive && !isCompleted && "text-gray-500",
                           )}
                         >
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <span className="text-sm">{s.number}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Icon
-                            className={cn(
-                              "h-4 w-4",
-                              isActive && "text-blue-600",
-                              isCompleted && "text-green-600",
-                              !isActive && !isCompleted && "text-gray-400",
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              "text-sm",
-                              isActive && "text-gray-900 font-semibold",
-                              isCompleted && "text-green-700 font-medium",
-                              !isActive && !isCompleted && "text-gray-500",
-                            )}
-                          >
-                            {s.title}
-                          </span>
-                        </div>
+                          {s.title}
+                        </span>
                       </div>
-                      {index < steps.length - 1 && (
-                        <ChevronRight className="h-4 w-4 text-gray-300" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 第二行：配額（大螢幕顯示，小螢幕也在這裡顯示） */}
+          {quotaInfo && (
+            <div className="flex items-center gap-2 text-xs mt-2 lg:mt-0">
+              <Gauge
+                className={cn(
+                  "h-3 w-3",
+                  quotaInfo.quota_remaining <= 0
+                    ? "text-red-500"
+                    : "text-gray-500",
+                )}
+              />
+              <span className="text-gray-600">
+                {t("dialogs.assignmentDialog.quota.remainingColon")}
+                <span
+                  className={cn(
+                    "font-semibold ml-1",
+                    quotaInfo.quota_remaining > 300
+                      ? "text-green-600"
+                      : quotaInfo.quota_remaining > 100
+                        ? "text-orange-600"
+                        : quotaInfo.quota_remaining > 0
+                          ? "text-red-600"
+                          : "text-red-700",
+                  )}
+                >
+                  {quotaInfo.quota_remaining}
+                </span>
+                <span className="text-gray-500">
+                  {" "}
+                  / {quotaInfo.quota_total}{" "}
+                  {t("dialogs.assignmentDialog.quota.seconds")}
+                </span>
+              </span>
+              {quotaInfo.quota_remaining <= 0 ? (
+                <Badge
+                  variant="destructive"
+                  className="text-xs py-0 px-1.5 animate-pulse"
+                >
+                  {t("dialogs.assignmentDialog.quota.exhausted")}
+                </Badge>
+              ) : (
+                quotaInfo.quota_remaining <= 100 && (
+                  <Badge variant="destructive" className="text-xs py-0 px-1.5">
+                    {t("dialogs.assignmentDialog.quota.low")}
+                  </Badge>
+                )
+              )}
+            </div>
+          )}
+
+          {/* 第三行：步驟（僅小螢幕顯示，置中，超小螢幕換行） */}
+          <div className="flex lg:hidden items-center justify-center mt-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:gap-x-3">
+              {steps.map((s, index) => {
+                const Icon = s.icon;
+                const isActive = s.number === currentStep;
+                const isCompleted = s.number < currentStep;
+
+                return (
+                  <React.Fragment key={s.number}>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-medium transition-all shrink-0",
+                          isActive && "bg-blue-600 text-white shadow-sm",
+                          isCompleted && "bg-green-500 text-white",
+                          !isActive &&
+                            !isCompleted &&
+                            "bg-gray-200 text-gray-500",
+                        )}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        ) : (
+                          <span className="text-xs sm:text-sm">{s.number}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Icon
+                          className={cn(
+                            "h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 hidden sm:block",
+                            isActive && "text-blue-600",
+                            isCompleted && "text-green-600",
+                            !isActive && !isCompleted && "text-gray-400",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-xs sm:text-sm whitespace-nowrap",
+                            isActive && "text-gray-900 font-semibold",
+                            isCompleted && "text-green-700 font-medium",
+                            !isActive && !isCompleted && "text-gray-500",
+                          )}
+                        >
+                          {s.title}
+                        </span>
+                      </div>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-300 shrink-0" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Content Area - Maximized Height */}
-        <div className="flex-1 overflow-hidden px-6 py-3">
+        {/* Content Area - Maximized Height with Scroll */}
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-3">
           {/* Step 1: Select Contents */}
           {currentStep === 1 && (
-            <div className="h-full flex gap-4">
-              {/* 左側：課程列表 (70%) */}
-              <div className="flex-1 flex flex-col">
+            <div className="h-full flex flex-col sm:flex-row gap-4 overflow-auto sm:overflow-hidden">
+              {/* 課程列表 - 小螢幕最小高度 400px，大螢幕 70% */}
+              <div className="flex-1 flex flex-col min-h-[400px] sm:min-h-0">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
                     {t("dialogs.assignmentDialog.selectContent.description")}
@@ -981,7 +1036,7 @@ export function AssignmentDialog({
                   onValueChange={(v) =>
                     setActiveTab(v as "template" | "classroom")
                   }
-                  className="flex-1 flex flex-col"
+                  className="flex-1 flex flex-col min-h-0"
                 >
                   <TabsList className="grid w-full grid-cols-2 mb-2">
                     <TabsTrigger
@@ -1003,7 +1058,7 @@ export function AssignmentDialog({
                   {/* 公版課程 Tab */}
                   <TabsContent
                     value="template"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden min-h-0"
                   >
                     <ScrollArea className="h-full border rounded-lg p-3">
                       {loadingTemplates ? (
@@ -1252,7 +1307,7 @@ export function AssignmentDialog({
                   {/* 班級課程 Tab */}
                   <TabsContent
                     value="classroom"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden min-h-0"
                   >
                     <ScrollArea className="h-full border rounded-lg p-3">
                       {loadingClassroomPrograms ? (
@@ -1473,8 +1528,8 @@ export function AssignmentDialog({
                 </Tabs>
               </div>
 
-              {/* 右側：購物車 (30%) */}
-              <div className="w-[30%] flex flex-col border rounded-lg bg-gray-50">
+              {/* 購物車 - 小螢幕動態高度（隨內容增加），大螢幕在右側 30% */}
+              <div className="w-full sm:w-[30%] sm:h-full flex-shrink-0 flex flex-col border rounded-lg bg-gray-50">
                 <div className="p-3 border-b bg-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -1488,7 +1543,7 @@ export function AssignmentDialog({
                   </Badge>
                 </div>
 
-                <ScrollArea className="flex-1 p-3">
+                <ScrollArea className="flex-1 p-3 max-h-[50vh] sm:max-h-none">
                   {cartItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-8">
                       <ShoppingCart className="h-12 w-12 text-gray-300 mb-3" />
@@ -2094,6 +2149,7 @@ export function AssignmentDialog({
         {/* Footer with Navigation */}
         <DialogFooter className="px-6 py-3 border-t">
           <div className="flex items-center justify-between w-full">
+            {/* 左側：返回按鈕 */}
             <Button
               variant="outline"
               onClick={
@@ -2113,6 +2169,7 @@ export function AssignmentDialog({
               )}
             </Button>
 
+            {/* 右側：下一步/建立按鈕 */}
             <div className="flex items-center gap-2">
               {currentStep < 4 ? (
                 <Button onClick={handleNextStep} disabled={!canProceed()}>
