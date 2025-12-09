@@ -435,6 +435,10 @@ jobs:
             echo '🔐 Configuring Docker for Artifact Registry...'
             docker-credential-gcr configure-docker --registries=asia-east1-docker.pkg.dev
 
+            echo '🧹 Cleaning up old Docker images to free disk space...'
+            docker image prune -a -f || echo '⚠️  Image cleanup failed, continuing deployment...'
+            echo '✅ Docker image cleanup completed'
+
             echo '🔥 Configuring iptables firewall...'
             sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
             sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
