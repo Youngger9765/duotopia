@@ -194,6 +194,9 @@ export default function AudioRecorder({
 
       // Handle recording stop
       mediaRecorder.onstop = async () => {
+        // 🔧 等待 Safari 完成 blob 編碼
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
         // ✅ 直接使用 mediaRecorder.mimeType（不要默認到 audio/webm）
         const audioBlob = new Blob(chunksRef.current, {
           type: mediaRecorder!.mimeType,
@@ -203,11 +206,20 @@ export default function AudioRecorder({
         // 驗證錄音檔案
         // 使用策略的最小檔案大小檢查
         const strategy = strategyRef.current;
-        if (audioBlob.size < strategy.minFileSize) {
+
+        // 🔍 雙重檢查：chunks 和 blob 都太小才報錯
+        const chunksSize = chunksRef.current.reduce(
+          (sum, chunk) => sum + chunk.size,
+          0,
+        );
+        const blobSize = audioBlob.size;
+
+        if (
+          chunksSize < strategy.minFileSize &&
+          blobSize < strategy.minFileSize
+        ) {
           console.error(
-            "Recording file too small:",
-            audioBlob.size,
-            `(min: ${strategy.minFileSize})`,
+            `⚠️ Recording file too small (both checks failed): chunks=${chunksSize}B, blob=${blobSize}B, min=${strategy.minFileSize}B`,
           );
 
           toast.error(t("audioRecorder.toast.recordingFailed"), {
@@ -218,7 +230,7 @@ export default function AudioRecorder({
             onError({
               errorType: "recording_too_small",
               audioUrl: audioUrl,
-              audioSize: audioBlob.size,
+              audioSize: blobSize,
               audioDuration: recordingTime,
               contentType: audioBlob.type,
             });
@@ -229,6 +241,11 @@ export default function AudioRecorder({
           cleanup();
           return;
         }
+
+        // ✅ 至少一個通過 - 記錄診斷資訊
+        console.log(
+          `✅ Recording size check passed: chunks=${chunksSize}B, blob=${blobSize}B (min: ${strategy.minFileSize}B)`,
+        );
 
         // 使用策略層的驗證函數
         try {

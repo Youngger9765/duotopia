@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -18,6 +19,7 @@ from core.thread_pool import (
 
 # Import middleware
 # from middleware.rate_limiter import RateLimitMiddleware  # Temporarily disabled due to bug
+from middleware.global_rate_limiter import global_rate_limiter
 
 # Import routers
 from routers import (
@@ -94,6 +96,54 @@ app.add_middleware(
 )
 
 
+# 🔐 全局 Rate Limiting (补充 slowapi)
+# 保守配置：500 请求/分钟 (观察 1 周后调整为 200)
+
+
+@app.middleware("http")
+async def global_rate_limit_middleware(request: Request, call_next):
+    """
+    全局速率限制 middleware
+
+    目的：防止异常高频请求（如 2025-12-03 的 OOM 事件）
+    配置：500 请求/分钟（非常宽松，正常用户不会触发）
+    跳过：健康检查、静态文件
+    """
+    # 跳过健康检查和静态资源
+    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
+        return await call_next(request)
+
+    if request.url.path.startswith("/static"):
+        return await call_next(request)
+
+    # 检查速率限制
+    allowed, info = await global_rate_limiter.check_rate_limit(
+        request,
+        max_requests=500,  # 非常宽松（观察期）
+        window_seconds=60,
+    )
+
+    if not allowed:
+        # 返回 429 Too Many Requests
+        return JSONResponse(
+            status_code=429,
+            content=info,
+            headers={
+                "Retry-After": str(info["retry_after"]),
+                "X-RateLimit-Limit": str(info["limit"]),
+            },
+        )
+
+    # 继续处理请求
+    response = await call_next(request)
+
+    # 添加 Rate Limit 信息到响应头（供调试）
+    response.headers["X-RateLimit-Limit"] = str(info["limit"])
+    response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
+
+    return response
+
+
 # Mount static files directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if not os.path.exists(static_dir):
@@ -109,7 +159,11 @@ async def startup_event():
     # 初始化線程池
     get_speech_thread_pool()
     get_audio_thread_pool()
-    print("🚀 Application startup complete - Thread pools initialized")
+
+    # 啟動全局 Rate Limiter 清理任務
+    global_rate_limiter.start_cleanup_task()
+
+    print("🚀 Application startup complete - Thread pools and rate limiter initialized")
 
 
 @app.on_event("shutdown")

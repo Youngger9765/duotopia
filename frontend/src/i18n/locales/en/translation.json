@@ -683,13 +683,15 @@
     "messages": {
       "noActivities": "This assignment has no activities yet",
       "submitSuccess": "Assignment submitted successfully!",
+      "submittingWithPending": "Assignment submitted! {{count}} question(s) are still being analyzed in the background. Please check back later for complete results.",
       "analyzingRecording": "Analyzing Recording",
       "batchAnalyzing": "Analyzing {{current}}/{{total}} items",
       "pleaseWait": "Please wait...",
       "doNotSwitchQuestions": "Please do not switch questions",
       "doNotLeave": "Please do not leave this page",
       "batchAnalysisComplete": "Completed {{count}} analyses",
-      "batchAnalysisFailed": "Auto-analysis failed, please try again later"
+      "batchAnalysisFailed": "Auto-analysis failed, please try again later",
+      "submittingAssignment": "Submitting Assignment..."
     },
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
@@ -711,6 +713,7 @@
       "title": "Incomplete Items",
       "incompleteItems": "The following items have not been recorded. Please complete them before submitting:",
       "notRecorded": "(Not Recorded)",
+      "notUploaded": "(Not Yet Uploaded)",
       "notAnalyzed": "(Not Analyzed)",
       "itemNumber": "Item {{number}}"
     },
@@ -3361,7 +3364,9 @@
       "passed": "Passed",
       "notPassed": "Not Passed",
       "uploadAndAnalyze": "Upload & Analyze",
-      "analyzing": "Uploading and analyzing",
+      "analyzing": "Analyzing...",
+      "analyzed": "Analyzed",
+      "analysisFailed": "Analysis Failed (Click to Retry)",
       "aiAnalyzing": "AI is analyzing...",
       "pleaseWait": "Please wait a moment",
       "clickToAssess": "Click button above to assess",

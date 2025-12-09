@@ -158,33 +158,31 @@ export default function StudentActivityPage() {
   };
 
   // Handle final submission
-  const handleSubmit = async () => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  const handleSubmit = async (_data?: { answers: any[] }) => {
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    const response = await fetch(
+      `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      );
+      },
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to submit assignment");
-      }
-
-      toast.success(t("studentActivityPage.messages.submitSuccess"));
-      setTimeout(() => {
-        // Issue #28: Navigate directly to assignment list instead of detail page
-        navigate("/student/assignments");
-      }, 500);
-    } catch (error) {
-      console.error("Failed to submit:", error);
-      toast.error(t("studentActivityPage.errors.submitFailed"));
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Failed to submit:", response.status, errorText);
+      throw new Error(`Failed to submit assignment: ${response.status}`);
     }
+
+    // Success - navigate to assignments list
+    setTimeout(() => {
+      // Issue #28: Navigate directly to assignment list instead of detail page
+      navigate("/student/assignments");
+    }, 500);
   };
 
   if (loading) {

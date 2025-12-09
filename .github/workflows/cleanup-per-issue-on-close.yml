@@ -123,15 +123,19 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueNum = context.issue.number;
-            const body = '## 🧹 Per-Issue Test Environment Cleaned Up\n\n' +
-              '✅ Cloud Run services deleted\n' +
-              '✅ Container images cleaned\n' +
-              '✅ All related branches deleted (智能檢測 issue-' + issueNum + ')\n' +
-              '💰 Billing stopped\n\n' +
-              '**Note**: All branches containing `issue-' + issueNum + '` pattern have been removed.';
+            const body = [
+              '## 🧹 Per-Issue Test Environment Cleaned Up',
+              '',
+              '✅ Cloud Run services deleted',
+              '✅ Container images cleaned',
+              `✅ All related branches deleted (智能檢測 issue-${context.issue.number})`,
+              '💰 Billing stopped',
+              '',
+              `**Note**: All branches containing \`issue-${context.issue.number}\` pattern have been removed.`
+            ].join('\n');
+
             github.rest.issues.createComment({
-              issue_number: issueNum,
+              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: body
@@ -246,13 +250,19 @@ jobs:
           script: |
             const issueNumber = ${{ steps.extract.outputs.issue_number }};
             const prNumber = ${{ github.event.pull_request.number }};
-            const body = '## 🧹 Per-Issue Test Environment Cleaned Up\n\n' +
-              'PR #' + prNumber + ' merged, cleaning up resources.\n\n' +
-              '✅ Cloud Run services deleted\n' +
-              '✅ Container images cleaned\n' +
-              '✅ All related branches deleted (智能檢測 issue-' + issueNumber + ')\n' +
-              '💰 Billing stopped\n\n' +
-              '**Note**: All branches containing `issue-' + issueNumber + '` pattern have been removed.';
+            const body = [
+              '## 🧹 Per-Issue Test Environment Cleaned Up',
+              '',
+              `PR #${prNumber} merged, cleaning up resources.`,
+              '',
+              '✅ Cloud Run services deleted',
+              '✅ Container images cleaned',
+              `✅ All related branches deleted (智能檢測 issue-${issueNumber})`,
+              '💰 Billing stopped',
+              '',
+              `**Note**: All branches containing \`issue-${issueNumber}\` pattern have been removed.`
+            ].join('\n');
+
             github.rest.issues.createComment({
               issue_number: issueNumber,
               owner: context.repo.owner,

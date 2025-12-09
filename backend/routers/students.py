@@ -146,6 +146,12 @@ class UpdatePasswordRequest(BaseModel):
     new_password: str
 
 
+class SubmitAssignmentRequest(BaseModel):
+    """Assignment submission request"""
+
+    answers: Optional[List[Dict[str, Any]]] = []
+
+
 @router.post("/validate", response_model=StudentLoginResponse)
 async def validate_student(
     request: StudentValidateRequest, db: Session = Depends(get_db)
@@ -851,13 +857,17 @@ def calculate_assignment_score(
     return round(total_score, 2)
 
 
+# Removed Cloud Tasks scheduling - submissions now only upload audio without executing analysis
+
+
 @router.post("/assignments/{assignment_id}/submit")
 async def submit_assignment(
     assignment_id: int,
+    request: SubmitAssignmentRequest = SubmitAssignmentRequest(),
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """提交作業"""
+    """提交作業（只儲存，不執行分析）"""
     if current_user.get("type") != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -906,9 +916,15 @@ async def submit_assignment(
             progress.status = final_status
             progress.completed_at = datetime.now()
 
-    # 更新作業狀態
-    student_assignment.status = final_status
-    student_assignment.submitted_at = datetime.now()
+    # 🔥 Fix Issue #58: 判斷是否為訂正後提交
+    # 如果當前狀態是 RETURNED (待訂正)，提交後應該是 RESUBMITTED (已訂正)
+    # 否則就是第一次提交，狀態為 SUBMITTED (已提交)
+    if student_assignment.status == AssignmentStatus.RETURNED:
+        student_assignment.status = AssignmentStatus.RESUBMITTED
+        student_assignment.resubmitted_at = datetime.now(timezone.utc)
+    else:
+        student_assignment.status = AssignmentStatus.SUBMITTED
+        student_assignment.submitted_at = datetime.now(timezone.utc)
 
     # 🆕 rearrangement 模式：同時設定 graded_at
     if is_rearrangement:

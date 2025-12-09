@@ -141,7 +141,7 @@ export default function TeacherAssignmentPreviewPage() {
         onBack={() =>
           navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
         }
-        onSubmit={() => {
+        onSubmit={async () => {
           // 預覽模式完成時，跳回作業列表
           toast.success(t("previewPage.messages.previewComplete"));
           navigate(`/teacher/classroom/${classroomId}?tab=assignments`);

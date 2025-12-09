@@ -69,6 +69,23 @@ export interface Activity {
     translation?: string;
     audio_url?: string;
     recording_url?: string;
+    progress_id?: number;
+    ai_assessment?: {
+      accuracy_score?: number;
+      fluency_score?: number;
+      completeness_score?: number;
+      pronunciation_score?: number;
+      prosody_score?: number;
+      word_details?: Array<{
+        word: string;
+        accuracy_score: number;
+        error_type?: string;
+      }>;
+      detailed_words?: unknown[];
+      reference_text?: string;
+      recognized_text?: string;
+      analysis_summary?: unknown;
+    };
     [key: string]: unknown;
   }>;
   item_count?: number;
@@ -84,7 +101,7 @@ export interface Activity {
     word_details?: Array<{
       word: string;
       accuracy_score: number;
-      error_type: string;
+      error_type?: string;
     }>;
     items?: Record<
       number,
@@ -97,7 +114,7 @@ export interface Activity {
         word_details?: Array<{
           word: string;
           accuracy_score: number;
-          error_type: string;
+          error_type?: string;
         }>;
         detailed_words?: unknown[];
         reference_text?: string;
@@ -128,7 +145,8 @@ interface StudentActivityPageContentProps {
   isPreviewMode?: boolean;
   authToken?: string; // 認證 token（預覽模式用）
   onBack?: () => void;
-  onSubmit?: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSubmit?: (data: { answers: any[] }) => Promise<void>;
   assignmentStatus?: string;
   practiceMode?: string | null; // 例句重組/朗讀模式
   showAnswer?: boolean; // 例句重組：答題結束後是否顯示正確答案
@@ -179,15 +197,31 @@ export default function StudentActivityPageContent({
   const [currentSubQuestionIndex, setCurrentSubQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [saving] = useState(false);
-  const [submitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState<string[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false); // 🔒 錄音分析中狀態
-  const [batchAnalysisProgress, setBatchAnalysisProgress] = useState<{
-    current: number;
-    total: number;
-    currentItemLabel: string;
-  } | null>(null); // 🔒 批次分析進度
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // 🔒 GroupedQuestionsTemplate 錄音分析中狀態
+
+  // 🎯 背景分析狀態管理
+  type ItemAnalysisStatus =
+    | "not_recorded"
+    | "recorded"
+    | "analyzing"
+    | "analyzed"
+    | "failed";
+
+  interface ItemAnalysisState {
+    status: ItemAnalysisStatus;
+    error?: string;
+    retryCount?: number;
+  }
+
+  const [itemAnalysisStates, setItemAnalysisStates] = useState<
+    Map<string, ItemAnalysisState>
+  >(new Map());
+  const [pendingAnalysisCount, setPendingAnalysisCount] = useState(0); // 🔒 追蹤背景分析數量以觸發 UI 更新
+  const pendingAnalysisRef = useRef<Map<string, Promise<void>>>(new Map());
+  const failedItemsRef = useRef<Set<string>>(new Set());
 
   // 例句重組導航狀態
   const [rearrangementQuestions, setRearrangementQuestions] = useState<
@@ -336,7 +370,7 @@ export default function StudentActivityPageContent({
       recorder.onstop = async () => {
         const actualRecordingDuration = recordingTimeRef.current;
 
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 800)); // 500→800ms
 
         const audioBlob = new Blob(chunks, {
           type: recorder.mimeType || "audio/webm",
@@ -347,23 +381,27 @@ export default function StudentActivityPageContent({
         const strategy = strategyRef.current;
         const localAudioUrl = URL.createObjectURL(audioBlob);
 
-        // 先檢查檔案大小（快速失敗）
-        if (audioBlob.size < strategy.minFileSize) {
+        // 🔍 雙重檢查：chunks 和 blob 都太小才報錯
+        const chunksSize = chunks.reduce((sum, chunk) => sum + chunk.size, 0);
+        const blobSize = audioBlob.size;
+
+        if (
+          chunksSize < strategy.minFileSize &&
+          blobSize < strategy.minFileSize
+        ) {
           console.error(
-            "⚠️ Recording file too small:",
-            audioBlob.size,
-            `(min: ${strategy.minFileSize})`,
+            `⚠️ Recording file too small (both checks failed): chunks=${chunksSize}B, blob=${blobSize}B, min=${strategy.minFileSize}B`,
           );
 
           const { logAudioError } = await import("@/utils/audioErrorLogger");
           await logAudioError({
             errorType: "recording_too_small",
             audioUrl: localAudioUrl,
-            audioSize: audioBlob.size,
+            audioSize: blobSize,
             audioDuration: actualRecordingDuration,
             contentType: audioBlob.type,
             assignmentId: assignmentId,
-            errorMessage: `File size ${audioBlob.size} below minimum ${strategy.minFileSize}`,
+            errorMessage: `Both chunks (${chunksSize}B) and blob (${blobSize}B) below minimum ${strategy.minFileSize}B`,
           });
 
           toast.error(t("studentActivityPage.recording.failed"), {
@@ -380,6 +418,11 @@ export default function StudentActivityPageContent({
           setRecordingTime(0);
           return;
         }
+
+        // ✅ 至少一個通過 - 記錄診斷資訊
+        console.log(
+          `✅ Recording size check passed: chunks=${chunksSize}B, blob=${blobSize}B (min: ${strategy.minFileSize}B)`,
+        );
 
         // 使用策略驗證 duration
         try {
@@ -506,7 +549,112 @@ export default function StudentActivityPageContent({
           });
         }
 
+        console.log("✅ 錄音完成，開始上傳到 GCS");
         isReRecording.current = false;
+
+        // 🎯 Issue #75: 立即上傳到 GCS (不觸發自動分析)
+        if (
+          !isPreviewMode &&
+          currentActivity.items &&
+          currentActivity.items.length > 0
+        ) {
+          const contentItemId =
+            currentActivity.items[currentSubQuestionIndex]?.id;
+
+          if (contentItemId) {
+            console.log("🚀 開始上傳錄音到 GCS...");
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            const authToken = useStudentAuthStore.getState().token;
+
+            retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${authToken}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+
+                return await uploadResponse.json();
+              },
+              (attempt, error) => {
+                console.log(`上傳重試 (${attempt}):`, error);
+              },
+            )
+              .then((uploadResult) => {
+                console.log("✅ 上傳成功:", uploadResult.audio_url);
+
+                // 更新為 GCS URL
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === currentActivity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [...newActivities[activityIndex].items!];
+                    if (newItems[currentSubQuestionIndex]) {
+                      newItems[currentSubQuestionIndex] = {
+                        ...newItems[currentSubQuestionIndex],
+                        recording_url: uploadResult.audio_url,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+
+                // 更新 progressIds
+                setAnswers((prev) => {
+                  const newAnswers = new Map(prev);
+                  const answer = newAnswers.get(currentActivity.id);
+                  if (answer) {
+                    if (!answer.progressIds) answer.progressIds = [];
+                    while (
+                      answer.progressIds.length <= currentSubQuestionIndex
+                    ) {
+                      answer.progressIds.push(0);
+                    }
+                    answer.progressIds[currentSubQuestionIndex] =
+                      uploadResult.progress_id;
+                    answer.status = "completed";
+                  }
+                  newAnswers.set(currentActivity.id, answer!);
+                  return newAnswers;
+                });
+              })
+              .catch((error) => {
+                console.error("❌ 上傳失敗:", error);
+                toast.error("上傳錄音失敗", {
+                  description: "請檢查網路連接後重試",
+                });
+              });
+          }
+        }
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
@@ -757,10 +905,239 @@ export default function StudentActivityPageContent({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // 🎯 生成項目唯一 key (activityId-itemIndex)
+  const getItemKey = (activityId: number, itemIndex: number) =>
+    `${activityId}-${itemIndex}`;
+
+  // 🎯 Issue #75: 背景分析函數已停用 - 改用手動分析
+  // @ts-expect-error - Function disabled for Issue #75 manual analysis workflow
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const analyzeInBackground = useCallback(
+    async (activityId: number, itemIndex: number) => {
+      const itemKey = getItemKey(activityId, itemIndex);
+      const activity = activities.find((a) => a.id === activityId);
+      if (!activity || !activity.items || !activity.items[itemIndex]) {
+        console.error("Activity or item not found for background analysis");
+        return;
+      }
+
+      const item = activity.items[itemIndex];
+      const audioUrl = item.recording_url;
+      const referenceText = item.text;
+      const contentItemId = item.id;
+
+      if (!audioUrl || !referenceText || !contentItemId) {
+        console.warn("Missing data for background analysis:", {
+          audioUrl,
+          referenceText,
+          contentItemId,
+        });
+        return;
+      }
+
+      // 檢查是否已經在分析中或已完成
+      const currentState = itemAnalysisStates.get(itemKey);
+      if (
+        currentState?.status === "analyzing" ||
+        currentState?.status === "analyzed"
+      ) {
+        console.log(`Item ${itemKey} already ${currentState.status}, skipping`);
+        return;
+      }
+
+      // 更新狀態為 analyzing
+      setItemAnalysisStates((prev) => {
+        const next = new Map(prev);
+        next.set(itemKey, { status: "analyzing", retryCount: 0 });
+        return next;
+      });
+
+      const token = useStudentAuthStore.getState().token;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+
+      const analysisPromise = (async () => {
+        try {
+          let gcsAudioUrl = audioUrl as string;
+          const answer = answers.get(activityId);
+          let currentProgressId =
+            answer?.progressIds && answer.progressIds[itemIndex]
+              ? answer.progressIds[itemIndex]
+              : item.progress_id || null;
+
+          // 🔍 上傳音檔（如果是 blob URL）
+          if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
+            const response = await fetch(audioUrl);
+            const audioBlob = await response.blob();
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const uploadResult = await retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  const error = new Error(
+                    `Upload failed: ${uploadResponse.status}`,
+                  );
+                  throw error;
+                }
+
+                return await uploadResponse.json();
+              },
+              (attempt, error) => {
+                console.log(`Background upload retrying (${attempt}):`, error);
+              },
+            );
+
+            if (uploadResult) {
+              gcsAudioUrl = uploadResult.audio_url;
+              currentProgressId = uploadResult.progress_id;
+            }
+          }
+
+          if (!currentProgressId) {
+            throw new Error("No progress_id available for analysis");
+          }
+
+          // 🤖 AI 分析
+          const aiFormData = new FormData();
+          const audioResponse = await fetch(gcsAudioUrl);
+          const audioBlob = await audioResponse.blob();
+          const fileExtension = audioBlob.type.includes("mp4")
+            ? "recording.mp4"
+            : audioBlob.type.includes("webm")
+              ? "recording.webm"
+              : "recording.audio";
+          aiFormData.append("audio_file", audioBlob, fileExtension);
+          aiFormData.append("reference_text", referenceText!);
+          aiFormData.append("progress_id", String(currentProgressId));
+          aiFormData.append("item_index", String(itemIndex));
+          if (assignmentId) {
+            aiFormData.append("assignment_id", String(assignmentId));
+          }
+
+          const analysisResult = await retryAIAnalysis(
+            async () => {
+              const analysisResponse = await fetch(
+                `${apiUrl}/api/speech/assess`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: aiFormData,
+                },
+              );
+
+              if (!analysisResponse.ok) {
+                throw new Error(`Analysis failed: ${analysisResponse.status}`);
+              }
+
+              return await analysisResponse.json();
+            },
+            (attempt, error) => {
+              console.log(`Background analysis retrying (${attempt}):`, error);
+            },
+          );
+
+          // 更新 activity 的 ai_scores
+          setActivities((prevActivities) => {
+            const newActivities = [...prevActivities];
+            const activityIndex = newActivities.findIndex(
+              (a) => a.id === activityId,
+            );
+            if (activityIndex !== -1) {
+              const updatedActivity = { ...newActivities[activityIndex] };
+              if (!updatedActivity.ai_scores) {
+                updatedActivity.ai_scores = { items: {} };
+              }
+              if (!updatedActivity.ai_scores.items) {
+                updatedActivity.ai_scores.items = {};
+              }
+              updatedActivity.ai_scores.items[itemIndex] = analysisResult;
+
+              // Also update item's ai_assessment
+              if (updatedActivity.items && updatedActivity.items[itemIndex]) {
+                const newItems = [...updatedActivity.items];
+                newItems[itemIndex] = {
+                  ...newItems[itemIndex],
+                  ai_assessment: analysisResult,
+                };
+                updatedActivity.items = newItems;
+              }
+
+              newActivities[activityIndex] = updatedActivity;
+            }
+            return newActivities;
+          });
+
+          // 更新狀態為 analyzed
+          setItemAnalysisStates((prev) => {
+            const next = new Map(prev);
+            next.set(itemKey, { status: "analyzed" });
+            return next;
+          });
+
+          pendingAnalysisRef.current.delete(itemKey);
+          failedItemsRef.current.delete(itemKey);
+          setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+
+          console.log(`✅ Background analysis completed for ${itemKey}`);
+        } catch (error) {
+          console.error(`❌ Background analysis failed for ${itemKey}:`, error);
+
+          // 更新狀態為 failed
+          setItemAnalysisStates((prev) => {
+            const next = new Map(prev);
+            const current = next.get(itemKey) || {
+              status: "failed" as const,
+              retryCount: 0,
+            };
+            next.set(itemKey, {
+              status: "failed",
+              error: error instanceof Error ? error.message : String(error),
+              retryCount: (current.retryCount || 0) + 1,
+            });
+            return next;
+          });
+
+          failedItemsRef.current.add(itemKey);
+          pendingAnalysisRef.current.delete(itemKey);
+          setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+        }
+      })();
+
+      pendingAnalysisRef.current.set(itemKey, analysisPromise);
+      setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
+    },
+    [activities, answers, assignmentId, itemAnalysisStates],
+  );
+
+  // 🎯 Issue #75: checkAndTriggerBackgroundAnalysis 已移除 - 不再自動分析
+
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     if (currentActivity.items && currentActivity.items.length > 0) {
+      // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex + 1);
         setRecordingTime(0);
@@ -780,6 +1157,7 @@ export default function StudentActivityPageContent({
   const handlePreviousActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     if (currentActivity.items && currentActivity.items.length > 0) {
       if (currentSubQuestionIndex > 0) {
         setCurrentSubQuestionIndex(currentSubQuestionIndex - 1);
@@ -808,13 +1186,23 @@ export default function StudentActivityPageContent({
     index: number,
     subQuestionIndex: number = 0,
   ) => {
+    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
     setCurrentActivityIndex(index);
     setCurrentSubQuestionIndex(subQuestionIndex);
     setRecordingTime(0);
     recordingTimeRef.current = 0;
   };
 
-  const handleSubmit = async (e?: React.MouseEvent) => {
+  /**
+   * Issue #75: 提交邏輯說明
+   *
+   * 當學生點擊「提交」時：
+   * 1. 只檢查所有題目是否有錄音檔案
+   * 2. 直接上傳所有錄音檔案並標記作業為已提交
+   * 3. 不等待 AI 分析完成，也不觸發分析
+   * 4. 背景分析可以繼續執行（不影響提交）
+   */
+  const handleSubmit = async (e?: React.MouseEvent, force = false) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -825,300 +1213,100 @@ export default function StudentActivityPageContent({
       return;
     }
 
-    // 🎯 Step 1: 收集所有未錄音和未分析的題目
-    const notRecorded: {
-      activity: Activity;
-      itemIndex?: number;
-      itemLabel: string;
-    }[] = [];
-    const needAnalysis: {
-      activity: Activity;
-      itemIndex: number;
-      item: NonNullable<Activity["items"]>[number];
-      itemLabel: string;
-    }[] = [];
+    // 🎯 收集所有未錄音的題目（警告） - 只在未強制提交時檢查
+    if (!force) {
+      const notRecorded: {
+        activity: Activity;
+        itemIndex?: number;
+        itemLabel: string;
+      }[] = [];
 
-    activities.forEach((activity) => {
-      // 檢查是否是需要錄音的題型
-      const needsRecording = [
-        "reading_assessment",
-        "grouped_questions",
-        "speaking",
-      ].includes(activity.type);
+      activities.forEach((activity) => {
+        // 檢查是否是需要錄音的題型
+        const needsRecording = [
+          "reading_assessment",
+          "grouped_questions",
+          "speaking",
+        ].includes(activity.type);
 
-      if (needsRecording && activity.items && activity.items.length > 0) {
-        // 逐題檢查
-        activity.items.forEach((item, itemIndex) => {
-          const hasRecording = item.recording_url && item.recording_url !== "";
-          const hasAiAssessment =
-            item.ai_assessment ||
-            (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
+        if (needsRecording && activity.items && activity.items.length > 0) {
+          // 逐題檢查
+          activity.items.forEach((item, itemIndex) => {
+            const hasRecording =
+              item.recording_url && item.recording_url !== "";
+            const isBlob =
+              hasRecording && item.recording_url!.startsWith("blob:");
+            const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
 
-          const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
+            if (!hasRecording || isBlob) {
+              const warning = isBlob
+                ? `${itemLabel}${t("studentActivityPage.validation.notUploaded")}`
+                : `${itemLabel}${t("studentActivityPage.validation.notRecorded")}`;
 
-          if (!hasRecording) {
-            notRecorded.push({ activity, itemIndex, itemLabel });
-          } else if (!hasAiAssessment) {
-            needAnalysis.push({ activity, itemIndex, item, itemLabel });
-          }
-        });
-      } else if (needsRecording && !activity.items) {
-        // 單一錄音題目（如 reading_assessment）
-        const hasRecording = activity.audio_url && activity.audio_url !== "";
-        const hasAiAssessment =
-          activity.ai_scores && Object.keys(activity.ai_scores).length > 0;
-
-        if (!hasRecording) {
-          notRecorded.push({ activity, itemLabel: activity.title });
-        } else if (!hasAiAssessment) {
-          // reading_assessment 單題暫不支援自動分析（需另外實作）
-          notRecorded.push({
-            activity,
-            itemLabel: `${activity.title}${t("studentActivityPage.validation.notAnalyzed")}`,
+              notRecorded.push({
+                activity,
+                itemIndex,
+                itemLabel: warning,
+              });
+            }
           });
+        } else if (needsRecording && !activity.items) {
+          // 單一錄音題目（如 reading_assessment）
+          const hasRecording = activity.audio_url && activity.audio_url !== "";
+          const isBlob =
+            hasRecording && activity.audio_url!.startsWith("blob:");
+
+          if (!hasRecording || isBlob) {
+            const warning = isBlob
+              ? `${activity.title}${t("studentActivityPage.validation.notUploaded")}`
+              : activity.title;
+
+            notRecorded.push({
+              activity,
+              itemLabel: warning,
+            });
+          }
         }
+      });
+
+      // 🎯 如果有未錄音的題目，顯示警告 dialog
+      if (notRecorded.length > 0) {
+        // itemLabel already contains the complete warning message
+        const incompleteList = notRecorded.map((item) => item.itemLabel);
+        setIncompleteItems(incompleteList);
+        setShowSubmitDialog(true);
+        return;
       }
-    });
-
-    // 🎯 Step 2: 如果有未錄音的題目，顯示警告 dialog
-    if (notRecorded.length > 0) {
-      const incompleteList = notRecorded.map((item) =>
-        item.itemLabel.includes(t("studentActivityPage.validation.notAnalyzed"))
-          ? item.itemLabel // 已經包含 "（未分析）" 字樣
-          : `${item.itemLabel}${t("studentActivityPage.validation.notRecorded")}`,
-      );
-      setIncompleteItems(incompleteList);
-      setShowSubmitDialog(true);
-      return;
     }
 
-    // 🎯 Step 3: 如果有未分析的錄音，顯示確認 dialog（批次分析將在 handleConfirmSubmit 執行）
-    if (needAnalysis.length > 0) {
-      const incompleteList = needAnalysis.map(
-        (item) =>
-          `${item.itemLabel}${t("studentActivityPage.validation.notAnalyzed")}`,
-      );
-      setIncompleteItems(incompleteList);
-      setShowSubmitDialog(true);
-      return;
-    }
-
-    // 🎯 Step 4: 沒有未分析項目，直接提交
+    // 🎯 立即提交（只上傳音檔，不執行分析）
     if (onSubmit) {
-      onSubmit();
+      try {
+        setSubmitting(true);
+        await onSubmit({
+          answers: [], // Will be filled by parent component
+        });
+        setSubmitting(false);
+
+        toast.success(
+          t("studentActivityPage.messages.submitSuccess") || "提交成功！",
+        );
+      } catch (error) {
+        setSubmitting(false);
+        console.error("Submission error:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "提交失敗";
+        toast.error(
+          t("studentActivityPage.messages.submitError") || errorMessage,
+        );
+      }
     }
   };
 
   const handleConfirmSubmit = async () => {
     setShowSubmitDialog(false);
-
-    // 🎯 用戶確認提交，但仍需檢查是否有已錄音但未分析的項目
-    const needAnalysis: {
-      activity: Activity;
-      itemIndex: number;
-      item: NonNullable<Activity["items"]>[number];
-      itemLabel: string;
-    }[] = [];
-
-    activities.forEach((activity) => {
-      const needsRecording = [
-        "reading_assessment",
-        "grouped_questions",
-        "speaking",
-      ].includes(activity.type);
-
-      if (needsRecording && activity.items && activity.items.length > 0) {
-        activity.items.forEach((item, itemIndex) => {
-          const hasRecording = item.recording_url && item.recording_url !== "";
-          const hasAiAssessment =
-            item.ai_assessment ||
-            (activity.ai_scores?.items && activity.ai_scores.items[itemIndex]);
-
-          const itemLabel = `${activity.title} - ${t("studentActivityPage.validation.itemNumber", { number: itemIndex + 1 })}`;
-
-          if (hasRecording && !hasAiAssessment) {
-            needAnalysis.push({ activity, itemIndex, item, itemLabel });
-          }
-        });
-      }
-    });
-
-    // 🎯 如果有需要分析的項目，執行批次分析
-    if (needAnalysis.length > 0) {
-      setIsAnalyzing(true);
-      const token = useStudentAuthStore.getState().token;
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-
-      try {
-        for (let i = 0; i < needAnalysis.length; i++) {
-          const { activity, itemIndex, item, itemLabel } = needAnalysis[i];
-
-          setBatchAnalysisProgress({
-            current: i + 1,
-            total: needAnalysis.length,
-            currentItemLabel: itemLabel,
-          });
-
-          const audioUrl = item.recording_url;
-          const referenceText = item.text;
-          const contentItemId = item.id;
-
-          if (!audioUrl || !referenceText || !contentItemId) {
-            console.error("Missing required data for analysis:", {
-              audioUrl,
-              referenceText,
-              contentItemId,
-            });
-            continue;
-          }
-
-          let gcsAudioUrl = audioUrl as string;
-          let uploadResult: {
-            audio_url: string;
-            progress_id: number;
-          } | null = null; // 🔒 定義在外層以便 AI 分析時使用
-
-          // 🔍 初始化 currentProgressId - 從三個來源依序取得（與 GroupedQuestionsTemplate 相同邏輯）
-          const answer = answers.get(activity.id);
-          let currentProgressId =
-            answer?.progressIds && answer.progressIds[itemIndex]
-              ? answer.progressIds[itemIndex]
-              : item.progress_id || null;
-
-          if (typeof audioUrl === "string" && audioUrl.startsWith("blob:")) {
-            const response = await fetch(audioUrl);
-            const audioBlob = await response.blob();
-
-            const formData = new FormData();
-            formData.append("assignment_id", assignmentId!.toString());
-            formData.append("content_item_id", contentItemId.toString());
-            const uploadFileExtension = audioBlob.type.includes("mp4")
-              ? "recording.mp4"
-              : audioBlob.type.includes("webm")
-                ? "recording.webm"
-                : "recording.audio";
-            formData.append("audio_file", audioBlob, uploadFileExtension);
-
-            uploadResult = await retryAudioUpload(
-              async () => {
-                const uploadResponse = await fetch(
-                  `${apiUrl}/api/students/upload-recording`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: formData,
-                  },
-                );
-
-                if (!uploadResponse.ok) {
-                  const error = new Error(
-                    `Upload failed: ${uploadResponse.status}`,
-                  );
-                  throw error;
-                }
-
-                return await uploadResponse.json();
-              },
-              () => {
-                // Retry callback - silent
-              },
-            );
-
-            if (uploadResult) {
-              gcsAudioUrl = uploadResult.audio_url; // 🔥 修復：backend 回傳 audio_url 不是 gcs_url
-              currentProgressId = uploadResult.progress_id; // 從 upload 結果更新 progress_id
-            }
-          }
-
-          // 🔥 如果還沒有 progress_id，無法分析（不應該發生，因為已從 item.progress_id 初始化）
-          if (!currentProgressId) {
-            console.error("❌ 無法取得 progress_id，跳過此題目", {
-              itemIndex,
-              item,
-              answer,
-            });
-            continue;
-          }
-
-          // 🔍 執行 AI 分析 - 使用與 GroupedQuestionsTemplate 相同的 API
-          // 準備 AI 分析的 FormData
-          const aiFormData = new FormData();
-          const audioResponse = await fetch(gcsAudioUrl);
-          const audioBlob = await audioResponse.blob();
-          const fileExtension = audioBlob.type.includes("mp4")
-            ? "recording.mp4"
-            : audioBlob.type.includes("webm")
-              ? "recording.webm"
-              : "recording.audio";
-          aiFormData.append("audio_file", audioBlob, fileExtension);
-          aiFormData.append("reference_text", referenceText!);
-
-          // 🔥 必須提供 progress_id（從三個來源之一取得）
-          aiFormData.append("progress_id", String(currentProgressId));
-          aiFormData.append("item_index", String(itemIndex));
-          if (assignmentId) {
-            aiFormData.append("assignment_id", String(assignmentId));
-          }
-
-          const analysisResult = await retryAIAnalysis(
-            async () => {
-              const analysisResponse = await fetch(
-                `${apiUrl}/api/speech/assess`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: aiFormData,
-                },
-              );
-
-              if (!analysisResponse.ok) {
-                throw new Error(`Analysis failed: ${analysisResponse.status}`);
-              }
-
-              return await analysisResponse.json();
-            },
-            () => {
-              // Retry callback - silent
-            },
-          );
-
-          // 更新 activity 的 ai_scores
-          if (analysisResult) {
-            if (!activity.ai_scores) {
-              activity.ai_scores = { items: {} };
-            }
-            if (!activity.ai_scores.items) {
-              activity.ai_scores.items = {};
-            }
-            activity.ai_scores.items[itemIndex] = analysisResult;
-          }
-        }
-
-        toast.success(
-          t("studentActivityPage.messages.batchAnalysisComplete", {
-            count: needAnalysis.length,
-          }),
-        );
-      } catch (error) {
-        console.error("Batch analysis failed:", error);
-        toast.error(t("studentActivityPage.messages.batchAnalysisFailed"));
-        setIsAnalyzing(false);
-        setBatchAnalysisProgress(null);
-        return;
-      } finally {
-        setIsAnalyzing(false);
-        setBatchAnalysisProgress(null);
-      }
-    }
-
-    // 🎯 執行提交
-    if (onSubmit) {
-      onSubmit();
-    }
+    // 用戶確認提交，強制提交跳過驗證（已經在 dialog 確認過了）
+    await handleSubmit(undefined, true);
   };
 
   const getStatusIcon = (activity: Activity, answer?: Answer) => {
@@ -1277,6 +1465,9 @@ export default function StudentActivityPageContent({
           assignmentId={assignmentId.toString()}
           isPreviewMode={isPreviewMode}
           authToken={authToken}
+          itemAnalysisState={itemAnalysisStates.get(
+            getItemKey(activity.id, currentSubQuestionIndex),
+          )}
           onUploadSuccess={(index, gcsUrl, progressId) => {
             setActivities((prevActivities) => {
               const newActivities = [...prevActivities];
@@ -1320,7 +1511,11 @@ export default function StudentActivityPageContent({
               const activityIndex = newActivities.findIndex(
                 (a) => a.id === activity.id,
               );
-              if (activityIndex !== -1 && newActivities[activityIndex].items) {
+              if (
+                activityIndex !== -1 &&
+                newActivities[activityIndex].items &&
+                assessmentResult
+              ) {
                 const newItems = [...newActivities[activityIndex].items!];
                 if (newItems[index]) {
                   newItems[index] = {
@@ -1367,7 +1562,7 @@ export default function StudentActivityPageContent({
                 }),
               );
               if (onSubmit) {
-                onSubmit();
+                onSubmit({ answers: [] });
               }
             }}
           />
@@ -1679,11 +1874,10 @@ export default function StudentActivityPageContent({
                               onClick={() => {
                                 if (isAnalyzing) return; // 🔒 分析中禁止切換
                                 if (activityIndex !== currentActivityIndex) {
-                                  handleActivitySelect(
-                                    activityIndex,
-                                    itemIndex,
-                                  );
+                                  // 切換 activity
+                                  handleActivitySelect(activityIndex, itemIndex);
                                 } else {
+                                  // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
                                   setCurrentSubQuestionIndex(itemIndex);
                                 }
                               }}
@@ -1910,7 +2104,7 @@ export default function StudentActivityPageContent({
                           variant="default"
                           size="sm"
                           onClick={handleSubmit}
-                          disabled={isAnalyzing || submitting} // 🔒 分析中禁用
+                          disabled={submitting} // 🔒 提交中禁用
                           className="flex-1 sm:flex-none min-w-0"
                         >
                           <span className="hidden sm:inline">
@@ -2048,7 +2242,7 @@ export default function StudentActivityPageContent({
         </DialogContent>
       </Dialog>
 
-      {/* 🔒 全屏分析遮罩 */}
+      {/* 🔒 全屏分析遮罩 (GroupedQuestionsTemplate 使用) */}
       {isAnalyzing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
@@ -2064,33 +2258,57 @@ export default function StudentActivityPageContent({
               />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {batchAnalysisProgress
-                ? t("studentActivityPage.messages.batchAnalyzing", {
-                    current: batchAnalysisProgress.current,
-                    total: batchAnalysisProgress.total,
-                  })
-                : t("studentActivityPage.messages.analyzingRecording")}
+              {t("studentActivityPage.messages.analyzingRecording")}
             </h3>
-            {batchAnalysisProgress && (
-              <>
-                <p className="text-purple-600 font-medium mb-4">
-                  {batchAnalysisProgress.currentItemLabel}
-                </p>
-                <Progress
-                  value={
-                    (batchAnalysisProgress.current /
-                      batchAnalysisProgress.total) *
-                    100
-                  }
-                  className="mb-4"
-                />
-              </>
-            )}
             <p className="text-gray-600 mb-4">
               {t("studentActivityPage.messages.pleaseWait")}
             </p>
             <p className="text-sm text-gray-500">
               {t("studentActivityPage.messages.doNotLeave")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🔒 提交中遮罩 */}
+      {submitting && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full bg-blue-100 animate-ping opacity-75"></div>
+              <div className="absolute inset-2 rounded-full bg-blue-200 animate-pulse"></div>
+              <Loader2
+                className="w-24 h-24 absolute inset-0 animate-spin text-blue-600"
+                style={{ animationDuration: "1.5s" }}
+              />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {t("studentActivityPage.messages.submittingAssignment") ||
+                "正在提交作業..."}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {t("studentActivityPage.messages.pleaseWait") || "請稍候"}
+            </p>
+            <p className="text-sm text-gray-500">
+              {t("studentActivityPage.messages.doNotLeave") || "請勿離開此頁面"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 背景分析進度指示器（輕量版，右下角浮動提示） */}
+      {!isAnalyzing && pendingAnalysisCount > 0 && (
+        <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-40 flex items-center gap-3 max-w-xs">
+          <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {t("studentActivityPage.messages.backgroundAnalyzing") ||
+                "背景分析中"}
+            </p>
+            <p className="text-xs text-blue-100">
+              {t("studentActivityPage.messages.backgroundAnalyzingCount", {
+                count: pendingAnalysisCount,
+              }) || `${pendingAnalysisCount} 題進行中...`}
             </p>
           </div>
         </div>
