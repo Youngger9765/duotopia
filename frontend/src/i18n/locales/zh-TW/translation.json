@@ -833,7 +833,15 @@
     },
     "errors": {
       "loginFailed": "登入失敗，請檢查帳號密碼",
-      "quickLoginFailed": "{{email}} 帳號登入失敗"
+      "quickLoginFailed": "{{email}} 帳號登入失敗",
+      "accountNotVerified": "帳號尚未驗證，請先驗證您的 Email 信箱"
+    },
+    "resend": {
+      "button": "重新發送驗證郵件",
+      "success": "驗證郵件已重新發送！請檢查您的信箱",
+      "failed": "發送失敗，請稍後再試",
+      "cooldown": "請等待 {{seconds}} 秒後再重新發送",
+      "noEmail": "沒有收到郵件？"
     }
   },
   "studentLogin": {

@@ -833,7 +833,15 @@
     },
     "errors": {
       "loginFailed": "Login failed, please check your credentials",
-      "quickLoginFailed": "{{email}} login failed"
+      "quickLoginFailed": "{{email}} login failed",
+      "accountNotVerified": "Account not verified, please verify your email first"
+    },
+    "resend": {
+      "button": "Resend Verification Email",
+      "success": "Verification email has been resent! Please check your inbox",
+      "failed": "Failed to send, please try again later",
+      "cooldown": "Please wait {{seconds}} seconds before resending",
+      "noEmail": "Didn't receive the email?"
     }
   },
   "studentLogin": {
