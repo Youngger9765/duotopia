@@ -157,7 +157,9 @@ async def teacher_register(
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.info(f"Triggering onboarding for newly registered teacher {new_teacher.id}")
+        logger.info(
+            f"Triggering onboarding for newly registered teacher {new_teacher.id}"
+        )
 
         onboarding_service = OnboardingService(db=db)
         await onboarding_service.trigger_onboarding(new_teacher.id)
