@@ -10,9 +10,7 @@ on:
     branches:
       - staging
       - develop
-    # Exclude main branch (uses VM deployment instead)
-    branches-ignore:
-      - main
+      # main branch uses VM deployment (deploy-vm-prod.yml)
     paths:
       # 前端相關檔案
       - 'frontend/**'
