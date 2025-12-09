@@ -171,7 +171,7 @@ deploy() {
         cd frontend
         IMAGE_TAG="manual-$(date +%Y%m%d-%H%M%S)"
         docker build \
-            --build-arg VITE_API_URL=/api \
+            --build-arg VITE_API_URL="" \
             --build-arg VITE_ENVIRONMENT=production \
             --build-arg BUILD_TIMESTAMP="$(date -u +%Y%m%d-%H%M%S)" \
             -t $ARTIFACT_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG \
