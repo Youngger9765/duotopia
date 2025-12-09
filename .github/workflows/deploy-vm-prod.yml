@@ -171,7 +171,7 @@ jobs:
     - name: Build frontend (test build)
       working-directory: ./frontend
       env:
-        VITE_API_URL: /api
+        VITE_API_URL: ""
         VITE_ENVIRONMENT: production
       run: npm run build
 
