@@ -52,7 +52,6 @@ class TestOnboardingIntegrationBasic:
             name="Integration Test Teacher",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -91,7 +90,6 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Two",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -142,7 +140,6 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Three",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -211,7 +208,6 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Four",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -264,7 +260,6 @@ class TestOnboardingIntegrationBasic:
             name="Teacher Five",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -307,7 +302,6 @@ class TestOnboardingIntegrationAdvanced:
             name="Teacher Six",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -372,107 +366,54 @@ class TestOnboardingIntegrationAdvanced:
             name="Teacher Seven",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
-            onboarding_started_at=None,
         )
         test_session.add(teacher)
         test_session.commit()
         test_session.refresh(teacher)
-
-        assert teacher.onboarding_completed is False
 
         # Trigger onboarding
         service = OnboardingService(db=test_session)
-        await service.trigger_onboarding(teacher.id)
+        result = await service.trigger_onboarding(teacher.id)
 
-        # Refresh teacher from database
-        test_session.refresh(teacher)
+        # Verify onboarding completed successfully
+        assert result["success"] is True
+        assert "classroom_id" in result
 
-        # Verify completion flags
-        assert teacher.onboarding_completed is True
-        assert teacher.onboarding_started_at is not None
-
-    @pytest.mark.asyncio
-    async def test_onboarding_idempotency(self, test_session: Session):
-        """Test that onboarding is idempotent (safe to call multiple times)"""
-        from services.onboarding import OnboardingService
-        from auth import get_password_hash
-
-        # Create teacher
-        teacher = Teacher(
-            email="teacher8@test.com",
-            password_hash=get_password_hash("password123"),
-            name="Teacher Eight",
-            email_verified=True,
-            is_active=True,
-            onboarding_completed=False,
-        )
-        test_session.add(teacher)
-        test_session.commit()
-        test_session.refresh(teacher)
-
-        service = OnboardingService(db=test_session)
-
-        # First trigger - should execute
-        result1 = await service.trigger_onboarding(teacher.id)
-        assert result1["success"] is True
-
-        # Count entities created
-        classroom_count = (
-            test_session.query(Classroom)
-            .filter(Classroom.teacher_id == teacher.id)
-            .count()
-        )
-        student_count = test_session.query(Student).count()
-
-        # Second trigger - should skip (idempotency)
-        result2 = await service.trigger_onboarding(teacher.id)
-        assert result2["success"] is True
-        assert "already completed" in result2.get("message", "").lower()
-
-        # Verify no duplicate entities created
-        new_classroom_count = (
-            test_session.query(Classroom)
-            .filter(Classroom.teacher_id == teacher.id)
-            .count()
-        )
-        new_student_count = test_session.query(Student).count()
-
-        assert new_classroom_count == classroom_count
-        assert new_student_count == student_count
+    # NOTE: Idempotency test removed - onboarding now runs once at registration
+    # No longer needed since onboarding is triggered immediately on registration
 
     @pytest.mark.asyncio
-    async def test_onboarding_triggered_on_first_login(
+    async def test_onboarding_triggered_on_registration(
         self, test_client, test_session: Session
     ):
-        """Test that onboarding is automatically triggered on first login"""
-        from auth import get_password_hash
+        """Test that onboarding is automatically triggered on registration"""
+        from unittest.mock import patch, AsyncMock
 
-        # Create new teacher (not onboarded)
-        teacher = Teacher(
-            email="newteacher@test.com",
-            password_hash=get_password_hash("password123"),
-            name="New Teacher",
-            email_verified=True,
-            is_active=True,
-            onboarding_completed=False,
+        # Mock email service to avoid sending real emails
+        with patch("routers.auth.email_service") as mock_email_service:
+            mock_email_service.send_teacher_verification_email.return_value = True
+
+            # Register new teacher
+            response = test_client.post(
+                "/api/auth/teacher/register",
+                json={
+                    "email": "newteacher@test.com",
+                    "password": "Password123!",
+                    "name": "New Teacher",
+                },
+            )
+
+            assert response.status_code == 200
+
+        # Verify teacher created
+        teacher = (
+            test_session.query(Teacher)
+            .filter(Teacher.email == "newteacher@test.com")
+            .first()
         )
-        test_session.add(teacher)
-        test_session.commit()
+        assert teacher is not None
 
-        # Login
-        response = test_client.post(
-            "/api/auth/teacher/login",
-            json={"email": "newteacher@test.com", "password": "password123"},
-        )
-
-        assert response.status_code == 200
-
-        # Verify onboarding triggered
-        test_session.refresh(teacher)
-        assert teacher.onboarding_completed is True
-
-        # Verify entities created
+        # Verify default resources created (onboarding triggered)
         classroom = (
             test_session.query(Classroom)
             .filter(Classroom.teacher_id == teacher.id)
@@ -480,6 +421,10 @@ class TestOnboardingIntegrationAdvanced:
         )
         assert classroom is not None
         assert classroom.name == "My First Class"
+
+        # Verify student created
+        student = test_session.query(Student).filter(Student.name == "Bruce").first()
+        assert student is not None
 
     @pytest.mark.asyncio
     async def test_onboarding_full_workflow_end_to_end(self, test_session: Session):
@@ -494,7 +439,6 @@ class TestOnboardingIntegrationAdvanced:
             name="Full Workflow Teacher",
             email_verified=True,
             is_active=True,
-            onboarding_completed=False,
         )
         test_session.add(teacher)
         test_session.commit()
@@ -563,8 +507,3 @@ class TestOnboardingIntegrationAdvanced:
             .first()
         )
         assert assignment is not None
-
-        # 7. Verify teacher completion
-        test_session.refresh(teacher)
-        assert teacher.onboarding_completed is True
-        assert teacher.onboarding_started_at is not None

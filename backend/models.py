@@ -317,10 +317,6 @@ class Teacher(Base):
     password_reset_sent_at = Column(DateTime(timezone=True))  # 最後發送密碼重設郵件時間
     password_reset_expires_at = Column(DateTime(timezone=True))  # token 過期時間
 
-    # 新手上線字段 (Issue #61)
-    onboarding_completed = Column(Boolean, default=False, nullable=False)  # 是否完成新手上線
-    onboarding_started_at = Column(DateTime(timezone=True), nullable=True)  # 新手上線開始時間
-
     # 訂閱系統 - 新系統使用 subscription_periods 表
     # 移除舊欄位：subscription_type, subscription_status, subscription_start_date,
     #            subscription_end_date, subscription_renewed_at, monthly_message_limit,
