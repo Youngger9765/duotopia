@@ -70,6 +70,9 @@ tmp/
 *.png
 /test_*.py  # Only ignore test files in root directory, not in tests/ folders
 
+# Generated TTS audio files (should use GCS in production)
+backend/static/tts/
+
 # Logs
 *.log
 logs/
