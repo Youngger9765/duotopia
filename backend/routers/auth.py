@@ -83,27 +83,6 @@ async def teacher_login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
             )
 
-    # Trigger onboarding for new teachers (Issue #61)
-    if not teacher.onboarding_completed and teacher.onboarding_started_at is None:
-        try:
-            from services.onboarding import OnboardingService
-            import logging
-
-            logger = logging.getLogger(__name__)
-
-            logger.info(f"Triggering onboarding for teacher {teacher.id}")
-            onboarding_service = OnboardingService(db=db)
-            await onboarding_service.trigger_onboarding(teacher.id)
-            logger.info(f"Onboarding completed for teacher {teacher.id}")
-
-        except Exception as e:
-            # Log error but don't block login
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.error(f"Onboarding failed for teacher {teacher.id}: {e}")
-            # Continue with login process
-
     # Create token
     access_token = create_access_token(
         data={
@@ -171,6 +150,26 @@ async def teacher_register(
     db.add(new_teacher)
     db.commit()
     db.refresh(new_teacher)
+
+    # 🆕 Issue #61: Trigger onboarding immediately for new teacher
+    try:
+        from services.onboarding import OnboardingService
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"Triggering onboarding for newly registered teacher {new_teacher.id}")
+
+        onboarding_service = OnboardingService(db=db)
+        await onboarding_service.trigger_onboarding(new_teacher.id)
+
+        logger.info(f"Onboarding completed for teacher {new_teacher.id}")
+    except Exception as e:
+        # Log error but don't fail registration
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Onboarding failed for teacher {new_teacher.id}: {e}")
+        # User can still complete registration and login, just without default resources
 
     # 🎯 發送驗證 email
     email_sent = email_service.send_teacher_verification_email(db, new_teacher)

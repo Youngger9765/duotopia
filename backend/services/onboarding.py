@@ -82,26 +82,6 @@ class OnboardingService:
         """
         self.db = db
 
-    def _check_if_onboarding_needed(self, teacher: Teacher) -> bool:
-        """
-        Check if teacher needs onboarding (idempotency).
-
-        Args:
-            teacher: Teacher instance
-
-        Returns:
-            True if onboarding is needed, False otherwise
-        """
-        # Skip if already completed
-        if teacher.onboarding_completed:
-            return False
-
-        # Skip if already started (prevent concurrent runs)
-        if teacher.onboarding_started_at is not None:
-            return False
-
-        return True
-
     def _create_default_classroom(self, teacher: Teacher) -> Classroom:
         """
         Create default classroom for teacher.
@@ -425,23 +405,10 @@ class OnboardingService:
         logger.info(f"Simulated student submission for assignment {assignment.id}")
         return student_assignment
 
-    def _mark_onboarding_complete(self, teacher: Teacher) -> None:
-        """
-        Mark teacher onboarding as complete.
-
-        Args:
-            teacher: Teacher instance
-        """
-        teacher.onboarding_completed = True
-        teacher.onboarding_started_at = datetime.now(timezone.utc)
-
-        self.db.commit()
-
-        logger.info(f"Marked onboarding complete for teacher {teacher.id}")
-
     async def trigger_onboarding(self, teacher_id: int) -> Dict[str, Any]:
         """
         Main orchestrator for onboarding flow.
+        Creates default resources for newly registered teacher.
 
         Args:
             teacher_id: Teacher ID
@@ -459,15 +426,6 @@ class OnboardingService:
 
             if not teacher:
                 raise ValueError(f"Teacher not found: {teacher_id}")
-
-            # Check if onboarding needed (idempotency)
-            if not self._check_if_onboarding_needed(teacher):
-                logger.info(f"Onboarding already completed for teacher {teacher_id}")
-                return {"success": True, "message": "Onboarding already completed"}
-
-            # Mark onboarding as started (prevent concurrent runs)
-            teacher.onboarding_started_at = datetime.now(timezone.utc)
-            self.db.flush()
 
             # Execute onboarding steps
             logger.info(f"Starting onboarding for teacher {teacher_id}")
@@ -493,8 +451,8 @@ class OnboardingService:
             # 6. Simulate student submission
             await self._simulate_student_submission(assignment, student)
 
-            # 7. Mark onboarding complete
-            self._mark_onboarding_complete(teacher)
+            # 7. Commit all changes
+            self.db.commit()
 
             logger.info(f"Onboarding completed successfully for teacher {teacher_id}")
 

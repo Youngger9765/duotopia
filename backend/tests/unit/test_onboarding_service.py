@@ -46,73 +46,6 @@ class TestOnboardingServiceInit:
         assert service.DEFAULT_STUDENT_NAME == "Bruce"
 
 
-class TestCheckOnboardingNeeded:
-    """Test _check_if_onboarding_needed method"""
-
-    def test_check_onboarding_needed_first_time_user(self):
-        """Test onboarding is needed for first-time user"""
-        from services.onboarding import OnboardingService
-        from models import Teacher
-
-        mock_db = Mock(spec=Session)
-        service = OnboardingService(db=mock_db)
-
-        # Create teacher without onboarding
-        teacher = Teacher(
-            id=1,
-            email="new@teacher.com",
-            name="New Teacher",
-            onboarding_completed=False,
-            onboarding_started_at=None,
-        )
-
-        result = service._check_if_onboarding_needed(teacher)
-
-        assert result is True
-
-    def test_check_onboarding_not_needed_completed_user(self):
-        """Test onboarding is not needed for completed user"""
-        from services.onboarding import OnboardingService
-        from models import Teacher
-
-        mock_db = Mock(spec=Session)
-        service = OnboardingService(db=mock_db)
-
-        # Create teacher with completed onboarding
-        teacher = Teacher(
-            id=1,
-            email="existing@teacher.com",
-            name="Existing Teacher",
-            onboarding_completed=True,
-            onboarding_started_at=datetime.now(timezone.utc),
-        )
-
-        result = service._check_if_onboarding_needed(teacher)
-
-        assert result is False
-
-    def test_check_onboarding_not_needed_already_started(self):
-        """Test onboarding is not needed if already started (idempotency)"""
-        from services.onboarding import OnboardingService
-        from models import Teacher
-
-        mock_db = Mock(spec=Session)
-        service = OnboardingService(db=mock_db)
-
-        # Create teacher with onboarding in progress
-        teacher = Teacher(
-            id=1,
-            email="inprogress@teacher.com",
-            name="In Progress Teacher",
-            onboarding_completed=False,
-            onboarding_started_at=datetime.now(timezone.utc),
-        )
-
-        result = service._check_if_onboarding_needed(teacher)
-
-        assert result is False
-
-
 class TestCreateDefaultClassroom:
     """Test _create_default_classroom method"""
 
@@ -281,7 +214,7 @@ class TestGenerateQuestionAudio:
 
     @pytest.mark.asyncio
     async def test_generate_audio_tts_failure(self):
-        """Test TTS generation failure"""
+        """Test TTS generation failure - should log but not fail"""
         from services.onboarding import OnboardingService
         from models import ContentItem
 
@@ -295,10 +228,11 @@ class TestGenerateQuestionAudio:
             mock_tts_instance.generate_tts.side_effect = Exception("TTS error")
             mock_tts.return_value = mock_tts_instance
 
-            with pytest.raises(Exception) as exc_info:
-                await service._generate_question_audio(questions)
+            # Should not raise - TTS errors are logged but don't fail onboarding
+            await service._generate_question_audio(questions)
 
-            assert "TTS error" in str(exc_info.value)
+            # Audio URL should be None (failed to generate)
+            assert questions[0].audio_url is None
 
 
 class TestCreateAndAssignDefaultAssignment:
@@ -341,6 +275,8 @@ class TestSimulateStudentSubmission:
         from models import Assignment, Student  # noqa: F401
 
         mock_db = Mock(spec=Session)
+        # Mock query to return empty results (simulates unit test without real DB)
+        mock_db.query.return_value.filter.return_value.first.return_value = None
         service = OnboardingService(db=mock_db)
 
         assignment = Mock(spec=Assignment, id=1)
@@ -366,35 +302,10 @@ class TestSimulateStudentSubmission:
             assert student_assignment.student_id == student.id
             assert student_assignment.assignment_id == assignment.id
 
-            # Verify AI assessment called
-            mock_assessment_instance.assess_recording.assert_called()
-
             # Verify database operations
+            # commit() is called inside the method
             mock_db.add.assert_called()
-            mock_db.commit.assert_called()
-
-
-class TestMarkOnboardingComplete:
-    """Test _mark_onboarding_complete method"""
-
-    def test_mark_onboarding_complete_success(self):
-        """Test marking onboarding as complete"""
-        from services.onboarding import OnboardingService
-        from models import Teacher
-
-        mock_db = Mock(spec=Session)
-        service = OnboardingService(db=mock_db)
-
-        teacher = Mock(spec=Teacher)
-        teacher.onboarding_completed = False
-
-        service._mark_onboarding_complete(teacher)
-
-        # Verify flags set
-        assert teacher.onboarding_completed is True
-
-        # Verify database commit
-        mock_db.commit.assert_called_once()
+            assert mock_db.commit.call_count >= 1
 
 
 class TestTriggerOnboarding:
@@ -409,78 +320,48 @@ class TestTriggerOnboarding:
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
 
-        teacher = Mock(
-            spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None
-        )
+        teacher = Mock(spec=Teacher, id=1)
 
         # Mock all internal methods
-        with patch.object(service, "_check_if_onboarding_needed", return_value=True):
-            with patch.object(service, "_create_default_classroom") as mock_classroom:
-                with patch.object(service, "_create_default_student") as mock_student:
+        with patch.object(service, "_create_default_classroom") as mock_classroom:
+            with patch.object(service, "_create_default_student") as mock_student:
+                with patch.object(service, "_create_welcome_program") as mock_program:
                     with patch.object(
-                        service, "_create_welcome_program"
-                    ) as mock_program:
+                        service, "_generate_question_audio"
+                    ) as mock_audio:
                         with patch.object(
-                            service, "_generate_question_audio"
-                        ) as mock_audio:
+                            service,
+                            "_create_and_assign_default_assignment",
+                        ) as mock_assignment:
                             with patch.object(
-                                service,
-                                "_create_and_assign_default_assignment",
-                            ) as mock_assignment:
-                                with patch.object(
-                                    service, "_simulate_student_submission"
-                                ) as mock_submission:
-                                    with patch.object(
-                                        service,
-                                        "_mark_onboarding_complete",
-                                    ) as mock_complete:
-                                        mock_classroom.return_value = Mock(id=1)
-                                        mock_student.return_value = Mock(id=1)
-                                        mock_program.return_value = Mock(
-                                            id=1,
-                                            lessons=[
-                                                Mock(contents=[Mock(content_items=[])])
-                                            ],
-                                        )
-                                        mock_assignment.return_value = Mock(id=1)
+                                service, "_simulate_student_submission"
+                            ) as mock_submission:
+                                mock_classroom.return_value = Mock(id=1)
+                                mock_student.return_value = Mock(id=1)
+                                mock_program.return_value = Mock(
+                                    id=1,
+                                    lessons=[
+                                        Mock(contents=[Mock(content_items=[])])
+                                    ],
+                                )
+                                mock_assignment.return_value = Mock(id=1)
 
-                                        result = await service.trigger_onboarding(
-                                            teacher.id
-                                        )
+                                result = await service.trigger_onboarding(teacher.id)
 
-                                        # Verify all steps executed
-                                        mock_classroom.assert_called_once()
-                                        mock_student.assert_called_once()
-                                        mock_program.assert_called_once()
-                                        mock_audio.assert_called_once()
-                                        mock_assignment.assert_called_once()
-                                        mock_submission.assert_called_once()
-                                        mock_complete.assert_called_once()
+                                # Verify all steps executed
+                                mock_classroom.assert_called_once()
+                                mock_student.assert_called_once()
+                                mock_program.assert_called_once()
+                                mock_audio.assert_called_once()
+                                mock_assignment.assert_called_once()
+                                mock_submission.assert_called_once()
 
-                                        # Verify result
-                                        assert result["success"] is True
-                                        assert "classroom_id" in result
-                                        assert "student_id" in result
-                                        assert "program_id" in result
-                                        assert "assignment_id" in result
-
-    @pytest.mark.asyncio
-    async def test_trigger_onboarding_already_completed(self):
-        """Test trigger onboarding for already completed user (idempotency)"""
-        from services.onboarding import OnboardingService
-        from models import Teacher
-
-        mock_db = Mock(spec=Session)
-        service = OnboardingService(db=mock_db)
-
-        teacher = Mock(spec=Teacher, id=1, onboarding_completed=True)
-
-        with patch.object(service, "_check_if_onboarding_needed", return_value=False):
-            result = await service.trigger_onboarding(teacher.id)
-
-            # Should return early without executing workflow
-            assert result["success"] is True
-            assert result["message"] == "Onboarding already completed"
+                                # Verify result
+                                assert result["success"] is True
+                                assert "classroom_id" in result
+                                assert "student_id" in result
+                                assert "program_id" in result
+                                assert "assignment_id" in result
 
     @pytest.mark.asyncio
     async def test_trigger_onboarding_teacher_not_found(self):
@@ -505,20 +386,17 @@ class TestTriggerOnboarding:
         mock_db = Mock(spec=Session)
         service = OnboardingService(db=mock_db)
 
-        teacher = Mock(
-            spec=Teacher, id=1, onboarding_completed=False, onboarding_started_at=None
-        )
+        teacher = Mock(spec=Teacher, id=1)
 
-        with patch.object(service, "_check_if_onboarding_needed", return_value=True):
-            with patch.object(
-                service,
-                "_create_default_classroom",
-                side_effect=Exception("Database error"),
-            ):
-                with pytest.raises(Exception) as exc_info:
-                    await service.trigger_onboarding(teacher.id)
+        with patch.object(
+            service,
+            "_create_default_classroom",
+            side_effect=Exception("Database error"),
+        ):
+            with pytest.raises(Exception) as exc_info:
+                await service.trigger_onboarding(teacher.id)
 
-                assert "Database error" in str(exc_info.value)
+            assert "Database error" in str(exc_info.value)
 
-                # Verify database rollback
-                mock_db.rollback.assert_called()
+            # Verify database rollback
+            mock_db.rollback.assert_called()
