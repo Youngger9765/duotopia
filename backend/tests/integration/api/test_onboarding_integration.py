@@ -387,7 +387,7 @@ class TestOnboardingIntegrationAdvanced:
         self, test_client, test_session: Session
     ):
         """Test that onboarding is automatically triggered on registration"""
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import patch
 
         # Mock email service to avoid sending real emails
         with patch("routers.auth.email_service") as mock_email_service:

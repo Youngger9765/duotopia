@@ -14,7 +14,6 @@ Test Coverage:
 """
 import os
 import sys
-from datetime import datetime, timezone
 from unittest.mock import Mock, patch, AsyncMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -340,9 +339,7 @@ class TestTriggerOnboarding:
                                 mock_student.return_value = Mock(id=1)
                                 mock_program.return_value = Mock(
                                     id=1,
-                                    lessons=[
-                                        Mock(contents=[Mock(content_items=[])])
-                                    ],
+                                    lessons=[Mock(contents=[Mock(content_items=[])])],
                                 )
                                 mock_assignment.return_value = Mock(id=1)
 
