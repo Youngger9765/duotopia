@@ -9,9 +9,7 @@ on:
   push:
     branches:
       - staging
-      # Exclude main branch (uses VM deployment instead)
-    branches-ignore:
-      - main
+      # Note: main branch uses VM deployment (deploy-vm-prod.yml)
     paths:
       # 後端相關檔案
       - 'backend/**'
