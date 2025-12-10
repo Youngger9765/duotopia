@@ -4,6 +4,7 @@
 
 from datetime import datetime  # noqa: F401
 from typing import List  # noqa: F401
+from copy import deepcopy
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -313,6 +314,59 @@ async def get_classroom_programs(
 # ============ 三種複製方式 ============
 
 
+def _deep_copy_content_with_items(
+    content: Content, new_lesson_id: int, db: Session
+) -> Content:
+    """Deep copy a Content object and all its ContentItems.
+
+    Args:
+        content: Source Content to copy from
+        new_lesson_id: ID of the new lesson to attach content to
+        db: Database session
+
+    Returns:
+        New Content object with all items copied
+    """
+    new_content = Content(
+        lesson_id=new_lesson_id,
+        title=content.title,
+        type=content.type,
+        level=content.level if hasattr(content, "level") else "A1",
+        tags=content.tags.copy() if hasattr(content, "tags") and content.tags else [],
+        is_public=content.is_public if hasattr(content, "is_public") else False,
+        target_wpm=content.target_wpm if hasattr(content, "target_wpm") else None,
+        target_accuracy=content.target_accuracy
+        if hasattr(content, "target_accuracy")
+        else None,
+        time_limit_seconds=content.time_limit_seconds
+        if hasattr(content, "time_limit_seconds")
+        else None,
+        order_index=content.order_index if hasattr(content, "order_index") else 0,
+    )
+    db.add(new_content)
+    db.flush()
+
+    # Deep copy each ContentItem
+    for original_item in content.content_items:
+        item_copy = ContentItem(
+            content_id=new_content.id,
+            order_index=original_item.order_index,
+            text=original_item.text,
+            translation=original_item.translation
+            if hasattr(original_item, "translation")
+            else None,
+            audio_url=original_item.audio_url
+            if hasattr(original_item, "audio_url")
+            else None,
+            item_metadata=deepcopy(original_item.item_metadata)
+            if hasattr(original_item, "item_metadata") and original_item.item_metadata
+            else {},
+        )
+        db.add(item_copy)
+
+    return new_content
+
+
 @router.post("/copy-from-template", response_model=ProgramResponse)
 async def copy_from_template(
     data: ProgramCopyFromTemplate,
@@ -320,9 +374,14 @@ async def copy_from_template(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """從公版模板複製課程到班級"""
-    # 驗證模板存在
+    # 驗證模板存在 (with eager loading to prevent N+1 queries)
     template = (
         db.query(Program)
+        .options(
+            selectinload(Program.lessons)
+            .selectinload(Lesson.contents)
+            .selectinload(Content.content_items)
+        )
         .filter(
             Program.id == data.template_id,
             Program.is_template.is_(True),
@@ -391,45 +450,8 @@ async def copy_from_template(
             if hasattr(content, "is_active") and not content.is_active:
                 continue
 
-            # 創建新的 content 複本 (不包含 content_items,後續會深度複製)
-            new_content = Content(
-                lesson_id=new_lesson.id,
-                title=content.title,
-                type=content.type,
-                target_wpm=content.target_wpm
-                if hasattr(content, "target_wpm")
-                else None,
-                target_accuracy=content.target_accuracy
-                if hasattr(content, "target_accuracy")
-                else None,
-                time_limit_seconds=content.time_limit_seconds
-                if hasattr(content, "time_limit_seconds")
-                else None,
-                order_index=content.order_index
-                if hasattr(content, "order_index")
-                else 0,
-            )
-            db.add(new_content)
-            db.flush()  # 取得 new_content.id
-
-            # 深度複製每個 ContentItem (Issue #81 修復)
-            for original_item in content.content_items:
-                item_copy = ContentItem(
-                    content_id=new_content.id,  # 指向新的 content
-                    order_index=original_item.order_index,
-                    text=original_item.text,
-                    translation=original_item.translation
-                    if hasattr(original_item, "translation")
-                    else None,
-                    audio_url=original_item.audio_url
-                    if hasattr(original_item, "audio_url")
-                    else None,
-                    item_metadata=original_item.item_metadata.copy()
-                    if hasattr(original_item, "item_metadata")
-                    and original_item.item_metadata
-                    else {},
-                )
-                db.add(item_copy)
+            # 使用 helper function 進行深度複製
+            _deep_copy_content_with_items(content, new_lesson.id, db)
 
     db.commit()
     db.refresh(new_program)
@@ -444,9 +466,14 @@ async def copy_from_classroom(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """從其他班級複製課程"""
-    # 驗證來源課程存在且屬於當前教師
+    # 驗證來源課程存在且屬於當前教師 (with eager loading to prevent N+1 queries)
     source_program = (
         db.query(Program)
+        .options(
+            selectinload(Program.lessons)
+            .selectinload(Lesson.contents)
+            .selectinload(Content.content_items)
+        )
         .join(Classroom)
         .filter(
             Program.id == data.source_program_id,
@@ -518,45 +545,8 @@ async def copy_from_classroom(
             if hasattr(content, "is_active") and not content.is_active:
                 continue
 
-            # 創建新的 content 複本
-            new_content = Content(
-                lesson_id=new_lesson.id,
-                title=content.title,
-                type=content.type,
-                target_wpm=content.target_wpm
-                if hasattr(content, "target_wpm")
-                else None,
-                target_accuracy=content.target_accuracy
-                if hasattr(content, "target_accuracy")
-                else None,
-                time_limit_seconds=content.time_limit_seconds
-                if hasattr(content, "time_limit_seconds")
-                else None,
-                order_index=content.order_index
-                if hasattr(content, "order_index")
-                else 0,
-            )
-            db.add(new_content)
-            db.flush()  # 取得 new_content.id
-
-            # 深度複製每個 ContentItem
-            for original_item in content.content_items:
-                item_copy = ContentItem(
-                    content_id=new_content.id,
-                    order_index=original_item.order_index,
-                    text=original_item.text,
-                    translation=original_item.translation
-                    if hasattr(original_item, "translation")
-                    else None,
-                    audio_url=original_item.audio_url
-                    if hasattr(original_item, "audio_url")
-                    else None,
-                    item_metadata=original_item.item_metadata.copy()
-                    if hasattr(original_item, "item_metadata")
-                    and original_item.item_metadata
-                    else {},
-                )
-                db.add(item_copy)
+            # 使用 helper function 進行深度複製
+            _deep_copy_content_with_items(content, new_lesson.id, db)
 
     db.commit()
     db.refresh(new_program)
