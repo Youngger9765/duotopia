@@ -539,6 +539,10 @@ export default function StudentActivityPageContent({
 
           if (contentItemId) {
             console.log("🚀 開始上傳錄音到 GCS...");
+            // 🎯 Issue #82: 顯示上傳中提示，讓用戶知道要等待
+            toast.info(t("studentActivityPage.recording.uploading"), {
+              duration: 3000,
+            });
 
             const formData = new FormData();
             formData.append("assignment_id", assignmentId!.toString());
@@ -578,6 +582,8 @@ export default function StudentActivityPageContent({
             )
               .then((uploadResult) => {
                 console.log("✅ 上傳成功:", uploadResult.audio_url);
+                // 🎯 Issue #82: 上傳成功提示，讓用戶知道可以點擊分析按鈕
+                toast.success(t("studentActivityPage.recording.uploadSuccess"));
 
                 // 更新為 GCS URL
                 setActivities((prevActivities) => {
@@ -824,6 +830,7 @@ export default function StudentActivityPageContent({
       const audioUrl = URL.createObjectURL(audioBlob);
       const currentActivity = activities[currentActivityIndex];
 
+      // 🎯 先設置本地 blob URL 讓用戶可以預覽
       setAnswers((prev) => {
         const newAnswers = new Map(prev);
         const answer = newAnswers.get(currentActivity.id) || {
@@ -875,7 +882,144 @@ export default function StudentActivityPageContent({
         description: `${file.name}（${duration.toFixed(1)} 秒）`,
       });
 
-      console.log("✅ File uploaded successfully");
+      console.log("✅ File validated successfully, starting upload to GCS...");
+
+      // 🎯 立即上傳到 GCS (與錄音完成後的上傳邏輯相同)
+      if (
+        !isPreviewMode &&
+        currentActivity.items &&
+        currentActivity.items.length > 0
+      ) {
+        const contentItemId =
+          currentActivity.items[currentSubQuestionIndex]?.id;
+
+        if (contentItemId) {
+          console.log("🚀 開始上傳檔案到 GCS...");
+          toast.info(t("studentActivityPage.recording.uploading"), {
+            duration: 3000,
+          });
+
+          const formData = new FormData();
+          formData.append("assignment_id", assignmentId!.toString());
+          formData.append("content_item_id", contentItemId.toString());
+          const uploadFileExtension = file.type.includes("mp4")
+            ? "recording.mp4"
+            : file.type.includes("webm")
+              ? "recording.webm"
+              : file.type.includes("wav")
+                ? "recording.wav"
+                : file.type.includes("m4a")
+                  ? "recording.m4a"
+                  : "recording.audio";
+          formData.append("audio_file", audioBlob, uploadFileExtension);
+
+          const apiUrl = import.meta.env.VITE_API_URL || "";
+          const authToken = useStudentAuthStore.getState().token;
+
+          retryAudioUpload(
+            async () => {
+              const uploadResponse = await fetch(
+                `${apiUrl}/api/students/upload-recording`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: formData,
+                },
+              );
+
+              if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+              }
+
+              return await uploadResponse.json();
+            },
+            (attempt, error) => {
+              console.log(`上傳重試 (${attempt}):`, error);
+            },
+          )
+            .then((uploadResult) => {
+              console.log("✅ 上傳成功:", uploadResult.audio_url);
+              toast.success(t("studentActivityPage.recording.uploadSuccess"));
+
+              // 更新為 GCS URL
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === currentActivity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[currentSubQuestionIndex]) {
+                    newItems[currentSubQuestionIndex] = {
+                      ...newItems[currentSubQuestionIndex],
+                      recording_url: uploadResult.audio_url,
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
+                  };
+                }
+                return newActivities;
+              });
+
+              // 更新 progressIds
+              setAnswers((prev) => {
+                const newAnswers = new Map(prev);
+                const answer = newAnswers.get(currentActivity.id);
+                if (answer) {
+                  if (!answer.progressIds) answer.progressIds = [];
+                  while (
+                    answer.progressIds.length <= currentSubQuestionIndex
+                  ) {
+                    answer.progressIds.push(0);
+                  }
+                  answer.progressIds[currentSubQuestionIndex] =
+                    uploadResult.progress_id;
+                  answer.status = "completed";
+                }
+                newAnswers.set(currentActivity.id, answer!);
+                return newAnswers;
+              });
+            })
+            .catch((error) => {
+              console.error("❌ 上傳失敗:", error);
+              toast.error("上傳錄音失敗", {
+                description: "請檢查網路連接後重試",
+              });
+
+              // 🎯 上傳失敗時，清除 blob URL，回到初始狀態
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === currentActivity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[currentSubQuestionIndex]) {
+                    newItems[currentSubQuestionIndex] = {
+                      ...newItems[currentSubQuestionIndex],
+                      recording_url: "",
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
+                  };
+                }
+                return newActivities;
+              });
+            });
+        }
+      }
     } catch (error) {
       console.error("❌ File upload failed:", error);
       toast.error(t("studentActivity.toast.validationFailed"), {
@@ -1479,16 +1623,14 @@ export default function StudentActivityPageContent({
               const activityIndex = newActivities.findIndex(
                 (a) => a.id === activity.id,
               );
-              if (
-                activityIndex !== -1 &&
-                newActivities[activityIndex].items &&
-                assessmentResult
-              ) {
+              // 修正：無論 assessmentResult 是新結果或 null（清除），都要更新 ai_assessment
+              // Issue #82: 刪除錄音時需要同步清除前端的分析結果
+              if (activityIndex !== -1 && newActivities[activityIndex].items) {
                 const newItems = [...newActivities[activityIndex].items!];
                 if (newItems[index]) {
                   newItems[index] = {
                     ...newItems[index],
-                    ai_assessment: assessmentResult,
+                    ai_assessment: assessmentResult ?? undefined, // 可以是新結果或 undefined（清除）
                   };
                 }
                 newActivities[activityIndex] = {
