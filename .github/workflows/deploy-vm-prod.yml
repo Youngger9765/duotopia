@@ -1,28 +1,14 @@
-name: Deploy to VM (Production)
+name: Deploy to VM (Production) - DEPRECATED
 
 # 🎯 Purpose: Deploy frontend, backend, or both to GCP e2-small VM (duotopia-prod-vm)
 # 🏗️ Architecture: Nginx reverse proxy + Frontend container + Backend container
-# 💡 NEW STRATEGY: Auto-deploy to VM on main branch push (production)
-# 🚀 Trigger: Automatic on push to main branch
-# 💰 Cost: ~$16/month (vs $240/month for Cloud Run) = 93% savings
+# ⚠️ DEPRECATED: This workflow is being phased out in favor of Cloud Run deployment
+# 🚀 Trigger: Manual only (automatic deployment disabled)
+# 💡 Migration: Domain duotopia.co will be migrated to Cloud Run
+# 📝 Status: VM will be kept running temporarily for fallback, then decommissioned
 
 on:
-  # Automatic deployment on push to main branch
-  push:
-    branches:
-      - main
-    paths:
-      # Trigger on backend or frontend changes
-      - 'backend/**'
-      - 'frontend/**'
-      - 'deployment/vm/**'
-      - '.github/workflows/deploy-vm-prod.yml'
-      # Exclude documentation and tests
-      - '!**/*.md'
-      - '!backend/tests/**'
-      - '!frontend/tests/**'
-
-  # Manual trigger for emergencies or partial deployments
+  # Manual trigger only - automatic deployment disabled
   workflow_dispatch:
     inputs:
       deploy_component:
