@@ -1,430 +1,366 @@
 """
-Database and Performance Monitoring for Load Tests
-Tracks database connections, query performance, and generates reports.
+Real-time monitoring for load tests
+Tracks database connections, system metrics, and performance
 """
 
-import logging
-import time
 import asyncio
-from typing import Optional, List, Dict, Any
+import json
+import os
 from datetime import datetime
-from pathlib import Path
+from typing import Dict, List
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import logging
 
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
+from config import MonitoringConfig
 
-    PSYCOPG2_AVAILABLE = True
-except ImportError:
-    PSYCOPG2_AVAILABLE = False
-    logging.warning("psycopg2 not installed - database monitoring disabled")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class DatabaseMonitor:
-    """
-    Monitors database performance during load tests.
-    Tracks connections, query times, and locks.
-    """
+    """Monitor database metrics during load test"""
 
-    def __init__(self, database_url: Optional[str] = None):
-        """
-        Initialize database monitor.
-
-        Args:
-            database_url: PostgreSQL connection string.
-                         If None, monitoring is disabled (graceful degradation).
-        """
+    def __init__(self, database_url: str):
         self.database_url = database_url
-        self.enabled = False
-        self.connection = None
+        self.metrics_history = []
+        self.is_monitoring = False
 
-        if not database_url:
-            logger.warning("No database URL provided - monitoring disabled")
-            return
+    def get_connection(self):
+        """Get database connection"""
+        return psycopg2.connect(self.database_url, cursor_factory=RealDictCursor)
 
-        if not PSYCOPG2_AVAILABLE:
-            logger.warning("psycopg2 not installed - monitoring disabled")
-            return
-
-        try:
-            self.connection = psycopg2.connect(database_url)
-            self.enabled = True
-            logger.info("Database monitoring enabled")
-        except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
-            logger.warning("Database monitoring disabled")
-
-    def __del__(self):
-        """Close database connection on cleanup."""
-        if self.connection:
-            self.connection.close()
-
-    def get_active_connections(self) -> int:
+    def get_connection_stats(self) -> Dict:
         """
-        Get count of active database connections.
+        Get current database connection statistics
 
         Returns:
-            Number of active connections, or -1 if monitoring disabled.
+            Dict with connection pool metrics
         """
-        if not self.enabled:
-            return -1
-
         try:
-            with self.connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT count(*)
-                    FROM pg_stat_activity
-                    WHERE state = 'active'
-                    AND pid != pg_backend_pid()
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            # Query active connections
+            cursor.execute(
                 """
-                )
-                result = cursor.fetchone()
-                return result[0] if result else 0
+                SELECT
+                    count(*) FILTER (WHERE state = 'active') as active,
+                    count(*) FILTER (WHERE state = 'idle') as idle,
+                    count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction,
+                    count(*) as total,
+                    max(EXTRACT(EPOCH FROM (now() - query_start))) as max_query_duration
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                AND pid != pg_backend_pid()
+            """
+            )
 
-        except Exception as e:
-            logger.error(f"Failed to get active connections: {e}")
-            return -1
+            stats = cursor.fetchone()
+            cursor.close()
+            conn.close()
 
-    def get_connection_stats(self) -> Dict[str, Any]:
-        """
-        Get detailed connection statistics.
-
-        Returns:
-            Dict with connection statistics or empty dict if disabled.
-        """
-        if not self.enabled:
-            return {}
-
-        try:
-            with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
-                # Get connection statistics
-                cursor.execute(
-                    """
-                    SELECT
-                        count(*) as total_connections,
-                        count(*) FILTER (WHERE state = 'active') as active_connections,
-                        count(*) FILTER (WHERE state = 'idle') as idle_connections,
-                        count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction,
-                        count(*) FILTER (WHERE wait_event_type IS NOT NULL) as waiting_connections
-                    FROM pg_stat_activity
-                    WHERE pid != pg_backend_pid()
-                """
-                )
-                stats = cursor.fetchone()
-
-                return dict(stats) if stats else {}
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "active_connections": stats["active"] or 0,
+                "idle_connections": stats["idle"] or 0,
+                "idle_in_transaction": stats["idle_in_transaction"] or 0,
+                "total_connections": stats["total"] or 0,
+                "max_query_duration_seconds": float(stats["max_query_duration"] or 0),
+            }
 
         except Exception as e:
             logger.error(f"Failed to get connection stats: {e}")
-            return {}
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            }
 
-    def get_slow_queries(self, min_duration_ms: int = 1000) -> List[Dict[str, Any]]:
+    def get_slow_queries(self, min_duration_seconds=1.0) -> List[Dict]:
         """
-        Get currently running slow queries.
+        Get currently running slow queries
 
         Args:
-            min_duration_ms: Minimum query duration in milliseconds.
+            min_duration_seconds: Minimum query duration to report
 
         Returns:
-            List of slow query information.
+            List of slow query details
         """
-        if not self.enabled:
-            return []
-
         try:
-            with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(
-                    """
-                    SELECT
-                        pid,
-                        now() - query_start as duration,
-                        state,
-                        query
-                    FROM pg_stat_activity
-                    WHERE state = 'active'
-                    AND pid != pg_backend_pid()
-                    AND now() - query_start > interval '%s milliseconds'
-                    ORDER BY duration DESC
-                    LIMIT 10
-                """,
-                    (min_duration_ms,),
-                )
+            conn = self.get_connection()
+            cursor = conn.cursor()
 
-                return [dict(row) for row in cursor.fetchall()]
+            cursor.execute(
+                """
+                SELECT
+                    pid,
+                    usename,
+                    application_name,
+                    client_addr,
+                    state,
+                    EXTRACT(EPOCH FROM (now() - query_start)) as duration_seconds,
+                    query
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                AND state = 'active'
+                AND query NOT LIKE '%%pg_stat_activity%%'
+                AND EXTRACT(EPOCH FROM (now() - query_start)) > %s
+                ORDER BY query_start
+            """,
+                (min_duration_seconds,),
+            )
+
+            queries = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            return [dict(q) for q in queries]
 
         except Exception as e:
             logger.error(f"Failed to get slow queries: {e}")
             return []
 
-    def get_lock_info(self) -> List[Dict[str, Any]]:
+    def get_lock_waits(self) -> List[Dict]:
         """
-        Get information about database locks.
+        Get queries waiting on locks
 
         Returns:
-            List of lock information.
+            List of lock wait details
         """
-        if not self.enabled:
-            return []
-
         try:
-            with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(
-                    """
-                    SELECT
-                        pl.pid,
-                        pl.mode,
-                        pl.granted,
-                        pa.query,
-                        pa.state
-                    FROM pg_locks pl
-                    JOIN pg_stat_activity pa ON pl.pid = pa.pid
-                    WHERE pl.pid != pg_backend_pid()
-                    ORDER BY pl.granted, pa.query_start
-                    LIMIT 20
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
                 """
-                )
+                SELECT
+                    blocked_locks.pid AS blocked_pid,
+                    blocked_activity.usename AS blocked_user,
+                    blocking_locks.pid AS blocking_pid,
+                    blocking_activity.usename AS blocking_user,
+                    blocked_activity.query AS blocked_statement,
+                    blocking_activity.query AS blocking_statement,
+                    blocked_activity.application_name AS blocked_application
+                FROM pg_catalog.pg_locks blocked_locks
+                JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+                JOIN pg_catalog.pg_locks blocking_locks
+                    ON blocking_locks.locktype = blocked_locks.locktype
+                    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+                    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+                    AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+                    AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+                    AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+                    AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+                    AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+                    AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+                    AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+                    AND blocking_locks.pid != blocked_locks.pid
+                JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+                WHERE NOT blocked_locks.granted
+            """
+            )
 
-                return [dict(row) for row in cursor.fetchall()]
+            locks = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            return [dict(lock) for lock in locks]
 
         except Exception as e:
-            logger.error(f"Failed to get lock info: {e}")
+            logger.error(f"Failed to get lock waits: {e}")
             return []
 
-    async def monitor_continuously(
-        self, interval_seconds: int = 5, duration_seconds: Optional[int] = None
-    ):
+    async def monitor_continuously(self, interval_seconds=5):
         """
-        Continuously monitor database and print statistics.
+        Continuously monitor database and log metrics
 
         Args:
-            interval_seconds: Time between monitoring checks.
-            duration_seconds: Total monitoring duration (None = infinite).
+            interval_seconds: Time between monitoring checks
         """
-        if not self.enabled:
-            logger.warning("Database monitoring is disabled")
-            return
+        self.is_monitoring = True
+        logger.info(f"🔍 Starting database monitoring (interval: {interval_seconds}s)")
 
-        logger.info(f"Starting continuous monitoring (interval: {interval_seconds}s)")
-
-        start_time = time.time()
-        iteration = 0
-
-        try:
-            while True:
-                iteration += 1
-                elapsed = time.time() - start_time
-
-                # Check if duration limit reached
-                if duration_seconds and elapsed >= duration_seconds:
-                    logger.info("Monitoring duration limit reached")
-                    break
-
-                # Get statistics
+        while self.is_monitoring:
+            try:
+                # Get connection stats
                 stats = self.get_connection_stats()
-                slow_queries = self.get_slow_queries()
+                self.metrics_history.append(stats)
 
-                # Print statistics
-                logger.info(
-                    f"--- Database Stats (iteration {iteration}, {elapsed:.1f}s) ---"
-                )
-                logger.info(f"Total connections: {stats.get('total_connections', 0)}")
-                logger.info(f"Active:            {stats.get('active_connections', 0)}")
-                logger.info(f"Idle:              {stats.get('idle_connections', 0)}")
-                logger.info(f"Waiting:           {stats.get('waiting_connections', 0)}")
+                # Log summary
+                if "error" not in stats:
+                    logger.info(
+                        f"📊 DB Connections: {stats['active_connections']} active, "
+                        f"{stats['idle_connections']} idle, "
+                        f"{stats['total_connections']} total"
+                    )
 
-                if slow_queries:
-                    logger.warning(f"Slow queries detected: {len(slow_queries)}")
-                    for query_info in slow_queries[:3]:  # Show top 3
-                        logger.warning(
-                            f"  PID {query_info['pid']}: {query_info['duration']} - "
-                            f"{query_info['query'][:80]}..."
-                        )
+                    # Check for slow queries
+                    slow_queries = self.get_slow_queries(min_duration_seconds=5.0)
+                    if slow_queries:
+                        logger.warning(f"⚠️ {len(slow_queries)} slow queries detected")
+                        for query in slow_queries[:3]:  # Log first 3
+                            logger.warning(
+                                f"   PID {query['pid']}: {query['duration_seconds']:.2f}s - "
+                                f"{query['query'][:100]}"
+                            )
 
-                # Wait before next iteration
-                await asyncio.sleep(interval_seconds)
+                    # Check for lock waits
+                    lock_waits = self.get_lock_waits()
+                    if lock_waits:
+                        logger.error(f"🔒 {len(lock_waits)} lock waits detected!")
+                        for lock in lock_waits[:3]:
+                            logger.error(
+                                f"   PID {lock['blocked_pid']} blocked by {lock['blocking_pid']}"
+                            )
 
-        except KeyboardInterrupt:
-            logger.info("Monitoring stopped by user")
-        except Exception as e:
-            logger.error(f"Monitoring error: {e}")
+                else:
+                    logger.error(f"❌ Monitoring error: {stats['error']}")
 
+            except Exception as e:
+                logger.error(f"Monitoring exception: {e}")
 
-class PerformanceCollector:
-    """
-    Collects and aggregates performance metrics from Locust results.
-    """
+            await asyncio.sleep(interval_seconds)
 
-    def __init__(self):
-        """Initialize performance collector."""
-        self.metrics: List[Dict[str, Any]] = []
+    def stop_monitoring(self):
+        """Stop continuous monitoring"""
+        self.is_monitoring = False
+        logger.info("🛑 Stopping database monitoring")
 
-    def collect_from_csv(self, stats_csv_path: str) -> bool:
+    def save_metrics(self, filename: str):
         """
-        Load metrics from Locust CSV stats file.
+        Save collected metrics to file
 
         Args:
-            stats_csv_path: Path to results_stats.csv file.
+            filename: Output filename
+        """
+        output_path = os.path.join(MonitoringConfig.RESULTS_DIR, filename)
+        os.makedirs(MonitoringConfig.RESULTS_DIR, exist_ok=True)
+
+        with open(output_path, "w") as f:
+            json.dump(self.metrics_history, f, indent=2)
+
+        logger.info(f"💾 Metrics saved to: {output_path}")
+
+    def get_summary(self) -> Dict:
+        """
+        Get summary statistics from collected metrics
 
         Returns:
-            True if successful, False otherwise.
+            Dict with summary stats
         """
-        try:
-            import csv
+        if not self.metrics_history:
+            return {"error": "No metrics collected"}
 
-            with open(stats_csv_path, "r") as f:
-                reader = csv.DictReader(f)
-                self.metrics = list(reader)
+        # Filter out error entries
+        valid_metrics = [m for m in self.metrics_history if "error" not in m]
 
-            logger.info(f"Loaded {len(self.metrics)} metric entries from CSV")
-            return True
+        if not valid_metrics:
+            return {"error": "No valid metrics collected"}
 
-        except FileNotFoundError:
-            logger.error(f"CSV file not found: {stats_csv_path}")
-            return False
-        except Exception as e:
-            logger.error(f"Failed to load CSV: {e}")
-            return False
-
-    def get_summary_statistics(self) -> Dict[str, Any]:
-        """
-        Calculate summary statistics from collected metrics.
-
-        Returns:
-            Dict with summary statistics.
-        """
-        if not self.metrics:
-            return {}
-
-        # Find the aggregated row (last row or "Aggregated" name)
-        aggregated = None
-        for row in reversed(self.metrics):
-            if row.get("Name") == "Aggregated" or row == self.metrics[-1]:
-                aggregated = row
-                break
-
-        if not aggregated:
-            return {}
+        # Calculate statistics
+        active_conns = [m["active_connections"] for m in valid_metrics]
+        total_conns = [m["total_connections"] for m in valid_metrics]
+        max_durations = [m["max_query_duration_seconds"] for m in valid_metrics]
 
         return {
-            "total_requests": int(aggregated.get("Request Count", 0)),
-            "total_failures": int(aggregated.get("Failure Count", 0)),
-            "median_response_ms": float(aggregated.get("Median Response Time", 0)),
-            "p95_response_ms": float(aggregated.get("95%", 0)),
-            "p99_response_ms": float(aggregated.get("99%", 0)),
-            "average_response_ms": float(aggregated.get("Average Response Time", 0)),
-            "min_response_ms": float(aggregated.get("Min Response Time", 0)),
-            "max_response_ms": float(aggregated.get("Max Response Time", 0)),
-            "requests_per_second": float(aggregated.get("Requests/s", 0)),
-            "success_rate": self._calculate_success_rate(aggregated),
+            "duration_seconds": len(valid_metrics) * MonitoringConfig.DB_QUERY_INTERVAL,
+            "samples": len(valid_metrics),
+            "connections": {
+                "max_active": max(active_conns),
+                "avg_active": sum(active_conns) / len(active_conns),
+                "max_total": max(total_conns),
+                "avg_total": sum(total_conns) / len(total_conns),
+            },
+            "query_duration": {
+                "max_seconds": max(max_durations),
+                "avg_seconds": sum(max_durations) / len(max_durations),
+            },
         }
 
-    def _calculate_success_rate(self, aggregated: Dict[str, Any]) -> float:
-        """Calculate success rate percentage."""
-        total = int(aggregated.get("Request Count", 0))
-        failures = int(aggregated.get("Failure Count", 0))
 
-        if total == 0:
-            return 0.0
+class PerformanceMonitor:
+    """Monitor API performance metrics"""
 
-        return ((total - failures) / total) * 100
+    def __init__(self):
+        self.requests = []
+        self.errors = []
 
-    def generate_text_report(self, output_path: Optional[str] = None) -> str:
-        """
-        Generate a text report of performance metrics.
+    def record_request(
+        self,
+        endpoint: str,
+        method: str,
+        duration: float,
+        status_code: int,
+        success: bool,
+    ):
+        """Record a request"""
+        self.requests.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "endpoint": endpoint,
+                "method": method,
+                "duration": duration,
+                "status_code": status_code,
+                "success": success,
+            }
+        )
 
-        Args:
-            output_path: Optional file path to save report.
+        if not success:
+            self.errors.append(self.requests[-1])
 
-        Returns:
-            Report text content.
-        """
-        summary = self.get_summary_statistics()
+    def get_statistics(self) -> Dict:
+        """Calculate performance statistics"""
+        if not self.requests:
+            return {"error": "No requests recorded"}
 
-        if not summary:
-            return "No metrics available"
+        durations = [r["duration"] for r in self.requests]
+        durations.sort()
 
-        # Format report
-        report_lines = [
-            "=" * 60,
-            "LOAD TEST PERFORMANCE REPORT",
-            "=" * 60,
-            "",
-            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            "REQUEST STATISTICS:",
-            f"  Total Requests:       {summary['total_requests']:,}",
-            f"  Failed Requests:      {summary['total_failures']:,}",
-            f"  Success Rate:         {summary['success_rate']:.2f}%",
-            f"  Requests per Second:  {summary['requests_per_second']:.2f}",
-            "",
-            "RESPONSE TIME (ms):",
-            f"  Minimum:              {summary['min_response_ms']:.0f}",
-            f"  Median (p50):         {summary['median_response_ms']:.0f}",
-            f"  Average:              {summary['average_response_ms']:.0f}",
-            f"  95th Percentile:      {summary['p95_response_ms']:.0f}",
-            f"  99th Percentile:      {summary['p99_response_ms']:.0f}",
-            f"  Maximum:              {summary['max_response_ms']:.0f}",
-            "",
-            "=" * 60,
-        ]
+        total_requests = len(self.requests)
+        successful_requests = sum(1 for r in self.requests if r["success"])
+        failed_requests = total_requests - successful_requests
 
-        report_text = "\n".join(report_lines)
+        # Calculate percentiles
+        def percentile(data, p):
+            idx = int(len(data) * p / 100)
+            return data[min(idx, len(data) - 1)]
 
-        # Save to file if requested
-        if output_path:
-            try:
-                Path(output_path).write_text(report_text)
-                logger.info(f"Report saved to: {output_path}")
-            except Exception as e:
-                logger.error(f"Failed to save report: {e}")
+        return {
+            "total_requests": total_requests,
+            "successful_requests": successful_requests,
+            "failed_requests": failed_requests,
+            "success_rate_percent": (successful_requests / total_requests * 100)
+            if total_requests > 0
+            else 0,
+            "latency": {
+                "min": min(durations),
+                "max": max(durations),
+                "avg": sum(durations) / len(durations),
+                "p50": percentile(durations, 50),
+                "p95": percentile(durations, 95),
+                "p99": percentile(durations, 99),
+            },
+            "errors_by_code": self._group_errors_by_code(),
+        }
 
-        return report_text
+    def _group_errors_by_code(self) -> Dict:
+        """Group errors by status code"""
+        error_codes = {}
+        for error in self.errors:
+            code = error["status_code"]
+            error_codes[code] = error_codes.get(code, 0) + 1
+        return error_codes
 
+    def save_results(self, filename: str):
+        """Save performance results"""
+        output_path = os.path.join(MonitoringConfig.RESULTS_DIR, filename)
+        os.makedirs(MonitoringConfig.RESULTS_DIR, exist_ok=True)
 
-def generate_html_summary(results_dir: str) -> bool:
-    """
-    Generate an HTML summary from load test results.
+        results = {
+            "statistics": self.get_statistics(),
+            "raw_data": self.requests if MonitoringConfig.SAVE_RAW_DATA else [],
+        }
 
-    Args:
-        results_dir: Directory containing results CSV files.
+        with open(output_path, "w") as f:
+            json.dump(results, f, indent=2)
 
-    Returns:
-        True if successful, False otherwise.
-    """
-    try:
-        results_path = Path(results_dir)
-        stats_csv = results_path / "results_stats.csv"
-
-        if not stats_csv.exists():
-            logger.error(f"Stats CSV not found: {stats_csv}")
-            return False
-
-        # Collect metrics
-        collector = PerformanceCollector()
-        collector.collect_from_csv(str(stats_csv))
-
-        # Generate text report
-        report_path = results_path / "summary.txt"
-        report_text = collector.generate_text_report(str(report_path))
-
-        logger.info(f"Summary report generated: {report_path}")
-        print("\n" + report_text)
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Failed to generate summary: {e}")
-        return False
-
-
-# Export main classes
-__all__ = [
-    "DatabaseMonitor",
-    "PerformanceCollector",
-    "generate_html_summary",
-]
+        logger.info(f"💾 Performance results saved to: {output_path}")

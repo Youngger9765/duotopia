@@ -173,7 +173,7 @@ async def shutdown_event():
 
 @app.get("/")
 async def root():
-    return {"message": "Duotopia API is running", "version": "1.0.0"}
+    return {"message": "Duotopia API is running", "version": "1.0.1"}
 
 
 @app.get("/health")

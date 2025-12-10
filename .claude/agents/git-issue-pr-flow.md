@@ -102,13 +102,10 @@ gcloud run services list --region=asia-east1 | grep "preview-issue"  # Should be
 4. Reproduce problem with evidence (screenshots/logs)
 5. Root cause analysis (5 Why)
 6. Design TDD test plan
-7. Generate PDCA Plan from template:
-   - Copy template from `.claude/templates/pdca-plan.md`
-   - Fill in: Issue number, problem analysis, root cause, solution, test plan
-8. **Post PDCA Plan to Issue #<NUM> as comment**:
-   - Use: `gh issue comment <NUM> --body-file .claude/templates/pdca-plan-filled.md`
-   - Or paste template content directly
-   - 📍 Location: GitHub Issue comment (not internal report)
+7. **Post PDCA Plan to Issue #<NUM> as comment**:
+   - Use: `gh issue comment <NUM> --body "[PDCA Plan content]"`
+   - Include: Issue number, problem analysis, root cause, solution, test plan
+   - 📍 Location: GitHub Issue comment (single source of truth)
    - ⏸️ STOP and wait for user to review plan
    - ✅ Only proceed to Phase 2 after approval
 
@@ -441,8 +438,11 @@ gh issue list --label "🚀 Ready for Production"
 ```
 
 ### Templates
-- `.claude/templates/pdca-plan.md` - PDCA Plan template
-- `.claude/templates/pdca-act.md` - PDCA Act completion report template
+Templates are available as reference but NOT required:
+- `.claude/templates/pdca-plan.md` - Optional structure reference
+- `.claude/templates/pdca-act.md` - Optional structure reference
+
+**IMPORTANT**: Never create `.claude/templates/pdca-*-issue-*.md` files. All PDCA tracking happens in GitHub Issues/PRs only.
 
 ### Automated Workflows
 - Auto-Approval Detection: Monitors Issue comments for approval keywords

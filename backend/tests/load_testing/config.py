@@ -1,299 +1,221 @@
 """
 Load Testing Configuration
-Manages environment settings and test scenario definitions for load testing.
+Supports PROD (VM) and Staging (Cloud Run) environments
 """
 
 import os
+from typing import Literal
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
-from dotenv import load_dotenv
-
-# Load environment variables from .env files
-load_dotenv()
 
 
 @dataclass
-class EnvironmentConfig:
-    """Configuration for a specific testing environment."""
+class LoadTestConfig:
+    """Configuration for load testing environments"""
 
     name: str
     base_url: str
-    database_url: Optional[str]
+    # Authentication credentials
+    teacher_email: str
+    teacher_password: str
     student_email: str
     student_password: str
-    teacher_email: Optional[str] = None
-    teacher_password: Optional[str] = None
+    # Test parameters
+    max_file_size_mb: float = 2.0
+    upload_timeout_seconds: int = 30
+    # Performance thresholds
+    max_acceptable_latency_p95: int = 10  # seconds
+    max_error_rate_percent: float = 5.0
+    # Database monitoring (optional)
+    database_url: str = None
 
 
-@dataclass
-class TestScenario:
-    """Configuration for a specific test scenario."""
-
-    name: str
-    users: int
-    spawn_rate: int  # users per second
-    duration: str  # e.g., "5m", "10m", "30m"
-    description: str
-
-
-# Test Scenario Definitions
-TEST_SCENARIOS: Dict[str, TestScenario] = {
-    "normal": TestScenario(
-        name="normal",
-        users=20,
-        spawn_rate=2,
-        duration="5m",
-        description="Typical usage pattern - baseline performance",
+# Environment configurations
+ENVIRONMENTS = {
+    "staging": LoadTestConfig(
+        name="Staging (Cloud Run)",
+        base_url=os.getenv(
+            "STAGING_BASE_URL",
+            "https://duotopia-staging-backend-316409492201.asia-east1.run.app",
+        ),
+        teacher_email=os.getenv("TEST_TEACHER_EMAIL", "test-teacher@duotopia.co"),
+        teacher_password=os.getenv("TEST_TEACHER_PASSWORD", "test-password"),
+        student_email=os.getenv("TEST_STUDENT_EMAIL", "test-student@duotopia.co"),
+        student_password=os.getenv("TEST_STUDENT_PASSWORD", "test-password"),
+        database_url=os.getenv("STAGING_DATABASE_URL"),
+        # Staging has lower resources
+        max_acceptable_latency_p95=15,  # More lenient
     ),
-    "peak": TestScenario(
-        name="peak",
-        users=50,
-        spawn_rate=5,
-        duration="5m",
-        description="High traffic period (e.g., after homework assignment)",
+    "production": LoadTestConfig(
+        name="Production (VM)",
+        base_url=os.getenv("PRODUCTION_BASE_URL", "https://duotopia.co"),
+        teacher_email=os.getenv("PROD_TEST_TEACHER_EMAIL", "load-test@duotopia.co"),
+        teacher_password=os.getenv("PROD_TEST_TEACHER_PASSWORD", "load-test-password"),
+        student_email=os.getenv(
+            "PROD_TEST_STUDENT_EMAIL", "load-test-student@duotopia.co"
+        ),
+        student_password=os.getenv("PROD_TEST_STUDENT_PASSWORD", "load-test-password"),
+        database_url=os.getenv("PRODUCTION_DATABASE_URL"),
+        # Production should be faster
+        max_acceptable_latency_p95=10,
     ),
-    "stress": TestScenario(
-        name="stress",
-        users=100,
-        spawn_rate=10,
-        duration="10m",
-        description="Beyond normal capacity - find bottlenecks",
-    ),
-    "spike": TestScenario(
-        name="spike",
-        users=50,
-        spawn_rate=25,
-        duration="3m",
-        description="Sudden burst of traffic",
-    ),
-    "endurance": TestScenario(
-        name="endurance",
-        users=30,
-        spawn_rate=3,
-        duration="30m",
-        description="Sustained load over time - check for memory leaks",
-    ),
-    "breaking": TestScenario(
-        name="breaking",
-        users=200,
-        spawn_rate=20,
-        duration="10m",
-        description="Find absolute system limits",
+    "local": LoadTestConfig(
+        name="Local Development",
+        base_url="http://localhost:8080",
+        teacher_email="teacher@example.com",
+        teacher_password="password123",
+        student_email="student@example.com",
+        student_password="password123",
+        database_url=os.getenv(
+            "DATABASE_URL",
+            "postgresql://duotopia_user:duotopia_pass@localhost:5432/duotopia",
+        ),
     ),
 }
 
 
-# Audio File Specifications
-# Based on README.md specifications (adjusted from user requirements: 1MB, 3MB, 5MB, 8MB)
-AUDIO_FILE_SPECS = {
-    "small": {
-        "filename": "small_3sec_50kb.webm",  # Using existing file
-        "size_kb": 50,
-        "probability": 0.40,  # 40% of uploads
-        "description": "Small file - 3 seconds",
-    },
-    "medium": {
-        "filename": "medium_10sec_200kb.webm",  # Using existing file
-        "size_kb": 200,
-        "probability": 0.30,  # 30% of uploads
-        "description": "Medium file - 10 seconds",
-    },
-    "large": {
-        "filename": "large_20sec_500kb.webm",  # Using existing file
-        "size_kb": 500,
-        "probability": 0.20,  # 20% of uploads
-        "description": "Large file - 20 seconds",
-    },
-    "max": {
-        "filename": "max_30sec_2mb.webm",  # Using existing file
-        "size_kb": 2000,
-        "probability": 0.10,  # 10% of uploads
-        "description": "Maximum file - 30 seconds",
-    },
-}
-
-
-def get_config(environment: str = None) -> EnvironmentConfig:
+def get_config(
+    env: Literal["staging", "production", "local"] = "staging"
+) -> LoadTestConfig:
     """
-    Get configuration for the specified environment.
+    Get configuration for specified environment
 
     Args:
-        environment: Environment name (staging, production, local).
-                    If None, uses TEST_ENV environment variable.
+        env: Environment name (staging/production/local)
 
     Returns:
-        EnvironmentConfig object for the specified environment.
-
-    Raises:
-        ValueError: If environment is not recognized or required variables are missing.
+        LoadTestConfig for the environment
     """
-    if environment is None:
-        environment = os.getenv("TEST_ENV", "staging")
-
-    environment = environment.lower()
-
-    if environment == "staging":
-        return EnvironmentConfig(
-            name="staging",
-            base_url=os.getenv(
-                "STAGING_BASE_URL",
-                "https://duotopia-staging-backend-316409492201.asia-east1.run.app",
-            ),
-            database_url=os.getenv("STAGING_DATABASE_URL"),
-            student_email=os.getenv("TEST_STUDENT_EMAIL", "student1@duotopia.com"),
-            student_password=os.getenv("TEST_STUDENT_PASSWORD", "20120101"),
-            teacher_email=os.getenv("TEST_TEACHER_EMAIL"),
-            teacher_password=os.getenv("TEST_TEACHER_PASSWORD"),
-        )
-
-    elif environment == "production":
-        # Require explicit configuration for production
-        base_url = os.getenv("PRODUCTION_BASE_URL")
-        if not base_url:
-            raise ValueError(
-                "PRODUCTION_BASE_URL must be set for production testing. "
-                "This is intentionally required to prevent accidental production tests."
-            )
-
-        student_email = os.getenv("PROD_TEST_STUDENT_EMAIL")
-        student_password = os.getenv("PROD_TEST_STUDENT_PASSWORD")
-
-        if not student_email or not student_password:
-            raise ValueError(
-                "PROD_TEST_STUDENT_EMAIL and PROD_TEST_STUDENT_PASSWORD must be set "
-                "for production testing."
-            )
-
-        return EnvironmentConfig(
-            name="production",
-            base_url=base_url,
-            database_url=os.getenv("PRODUCTION_DATABASE_URL"),
-            student_email=student_email,
-            student_password=student_password,
-            teacher_email=os.getenv("PROD_TEST_TEACHER_EMAIL"),
-            teacher_password=os.getenv("PROD_TEST_TEACHER_PASSWORD"),
-        )
-
-    elif environment == "local":
-        return EnvironmentConfig(
-            name="local",
-            base_url=os.getenv("LOCAL_BASE_URL", "http://localhost:8000"),
-            database_url=os.getenv(
-                "LOCAL_DATABASE_URL",
-                "postgresql://postgres:postgres@localhost:5432/duotopia",
-            ),
-            student_email=os.getenv("LOCAL_TEST_STUDENT_EMAIL", "test@example.com"),
-            student_password=os.getenv("LOCAL_TEST_STUDENT_PASSWORD", "test123"),
-            teacher_email=os.getenv("LOCAL_TEST_TEACHER_EMAIL"),
-            teacher_password=os.getenv("LOCAL_TEST_TEACHER_PASSWORD"),
-        )
-
-    else:
+    if env not in ENVIRONMENTS:
         raise ValueError(
-            f"Unknown environment: {environment}. "
-            f"Must be one of: staging, production, local"
+            f"Unknown environment: {env}. Must be one of {list(ENVIRONMENTS.keys())}"
         )
 
+    config = ENVIRONMENTS[env]
 
-def get_scenario(scenario_name: str) -> TestScenario:
-    """
-    Get test scenario configuration by name.
-
-    Args:
-        scenario_name: Name of the test scenario.
-
-    Returns:
-        TestScenario object.
-
-    Raises:
-        ValueError: If scenario name is not recognized.
-    """
-    scenario_name = scenario_name.lower()
-
-    if scenario_name not in TEST_SCENARIOS:
-        available = ", ".join(TEST_SCENARIOS.keys())
-        raise ValueError(
-            f"Unknown scenario: {scenario_name}. " f"Available scenarios: {available}"
-        )
-
-    return TEST_SCENARIOS[scenario_name]
-
-
-def get_audio_file_by_probability() -> Dict[str, Any]:
-    """
-    Select an audio file based on configured probability distribution.
-
-    Returns:
-        Dict containing audio file information (filename, size_kb, description).
-    """
-    import random
-
-    # Create weighted list based on probabilities
-    choices = []
-    for file_type, spec in AUDIO_FILE_SPECS.items():
-        weight = int(spec["probability"] * 100)  # Convert to integer weight
-        choices.extend([file_type] * weight)
-
-    # Random selection
-    selected_type = random.choice(choices)
-    return AUDIO_FILE_SPECS[selected_type]
-
-
-def validate_config(config: EnvironmentConfig) -> None:
-    """
-    Validate that required configuration is present.
-
-    Args:
-        config: EnvironmentConfig to validate.
-
-    Raises:
-        ValueError: If required configuration is missing.
-    """
-    if not config.base_url:
-        raise ValueError(f"base_url is required for environment: {config.name}")
-
+    # Validate required credentials
+    if not config.teacher_email or not config.teacher_password:
+        raise ValueError(f"Missing teacher credentials for {env} environment")
     if not config.student_email or not config.student_password:
-        raise ValueError(
-            f"student_email and student_password are required for environment: {config.name}"
-        )
+        raise ValueError(f"Missing student credentials for {env} environment")
 
-    # Check that base_url is a valid URL
-    if not config.base_url.startswith(("http://", "https://")):
-        raise ValueError(
-            f"base_url must start with http:// or https://, got: {config.base_url}"
-        )
+    return config
 
 
-# Module-level configuration cache
-_cached_config: Optional[EnvironmentConfig] = None
+# Test scenario configurations
+class TestScenarios:
+    """Predefined load test scenarios"""
+
+    NORMAL_LOAD = {
+        "name": "Normal Load",
+        "description": "Typical usage pattern",
+        "users": 20,
+        "spawn_rate": 2,  # users/second
+        "duration": "5m",
+        "expected_rps": 10,  # requests per second
+    }
+
+    PEAK_LOAD = {
+        "name": "Peak Load",
+        "description": "High traffic period (e.g., after homework assignment)",
+        "users": 50,
+        "spawn_rate": 5,
+        "duration": "5m",
+        "expected_rps": 25,
+    }
+
+    STRESS_TEST = {
+        "name": "Stress Test",
+        "description": "Push system beyond normal capacity",
+        "users": 100,
+        "spawn_rate": 10,
+        "duration": "10m",
+        "expected_rps": 50,
+    }
+
+    SPIKE_TEST = {
+        "name": "Spike Test",
+        "description": "Sudden traffic burst",
+        "users": 50,
+        "spawn_rate": 50,  # All users at once
+        "duration": "3m",
+        "expected_rps": 30,
+    }
+
+    ENDURANCE_TEST = {
+        "name": "Endurance Test",
+        "description": "Sustained load over time",
+        "users": 30,
+        "spawn_rate": 3,
+        "duration": "30m",
+        "expected_rps": 15,
+    }
+
+    BREAKING_POINT = {
+        "name": "Breaking Point",
+        "description": "Find system limits",
+        "users": 200,
+        "spawn_rate": 20,
+        "duration": "10m",
+        "expected_rps": 100,
+    }
 
 
-def get_current_config() -> EnvironmentConfig:
-    """
-    Get the current environment configuration (cached).
-    Uses TEST_ENV environment variable to determine environment.
+# Audio test file configurations
+class AudioTestFiles:
+    """Test audio file specifications"""
 
-    Returns:
-        EnvironmentConfig object for the current environment.
-    """
-    global _cached_config
+    SMALL = {
+        "name": "small",
+        "size_kb": 50,
+        "duration_seconds": 3,
+        "description": "Short phrase (e.g., 'Hello, how are you?')",
+    }
 
-    if _cached_config is None:
-        _cached_config = get_config()
-        validate_config(_cached_config)
+    MEDIUM = {
+        "name": "medium",
+        "size_kb": 200,
+        "duration_seconds": 10,
+        "description": "Medium sentence recording",
+    }
 
-    return _cached_config
+    LARGE = {
+        "name": "large",
+        "size_kb": 500,
+        "duration_seconds": 20,
+        "description": "Long recording near limit",
+    }
+
+    MAX_SIZE = {
+        "name": "max",
+        "size_kb": 2000,  # 2MB limit
+        "duration_seconds": 30,
+        "description": "Maximum allowed size (30 seconds)",
+    }
 
 
-# Export commonly used objects
-__all__ = [
-    "EnvironmentConfig",
-    "TestScenario",
-    "TEST_SCENARIOS",
-    "AUDIO_FILE_SPECS",
-    "get_config",
-    "get_scenario",
-    "get_audio_file_by_probability",
-    "validate_config",
-    "get_current_config",
-]
+# Monitoring configuration
+class MonitoringConfig:
+    """Configuration for metrics collection"""
+
+    # Prometheus-style metrics
+    ENABLE_PROMETHEUS = (
+        os.getenv("ENABLE_PROMETHEUS_METRICS", "false").lower() == "true"
+    )
+    PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "9091"))
+
+    # Database monitoring
+    ENABLE_DB_MONITORING = os.getenv("ENABLE_DB_MONITORING", "true").lower() == "true"
+    DB_QUERY_INTERVAL = int(os.getenv("DB_QUERY_INTERVAL", "5"))  # seconds
+
+    # Result storage
+    RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
+    SAVE_RAW_DATA = os.getenv("SAVE_RAW_DATA", "true").lower() == "true"
+
+    # Alerting
+    SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
+    ALERT_ON_ERROR_RATE = float(
+        os.getenv("ALERT_ERROR_RATE_THRESHOLD", "10.0")
+    )  # percent
+    ALERT_ON_LATENCY_P95 = int(
+        os.getenv("ALERT_LATENCY_P95_THRESHOLD", "15")
+    )  # seconds
