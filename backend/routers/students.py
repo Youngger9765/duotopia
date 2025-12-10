@@ -1381,7 +1381,7 @@ async def upload_student_recording(
             print(f"GCS upload failed: {upload_error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to upload recording to cloud storage: {str(upload_error)}"
+                detail=f"Failed to upload recording to cloud storage: {str(upload_error)}",
             )
 
         # 刪除舊錄音檔案（如果存在且不同）
@@ -1429,7 +1429,9 @@ async def upload_student_recording(
                     existing_item_progress.ai_assessed_at = None
                     print("Cleared AI scores for re-recording")
 
-                print(f"Updated existing item progress record: {existing_item_progress.id}")
+                print(
+                    f"Updated existing item progress record: {existing_item_progress.id}"
+                )
                 current_item_progress = existing_item_progress
             else:
                 # 創建新記錄
@@ -1458,7 +1460,7 @@ async def upload_student_recording(
             if not summary_progress:
                 summary_progress = StudentContentProgress(
                     student_assignment_id=assignment_id,
-                    content_id=content_id,
+                    content_id=content_id_value,
                     order_index=0,  # 摘要記錄使用 0
                     status=AssignmentStatus.IN_PROGRESS,
                 )
@@ -1482,14 +1484,16 @@ async def upload_student_recording(
             if audio_url:
                 try:
                     audio_manager.delete_old_audio(audio_url)
-                    logger.warning(f"Cleaned up orphaned GCS file after DB error: {audio_url}")
+                    logger.warning(
+                        f"Cleaned up orphaned GCS file after DB error: {audio_url}"
+                    )
                 except Exception as cleanup_error:
                     logger.error(f"Failed to cleanup orphaned file: {cleanup_error}")
 
             print(f"Database update failed after GCS upload: {db_error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Recording uploaded but database update failed: {str(db_error)}"
+                detail=f"Recording uploaded but database update failed: {str(db_error)}",
             )
         finally:
             db_new.close()
