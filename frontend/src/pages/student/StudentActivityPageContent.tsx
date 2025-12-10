@@ -539,6 +539,10 @@ export default function StudentActivityPageContent({
 
           if (contentItemId) {
             console.log("🚀 開始上傳錄音到 GCS...");
+            // 🎯 Issue #82: 顯示上傳中提示，讓用戶知道要等待
+            toast.info(t("studentActivityPage.recording.uploading"), {
+              duration: 3000,
+            });
 
             const formData = new FormData();
             formData.append("assignment_id", assignmentId!.toString());
@@ -578,6 +582,8 @@ export default function StudentActivityPageContent({
             )
               .then((uploadResult) => {
                 console.log("✅ 上傳成功:", uploadResult.audio_url);
+                // 🎯 Issue #82: 上傳成功提示，讓用戶知道可以點擊分析按鈕
+                toast.success(t("studentActivityPage.recording.uploadSuccess"));
 
                 // 更新為 GCS URL
                 setActivities((prevActivities) => {
@@ -1479,16 +1485,14 @@ export default function StudentActivityPageContent({
               const activityIndex = newActivities.findIndex(
                 (a) => a.id === activity.id,
               );
-              if (
-                activityIndex !== -1 &&
-                newActivities[activityIndex].items &&
-                assessmentResult
-              ) {
+              // 修正：無論 assessmentResult 是新結果或 null（清除），都要更新 ai_assessment
+              // Issue #82: 刪除錄音時需要同步清除前端的分析結果
+              if (activityIndex !== -1 && newActivities[activityIndex].items) {
                 const newItems = [...newActivities[activityIndex].items!];
                 if (newItems[index]) {
                   newItems[index] = {
                     ...newItems[index],
-                    ai_assessment: assessmentResult,
+                    ai_assessment: assessmentResult ?? undefined, // 可以是新結果或 undefined（清除）
                   };
                 }
                 newActivities[activityIndex] = {
