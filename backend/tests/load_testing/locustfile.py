@@ -125,7 +125,9 @@ class AudioUploadUser(HttpUser):
                         self.token = data.get("access_token") or data.get("token")
 
                         if not self.token:
-                            logger.error("Login response missing 'access_token' or 'token' field")
+                            logger.error(
+                                "Login response missing 'access_token' or 'token' field"
+                            )
                             response.failure("Login response missing token")
                             auth_failures += 1
                             raise StopUser()
