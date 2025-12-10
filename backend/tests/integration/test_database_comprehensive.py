@@ -315,7 +315,9 @@ class TestConnectionPoolExhaustion:
                 db_extra.execute(text("SELECT 1"))
                 # If we get here, either pool is larger than expected or timeout is too long
                 db_extra.close()
-                pytest.fail("Should have raised timeout exception when pool exhausted")
+                pytest.fail(
+                    "Should have raised timeout exception when pool exhausted"
+                )
             except Exception as e:
                 duration = time.time() - start
                 # Should timeout within 15 seconds (pool_timeout=10s + some overhead)
@@ -369,9 +371,7 @@ class TestConnectionPoolExhaustion:
             engine = get_engine()
 
             # Verify configuration applied
-            assert (
-                engine.pool.size() == 8
-            ), f"Pool size is {engine.pool.size()}, expected 8"
+            assert engine.pool.size() == 8, f"Pool size is {engine.pool.size()}, expected 8"
             assert (
                 engine.pool._max_overflow == 12
             ), f"Max overflow is {engine.pool._max_overflow}, expected 12"

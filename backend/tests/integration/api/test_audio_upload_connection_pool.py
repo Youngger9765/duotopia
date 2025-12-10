@@ -13,7 +13,9 @@ The critical fix is that Phase 2's slow GCS upload does NOT block the connection
 import pytest
 import asyncio
 import io
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, MagicMock, AsyncMock
+from fastapi.testclient import TestClient
+from database import get_db, get_session_local
 from models import (
     Student,
     Teacher,
@@ -192,7 +194,6 @@ class TestAudioUploadConnectionPool:
         OLD BEHAVIOR: Pool exhaustion after 10-15 concurrent uploads
         NEW BEHAVIOR: All succeed because connections are released quickly
         """
-
         # Mock GCS upload to be slow but not block DB
         async def slow_upload(*args, **kwargs):
             await asyncio.sleep(0.2)  # 200ms upload time
@@ -300,7 +301,6 @@ class TestAudioUploadConnectionPool:
         """
         Edge case: GCS upload fails, database should NOT be updated.
         """
-
         # Mock GCS upload to fail
         async def failed_upload(*args, **kwargs):
             raise Exception("GCS connection timeout")
