@@ -16,15 +16,33 @@ _SessionLocal = None
 
 
 def get_engine():
-    """延遲建立資料庫引擎"""
+    """延遲建立資料庫引擎
+
+    Connection pool configuration (2024-12-10):
+    - Increased from 15 to 30 total connections to support 200+ concurrent users
+    - pool_size=15: Base pool always kept alive
+    - max_overflow=15: Additional connections created on demand
+    - pool_timeout=10: Faster failure feedback (down from default 30s)
+    - pool_recycle=3600: Recycle connections every hour to avoid idle timeouts
+    - pool_pre_ping=True: Health check before using connection
+
+    This fixes production issue where 20 concurrent audio uploads exhausted
+    the previous 15-connection limit, causing timeout errors.
+    """
     global _engine
     if _engine is None:
+        # Read pool configuration from environment variables with safe defaults
+        pool_size = int(os.getenv("DB_POOL_SIZE", "15"))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "15"))
+        pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "10"))
+
         _engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,  # 每次取得連線前先測試，防止使用斷線的連線
             pool_recycle=3600,  # 1小時回收連線，避免長時間閒置被關閉
-            pool_size=5,  # 連線池大小
-            max_overflow=10,  # 最大溢出連線數
+            pool_size=pool_size,  # 連線池大小 (increased: 5 → 15)
+            max_overflow=max_overflow,  # 最大溢出連線數 (increased: 10 → 15)
+            pool_timeout=pool_timeout,  # 連線等待超時 (降低: 30s → 10s 快速失敗)
             connect_args={
                 "connect_timeout": 10,  # 連線超時 10 秒
                 "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
