@@ -43,42 +43,42 @@ TEST_SCENARIOS: Dict[str, TestScenario] = {
         users=20,
         spawn_rate=2,
         duration="5m",
-        description="Typical usage pattern - baseline performance"
+        description="Typical usage pattern - baseline performance",
     ),
     "peak": TestScenario(
         name="peak",
         users=50,
         spawn_rate=5,
         duration="5m",
-        description="High traffic period (e.g., after homework assignment)"
+        description="High traffic period (e.g., after homework assignment)",
     ),
     "stress": TestScenario(
         name="stress",
         users=100,
         spawn_rate=10,
         duration="10m",
-        description="Beyond normal capacity - find bottlenecks"
+        description="Beyond normal capacity - find bottlenecks",
     ),
     "spike": TestScenario(
         name="spike",
         users=50,
         spawn_rate=25,
         duration="3m",
-        description="Sudden burst of traffic"
+        description="Sudden burst of traffic",
     ),
     "endurance": TestScenario(
         name="endurance",
         users=30,
         spawn_rate=3,
         duration="30m",
-        description="Sustained load over time - check for memory leaks"
+        description="Sustained load over time - check for memory leaks",
     ),
     "breaking": TestScenario(
         name="breaking",
         users=200,
         spawn_rate=20,
         duration="10m",
-        description="Find absolute system limits"
+        description="Find absolute system limits",
     ),
 }
 
@@ -90,25 +90,25 @@ AUDIO_FILE_SPECS = {
         "filename": "small_3sec_50kb.webm",  # Using existing file
         "size_kb": 50,
         "probability": 0.40,  # 40% of uploads
-        "description": "Small file - 3 seconds"
+        "description": "Small file - 3 seconds",
     },
     "medium": {
         "filename": "medium_10sec_200kb.webm",  # Using existing file
         "size_kb": 200,
         "probability": 0.30,  # 30% of uploads
-        "description": "Medium file - 10 seconds"
+        "description": "Medium file - 10 seconds",
     },
     "large": {
         "filename": "large_20sec_500kb.webm",  # Using existing file
         "size_kb": 500,
         "probability": 0.20,  # 20% of uploads
-        "description": "Large file - 20 seconds"
+        "description": "Large file - 20 seconds",
     },
     "max": {
         "filename": "max_30sec_2mb.webm",  # Using existing file
         "size_kb": 2000,
         "probability": 0.10,  # 10% of uploads
-        "description": "Maximum file - 30 seconds"
+        "description": "Maximum file - 30 seconds",
     },
 }
 
@@ -137,7 +137,7 @@ def get_config(environment: str = None) -> EnvironmentConfig:
             name="staging",
             base_url=os.getenv(
                 "STAGING_BASE_URL",
-                "https://duotopia-staging-backend-316409492201.asia-east1.run.app"
+                "https://duotopia-staging-backend-316409492201.asia-east1.run.app",
             ),
             database_url=os.getenv("STAGING_DATABASE_URL"),
             student_email=os.getenv("TEST_STUDENT_EMAIL", "student1@duotopia.com"),
@@ -178,7 +178,10 @@ def get_config(environment: str = None) -> EnvironmentConfig:
         return EnvironmentConfig(
             name="local",
             base_url=os.getenv("LOCAL_BASE_URL", "http://localhost:8000"),
-            database_url=os.getenv("LOCAL_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/duotopia"),
+            database_url=os.getenv(
+                "LOCAL_DATABASE_URL",
+                "postgresql://postgres:postgres@localhost:5432/duotopia",
+            ),
             student_email=os.getenv("LOCAL_TEST_STUDENT_EMAIL", "test@example.com"),
             student_password=os.getenv("LOCAL_TEST_STUDENT_PASSWORD", "test123"),
             teacher_email=os.getenv("LOCAL_TEST_TEACHER_EMAIL"),
@@ -210,8 +213,7 @@ def get_scenario(scenario_name: str) -> TestScenario:
     if scenario_name not in TEST_SCENARIOS:
         available = ", ".join(TEST_SCENARIOS.keys())
         raise ValueError(
-            f"Unknown scenario: {scenario_name}. "
-            f"Available scenarios: {available}"
+            f"Unknown scenario: {scenario_name}. " f"Available scenarios: {available}"
         )
 
     return TEST_SCENARIOS[scenario_name]

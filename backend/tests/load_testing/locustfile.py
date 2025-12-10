@@ -3,7 +3,6 @@ Locust Load Testing for Duotopia Audio Upload
 Simulates concurrent users uploading audio recordings to test system capacity.
 """
 
-import os
 import logging
 from typing import Optional
 from pathlib import Path
@@ -122,15 +121,18 @@ class AudioUploadUser(HttpUser):
                 if response.status_code == 200:
                     try:
                         data = response.json()
-                        self.token = data.get("token")
+                        # API returns 'access_token', not 'token'
+                        self.token = data.get("access_token") or data.get("token")
 
                         if not self.token:
-                            logger.error("Login response missing 'token' field")
+                            logger.error("Login response missing 'access_token' or 'token' field")
                             response.failure("Login response missing token")
                             auth_failures += 1
                             raise StopUser()
 
-                        logger.info(f"Successfully authenticated: {self.config.student_email}")
+                        logger.info(
+                            f"Successfully authenticated: {self.config.student_email}"
+                        )
                         response.success()
                     except Exception as e:
                         logger.error(f"Failed to parse login response: {e}")
@@ -197,14 +199,10 @@ class AudioUploadUser(HttpUser):
         try:
             # Prepare multipart form data
             with open(audio_file, "rb") as f:
-                files = {
-                    "audio": (audio_file.name, f, "audio/webm")
-                }
+                files = {"audio": (audio_file.name, f, "audio/webm")}
 
                 # Add authorization header
-                headers = {
-                    "Authorization": f"Bearer {self.token}"
-                }
+                headers = {"Authorization": f"Bearer {self.token}"}
 
                 # Perform upload
                 with self.client.post(
@@ -267,9 +265,7 @@ class AudioUploadUser(HttpUser):
         if not self.token:
             return
 
-        headers = {
-            "Authorization": f"Bearer {self.token}"
-        }
+        headers = {"Authorization": f"Bearer {self.token}"}
 
         with self.client.get(
             "/api/students/profile",
@@ -293,6 +289,7 @@ class SpikeTester(AudioUploadUser):
     Aggressive user for spike testing.
     Uploads continuously with minimal wait time.
     """
+
     wait_time = between(0.5, 1.5)  # Very short wait time
 
     @task
