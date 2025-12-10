@@ -1,15 +1,16 @@
 name: Deploy Frontend (Cloud Run)
 
-# 🎯 NEW STRATEGY: Deploy to Cloud Run for staging/other branches
-# 📝 Main branch → VM (see deploy-vm-prod.yml)
-# 📝 Staging/other branches → Cloud Run (this workflow)
+# 🎯 UPDATED STRATEGY: Deploy to Cloud Run for ALL environments
+# 📝 Main branch → Production Cloud Run (primary deployment)
+# 📝 Staging/other branches → Staging Cloud Run
+# 📝 VM deployment is deprecated and will be phased out
 
 on:
   workflow_dispatch:  # 手動觸發
   push:
     branches:
+      - main
       - staging
-      # Note: main branch uses VM deployment (deploy-vm-prod.yml)
     paths:
       # 前端相關檔案
       - 'frontend/**'
@@ -98,18 +99,18 @@ jobs:
     - name: Set Environment Variables
       id: env_vars
       run: |
-        # This workflow should NOT run on main branch (VM deployment instead)
+        # Deploy to Production for main branch, Staging for others
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "❌ ERROR: This workflow should not run on main branch!"
-          echo "Main branch uses VM deployment (deploy-vm-prod.yml)"
-          exit 1
+          echo "ENV_NAME=production" >> $GITHUB_OUTPUT
+          echo "FRONTEND_SERVICE=${{ secrets.PRODUCTION_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🚀 Deploying to PRODUCTION (Cloud Run)"
+        else
+          echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+          echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🧪 Deploying to STAGING (Cloud Run)"
         fi
-
-        # Default to staging for all non-main branches
-        echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-        echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
-        echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
-        echo "🧪 Deploying to STAGING (Cloud Run)"
 
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
@@ -155,10 +156,14 @@ jobs:
       run: |
         echo "Building frontend with API URL: ${{ steps.backend_url.outputs.BACKEND_URL }}"
 
-        # Staging always uses Dockerfile.staging
-        DOCKERFILE="Dockerfile.staging"
+        # Use appropriate Dockerfile based on environment
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          DOCKERFILE="Dockerfile.staging"  # Production also uses staging Dockerfile (with build-time env)
+        else
+          DOCKERFILE="Dockerfile.staging"
+        fi
 
-        # TapPay build args - Staging uses production TapPay for real payments
+        # TapPay build args - Both environments use production TapPay for real payments
         TAPPAY_SERVER_TYPE="production"
         TAPPAY_PRODUCTION_APP_ID="${{ secrets.TAPPAY_PRODUCTION_APP_ID }}"
         TAPPAY_PRODUCTION_APP_KEY="${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
@@ -175,12 +180,22 @@ jobs:
 
     - name: Deploy frontend to Cloud Run
       run: |
-        # 💰 成本優化：Staging 環境最小化成本
-        MIN_INSTANCES=0  # Scale-to-Zero 最大化節省成本
-        MEMORY="256Mi"
-        CPU="500m"       # 0.5 CPU
-        CONCURRENCY=1    # CPU < 1 時必須設為 1
-        MAX_INSTANCES=1  # Staging 流量低，降為 1 節省成本
+        # Environment-specific resource configuration
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # 💰 Production: 資源配置
+          MIN_INSTANCES=0  # Scale-to-Zero 節省成本
+          MEMORY="512Mi"   # Production 需要更多記憶體
+          CPU="1000m"      # 1 CPU
+          CONCURRENCY=80   # 高併發
+          MAX_INSTANCES=6  # 支援更高流量
+        else
+          # 💰 Staging: 最小化成本
+          MIN_INSTANCES=0  # Scale-to-Zero 最大化節省成本
+          MEMORY="256Mi"
+          CPU="500m"       # 0.5 CPU
+          CONCURRENCY=1    # CPU < 1 時必須設為 1
+          MAX_INSTANCES=1  # Staging 流量低，降為 1 節省成本
+        fi
 
         gcloud run deploy ${{ steps.env_vars.outputs.FRONTEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.FRONTEND_SERVICE }}:$GITHUB_SHA \
