@@ -17,7 +17,7 @@ RUN npm ci
 COPY . .
 
 # 建置時設定 API URL（使用 build argument）
-ARG VITE_API_URL=/api
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
 # Environment（決定是否顯示測試帳號）

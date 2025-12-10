@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone  # noqa: F401
 from decimal import Decimal
 import json
 import logging
-from database import get_db
+from database import get_db, get_session_local
 from models import (
     Student,
     Classroom,
@@ -1395,7 +1395,14 @@ async def upload_student_recording(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """上傳學生錄音到 Google Cloud Storage (支援重新錄製)"""
+    """上傳學生錄音到 Google Cloud Storage (支援重新錄製)
+
+    CRITICAL FIX: Release DB connection before GCS upload to prevent pool exhaustion.
+    This function is split into 3 phases:
+    1. Quick DB query to get necessary data
+    2. Release DB connection, upload to GCS (2-5 seconds)
+    3. Acquire new DB connection, update database
+    """
     try:
         from services.audio_upload import get_audio_upload_service
         from services.audio_manager import get_audio_manager
@@ -1411,60 +1418,120 @@ async def upload_student_recording(
 
         student_id = int(current_user.get("sub"))
 
-        # 驗證作業存在且屬於該學生
-        assignment = (
-            db.query(StudentAssignment)
-            .filter(
-                StudentAssignment.id == assignment_id,
-                StudentAssignment.student_id == student_id,
+        # ============ PHASE 1: Quick DB query (connection held) ============
+        try:
+            # 驗證作業存在且屬於該學生
+            assignment = (
+                db.query(StudentAssignment)
+                .filter(
+                    StudentAssignment.id == assignment_id,
+                    StudentAssignment.student_id == student_id,
+                )
+                .first()
             )
-            .first()
-        )
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
+            if not assignment:
+                raise HTTPException(status_code=404, detail="Assignment not found")
 
-        # 直接用 content_item_id 查詢
-        content_item = (
-            db.query(ContentItem).filter(ContentItem.id == content_item_id).first()
-        )
+            # 直接用 content_item_id 查詢
+            content_item = (
+                db.query(ContentItem).filter(ContentItem.id == content_item_id).first()
+            )
 
-        if not content_item:
+            if not content_item:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Content item not found with id {content_item_id}",
+                )
+
+            # 查找現有的 StudentItemProgress 記錄以獲取舊 URL
+            existing_item_progress = (
+                db.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == assignment_id,
+                    StudentItemProgress.content_item_id == content_item.id,
+                )
+                .first()
+            )
+
+            # CRITICAL: Extract ALL needed values as primitives BEFORE db.close()
+            # After db.close(), ORM objects become detached and cannot access lazy-loaded attributes
+            old_audio_url = None
+            if existing_item_progress and existing_item_progress.recording_url:
+                old_audio_url = existing_item_progress.recording_url
+
+            # Extract primitive values from ORM objects
+            content_id_value = content_item.content_id
+            content_item_id_value = content_item.id
+
+        except HTTPException:
+            # FIX #1: Close DB connection on validation errors
+            db.close()
+            raise
+        except Exception as e:
+            # FIX #1: Close DB connection on unexpected errors
+            db.close()
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+        # ============ PHASE 2: Release DB connection, upload to GCS ============
+        # CRITICAL: Close DB connection BEFORE slow GCS upload (2-5 seconds)
+        # WARNING: After this point, do NOT access ORM objects from Phase 1
+        #          All data must be extracted as primitives above
+        db.close()
+
+        try:
+            # 上傳新錄音（不傳 content_id 和 item_index，讓它用 UUID）
+            # This operation takes 2-5 seconds but NO LONGER blocks DB connections
+            audio_url = await audio_service.upload_audio(
+                audio_file,
+                duration_seconds=30,  # 預設 30 秒
+                assignment_id=assignment_id,
+                student_id=student_id,
+            )
+        except Exception as upload_error:
+            # If GCS upload fails, don't update database
+            print(f"GCS upload failed: {upload_error}")
             raise HTTPException(
-                status_code=404,
-                detail=f"Content item not found with id {content_item_id}",
+                status_code=500,
+                detail=f"Failed to upload recording to cloud storage: {str(upload_error)}",
             )
-
-        # 查找現有的 StudentItemProgress 記錄以獲取舊 URL
-        existing_item_progress = (
-            db.query(StudentItemProgress)
-            .filter(
-                StudentItemProgress.student_assignment_id == assignment_id,
-                StudentItemProgress.content_item_id == content_item.id,
-            )
-            .first()
-        )
-
-        # 檢查是否有舊錄音需要刪除
-        old_audio_url = None
-        if existing_item_progress and existing_item_progress.recording_url:
-            old_audio_url = existing_item_progress.recording_url
-
-        # 上傳新錄音（不傳 content_id 和 item_index，讓它用 UUID）
-        audio_url = await audio_service.upload_audio(
-            audio_file,
-            duration_seconds=30,  # 預設 30 秒
-            assignment_id=assignment_id,
-            student_id=student_id,
-        )
 
         # 刪除舊錄音檔案（如果存在且不同）
+        # This is async operation that doesn't require DB connection
         if old_audio_url and old_audio_url != audio_url:
             try:
                 audio_manager.delete_old_audio(old_audio_url)
                 print(f"Deleted old student recording: {old_audio_url}")
+            except Exception as e:
+                print(f"Failed to delete old recording: {e}")
+
+        # ============ PHASE 3: Acquire new DB connection, update database ============
+        # Create a new DB session for database updates
+        SessionLocal = get_session_local()
+        db_new = SessionLocal()
+
+        try:
+            # Re-query the existing progress record (must use new session)
+            # FIX #3: Add row-level locking to prevent concurrent update race conditions
+            existing_item_progress = (
+                db_new.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == assignment_id,
+                    StudentItemProgress.content_item_id == content_item_id_value,
+                )
+                .with_for_update()  # SELECT FOR UPDATE - blocks concurrent updates
+                .first()
+            )
+
+            # 更新或創建 StudentItemProgress 記錄
+            if existing_item_progress:
+                # 更新現有記錄
+                existing_item_progress.recording_url = audio_url
+                # FIX #6: Replace deprecated datetime.utcnow() with timezone-aware version
+                existing_item_progress.submitted_at = datetime.now(timezone.utc)
+                existing_item_progress.status = "COMPLETED"
 
                 # 同時清除舊的 AI 分數，因為分數對應的是舊錄音
-                if existing_item_progress:
+                if old_audio_url:
                     existing_item_progress.accuracy_score = None
                     existing_item_progress.fluency_score = None
                     existing_item_progress.pronunciation_score = None
@@ -1473,71 +1540,80 @@ async def upload_student_recording(
                     existing_item_progress.ai_assessed_at = None
                     print("Cleared AI scores for re-recording")
 
-            except Exception as e:
-                print(f"Failed to delete old recording: {e}")
+                print(
+                    f"Updated existing item progress record: {existing_item_progress.id}"
+                )
+                current_item_progress = existing_item_progress
+            else:
+                # 創建新記錄
+                new_item_progress = StudentItemProgress(
+                    student_assignment_id=assignment_id,
+                    content_item_id=content_item_id_value,
+                    recording_url=audio_url,
+                    # FIX #6: Replace deprecated datetime.utcnow() with timezone-aware version
+                    submitted_at=datetime.now(timezone.utc),
+                    status="COMPLETED",
+                )
+                db_new.add(new_item_progress)
+                print("Created new item progress record")
+                current_item_progress = new_item_progress
 
-        # 更新或創建 StudentItemProgress 記錄
-        if existing_item_progress:
-            # 更新現有記錄
-            existing_item_progress.recording_url = audio_url
-            existing_item_progress.submitted_at = datetime.utcnow()
-            existing_item_progress.status = "COMPLETED"
-            print(f"Updated existing item progress record: {existing_item_progress.id}")
-            current_item_progress = existing_item_progress
-        else:
-            # 創建新記錄
-            new_item_progress = StudentItemProgress(
-                student_assignment_id=assignment_id,
-                content_item_id=content_item.id,
-                recording_url=audio_url,
-                submitted_at=datetime.utcnow(),
-                status="COMPLETED",
+            # 更新或創建摘要統計 (StudentContentProgress)
+            summary_progress = (
+                db_new.query(StudentContentProgress)
+                .filter(
+                    StudentContentProgress.student_assignment_id == assignment_id,
+                    StudentContentProgress.content_id == content_id_value,
+                )
+                .first()
             )
-            db.add(new_item_progress)
-            print("Created new item progress record")
-            current_item_progress = new_item_progress
 
-        # 從 ContentItem 找到對應的 Content
-        content_item_obj = db.query(ContentItem).filter_by(id=content_item_id).first()
-        if not content_item_obj:
+            if not summary_progress:
+                summary_progress = StudentContentProgress(
+                    student_assignment_id=assignment_id,
+                    content_id=content_id_value,
+                    order_index=0,  # 摘要記錄使用 0
+                    status=AssignmentStatus.IN_PROGRESS,
+                )
+                db_new.add(summary_progress)
+
+            # 更新 StudentContentProgress 狀態
+            summary_progress.status = AssignmentStatus.IN_PROGRESS
+
+            db_new.commit()
+
+            # 重新查詢以取得 ID（因為新記錄需要 commit 後才有 ID）
+            db_new.refresh(current_item_progress)
+
+            progress_id = current_item_progress.id
+
+        except Exception as db_error:
+            db_new.rollback()
+
+            # FIX #4: Best-effort cleanup of orphaned GCS file
+            # If Phase 3 fails, audio file is uploaded but not recorded in DB
+            if audio_url:
+                try:
+                    audio_manager.delete_old_audio(audio_url)
+                    logger.warning(
+                        f"Cleaned up orphaned GCS file after DB error: {audio_url}"
+                    )
+                except Exception as cleanup_error:
+                    logger.error(f"Failed to cleanup orphaned file: {cleanup_error}")
+
+            print(f"Database update failed after GCS upload: {db_error}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Content item not found"
+                status_code=500,
+                detail=f"Recording uploaded but database update failed: {str(db_error)}",
             )
-
-        content_id = content_item_obj.content_id
-
-        # 更新或創建摘要統計 (StudentContentProgress)
-        summary_progress = (
-            db.query(StudentContentProgress)
-            .filter(
-                StudentContentProgress.student_assignment_id == assignment_id,
-                StudentContentProgress.content_id == content_id,
-            )
-            .first()
-        )
-
-        if not summary_progress:
-            summary_progress = StudentContentProgress(
-                student_assignment_id=assignment_id,
-                content_id=content_id,
-                order_index=0,  # 摘要記錄使用 0
-                status=AssignmentStatus.IN_PROGRESS,
-            )
-            db.add(summary_progress)
-
-        # 更新 StudentContentProgress 狀態
-        summary_progress.status = AssignmentStatus.IN_PROGRESS
-
-        db.commit()
-
-        # 重新查詢以取得 ID（因為新記錄需要 commit 後才有 ID）
-        db.refresh(current_item_progress)
+        finally:
+            db_new.close()
 
         return {
             "audio_url": audio_url,
             "assignment_id": assignment_id,
             "content_item_id": content_item_id,
-            "progress_id": current_item_progress.id,  # 🔥 新增：回傳 progress_id 給前端使用
+            "progress_id": progress_id,  # 🔥 新增：回傳 progress_id 給前端使用
             "storage_type": "gcs",
             "message": "Recording uploaded successfully to cloud storage",
         }

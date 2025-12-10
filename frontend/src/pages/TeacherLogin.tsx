@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, User, Lock, Zap, Home } from "lucide-react";
-import { apiClient } from "../lib/api";
+import { apiClient, ApiError } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { toast } from "sonner";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ export default function TeacherLogin() {
     email: "",
     password: "",
   });
+  const [resendLoading, setResendLoading] = useState(false);
+  const [lastResendTime, setLastResendTime] = useState(0);
+  const [showResendLink, setShowResendLink] = useState(false);
 
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);
@@ -40,6 +44,7 @@ export default function TeacherLogin() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setShowResendLink(false);
 
     try {
       const result = await apiClient.teacherLogin(formData);
@@ -55,9 +60,56 @@ export default function TeacherLogin() {
       navigate("/teacher/dashboard");
     } catch (err) {
       console.error("🔑 [ERROR] 登入失敗:", err);
-      setError(t("teacherLogin.errors.loginFailed"));
+
+      // Check if error is related to email verification
+      if (err instanceof ApiError) {
+        const errorDetail = err.detail.toLowerCase();
+        if (
+          errorDetail.includes("verified") ||
+          errorDetail.includes("驗證") ||
+          errorDetail.includes("verify")
+        ) {
+          setError(t("teacherLogin.errors.accountNotVerified"));
+          setShowResendLink(true);
+        } else {
+          setError(t("teacherLogin.errors.loginFailed"));
+        }
+      } else {
+        setError(t("teacherLogin.errors.loginFailed"));
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!formData.email) {
+      toast.error(t("teacherLogin.errors.loginFailed"));
+      return;
+    }
+
+    const now = Date.now();
+    const cooldownSeconds = 60;
+    const timeElapsed = (now - lastResendTime) / 1000;
+
+    if (lastResendTime && timeElapsed < cooldownSeconds) {
+      const remainingSeconds = Math.ceil(cooldownSeconds - timeElapsed);
+      toast.error(
+        t("teacherLogin.resend.cooldown", { seconds: remainingSeconds }),
+      );
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      await apiClient.resendVerification(formData.email);
+      toast.success(t("teacherLogin.resend.success"));
+      setLastResendTime(now);
+    } catch (err) {
+      console.error("重新發送驗證郵件失敗:", err);
+      toast.error(t("teacherLogin.resend.failed"));
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -167,9 +219,31 @@ export default function TeacherLogin() {
               </div>
 
               {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <>
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                  {showResendLink && (
+                    <div className="text-center">
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleResendVerification}
+                        disabled={resendLoading}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        {resendLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            {t("teacherLogin.form.loggingIn")}
+                          </>
+                        ) : (
+                          t("teacherLogin.resend.button")
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
 
               <Button

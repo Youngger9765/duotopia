@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Card,
@@ -8,15 +9,53 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, CheckCircle, ArrowLeft } from "lucide-react";
+import { Mail, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 export function TeacherVerifyEmail() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { email, message } = location.state || {
     email: "",
     message: "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。",
+  };
+
+  const [resendLoading, setResendLoading] = useState(false);
+  const [lastResendTime, setLastResendTime] = useState(0);
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error(t("teacherLogin.resend.failed"));
+      return;
+    }
+
+    const now = Date.now();
+    const cooldownSeconds = 60;
+    const timeElapsed = (now - lastResendTime) / 1000;
+
+    if (lastResendTime && timeElapsed < cooldownSeconds) {
+      const remainingSeconds = Math.ceil(cooldownSeconds - timeElapsed);
+      toast.error(
+        t("teacherLogin.resend.cooldown", { seconds: remainingSeconds }),
+      );
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      await apiClient.resendVerification(email);
+      toast.success(t("teacherLogin.resend.success"));
+      setLastResendTime(now);
+    } catch (err) {
+      console.error("重新發送驗證郵件失敗:", err);
+      toast.error(t("teacherLogin.resend.failed"));
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -65,7 +104,7 @@ export function TeacherVerifyEmail() {
 
             <div className="space-y-3">
               <p className="text-sm text-gray-500 text-center">
-                沒有收到驗證郵件？請檢查垃圾郵件資料夾
+                {t("teacherLogin.resend.noEmail")}
               </p>
 
               <div className="flex gap-3">
@@ -78,8 +117,19 @@ export function TeacherVerifyEmail() {
                   返回登入
                 </Button>
 
-                <Button className="flex-1" disabled>
-                  重新發送郵件
+                <Button
+                  className="flex-1"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                >
+                  {resendLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      發送中...
+                    </>
+                  ) : (
+                    t("teacherLogin.resend.button")
+                  )}
                 </Button>
               </div>
             </div>

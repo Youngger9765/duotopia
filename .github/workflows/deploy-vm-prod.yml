@@ -171,7 +171,7 @@ jobs:
     - name: Build frontend (test build)
       working-directory: ./frontend
       env:
-        VITE_API_URL: /api
+        VITE_API_URL: ""
         VITE_ENVIRONMENT: production
       run: npm run build
 
@@ -260,7 +260,7 @@ jobs:
           --cache-from type=local,src=/tmp/.buildx-cache-frontend \
           --cache-to type=local,dest=/tmp/.buildx-cache-frontend-new,mode=max \
           -f Dockerfile.vm \
-          --build-arg VITE_API_URL=/api \
+          --build-arg VITE_API_URL="" \
           --build-arg VITE_ENVIRONMENT=production \
           --build-arg VITE_TAPPAY_SERVER_TYPE=production \
           --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=${{ secrets.TAPPAY_PRODUCTION_APP_ID }} \
@@ -370,8 +370,8 @@ jobs:
         FROM_EMAIL=${{ secrets.FROM_EMAIL }}
         FROM_NAME=${{ secrets.FROM_NAME }}
 
-        # Frontend URL
-        FRONTEND_URL=http://34.81.38.211
+        # Frontend URL (MUST use domain for email verification links)
+        FRONTEND_URL=https://duotopia.co
 
         # GCP Configuration
         GCP_PROJECT_ID=$PROJECT_ID
@@ -434,6 +434,10 @@ jobs:
 
             echo '🔐 Configuring Docker for Artifact Registry...'
             docker-credential-gcr configure-docker --registries=asia-east1-docker.pkg.dev
+
+            echo '🧹 Cleaning up old Docker images to free disk space...'
+            docker image prune -a -f || echo '⚠️  Image cleanup failed, continuing deployment...'
+            echo '✅ Docker image cleanup completed'
 
             echo '🔥 Configuring iptables firewall...'
             sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
@@ -621,7 +625,7 @@ jobs:
       if: ${{ needs.determine-component.outputs.deploy_backend == 'true' }}
       run: |
         echo "🔍 Cleaning up old backend images..."
-        KEEP_COUNT=3
+        KEEP_COUNT=2
 
         IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$BACKEND_IMAGE_NAME \
           --format='get(version)' \
@@ -654,7 +658,7 @@ jobs:
       if: ${{ needs.determine-component.outputs.deploy_frontend == 'true' }}
       run: |
         echo "🔍 Cleaning up old frontend images..."
-        KEEP_COUNT=3
+        KEEP_COUNT=2
 
         IMAGES=$(gcloud artifacts docker images list $ARTIFACT_REGISTRY/$FRONTEND_IMAGE_NAME \
           --format='get(version)' \

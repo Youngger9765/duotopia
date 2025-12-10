@@ -480,7 +480,13 @@ class EmailService:
 
         # 檢查發送頻率限制（5 分鐘內不能重複發送）
         if teacher.email_verification_sent_at:
-            time_diff = datetime.utcnow() - teacher.email_verification_sent_at
+            now_utc = datetime.utcnow().replace(tzinfo=None)
+            sent_at = (
+                teacher.email_verification_sent_at.replace(tzinfo=None)
+                if teacher.email_verification_sent_at.tzinfo
+                else teacher.email_verification_sent_at
+            )
+            time_diff = now_utc - sent_at
             if time_diff < timedelta(minutes=5):
                 logger.warning(f"教師驗證信發送過於頻繁: {teacher.email}")
                 return False
