@@ -974,9 +974,7 @@ export default function StudentActivityPageContent({
                 const answer = newAnswers.get(currentActivity.id);
                 if (answer) {
                   if (!answer.progressIds) answer.progressIds = [];
-                  while (
-                    answer.progressIds.length <= currentSubQuestionIndex
-                  ) {
+                  while (answer.progressIds.length <= currentSubQuestionIndex) {
                     answer.progressIds.push(0);
                   }
                   answer.progressIds[currentSubQuestionIndex] =
