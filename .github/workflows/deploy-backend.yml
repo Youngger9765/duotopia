@@ -1,13 +1,15 @@
 name: Deploy Backend (Cloud Run)
 
-# 🎯 NEW STRATEGY: Deploy to Cloud Run for staging/other branches
-# 📝 Main branch → VM (see deploy-vm-prod.yml)
-# 📝 Staging/other branches → Cloud Run (this workflow)
+# 🎯 UPDATED STRATEGY: Deploy to Cloud Run for ALL environments
+# 📝 Main branch → Production Cloud Run (primary deployment)
+# 📝 Staging/other branches → Staging Cloud Run
+# 📝 VM deployment is deprecated and will be phased out
 
 on:
   workflow_dispatch:  # 手動觸發
   push:
     branches:
+      - main
       - staging
       - develop
       # Note: main branch uses VM deployment (deploy-vm-prod.yml)
@@ -88,11 +90,11 @@ jobs:
     - name: Set Environment Variables
       id: env_vars
       run: |
-        # This workflow should NOT run on main branch (VM deployment instead)
+        # Deploy to Production for main branch, Staging for others
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "❌ ERROR: This workflow should not run on main branch!"
-          echo "Main branch uses VM deployment (deploy-vm-prod.yml)"
-          exit 1
+          echo "ENV_NAME=production" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🚀 Deploying to PRODUCTION (Cloud Run)"
         elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
           echo "ENV_NAME=develop" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.DEVELOP_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
@@ -100,7 +102,7 @@ jobs:
         else
           echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.STAGING_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
-          echo "🧪 Deploying to STAGING"
+          echo "🧪 Deploying to STAGING (Cloud Run)"
         fi
 
     - name: Authenticate to Google Cloud
@@ -132,8 +134,17 @@ jobs:
     - name: Set Database Environment Variables
       id: db_env
       run: |
-        # main branch is handled by VM deployment, so only develop and staging here
-        if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+        # Use production, develop, or staging database based on branch
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "ALEMBIC_DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_URL=${{ secrets.PRODUCTION_SUPABASE_URL }}" >> $GITHUB_OUTPUT
+          echo "SUPABASE_KEY=${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
+          echo "JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
+          echo "🚀 Using Production Database"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
           # Develop 使用獨立資料庫
           echo "DATABASE_URL=${{ secrets.DEVELOP_DATABASE_URL }}" >> $GITHUB_OUTPUT
           echo "ALEMBIC_DATABASE_URL=${{ secrets.DEVELOP_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
@@ -141,6 +152,7 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.DEVELOP_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.DEVELOP_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.DEVELOP_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+          echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
           echo "🔧 Using Develop Database (independent)"
         else
           echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_OUTPUT
@@ -149,9 +161,8 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> $GITHUB_OUTPUT
           echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-          # Audio error monitoring always connects to production Supabase
           echo "PROD_DATABASE_POOLER_URL=${{ secrets.PRODUCTION_DATABASE_POOLER_URL }}" >> $GITHUB_OUTPUT
-          echo "🆓 Using Staging Database"
+          echo "🧪 Using Staging Database"
         fi
 
     - name: Build and push backend image
@@ -303,7 +314,7 @@ jobs:
         ENV_VARS="$ENV_VARS,REGION=$REGION"
         ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
 
-        # TapPay 配置（Staging 使用 Production TapPay）
+        # TapPay 配置（環境相關）
         ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}"
         ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_KEY=${{ secrets.TAPPAY_SANDBOX_APP_KEY }}"
         ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_PARTNER_KEY=${{ secrets.TAPPAY_SANDBOX_PARTNER_KEY }}"
@@ -312,31 +323,45 @@ jobs:
         ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_APP_KEY=${{ secrets.TAPPAY_PRODUCTION_APP_KEY }}"
         ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
         ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
-        ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"  # Staging uses production TapPay
-        ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
 
-        # Cron Job 配置
-        if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+        # Environment-specific configuration
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"
+          ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
+          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}"
+          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}"
+
+          # 💰 Production: 資源配置
+          MIN_INSTANCES=0      # Scale-to-Zero 節省成本
+          MEMORY="512Mi"       # Production 需要更多記憶體
+          CPU="1000m"          # 1 CPU
+          CONCURRENCY=80       # 高併發
+          MAX_INSTANCES=6      # 支援更高流量
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=sandbox"
+          ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.DEVELOP_CRON_SECRET }}"
-        else
-          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}"
-        fi
-
-        # Payment 功能控制
-        if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-          # Develop: 預設啟用付款功能（測試用）
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.DEVELOP_ENABLE_PAYMENT }}"
-        else
-          # Staging: 預設啟用付款功能（測試用）
-          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
-        fi
 
-        # 💰 成本優化：Staging/Develop 環境最小化成本
-        MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
-        MEMORY="256Mi"
-        CPU="500m"           # 0.5 CPU
-        CONCURRENCY=1        # CPU < 1 時必須設為 1
-        MAX_INSTANCES=1      # 流量低，降為 1 節省成本
+          # 💰 Develop: 最小化成本
+          MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
+          MEMORY="256Mi"
+          CPU="500m"           # 0.5 CPU
+          CONCURRENCY=1        # CPU < 1 時必須設為 1
+          MAX_INSTANCES=1      # Develop 流量低，降為 1 節省成本
+        else
+          ENV_VARS="$ENV_VARS,TAPPAY_ENV=production"  # Staging uses production TapPay
+          ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
+          ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}"
+          ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
+
+          # 💰 Staging: 最小化成本
+          MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
+          MEMORY="256Mi"
+          CPU="500m"           # 0.5 CPU
+          CONCURRENCY=1        # CPU < 1 時必須設為 1
+          MAX_INSTANCES=1      # Staging 流量低，降為 1 節省成本
+        fi
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \

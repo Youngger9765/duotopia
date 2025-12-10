@@ -1,0 +1,43 @@
+# Load Testing .gitignore
+
+# Environment configuration (contains secrets)
+.env
+.env.local
+.env.staging
+.env.production
+
+# Python virtual environment
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Test results
+results/
+*.log
+locust.log
+
+# Audio samples (can be regenerated)
+audio_samples/*.webm
+audio_samples/*.mp3
+audio_samples/*.wav
+
+# Keep example files
+!audio_samples/.gitkeep
+
+# Monitoring data
+*.json
+monitoring_*.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Backup files
+*.bak
+*~

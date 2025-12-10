@@ -749,7 +749,9 @@
       "cannotValidate": "Unable to validate recording, please record again",
       "complete": "Recording Complete",
       "duration": "Recording duration: {{duration}} seconds",
-      "completePreview": "Recording Complete (Preview mode, will not be saved)"
+      "completePreview": "Recording Complete (Preview mode, will not be saved)",
+      "uploading": "Uploading recording...",
+      "uploadSuccess": "Upload complete, you can now click analyze"
     },
     "preview": {
       "cannotSubmit": "Cannot submit assignment in preview mode"

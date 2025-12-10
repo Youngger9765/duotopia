@@ -117,3 +117,15 @@ mcp-servers/browser/screenshots/
 # Development environment
 .dev-pids/
 .dev-logs/
+
+# Load Testing Artifacts
+# Ignore all generated test results and artifacts
+backend/tests/load_testing/results/
+backend/tests/load_testing/audio_samples/*.webm
+backend/tests/load_testing/audio_samples/*.wav
+backend/tests/load_testing/audio_samples/*.mp3
+backend/tests/load_testing/.env
+backend/tests/load_testing/__pycache__/
+# Keep .gitkeep files to track empty directories
+!backend/tests/load_testing/audio_samples/.gitkeep
+!backend/tests/load_testing/results/.gitkeep
