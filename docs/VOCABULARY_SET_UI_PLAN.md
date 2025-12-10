@@ -1,14 +1,31 @@
-# 句子模組 UI 重構計劃
+# 單字集 (VOCABULARY_SET) UI 規劃
+
+> ⚠️ **注意**：此功能目前為 **Phase 2**，UI 中已隱藏，功能尚未開放。
+>
+> 此文件保留 UI 規劃供未來開發參考。
+
+---
+
+## 概述
+
+| 項目 | 說明 |
+|------|------|
+| ContentType | `VOCABULARY_SET` |
+| 中文名稱 | 單字集 |
+| 舊名稱 | SENTENCE_MAKING（已棄用） |
+| 目前狀態 | ⏸️ Phase 2 - 功能隱藏 |
+
+---
 
 ## 修改範圍
 
-本次修改**僅影響句子模組（Sentence Making）的編輯界面**，不影響朗讀評測模組。
+本次修改**僅影響單字集（VOCABULARY_SET）的編輯界面**。
 
 ### 影響的檔案
 
 | 檔案 | 修改類型 |
 |------|----------|
-| `frontend/src/components/SentenceMakingPanel.tsx` | 主要修改 |
+| `frontend/src/components/VocabularySetPanel.tsx` | 主要修改（原 SentenceMakingPanel） |
 | `frontend/src/types/index.ts` | 新增詞性類型 |
 | `backend/models.py` | 新增詞性欄位（使用 item_metadata） |
 | `backend/routers/teachers.py` | 修改 AI 生成 API |
