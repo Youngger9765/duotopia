@@ -283,3 +283,197 @@ class TestConcurrency:
         # Check results
         assert len(errors) == 0, f"Errors occurred: {errors}"
         assert len(results) == 5
+
+
+class TestConnectionPoolExhaustion:
+    """Test connection pool behavior under stress - Issue #81"""
+
+    def test_connection_pool_exhaustion_handling(self):
+        """
+        Test pool behavior when all connections are in use.
+        Verifies pool_timeout and max_overflow settings work correctly.
+
+        This test validates that when the pool is exhausted (pool_size + max_overflow),
+        new connection requests timeout quickly rather than hanging indefinitely.
+        """
+        import time
+        from database import get_db
+
+        # Acquire all connections (pool_size + max_overflow = 10 + 10 = 20)
+        sessions = []
+        try:
+            for i in range(20):
+                db = next(get_db())
+                sessions.append(db)
+                # Execute query to keep connection active
+                db.execute(text("SELECT 1"))
+
+            # Try to get one more connection - should timeout quickly (~10s)
+            start = time.time()
+            try:
+                db_extra = next(get_db())
+                db_extra.execute(text("SELECT 1"))
+                # If we get here, either pool is larger than expected or timeout is too long
+                db_extra.close()
+                pytest.fail(
+                    "Should have raised timeout exception when pool exhausted"
+                )
+            except Exception as e:
+                duration = time.time() - start
+                # Should timeout within 15 seconds (pool_timeout=10s + some overhead)
+                assert duration < 15, f"Timeout took {duration}s, expected ~10s"
+                # Verify it's a timeout/pool error
+                error_msg = str(e).lower()
+                assert (
+                    "timeout" in error_msg
+                    or "pool" in error_msg
+                    or "connection" in error_msg
+                ), f"Expected timeout error, got: {e}"
+        finally:
+            # Cleanup - release all connections
+            for session in sessions:
+                try:
+                    session.close()
+                except Exception:
+                    pass
+
+    def test_pool_configuration_env_vars(self):
+        """
+        Verify DB_POOL_SIZE and DB_MAX_OVERFLOW env vars work correctly.
+
+        This test ensures the database module correctly reads pool configuration
+        from environment variables.
+        """
+        import os
+        import importlib
+
+        # Save original values
+        original_pool_size = os.environ.get("DB_POOL_SIZE")
+        original_max_overflow = os.environ.get("DB_MAX_OVERFLOW")
+
+        try:
+            # Set custom values
+            os.environ["DB_POOL_SIZE"] = "8"
+            os.environ["DB_MAX_OVERFLOW"] = "12"
+
+            # Reload database module to apply env vars
+            import database
+
+            # Force re-initialization
+            database._engine = None
+            database._SessionLocal = None
+
+            importlib.reload(database)
+
+            # Get fresh engine
+            from database import get_engine
+
+            engine = get_engine()
+
+            # Verify configuration applied
+            assert engine.pool.size() == 8, f"Pool size is {engine.pool.size()}, expected 8"
+            assert (
+                engine.pool._max_overflow == 12
+            ), f"Max overflow is {engine.pool._max_overflow}, expected 12"
+
+        finally:
+            # Restore original values
+            if original_pool_size is not None:
+                os.environ["DB_POOL_SIZE"] = original_pool_size
+            elif "DB_POOL_SIZE" in os.environ:
+                del os.environ["DB_POOL_SIZE"]
+
+            if original_max_overflow is not None:
+                os.environ["DB_MAX_OVERFLOW"] = original_max_overflow
+            elif "DB_MAX_OVERFLOW" in os.environ:
+                del os.environ["DB_MAX_OVERFLOW"]
+
+            # Reload to restore defaults
+            import database
+
+            database._engine = None
+            database._SessionLocal = None
+            importlib.reload(database)
+
+    def test_connection_release_after_use(self):
+        """
+        Test that connections are properly released back to the pool after use.
+
+        This validates the fix for Issue #81 where connections weren't being
+        released quickly enough during audio uploads.
+        """
+        from database import get_db, get_engine
+
+        engine = get_engine()
+
+        # Get initial pool status
+        initial_pool_size = engine.pool.size()
+
+        # Use and release multiple connections
+        for i in range(5):
+            db = next(get_db())
+            db.execute(text("SELECT 1"))
+            db.close()
+
+        # Pool size should remain stable (connections returned)
+        final_pool_size = engine.pool.size()
+        assert (
+            final_pool_size == initial_pool_size
+        ), "Connections not properly returned to pool"
+
+    def test_rapid_connection_acquisition_release(self):
+        """
+        Test rapid connection acquisition and release pattern.
+
+        Simulates the 3-phase audio upload pattern:
+        1. Acquire connection
+        2. Quick query
+        3. Release immediately
+        4. Repeat
+
+        This should NOT exhaust the pool.
+        """
+        from database import get_db
+        import time
+
+        start = time.time()
+
+        # Simulate 50 rapid acquire-query-release cycles
+        for i in range(50):
+            db = next(get_db())
+            db.execute(text("SELECT 1"))
+            db.close()
+
+        duration = time.time() - start
+
+        # Should complete quickly (< 5 seconds)
+        assert duration < 5, f"Took {duration}s for 50 cycles, expected < 5s"
+
+    def test_pool_size_configuration_values(self):
+        """
+        Verify the default pool configuration values are safe for Supabase Free Tier.
+
+        Supabase Free Tier has ~25 connection limit.
+        Default should be 10 + 10 = 20 total connections per instance.
+        """
+        from database import get_engine
+        import os
+
+        # Get current values (should be defaults if not overridden)
+        pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+
+        # Verify safe defaults
+        total_connections = pool_size + max_overflow
+        assert (
+            total_connections <= 20
+        ), f"Total connections {total_connections} exceeds safe limit for Supabase Free Tier"
+
+        # Verify engine uses these values
+        engine = get_engine()
+        assert (
+            engine.pool.size() == pool_size
+        ), f"Engine pool size {engine.pool.size()} != expected {pool_size}"
+        assert (
+            engine.pool._max_overflow == max_overflow
+        ), f"Engine max overflow {engine.pool._max_overflow} != expected {max_overflow}"
