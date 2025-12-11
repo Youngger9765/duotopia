@@ -8,9 +8,7 @@ import os
 import hashlib
 import logging
 from typing import Optional, Dict  # noqa: F401
-from functools import lru_cache
 from google.cloud import storage
-import uuid
 from datetime import datetime  # noqa: F401
 import azure.cognitiveservices.speech as speechsdk
 
@@ -123,9 +121,7 @@ class TTSService:
         except (ValueError, AttributeError):
             return "1.0"
 
-    def _generate_cache_key(
-        self, text: str, voice: str, rate: str, volume: str
-    ) -> str:
+    def _generate_cache_key(self, text: str, voice: str, rate: str, volume: str) -> str:
         """
         Generate a unique cache key for TTS parameters
         Uses hash of text + voice + rate + volume to create deterministic filename

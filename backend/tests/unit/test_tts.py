@@ -4,9 +4,8 @@ Tests cache initialization, hits, misses, statistics, and performance
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import Mock, patch, MagicMock
 import os
-import tempfile
 from services.tts import TTSService, get_tts_service
 
 
