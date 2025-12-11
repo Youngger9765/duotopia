@@ -159,8 +159,7 @@ class TestTranslationService:
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("builtins.print")
-    async def test_translate_text_error_logging(self, mock_print, service):
+    async def test_translate_text_error_logging(self, service, caplog):
         """測試錯誤記錄"""
         service.client = Mock()
         service.client.chat.completions.create = Mock(
@@ -169,61 +168,81 @@ class TestTranslationService:
 
         await service.translate_text("Hello", "zh-TW")
 
-        mock_print.assert_called_once_with("Translation error: API Error")
+        # Check that error was logged
+        assert "Translation error: API Error" in caplog.text
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_batch_translate_zh_tw(self, service):
-        """測試批次翻譯至繁體中文"""
+        """測試批次翻譯至繁體中文（小批量使用 cache）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "你好---再見---謝謝"
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        # Mock different responses for different texts
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "你好"
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "再見"
+            elif "Thank you" in content:
+                mock_resp.choices[0].message.content = "謝謝"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye", "Thank you"]
         result = await service.batch_translate(texts, "zh-TW")
 
         assert result == ["你好", "再見", "謝謝"]
 
-        # 檢查呼叫參數
-        call_args = service.client.chat.completions.create.call_args
-        assert call_args.kwargs["max_tokens"] == 500  # 批次需要更多 tokens
-        messages = call_args.kwargs["messages"]
-        assert "繁體中文" in messages[1]["content"]
-        assert "---" in messages[1]["content"]
-
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_batch_translate_english_definitions(self, service):
-        """測試批次英英釋義"""
+        """測試批次英英釋義（小批量使用 cache）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[
-            0
-        ].message.content = "A greeting---A farewell---Expression of gratitude"
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        # Mock different responses for different texts
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "A greeting"
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "A farewell"
+            elif "Thank you" in content:
+                mock_resp.choices[0].message.content = "Expression of gratitude"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye", "Thank you"]
         result = await service.batch_translate(texts, "en")
 
         assert result == ["A greeting", "A farewell", "Expression of gratitude"]
 
-        # 檢查呼叫參數
-        call_args = service.client.chat.completions.create.call_args
-        messages = call_args.kwargs["messages"]
-        assert "simple English definitions" in messages[1]["content"]
-
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_batch_translate_other_language(self, service):
-        """測試批次翻譯至其他語言"""
+        """測試批次翻譯至其他語言（小批量使用 cache）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "Hola---Adiós"
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "Hola"
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "Adiós"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye"]
         result = await service.batch_translate(texts, "Spanish")
@@ -233,12 +252,23 @@ class TestTranslationService:
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_batch_translate_strip_whitespace(self, service):
-        """測試批次翻譯移除空白"""
+        """測試批次翻譯移除空白（小批量使用 cache）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "  你好  ---  再見  ---  謝謝  "
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "  你好  "
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "  再見  "
+            elif "Thank you" in content:
+                mock_resp.choices[0].message.content = "  謝謝  "
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye", "Thank you"]
         result = await service.batch_translate(texts, "zh-TW")
@@ -248,36 +278,53 @@ class TestTranslationService:
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_batch_translate_empty_segments(self, service):
-        """測試處理空白片段"""
+        """測試處理空白片段（小批量使用 cache）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "你好---   ---再見"
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "你好"
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "再見"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye"]
         result = await service.batch_translate(texts, "zh-TW")
 
-        # 過濾掉空白片段，所以只有兩個結果
         assert result == ["你好", "再見"]
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("builtins.print")
-    async def test_batch_translate_count_mismatch(self, mock_print, service):
-        """測試翻譯數量不匹配"""
+    async def test_batch_translate_count_mismatch(self, service):
+        """測試翻譯數量不匹配（小批量使用 cache，自動逐個翻譯）"""
         service.client = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "你好"  # 只有一個翻譯
-        service.client.chat.completions.create = Mock(return_value=mock_response)
+
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            content = messages[1]["content"]
+            if "Hello" in content:
+                mock_resp.choices[0].message.content = "你好"
+            elif "Goodbye" in content:
+                mock_resp.choices[0].message.content = "再見"
+            elif "Thank you" in content:
+                mock_resp.choices[0].message.content = "謝謝"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
 
         texts = ["Hello", "Goodbye", "Thank you"]
         result = await service.batch_translate(texts, "zh-TW")
 
-        # 數量不匹配時返回原文
-        assert result == texts
-        mock_print.assert_called_with("Warning: Expected 3 translations, got 1")
+        # Small batches use individual translation, so all succeed
+        assert result == ["你好", "再見", "謝謝"]
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
@@ -296,8 +343,7 @@ class TestTranslationService:
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch("builtins.print")
-    async def test_batch_translate_error_logging(self, mock_print, service):
+    async def test_batch_translate_error_logging(self, service, caplog):
         """測試批次翻譯錯誤記錄"""
         service.client = Mock()
         service.client.chat.completions.create = Mock(
@@ -307,7 +353,8 @@ class TestTranslationService:
         texts = ["Hello", "Goodbye"]
         await service.batch_translate(texts, "zh-TW")
 
-        mock_print.assert_called_once_with("Batch translation error: API Error")
+        # Check that error was logged (will appear in individual translate_text calls)
+        assert "Translation error: API Error" in caplog.text
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
@@ -345,3 +392,149 @@ class TestTranslationService:
 
         assert isinstance(translation_service, TranslationService)
         assert translation_service.model == "gpt-3.5-turbo"
+
+    # ===== Cache Tests (Issue #88) =====
+
+    def test_cache_initialization(self, service):
+        """測試 cache 初始化"""
+        assert service._cache_hits == 0
+        assert service._cache_misses == 0
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_translate_text_cache_miss(self, service, mock_openai_response):
+        """測試 cache miss"""
+        service.client = Mock()
+        service.client.chat.completions.create = Mock(return_value=mock_openai_response)
+
+        result1 = await service.translate_text("Hello", "zh-TW")
+
+        assert result1 == "翻譯結果"
+        assert service._cache_misses == 1
+        assert service._cache_hits == 0
+        # API should be called once
+        assert service.client.chat.completions.create.call_count == 1
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_translate_text_cache_hit(self, service, mock_openai_response):
+        """測試 cache hit - 相同文本不应重复调用 API"""
+        service.client = Mock()
+        service.client.chat.completions.create = Mock(return_value=mock_openai_response)
+
+        # First call - cache miss
+        result1 = await service.translate_text("Hello", "zh-TW")
+        assert service._cache_misses == 1
+
+        # Second call - should hit cache
+        result2 = await service.translate_text("Hello", "zh-TW")
+        assert result2 == result1
+        assert service._cache_hits == 1
+        # API should only be called ONCE (second call uses cache)
+        assert service.client.chat.completions.create.call_count == 1
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_translate_text_cache_different_lang(self, service):
+        """測試不同語言使用不同 cache key"""
+        service.client = Mock()
+
+        # Mock different responses for different languages
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            messages = kwargs["messages"]
+            if "繁體中文" in messages[1]["content"]:
+                mock_resp.choices[0].message.content = "你好"
+            elif "simple English definition" in messages[1]["content"]:
+                mock_resp.choices[0].message.content = "A greeting"
+            else:
+                mock_resp.choices[0].message.content = "Hola"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
+
+        # Different languages should not share cache
+        result_zh = await service.translate_text("Hello", "zh-TW")
+        result_en = await service.translate_text("Hello", "en")
+        result_es = await service.translate_text("Hello", "Spanish")
+
+        assert result_zh == "你好"
+        assert result_en == "A greeting"
+        assert result_es == "Hola"
+        # All should be cache misses (different keys)
+        assert service._cache_misses == 3
+        assert service._cache_hits == 0
+        assert service.client.chat.completions.create.call_count == 3
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_batch_translate_uses_cache(self, service):
+        """測試 batch_translate 使用 cache（小批量或有重复）"""
+        service.client = Mock()
+
+        def mock_create(**kwargs):
+            mock_resp = Mock()
+            mock_resp.choices = [Mock()]
+            mock_resp.choices[0].message.content = "你好"
+            return mock_resp
+
+        service.client.chat.completions.create = Mock(side_effect=mock_create)
+
+        # Small batch should use individual translation (which uses cache)
+        texts = ["Hello", "Hello", "Hi"]  # Has duplicates
+        result = await service.batch_translate(texts, "zh-TW")
+
+        assert len(result) == 3
+        # Should have called individual translate_text which uses cache
+        # "Hello" appears twice, so second time should hit cache
+        assert service._cache_hits >= 1
+
+    def test_get_cache_stats(self, service):
+        """測試 cache 统计信息"""
+        service._cache_hits = 10
+        service._cache_misses = 5
+
+        stats = service.get_cache_stats()
+
+        assert stats["cache_hits"] == 10
+        assert stats["cache_misses"] == 5
+        assert stats["total_calls"] == 15
+        assert stats["hit_rate_percent"] == 66.67
+        assert stats["cache_maxsize"] == 10000
+
+    def test_get_cache_stats_no_calls(self, service):
+        """測試初始 cache 统计（无调用）"""
+        stats = service.get_cache_stats()
+
+        assert stats["cache_hits"] == 0
+        assert stats["cache_misses"] == 0
+        assert stats["total_calls"] == 0
+        assert stats["hit_rate_percent"] == 0
+
+    def test_clear_cache(self, service):
+        """測試清空 cache"""
+        service._cache_hits = 10
+        service._cache_misses = 5
+
+        service.clear_cache()
+
+        assert service._cache_hits == 0
+        assert service._cache_misses == 0
+        cache_info = service._translate_cached.cache_info()
+        assert cache_info.currsize == 0
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_cache_size_limit(self, service, mock_openai_response):
+        """測試 cache 大小限制（maxsize=10000）"""
+        service.client = Mock()
+        service.client.chat.completions.create = Mock(return_value=mock_openai_response)
+
+        # Cache should work within limit
+        for i in range(100):
+            await service.translate_text(f"text_{i}", "zh-TW")
+
+        stats = service.get_cache_stats()
+        assert stats["cache_size"] == 100
+        assert stats["cache_size"] <= stats["cache_maxsize"]

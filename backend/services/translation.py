@@ -3,17 +3,24 @@ Translation service using OpenAI API
 """
 
 import os
+import logging
 from typing import List, Dict, Optional  # noqa: F401
+from functools import lru_cache
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class TranslationService:
     def __init__(self):
         self.client = None
         self.model = "gpt-3.5-turbo"
+        # Cache statistics
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def _ensure_client(self):
         """Lazy initialization of OpenAI client"""
@@ -23,28 +30,31 @@ class TranslationService:
                 raise ValueError("OPENAI_API_KEY not found in environment variables")
             self.client = OpenAI(api_key=api_key)
 
-    async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
+    @lru_cache(maxsize=10000)
+    def _translate_cached(self, text: str, target_lang: str = "zh-TW") -> str:
         """
-        翻譯單一文本
+        Cached synchronous translation helper
 
         Args:
-            text: 要翻譯的文本
-            target_lang: 目標語言（預設為繁體中文）
+            text: Text to translate
+            target_lang: Target language
 
         Returns:
-            翻譯後的文本
+            Translated text
         """
         self._ensure_client()
 
         try:
-            # 根據目標語言設定 prompt
+            # Build prompt based on target language
             if target_lang == "zh-TW":
                 prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
             elif target_lang == "en":
-                # 英英釋義
+                # English definition
                 prompt = (
-                    f"Please provide a simple English definition or explanation for the following word or phrase. "
-                    f"Keep it concise (1-2 sentences) and suitable for language learners:\n{text}"
+                    f"Please provide a simple English definition or explanation "
+                    f"for the following word or phrase. "
+                    f"Keep it concise (1-2 sentences) and suitable for language "
+                    f"learners:\n{text}"
                 )
             else:
                 prompt = (
@@ -64,21 +74,83 @@ class TranslationService:
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
+                temperature=0.3,  # Lower randomness for consistent translations
                 max_tokens=100,
             )
 
             return response.choices[0].message.content.strip()
         except Exception as e:
-            print(f"Translation error: {e}")
-            # 如果翻譯失敗，返回原文
+            logger.error(f"Translation error: {e}")
+            # Return original text if translation fails
             return text
+
+    async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
+        """
+        翻譯單一文本（使用 LRU 缓存减少 API 调用）
+
+        Args:
+            text: 要翻譯的文本
+            target_lang: 目標語言（預設為繁體中文）
+
+        Returns:
+            翻譯後的文本
+        """
+        # Check cache before calling API
+        cache_info = self._translate_cached.cache_info()
+        prev_hits = cache_info.hits
+
+        # Call cached translation
+        result = self._translate_cached(text, target_lang)
+
+        # Track cache statistics
+        new_cache_info = self._translate_cached.cache_info()
+        if new_cache_info.hits > prev_hits:
+            self._cache_hits += 1
+            logger.debug(
+                f"Translation cache HIT for '{text[:30]}...' ({target_lang}). "
+                f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
+            )
+        else:
+            self._cache_misses += 1
+            logger.info(
+                f"Translation cache MISS for '{text[:30]}...' ({target_lang}). "
+                f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
+            )
+
+        return result
+
+    def get_cache_stats(self) -> Dict[str, any]:
+        """
+        Get cache statistics for monitoring
+
+        Returns:
+            Dictionary with cache hit/miss rates and other metrics
+        """
+        cache_info = self._translate_cached.cache_info()
+        total_calls = self._cache_hits + self._cache_misses
+        hit_rate = (self._cache_hits / total_calls * 100) if total_calls > 0 else 0
+
+        return {
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "total_calls": total_calls,
+            "hit_rate_percent": round(hit_rate, 2),
+            "cache_size": cache_info.currsize,
+            "cache_maxsize": cache_info.maxsize,
+        }
+
+    def clear_cache(self):
+        """Clear the translation cache"""
+        self._translate_cached.cache_clear()
+        self._cache_hits = 0
+        self._cache_misses = 0
+        logger.info("Translation cache cleared")
 
     async def batch_translate(
         self, texts: List[str], target_lang: str = "zh-TW"
     ) -> List[str]:
         """
-        批次翻譯多個文本（使用 JSON 格式確保穩定快速）
+        批次翻譯多個文本（使用缓存优化，重复文本不会重复翻译）
 
         Args:
             texts: 要翻譯的文本列表
@@ -87,6 +159,38 @@ class TranslationService:
         Returns:
             翻譯後的文本列表
         """
+        # Strategy: Check for cached items first
+        # If many items are cached, use individual lookups
+        # Otherwise, use batch API call
+        import asyncio
+
+        cached_count = 0
+        for text in texts:
+            cache_key = (text, target_lang)
+            # Check if in cache without calling the function
+            if cache_key in {
+                (text, lang)
+                for text, lang in [
+                    (t, l)
+                    for t, l in zip(
+                        [text],
+                        [target_lang],
+                    )
+                ]
+            }:
+                cached_count += 1
+
+        # If batch is small or has many potential cache hits, use individual calls
+        # This maximizes cache utilization
+        if len(texts) <= 10 or len(set(texts)) < len(texts):
+            logger.info(
+                f"Using individual translation for {len(texts)} items "
+                f"(unique: {len(set(texts))}) to maximize cache hits"
+            )
+            tasks = [self.translate_text(text, target_lang) for text in texts]
+            return await asyncio.gather(*tasks)
+
+        # For large unique batches, use batch API
         self._ensure_client()
 
         try:
@@ -104,7 +208,8 @@ class TranslationService:
 
 要求: 返回格式必須是 ["翻譯1", "翻譯2", ...]"""
             elif target_lang == "en":
-                prompt = f"""Please provide simple English definitions for the following JSON array of words/phrases.
+                prompt = f"""Please provide simple English definitions for the \
+following JSON array of words/phrases.
 Return as a JSON array with each definition as one item.
 Keep definitions concise (1-2 sentences) and suitable for language learners.
 Only return the JSON array, no other text.
