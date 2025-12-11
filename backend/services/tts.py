@@ -187,11 +187,22 @@ class TTSService:
                         client = self._get_storage_client()
                         bucket = client.bucket(self.bucket_name)
                         blob = bucket.blob(f"tts/{filename}")
+                        blob.upload_from_filename(tmp_file_path)
 
-                    blob.upload_from_filename(tmp_file_path)
+                        # 返回公開 URL (bucket 已設定為 public，無需 make_public())
+                        return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                    else:
+                        # 本地儲存
+                        import shutil
 
-                    # 返回公開 URL (bucket 已設定為 public，無需 make_public())
-                    return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                        local_path = os.path.join(self.local_audio_dir, filename)
+                        shutil.copy(tmp_file_path, local_path)
+
+                        # 返回本地 URL
+                        if self.backend_url:
+                            return f"{self.backend_url}/static/tts/{filename}"
+                        else:
+                            return f"/static/tts/{filename}"
                 else:
                     cancellation_details = speechsdk.CancellationDetails(result)
                     error_msg = f"Azure TTS failed: {result.reason}"
