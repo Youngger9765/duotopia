@@ -1352,9 +1352,9 @@ class UserWordProgress(Base):
             "content_item_id",
             name="uq_user_word_progress_assignment_item",
         ),
-        Index("idx_user_word_progress_student", "student_id"),
+        Index("idx_user_word_progress_student", "student_id", "student_assignment_id"),
         Index("idx_user_word_progress_memory", "memory_strength"),
-        Index("idx_user_word_progress_next_review", "next_review_at"),
+        Index("idx_user_word_progress_next_review", "student_assignment_id", "next_review_at"),
     )
 
     def __repr__(self):
@@ -1412,7 +1412,7 @@ class PracticeSession(Base):
 
     # Constraints - 匹配現有資料庫索引
     __table_args__ = (
-        Index("idx_practice_sessions_student", "student_id"),
+        Index("idx_practice_sessions_student", "student_id", "student_assignment_id"),
         Index("idx_practice_sessions_started", "started_at"),
     )
 
