@@ -740,6 +740,11 @@ class Assignment(Base):
     """作業主表 - 教師建立的作業任務"""
 
     __tablename__ = "assignments"
+    __table_args__ = (
+        Index(
+            "ix_assignments_teacher_id", "teacher_id"
+        ),  # Issue #94: Optimize teacher assignments queries
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
@@ -829,6 +834,14 @@ class StudentAssignment(Base):
     """學生作業實例 - 每個學生對應作業的記錄"""
 
     __tablename__ = "student_assignments"
+    __table_args__ = (
+        Index(
+            "ix_student_assignments_student_id", "student_id"
+        ),  # Issue #94: Optimize student queries
+        Index(
+            "ix_student_assignments_assignment_id", "assignment_id"
+        ),  # Issue #94: Optimize assignment queries
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(
