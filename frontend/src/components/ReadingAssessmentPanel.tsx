@@ -1794,49 +1794,54 @@ export default function ReadingAssessmentPanel({
     // 更新前端狀態
     setRows(updatedRows);
 
-    // 🔥 重點：直接儲存到資料庫
-    try {
-      const saveData = {
-        title: title,
-        items: updatedRows.map((row) => ({
-          text: row.text.trim(),
-          definition: row.definition || "",
-          english_definition: row.translation || "",
-          translation: row.definition || "",
-          selectedLanguage: row.selectedLanguage || "chinese",
-          audio_url: row.audioUrl || row.audio_url || "",
-        })),
-        target_wpm: 60,
-        target_accuracy: 0.8,
-        time_limit_seconds: 180,
-      };
+    const existingContentId = editingContent?.id || content?.id;
 
-      const existingContentId = editingContent?.id || content?.id;
+    if (existingContentId) {
+      // 編輯模式：直接儲存到資料庫
+      try {
+        const saveData = {
+          title: title,
+          items: updatedRows.map((row) => ({
+            text: row.text.trim(),
+            definition: row.definition || "",
+            english_definition: row.translation || "",
+            translation: row.definition || "",
+            selectedLanguage: row.selectedLanguage || "chinese",
+            audio_url: row.audioUrl || row.audio_url || "",
+          })),
+          target_wpm: 60,
+          target_accuracy: 0.8,
+          time_limit_seconds: 180,
+        };
 
-      if (existingContentId) {
-        // 編輯模式：更新現有內容
         await apiClient.updateContent(existingContentId, saveData);
         toast.success(
           `已新增 ${lines.length} 個項目並儲存（共 ${updatedRows.length} 個）`,
         );
-      } else if (isCreating && lessonId) {
-        // 創建模式：新增內容
-        await apiClient.createContent(lessonId, {
-          type: "EXAMPLE_SENTENCES",
-          ...saveData,
-        });
-        toast.success(`已新增 ${lines.length} 個項目並創建內容`);
-        // 🔥 不要呼叫 onSave 避免重新載入，直接顯示結果
-      } else {
-        // 沒有 contentId 也沒有 lessonId，只更新前端
-        toast.success(
-          `已新增 ${lines.length} 個項目（共 ${updatedRows.length} 個）`,
-        );
+      } catch (error) {
+        console.error("Failed to save batch paste:", error);
+        toast.error("儲存失敗，請稍後再試");
+        return;
       }
-    } catch (error) {
-      console.error("Failed to save batch paste:", error);
-      toast.error("儲存失敗，請稍後再試");
-      return;
+    } else {
+      // 新增模式：只更新本地狀態，不儲存到資料庫
+      // 使用者需要按「儲存」按鈕才會真正創建內容
+      if (onUpdateContent) {
+        onUpdateContent({
+          ...editingContent,
+          title,
+          items: updatedRows.map((row) => ({
+            text: row.text,
+            definition: row.definition,
+            translation: row.translation,
+            audio_url: row.audioUrl || row.audio_url || "",
+            selectedLanguage: row.selectedLanguage,
+          })),
+        });
+      }
+      toast.success(
+        `已新增 ${lines.length} 個項目（共 ${updatedRows.length} 個），請按「儲存」完成創建`,
+      );
     }
 
     setBatchPasteDialogOpen(false);
