@@ -4,13 +4,14 @@ TapPay Payment Service
 """
 
 import os
-import requests
 import logging
 import hmac
 import hashlib
+import requests
 from typing import Dict
 from datetime import datetime
 from core.config import settings
+from core.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,9 @@ class TapPayService:
         self.environment = settings.TAPPAY_ENV
         self.partner_key = settings.tappay_partner_key
         self.merchant_id = settings.tappay_merchant_id
+
+        # Use shared HTTP session with connection pooling
+        self.session = get_http_session()
 
         # 根據環境選擇 API URL
         if self.environment == "production":
@@ -119,7 +123,8 @@ class TapPayService:
             print(f"  - Amount: {payload['amount']}")
             print(f"  - Merchant: {payload['merchant_id']}")
 
-            response = requests.post(
+            # Use connection pool for better performance
+            response = self.session.post(
                 self.api_url, json=payload, headers=headers, timeout=30
             )
 
@@ -206,7 +211,8 @@ class TapPayService:
                 "x-api-key": self.partner_key,
             }
 
-            response = requests.post(
+            # Use connection pool for better performance
+            response = self.session.post(
                 self.pay_by_token_url, json=payload, headers=headers, timeout=30
             )
 
@@ -254,7 +260,8 @@ class TapPayService:
         payload = {"partner_key": self.partner_key, "rec_trade_id": rec_trade_id}
 
         try:
-            response = requests.post(
+            # Use connection pool for better performance
+            response = self.session.post(
                 query_url,
                 json=payload,
                 headers={
@@ -299,7 +306,8 @@ class TapPayService:
         logger.info(f"  amount: {amount or 'Full refund'}")
 
         try:
-            response = requests.post(
+            # Use connection pool for better performance
+            response = self.session.post(
                 refund_url,
                 json=payload,
                 headers={
@@ -353,7 +361,8 @@ class TapPayService:
             payload["amount"] = amount
 
         try:
-            response = requests.post(
+            # Use connection pool for better performance
+            response = self.session.post(
                 capture_url,
                 json=payload,
                 headers={"Content-Type": "application/json"},
