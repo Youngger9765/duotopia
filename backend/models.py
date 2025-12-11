@@ -1352,6 +1352,9 @@ class UserWordProgress(Base):
             "content_item_id",
             name="uq_user_word_progress_assignment_item",
         ),
+        Index("idx_user_word_progress_student", "student_id"),
+        Index("idx_user_word_progress_memory", "memory_strength"),
+        Index("idx_user_word_progress_next_review", "next_review_at"),
     )
 
     def __repr__(self):
@@ -1407,6 +1410,12 @@ class PracticeSession(Base):
         "PracticeAnswer", back_populates="session", cascade="all, delete-orphan"
     )
 
+    # Constraints - 匹配現有資料庫索引
+    __table_args__ = (
+        Index("idx_practice_sessions_student", "student_id"),
+        Index("idx_practice_sessions_started", "started_at"),
+    )
+
     def __repr__(self):
         return (
             f"<PracticeSession id={self.id} student={self.student_id} "
@@ -1441,6 +1450,12 @@ class PracticeAnswer(Base):
     # Relationships
     session = relationship("PracticeSession", back_populates="answers")
     content_item = relationship("ContentItem")
+
+    # Constraints - 匹配現有資料庫索引
+    __table_args__ = (
+        Index("idx_practice_answers_session", "practice_session_id"),
+        Index("idx_practice_answers_item", "content_item_id"),
+    )
 
     def __repr__(self):
         return (
