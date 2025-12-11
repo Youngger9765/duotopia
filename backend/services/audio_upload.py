@@ -2,6 +2,7 @@
 Audio upload service for recording files
 """
 
+import asyncio
 import os
 import uuid
 from datetime import datetime  # noqa: F401
@@ -196,8 +197,10 @@ class AudioUploadService:
                 bucket = client.bucket(self.bucket_name)
                 blob = bucket.blob(f"recordings/{filename}")
 
-                # 上傳檔案並設定正確的 content type
-                blob.upload_from_string(content, content_type=file.content_type)
+                # 上傳檔案並設定正確的 content type (使用 asyncio.to_thread 避免阻塞)
+                await asyncio.to_thread(
+                    blob.upload_from_string, content, content_type=file.content_type
+                )
 
                 # 返回公開 URL (bucket 已設定為 public，無需 make_public())
                 return f"https://storage.googleapis.com/{self.bucket_name}/recordings/{filename}"
