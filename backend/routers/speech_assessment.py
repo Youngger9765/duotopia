@@ -34,6 +34,42 @@ from sqlalchemy.orm import joinedload
 # 設定 logger
 logger = logging.getLogger(__name__)
 
+# 全局 Semaphore - 限制並發 Azure Speech API 呼叫
+# Azure S0 標準層限制：20 TPS（每秒事務數）
+# 保守設定：18 並發（保留 2 個緩衝，避免觸發 429 錯誤）
+# 使用字典儲存每個 event loop 的 semaphore，避免跨 loop 問題
+_azure_speech_semaphores = {}
+
+
+def _get_azure_speech_semaphore():
+    """
+    獲取當前 event loop 的 Azure Speech API Semaphore
+    每個 event loop 維護獨立的 semaphore 實例
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        loop_id = id(loop)
+
+        if loop_id not in _azure_speech_semaphores:
+            _azure_speech_semaphores[loop_id] = asyncio.Semaphore(18)
+
+        return _azure_speech_semaphores[loop_id]
+    except RuntimeError:
+        # No event loop running, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop_id = id(loop)
+        _azure_speech_semaphores[loop_id] = asyncio.Semaphore(18)
+        return _azure_speech_semaphores[loop_id]
+
+
+# 自定義異常 - Azure API 429 錯誤
+class AzureRateLimitError(Exception):
+    """Azure API 429 Too Many Requests 錯誤"""
+
+    pass
+
+
 # 🕐 Azure Speech API Timeout 設定（秒）
 AZURE_SPEECH_TIMEOUT = 20  # Azure Speech API timeout in seconds
 
@@ -399,6 +435,16 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         # 🕐 計算總處理時間（包含失敗的情況）
         total_latency = time.time() - start_time
 
+        # 🔒 檢測 429 錯誤（Azure API 限流）
+        error_msg = str(e).lower()
+        if (
+            "429" in error_msg
+            or "too many requests" in error_msg
+            or "rate limit" in error_msg
+        ):
+            logger.warning(f"⚠️ Azure rate limit hit (429): {e}")
+            raise AzureRateLimitError(f"Azure API rate limit exceeded: {e}")
+
         logger.error(f"Azure Speech API error: {str(e)}")
         logger.error(f"Total processing time before failure: {total_latency:.2f}s")
         logger.debug(f"Error type: {type(e)}")
@@ -648,20 +694,38 @@ async def assess_pronunciation_endpoint(
     # 進行發音評估（Azure Speech SDK）
     # ⚡ 使用自訂語音線程池避免阻塞 event loop
     # 🕐 加入 timeout 保護避免長時間阻塞
+    # 🔒 使用全局 Semaphore 限制並發（18 並發，避免 429 錯誤）
     with start_span(
         "Azure Speech API Call", {"reference_text_length": len(reference_text)}
     ):
         loop = asyncio.get_event_loop()
         speech_pool = get_speech_thread_pool()
 
+        # 🔒 記錄隊列等待時間
+        queue_start = time.time()
+
         try:
-            # 🕐 使用 asyncio.wait_for 加入 timeout（預設 20 秒）
-            assessment_result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    speech_pool, assess_pronunciation, wav_audio_data, reference_text
-                ),
-                timeout=AZURE_SPEECH_TIMEOUT,
-            )
+            # 🔒 全局限流：最多 18 個並發 Azure API 呼叫
+            async with _get_azure_speech_semaphore():
+                queue_wait = time.time() - queue_start
+
+                # ⚠️ 如果隊列等待超過 2 秒，記錄警告
+                if queue_wait > 2:
+                    logger.warning(
+                        f"⚠️ Azure rate limit queue wait: {queue_wait:.2f}s "
+                        f"for student {current_student.id}"
+                    )
+
+                # 🕐 使用 asyncio.wait_for 加入 timeout（預設 20 秒）
+                assessment_result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        speech_pool,
+                        assess_pronunciation,
+                        wav_audio_data,
+                        reference_text,
+                    ),
+                    timeout=AZURE_SPEECH_TIMEOUT,
+                )
             perf.checkpoint("Azure Speech Assessment Complete")
 
         except asyncio.TimeoutError:
