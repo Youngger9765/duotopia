@@ -753,11 +753,12 @@ class Assignment(Base):
 
     # Legacy: 造句練習答題模式（只對舊 SENTENCE_MAKING 類型有效）
     # @deprecated: 請使用 practice_mode 和 play_audio 替代
+    # Note: 保持 nullable=True 以兼容現有數據庫 schema
     answer_mode = Column(
         String(20),
         default="writing",
         server_default="writing",
-        nullable=False,
+        nullable=True,
     )
 
     # ===== 新增：例句集作答模式設定 =====
@@ -1290,7 +1291,8 @@ class UserWordProgress(Base):
 
     __tablename__ = "user_word_progress"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
     student_id = Column(
         Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
@@ -1364,7 +1366,8 @@ class PracticeSession(Base):
 
     __tablename__ = "practice_sessions"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
     student_id = Column(
         Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
@@ -1416,7 +1419,8 @@ class PracticeAnswer(Base):
 
     __tablename__ = "practice_answers"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
     practice_session_id = Column(
         Integer, ForeignKey("practice_sessions.id", ondelete="CASCADE"), nullable=False
     )
@@ -1426,8 +1430,8 @@ class PracticeAnswer(Base):
     is_correct = Column(Boolean, nullable=False)
     time_spent_seconds = Column(Integer, default=0, server_default="0", nullable=False)
 
-    # 學生答案（JSON 格式儲存）
-    answer_data = Column(JSON)  # {"selected_words": [...], "attempts": 3}
+    # 學生答案（JSONB 格式儲存，兼容現有數據庫 schema）
+    answer_data = Column(JSONB)  # {"selected_words": [...], "attempts": 3}
 
     # 時間戳記
     created_at = Column(
