@@ -674,7 +674,15 @@ async def recording_error_report_cron(
         # 從 PostgreSQL 查詢學生、老師、班級資料
         students_with_errors = []
         if student_errors:
-            engine = create_engine(os.getenv("DATABASE_URL"))
+            # Issue #93: Use optimized pool configuration
+            engine = create_engine(
+                os.getenv("DATABASE_URL"),
+                pool_size=5,
+                max_overflow=5,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                pool_timeout=10,
+            )
             SessionLocal = sessionmaker(bind=engine)
             db_session = SessionLocal()
 

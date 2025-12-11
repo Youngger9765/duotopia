@@ -411,11 +411,14 @@ class AudioErrorQueryService:
                 return {}
 
             # 創建生產環境專用連接
+            # Issue #93: Use optimized pool configuration
             prod_engine = create_engine(
                 prod_db_url,
-                pool_size=2,
-                max_overflow=0,
-                pool_pre_ping=True,
+                pool_size=5,  # Increased for better concurrency
+                max_overflow=5,  # Allow burst traffic
+                pool_pre_ping=True,  # Test connections before use
+                pool_recycle=3600,  # Recycle connections every hour
+                pool_timeout=10,  # Faster failure feedback
             )
 
             with Session(prod_engine) as db:
