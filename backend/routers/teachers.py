@@ -449,6 +449,8 @@ async def get_teacher_programs(
                                             "text": item.text,
                                             "translation": item.translation,
                                             "audio_url": item.audio_url,
+                                            "example_sentence": item.example_sentence,
+                                            "example_sentence_translation": item.example_sentence_translation,
                                             "order_index": item.order_index,
                                         }
                                     )
@@ -2217,15 +2219,52 @@ async def delete_lesson(
 
 
 class ContentCreate(BaseModel):
-    type: str = "reading_assessment"
+    type: str = "example_sentences"  # 預設改為新的類型
     title: str
     items: List[Dict[str, Any]]  # [{"text": "...", "translation": "..."}, ...]
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
+    time_limit_seconds: Optional[int] = None
     order_index: Optional[int] = None  # None = 自動計算為最後一個位置
     level: Optional[str] = "A1"
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = False
+
+
+def normalize_content_type(content_type: str) -> str:
+    """將舊的 ContentType 值轉換為新值（向後相容）"""
+    mapping = {
+        "READING_ASSESSMENT": "EXAMPLE_SENTENCES",
+        "reading_assessment": "EXAMPLE_SENTENCES",
+        "SENTENCE_MAKING": "VOCABULARY_SET",
+        "sentence_making": "VOCABULARY_SET",
+    }
+    return mapping.get(content_type, content_type.upper())
+
+
+def count_words(text: str) -> int:
+    """計算英文單字數量（以空格分隔）"""
+    if not text:
+        return 0
+    # 移除多餘空格後以空格分割
+    return len(text.strip().split())
+
+
+def calculate_max_errors(word_count: int) -> int:
+    """根據單字數量計算允許的錯誤次數"""
+    if word_count <= 10:
+        return 3
+    return 5
+
+
+def validate_sentence_length(text: str) -> tuple:
+    """驗證句子長度是否符合規則（2-25 個單字）"""
+    word_count = count_words(text)
+    if word_count < 2:
+        return False, f"句子至少需要 2 個單字，目前 {word_count} 個", word_count
+    if word_count > 25:
+        return False, f"句子最多 25 個單字，目前 {word_count} 個", word_count
+    return True, f"符合規則（{word_count} 個單字）", word_count
 
 
 class ContentUpdate(BaseModel):
@@ -2281,6 +2320,8 @@ async def get_lesson_contents(
                 "text": item.text,
                 "translation": item.translation,
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
             }
             for item in content_items
         ]
@@ -2341,13 +2382,44 @@ async def create_content(
         order_index = content_data.order_index
 
     # 建立 Content（不再使用 items 欄位）
+    # 根據 content_data.type 設定正確的類型（支援舊值相容）
+    normalized_type = normalize_content_type(content_data.type)
+    try:
+        content_type = ContentType(normalized_type)
+    except ValueError:
+        # 如果類型不存在，預設使用 EXAMPLE_SENTENCES
+        content_type = ContentType.EXAMPLE_SENTENCES
+
+    # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
+    if content_type == ContentType.EXAMPLE_SENTENCES:
+        invalid_items = []
+        validation_details = []
+        for idx, item_data in enumerate(content_data.items):
+            item_text = item_data.get("text", "")
+            if item_text:  # 只驗證非空的文字
+                is_valid, message, word_count = validate_sentence_length(item_text)
+                if not is_valid:
+                    invalid_items.append(idx + 1)
+                    validation_details.append(f"第 {idx + 1} 題：{message}")
+
+        if invalid_items:
+            items_str = ", ".join(str(i) for i in invalid_items)
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": f"第 {items_str} 題句子長度不符合規定（需為 2-25 個單字）",
+                    "errors": validation_details,
+                },
+            )
+
     content = Content(
         lesson_id=lesson_id,
-        type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
+        type=content_type,
         title=content_data.title,
         # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
+        time_limit_seconds=content_data.time_limit_seconds,
         order_index=order_index,
         level=content_data.level,
         tags=content_data.tags or [],
@@ -2360,16 +2432,33 @@ async def create_content(
     items_created = []
     if content_data.items:
         for idx, item_data in enumerate(content_data.items):
+            item_text = item_data.get("text", "")
+            word_count = count_words(item_text)
+            max_errors = calculate_max_errors(word_count)
+
             content_item = ContentItem(
                 content_id=content.id,
                 order_index=idx,
-                text=item_data.get("text", ""),
+                text=item_text,
                 translation=item_data.get("translation", ""),
                 audio_url=item_data.get("audio_url"),
+                example_sentence=item_data.get("example_sentence"),
+                example_sentence_translation=item_data.get(
+                    "example_sentence_translation"
+                ),
+                word_count=word_count,
+                max_errors=max_errors,
             )
             db.add(content_item)
             items_created.append(
-                {"text": content_item.text, "translation": content_item.translation}
+                {
+                    "text": content_item.text,
+                    "translation": content_item.translation,
+                    "example_sentence": content_item.example_sentence,
+                    "example_sentence_translation": content_item.example_sentence_translation,
+                    "word_count": word_count,
+                    "max_errors": max_errors,
+                }
             )
 
     db.commit()
@@ -2473,11 +2562,16 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "created_at": item.created_at.isoformat() if item.created_at else None,
                 "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
                 "has_student_progress": item.id in items_with_progress,  # 🔥 新增：是否有學生進度
             }
             for item in content.content_items
@@ -2542,6 +2636,29 @@ async def update_content(
 
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
+
+    # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
+    if update_data.items is not None and content.type == ContentType.EXAMPLE_SENTENCES:
+        invalid_items = []
+        validation_details = []
+        for idx, item_data in enumerate(update_data.items):
+            if isinstance(item_data, dict):
+                item_text = item_data.get("text", "")
+                if item_text:  # 只驗證非空的文字
+                    is_valid, message, word_count = validate_sentence_length(item_text)
+                    if not is_valid:
+                        invalid_items.append(idx + 1)
+                        validation_details.append(f"第 {idx + 1} 題：{message}")
+
+        if invalid_items:
+            items_str = ", ".join(str(i) for i in invalid_items)
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": f"第 {items_str} 題句子長度不符合規定（需為 2-25 個單字）",
+                    "errors": validation_details,
+                },
+            )
 
     # 引入音檔管理器
     from services.audio_manager import get_audio_manager
@@ -2678,6 +2795,10 @@ async def update_content(
                     matched_item.text = new_text
                     matched_item.translation = translation_value
                     matched_item.audio_url = new_audio_url
+                    matched_item.example_sentence = item_data.get("example_sentence")
+                    matched_item.example_sentence_translation = item_data.get(
+                        "example_sentence_translation"
+                    )
                     matched_item.item_metadata = metadata
                 else:
                     # 無法匹配，創建新的 ContentItem
@@ -2687,6 +2808,10 @@ async def update_content(
                         text=new_text,
                         translation=translation_value,
                         audio_url=new_audio_url,
+                        example_sentence=item_data.get("example_sentence"),
+                        example_sentence_translation=item_data.get(
+                            "example_sentence_translation"
+                        ),
                         item_metadata=metadata,
                     )
                     db.add(new_item)
@@ -2831,6 +2956,8 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
                 "options": item.item_metadata.get("options", [])
                 if item.item_metadata
                 else [],
@@ -2840,6 +2967,9 @@ async def update_content(
                 "question_type": item.item_metadata.get("question_type", "text")
                 if item.item_metadata
                 else "text",
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata
+                else [],
             }
             for item in content.content_items
         ]
@@ -2930,6 +3060,25 @@ async def translate_text(
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
+@router.post("/translate-with-pos")
+async def translate_with_pos(
+    request: TranslateRequest, current_teacher: Teacher = Depends(get_current_teacher)
+):
+    """翻譯單字並辨識詞性"""
+    try:
+        result = await translation_service.translate_with_pos(
+            request.text, request.target_lang
+        )
+        return {
+            "original": request.text,
+            "translation": result["translation"],
+            "parts_of_speech": result["parts_of_speech"],
+        }
+    except Exception as e:
+        print(f"Translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
 @router.post("/translate/batch")
 async def batch_translate(
     request: BatchTranslateRequest,
@@ -2944,6 +3093,51 @@ async def batch_translate(
     except Exception as e:
         print(f"Batch translation error: {e}")
         raise HTTPException(status_code=500, detail="Translation service error")
+
+
+@router.post("/translate-with-pos/batch")
+async def batch_translate_with_pos(
+    request: BatchTranslateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """批次翻譯多個單字並辨識詞性"""
+    try:
+        results = await translation_service.batch_translate_with_pos(
+            request.texts, request.target_lang
+        )
+        return {"originals": request.texts, "results": results}
+    except Exception as e:
+        print(f"Batch translate with POS error: {e}")
+        raise HTTPException(status_code=500, detail="Translation service error")
+
+
+# ============ AI Generate Sentences ============
+class GenerateSentencesRequest(BaseModel):
+    words: List[str]
+    level: Optional[str] = "A1"
+    prompt: Optional[str] = None
+    translate_to: Optional[str] = None  # zh-TW, ja, ko
+    parts_of_speech: Optional[List[List[str]]] = None
+
+
+@router.post("/generate-sentences")
+async def generate_sentences(
+    request: GenerateSentencesRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """AI 生成例句"""
+    try:
+        sentences = await translation_service.generate_sentences(
+            words=request.words,
+            level=request.level,
+            prompt=request.prompt,
+            translate_to=request.translate_to,
+            parts_of_speech=request.parts_of_speech,
+        )
+        return {"sentences": sentences}
+    except Exception as e:
+        print(f"Generate sentences error: {e}")
+        raise HTTPException(status_code=500, detail="Generate sentences failed")
 
 
 # ============ TTS Endpoints ============
@@ -3188,6 +3382,8 @@ async def get_assignment_preview(
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
+                    "example_sentence": item.example_sentence,
+                    "example_sentence_translation": item.example_sentence_translation,
                     "recording_url": None,  # 預覽模式沒有學生錄音
                 }
                 items_data.append(item_data)
@@ -3196,9 +3392,16 @@ async def get_assignment_preview(
             activity_data["item_count"] = len(items_data)
 
             # 額外欄位（根據 content type）
-            if content.type == ContentType.READING_ASSESSMENT:
+            if content.type == ContentType.EXAMPLE_SENTENCES:
                 activity_data["target_wpm"] = content.target_wpm
                 activity_data["target_accuracy"] = content.target_accuracy
+                # 🔧 修復：為 reading 模式添加 example_audio_url（取第一個 item 的 audio_url）
+                if content_items and len(content_items) > 0:
+                    first_item = content_items[0]
+                    activity_data["example_audio_url"] = first_item.audio_url
+                    # 同時設置 content 和 target_text（ReadingAssessmentTemplate 需要）
+                    activity_data["content"] = first_item.translation or ""
+                    activity_data["target_text"] = first_item.text or ""
 
             activities.append(activity_data)
 
@@ -3206,8 +3409,257 @@ async def get_assignment_preview(
         "assignment_id": assignment.id,
         "title": assignment.title,
         "status": "preview",  # 特殊標記表示這是預覽模式
+        "practice_mode": assignment.practice_mode,  # 例句重組/朗讀模式
+        "score_category": assignment.score_category,  # 計分類別
+        "show_answer": assignment.show_answer or False,  # 答題結束後是否顯示正確答案
         "total_activities": len(activities),
         "activities": activities,
+    }
+
+
+@router.get("/assignments/{assignment_id}/preview/rearrangement-questions")
+async def preview_rearrangement_questions(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：取得例句重組題目列表
+
+    - 供老師預覽示範用
+    - 不需要 StudentAssignment，直接從 Assignment 讀取
+    """
+    import random
+    from pydantic import BaseModel
+    from typing import Optional, List
+
+    class RearrangementQuestionResponse(BaseModel):
+        content_item_id: int
+        shuffled_words: List[str]
+        word_count: int
+        max_errors: int
+        time_limit: int
+        play_audio: bool
+        audio_url: Optional[str] = None
+        translation: Optional[str] = None
+        original_text: Optional[str] = None  # 正確答案（用於顯示答案功能）
+
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是例句重組模式
+    if assignment.practice_mode != "rearrangement":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in rearrangement mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    # 如果需要打亂順序
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    questions = []
+    for item in content_items:
+        # 打亂單字順序
+        words = item.text.strip().split()
+        shuffled_words = words.copy()
+        random.shuffle(shuffled_words)
+
+        questions.append(
+            RearrangementQuestionResponse(
+                content_item_id=item.id,
+                shuffled_words=shuffled_words,
+                word_count=item.word_count or len(words),
+                max_errors=item.max_errors or (3 if len(words) <= 10 else 5),
+                time_limit=assignment.time_limit_per_question or 40,
+                play_audio=assignment.play_audio or False,
+                audio_url=item.audio_url,
+                translation=item.translation,
+                original_text=item.text.strip(),  # 正確答案
+            )
+        )
+
+    return {
+        "student_assignment_id": assignment_id,
+        "practice_mode": "rearrangement",
+        "score_category": assignment.score_category,
+        "questions": questions,
+        "total_questions": len(questions),
+    }
+
+
+@router.post("/assignments/{assignment_id}/preview/rearrangement-answer")
+async def preview_rearrangement_answer(
+    assignment_id: int,
+    request: dict,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：驗證例句重組答案（不存儲）
+
+    - 只做答案驗證，不存入資料庫
+    - 供老師預覽示範用
+    """
+    import math
+
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 取得內容項目
+    content_item = (
+        db.query(ContentItem)
+        .filter(ContentItem.id == request.get("content_item_id"))
+        .first()
+    )
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    # 解析正確答案
+    correct_words = content_item.text.strip().split()
+    word_count = len(correct_words)
+    max_errors = content_item.max_errors or (3 if word_count <= 10 else 5)
+    points_per_word = math.floor(100 / word_count)
+
+    # 檢查答案是否正確
+    current_position = request.get("current_position", 0)
+    if current_position >= word_count:
+        raise HTTPException(status_code=400, detail="Invalid position")
+
+    correct_word = correct_words[current_position]
+    selected_word = request.get("selected_word", "")
+    is_correct = selected_word.strip() == correct_word.strip()
+
+    # 預覽模式：計算預期分數（不存儲）
+    # 假設這是第一次作答，所以 error_count 從請求中取得（前端追蹤）
+    error_count = request.get("error_count", 0)
+    if not is_correct:
+        error_count += 1
+
+    expected_score = max(0, 100 - (error_count * points_per_word))
+    correct_word_count = current_position + 1 if is_correct else current_position
+
+    # 檢查是否達到錯誤上限
+    challenge_failed = error_count >= max_errors
+
+    # 檢查是否完成
+    completed = correct_word_count >= word_count
+
+    return {
+        "is_correct": is_correct,
+        "correct_word": correct_word if not is_correct else None,
+        "error_count": error_count,
+        "max_errors": max_errors,
+        "expected_score": expected_score,
+        "correct_word_count": correct_word_count,
+        "total_word_count": word_count,
+        "challenge_failed": challenge_failed,
+        "completed": completed,
+    }
+
+
+@router.post("/assignments/{assignment_id}/preview/rearrangement-complete")
+async def preview_rearrangement_complete(
+    assignment_id: int,
+    request: dict,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：完成題目（不存儲）
+
+    - 不存入資料庫
+    - 供老師預覽示範用
+    """
+    from datetime import datetime
+
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 預覽模式直接返回成功
+    return {
+        "success": True,
+        "final_score": request.get("expected_score", 0),
+        "timeout": request.get("timeout", False),
+        "completed_at": datetime.now().isoformat(),
+    }
+
+
+@router.post("/assignments/{assignment_id}/preview/rearrangement-retry")
+async def preview_rearrangement_retry(
+    assignment_id: int,
+    request: dict,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：重新挑戰題目（不存儲）
+
+    - 不存入資料庫
+    - 供老師預覽示範用
+    """
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 預覽模式直接返回成功（前端會自行重置狀態）
+    return {
+        "success": True,
+        "retry_count": 1,
+        "message": "Progress reset. You can start again.",
     }
 
 

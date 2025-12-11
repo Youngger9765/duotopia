@@ -23,6 +23,11 @@ import { toast } from "sonner";
 import ReadingAssessmentTemplate from "@/components/activities/ReadingAssessmentTemplate";
 import ListeningClozeTemplate from "@/components/activities/ListeningClozeTemplate";
 import GroupedQuestionsTemplate from "@/components/activities/GroupedQuestionsTemplate";
+import SentenceMakingActivity from "@/components/activities/SentenceMakingActivity";
+import RearrangementActivity, {
+  type RearrangementQuestion,
+  type RearrangementQuestionState,
+} from "@/components/activities/RearrangementActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -143,7 +148,34 @@ interface StudentActivityPageContentProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit?: (data: { answers: any[] }) => Promise<void>;
   assignmentStatus?: string;
+  practiceMode?: string | null; // 例句重組/朗讀模式
+  showAnswer?: boolean; // 例句重組：答題結束後是否顯示正確答案
 }
+
+// =============================================================================
+// Content Type Compatibility Helpers
+// =============================================================================
+// 處理新舊 ContentType 的相容性：
+// - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+// - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+/**
+ * 檢查是否為「例句集」類型（包含新舊類型）
+ * 用於：朗讀練習、例句重組
+ */
+const isExampleSentencesType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalizedType);
+};
+
+/**
+ * 檢查是否為「單字集」類型（包含新舊類型）
+ * 用於：造句練習
+ */
+const isVocabularySetType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalizedType);
+};
 
 export default function StudentActivityPageContent({
   activities: initialActivities,
@@ -154,6 +186,8 @@ export default function StudentActivityPageContent({
   onBack,
   onSubmit,
   assignmentStatus = "",
+  practiceMode = null,
+  showAnswer = false,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
 
@@ -189,6 +223,15 @@ export default function StudentActivityPageContent({
   const pendingAnalysisRef = useRef<Map<string, Promise<void>>>(new Map());
   const failedItemsRef = useRef<Set<string>>(new Set());
 
+  // 例句重組導航狀態
+  const [rearrangementQuestions, setRearrangementQuestions] = useState<
+    RearrangementQuestion[]
+  >([]);
+  const [rearrangementQuestionStates, setRearrangementQuestionStates] =
+    useState<Map<number, RearrangementQuestionState>>(new Map());
+  const [rearrangementQuestionIndex, setRearrangementQuestionIndex] =
+    useState(0);
+
   // Read-only mode (for submitted/graded assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
   const isReadOnly =
@@ -211,7 +254,7 @@ export default function StudentActivityPageContent({
     const initialAnswers = new Map<number, Answer>();
     initialActivities.forEach((activity) => {
       let audioUrl: string | undefined = undefined;
-      if (activity.type === "reading_assessment" && activity.items?.[0]) {
+      if (isExampleSentencesType(activity.type) && activity.items?.[0]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         audioUrl = (activity.items[0] as any).recording_url || "";
       }
@@ -245,14 +288,12 @@ export default function StudentActivityPageContent({
   const cleanupRecording = () => {
     // 停止舊的 MediaRecorder
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      console.log("🧹 Stopping old MediaRecorder");
       mediaRecorder.stop();
     }
     setMediaRecorder(null);
 
     // 停止舊的 MediaStream
     if (streamRef.current) {
-      console.log("🧹 Stopping old MediaStream tracks");
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
@@ -319,21 +360,15 @@ export default function StudentActivityPageContent({
       const recorder = new MediaRecorder(stream, options);
       const chunks: Blob[] = [];
 
-      console.log(
-        `🎙️ MediaRecorder initialized with MIME type: ${recorder.mimeType} (platform: ${strategy.platformName})`,
-      );
-
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
           hasRecordedData.current = true;
-          console.log("✅ Audio data collected");
         }
       };
 
       recorder.onstop = async () => {
         const actualRecordingDuration = recordingTimeRef.current;
-        console.log("🎙️ 實際錄音時長:", actualRecordingDuration, "秒");
 
         await new Promise((resolve) => setTimeout(resolve, 800)); // 500→800ms
 
@@ -341,13 +376,6 @@ export default function StudentActivityPageContent({
           type: recorder.mimeType || "audio/webm",
         });
         const currentActivity = activities[currentActivityIndex];
-
-        console.log("🎤 Recording completed:", {
-          size: audioBlob.size,
-          type: audioBlob.type,
-          hasData: hasRecordedData.current,
-          chunksCount: chunks.length,
-        });
 
         // 🎯 使用統一驗證策略
         const strategy = strategyRef.current;
@@ -429,10 +457,6 @@ export default function StudentActivityPageContent({
             }
             return;
           }
-
-          console.log(
-            `✅ Recording validation passed (${validationResult.method}): ${validationResult.duration.toFixed(1)}s`,
-          );
 
           if (!isPreviewMode) {
             toast.success(t("studentActivityPage.recording.complete"), {
@@ -654,7 +678,6 @@ export default function StudentActivityPageContent({
       setRecordingTime(0);
       recordingTimeRef.current = 0;
       hasRecordedData.current = false;
-      console.log("🎙️ Recording started, waiting for audio data...");
 
       // Start recording timer with 45 second limit
       let hasReachedLimit = false;
@@ -755,12 +778,6 @@ export default function StudentActivityPageContent({
       );
       return;
     }
-
-    console.log("📁 File upload:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
 
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
@@ -1449,13 +1466,26 @@ export default function StudentActivityPageContent({
   };
 
   const getActivityTypeBadge = (type: string) => {
+    // 使用 helper functions 處理例句集和單字集類型
+    if (isExampleSentencesType(type)) {
+      return (
+        <Badge variant="outline">
+          {practiceMode === "rearrangement"
+            ? t("studentActivityPage.activityTypes.rearrangement")
+            : t("studentActivityPage.activityTypes.reading")}
+        </Badge>
+      );
+    }
+
+    if (isVocabularySetType(type)) {
+      return (
+        <Badge variant="outline">
+          {t("studentActivityPage.activityTypes.sentence")}
+        </Badge>
+      );
+    }
+
     switch (type) {
-      case "reading_assessment":
-        return (
-          <Badge variant="outline">
-            {t("studentActivityPage.activityTypes.reading")}
-          </Badge>
-        );
       case "listening_cloze":
         return (
           <Badge variant="outline">
@@ -1469,12 +1499,6 @@ export default function StudentActivityPageContent({
           </Badge>
         );
       case "speaking_scenario":
-        return (
-          <Badge variant="outline">
-            {t("studentActivityPage.activityTypes.speaking")}
-          </Badge>
-        );
-      case "sentence_making":
         return (
           <Badge variant="outline">
             {t("studentActivityPage.activityTypes.speaking")}
@@ -1524,7 +1548,17 @@ export default function StudentActivityPageContent({
   const renderActivityContent = (activity: Activity) => {
     const answer = answers.get(activity.id);
 
-    if (activity.items && activity.items.length > 0) {
+    // 單字集類型使用新的 SentenceMakingActivity 組件，不要進入舊的 GroupedQuestionsTemplate
+    // 例句集 + rearrangement 模式使用 RearrangementActivity，也不要進入 GroupedQuestionsTemplate
+    const isRearrangementMode =
+      isExampleSentencesType(activity.type) && practiceMode === "rearrangement";
+
+    if (
+      activity.items &&
+      activity.items.length > 0 &&
+      !isVocabularySetType(activity.type) &&
+      !isRearrangementMode
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const aiAssessments: Record<number, any> = {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1644,8 +1678,39 @@ export default function StudentActivityPageContent({
       );
     }
 
-    switch (activity.type) {
-      case "reading_assessment":
+    // 使用 helper functions 來處理類型判斷，避免 switch 遺漏新類型
+    // 例句集類型（包含 READING_ASSESSMENT 和 EXAMPLE_SENTENCES）
+    if (isExampleSentencesType(activity.type)) {
+      // 例句集：根據 practiceMode 決定使用哪種練習模式
+      if (practiceMode === "rearrangement") {
+        // 例句重組模式
+        return (
+          <RearrangementActivity
+            studentAssignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            showAnswer={showAnswer}
+            currentQuestionIndex={rearrangementQuestionIndex}
+            onQuestionIndexChange={setRearrangementQuestionIndex}
+            onQuestionsLoaded={(questions, states) => {
+              setRearrangementQuestions(questions);
+              setRearrangementQuestionStates(states);
+            }}
+            onQuestionStateChange={setRearrangementQuestionStates}
+            onComplete={(totalScore, totalQuestions) => {
+              toast.success(
+                t("rearrangement.messages.allComplete", {
+                  score: totalScore,
+                  total: totalQuestions * 100,
+                }),
+              );
+              if (onSubmit) {
+                onSubmit({ answers: [] });
+              }
+            }}
+          />
+        );
+      } else {
+        // 預設朗讀模式
         return (
           <ReadingAssessmentTemplate
             content={activity.content}
@@ -1655,9 +1720,32 @@ export default function StudentActivityPageContent({
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
             readOnly={isReadOnly}
+            timeLimit={activity.duration || 60}
+            onSkip={
+              currentActivityIndex < activities.length - 1
+                ? () => handleActivitySelect(currentActivityIndex + 1)
+                : undefined
+            }
           />
         );
+      }
+    }
 
+    // 單字集類型（包含 SENTENCE_MAKING 和 VOCABULARY_SET）
+    if (isVocabularySetType(activity.type)) {
+      // 造句練習：使用艾賓浩斯記憶曲線系統
+      return (
+        <SentenceMakingActivity
+          assignmentId={assignmentId}
+          onComplete={() => {
+            toast.success("作業已完成！");
+          }}
+        />
+      );
+    }
+
+    // 其他類型使用 switch 處理
+    switch (activity.type) {
       case "listening_cloze":
         return (
           <ListeningClozeTemplate
@@ -1696,6 +1784,13 @@ export default function StudentActivityPageContent({
         );
 
       default:
+        console.warn(
+          "⚠️ [StudentActivityPageContent] Unknown activity.type, falling back to ReadingAssessmentTemplate",
+        );
+        console.warn(
+          "⚠️ [StudentActivityPageContent] activity.type =",
+          activity.type,
+        );
         return (
           <ReadingAssessmentTemplate
             content={activity.content}
@@ -1704,6 +1799,12 @@ export default function StudentActivityPageContent({
             onRecordingComplete={handleRecordingComplete}
             progressId={activity.id}
             readOnly={isReadOnly}
+            timeLimit={activity.duration || 60}
+            onSkip={
+              currentActivityIndex < activities.length - 1
+                ? () => handleActivitySelect(currentActivityIndex + 1)
+                : undefined
+            }
           />
         );
     }
@@ -1817,133 +1918,181 @@ export default function StudentActivityPageContent({
 
           {/* Activity navigation */}
           <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {activities.map((activity, activityIndex) => {
-              const answer = answers.get(activity.id);
-              const isActiveActivity = activityIndex === currentActivityIndex;
+            {/* 例句重組模式：所有題目合併顯示，不分 activity */}
+            {practiceMode === "rearrangement" &&
+            rearrangementQuestions.length > 0 ? (
+              <div className="flex gap-0.5 sm:gap-1 flex-wrap">
+                {rearrangementQuestions.map((q, qIndex) => {
+                  const state = rearrangementQuestionStates.get(
+                    q.content_item_id,
+                  );
+                  const isActiveItem = rearrangementQuestionIndex === qIndex;
+                  const isCompleted = state?.completed;
+                  const isFailed = state?.challengeFailed;
 
-              if (activity.items && activity.items.length > 0) {
-                return (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
-                        {activity.title}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
-                      >
-                        {t("studentActivityPage.labels.itemCount", {
-                          count: activity.items.length,
-                        })}
-                      </Badge>
-                    </div>
+                  return (
+                    <button
+                      key={q.content_item_id}
+                      onClick={() => setRearrangementQuestionIndex(qIndex)}
+                      className={cn(
+                        "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                        "flex items-center justify-center text-sm sm:text-xs font-medium",
+                        "min-w-[32px] sm:min-w-[32px]",
+                        isCompleted
+                          ? "bg-green-100 text-green-800 border-green-400"
+                          : isFailed
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                        isActiveItem && "border-2 border-blue-600",
+                      )}
+                      title={
+                        isCompleted
+                          ? "已完成"
+                          : isFailed
+                            ? "挑戰失敗"
+                            : "未完成"
+                      }
+                    >
+                      {qIndex + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* 其他模式：保持原來的 activities.map 邏輯 */
+              activities.map((activity, activityIndex) => {
+                const answer = answers.get(activity.id);
+                const isActiveActivity = activityIndex === currentActivityIndex;
 
-                    <div className="flex gap-0.5 sm:gap-1">
-                      {activity.items.map((item, itemIndex) => {
-                        const isActiveItem =
-                          isActiveActivity &&
-                          currentSubQuestionIndex === itemIndex;
+                if (activity.items && activity.items.length > 0) {
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                          {activity.title}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
+                        >
+                          {t("studentActivityPage.labels.itemCount", {
+                            count: activity.items.length,
+                          })}
+                        </Badge>
+                      </div>
 
-                        const isCompleted =
-                          ("recording_url" in item && item.recording_url) ||
-                          activity.answers?.[itemIndex];
-                        const teacherFeedback =
-                          "teacher_feedback" in item
-                            ? item.teacher_feedback
-                            : undefined;
-                        const teacherPassed =
-                          "teacher_passed" in item
-                            ? item.teacher_passed
-                            : undefined;
+                      <div className="flex gap-0.5 sm:gap-1">
+                        {activity.items.map((item, itemIndex) => {
+                          const isActiveItem =
+                            isActiveActivity &&
+                            currentSubQuestionIndex === itemIndex;
 
-                        const hasTeacherGraded =
-                          teacherFeedback !== undefined &&
-                          teacherFeedback !== null;
-                        const isTeacherPassed =
-                          hasTeacherGraded && teacherPassed === true;
-                        const needsCorrection =
-                          hasTeacherGraded && teacherPassed === false;
+                          const isCompleted =
+                            ("recording_url" in item && item.recording_url) ||
+                            activity.answers?.[itemIndex];
+                          const teacherFeedback =
+                            "teacher_feedback" in item
+                              ? item.teacher_feedback
+                              : undefined;
+                          const teacherPassed =
+                            "teacher_passed" in item
+                              ? item.teacher_passed
+                              : undefined;
 
-                        return (
-                          <button
-                            key={itemIndex}
-                            onClick={() => {
-                              if (isAnalyzing) return; // 🔒 分析中禁止切換
-                              if (activityIndex !== currentActivityIndex) {
-                                // 切換 activity
-                                handleActivitySelect(activityIndex, itemIndex);
-                              } else {
-                                // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
-                                setCurrentSubQuestionIndex(itemIndex);
-                              }
-                            }}
-                            disabled={isAnalyzing} // 🔒 分析中禁用
-                            className={cn(
-                              "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
-                              "flex items-center justify-center text-sm sm:text-xs font-medium",
-                              "min-w-[32px] sm:min-w-[32px]",
-                              // 保持學生原本的完成狀態樣式
-                              isCompleted
-                                ? "bg-green-100 text-green-800 border-green-400"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
-                              isActiveItem && "border-2 border-blue-600",
-                            )}
-                            title={
-                              needsCorrection
-                                ? "老師要求訂正"
-                                : isTeacherPassed
-                                  ? "老師已通過"
-                                  : isCompleted
-                                    ? "已完成"
-                                    : "未完成"
-                            }
-                          >
-                            {itemIndex + 1}
-                            {/* 老師評分圖標 - 右上角圓點徽章 */}
-                            {hasTeacherGraded && (
-                              <span
-                                className={cn(
-                                  "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
-                                  teacherPassed ? "bg-green-500" : "bg-red-500",
-                                )}
-                                aria-label={
-                                  teacherPassed
-                                    ? t("studentActivityPage.feedback.passed")
-                                    : t("studentActivityPage.feedback.failed")
+                          const hasTeacherGraded =
+                            teacherFeedback !== undefined &&
+                            teacherFeedback !== null;
+                          const isTeacherPassed =
+                            hasTeacherGraded && teacherPassed === true;
+                          const needsCorrection =
+                            hasTeacherGraded && teacherPassed === false;
+
+                          return (
+                            <button
+                              key={itemIndex}
+                              onClick={() => {
+                                if (isAnalyzing) return; // 🔒 分析中禁止切換
+                                if (activityIndex !== currentActivityIndex) {
+                                  // 切換 activity
+                                  handleActivitySelect(
+                                    activityIndex,
+                                    itemIndex,
+                                  );
+                                } else {
+                                  // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
+                                  setCurrentSubQuestionIndex(itemIndex);
                                 }
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
+                              }}
+                              disabled={isAnalyzing} // 🔒 分析中禁用
+                              className={cn(
+                                "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                                "flex items-center justify-center text-sm sm:text-xs font-medium",
+                                "min-w-[32px] sm:min-w-[32px]",
+                                // 保持學生原本的完成狀態樣式
+                                isCompleted
+                                  ? "bg-green-100 text-green-800 border-green-400"
+                                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                isActiveItem && "border-2 border-blue-600",
+                              )}
+                              title={
+                                needsCorrection
+                                  ? "老師要求訂正"
+                                  : isTeacherPassed
+                                    ? "老師已通過"
+                                    : isCompleted
+                                      ? "已完成"
+                                      : "未完成"
+                              }
+                            >
+                              {itemIndex + 1}
+                              {/* 老師評分圖標 - 右上角圓點徽章 */}
+                              {hasTeacherGraded && (
+                                <span
+                                  className={cn(
+                                    "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
+                                    teacherPassed
+                                      ? "bg-green-500"
+                                      : "bg-red-500",
+                                  )}
+                                  aria-label={
+                                    teacherPassed
+                                      ? t("studentActivityPage.feedback.passed")
+                                      : t("studentActivityPage.feedback.failed")
+                                  }
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {activityIndex < activities.length - 1 && (
+                        <div className="w-px h-8 bg-gray-300 ml-2" />
+                      )}
                     </div>
+                  );
+                }
 
-                    {activityIndex < activities.length - 1 && (
-                      <div className="w-px h-8 bg-gray-300 ml-2" />
-                    )}
-                  </div>
+                return (
+                  <Button
+                    key={activity.id}
+                    variant={isActiveActivity ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleActivitySelect(activityIndex)}
+                    disabled={isAnalyzing} // 🔒 分析中禁用
+                    className="flex-shrink-0 h-8"
+                  >
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(activity, answer)}
+                      <span className="text-xs">{activity.title}</span>
+                    </div>
+                  </Button>
                 );
-              }
-
-              return (
-                <Button
-                  key={activity.id}
-                  variant={isActiveActivity ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleActivitySelect(activityIndex)}
-                  disabled={isAnalyzing} // 🔒 分析中禁用
-                  className="flex-shrink-0 h-8"
-                >
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(activity, answer)}
-                    <span className="text-xs">{activity.title}</span>
-                  </div>
-                </Button>
-              );
-            })}
+              })
+            )}
           </div>
 
           <Progress value={progress} className="h-1 mt-1" />
@@ -1977,7 +2126,7 @@ export default function StudentActivityPageContent({
                   currentActivity.items[currentSubQuestionIndex];
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isAssessed = !!(currentItem as any)?.ai_assessment;
-              } else if (currentActivity.type === "reading_assessment") {
+              } else if (isExampleSentencesType(currentActivity.type)) {
                 isAssessed = !!currentActivity.ai_scores;
               } else if (currentActivity.type === "listening_cloze") {
                 const answer = answers.get(currentActivity.id);
@@ -1990,16 +2139,90 @@ export default function StudentActivityPageContent({
                 return null;
               }
 
+              // 檢查是否為例句重組模式
+              const isRearrangementMode =
+                isExampleSentencesType(currentActivity.type) &&
+                practiceMode === "rearrangement" &&
+                rearrangementQuestions.length > 0;
+
+              // 例句重組模式：檢查是否有未完成的題目
+              let hasPrevUnanswered = false;
+              let hasNextUnanswered = false;
+
+              if (isRearrangementMode) {
+                // 檢查當前題目之前是否有未完成的
+                for (let i = 0; i < rearrangementQuestionIndex; i++) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    hasPrevUnanswered = true;
+                    break;
+                  }
+                }
+                // 檢查當前題目之後是否有未完成的
+                for (
+                  let i = rearrangementQuestionIndex + 1;
+                  i < rearrangementQuestions.length;
+                  i++
+                ) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    hasNextUnanswered = true;
+                    break;
+                  }
+                }
+              }
+
+              // 例句重組模式的上一題/下一題處理函數
+              const handleRearrangementPrev = () => {
+                // 從當前位置向前找第一個未完成的題目
+                for (let i = rearrangementQuestionIndex - 1; i >= 0; i--) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    setRearrangementQuestionIndex(i);
+                    return;
+                  }
+                }
+              };
+
+              const handleRearrangementNext = () => {
+                // 從當前位置向後找第一個未完成的題目
+                for (
+                  let i = rearrangementQuestionIndex + 1;
+                  i < rearrangementQuestions.length;
+                  i++
+                ) {
+                  const state = rearrangementQuestionStates.get(
+                    rearrangementQuestions[i].content_item_id,
+                  );
+                  if (state && !state.completed && !state.challengeFailed) {
+                    setRearrangementQuestionIndex(i);
+                    return;
+                  }
+                }
+              };
+
               return (
                 <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 pt-4 border-t border-gray-200">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handlePreviousActivity}
+                    onClick={
+                      isRearrangementMode
+                        ? handleRearrangementPrev
+                        : handlePreviousActivity
+                    }
                     disabled={
                       isAnalyzing || // 🔒 分析中禁用
-                      (currentActivityIndex === 0 &&
-                        currentSubQuestionIndex === 0)
+                      (isRearrangementMode
+                        ? !hasPrevUnanswered
+                        : currentActivityIndex === 0 &&
+                          currentSubQuestionIndex === 0)
                     }
                     className="flex-1 sm:flex-none min-w-0"
                   >
@@ -2048,8 +2271,15 @@ export default function StudentActivityPageContent({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleNextActivity}
-                        disabled={isAnalyzing} // 🔒 分析中禁用
+                        onClick={
+                          isRearrangementMode
+                            ? handleRearrangementNext
+                            : handleNextActivity
+                        }
+                        disabled={
+                          isAnalyzing || // 🔒 分析中禁用
+                          (isRearrangementMode ? !hasNextUnanswered : false)
+                        }
                         className="flex-1 sm:flex-none min-w-0"
                       >
                         <span className="hidden sm:inline">

@@ -222,6 +222,8 @@ async def get_template_program(
                         "text": item.text,
                         "translation": item.translation,
                         "audio_url": item.audio_url,
+                        "example_sentence": item.example_sentence,
+                        "example_sentence_translation": item.example_sentence_translation,
                     }
                     for item in content_items
                 ],

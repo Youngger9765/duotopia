@@ -1,6 +1,9 @@
 import { TreeNodeConfig } from "./RecursiveTreeAccordion";
 import { BookOpen, ListOrdered, FileText, Clock } from "lucide-react";
 
+// Content types to hide (Phase 2 - disabled)
+const HIDDEN_CONTENT_TYPES = ["sentence_making", "vocabulary_set"];
+
 // Content layer config (leaf nodes)
 const contentConfig: TreeNodeConfig = {
   icon: FileText,
@@ -20,6 +23,12 @@ const contentConfig: TreeNodeConfig = {
   canExpand: false, // Leaf node
   displayFields: [],
   emptyMessage: "暫無內容",
+  // Filter out sentence_making and vocabulary_set content types
+  // This filter is applied by the parent (lessonConfig) when rendering children
+  filterChildren: (content: { type?: string }) => {
+    const contentType = content.type?.toLowerCase();
+    return !contentType || !HIDDEN_CONTENT_TYPES.includes(contentType);
+  },
 };
 
 // Lesson layer config

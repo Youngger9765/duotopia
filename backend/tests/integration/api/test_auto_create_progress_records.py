@@ -107,7 +107,7 @@ def setup_test_data(db_session):
     db_session.add(lesson)
 
     # 創建內容
-    content = Content(id=27, lesson_id=1, title="單字", type="READING_ASSESSMENT")
+    content = Content(id=27, lesson_id=1, title="單字", type="EXAMPLE_SENTENCES")
     db_session.add(content)
 
     # 創建內容項目

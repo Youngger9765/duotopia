@@ -19,6 +19,7 @@ import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import SentenceMakingPanel from "@/components/SentenceMakingPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import BatchGradingModal from "@/components/BatchGradingModal";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
@@ -37,7 +38,7 @@ import {
   Trash2,
   Sparkles,
 } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Content,
@@ -135,6 +136,16 @@ export default function ClassroomDetail({
   const [showReadingEditor, setShowReadingEditor] = useState(false);
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
+
+  // Sentence Making Editor state
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+    useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+    number | null
+  >(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+    number | null
+  >(null);
 
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -373,8 +384,33 @@ export default function ClassroomDetail({
       return;
     }
 
-    // For reading_assessment type, use side panel for viewing/editing
-    if (content.type === "reading_assessment") {
+    // 統一轉成小寫比對
+    const contentType = content.type?.toLowerCase();
+
+    // For reading_assessment and example_sentences type, use side panel for viewing/editing
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (
+      contentType === "reading_assessment" ||
+      contentType === "example_sentences"
+    ) {
+      setSelectedContent(content);
+      setEditingContent({
+        id: content.id,
+        title: content.title,
+        items_count: content.items_count,
+        items: content.items || [],
+        lesson_id: content.lesson_id,
+        type: content.type,
+        estimated_time: content.estimated_time,
+        target_wpm: content.target_wpm,
+        target_accuracy: content.target_accuracy,
+        time_limit_seconds: content.time_limit_seconds,
+        programName: content.programName,
+        lessonName: content.lessonName,
+      });
+      setIsPanelOpen(true);
+    } else if (contentType === "sentence_making") {
+      // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -485,9 +521,23 @@ export default function ClassroomDetail({
       toast.success(t("classroomDetail.messages.contentUpdated"));
       await refreshPrograms();
       closePanel();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to update content:", error);
-      toast.error(t("classroomDetail.messages.updateContentFailed"));
+      // 解析 ApiError 的結構化錯誤訊息
+      if (error instanceof ApiError) {
+        const detail = error.detail;
+        const errorMessage =
+          typeof detail === "object" && detail?.message
+            ? detail.message
+            : typeof detail === "string"
+              ? detail
+              : null;
+        toast.error(
+          errorMessage || t("classroomDetail.messages.updateContentFailed"),
+        );
+      } else {
+        toast.error(t("classroomDetail.messages.updateContentFailed"));
+      }
     }
   };
 
@@ -882,11 +932,27 @@ export default function ClassroomDetail({
     programName: string;
     lessonName: string;
   }) => {
-    // For reading_assessment, use popup for new content creation
-    if (selection.type === "reading_assessment") {
+    // For reading_assessment and example_sentences, use popup for new content creation
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (
+      selection.type === "reading_assessment" ||
+      selection.type === "example_sentences" ||
+      selection.type === "EXAMPLE_SENTENCES"
+    ) {
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
+      setShowContentTypeDialog(false);
+    } else if (
+      selection.type === "SENTENCE_MAKING" ||
+      selection.type === "sentence_making" ||
+      selection.type === "vocabulary_set" ||
+      selection.type === "VOCABULARY_SET"
+    ) {
+      // For sentence_making/vocabulary_set, use popup for new content creation
+      setSentenceMakingLessonId(selection.lessonId);
+      setSentenceMakingContentId(null); // null for new content
+      setShowSentenceMakingEditor(true);
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -1410,23 +1476,29 @@ export default function ClassroomDetail({
                                       {typeInfo.label}
                                     </span>
                                   </div>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                    onClick={() => {
-                                      setBatchGradingModal({
-                                        open: true,
-                                        assignmentId: assignment.id,
-                                        classroomId: Number(id),
-                                      });
-                                    }}
-                                  >
-                                    <Sparkles className="w-5 h-5" />
-                                    <span className="text-sm font-medium">
-                                      {t("assignmentDetail.buttons.batchGrade")}
-                                    </span>
-                                  </Button>
+                                  {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕（提交後直接完成） */}
+                                  {assignment.practice_mode !==
+                                    "rearrangement" && (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                      onClick={() => {
+                                        setBatchGradingModal({
+                                          open: true,
+                                          assignmentId: assignment.id,
+                                          classroomId: Number(id),
+                                        });
+                                      }}
+                                    >
+                                      <Sparkles className="w-5 h-5" />
+                                      <span className="text-sm font-medium">
+                                        {t(
+                                          "assignmentDetail.buttons.batchGrade",
+                                        )}
+                                      </span>
+                                    </Button>
+                                  )}
                                 </div>
 
                                 {/* Description */}
@@ -1727,23 +1799,27 @@ export default function ClassroomDetail({
                                             "classroomDetail.buttons.previewDemo",
                                           )}
                                         </Button>
-                                        <Button
-                                          variant="default"
-                                          size="sm"
-                                          className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
-                                          onClick={() => {
-                                            setBatchGradingModal({
-                                              open: true,
-                                              assignmentId: assignment.id,
-                                              classroomId: Number(id),
-                                            });
-                                          }}
-                                        >
-                                          <Sparkles className="w-4 h-4 mr-1" />
-                                          {t(
-                                            "assignmentDetail.buttons.batchGrade",
-                                          )}
-                                        </Button>
+                                        {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕 */}
+                                        {assignment.practice_mode !==
+                                          "rearrangement" && (
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                            onClick={() => {
+                                              setBatchGradingModal({
+                                                open: true,
+                                                assignmentId: assignment.id,
+                                                classroomId: Number(id),
+                                              });
+                                            }}
+                                          >
+                                            <Sparkles className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "assignmentDetail.buttons.batchGrade",
+                                            )}
+                                          </Button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -1775,25 +1851,9 @@ export default function ClassroomDetail({
             <div className="h-full flex flex-col">
               {/* Panel Header */}
               <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                <div className="flex-1 mr-4">
-                  <h3 className="font-semibold text-sm text-gray-600 mb-2">
-                    {t("classroomDetail.labels.contentEditor")}
-                  </h3>
-                  <input
-                    type="text"
-                    value={editingContent?.title || selectedContent.title || ""}
-                    onChange={(e) => {
-                      if (editingContent) {
-                        setEditingContent({
-                          ...editingContent,
-                          title: e.target.value,
-                        });
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 border rounded-md text-lg font-medium"
-                    placeholder={t("classroomDetail.labels.enterTitle")}
-                  />
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("classroomDetail.labels.editContent")}
+                </h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1806,9 +1866,26 @@ export default function ClassroomDetail({
 
               {/* Panel Content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {selectedContent.type === "reading_assessment" ? (
+                {selectedContent.type?.toLowerCase() === "reading_assessment" ||
+                selectedContent.type?.toLowerCase() === "example_sentences" ? (
                   /* ReadingAssessmentPanel has its own save button */
+                  /* EXAMPLE_SENTENCES uses the same panel as READING_ASSESSMENT */
                   <ReadingAssessmentPanel
+                    content={selectedContent as ReadingAssessmentContent}
+                    editingContent={
+                      editingContent as ReadingAssessmentContent | undefined
+                    }
+                    onUpdateContent={(
+                      updatedContent: Record<string, unknown>,
+                    ) => {
+                      setEditingContent(updatedContent as unknown as Content);
+                    }}
+                    onSave={handleSaveContent}
+                  />
+                ) : selectedContent.type?.toLowerCase() === "sentence_making" ||
+                  selectedContent.type?.toLowerCase() === "vocabulary_set" ? (
+                  /* SentenceMakingPanel has its own save button */
+                  <SentenceMakingPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
                       editingContent as ReadingAssessmentContent | undefined
@@ -1973,24 +2050,27 @@ export default function ClassroomDetail({
                 )}
               </div>
 
-              {/* Panel Footer - Only show for non-reading_assessment types */}
-              {selectedContent.type !== "reading_assessment" && (
-                <div className="p-4 border-t bg-gray-50">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={closePanel}
-                    >
-                      {t("classroomDetail.buttons.cancel")}
-                    </Button>
-                    <Button className="flex-1" onClick={handleSaveContent}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {t("classroomDetail.buttons.saveChanges")}
-                    </Button>
+              {/* Panel Footer - Only show for types that don't have their own save button */}
+              {selectedContent.type?.toLowerCase() !== "reading_assessment" &&
+                selectedContent.type?.toLowerCase() !== "example_sentences" &&
+                selectedContent.type?.toLowerCase() !== "sentence_making" &&
+                selectedContent.type?.toLowerCase() !== "vocabulary_set" && (
+                  <div className="p-4 border-t bg-gray-50">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={closePanel}
+                      >
+                        {t("classroomDetail.buttons.cancel")}
+                      </Button>
+                      <Button className="flex-1" onClick={handleSaveContent}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {t("classroomDetail.buttons.saveChanges")}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
         </div>
@@ -2292,6 +2372,54 @@ export default function ClassroomDetail({
                   setEditorContentId(null);
                 }}
                 isCreating={!editorContentId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sentence Making Editor */}
+      {showSentenceMakingEditor && sentenceMakingLessonId && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">句子模組設定</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SentenceMakingPanel
+                content={undefined}
+                editingContent={{ id: sentenceMakingContentId ?? undefined }}
+                lessonId={sentenceMakingLessonId}
+                onUpdateContent={(updatedContent) => {
+                  // Handle content update if needed
+                  console.log("Content updated:", updatedContent);
+                }}
+                onSave={async () => {
+                  // SentenceMakingPanel handles save internally
+                  // Just close the editor on successful save
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                  await refreshPrograms();
+                  toast.success("內容已成功儲存");
+                }}
+                onCancel={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+                isCreating={!sentenceMakingContentId}
               />
             </div>
           </div>

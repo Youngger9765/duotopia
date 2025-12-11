@@ -154,7 +154,7 @@ def setup_test_environment(
     content = Content(
         lesson_id=lesson.id,
         title="Completeness Test Content",
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
     )
     shared_test_session.add(content)
     shared_test_session.commit()

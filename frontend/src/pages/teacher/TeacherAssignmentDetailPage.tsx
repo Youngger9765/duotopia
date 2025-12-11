@@ -119,7 +119,7 @@ interface ContentDetail {
     audio_url?: string;
     definition: string;
     english_definition?: string;
-    selectedLanguage?: "chinese" | "english";
+    selectedLanguage?: "chinese" | "japanese" | "korean";
     has_student_progress?: boolean;
   }>;
   type?: string;

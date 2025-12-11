@@ -39,6 +39,7 @@ import {
   X,
   Globe,
   School,
+  Settings,
 } from "lucide-react";
 import {
   DndContext,
@@ -68,12 +69,21 @@ interface Student {
   email?: string; // Make email optional to match global Student type
 }
 
+// ContentItem 包含 audio_url 資訊，用於驗證音檔是否存在
+interface ContentItemData {
+  id: number;
+  text: string;
+  translation?: string;
+  audio_url?: string | null;
+}
+
 interface Content {
   id: number;
   title: string;
   type: string;
   lesson_id: number;
   items_count?: number;
+  items?: ContentItemData[]; // 包含音檔資訊的項目列表
   level?: string;
 }
 
@@ -101,8 +111,33 @@ interface AssignmentDialogProps {
   onSuccess?: () => void;
 }
 
+// =============================================================================
+// Content Type Compatibility Helpers
+// =============================================================================
+// 處理新舊 ContentType 的相容性：
+// - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+// - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+const isExampleSentencesType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalizedType);
+};
+
+const isVocabularySetType = (type: string): boolean => {
+  const normalizedType = type?.toUpperCase();
+  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalizedType);
+};
+
 // Content type labels - using i18n
+// Map READING_ASSESSMENT and EXAMPLE_SENTENCES both to "例句集"
 const useContentTypeLabel = (type: string, t: (key: string) => string) => {
+  // Normalize type for display - both READING_ASSESSMENT and EXAMPLE_SENTENCES show as "例句集"
+  if (isExampleSentencesType(type)) {
+    return t(`dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES`);
+  }
+  if (isVocabularySetType(type)) {
+    return t(`dialogs.assignmentDialog.contentTypes.VOCABULARY_SET`);
+  }
   return t(`dialogs.assignmentDialog.contentTypes.${type}`) || type;
 };
 
@@ -122,6 +157,7 @@ interface CartItem {
   contentType: string;
   itemsCount?: number;
   order: number; // 用於排序
+  hasMissingAudio: boolean; // 是否有缺少音檔的項目
 }
 
 // 可拖曳的購物車項目組件
@@ -250,6 +286,12 @@ export function AssignmentDialog({
     assign_to_all: true,
     due_date: undefined as Date | undefined,
     start_date: undefined as Date | undefined,
+    // ===== 例句集作答模式設定 =====
+    practice_mode: "reading" as "reading" | "rearrangement", // 作答模式
+    time_limit_per_question: 40 as 10 | 20 | 30 | 40, // 每題時間限制
+    shuffle_questions: false, // 是否打亂順序
+    show_answer: false, // 答題結束後是否顯示正確答案（例句重組專用）
+    play_audio: false, // 是否播放音檔（例句重組專用）
   });
 
   useEffect(() => {
@@ -266,6 +308,11 @@ export function AssignmentDialog({
         assign_to_all: true,
         due_date: undefined,
         start_date: new Date(), // 預設為今天
+        practice_mode: "reading", // 預設為例句朗讀模式
+        time_limit_per_question: 40,
+        shuffle_questions: false,
+        show_answer: false,
+        play_audio: false,
       });
       setCurrentStep(1);
       setActiveTab("template");
@@ -454,7 +501,10 @@ export function AssignmentDialog({
         // 移除
         return prev.filter((item) => item.contentId !== contentId);
       } else {
-        // 添加
+        // 添加 - 檢查是否有缺少音檔的項目
+        const hasMissingAudio = content.items
+          ? content.items.some((item) => !item.audio_url)
+          : false;
         return [
           ...prev,
           {
@@ -465,6 +515,7 @@ export function AssignmentDialog({
             contentType: content.type,
             itemsCount: content.items_count,
             order: prev.length, // 順序為當前數量
+            hasMissingAudio,
           },
         ];
       }
@@ -505,7 +556,11 @@ export function AssignmentDialog({
   ) => {
     if (!lesson.contents) return;
 
-    const lessonContentIds = lesson.contents.map((c) => c.id);
+    // 過濾掉 VOCABULARY_SET 類型的內容
+    const filteredContents = lesson.contents.filter(
+      (c) => !isVocabularySetType(c.type),
+    );
+    const lessonContentIds = filteredContents.map((c) => c.id);
     const allSelected = lessonContentIds.every((id) =>
       cartItems.some((item) => item.contentId === id),
     );
@@ -522,8 +577,8 @@ export function AssignmentDialog({
       // 添加所有
       setCartItems((prev) => {
         const existingIds = new Set(prev.map((item) => item.contentId));
-        const newItems = lesson
-          .contents!.filter((content) => !existingIds.has(content.id))
+        const newItems = filteredContents
+          .filter((content) => !existingIds.has(content.id))
           .map((content, idx) => ({
             contentId: content.id,
             programName,
@@ -532,6 +587,9 @@ export function AssignmentDialog({
             contentType: content.type,
             itemsCount: content.items_count,
             order: prev.length + idx,
+            hasMissingAudio: content.items
+              ? content.items.some((item) => !item.audio_url)
+              : false,
           }));
         return [...prev, ...newItems];
       });
@@ -596,6 +654,19 @@ export function AssignmentDialog({
         .sort((a, b) => a.order - b.order)
         .map((item) => item.contentId);
 
+      // 根據練習模式和播放音檔設定決定 answer_mode
+      // - 例句朗讀 (reading) → speaking 模式
+      // - 例句重組 (rearrangement) + 播放音檔 → listening 模式
+      // - 例句重組 (rearrangement) + 不播放音檔 → writing 模式
+      let answerMode: "speaking" | "listening" | "writing";
+      if (formData.practice_mode === "reading") {
+        answerMode = "speaking";
+      } else if (formData.play_audio) {
+        answerMode = "listening";
+      } else {
+        answerMode = "writing";
+      }
+
       // Create one assignment with multiple contents (新架構)
       const payload = {
         title: formData.title,
@@ -609,6 +680,13 @@ export function AssignmentDialog({
         start_date: formData.start_date
           ? formData.start_date.toISOString()
           : undefined,
+        answer_mode: answerMode, // 根據練習模式決定
+        // ===== 例句集作答模式設定 =====
+        practice_mode: formData.practice_mode,
+        time_limit_per_question: formData.time_limit_per_question,
+        shuffle_questions: formData.shuffle_questions,
+        show_answer: formData.show_answer,
+        play_audio: formData.play_audio,
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -672,6 +750,11 @@ export function AssignmentDialog({
       assign_to_all: true,
       due_date: undefined,
       start_date: undefined,
+      practice_mode: "reading",
+      time_limit_per_question: 40,
+      shuffle_questions: false,
+      show_answer: false,
+      play_audio: false,
     });
     setCartItems([]);
     setExpandedPrograms(new Set());
@@ -686,12 +769,51 @@ export function AssignmentDialog({
       case 1:
         return cartItems.length > 0;
       case 2:
-        return formData.student_ids.length > 0;
+        return true; // 練習模式設定總是可以繼續
       case 3:
+        return formData.student_ids.length > 0;
+      case 4:
         return formData.title.trim().length > 0;
       default:
         return false;
     }
+  };
+
+  // 檢查是否需要音檔但有缺少音檔的內容
+  const checkAudioRequirement = (): boolean => {
+    // 判斷練習模式是否需要音檔
+    const needsAudio =
+      formData.practice_mode === "reading" || // 例句朗讀需要音檔
+      (formData.practice_mode === "rearrangement" && formData.play_audio); // 例句重組 + 播放音檔需要音檔
+
+    if (!needsAudio) {
+      return true; // 不需要音檔，直接通過
+    }
+
+    // 檢查是否有缺少音檔的內容
+    const hasContentWithMissingAudio = cartItems.some(
+      (item) => item.hasMissingAudio,
+    );
+
+    if (hasContentWithMissingAudio) {
+      toast.error(t("dialogs.assignmentDialog.errors.missingAudio"), {
+        description: t("dialogs.assignmentDialog.errors.missingAudioDesc"),
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  // 處理下一步按鈕點擊
+  const handleNextStep = () => {
+    // 從 step 2 移動到 step 3 時，檢查音檔需求
+    if (currentStep === 2) {
+      if (!checkAudioRequirement()) {
+        return; // 驗證失敗，不繼續
+      }
+    }
+    setCurrentStep(currentStep + 1);
   };
 
   const steps = [
@@ -702,11 +824,16 @@ export function AssignmentDialog({
     },
     {
       number: 2,
+      title: t("dialogs.assignmentDialog.steps.practiceMode"),
+      icon: Settings,
+    },
+    {
+      number: 3,
       title: t("dialogs.assignmentDialog.steps.selectStudents"),
       icon: Users,
     },
     {
-      number: 3,
+      number: 4,
       title: t("dialogs.assignmentDialog.steps.details"),
       icon: FileText,
     },
@@ -715,133 +842,188 @@ export function AssignmentDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl h-[92vh] flex flex-col p-0">
-        {/* Compact Header with Clear Steps */}
+        {/* Compact Header with Clear Steps - 響應式方案 C */}
         <div className="px-6 py-3 border-b bg-gray-50">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <DialogTitle className="text-lg font-semibold">
-                {t("dialogs.assignmentDialog.title")}
-              </DialogTitle>
-              {/* Quota display */}
-              {quotaInfo && (
-                <div className="mt-1 flex items-center gap-2 text-xs">
-                  <Gauge
-                    className={cn(
-                      "h-3 w-3",
-                      quotaInfo.quota_remaining <= 0
-                        ? "text-red-500"
-                        : "text-gray-500",
-                    )}
-                  />
-                  <span className="text-gray-600">
-                    {t("dialogs.assignmentDialog.quota.remainingColon")}
-                    <span
-                      className={cn(
-                        "font-semibold ml-1",
-                        quotaInfo.quota_remaining > 300
-                          ? "text-green-600"
-                          : quotaInfo.quota_remaining > 100
-                            ? "text-orange-600"
-                            : quotaInfo.quota_remaining > 0
-                              ? "text-red-600"
-                              : "text-red-700",
-                      )}
-                    >
-                      {quotaInfo.quota_remaining}
-                    </span>
-                    <span className="text-gray-500">
-                      {" "}
-                      / {quotaInfo.quota_total}{" "}
-                      {t("dialogs.assignmentDialog.quota.seconds")}
-                    </span>
-                  </span>
-                  {quotaInfo.quota_remaining <= 0 ? (
-                    <Badge
-                      variant="destructive"
-                      className="text-xs py-0 px-1.5 animate-pulse"
-                    >
-                      {t("dialogs.assignmentDialog.quota.exhausted")}
-                    </Badge>
-                  ) : (
-                    quotaInfo.quota_remaining <= 100 && (
-                      <Badge
-                        variant="destructive"
-                        className="text-xs py-0 px-1.5"
+          {/* 大螢幕 (≥1024px)：標題 + 步驟同一行 */}
+          {/* 小螢幕 (<1024px)：標題 → 配額 → 步驟 三行 */}
+
+          {/* 第一行：標題（小螢幕單獨一行，大螢幕與步驟同行） */}
+          <div className="flex items-center justify-between lg:mb-2">
+            <DialogTitle className="text-lg font-semibold">
+              {t("dialogs.assignmentDialog.title")}
+            </DialogTitle>
+
+            {/* 大螢幕：步驟顯示在標題右側（預留空間給 X 按鈕） */}
+            <div className="hidden lg:flex items-center gap-3 pr-8">
+              {steps.map((s, index) => {
+                const Icon = s.icon;
+                const isActive = s.number === currentStep;
+                const isCompleted = s.number < currentStep;
+
+                return (
+                  <React.Fragment key={s.number}>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all shrink-0",
+                          isActive && "bg-blue-600 text-white shadow-sm",
+                          isCompleted && "bg-green-500 text-white",
+                          !isActive &&
+                            !isCompleted &&
+                            "bg-gray-200 text-gray-500",
+                        )}
                       >
-                        {t("dialogs.assignmentDialog.quota.low")}
-                      </Badge>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Centered Step Indicator with Icons */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center gap-4">
-                {steps.map((s, index) => {
-                  const Icon = s.icon;
-                  const isActive = s.number === currentStep;
-                  const isCompleted = s.number < currentStep;
-
-                  return (
-                    <React.Fragment key={s.number}>
-                      <div className="flex items-center gap-2">
-                        <div
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <span className="text-sm">{s.number}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Icon
                           className={cn(
-                            "w-7 h-7 rounded-full flex items-center justify-center font-medium transition-all",
-                            isActive && "bg-blue-600 text-white shadow-sm",
-                            isCompleted && "bg-green-500 text-white",
-                            !isActive &&
-                              !isCompleted &&
-                              "bg-gray-200 text-gray-500",
+                            "h-4 w-4 shrink-0",
+                            isActive && "text-blue-600",
+                            isCompleted && "text-green-600",
+                            !isActive && !isCompleted && "text-gray-400",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-sm whitespace-nowrap",
+                            isActive && "text-gray-900 font-semibold",
+                            isCompleted && "text-green-700 font-medium",
+                            !isActive && !isCompleted && "text-gray-500",
                           )}
                         >
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <span className="text-sm">{s.number}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Icon
-                            className={cn(
-                              "h-4 w-4",
-                              isActive && "text-blue-600",
-                              isCompleted && "text-green-600",
-                              !isActive && !isCompleted && "text-gray-400",
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              "text-sm",
-                              isActive && "text-gray-900 font-semibold",
-                              isCompleted && "text-green-700 font-medium",
-                              !isActive && !isCompleted && "text-gray-500",
-                            )}
-                          >
-                            {s.title}
-                          </span>
-                        </div>
+                          {s.title}
+                        </span>
                       </div>
-                      {index < steps.length - 1 && (
-                        <ChevronRight className="h-4 w-4 text-gray-300" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 第二行：配額（大螢幕顯示，小螢幕也在這裡顯示） */}
+          {quotaInfo && (
+            <div className="flex items-center gap-2 text-xs mt-2 lg:mt-0">
+              <Gauge
+                className={cn(
+                  "h-3 w-3",
+                  quotaInfo.quota_remaining <= 0
+                    ? "text-red-500"
+                    : "text-gray-500",
+                )}
+              />
+              <span className="text-gray-600">
+                {t("dialogs.assignmentDialog.quota.remainingColon")}
+                <span
+                  className={cn(
+                    "font-semibold ml-1",
+                    quotaInfo.quota_remaining > 300
+                      ? "text-green-600"
+                      : quotaInfo.quota_remaining > 100
+                        ? "text-orange-600"
+                        : quotaInfo.quota_remaining > 0
+                          ? "text-red-600"
+                          : "text-red-700",
+                  )}
+                >
+                  {quotaInfo.quota_remaining}
+                </span>
+                <span className="text-gray-500">
+                  {" "}
+                  / {quotaInfo.quota_total}{" "}
+                  {t("dialogs.assignmentDialog.quota.seconds")}
+                </span>
+              </span>
+              {quotaInfo.quota_remaining <= 0 ? (
+                <Badge
+                  variant="destructive"
+                  className="text-xs py-0 px-1.5 animate-pulse"
+                >
+                  {t("dialogs.assignmentDialog.quota.exhausted")}
+                </Badge>
+              ) : (
+                quotaInfo.quota_remaining <= 100 && (
+                  <Badge variant="destructive" className="text-xs py-0 px-1.5">
+                    {t("dialogs.assignmentDialog.quota.low")}
+                  </Badge>
+                )
+              )}
+            </div>
+          )}
+
+          {/* 第三行：步驟（僅小螢幕顯示，置中，超小螢幕換行） */}
+          <div className="flex lg:hidden items-center justify-center mt-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:gap-x-3">
+              {steps.map((s, index) => {
+                const Icon = s.icon;
+                const isActive = s.number === currentStep;
+                const isCompleted = s.number < currentStep;
+
+                return (
+                  <React.Fragment key={s.number}>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-medium transition-all shrink-0",
+                          isActive && "bg-blue-600 text-white shadow-sm",
+                          isCompleted && "bg-green-500 text-white",
+                          !isActive &&
+                            !isCompleted &&
+                            "bg-gray-200 text-gray-500",
+                        )}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        ) : (
+                          <span className="text-xs sm:text-sm">{s.number}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Icon
+                          className={cn(
+                            "h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 hidden sm:block",
+                            isActive && "text-blue-600",
+                            isCompleted && "text-green-600",
+                            !isActive && !isCompleted && "text-gray-400",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-xs sm:text-sm whitespace-nowrap",
+                            isActive && "text-gray-900 font-semibold",
+                            isCompleted && "text-green-700 font-medium",
+                            !isActive && !isCompleted && "text-gray-500",
+                          )}
+                        >
+                          {s.title}
+                        </span>
+                      </div>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-300 shrink-0" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Content Area - Maximized Height */}
-        <div className="flex-1 overflow-hidden px-6 py-3">
+        {/* Content Area - Maximized Height with Scroll */}
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-3">
           {/* Step 1: Select Contents */}
           {currentStep === 1 && (
-            <div className="h-full flex gap-4">
-              {/* 左側：課程列表 (70%) */}
-              <div className="flex-1 flex flex-col">
+            <div className="h-full flex flex-col sm:flex-row gap-4 overflow-auto sm:overflow-hidden">
+              {/* 課程列表 - 小螢幕最小高度 400px，大螢幕 70% */}
+              <div className="flex-1 flex flex-col min-h-[400px] sm:min-h-0">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
                     {t("dialogs.assignmentDialog.selectContent.description")}
@@ -854,7 +1036,7 @@ export function AssignmentDialog({
                   onValueChange={(v) =>
                     setActiveTab(v as "template" | "classroom")
                   }
-                  className="flex-1 flex flex-col"
+                  className="flex-1 flex flex-col min-h-0"
                 >
                   <TabsList className="grid w-full grid-cols-2 mb-2">
                     <TabsTrigger
@@ -876,7 +1058,7 @@ export function AssignmentDialog({
                   {/* 公版課程 Tab */}
                   <TabsContent
                     value="template"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden min-h-0"
                   >
                     <ScrollArea className="h-full border rounded-lg p-3">
                       {loadingTemplates ? (
@@ -1000,7 +1182,10 @@ export function AssignmentDialog({
                                               </span>
                                             )}
                                             {lesson.contents &&
-                                              lesson.contents.length > 0 &&
+                                              lesson.contents.filter(
+                                                (c) =>
+                                                  !isVocabularySetType(c.type),
+                                              ).length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1013,12 +1198,20 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents.every((c) =>
-                                                    cartItems.some(
-                                                      (item) =>
-                                                        item.contentId === c.id,
-                                                    ),
-                                                  )
+                                                  {lesson.contents
+                                                    .filter(
+                                                      (c) =>
+                                                        !isVocabularySetType(
+                                                          c.type,
+                                                        ),
+                                                    )
+                                                    .every((c) =>
+                                                      cartItems.some(
+                                                        (item) =>
+                                                          item.contentId ===
+                                                          c.id,
+                                                      ),
+                                                    )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1033,8 +1226,14 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents.map(
-                                                (content) => {
+                                              {lesson.contents
+                                                .filter(
+                                                  (c) =>
+                                                    !isVocabularySetType(
+                                                      c.type,
+                                                    ),
+                                                )
+                                                .map((content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
@@ -1091,8 +1290,7 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                },
-                                              )}
+                                                })}
                                             </div>
                                           )}
                                       </div>
@@ -1109,7 +1307,7 @@ export function AssignmentDialog({
                   {/* 班級課程 Tab */}
                   <TabsContent
                     value="classroom"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden min-h-0"
                   >
                     <ScrollArea className="h-full border rounded-lg p-3">
                       {loadingClassroomPrograms ? (
@@ -1206,7 +1404,10 @@ export function AssignmentDialog({
                                               )}
                                             </span>
                                             {lesson.contents &&
-                                              lesson.contents.length > 0 &&
+                                              lesson.contents.filter(
+                                                (c) =>
+                                                  !isVocabularySetType(c.type),
+                                              ).length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1219,12 +1420,20 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents.every((c) =>
-                                                    cartItems.some(
-                                                      (item) =>
-                                                        item.contentId === c.id,
-                                                    ),
-                                                  )
+                                                  {lesson.contents
+                                                    .filter(
+                                                      (c) =>
+                                                        !isVocabularySetType(
+                                                          c.type,
+                                                        ),
+                                                    )
+                                                    .every((c) =>
+                                                      cartItems.some(
+                                                        (item) =>
+                                                          item.contentId ===
+                                                          c.id,
+                                                      ),
+                                                    )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1239,8 +1448,14 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents.map(
-                                                (content) => {
+                                              {lesson.contents
+                                                .filter(
+                                                  (c) =>
+                                                    !isVocabularySetType(
+                                                      c.type,
+                                                    ),
+                                                )
+                                                .map((content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
@@ -1297,8 +1512,7 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                },
-                                              )}
+                                                })}
                                             </div>
                                           )}
                                       </div>
@@ -1314,8 +1528,8 @@ export function AssignmentDialog({
                 </Tabs>
               </div>
 
-              {/* 右側：購物車 (30%) */}
-              <div className="w-[30%] flex flex-col border rounded-lg bg-gray-50">
+              {/* 購物車 - 小螢幕動態高度（隨內容增加），大螢幕在右側 30% */}
+              <div className="w-full sm:w-[30%] sm:h-full flex-shrink-0 flex flex-col border rounded-lg bg-gray-50">
                 <div className="p-3 border-b bg-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -1329,7 +1543,7 @@ export function AssignmentDialog({
                   </Badge>
                 </div>
 
-                <ScrollArea className="flex-1 p-3">
+                <ScrollArea className="flex-1 p-3 max-h-[50vh] sm:max-h-none">
                   {cartItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-8">
                       <ShoppingCart className="h-12 w-12 text-gray-300 mb-3" />
@@ -1369,8 +1583,259 @@ export function AssignmentDialog({
             </div>
           )}
 
-          {/* Step 2: Select Students */}
+          {/* Step 2: Practice Mode Settings */}
           {currentStep === 2 && (
+            <div className="h-full flex flex-col">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  {t("dialogs.assignmentDialog.practiceMode.description")}
+                </p>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full">
+                {/* 作答模式選擇 */}
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          practice_mode: "reading",
+                        }))
+                      }
+                      className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                        formData.practice_mode === "reading"
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <span className="text-4xl">🎙️</span>
+                        <div className="text-center">
+                          <div className="font-semibold text-lg">
+                            {t("dialogs.assignmentDialog.practiceMode.reading")}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.readingDesc",
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          practice_mode: "rearrangement",
+                        }))
+                      }
+                      className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                        formData.practice_mode === "rearrangement"
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <span className="text-4xl">🔀</span>
+                        <div className="text-center">
+                          <div className="font-semibold text-lg">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.rearrangement",
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.rearrangementDesc",
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* 細節設定 */}
+                  <Card className="p-4 border-gray-200">
+                    <h4 className="text-sm font-medium mb-3 text-gray-700">
+                      {t(
+                        "dialogs.assignmentDialog.practiceMode.advancedSettings",
+                      )}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 時間限制 */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-gray-600">
+                          {t("dialogs.assignmentDialog.practiceMode.timeLimit")}
+                        </Label>
+                        <select
+                          value={formData.time_limit_per_question}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              time_limit_per_question: Number(
+                                e.target.value,
+                              ) as 10 | 20 | 30 | 40,
+                            }))
+                          }
+                          className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
+                        >
+                          <option value={10}>
+                            10{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={20}>
+                            20{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={30}>
+                            30{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
+                          </option>
+                          <option value={40}>
+                            40{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}{" "}
+                            (
+                            {t("dialogs.assignmentDialog.practiceMode.default")}
+                            )
+                          </option>
+                        </select>
+                      </div>
+
+                      {/* 打亂順序 */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-gray-600">
+                          {t(
+                            "dialogs.assignmentDialog.practiceMode.shuffleQuestions",
+                          )}
+                        </Label>
+                        <div className="flex items-center h-9">
+                          <input
+                            type="checkbox"
+                            checked={formData.shuffle_questions}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                shuffle_questions: e.target.checked,
+                              }))
+                            }
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="ml-2 text-sm text-gray-600">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc",
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 例句重組專用選項 - 顯示答案 */}
+                      {formData.practice_mode === "rearrangement" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-gray-600">
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.showAnswer",
+                            )}
+                          </Label>
+                          <div className="flex items-center h-9">
+                            <input
+                              type="checkbox"
+                              checked={formData.show_answer}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  show_answer: e.target.checked,
+                                }))
+                              }
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="ml-2 text-sm text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.showAnswerDesc",
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 例句重組專用選項 - 播放音檔 */}
+                    {formData.practice_mode === "rearrangement" && (
+                      <div className="mt-4 pt-4 border-t">
+                        <Label className="text-xs text-gray-600 mb-2 block">
+                          {t("dialogs.assignmentDialog.practiceMode.playAudio")}
+                        </Label>
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                play_audio: true,
+                              }))
+                            }
+                            className={`flex-1 p-3 rounded-lg border text-sm ${
+                              formData.play_audio
+                                ? "border-blue-500 bg-blue-50 text-blue-700"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            🔊{" "}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.playAudioYes",
+                            )}
+                            <span className="block text-xs text-gray-500 mt-0.5">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.scoreListening",
+                              )}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                play_audio: false,
+                              }))
+                            }
+                            className={`flex-1 p-3 rounded-lg border text-sm ${
+                              !formData.play_audio
+                                ? "border-blue-500 bg-blue-50 text-blue-700"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            🔇{" "}
+                            {t(
+                              "dialogs.assignmentDialog.practiceMode.playAudioNo",
+                            )}
+                            <span className="block text-xs text-gray-500 mt-0.5">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.scoreWriting",
+                              )}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 例句朗讀模式提示 */}
+                    {formData.practice_mode === "reading" && (
+                      <div className="mt-4 pt-4 border-t text-sm text-gray-500 bg-gray-50 p-3 rounded">
+                        ℹ️{" "}
+                        {t(
+                          "dialogs.assignmentDialog.practiceMode.scoreSpeaking",
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Select Students */}
+          {currentStep === 3 && (
             <div className="h-full flex flex-col">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
@@ -1509,8 +1974,8 @@ export function AssignmentDialog({
             </div>
           )}
 
-          {/* Step 3: Assignment Details */}
-          {currentStep === 3 && (
+          {/* Step 4: Assignment Details */}
+          {currentStep === 4 && (
             <div className="h-full flex flex-col">
               <div className="mb-2">
                 <p className="text-sm text-gray-600">
@@ -1651,6 +2116,15 @@ export function AssignmentDialog({
                               )}
                         </span>
                       </div>
+                      {cartItems.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-3 w-3 text-blue-600" />
+                          <span className="text-gray-700">作業類型：</span>
+                          <span className="font-medium text-blue-900">
+                            {useContentTypeLabel(cartItems[0].contentType, t)}
+                          </span>
+                        </div>
+                      )}
                       {formData.due_date && (
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3 text-blue-600" />
@@ -1675,6 +2149,7 @@ export function AssignmentDialog({
         {/* Footer with Navigation */}
         <DialogFooter className="px-6 py-3 border-t">
           <div className="flex items-center justify-between w-full">
+            {/* 左側：返回按鈕 */}
             <Button
               variant="outline"
               onClick={
@@ -1694,12 +2169,10 @@ export function AssignmentDialog({
               )}
             </Button>
 
+            {/* 右側：下一步/建立按鈕 */}
             <div className="flex items-center gap-2">
-              {currentStep < 3 ? (
-                <Button
-                  onClick={() => setCurrentStep(currentStep + 1)}
-                  disabled={!canProceed()}
-                >
+              {currentStep < 4 ? (
+                <Button onClick={handleNextStep} disabled={!canProceed()}>
                   {t("dialogs.assignmentDialog.buttons.next")}
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>

@@ -33,9 +33,20 @@ class TTSService:
             # 不立即拋出錯誤，允許延遲檢查（用於開發環境）
             pass
 
-        # GCS 設定
+        # 儲存設定：GCS 或本地檔案系統
+        self.use_gcs = os.getenv("USE_GCS_STORAGE", "false").lower() == "true"
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
         self.storage_client = None
+
+        # Backend URL（用於生成完整的音檔 URL）
+        self.backend_url = os.getenv("BACKEND_URL", "").rstrip("/")
+
+        # 本地儲存目錄（當不使用 GCS 時）
+        self.local_audio_dir = os.path.join(
+            os.path.dirname(__file__), "..", "static", "tts"
+        )
+        if not self.use_gcs:
+            os.makedirs(self.local_audio_dir, exist_ok=True)
 
     def _get_storage_client(self):
         """延遲初始化 GCS client（使用與 audio_upload.py 相同的認證邏輯）"""
@@ -171,10 +182,11 @@ class TTSService:
 
                 # 檢查結果
                 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                    # 上傳到 GCS
-                    client = self._get_storage_client()
-                    bucket = client.bucket(self.bucket_name)
-                    blob = bucket.blob(f"tts/{filename}")
+                    if self.use_gcs:
+                        # 上傳到 GCS
+                        client = self._get_storage_client()
+                        bucket = client.bucket(self.bucket_name)
+                        blob = bucket.blob(f"tts/{filename}")
 
                     blob.upload_from_filename(tmp_file_path)
 

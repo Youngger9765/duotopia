@@ -15,10 +15,17 @@ const DEBUG = false; // 暫時關閉以便追蹤其他問題
 export class ApiError extends Error {
   constructor(
     public status: number,
-    public detail: string,
+    public detail: string | { message?: string; errors?: string[] },
     public originalError?: unknown,
   ) {
-    super(detail);
+    // Extract message for Error base class
+    const message =
+      typeof detail === "object" && detail?.message
+        ? detail.message
+        : typeof detail === "string"
+          ? detail
+          : "Unknown error";
+    super(message);
     this.name = "ApiError";
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
@@ -179,10 +186,10 @@ class ApiClient {
           });
         }
 
-        // Extract detail message
+        // Extract detail - preserve structured error objects
         const detail =
           typeof error === "object" && error !== null && "detail" in error
-            ? String(error.detail)
+            ? error.detail
             : `HTTP ${response.status} Error`;
 
         // Throw ApiError instead of generic Error
@@ -745,10 +752,55 @@ class ApiClient {
     });
   }
 
+  // 翻譯並辨識詞性
+  async translateWithPos(
+    text: string,
+    targetLang: string = "zh-TW",
+  ): Promise<{
+    original: string;
+    translation: string;
+    parts_of_speech: string[];
+  }> {
+    return this.request("/api/teachers/translate-with-pos", {
+      method: "POST",
+      body: JSON.stringify({ text, target_lang: targetLang }),
+    });
+  }
+
   async batchTranslate(texts: string[], targetLang: string = "zh-TW") {
     return this.request("/api/teachers/translate/batch", {
       method: "POST",
       body: JSON.stringify({ texts, target_lang: targetLang }),
+    });
+  }
+
+  // 批次翻譯並辨識詞性
+  async batchTranslateWithPos(
+    texts: string[],
+    targetLang: string = "zh-TW",
+  ): Promise<{
+    originals: string[];
+    results: Array<{ translation: string; parts_of_speech: string[] }>;
+  }> {
+    return this.request("/api/teachers/translate-with-pos/batch", {
+      method: "POST",
+      body: JSON.stringify({ texts, target_lang: targetLang }),
+    });
+  }
+
+  // AI 生成例句
+  async generateSentences(params: {
+    words: string[];
+    level?: string;
+    prompt?: string;
+    translate_to?: string;
+    parts_of_speech?: string[][];
+  }): Promise<{
+    sentences: Array<{ sentence: string; translation?: string }>;
+  }> {
+    return this.request("/api/teachers/generate-sentences", {
+      method: "POST",
+      body: JSON.stringify(params),
     });
   }
 

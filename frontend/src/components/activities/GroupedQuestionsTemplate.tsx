@@ -31,6 +31,10 @@ interface Question {
   teacher_review_score?: number;
   teacher_reviewed_at?: string;
   review_status?: string;
+  // Phase 1: Example sentence fields
+  example_sentence?: string;
+  example_sentence_translation?: string;
+  example_sentence_definition?: string;
   [key: string]: unknown;
 }
 
@@ -378,8 +382,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       questionAudioRef.current = audio;
 
       // 播放音檔
-      audio.play().catch((err) => {
-        console.log(t("groupedQuestionsTemplate.messages.autoplayFailed"), err);
+      audio.play().catch(() => {
+        // 瀏覽器自動播放政策阻擋，需要用戶互動
       });
     }
 
@@ -478,13 +482,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
             return await uploadResponse.json();
           },
-          (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.uploadRetrying", {
-                attempt,
-              }),
-              error,
-            );
+          (attempt) => {
             toast.warning(
               t("groupedQuestionsTemplate.messages.uploadRetrying", {
                 attempt,
@@ -566,11 +564,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
             // 預覽 API 返回格式：{ success: true, preview_mode: true, assessment: {...} }
             return data.assessment;
           },
-          (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-              error,
-            );
+          (attempt) => {
             toast.warning(
               t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
             );
@@ -582,13 +576,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         if (!currentProgressId) {
           currentProgressId = (progressId as number) || 1;
         }
-
-        console.log("🔍 AI評估使用 progress_id:", {
-          currentQuestionIndex,
-          progressIds,
-          progressId,
-          currentProgressId,
-        });
 
         formData.append("progress_id", String(currentProgressId));
         formData.append("item_index", String(currentQuestionIndex));
@@ -622,55 +609,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
             return await assessResponse.json();
           },
-          (attempt, error) => {
-            console.log(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-              error,
-            );
+          (attempt) => {
             toast.warning(
               t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-            );
-          },
-        );
-      }
-
-      // 🔍 詳細記錄AI評估結果
-      console.log("🎯 AI評估完整回應:", JSON.stringify(result, null, 2));
-      console.log("🔍 詳細分析 - detailed_words:", result.detailed_words);
-      console.log("🔍 basic word_details:", result.word_details);
-      console.log(
-        "🔍 有detailed_words嗎?",
-        !!(result.detailed_words && result.detailed_words.length > 0),
-      );
-
-      if (result.detailed_words && result.detailed_words.length > 0) {
-        result.detailed_words.forEach(
-          (
-            word: {
-              word: string;
-              syllables?: Array<{
-                index: number;
-                syllable: string;
-                accuracy_score: number;
-              }>;
-              phonemes?: Array<{
-                index: number;
-                phoneme: string;
-                accuracy_score: number;
-              }>;
-            },
-            idx: number,
-          ) => {
-            console.log(`🔍 Word ${idx}:`, word.word);
-            console.log(
-              `   - syllables:`,
-              word.syllables?.length || 0,
-              word.syllables,
-            );
-            console.log(
-              `   - phonemes:`,
-              word.phonemes?.length || 0,
-              word.phonemes,
             );
           },
         );

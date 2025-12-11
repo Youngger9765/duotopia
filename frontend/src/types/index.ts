@@ -55,6 +55,9 @@ export interface ContentItem {
   question?: string;
   answer?: string;
   options?: string[];
+  // Example sentence fields
+  example_sentence?: string;
+  example_sentence_translation?: string;
 }
 
 export interface Content {
@@ -148,6 +151,8 @@ export interface Assignment {
   };
   // Score property for graded assignments
   score?: number;
+  // 🆕 練習模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+  practice_mode?: "reading" | "rearrangement";
 }
 
 // ============ Student Assignment Types ============
