@@ -158,6 +158,13 @@ class TTSService:
             )
             speech_config.speech_synthesis_voice_name = voice
 
+            # ⏱️ 設定 TTS 連線超時（Issue #92 優化）
+            # 連線超時：10 秒（比預設的 30 秒快 3 倍）
+            speech_config.set_property(
+                speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
+                "10000",  # 10 seconds
+            )
+
             # 生成唯一檔名
             file_id = str(uuid.uuid4())
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

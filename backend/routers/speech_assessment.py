@@ -199,6 +199,21 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         # 🔥 設定語言為美式英語以支援韻律評估
         speech_config.speech_recognition_language = "en-US"
 
+        # ⏱️ 設定連線與識別超時（Issue #92 優化）
+        # 連線超時：10 秒（比預設的 30 秒快 3 倍）
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
+            "10000",  # 10 seconds
+        )
+        # 識別結束超時：2 秒（加快識別完成判斷）
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,
+            "2000",  # 2 seconds
+        )
+        logger.info(
+            "✅ Azure Speech SDK timeout configured: connection=10s, end_silence=2s"
+        )
+
         # 設定發音評估 - 啟用韻律評估
         pronunciation_config = speechsdk.PronunciationAssessmentConfig(
             reference_text=reference_text,
