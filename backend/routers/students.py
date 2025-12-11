@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
@@ -440,8 +440,14 @@ async def get_assignment_activities(
             )
 
         # 優化：批次查詢所有 content，避免 N+1 問題
+        # 🔥 Issue #90: 使用 eager loading 一次性載入 content_items
         content_ids = [progress.content_id for progress in progress_records]
-        contents = db.query(Content).filter(Content.id.in_(content_ids)).all()
+        contents = (
+            db.query(Content)
+            .options(selectinload(Content.content_items))
+            .filter(Content.id.in_(content_ids))
+            .all()
+        )
         content_dict = {content.id: content for content in contents}
 
         # 🔥 優化：預先批次查詢所有 ContentItems 和 StudentItemProgress

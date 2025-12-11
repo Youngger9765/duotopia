@@ -1535,9 +1535,14 @@ async def get_assignment_detail(
     )
 
     # 優化：批次查詢所有 content，避免 N+1 問題
+    # 🔥 Issue #90: 使用 eager loading 一次性載入 content_items，避免 N+1 查詢
     content_ids = [ac.content_id for ac in assignment_contents]
     content_dict = {
-        c.id: c for c in db.query(Content).filter(Content.id.in_(content_ids)).all()
+        c.id: c
+        for c in db.query(Content)
+        .options(selectinload(Content.content_items))
+        .filter(Content.id.in_(content_ids))
+        .all()
     }
 
     contents = []
