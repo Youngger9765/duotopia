@@ -1354,7 +1354,11 @@ class UserWordProgress(Base):
         ),
         Index("idx_user_word_progress_student", "student_id", "student_assignment_id"),
         Index("idx_user_word_progress_memory", "memory_strength"),
-        Index("idx_user_word_progress_next_review", "student_assignment_id", "next_review_at"),
+        Index(
+            "idx_user_word_progress_next_review",
+            "student_assignment_id",
+            "next_review_at",
+        ),
     )
 
     def __repr__(self):
