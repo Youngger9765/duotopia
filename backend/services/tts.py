@@ -5,11 +5,16 @@ Text-to-Speech service using Azure Speech Service (Official Microsoft TTS)
 import asyncio
 import tempfile
 import os
-from typing import Optional  # noqa: F401
+import hashlib
+import logging
+from typing import Optional, Dict  # noqa: F401
+from functools import lru_cache
 from google.cloud import storage
 import uuid
 from datetime import datetime  # noqa: F401
 import azure.cognitiveservices.speech as speechsdk
+
+logger = logging.getLogger(__name__)
 
 
 class TTSService:
@@ -36,6 +41,10 @@ class TTSService:
         # GCS 設定
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
         self.storage_client = None
+
+        # Cache statistics
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def _get_storage_client(self):
         """延遲初始化 GCS client（使用與 audio_upload.py 相同的認證邏輯）"""
@@ -114,6 +123,38 @@ class TTSService:
         except (ValueError, AttributeError):
             return "1.0"
 
+    def _generate_cache_key(
+        self, text: str, voice: str, rate: str, volume: str
+    ) -> str:
+        """
+        Generate a unique cache key for TTS parameters
+        Uses hash of text + voice + rate + volume to create deterministic filename
+        """
+        cache_input = f"{text}|{voice}|{rate}|{volume}"
+        hash_object = hashlib.md5(cache_input.encode("utf-8"))
+        return hash_object.hexdigest()
+
+    def _get_cached_audio_url(self, cache_key: str) -> Optional[str]:
+        """
+        Check if audio file exists in GCS for given cache key
+        Returns GCS URL if exists, None otherwise
+        """
+        try:
+            client = self._get_storage_client()
+            bucket = client.bucket(self.bucket_name)
+            blob_name = f"tts/cached_{cache_key}.mp3"
+            blob = bucket.blob(blob_name)
+
+            if blob.exists():
+                logger.debug(f"Cache HIT: Found cached audio for key {cache_key}")
+                return f"https://storage.googleapis.com/{self.bucket_name}/{blob_name}"
+            else:
+                logger.debug(f"Cache MISS: No cached audio for key {cache_key}")
+                return None
+        except Exception as e:
+            logger.warning(f"Error checking cache: {e}")
+            return None
+
     async def generate_tts(
         self,
         text: str,
@@ -123,6 +164,7 @@ class TTSService:
     ) -> str:
         """
         生成 TTS 音檔並上傳到 GCS (使用 Azure Speech Service)
+        Implements caching to reduce API costs and improve performance
 
         Args:
             text: 要轉換的文字
@@ -134,6 +176,26 @@ class TTSService:
             音檔 GCS URL
         """
         try:
+            # Generate cache key
+            cache_key = self._generate_cache_key(text, voice, rate, volume)
+
+            # Check if audio already exists in GCS
+            cached_url = self._get_cached_audio_url(cache_key)
+            if cached_url:
+                self._cache_hits += 1
+                logger.info(
+                    f"TTS cache HIT for '{text[:30]}...' (voice={voice}, rate={rate}). "
+                    f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
+                )
+                return cached_url
+
+            # Cache miss - generate new audio
+            self._cache_misses += 1
+            logger.info(
+                f"TTS cache MISS for '{text[:30]}...' (voice={voice}, rate={rate}). "
+                f"Generating new audio. Total hits: {self._cache_hits}, misses: {self._cache_misses}"
+            )
+
             # 檢查 Azure Speech 配置
             if not self.azure_speech_key:
                 raise ValueError(
@@ -147,10 +209,8 @@ class TTSService:
             )
             speech_config.speech_synthesis_voice_name = voice
 
-            # 生成唯一檔名
-            file_id = str(uuid.uuid4())
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"tts_{timestamp}_{file_id}.mp3"
+            # Use cache key as filename for deterministic naming
+            filename = f"cached_{cache_key}.mp3"
 
             # 創建臨時檔案（在 with 區塊外保持打開）
             tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
@@ -298,6 +358,33 @@ class TTSService:
         filtered_voices = [v for v in all_voices if v["locale"].startswith(language)]
 
         return filtered_voices
+
+    def get_cache_stats(self) -> Dict[str, any]:
+        """
+        Get cache statistics for monitoring
+
+        Returns:
+            Dictionary with cache hit/miss rates and other metrics
+        """
+        total_calls = self._cache_hits + self._cache_misses
+        hit_rate = (self._cache_hits / total_calls * 100) if total_calls > 0 else 0
+
+        return {
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "total_calls": total_calls,
+            "hit_rate_percent": round(hit_rate, 2),
+            "estimated_api_calls_saved": self._cache_hits,
+            "estimated_cost_savings_usd": round(
+                self._cache_hits * 0.016, 2
+            ),  # Azure TTS ~$16/1M chars, avg ~1000 chars
+        }
+
+    def clear_cache(self):
+        """Clear the cache statistics (GCS files remain for persistence)"""
+        self._cache_hits = 0
+        self._cache_misses = 0
+        logger.info("TTS cache statistics cleared")
 
 
 # 單例模式
