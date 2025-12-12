@@ -20,6 +20,7 @@ import {
   Square,
   RefreshCw,
   Clipboard,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient, ApiError } from "@/lib/api";
@@ -1082,6 +1083,13 @@ export default function ReadingAssessmentPanel({
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 🔥 標記是否為初始載入
+  const [isBatchGeneratingTTS, setIsBatchGeneratingTTS] = useState(false); // 批次生成 TTS 中
+  const [isBatchGeneratingTranslation, setIsBatchGeneratingTranslation] =
+    useState(false); // 批次生成翻譯中
+
+  // 計算是否有批次操作正在進行
+  const isBatchProcessing =
+    isBatchGeneratingTTS || isBatchGeneratingTranslation;
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1471,17 +1479,18 @@ export default function ReadingAssessmentPanel({
   };
 
   const handleBatchGenerateTTS = async () => {
+    // 收集需要生成 TTS 的文字
+    const textsToGenerate = rows
+      .filter((row) => row.text && !row.audioUrl)
+      .map((row) => row.text);
+
+    if (textsToGenerate.length === 0) {
+      toast.info("所有項目都已有音檔");
+      return;
+    }
+
+    setIsBatchGeneratingTTS(true);
     try {
-      // 收集需要生成 TTS 的文字
-      const textsToGenerate = rows
-        .filter((row) => row.text && !row.audioUrl)
-        .map((row) => row.text);
-
-      if (textsToGenerate.length === 0) {
-        toast.info("所有項目都已有音檔");
-        return;
-      }
-
       toast.info(`正在生成 ${textsToGenerate.length} 個音檔...`);
 
       // 批次生成 TTS
@@ -1586,6 +1595,8 @@ export default function ReadingAssessmentPanel({
     } catch (error) {
       console.error("Batch TTS generation failed:", error);
       toast.error("批次生成失敗，請重試");
+    } finally {
+      setIsBatchGeneratingTTS(false);
     }
   };
 
@@ -1650,6 +1661,7 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
+    setIsBatchGeneratingTranslation(true);
     toast.info(`開始批次生成翻譯...`);
     const newRows = [...rows];
 
@@ -1709,6 +1721,8 @@ export default function ReadingAssessmentPanel({
     } catch (error) {
       console.error("Batch translation error:", error);
       toast.error("批次翻譯失敗，請稍後再試");
+    } finally {
+      setIsBatchGeneratingTranslation(false);
     }
   };
 
@@ -1911,7 +1925,8 @@ export default function ReadingAssessmentPanel({
             variant="outline"
             size="sm"
             onClick={() => setBatchPasteDialogOpen(true)}
-            className="bg-blue-100 hover:bg-blue-200 border-blue-300"
+            disabled={isBatchProcessing}
+            className="bg-blue-100 hover:bg-blue-200 border-blue-300 disabled:opacity-50"
             title="批次貼上素材，每行一個項目"
           >
             <Clipboard className="h-4 w-4 mr-1" />
@@ -1921,21 +1936,31 @@ export default function ReadingAssessmentPanel({
             variant="outline"
             size="sm"
             onClick={handleBatchGenerateTTS}
-            className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
+            disabled={isBatchProcessing}
+            className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300 disabled:opacity-50"
             title="使用免費的 Microsoft Edge TTS 生成語音"
           >
-            <Volume2 className="h-4 w-4 mr-1" />
-            批次生成TTS
+            {isBatchGeneratingTTS ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Volume2 className="h-4 w-4 mr-1" />
+            )}
+            {isBatchGeneratingTTS ? "生成中..." : "批次生成TTS"}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleBatchGenerateDefinitions()}
-            className="bg-green-100 hover:bg-green-200 border-green-300"
+            disabled={isBatchProcessing}
+            className="bg-green-100 hover:bg-green-200 border-green-300 disabled:opacity-50"
             title="批次生成翻譯（根據各行語言設定）"
           >
-            <Globe className="h-4 w-4 mr-1" />
-            批次生成翻譯
+            {isBatchGeneratingTranslation ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Globe className="h-4 w-4 mr-1" />
+            )}
+            {isBatchGeneratingTranslation ? "翻譯中..." : "批次生成翻譯"}
           </Button>
         </div>
       </div>
@@ -1987,6 +2012,127 @@ export default function ReadingAssessmentPanel({
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Footer with Save Button */}
+      {onSave && (
+        <div className="flex-shrink-0 pt-4 mt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3">
+            <Button
+              size="lg"
+              disabled={isBatchProcessing}
+              className="px-8 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={async () => {
+                // 過濾掉空白項目
+                const validRows = rows.filter(
+                  (row) => row.text && row.text.trim(),
+                );
+
+                if (validRows.length === 0) {
+                  toast.error("請至少新增一個內容項目");
+                  return;
+                }
+
+                if (!title || title.trim() === "") {
+                  toast.error("請輸入標題");
+                  return;
+                }
+
+                // 準備要儲存的資料
+                const saveData = {
+                  title: title,
+                  items: validRows.map((row) => ({
+                    text: row.text.trim(),
+                    definition: row.definition || "",
+                    english_definition: row.translation || "",
+                    translation: row.definition || "",
+                    selectedLanguage: row.selectedLanguage || "chinese",
+                    audio_url: row.audioUrl || row.audio_url || "",
+                  })),
+                  target_wpm: 60,
+                  target_accuracy: 0.8,
+                  time_limit_seconds: 180,
+                };
+
+                console.log("Saving data:", saveData);
+
+                const existingContentId = editingContent?.id || content?.id;
+
+                if (existingContentId) {
+                  // 編輯模式：更新現有內容
+                  try {
+                    await apiClient.updateContent(existingContentId, saveData);
+                    toast.success("儲存成功");
+                    if (onSave) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      await (onSave as (content?: any) => void | Promise<void>)(
+                        {
+                          id: existingContentId,
+                          title: saveData.title,
+                          items: saveData.items,
+                        },
+                      );
+                    }
+                  } catch (error: unknown) {
+                    console.error("Failed to update content:", error);
+                    // 解析 ApiError 的結構化錯誤訊息
+                    if (error instanceof ApiError) {
+                      const detail = error.detail;
+                      const errorMessage =
+                        typeof detail === "object" && detail?.message
+                          ? detail.message
+                          : typeof detail === "string"
+                            ? detail
+                            : null;
+                      toast.error(errorMessage || "儲存失敗");
+                    } else {
+                      toast.error("儲存失敗");
+                    }
+                  }
+                } else if (isCreating && lessonId) {
+                  // 創建模式：新增內容
+                  try {
+                    const newContent = await apiClient.createContent(lessonId, {
+                      type: "EXAMPLE_SENTENCES",
+                      ...saveData,
+                    });
+                    toast.success("內容已成功創建");
+                    if (onSave) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      await (onSave as (content?: any) => void | Promise<void>)(
+                        newContent,
+                      );
+                    }
+                  } catch (error: unknown) {
+                    console.error("Failed to create content:", error);
+                    // 解析 ApiError 的結構化錯誤訊息
+                    if (error instanceof ApiError) {
+                      const detail = error.detail;
+                      const errorMessage =
+                        typeof detail === "object" && detail?.message
+                          ? detail.message
+                          : typeof detail === "string"
+                            ? detail
+                            : null;
+                      toast.error(errorMessage || "創建內容失敗");
+                    } else {
+                      toast.error("創建內容失敗");
+                    }
+                  }
+                }
+              }}
+            >
+              {isBatchProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  處理中...
+                </>
+              ) : (
+                "儲存"
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* TTS Modal */}
       {selectedRow && (
@@ -2076,115 +2222,6 @@ export default function ReadingAssessmentPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Save Button */}
-      {onSave && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-            onClick={async () => {
-              // 過濾掉空白項目
-              const validRows = rows.filter(
-                (row) => row.text && row.text.trim(),
-              );
-
-              if (validRows.length === 0) {
-                toast.error("請至少新增一個內容項目");
-                return;
-              }
-
-              if (!title || title.trim() === "") {
-                toast.error("請輸入標題");
-                return;
-              }
-
-              // 準備要儲存的資料
-              const saveData = {
-                title: title,
-                items: validRows.map((row) => ({
-                  text: row.text.trim(),
-                  definition: row.definition || "",
-                  english_definition: row.translation || "",
-                  translation: row.definition || "",
-                  selectedLanguage: row.selectedLanguage || "chinese",
-                  audio_url: row.audioUrl || row.audio_url || "",
-                })),
-                target_wpm: 60,
-                target_accuracy: 0.8,
-                time_limit_seconds: 180,
-              };
-
-              console.log("Saving data:", saveData);
-
-              const existingContentId = editingContent?.id || content?.id;
-
-              if (existingContentId) {
-                // 編輯模式：更新現有內容
-                try {
-                  await apiClient.updateContent(existingContentId, saveData);
-                  toast.success("儲存成功");
-                  if (onSave) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)({
-                      id: existingContentId,
-                      title: saveData.title,
-                      items: saveData.items,
-                    });
-                  }
-                } catch (error: unknown) {
-                  console.error("Failed to update content:", error);
-                  // 解析 ApiError 的結構化錯誤訊息
-                  if (error instanceof ApiError) {
-                    const detail = error.detail;
-                    const errorMessage =
-                      typeof detail === "object" && detail?.message
-                        ? detail.message
-                        : typeof detail === "string"
-                          ? detail
-                          : null;
-                    toast.error(errorMessage || "儲存失敗");
-                  } else {
-                    toast.error("儲存失敗");
-                  }
-                }
-              } else if (isCreating && lessonId) {
-                // 創建模式：新增內容
-                try {
-                  const newContent = await apiClient.createContent(lessonId, {
-                    type: "EXAMPLE_SENTENCES",
-                    ...saveData,
-                  });
-                  toast.success("內容已成功創建");
-                  if (onSave) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)(
-                      newContent,
-                    );
-                  }
-                } catch (error: unknown) {
-                  console.error("Failed to create content:", error);
-                  // 解析 ApiError 的結構化錯誤訊息
-                  if (error instanceof ApiError) {
-                    const detail = error.detail;
-                    const errorMessage =
-                      typeof detail === "object" && detail?.message
-                        ? detail.message
-                        : typeof detail === "string"
-                          ? detail
-                          : null;
-                    toast.error(errorMessage || "創建內容失敗");
-                  } else {
-                    toast.error("創建內容失敗");
-                  }
-                }
-              }
-            }}
-          >
-            儲存
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
