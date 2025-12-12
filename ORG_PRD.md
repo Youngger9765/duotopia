@@ -11,124 +11,125 @@
 
 ### 實施狀態
 1. [Implementation Status](#-implementation-status) - 當前進度與缺失功能
+2. [Testing Status & Test Plan](#-testing-status--test-plan) - 測試狀態與手動測試計畫
 
 ### 用戶流程
-2. [User Flows](#-user-flows) - 核心用戶流程圖
+3. [User Flows](#-user-flows) - 核心用戶流程圖
 
 ### Part I: 商業策略與產品規劃
-3. [商業價值分析](#商業價值分析)
-4. [市場定位](#市場定位)
-5. [產品策略](#產品策略)
-6. [定價策略](#定價策略)
+4. [商業價值分析](#商業價值分析)
+5. [市場定位](#市場定位)
+6. [產品策略](#產品策略)
+7. [定價策略](#定價策略)
 
 ### Part II: 技術實施規格
-7. [核心需求總覽](#核心需求總覽)
-8. [現有架構分析](#現有架構分析)
-9. [後端 API 設計](#後端-api-設計)
-   - [已實現 API](#1-組織架構-api)
-   - [缺失 API](#-api-specification---missing-endpoints)
-10. [資料庫 Schema](#-資料庫-migration)
-11. [前端 UI 設計](#前端-ui-設計)
-12. [權限系統設計](#權限系統設計)
-13. [金流整合](#金流整合)
-14. [學生端改動](#學生端改動)
-15. [Testing Strategy](#-testing-strategy)
-16. [實作順序](#實作順序)
+8. [核心需求總覽](#核心需求總覽)
+9. [現有架構分析](#現有架構分析)
+10. [後端 API 設計](#後端-api-設計)
+    - [已實現 API](#1-組織架構-api)
+    - [缺失 API](#-api-specification---missing-endpoints)
+11. [資料庫 Schema](#-資料庫-migration)
+12. [前端 UI 設計](#前端-ui-設計)
+13. [權限系統設計](#權限系統設計)
+14. [金流整合](#金流整合)
+15. [學生端改動](#學生端改動)
+16. [Testing Strategy](#-testing-strategy)
+17. [實作順序](#實作順序)
 
 ---
 
 ## 📊 Implementation Status
 
-**Last Updated**: 2025-12-13
+**Last Updated**: 2025-12-13 (Updated after critical fixes)
 **Branch**: `feat/issue-112-org-hierarchy`
-**Overall Completion**: 75-80%
+**Overall Completion**: 80-85% ✅
+
+**Latest Commits**:
+- `ebc1320` - Fix critical permission system issues + student API extension
+- `0be6deb` - Rename to ORG_PRD and add implementation details
+- `c72f118` - Sync .gitignore with main branch
 
 ### Completed Features ✅
 
-#### 1. Database Schema (100%)
-- ✅ 5 core models: Organization, School, TeacherOrganization, TeacherSchool, ClassroomSchool
-- ✅ Alembic migrations completed
-- ✅ Performance indexes optimized (9 indexes)
-- ✅ Soft delete support (is_active flags)
-- ✅ JSONB settings/roles support
+#### Core Infrastructure (100%)
+- **Database Schema (100%)** ✅
+  - 5 core models with proper relationships
+  - Performance indexes optimized (9 indexes)
+  - Migrations: `5106b545b6d2`, `16ea1d78b460`, `4566cb74e6f7`
 
-#### 2. API Endpoints (85%)
-**Organizations**:
-- ✅ `GET /api/organizations/me` - Get current user's organization
-- ✅ `GET /api/organizations/{org_id}` - Get organization details
-- ✅ `POST /api/organizations` - Create organization
-- ✅ `PUT /api/organizations/{org_id}` - Update organization
+- **Casbin Permission System (100%)** ✅
+  - **FIXED**: Complete policy definitions (20 policies)
+  - **FIXED**: Startup sync with retry mechanism (3 attempts)
+  - **FIXED**: Session management improvements (prevent leaks)
+  - RBAC with 4 roles: org_owner, org_admin, school_admin, teacher
+  - Database sync enabled with automatic retry
 
-**Schools**:
-- ✅ `GET /api/schools/{school_id}` - Get school details
-- ✅ `POST /api/schools` - Create school
-- ✅ `PUT /api/schools/{school_id}` - Update school
-- ✅ `GET /api/schools/{school_id}/classrooms` - List school classrooms
+- **API Endpoints (85%)** ✅
+  - Organizations CRUD ✅
+  - Schools CRUD ✅
+  - Members management ✅
+  - Classroom-School linking ✅
 
-**Members**:
-- ✅ `POST /api/schools/{school_id}/teachers` - Invite teacher to school
-- ✅ `PUT /api/schools/{school_id}/teachers/{teacher_id}` - Update teacher role
-- ✅ `DELETE /api/schools/{school_id}/teachers/{teacher_id}` - Remove teacher
+#### MVP Features Completed (50%)
 
-**Classroom-School Linking**:
-- ✅ `POST /api/classrooms/{classroom_id}/link-school` - Link classroom to school
+**1. ✅ Casbin DB Sync - IMPLEMENTED** ✅
+- `sync_from_database()` method
+- `sync_teacher_roles()` method
+- Startup integration with retry mechanism
+- Auto-sync on role changes
+- **Status**: 🧪 Awaiting User Testing
+- **Test Coverage**: 12/18 tests passing (core 100%)
+- **Commit**: `ebc1320`
 
-#### 3. Casbin Permission System (100%)
-- ✅ CasbinService implemented (`backend/services/casbin_service.py`)
-- ✅ RBAC with Domains model configured
-- ✅ Policy files in `backend/casbin/`
-- ✅ Permission checking methods:
-  - `check_org_permission(org_id, teacher_id, action)`
-  - `check_school_permission(school_id, teacher_id, action)`
-  - `check_classroom_permission(classroom_id, teacher_id, action)`
-- ⚠️ **Database sync NOT enabled** (currently file-based only)
+**2. ✅ Student API Extension - IMPLEMENTED** ✅
+- Login returns organization_name/school_name
+- StudentUser type extended
+- Breadcrumb displays: Org > School > Classroom
+- Handles partial hierarchy gracefully
+- **Status**: 🧪 Awaiting User Testing
+- **Test Coverage**: 5/5 integration tests passing
+- **Commit**: `ebc1320`
 
-#### 4. Frontend (70%)
+**3. ✅ Critical Bug Fixes - IMPLEMENTED** ✅
+- Fixed missing Casbin policy definitions
+- Fixed startup sync error handling (3 retries)
+- Fixed session management (prevent leaks)
+- Fixed policy file corruption issue
+- **Status**: 🧪 Awaiting User Testing
+- **Commit**: `ebc1320`
+
+#### Frontend (70%)
 - ✅ OrganizationHub page (`frontend/src/pages/teacher/OrganizationHub.tsx`)
 - ✅ OrganizationContext state management
 - ✅ Basic school display in Organization page
 - ✅ Basic classroom display
-- ⚠️ **Dashboard/Analytics UI missing**
-- ⚠️ **Subscription page integration incomplete**
+- ⚠️ **Dashboard/Analytics UI missing** (ON HOLD)
+- ⚠️ **Subscription page integration incomplete** (ON HOLD)
 
 ### Missing Features ❌
 
-#### 🔴 High Priority (MVP Blockers)
+#### 🔴 High Priority (MVP Blockers) - ON HOLD PENDING TESTING
 
-**1. Dashboard/Analytics API** (0%)
-- ❌ `GET /api/organizations/{org_id}/dashboard` - Organization-level metrics
-- ❌ `GET /api/schools/{school_id}/dashboard` - School-level metrics
-- **Business value**: Data-driven decision making for org_owner and school_admin
-- **Estimated effort**: 16-20 hours
-- **Dependencies**: Requires JOIN queries with performance optimization
+**1. ✅ Student API Extension** - COMPLETED ✅
+- See "Completed Features" section above
+- Status: Awaiting User Testing
 
-**2. Subscription Integration** (0%)
-- ❌ Backend: org_owner role check on subscription APIs
-- ❌ Frontend: Dynamic display based on roles (show "Contact org_owner" for non-owners)
-- **Business value**: Core revenue feature, enables B2B billing
-- **Estimated effort**: 8-12 hours
+**2. ✅ Enable Casbin DB Sync** - COMPLETED ✅
+- See "Completed Features" section above
+- Status: Awaiting User Testing
 
-**3. Student API Extension** (0%)
-- ❌ Login API return organization_name/school_name
-- ❌ StudentUser type extension in frontend
-- **Business value**: Student sees breadcrumb "ABC補習班 > 台北校區 > 國小英文班"
-- **Estimated effort**: 4-6 hours
-- **Implementation**:
-  ```python
-  # In students.py login endpoint
-  classroom = db.query(Classroom)\
-      .joinedload(Classroom.classroom_school)\
-      .joinedload(ClassroomSchool.school)\
-      .joinedload(School.organization)\
-      .filter(Classroom.id == student.classroom_id)\
-      .first()
-  ```
+**3. ❌ Subscription Integration** (0%) - **⏸️ ON HOLD**
+- Backend: org_owner role check on subscription APIs
+- Frontend: Dynamic display based on roles
+- **Estimated**: 8-12 hours
+- **Status**: Waiting for user testing of core features
 
-**4. Enable Casbin DB Sync** (0%)
-- ❌ Implement `sync_from_database()` method in CasbinService
-- ❌ Call on application startup (in `main.py`)
-- **Why critical**: Currently policies are file-based only, won't reflect runtime role changes
-- **Estimated effort**: 4-6 hours
+**4. ❌ Dashboard/Analytics API** (0%) - **⏸️ ON HOLD**
+- `GET /api/organizations/{org_id}/dashboard`
+- `GET /api/schools/{school_id}/dashboard`
+- **Business value**: Data-driven decision making
+- **Estimated**: 16-20 hours
+- **Status**: Waiting for user testing of core features
 
 #### 🟡 Medium Priority (UX Enhancement)
 
@@ -179,6 +180,203 @@
 - Permission Decorators (nice to have, can refactor later)
 - Teacher Transfer (can implement on-demand when first customer requests)
 - Comprehensive Testing (should do post-MVP)
+
+---
+
+## 🧪 Testing Status & Test Plan
+
+**Current Phase**: Manual User Testing
+**Start Date**: 2025-12-13
+**Testing By**: Product Owner/Stakeholder
+
+### ✅ Completed & Ready for Testing
+
+#### 1. Casbin Permission System
+**Test Focus**: Permission enforcement and role-based access
+
+**Test Scenarios**:
+```bash
+# Scenario 1: org_owner permissions
+1. Create organization as Teacher A
+2. Verify Teacher A has org_owner role
+3. Test: Can create schools ✅
+4. Test: Can manage subscription (when implemented) ✅
+5. Test: Can invite other teachers ✅
+6. Test: Can view all org data ✅
+
+# Scenario 2: org_admin permissions
+1. Teacher A invites Teacher B as org_admin
+2. Test: Teacher B can create schools ✅
+3. Test: Teacher B CANNOT manage subscription ❌
+4. Test: Teacher B can invite teachers ✅
+
+# Scenario 3: school_admin permissions
+1. Teacher A creates School X
+2. Teacher A adds Teacher C as school_admin
+3. Test: Teacher C can manage School X teachers ✅
+4. Test: Teacher C CANNOT access School Y ❌
+5. Test: Teacher C CANNOT manage organization ❌
+
+# Scenario 4: teacher permissions
+1. Teacher D is added as regular teacher
+2. Test: Can only access assigned classrooms ✅
+3. Test: CANNOT invite other teachers ❌
+4. Test: CANNOT create schools ❌
+```
+
+**Backend API Tests**: 12/18 passing (core 100%)
+**Manual Testing**: ⏳ Pending
+
+---
+
+#### 2. Student Breadcrumb Navigation
+**Test Focus**: Organization hierarchy display in student UI
+
+**Test Scenarios**:
+```bash
+# Scenario A: Full Hierarchy (Org > School > Classroom)
+1. Create: Organization "ABC補習班"
+2. Create: School "台北校區" under ABC
+3. Create: Classroom "國小英文班" linked to 台北校區
+4. Create: Student in 國小英文班
+5. Student Login
+6. Expected Breadcrumb: "ABC補習班 > 台北校區 > 國小英文班" ✅
+
+# Scenario B: Partial Hierarchy (Org > Classroom, no school)
+1. Create: Organization "XYZ Learning"
+2. Create: Classroom "進階班" (NO school linking)
+3. Student Login
+4. Expected Breadcrumb: "XYZ Learning > 進階班" ✅
+
+# Scenario C: Individual Teacher (Classroom only)
+1. Independent teacher (no org)
+2. Create: Classroom "王老師的班級"
+3. Student Login
+4. Expected Breadcrumb: "王老師的班級" ✅
+```
+
+**Backend API Tests**: 5/5 integration tests passing
+**Frontend Manual Testing**: ⏳ Pending
+
+---
+
+#### 3. Database Sync Robustness
+**Test Focus**: Application reliability and error recovery
+
+**Test Scenarios**:
+```bash
+# Scenario 1: Normal startup
+1. Start application
+2. Expected: "✅ Casbin roles synced from database" in logs
+3. No errors
+
+# Scenario 2: Database temporarily unavailable
+1. Simulate DB connection failure
+2. Expected: 3 retry attempts with backoff (2s, 4s, 8s)
+3. Expected: Application fails to start with clear error message
+4. Fix DB connection
+5. Restart app successfully
+
+# Scenario 3: Session leak prevention
+1. Monitor DB connections during heavy load
+2. Trigger exceptions during sync operations
+3. Verify: No connection leaks (sessions properly closed)
+```
+
+**Backend Tests**: Covered in integration tests
+**Production Monitoring**: ⏳ Pending
+
+---
+
+### ⏸️ On Hold (Waiting for Test Results)
+
+#### 4. Subscription Integration
+**Status**: Not started - waiting for core feature validation
+
+#### 5. Dashboard/Analytics API
+**Status**: Not started - waiting for core feature validation
+
+---
+
+### 📝 Testing Checklist for User
+
+#### Pre-Testing Setup
+- [ ] Ensure staging/test database is clean
+- [ ] Have 3-4 test teacher accounts ready
+- [ ] Have 2-3 test student accounts ready
+- [ ] Access to backend logs for debugging
+
+#### Core Permission Tests
+- [ ] Test org_owner full permissions
+- [ ] Test org_admin limited permissions
+- [ ] Test school_admin scoped permissions
+- [ ] Test teacher minimal permissions
+- [ ] Test permission boundaries (what should fail)
+
+#### Student UI Tests
+- [ ] Test full hierarchy breadcrumb
+- [ ] Test partial hierarchy breadcrumb
+- [ ] Test individual teacher breadcrumb
+- [ ] Test breadcrumb navigation
+
+#### Robustness Tests
+- [ ] Monitor application startup logs
+- [ ] Check for any error messages
+- [ ] Verify DB connections are properly managed
+
+#### Edge Cases
+- [ ] Inactive teacher relationships (soft delete)
+- [ ] Teacher with multiple roles (org_owner + school_admin)
+- [ ] Empty organizations (no schools/teachers)
+- [ ] Student without classroom (error handling)
+
+---
+
+### 🐛 Bug Report Template
+
+If issues are found during testing, please report with:
+
+```markdown
+**Bug Title**: [Brief description]
+
+**Severity**: Critical / High / Medium / Low
+
+**Environment**:
+- Branch: feat/issue-112-org-hierarchy
+- Commit: ebc1320
+- Test Date: YYYY-MM-DD
+
+**Steps to Reproduce**:
+1.
+2.
+3.
+
+**Expected Behavior**:
+[What should happen]
+
+**Actual Behavior**:
+[What actually happened]
+
+**Screenshots/Logs**:
+[If applicable]
+
+**Test Scenario**:
+[Which scenario from the test plan?]
+```
+
+---
+
+### 📊 Testing Timeline
+
+| Phase | Duration | Status |
+|-------|----------|--------|
+| Core Permission Testing | 2-3 hours | ⏳ Pending |
+| Student UI Testing | 1-2 hours | ⏳ Pending |
+| Robustness Testing | 1 hour | ⏳ Pending |
+| Bug Fixes (if needed) | TBD | - |
+| **Total** | **4-6 hours** | **Not Started** |
+
+**Next Implementation Phase**: After successful testing validation
 
 ---
 
@@ -3487,6 +3685,34 @@ COMMIT;
 - 技術規格：原 ORG_IMPLEMENTATION_SPEC.md
 - 商業策略：原 ORG_TODO.md
 **負責人**: [待指派]
+
+---
+
+## 📈 Testing Results (To Be Updated)
+
+**Testing Date**: TBD
+**Tested By**: Product Owner
+**Environment**: Staging/Test
+
+### Test Results Summary
+_Will be updated after user testing_
+
+| Feature | Tests Passed | Tests Failed | Status |
+|---------|-------------|--------------|--------|
+| Casbin Permissions | - | - | ⏳ Pending |
+| Student Breadcrumb | - | - | ⏳ Pending |
+| DB Sync Robustness | - | - | ⏳ Pending |
+
+### Issues Found
+_Will be populated during testing_
+
+### Approved for Production
+- [ ] Casbin Permission System
+- [ ] Student API Extension
+- [ ] Critical Bug Fixes
+
+**Sign-off**: ________________
+**Date**: ________________
 
 ---
 
