@@ -1054,22 +1054,22 @@ export default function TeacherAssignmentDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-row gap-2 sm:gap-3">
-            {/* 批改作業按鈕 */}
-            <Button
-              onClick={() =>
-                navigate(
-                  `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                )
-              }
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.gradeAssignment")}
-            </Button>
-            {/* AI批改按鈕 - 🆕 rearrangement 模式不顯示（自動計分，不需 AI 批改） */}
-            {assignment?.practice_mode !== "rearrangement" && (
+          {/* Action Buttons - 🆕 rearrangement 模式隱藏所有批改按鈕 */}
+          {assignment?.practice_mode !== "rearrangement" && (
+            <div className="flex flex-row gap-2 sm:gap-3">
+              {/* 批改作業按鈕 */}
+              <Button
+                onClick={() =>
+                  navigate(
+                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                  )
+                }
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.gradeAssignment")}
+              </Button>
+              {/* AI批改按鈕 */}
               <Button
                 onClick={() => setShowBatchGradingModal(true)}
                 disabled={stats.total === 0}
@@ -1081,8 +1081,8 @@ export default function TeacherAssignmentDetailPage() {
                 <Sparkles className="h-4 w-4 mr-2" />
                 {t("assignmentDetail.buttons.batchGrade")}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Assignment Info Card */}
@@ -1674,6 +1674,24 @@ export default function TeacherAssignmentDetailPage() {
                       color:
                         "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400",
                     };
+
+                  // 🆕 rearrangement 模式：SUBMITTED/RETURNED/RESUBMITTED 都顯示為「已完成」
+                  const isRearrangement =
+                    assignment?.practice_mode === "rearrangement";
+                  if (
+                    isRearrangement &&
+                    (currentStatus === "SUBMITTED" ||
+                      currentStatus === "RETURNED" ||
+                      currentStatus === "RESUBMITTED" ||
+                      currentStatus === "GRADED")
+                  ) {
+                    return {
+                      label: t("assignmentDetail.labels.graded"),
+                      color:
+                        "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+                    };
+                  }
+
                   switch (currentStatus) {
                     case "NOT_STARTED":
                       return {
@@ -1760,22 +1778,38 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex-shrink-0">
                         {isAssigned ? (
                           <>
-                            {(upperStatus === "SUBMITTED" ||
-                              upperStatus === "RESUBMITTED" ||
-                              upperStatus === "GRADED" ||
-                              upperStatus === "RETURNED") && (
-                              <Button
-                                variant="outline"
-                                className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                                onClick={() =>
-                                  navigate(
-                                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                                  )
-                                }
-                              >
-                                {t("assignmentDetail.buttons.grade")}
-                              </Button>
-                            )}
+                            {/* 🆕 rearrangement 模式：GRADED 狀態顯示查看結果，其他狀態不顯示批改按鈕 */}
+                            {assignment?.practice_mode === "rearrangement"
+                              ? upperStatus === "GRADED" && (
+                                  <Button
+                                    variant="outline"
+                                    className="text-green-600 border-green-600 hover:bg-green-50 h-12 min-h-12 px-3 text-sm dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
+                                    onClick={() =>
+                                      navigate(
+                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
+                                      )
+                                    }
+                                  >
+                                    {t("assignmentDetail.buttons.viewResult") ||
+                                      "查看結果"}
+                                  </Button>
+                                )
+                              : (upperStatus === "SUBMITTED" ||
+                                  upperStatus === "RESUBMITTED" ||
+                                  upperStatus === "GRADED" ||
+                                  upperStatus === "RETURNED") && (
+                                  <Button
+                                    variant="outline"
+                                    className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                                    onClick={() =>
+                                      navigate(
+                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                      )
+                                    }
+                                  >
+                                    {t("assignmentDetail.buttons.grade")}
+                                  </Button>
+                                )}
                             {(upperStatus === "NOT_STARTED" ||
                               upperStatus === "IN_PROGRESS") && (
                               <Button
@@ -2107,6 +2141,54 @@ export default function TeacherAssignmentDetailPage() {
                                   // 使用大寫的狀態值進行比較
                                   const upperStatus =
                                     progress.status?.toUpperCase();
+
+                                  // 🆕 rearrangement 模式：只有 GRADED 狀態顯示「查看結果」
+                                  if (
+                                    assignment?.practice_mode ===
+                                    "rearrangement"
+                                  ) {
+                                    if (upperStatus === "GRADED") {
+                                      return (
+                                        <Button
+                                          variant="outline"
+                                          className="text-green-600 border-green-600 hover:bg-green-50 transition-colors h-12 min-h-12 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
+                                          onClick={() => {
+                                            navigate(
+                                              `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
+                                            );
+                                          }}
+                                        >
+                                          {t(
+                                            "assignmentDetail.buttons.viewResult",
+                                          ) || "查看結果"}
+                                        </Button>
+                                      );
+                                    }
+                                    // rearrangement 模式：未開始或進行中可取消指派
+                                    if (
+                                      upperStatus === "NOT_STARTED" ||
+                                      upperStatus === "IN_PROGRESS"
+                                    ) {
+                                      return (
+                                        <Button
+                                          variant="outline"
+                                          className="text-red-600 border-red-600 hover:bg-red-50 transition-colors h-12 min-h-12 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-900/20"
+                                          onClick={() =>
+                                            handleUnassignStudent(
+                                              progress.student_id,
+                                              progress.student_name,
+                                              progress.status,
+                                            )
+                                          }
+                                        >
+                                          {t(
+                                            "assignmentDetail.buttons.unassign",
+                                          )}
+                                        </Button>
+                                      );
+                                    }
+                                    return null;
+                                  }
 
                                   // 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕
                                   if (
