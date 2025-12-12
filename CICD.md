@@ -159,12 +159,45 @@ curl https://duotopia.co/api/health
 curl https://duotopia.co/
 ```
 
+### 部署流程圖
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    GIT PUSH EVENT                               │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+            ┌────────────────────────┐
+            │   Which branch?        │
+            └────────┬───────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+   ┌────────┐  ┌─────────┐  ┌─────────────┐
+   │  main  │  │ staging │  │ fix/issue-* │
+   └───┬────┘  └────┬────┘  └──────┬──────┘
+       │            │              │
+       ▼            ▼              ▼
+┌─────────────┐ ┌────────────┐ ┌──────────────┐
+│ deploy-     │ │ deploy-    │ │ deploy-per-  │
+│ backend     │ │ backend    │ │ issue.yml    │
+│ -frontend   │ │ -frontend  │ │              │
+│             │ │            │ │ → Cloud Run  │
+│ → Cloud Run │ │ → Cloud Run│ │ (Preview)    │
+│ (Prod)      │ │ (Staging)  │ │              │
+│             │ │            │ │ $0-5/month   │
+│ $5-10/month │ │ $0-5/month │ └──────────────┘
+└─────────────┘ └────────────┘
+```
+
 ### 部署目標對照表
-| 分支 | 環境 | 部署目標 | 域名 | 自動部署 |
-|------|------|---------|------|---------|
-| `staging` | Staging | Cloud Run | staging-xxx.run.app | ✅ Yes |
-| `main` | Production | Cloud Run | duotopia.co | ✅ Yes |
-| `main` | Production | VM (deprecated) | 34.81.38.211 | ❌ Manual only |
+| 分支 | 環境 | 部署目標 | 域名 | 自動部署 | 成本/月 |
+|------|------|---------|------|---------|---------|
+| `staging` | Staging | Cloud Run | staging-xxx.run.app | ✅ Yes | $0-5 |
+| `main` | Production | Cloud Run | duotopia.co | ✅ Yes | $5-10 |
+| `fix/issue-*` | Preview | Cloud Run | preview-issue-N-xxx.run.app | ✅ Yes | $0-5 |
+| `main` | Production | VM (deprecated) | 34.81.38.211 | ❌ Manual only | $13 (已停用) |
 
 ### VM 部署（已廢棄 - 僅限緊急回滾使用）
 
