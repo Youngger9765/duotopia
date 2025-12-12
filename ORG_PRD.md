@@ -1,30 +1,284 @@
-# 機構層級管理系統 - 完整實施規格
+# 機構層級管理系統 - 產品需求文檔 (PRD)
 
-> **整合說明**：本文件整合了商業策略（原 ORG_TODO.md）與技術實施規格
+> **文件類型**：Product Requirements Document (PRD)
 > **目標**：實作完整的機構/學校管理功能，同時保持向下相容
-> **最後更新**：2025-11-29
+> **最後更新**：2025-12-13
+> **分支**：feat/issue-112-org-hierarchy
 
 ---
 
 ## 📋 目錄
 
+### 實施狀態
+1. [Implementation Status](#-implementation-status) - 當前進度與缺失功能
+
+### 用戶流程
+2. [User Flows](#-user-flows) - 核心用戶流程圖
+
 ### Part I: 商業策略與產品規劃
-1. [商業價值分析](#商業價值分析)
-2. [市場定位](#市場定位)
-3. [產品策略](#產品策略)
-4. [定價策略](#定價策略)
+3. [商業價值分析](#商業價值分析)
+4. [市場定位](#市場定位)
+5. [產品策略](#產品策略)
+6. [定價策略](#定價策略)
 
 ### Part II: 技術實施規格
-5. [核心需求總覽](#核心需求總覽)
-6. [現有架構分析](#現有架構分析)
-7. [後端 API 設計](#後端-api-設計)
-8. [資料庫 Migration](#資料庫-migration)
-9. [前端 UI 設計](#前端-ui-設計)
-10. [權限系統設計](#權限系統設計)
-11. [金流整合](#金流整合)
-12. [學生端改動](#學生端改動)
-13. [實作順序](#實作順序)
-14. [測試計畫](#測試計畫)
+7. [核心需求總覽](#核心需求總覽)
+8. [現有架構分析](#現有架構分析)
+9. [後端 API 設計](#後端-api-設計)
+   - [已實現 API](#1-組織架構-api)
+   - [缺失 API](#-api-specification---missing-endpoints)
+10. [資料庫 Schema](#-資料庫-migration)
+11. [前端 UI 設計](#前端-ui-設計)
+12. [權限系統設計](#權限系統設計)
+13. [金流整合](#金流整合)
+14. [學生端改動](#學生端改動)
+15. [Testing Strategy](#-testing-strategy)
+16. [實作順序](#實作順序)
+
+---
+
+## 📊 Implementation Status
+
+**Last Updated**: 2025-12-13
+**Branch**: `feat/issue-112-org-hierarchy`
+**Overall Completion**: 75-80%
+
+### Completed Features ✅
+
+#### 1. Database Schema (100%)
+- ✅ 5 core models: Organization, School, TeacherOrganization, TeacherSchool, ClassroomSchool
+- ✅ Alembic migrations completed
+- ✅ Performance indexes optimized (9 indexes)
+- ✅ Soft delete support (is_active flags)
+- ✅ JSONB settings/roles support
+
+#### 2. API Endpoints (85%)
+**Organizations**:
+- ✅ `GET /api/organizations/me` - Get current user's organization
+- ✅ `GET /api/organizations/{org_id}` - Get organization details
+- ✅ `POST /api/organizations` - Create organization
+- ✅ `PUT /api/organizations/{org_id}` - Update organization
+
+**Schools**:
+- ✅ `GET /api/schools/{school_id}` - Get school details
+- ✅ `POST /api/schools` - Create school
+- ✅ `PUT /api/schools/{school_id}` - Update school
+- ✅ `GET /api/schools/{school_id}/classrooms` - List school classrooms
+
+**Members**:
+- ✅ `POST /api/schools/{school_id}/teachers` - Invite teacher to school
+- ✅ `PUT /api/schools/{school_id}/teachers/{teacher_id}` - Update teacher role
+- ✅ `DELETE /api/schools/{school_id}/teachers/{teacher_id}` - Remove teacher
+
+**Classroom-School Linking**:
+- ✅ `POST /api/classrooms/{classroom_id}/link-school` - Link classroom to school
+
+#### 3. Casbin Permission System (100%)
+- ✅ CasbinService implemented (`backend/services/casbin_service.py`)
+- ✅ RBAC with Domains model configured
+- ✅ Policy files in `backend/casbin/`
+- ✅ Permission checking methods:
+  - `check_org_permission(org_id, teacher_id, action)`
+  - `check_school_permission(school_id, teacher_id, action)`
+  - `check_classroom_permission(classroom_id, teacher_id, action)`
+- ⚠️ **Database sync NOT enabled** (currently file-based only)
+
+#### 4. Frontend (70%)
+- ✅ OrganizationHub page (`frontend/src/pages/teacher/OrganizationHub.tsx`)
+- ✅ OrganizationContext state management
+- ✅ Basic school display in Organization page
+- ✅ Basic classroom display
+- ⚠️ **Dashboard/Analytics UI missing**
+- ⚠️ **Subscription page integration incomplete**
+
+### Missing Features ❌
+
+#### 🔴 High Priority (MVP Blockers)
+
+**1. Dashboard/Analytics API** (0%)
+- ❌ `GET /api/organizations/{org_id}/dashboard` - Organization-level metrics
+- ❌ `GET /api/schools/{school_id}/dashboard` - School-level metrics
+- **Business value**: Data-driven decision making for org_owner and school_admin
+- **Estimated effort**: 16-20 hours
+- **Dependencies**: Requires JOIN queries with performance optimization
+
+**2. Subscription Integration** (0%)
+- ❌ Backend: org_owner role check on subscription APIs
+- ❌ Frontend: Dynamic display based on roles (show "Contact org_owner" for non-owners)
+- **Business value**: Core revenue feature, enables B2B billing
+- **Estimated effort**: 8-12 hours
+
+**3. Student API Extension** (0%)
+- ❌ Login API return organization_name/school_name
+- ❌ StudentUser type extension in frontend
+- **Business value**: Student sees breadcrumb "ABC補習班 > 台北校區 > 國小英文班"
+- **Estimated effort**: 4-6 hours
+- **Implementation**:
+  ```python
+  # In students.py login endpoint
+  classroom = db.query(Classroom)\
+      .joinedload(Classroom.classroom_school)\
+      .joinedload(ClassroomSchool.school)\
+      .joinedload(School.organization)\
+      .filter(Classroom.id == student.classroom_id)\
+      .first()
+  ```
+
+**4. Enable Casbin DB Sync** (0%)
+- ❌ Implement `sync_from_database()` method in CasbinService
+- ❌ Call on application startup (in `main.py`)
+- **Why critical**: Currently policies are file-based only, won't reflect runtime role changes
+- **Estimated effort**: 4-6 hours
+
+#### 🟡 Medium Priority (UX Enhancement)
+
+**5. Permission Decorators** (0%)
+- ❌ Unified `@require_permission` decorator for API endpoints
+- ❌ Refactor existing role checks to use decorators
+- **Business value**: Cleaner code, easier maintenance
+- **Estimated effort**: 8-10 hours
+- **Example**:
+  ```python
+  @router.get("/schools/{school_id}")
+  @require_permission("school", "read")
+  async def get_school(school_id: str, current_teacher: Teacher = Depends(get_current_teacher)):
+      # Permission auto-checked by decorator
+  ```
+
+**6. Teacher Transfer API** (0%)
+- ❌ `POST /api/teachers/{teacher_id}/transfer` - Move teacher between schools
+- ❌ Support both cross-school (keep_old_school=true) and full transfer (false)
+- **Business value**: Flexibility for orgs with multiple schools
+- **Estimated effort**: 6-8 hours
+
+#### 🟢 Low Priority (Long-term Improvement)
+
+**7. Comprehensive Testing** (10%)
+- ✅ Manual test script: `backend/tests/manual_test_organization_hierarchy.py`
+- ❌ Unit tests (80%+ coverage target)
+- ❌ Integration tests (all critical workflows)
+- ❌ E2E tests (Playwright)
+- **Estimated effort**: 40-60 hours
+
+**8. Error Message i18n** (0%)
+- ❌ Translate Casbin permission errors to user-friendly messages
+- ❌ Support zh-TW/en locales
+- **Estimated effort**: 8-10 hours
+
+### MVP Timeline Estimate
+
+**Total Estimated Effort**: 40-54 hours (1-2 weeks for 1 full-time developer)
+
+**Required for MVP Launch**:
+1. ✅ Student API Extension (4-6 hr) - **Must have** for student UX
+2. ✅ Enable Casbin DB Sync (4-6 hr) - **Must have** for security
+3. ✅ Subscription Integration (8-12 hr) - **Must have** for revenue
+4. ⚠️ Dashboard API (16-20 hr) - **Should have** for business value (can defer if needed)
+
+**Optional for MVP**:
+- Permission Decorators (nice to have, can refactor later)
+- Teacher Transfer (can implement on-demand when first customer requests)
+- Comprehensive Testing (should do post-MVP)
+
+---
+
+## 🔄 User Flows
+
+### Flow 1: 機構創建與設置
+
+```mermaid
+graph TD
+    A[教師註冊/登入] --> B{選擇類型}
+    B -->|個體戶| C[type=personal]
+    B -->|創建機構| D[POST /api/organizations]
+    D --> E[自動設為 org_owner]
+    E --> F[創建分校 POST /api/schools]
+    F --> G[邀請教師到分校<br/>POST /api/schools/{id}/teachers]
+    G --> H[設定教師角色:<br/>school_admin/teacher]
+    H --> I[Dashboard 查看機構總覽]
+
+    C --> J[直接管理訂閱]
+    E --> K{org_owner 管理訂閱}
+    K --> L[其他成員看到<br/>「請聯絡管理者」]
+```
+
+**關鍵步驟說明**:
+1. **個體戶路徑** - 自動創建 type=personal 的組織,直接使用平台功能
+2. **機構路徑** - org_owner 創建機構後,可建立多個分校,邀請教師並分配角色
+3. **權限分離** - 只有 org_owner 能管理訂閱,其他成員被重定向
+
+### Flow 2: 學校管理員日常操作
+
+```mermaid
+graph TD
+    A[school_admin 登入] --> B[查看學校 Dashboard]
+    B --> C[查看班級列表]
+    C --> D[邀請新教師]
+    D --> E[分配班級給教師]
+    E --> F[查看學校統計數據]
+    F --> G{權限檢查}
+    G -->|無法| H[訂閱管理 -<br/>顯示「聯絡 org_owner」]
+    G -->|無法| I[其他分校資料 -<br/>403 Forbidden]
+    G -->|可以| J[本校教師/班級/學生管理]
+```
+
+**權限邊界**:
+- ✅ **可以**: 管理本校教師、班級、學生數據
+- ❌ **無法**: 訪問其他分校數據(Casbin domain isolation)
+- ❌ **無法**: 管理訂閱(僅 org_owner)
+
+### Flow 3: 學生看到組織資訊
+
+```mermaid
+graph TD
+    A[學生登入] --> B[POST /api/students/login]
+    B --> C{返回資料}
+    C --> D[organization_name:<br/>ABC補習班]
+    C --> E[school_name:<br/>台北校區]
+    C --> F[classroom_name:<br/>國小英文班]
+    D --> G[麵包屑顯示:<br/>ABC補習班 > 台北校區 > 國小英文班]
+    G --> H[學生開始學習]
+```
+
+**實施狀態**: ❌ **Missing** (Student API Extension required)
+
+**實施方法**:
+```python
+# backend/routes/students.py
+classroom = db.query(Classroom)\
+    .joinedload(Classroom.classroom_school)\
+    .joinedload(ClassroomSchool.school)\
+    .joinedload(School.organization)\
+    .filter(Classroom.id == student.classroom_id)\
+    .first()
+
+return {
+    "classroom_name": classroom.name,
+    "school_name": classroom.classroom_school.school.name if classroom.classroom_school else None,
+    "organization_name": classroom.classroom_school.school.organization.name if ... else None
+}
+```
+
+### Flow 4: 老師調動(跨校任教)
+
+```mermaid
+graph TD
+    A[org_owner] --> B[POST /api/teachers/{id}/transfer]
+    B --> C{keep_old_school?}
+    C -->|true| D[跨校任教 -<br/>同時屬於兩校]
+    C -->|false| E[完全調動 -<br/>離開原校]
+    D --> F[老師可訪問兩校資料]
+    E --> G[老師只能訪問新校]
+    F --> H[Casbin 更新權限]
+    G --> H
+```
+
+**實施狀態**: ❌ **Missing** (Teacher Transfer API required)
+
+**業務價值**:
+- 支援連鎖補習班教師跨校支援
+- 靈活調配師資
+- 保留歷史教學記錄
 
 ---
 
@@ -951,6 +1205,201 @@ def invite_teacher(school_id):
 
 ---
 
+## 🚀 API Specification - Missing Endpoints
+
+### 1. Dashboard API
+
+#### GET /api/organizations/{org_id}/dashboard
+**Permission**: org_owner, org_admin
+**Description**: 機構總覽數據
+
+**Response**:
+```json
+{
+  "summary": {
+    "total_schools": 5,
+    "total_teachers": 30,
+    "total_students": 500,
+    "total_classrooms": 50,
+    "active_assignments": 120
+  },
+  "schools_performance": [
+    {
+      "school_id": "uuid",
+      "school_name": "台北校區",
+      "teacher_count": 10,
+      "student_count": 150,
+      "avg_assignment_score": 85.5,
+      "active_students_rate": 0.92
+    }
+  ],
+  "top_teachers": [
+    {
+      "teacher_id": 123,
+      "name": "張老師",
+      "school_name": "台北校區",
+      "avg_student_score": 92.3,
+      "total_assignments": 50
+    }
+  ],
+  "recent_activities": [
+    {
+      "timestamp": "2025-12-13T10:30:00Z",
+      "type": "teacher_joined",
+      "school_name": "新竹校區",
+      "description": "李老師加入新竹校區"
+    }
+  ]
+}
+```
+
+**Implementation Notes**:
+- Use JOIN queries to avoid N+1
+- Cache for 5 minutes
+- Require `check_org_permission(org_id, teacher_id, 'read')`
+
+#### GET /api/schools/{school_id}/dashboard
+**Permission**: org_owner, org_admin, school_admin (該校)
+**Description**: 學校總覽數據
+
+**Response**:
+```json
+{
+  "summary": {
+    "total_teachers": 10,
+    "total_students": 150,
+    "total_classrooms": 15,
+    "active_assignments": 40
+  },
+  "classrooms_performance": [
+    {
+      "classroom_id": 1,
+      "classroom_name": "國小英文班",
+      "teacher_name": "王老師",
+      "student_count": 20,
+      "avg_score": 88.5
+    }
+  ],
+  "top_students": [
+    {
+      "student_id": 456,
+      "name": "小明",
+      "classroom_name": "國小英文班",
+      "avg_score": 95.5,
+      "completed_assignments": 30
+    }
+  ],
+  "recent_activities": [...]
+}
+```
+
+### 2. Teacher Transfer API
+
+#### POST /api/teachers/{teacher_id}/transfer
+**Permission**: org_owner
+**Description**: 老師調動（跨校或調校）
+
+**Request**:
+```json
+{
+  "from_school_id": "uuid-taipei",
+  "to_school_id": "uuid-hsinchu",
+  "keep_old_school": false,  // true=跨校任教, false=完全調動
+  "new_role": "teacher"  // 在新校的角色
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "teacher_id": 123,
+  "old_school": "台北校區",
+  "new_school": "新竹校區",
+  "roles": ["teacher@school:uuid-hsinchu"]
+}
+```
+
+**Implementation**:
+```python
+1. Verify org_owner permission
+2. Check teacher exists in from_school
+3. If keep_old_school=false:
+   - Soft delete TeacherSchool for from_school
+   - Delete Casbin roles for from_school
+4. Create TeacherSchool for to_school
+5. Add Casbin role for to_school
+6. Update classroom assignments if needed
+```
+
+### 3. Student Login API Extension
+
+#### POST /api/students/login
+**Current**: Returns basic student info
+**Required**: Add organization_name and school_name
+
+**Updated Response**:
+```json
+{
+  "token": "jwt_token",
+  "student": {
+    "id": 1,
+    "name": "小明",
+    "classroom_id": 1,
+    "classroom_name": "國小英文班",
+    "school_id": "uuid-taipei",        // ← NEW
+    "school_name": "台北校區",          // ← NEW
+    "organization_id": "uuid-abc",     // ← NEW
+    "organization_name": "ABC補習班"   // ← NEW
+  }
+}
+```
+
+**Implementation**:
+```python
+# In students.py login endpoint
+classroom = db.query(Classroom)\
+    .joinedload(Classroom.classroom_school)\
+    .joinedload(ClassroomSchool.school)\
+    .joinedload(School.organization)\
+    .filter(Classroom.id == student.classroom_id)\
+    .first()
+
+return {
+    ...
+    "school_name": classroom.classroom_school.school.name if classroom.classroom_school else None,
+    "organization_name": classroom.classroom_school.school.organization.name if ... else None
+}
+```
+
+### 4. Subscription API Extensions
+
+#### GET /api/subscriptions/check-owner
+**Description**: Check if current teacher is org_owner for subscription management
+
+**Response**:
+```json
+{
+  "is_owner": true,
+  "organization_type": "organization",  // "personal" | "organization"
+  "can_manage_subscription": true
+}
+```
+
+#### GET /api/subscriptions/owner-info
+**Description**: Get org_owner contact info for non-owners
+
+**Response**:
+```json
+{
+  "owner_name": "張老師",
+  "owner_email": "owner@abc.com",
+  "message": "請聯絡機構管理者 張老師 (owner@abc.com) 管理訂閱"
+}
+```
+
+---
+
 ### 3.X 舊方案（參考用，已棄用）
 
 <details>
@@ -1062,15 +1511,23 @@ def invite_teacher(school_id):
 
 ---
 
-## 💾 資料庫 Migration
+## 💾 資料庫 Migration (✅ Implemented)
 
 ### Migration 腳本位置
 
-`backend/migrations/versions/xxx_add_organization_hierarchy.py`
+✅ **Completed**: `backend/migrations/versions/e1f01b3dd987_add_organization_hierarchy.py`
+
+### 實施狀態
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **5 Core Tables** | ✅ **Completed** | All tables created with proper constraints |
+| **9 Indexes** | ✅ **Completed** | Optimized for query performance |
+| **Data Migration** | ✅ **Completed** | Existing teachers auto-converted to personal orgs |
+| **ORM Models** | ✅ **Completed** | All models defined in `backend/models.py` |
+| **Downgrade Support** | ✅ **Completed** | Full rollback capability |
 
 ### 關鍵內容
-
-（詳見 `ORG_TODO.md` 的完整 SQL schema）
 
 ```python
 def upgrade():
@@ -1103,9 +1560,21 @@ def downgrade():
     op.drop_table('organizations')
 ```
 
-### ORM Models 新增
+### ORM Models (✅ Implemented)
 
-`backend/models.py` 新增：
+✅ **File**: `backend/models.py`
+
+**Database Tables Implemented**:
+
+| Model | Table Name | Key Features | Status |
+|-------|------------|--------------|--------|
+| **Organization** | organizations | UUID primary key, type enum, JSONB settings | ✅ |
+| **School** | schools | Foreign key to Organization, JSONB settings | ✅ |
+| **TeacherOrganization** | teacher_organizations | Many-to-many with soft delete | ✅ |
+| **TeacherSchool** | teacher_schools | JSONB roles array, nullable school_id | ✅ |
+| **ClassroomSchool** | classroom_schools | Links classrooms to schools | ✅ |
+
+**Code**:
 
 ```python
 class Organization(Base):
@@ -2243,7 +2712,420 @@ diff before.txt after.txt
 
 ---
 
-## 🧪 測試計畫
+## 🧪 Testing Strategy
+
+### Current Status: 10% (Manual Tests Only)
+
+**Existing**:
+- ✅ `backend/tests/manual_test_organization_hierarchy.py` - Manual integration test
+- ⚠️ No automated unit/integration tests
+- ❌ No E2E tests
+
+**Target Coverage Goals**:
+- Unit Tests: **80%+** coverage
+- Integration Tests: Cover all critical workflows
+- E2E Tests: Cover happy paths and key edge cases
+
+---
+
+### 1. Unit Tests (Priority: 🔴 High)
+
+#### 1.1 Casbin Service Tests
+
+**File**: `backend/tests/test_casbin_service.py`
+
+```python
+import pytest
+from backend.services.casbin_service import CasbinService
+
+class TestCasbinService:
+    def test_org_owner_has_all_permissions(self):
+        """org_owner should have all organization-level permissions"""
+        service = CasbinService()
+        assert service.check_permission('teacher:1', 'org:uuid', 'manage_subscription', 'write')
+        assert service.check_permission('teacher:1', 'org:uuid', 'manage_schools', 'write')
+        assert service.check_permission('teacher:1', 'org:uuid', 'view_analytics', 'read')
+
+    def test_school_admin_cannot_access_other_schools(self):
+        """school_admin should only access their own school"""
+        service = CasbinService()
+        # Can access own school
+        assert service.check_permission('teacher:2', 'school:uuid-taipei', 'read_students', 'read')
+        # Cannot access other school
+        assert not service.check_permission('teacher:2', 'school:uuid-hsinchu', 'read_students', 'read')
+
+    def test_regular_teacher_cannot_manage_teachers(self):
+        """Regular teacher should not have admin permissions"""
+        service = CasbinService()
+        assert not service.check_permission('teacher:3', 'school:uuid', 'manage_teachers', 'write')
+
+    def test_add_role_for_user(self):
+        """Test adding role to user in domain"""
+        service = CasbinService()
+        success = service.add_role_for_user('teacher:4', 'school_admin', 'school:uuid-test')
+        assert success
+        assert service.check_permission('teacher:4', 'school:uuid-test', 'manage_teachers', 'write')
+```
+
+#### 1.2 Permission Service Tests
+
+**File**: `backend/tests/test_permission_service.py`
+
+```python
+class TestPermissionService:
+    def test_require_permission_decorator_allows_authorized(self, client, org_owner_token):
+        """Decorator should allow authorized users"""
+        @require_permission('manage_schools', 'write', domain_param='org_id')
+        def create_school(org_id):
+            return {"success": True}
+
+        response = client.post(f'/api/test/{org_id}', headers={'Authorization': f'Bearer {org_owner_token}'})
+        assert response.status_code == 200
+
+    def test_require_permission_decorator_blocks_unauthorized(self, client, teacher_token):
+        """Decorator should block unauthorized users"""
+        response = client.post(f'/api/test/{org_id}', headers={'Authorization': f'Bearer {teacher_token}'})
+        assert response.status_code == 403
+```
+
+#### 1.3 Model Tests
+
+**File**: `backend/tests/test_models.py`
+
+```python
+class TestOrganizationModels:
+    def test_teacher_current_organization(self, db, teacher):
+        """Test Teacher.current_organization property"""
+        org = Organization(name="Test Org", type="organization")
+        db.session.add(org)
+        db.session.flush()
+
+        teacher_org = TeacherOrganization(teacher_id=teacher.id, organization_id=org.id)
+        db.session.add(teacher_org)
+        db.session.commit()
+
+        assert teacher.current_organization.name == "Test Org"
+
+    def test_teacher_roles_aggregation(self, db, teacher, school1, school2):
+        """Test Teacher.roles aggregates from all schools"""
+        TeacherSchool.create(teacher_id=teacher.id, school_id=school1.id, roles=["teacher"])
+        TeacherSchool.create(teacher_id=teacher.id, school_id=school2.id, roles=["school_admin", "teacher"])
+
+        roles = teacher.roles
+        assert "teacher" in roles
+        assert "school_admin" in roles
+```
+
+---
+
+### 2. Integration Tests (Priority: 🔴 High)
+
+#### 2.1 Organization Workflow Tests
+
+**File**: `backend/tests/test_organization_workflow.py`
+
+```python
+def test_org_owner_full_workflow(client, db):
+    """Test complete org_owner workflow from creation to school management"""
+
+    # 1. Create organization
+    response = client.post('/api/organizations', json={'name': 'Test Org', 'type': 'organization'})
+    assert response.status_code == 201
+    org_id = response.json['id']
+
+    # 2. Verify org_owner role was automatically assigned
+    teacher_id = get_current_teacher_id(client)
+    roles = get_teacher_roles(teacher_id, org_id)
+    assert 'org_owner' in roles
+
+    # 3. Create school
+    response = client.post(f'/api/organizations/{org_id}/schools', json={'name': 'Test School'})
+    assert response.status_code == 201
+    school_id = response.json['id']
+
+    # 4. Invite teacher to school
+    response = client.post(f'/api/schools/{school_id}/teachers', json={
+        'email': 'new@test.com',
+        'name': 'New Teacher',
+        'password': 'temp123',
+        'roles': ['teacher']
+    })
+    assert response.status_code == 201
+    new_teacher_id = response.json['teacher_id']
+
+    # 5. Verify new teacher can access school
+    assert can_access_school(new_teacher_id, school_id)
+
+    # 6. Verify new teacher cannot access other schools
+    other_school_id = create_another_school(org_id)
+    assert not can_access_school(new_teacher_id, other_school_id)
+```
+
+#### 2.2 Permission Isolation Tests
+
+**File**: `backend/tests/test_permission_isolation.py`
+
+```python
+def test_school_admin_cannot_access_other_schools(client, db):
+    """Verify strict school isolation"""
+
+    # Create org with 2 schools
+    org = create_organization('Test Org')
+    school1 = create_school(org.id, 'School 1')
+    school2 = create_school(org.id, 'School 2')
+
+    # Create school_admin for school1
+    admin = create_teacher_with_role(school1.id, 'school_admin')
+
+    # Admin can access school1
+    response = client.get(f'/api/schools/{school1.id}', headers=auth_header(admin))
+    assert response.status_code == 200
+
+    # Admin CANNOT access school2
+    response = client.get(f'/api/schools/{school2.id}', headers=auth_header(admin))
+    assert response.status_code == 403
+```
+
+#### 2.3 Data Migration Tests
+
+**File**: `backend/tests/test_data_migration.py`
+
+```python
+def test_existing_teachers_auto_converted_to_personal_orgs(db):
+    """Test that migration converts existing teachers to personal orgs"""
+
+    # Simulate existing teacher before migration
+    teacher = Teacher(name="Old Teacher", email="old@test.com")
+    db.session.add(teacher)
+    db.session.commit()
+
+    # Run migration
+    run_migration_up()
+
+    # Verify personal organization created
+    org = Organization.query.filter_by(type='personal').first()
+    assert org is not None
+    assert org.name == "Old Teacher的工作室"
+
+    # Verify teacher linked to org
+    teacher_org = TeacherOrganization.query.filter_by(teacher_id=teacher.id).first()
+    assert teacher_org.organization_id == org.id
+    assert teacher_org.is_active
+```
+
+---
+
+### 3. E2E Tests (Priority: 🟡 Medium)
+
+#### 3.1 Organization Management E2E
+
+**File**: `frontend/e2e/organization-management.spec.ts`
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('org owner can create and manage school', async ({ page }) => {
+  // Login as org_owner
+  await page.goto('/teacher/login');
+  await page.fill('[name="email"]', 'owner@test.com');
+  await page.fill('[name="password"]', 'password');
+  await page.click('button:has-text("登入")');
+
+  // Navigate to organization page
+  await page.click('text=機構管理');
+  await expect(page).toHaveURL('/teacher/organization');
+
+  // Create new school
+  await page.click('[data-testid="create-school-btn"]');
+  await page.fill('[name="school_name"]', 'Test School');
+  await page.click('[data-testid="submit-btn"]');
+
+  // Verify school appears
+  await expect(page.locator('text=Test School')).toBeVisible();
+
+  // Invite teacher to school
+  await page.click('text=Test School');
+  await page.click('[data-testid="invite-teacher-btn"]');
+  await page.fill('[name="email"]', 'teacher@test.com');
+  await page.fill('[name="name"]', 'Test Teacher');
+  await page.click('[data-testid="send-invite-btn"]');
+
+  // Verify teacher appears in list
+  await expect(page.locator('text=Test Teacher')).toBeVisible();
+});
+
+test('regular teacher sees correct limited UI', async ({ page }) => {
+  // Login as regular teacher
+  await page.goto('/teacher/login');
+  await page.fill('[name="email"]', 'teacher@test.com');
+  await page.fill('[name="password"]', 'password');
+  await page.click('button:has-text("登入")');
+
+  // Verify sidebar does NOT show org management
+  await expect(page.locator('text=機構管理')).not.toBeVisible();
+
+  // Verify subscription page shows "Contact org_owner"
+  await page.goto('/teacher/subscription');
+  await expect(page.locator('text=請聯絡機構管理者')).toBeVisible();
+});
+```
+
+#### 3.2 Student Experience E2E
+
+**File**: `frontend/e2e/student-organization-display.spec.ts`
+
+```typescript
+test('student sees organization breadcrumb', async ({ page }) => {
+  // Login as student
+  await page.goto('/student/login');
+  await page.fill('[name="username"]', 'student1');
+  await page.fill('[name="password"]', 'password');
+  await page.click('button:has-text("登入")');
+
+  // Verify breadcrumb shows: Org > School > Classroom
+  await expect(page.locator('text=ABC補習班')).toBeVisible();
+  await expect(page.locator('text=台北校區')).toBeVisible();
+  await expect(page.locator('text=國小英文班')).toBeVisible();
+
+  // Verify hierarchy order
+  const breadcrumb = page.locator('[data-testid="breadcrumb"]');
+  await expect(breadcrumb).toContainText('ABC補習班 > 台北校區 > 國小英文班');
+});
+```
+
+---
+
+### 4. Test Data Management
+
+#### Factory Pattern (Recommended)
+
+**File**: `backend/tests/factories.py`
+
+```python
+import factory
+from backend.models import Organization, School, Teacher, TeacherOrganization
+
+class OrganizationFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = Organization
+        sqlalchemy_session = db.session
+
+    name = factory.Sequence(lambda n: f'Organization {n}')
+    type = 'organization'
+    settings = {}
+
+class SchoolFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = School
+        sqlalchemy_session = db.session
+
+    name = factory.Sequence(lambda n: f'School {n}')
+    organization = factory.SubFactory(OrganizationFactory)
+
+class TeacherFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = Teacher
+        sqlalchemy_session = db.session
+
+    name = factory.Sequence(lambda n: f'Teacher {n}')
+    email = factory.LazyAttribute(lambda obj: f'{obj.name.lower().replace(" ", "")}@test.com')
+```
+
+**Usage**:
+```python
+def test_with_factories(db):
+    org = OrganizationFactory()
+    school = SchoolFactory(organization=org)
+    teacher = TeacherFactory()
+    # Test logic here
+```
+
+---
+
+### 5. Testing Coverage Metrics
+
+**Tools**:
+- Backend: `pytest-cov`
+- Frontend: `vitest` with coverage
+- E2E: Playwright built-in coverage
+
+**Commands**:
+```bash
+# Backend unit tests with coverage
+cd backend
+pytest --cov=backend --cov-report=html
+
+# Frontend unit tests with coverage
+cd frontend
+npm run test:coverage
+
+# E2E tests
+cd frontend
+npm run test:e2e
+```
+
+**Coverage Goals**:
+```
+backend/
+├── models.py              → 90%+ (critical data layer)
+├── services/
+│   ├── casbin_service.py  → 95%+ (security critical)
+│   └── ...                → 80%+
+├── routes/
+│   ├── organizations.py   → 85%+
+│   ├── schools.py         → 85%+
+│   └── ...                → 80%+
+
+frontend/
+├── components/            → 70%+
+├── pages/                 → 60%+
+├── lib/api.ts            → 85%+
+```
+
+---
+
+### 6. Continuous Integration
+
+**GitHub Actions Workflow** (`.github/workflows/test.yml`):
+
+```yaml
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          pytest --cov=backend --cov-fail-under=80
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm install
+          npm run test:coverage
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run E2E Tests
+        run: |
+          cd frontend
+          npx playwright install
+          npm run test:e2e
+```
+
+---
+
+## 🧪 測試計畫 (Legacy Documentation)
 
 ### 後端測試
 
