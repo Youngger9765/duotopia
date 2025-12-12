@@ -120,8 +120,42 @@ async def startup_event():
     log_all = environment == "development"
     setup_query_logging(get_engine(), log_all=log_all)
 
+    # Sync Casbin roles from database with retry mechanism
+    import logging
+    import time
+
+    logger = logging.getLogger(__name__)
+
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2  # seconds
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            from services.casbin_service import get_casbin_service
+
+            casbin_service = get_casbin_service()
+            casbin_service.sync_from_database()
+            logger.info("✅ Casbin roles synced from database")
+            break
+        except Exception as e:
+            if attempt == MAX_RETRIES - 1:
+                # Last attempt failed - this is critical
+                logger.critical(
+                    f"🚨 CRITICAL: Failed to sync Casbin roles after {MAX_RETRIES} attempts: {e}",
+                    exc_info=True
+                )
+                raise RuntimeError(
+                    "Failed to initialize permission system. Cannot start application."
+                ) from e
+            else:
+                logger.warning(
+                    f"⚠️ Casbin sync attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {RETRY_DELAY}s..."
+                )
+                time.sleep(RETRY_DELAY)
+                RETRY_DELAY *= 2  # Exponential backoff
+
     print(
-        "🚀 Application startup complete - Thread pools initialized, query logging enabled"
+        "🚀 Application startup complete - Thread pools initialized, query logging enabled, Casbin synced"
     )
 
 

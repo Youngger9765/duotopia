@@ -90,37 +90,54 @@ export default function StudentLayout() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Mock organization data - in real app, fetch from API or context
-  // TODO: Add organization_name and school_name to StudentUser type
-  const organizationData = {
-    organization:
-      ((user as unknown as Record<string, unknown>)
-        ?.organization_name as string) || "Duotopia Learning",
-    school:
-      ((user as unknown as Record<string, unknown>)?.school_name as string) ||
-      "示範學校",
-    classroom: user?.classroom_name || "默認班級",
-  };
+  // Build breadcrumb items dynamically based on available data
+  const breadcrumbItems = [
+    user?.organization_name && {
+      icon: Building2,
+      label: user.organization_name,
+      isFinal: false,
+    },
+    user?.school_name && {
+      icon: School,
+      label: user.school_name,
+      isFinal: false,
+    },
+    {
+      icon: Users,
+      label: user?.classroom_name || "班級",
+      isFinal: true,
+    },
+  ].filter(Boolean) as Array<{
+    icon: typeof Building2;
+    label: string;
+    isFinal: boolean;
+  }>;
 
-  // Breadcrumb component
+  // Breadcrumb component with dynamic hierarchy
   const Breadcrumb = () => (
     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 overflow-x-auto">
-      <div className="flex items-center gap-1 whitespace-nowrap">
-        <Building2 className="h-3 w-3" />
-        <span>{organizationData.organization}</span>
-      </div>
-      <ChevronRight className="h-3 w-3 flex-shrink-0" />
-      <div className="flex items-center gap-1 whitespace-nowrap">
-        <School className="h-3 w-3" />
-        <span>{organizationData.school}</span>
-      </div>
-      <ChevronRight className="h-3 w-3 flex-shrink-0" />
-      <div className="flex items-center gap-1 whitespace-nowrap">
-        <Users className="h-3 w-3" />
-        <span className="font-medium text-gray-900 dark:text-gray-100">
-          {organizationData.classroom}
-        </span>
-      </div>
+      {breadcrumbItems.map((item, index) => {
+        const Icon = item.icon;
+        const isLast = index === breadcrumbItems.length - 1;
+
+        return (
+          <div key={index} className="flex items-center gap-2">
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <Icon className="h-3 w-3" />
+              <span
+                className={
+                  item.isFinal
+                    ? "font-medium text-gray-900 dark:text-gray-100"
+                    : ""
+                }
+              >
+                {item.label}
+              </span>
+            </div>
+            {!isLast && <ChevronRight className="h-3 w-3 flex-shrink-0" />}
+          </div>
+        );
+      })}
     </div>
   );
 

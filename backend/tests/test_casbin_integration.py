@@ -15,11 +15,17 @@ class TestCasbinService:
     def setup(self):
         """每個測試前初始化"""
         self.casbin = CasbinService()
-        # 清空政策
-        self.casbin.enforcer.clear_policy()
+        # 只清空角色分配（g rules），保留權限政策（p rules）
+        # clear_policy() 會清除所有規則，包括從 CSV 載入的 p 規則
+        # 我們只想清除測試中動態添加的角色分配
+        all_grouping = self.casbin.enforcer.get_grouping_policy()
+        for g in all_grouping:
+            self.casbin.enforcer.remove_grouping_policy(*g)
         yield
-        # 清理
-        self.casbin.enforcer.clear_policy()
+        # 清理：只清除角色分配
+        all_grouping = self.casbin.enforcer.get_grouping_policy()
+        for g in all_grouping:
+            self.casbin.enforcer.remove_grouping_policy(*g)
 
     def test_add_and_check_role(self):
         """測試新增角色並檢查"""
@@ -233,15 +239,255 @@ class TestCasbinHelpers:
         assert service.enforcer is not None
 
 
-# 如果要測試資料庫同步，需要 mock database
-@pytest.mark.skip(reason="需要資料庫連線")
 class TestDatabaseSync:
-    """測試資料庫同步（需要資料庫）"""
+    """測試資料庫同步功能"""
 
-    def test_sync_from_database(self):
-        """測試從資料庫同步"""
-        # TODO: 實作資料庫 mock
-        pass
+    @pytest.fixture(autouse=True)
+    def setup(self, shared_test_session):
+        """每個測試前初始化"""
+        self.db = shared_test_session
+        self.casbin = CasbinService()
+        # 清空 Casbin 政策
+        self.casbin.enforcer.clear_policy()
+        yield
+        # 清理
+        self.casbin.enforcer.clear_policy()
+
+    def test_sync_from_database_empty(self):
+        """測試從空資料庫同步"""
+        # 確保資料庫為空
+        from models.organization import TeacherOrganization, TeacherSchool
+
+        assert self.db.query(TeacherOrganization).count() == 0
+        assert self.db.query(TeacherSchool).count() == 0
+
+        # 同步應該成功且無錯誤
+        self.casbin.sync_from_database(db=self.db)
+
+        # 驗證沒有角色
+        all_policies = self.casbin.enforcer.get_grouping_policy()
+        assert len(all_policies) == 0
+
+    def test_sync_from_database_with_org_roles(self):
+        """測試同步組織角色"""
+        from models.organization import Organization, TeacherOrganization
+        from models import Teacher
+        from tests.factories import TestDataFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TestDataFactory.create_teacher(self.db)
+        self.db.flush()
+
+        org = Organization(
+            id=uuid.uuid4(), name="Test Org", display_name="Test Organization"
+        )
+        self.db.add(org)
+        self.db.flush()
+
+        teacher_org = TeacherOrganization(
+            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+        )
+        self.db.add(teacher_org)
+        self.db.commit()
+
+        # 執行同步
+        self.casbin.sync_from_database(db=self.db)
+
+        # 驗證角色已同步
+        has_role = self.casbin.has_role(teacher.id, "org_owner", f"org-{org.id}")
+        assert has_role is True
+
+        # 驗證權限
+        can_manage_schools = self.casbin.check_permission(
+            teacher.id, f"org-{org.id}", "manage_schools", "write"
+        )
+        assert can_manage_schools is True
+
+    def test_sync_from_database_with_school_roles(self):
+        """測試同步學校角色"""
+        from models.organization import Organization, School, TeacherSchool
+        from models import Teacher
+        from tests.factories import TeacherFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TeacherFactory.create()
+        self.db.add(teacher)
+
+        org = Organization(id=uuid.uuid4(), name="Test Org")
+        self.db.add(org)
+        self.db.flush()
+
+        school = School(
+            id=uuid.uuid4(), organization_id=org.id, name="Test School"
+        )
+        self.db.add(school)
+        self.db.flush()
+
+        teacher_school = TeacherSchool(
+            teacher_id=teacher.id,
+            school_id=school.id,
+            roles=["school_admin", "teacher"],
+            is_active=True,
+        )
+        self.db.add(teacher_school)
+        self.db.commit()
+
+        # 執行同步
+        self.casbin.sync_from_database(db=self.db)
+
+        # 驗證兩個角色都已同步
+        has_admin_role = self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}")
+        has_teacher_role = self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}")
+        assert has_admin_role is True
+        assert has_teacher_role is True
+
+    def test_sync_from_database_ignores_inactive(self):
+        """測試同步時忽略 is_active=False 的記錄"""
+        from models.organization import Organization, TeacherOrganization
+        from tests.factories import TeacherFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TeacherFactory.create()
+        self.db.add(teacher)
+
+        org = Organization(id=uuid.uuid4(), name="Test Org")
+        self.db.add(org)
+        self.db.flush()
+
+        # 創建 inactive 的角色
+        teacher_org = TeacherOrganization(
+            teacher_id=teacher.id,
+            organization_id=org.id,
+            role="org_owner",
+            is_active=False,  # Inactive!
+        )
+        self.db.add(teacher_org)
+        self.db.commit()
+
+        # 執行同步
+        self.casbin.sync_from_database(db=self.db)
+
+        # 驗證 inactive 角色未被同步
+        has_role = self.casbin.has_role(teacher.id, "org_owner", f"org-{org.id}")
+        assert has_role is False
+
+    def test_sync_teacher_roles(self):
+        """測試同步特定教師的角色"""
+        from models.organization import Organization, School, TeacherOrganization, TeacherSchool
+        from tests.factories import TeacherFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TeacherFactory.create()
+        self.db.add(teacher)
+
+        org = Organization(id=uuid.uuid4(), name="Test Org")
+        self.db.add(org)
+        self.db.flush()
+
+        school = School(id=uuid.uuid4(), organization_id=org.id, name="Test School")
+        self.db.add(school)
+        self.db.flush()
+
+        # 添加組織角色
+        teacher_org = TeacherOrganization(
+            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+        )
+        self.db.add(teacher_org)
+
+        # 添加學校角色
+        teacher_school = TeacherSchool(
+            teacher_id=teacher.id, school_id=school.id, roles=["teacher"], is_active=True
+        )
+        self.db.add(teacher_school)
+        self.db.commit()
+
+        # 執行同步（針對特定教師）
+        self.casbin.sync_teacher_roles(teacher.id, db=self.db)
+
+        # 驗證角色已同步
+        has_org_role = self.casbin.has_role(teacher.id, "org_owner", f"org-{org.id}")
+        has_school_role = self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}")
+        assert has_org_role is True
+        assert has_school_role is True
+
+    def test_sync_teacher_roles_removes_old_roles(self):
+        """測試 sync_teacher_roles 會移除舊角色"""
+        from models.organization import Organization, TeacherOrganization
+        from tests.factories import TeacherFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TeacherFactory.create()
+        self.db.add(teacher)
+
+        org = Organization(id=uuid.uuid4(), name="Test Org")
+        self.db.add(org)
+        self.db.flush()
+
+        # 先手動添加一個 Casbin 角色
+        self.casbin.add_role_for_user(teacher.id, "old_role", f"org-{org.id}")
+        assert self.casbin.has_role(teacher.id, "old_role", f"org-{org.id}") is True
+
+        # 在資料庫中創建新角色（不包含 old_role）
+        teacher_org = TeacherOrganization(
+            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+        )
+        self.db.add(teacher_org)
+        self.db.commit()
+
+        # 執行同步
+        self.casbin.sync_teacher_roles(teacher.id, db=self.db)
+
+        # 驗證舊角色已移除
+        has_old_role = self.casbin.has_role(teacher.id, "old_role", f"org-{org.id}")
+        assert has_old_role is False
+
+        # 驗證新角色已添加
+        has_new_role = self.casbin.has_role(teacher.id, "org_owner", f"org-{org.id}")
+        assert has_new_role is True
+
+    def test_sync_teacher_roles_handles_role_changes(self):
+        """測試 sync_teacher_roles 處理角色變更"""
+        from models.organization import School, TeacherSchool, Organization
+        from tests.factories import TeacherFactory
+        import uuid
+
+        # 創建測試資料
+        teacher = TeacherFactory.create()
+        self.db.add(teacher)
+
+        org = Organization(id=uuid.uuid4(), name="Test Org")
+        self.db.add(org)
+        self.db.flush()
+
+        school = School(id=uuid.uuid4(), organization_id=org.id, name="Test School")
+        self.db.add(school)
+        self.db.flush()
+
+        # 初始角色: teacher
+        teacher_school = TeacherSchool(
+            teacher_id=teacher.id, school_id=school.id, roles=["teacher"], is_active=True
+        )
+        self.db.add(teacher_school)
+        self.db.commit()
+
+        # 第一次同步
+        self.casbin.sync_teacher_roles(teacher.id, db=self.db)
+        assert self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
+        assert self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}") is False
+
+        # 升級為 school_admin
+        teacher_school.roles = ["school_admin", "teacher"]
+        self.db.commit()
+
+        # 第二次同步
+        self.casbin.sync_teacher_roles(teacher.id, db=self.db)
+        assert self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
+        assert self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}") is True
 
 
 if __name__ == "__main__":

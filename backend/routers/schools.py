@@ -605,11 +605,15 @@ async def add_teacher_to_school(
     db.commit()
     db.refresh(teacher_school)
 
-    # Add Casbin roles
-    for role in request.roles:
-        casbin_service.add_role_for_user(
-            request.teacher_id, role, f"school-{school_id}"
-        )
+    # Sync Casbin roles for this teacher
+    try:
+        casbin_service.sync_teacher_roles(request.teacher_id)
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync Casbin roles for teacher {request.teacher_id}: {e}")
 
     return TeacherSchoolRelationResponse.from_orm(teacher_school)
 
@@ -659,21 +663,20 @@ async def update_teacher_school_roles(
             detail="Teacher relationship not found",
         )
 
-    # Get old roles for Casbin cleanup
-    old_roles = teacher_school.roles if teacher_school.roles else []
-
     # Update roles
     teacher_school.roles = request.roles
     db.commit()
     db.refresh(teacher_school)
 
-    # Update Casbin roles
-    # Remove old roles
-    for role in old_roles:
-        casbin_service.delete_role_for_user(teacher_id, role, f"school-{school_id}")
-    # Add new roles
-    for role in request.roles:
-        casbin_service.add_role_for_user(teacher_id, role, f"school-{school_id}")
+    # Sync Casbin roles for this teacher (will update all roles)
+    try:
+        casbin_service.sync_teacher_roles(teacher_id)
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync Casbin roles for teacher {teacher_id}: {e}")
 
     return TeacherSchoolRelationResponse.from_orm(teacher_school)
 
@@ -715,9 +718,14 @@ async def remove_teacher_from_school(
     teacher_school.is_active = False
     db.commit()
 
-    # Remove all Casbin roles
-    roles = teacher_school.roles if teacher_school.roles else []
-    for role in roles:
-        casbin_service.delete_role_for_user(teacher_id, role, f"school-{school_id}")
+    # Sync Casbin roles for this teacher (will remove inactive roles)
+    try:
+        casbin_service.sync_teacher_roles(teacher_id)
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync Casbin roles for teacher {teacher_id}: {e}")
 
     return {"message": "Teacher removed from school successfully"}

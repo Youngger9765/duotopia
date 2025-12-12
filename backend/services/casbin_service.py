@@ -6,8 +6,11 @@ Casbin Permission Service
 
 import os
 import casbin
+import logging
 from typing import List, Optional
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # 配置檔案路徑（使用绝对路径）
 CONFIG_DIR = Path(__file__).parent.parent / "config"
@@ -136,9 +139,10 @@ class CasbinService:
         )
 
         if success:
-            # 儲存變更
-            self.enforcer.save_policy()
-            print(f"[Casbin] Added role: {role} for teacher={teacher_id} in {domain}")
+            # NOTE: 不儲存到檔案，因為會覆蓋 casbin_policy.csv 中的 p 規則
+            # 角色分配（g 規則）應該從資料庫同步，不需要持久化到檔案
+            # self.enforcer.save_policy()  # REMOVED: This would overwrite p rules in CSV
+            logger.info(f"[Casbin] Added role: {role} for teacher={teacher_id} in {domain}")
 
         return success
 
@@ -154,13 +158,13 @@ class CasbinService:
         Returns:
             bool: 是否成功
         """
-        success = self.enforcer.delete_roles_for_user_in_domain(
-            str(teacher_id), role, domain
-        )
+        # Use remove_grouping_policy to delete the g rule: [user, role, domain]
+        success = self.enforcer.remove_grouping_policy(str(teacher_id), role, domain)
 
         if success:
-            self.enforcer.save_policy()
-            print(f"[Casbin] Removed role: {role} for teacher={teacher_id} in {domain}")
+            # NOTE: 不儲存到檔案，因為會覆蓋 casbin_policy.csv 中的 p 規則
+            # self.enforcer.save_policy()  # REMOVED: This would overwrite p rules in CSV
+            logger.info(f"[Casbin] Removed role: {role} for teacher={teacher_id} in {domain}")
 
         return success
 
@@ -186,7 +190,9 @@ class CasbinService:
             # 移除所有角色
             success = self.enforcer.delete_roles_for_user(str(teacher_id))
             if success:
-                self.enforcer.save_policy()
+                # NOTE: 不儲存到檔案，因為會覆蓋 casbin_policy.csv 中的 p 規則
+                # self.enforcer.save_policy()  # REMOVED
+                logger.info(f"[Casbin] Removed all roles for teacher={teacher_id}")
 
         return True
 
@@ -223,29 +229,180 @@ class CasbinService:
     # 資料庫同步
     # ============================================
 
-    def sync_from_database(self):
+    def sync_from_database(self, db=None):
         """
-        從資料庫同步角色到 Casbin
+        從資料庫同步角色到 Casbin (with improved session management)
+
+        Args:
+            db: Optional database session (for testing). If None, creates a new session.
 
         這個方法應該在應用啟動時呼叫，
-        將 teacher_schools 表的資料同步到 Casbin
-
-        TODO: Enable after database migrations are created
+        將 teacher_organizations 和 teacher_schools 表的資料同步到 Casbin
         """
-        # TODO: Implement after database migrations
-        raise NotImplementedError("Database sync pending - requires migrations")
+        from sqlalchemy.orm import Session
+        from database import get_session_local
+        from models.organization import TeacherOrganization, TeacherSchool
 
-    def sync_teacher_roles(self, teacher_id: int):
+        # Use provided session or create a new one
+        session_provided = db is not None
+        session_to_close = None
+
+        if not session_provided:
+            SessionLocal = get_session_local()
+            db = SessionLocal()
+            session_to_close = db
+
+        try:
+            # 1. 只清空角色分配（g rules），保留權限政策（p rules）
+            # clear_policy() 會清除所有規則，包括從 CSV 載入的 p 規則
+            all_grouping = self.enforcer.get_grouping_policy()
+            for g in all_grouping:
+                self.enforcer.remove_grouping_policy(*g)
+            logger.info(f"[Casbin] Cleared {len(all_grouping)} existing role assignments")
+
+            # 2. 同步組織角色
+            org_roles = (
+                db.query(TeacherOrganization)
+                .filter(TeacherOrganization.is_active.is_(True))
+                .all()
+            )
+
+            for tr in org_roles:
+                self.add_role_for_user(
+                    tr.teacher_id, tr.role, f"org-{tr.organization_id}"
+                )
+
+            logger.info(f"[Casbin] Synced {len(org_roles)} organization roles")
+
+            # 3. 同步學校角色
+            school_roles = (
+                db.query(TeacherSchool).filter(TeacherSchool.is_active.is_(True)).all()
+            )
+
+            for ts in school_roles:
+                # TeacherSchool.roles 是列表，需要逐個添加
+                if ts.roles:
+                    for role in ts.roles:
+                        self.add_role_for_user(
+                            ts.teacher_id, role, f"school-{ts.school_id}"
+                        )
+
+            logger.info(f"[Casbin] Synced {len(school_roles)} school roles")
+
+            # 4. 不需要保存到檔案（會覆蓋 casbin_policy.csv 中的 p 規則）
+            # 角色分配只存在記憶體中，每次啟動時從資料庫同步
+            # self.enforcer.save_policy()  # REMOVED
+            logger.info(
+                f"[Casbin] Database sync complete: {len(org_roles)} org roles + {len(school_roles)} school roles"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"[Casbin] Failed to sync from database: {e}",
+                exc_info=True
+            )
+            raise
+        finally:
+            if session_to_close is not None:
+                try:
+                    session_to_close.close()
+                except Exception as close_error:
+                    logger.error(
+                        f"[Casbin] Failed to close database session: {close_error}",
+                        exc_info=True
+                    )
+
+    def sync_teacher_roles(self, teacher_id: int, db=None):
         """
-        同步特定老師的角色
+        同步特定老師的角色 (with improved session management)
 
         Args:
             teacher_id: 老師 ID
-
-        TODO: Enable after database migrations are created
+            db: Optional database session (for testing). If None, creates a new session.
         """
-        # TODO: Implement after database migrations
-        raise NotImplementedError("Database sync pending - requires migrations")
+        from sqlalchemy.orm import Session
+        from database import get_session_local
+        from models.organization import TeacherOrganization, TeacherSchool
+
+        # Use provided session or create a new one
+        session_provided = db is not None
+        session_to_close = None
+
+        if not session_provided:
+            SessionLocal = get_session_local()
+            db = SessionLocal()
+            session_to_close = db
+
+        try:
+            # 1. 刪除該教師的所有舊角色
+            user = str(teacher_id)
+
+            # Get all grouping policies for this user (format: [user, role, domain])
+            all_grouping_policies = self.enforcer.get_grouping_policy()
+            removed_count = 0
+
+            for policy in all_grouping_policies:
+                if len(policy) >= 3 and policy[0] == user:
+                    # policy = [user, role, domain]
+                    role = policy[1]
+                    domain = policy[2]
+                    if self.delete_role_for_user(teacher_id, role, domain):
+                        removed_count += 1
+
+            logger.info(f"[Casbin] Removed {removed_count} old roles for teacher {teacher_id}")
+
+            # 2. 查詢並添加組織角色
+            org_roles = (
+                db.query(TeacherOrganization)
+                .filter(
+                    TeacherOrganization.teacher_id == teacher_id,
+                    TeacherOrganization.is_active.is_(True),
+                )
+                .all()
+            )
+
+            for tr in org_roles:
+                self.add_role_for_user(
+                    teacher_id, tr.role, f"org-{tr.organization_id}"
+                )
+
+            logger.info(f"[Casbin] Added {len(org_roles)} organization roles for teacher {teacher_id}")
+
+            # 3. 查詢並添加學校角色
+            school_roles = (
+                db.query(TeacherSchool)
+                .filter(
+                    TeacherSchool.teacher_id == teacher_id,
+                    TeacherSchool.is_active.is_(True),
+                )
+                .all()
+            )
+
+            school_role_count = 0
+            for ts in school_roles:
+                if ts.roles:
+                    for role in ts.roles:
+                        self.add_role_for_user(teacher_id, role, f"school-{ts.school_id}")
+                        school_role_count += 1
+
+            logger.info(f"[Casbin] Added {school_role_count} school roles for teacher {teacher_id}")
+            logger.info(f"[Casbin] Sync complete for teacher {teacher_id}")
+
+        except Exception as e:
+            logger.error(
+                f"[Casbin] Failed to sync roles for teacher {teacher_id}: {e}",
+                exc_info=True
+            )
+            raise
+        finally:
+            if session_to_close is not None:
+                try:
+                    session_to_close.close()
+                except Exception as close_error:
+                    logger.error(
+                        f"[Casbin] Failed to close database session: {close_error}",
+                        exc_info=True
+                    )
 
     # ============================================
     # 工具方法
