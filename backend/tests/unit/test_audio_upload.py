@@ -75,6 +75,64 @@ class TestAudioUploadService:
         assert "Invalid file type" in exc_info.value.detail
 
     @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_upload_audio_video_mp4_safari(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試 Safari 的 video/mp4 格式 (Issue #109)"""
+        mock_uuid.return_value = "test-uuid"
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        mock_client = Mock()
+        mock_bucket = Mock()
+        mock_blob = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+        mock_bucket.blob.return_value = mock_blob
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.content_type = "video/mp4"
+        mock_file.filename = "recording.mp4"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)
+
+        result = await service.upload_audio(mock_file, duration_seconds=20)
+
+        assert "mp4" in result
+        mock_blob.upload_from_string.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_upload_audio_mp4_with_codecs(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試帶 codecs 參數的 audio/mp4 格式 (Issue #109)"""
+        mock_uuid.return_value = "test-uuid"
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        mock_client = Mock()
+        mock_bucket = Mock()
+        mock_blob = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+        mock_bucket.blob.return_value = mock_blob
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.content_type = "audio/mp4;codecs=aac"
+        mock_file.filename = "recording.m4a"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)
+
+        result = await service.upload_audio(mock_file, duration_seconds=20)
+
+        assert result is not None
+        mock_blob.upload_from_string.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_upload_audio_file_too_large(self, service):
         """測試檔案過大"""
         mock_file = Mock(spec=UploadFile)
