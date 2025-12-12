@@ -63,6 +63,7 @@ interface AssignmentDetail extends Assignment {
   content_id: number;
   assigned_date?: string; // Alternative field name
   students?: number[]; // Alternative field name
+  practice_mode?: "reading" | "rearrangement"; // 🆕 例句重組/朗讀模式
   content?: {
     title: string;
     type: string;
@@ -1067,18 +1068,20 @@ export default function TeacherAssignmentDetailPage() {
               <CheckCircle className="h-4 w-4 mr-2" />
               {t("assignmentDetail.buttons.gradeAssignment")}
             </Button>
-            {/* AI批改按鈕 */}
-            <Button
-              onClick={() => setShowBatchGradingModal(true)}
-              disabled={stats.total === 0}
-              className={cn(
-                "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
-                "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
-              )}
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.batchGrade")}
-            </Button>
+            {/* AI批改按鈕 - 🆕 rearrangement 模式不顯示（自動計分，不需 AI 批改） */}
+            {assignment?.practice_mode !== "rearrangement" && (
+              <Button
+                onClick={() => setShowBatchGradingModal(true)}
+                disabled={stats.total === 0}
+                className={cn(
+                  "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                  "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+                )}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.batchGrade")}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1484,68 +1487,73 @@ export default function TeacherAssignmentDetailPage() {
                   </div>
                 </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 已提交 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
-                    >
-                      {stats.submitted}
+                {/* 🆕 rearrangement 模式：隱藏 已提交/待訂正/已訂正 步驟 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.submitted")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 待訂正 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
-                    >
-                      {stats.returned}
+                    {/* 已提交 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
+                        >
+                          {stats.submitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.submitted")}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.returned")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 已訂正 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
-                    >
-                      {stats.resubmitted}
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.resubmitted")}
-                  </div>
-                </div>
+
+                    {/* 待訂正 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
+                        >
+                          {stats.returned}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.returned")}
+                      </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+
+                    {/* 已訂正 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
+                        >
+                          {stats.resubmitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.resubmitted")}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Arrow */}
                 <div className="flex-shrink-0 flex items-center pt-6">

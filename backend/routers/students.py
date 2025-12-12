@@ -919,11 +919,14 @@ async def submit_assignment(
     # 🔥 Fix Issue #58: 判斷是否為訂正後提交
     # 如果當前狀態是 RETURNED (待訂正)，提交後應該是 RESUBMITTED (已訂正)
     # 否則就是第一次提交，狀態為 SUBMITTED (已提交)
+    # 🆕 Fix Issue #107: rearrangement 模式使用 final_status (GRADED) 而非 SUBMITTED
     if student_assignment.status == AssignmentStatus.RETURNED:
         student_assignment.status = AssignmentStatus.RESUBMITTED
         student_assignment.resubmitted_at = datetime.now(timezone.utc)
     else:
-        student_assignment.status = AssignmentStatus.SUBMITTED
+        student_assignment.status = (
+            final_status  # 🔥 Fix: 使用 final_status 而非寫死 SUBMITTED
+        )
         student_assignment.submitted_at = datetime.now(timezone.utc)
 
     # 🆕 rearrangement 模式：同時設定 graded_at
