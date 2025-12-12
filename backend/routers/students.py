@@ -483,7 +483,11 @@ async def get_assignment_activities(
                         content.type.value if content.type else "EXAMPLE_SENTENCES"
                     ),
                     "title": content.title,
-                    "duration": 60,  # Default duration
+                    "duration": (
+                        assignment.time_limit_per_question
+                        if assignment and assignment.time_limit_per_question
+                        else 30
+                    ),
                     "points": (
                         100 // len(progress_records)
                         if len(progress_records) > 0

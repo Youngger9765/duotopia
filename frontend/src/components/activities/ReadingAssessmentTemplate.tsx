@@ -48,7 +48,7 @@ export default function ReadingAssessmentTemplate({
   exampleAudioUrl,
   progressId,
   readOnly = false,
-  timeLimit = 60, // 預設 60 秒
+  timeLimit = 30, // 預設 30 秒
   onTimeout,
   onRetry,
   onSkip,
@@ -307,7 +307,7 @@ export default function ReadingAssessmentTemplate({
               onRecordingComplete?.(blob, url);
             }}
             readOnly={readOnly}
-            autoStop={45}
+            autoStop={timeLimit}
             variant="default"
             showProgress={true}
             showTimer={true}

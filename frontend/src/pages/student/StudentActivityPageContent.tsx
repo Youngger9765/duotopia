@@ -1597,6 +1597,7 @@ export default function StudentActivityPageContent({
           }
           onFileUpload={handleFileUpload}
           formatTime={formatTime}
+          timeLimit={activity.duration || 30}
           progressIds={
             answer?.progressIds ||
             activity.items

@@ -288,7 +288,7 @@ export function AssignmentDialog({
     start_date: undefined as Date | undefined,
     // ===== 例句集作答模式設定 =====
     practice_mode: "reading" as "reading" | "rearrangement", // 作答模式
-    time_limit_per_question: 40 as 10 | 20 | 30 | 40, // 每題時間限制
+    time_limit_per_question: 30 as 10 | 20 | 30 | 40, // 每題時間限制
     shuffle_questions: false, // 是否打亂順序
     show_answer: false, // 答題結束後是否顯示正確答案（例句重組專用）
     play_audio: false, // 是否播放音檔（例句重組專用）
@@ -309,7 +309,7 @@ export function AssignmentDialog({
         due_date: undefined,
         start_date: new Date(), // 預設為今天
         practice_mode: "reading", // 預設為例句朗讀模式
-        time_limit_per_question: 40,
+        time_limit_per_question: 30,
         shuffle_questions: false,
         show_answer: false,
         play_audio: false,
@@ -1691,14 +1691,14 @@ export function AssignmentDialog({
                           </option>
                           <option value={30}>
                             30{" "}
-                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
-                          </option>
-                          <option value={40}>
-                            40{" "}
                             {t("dialogs.assignmentDialog.practiceMode.seconds")}{" "}
                             (
                             {t("dialogs.assignmentDialog.practiceMode.default")}
                             )
+                          </option>
+                          <option value={40}>
+                            40{" "}
+                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
                           </option>
                         </select>
                       </div>

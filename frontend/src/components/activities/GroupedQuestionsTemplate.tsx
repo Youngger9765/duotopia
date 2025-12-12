@@ -124,6 +124,7 @@ interface GroupedQuestionsTemplateProps {
     assessmentResult: AssessmentResult | null,
   ) => void; // AI 評估完成回調
   onAnalyzingStateChange?: (isAnalyzing: boolean) => void; // 🔒 分析狀態變化回調
+  timeLimit?: number; // 錄音時間限制（秒）
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -149,6 +150,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onUploadSuccess,
   onAssessmentComplete,
   onAnalyzingStateChange, // 🔒 分析狀態變化回調
+  timeLimit = 30, // 錄音時間限制（秒）
 }: GroupedQuestionsTemplateProps) {
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
@@ -975,7 +977,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   {/* 錄音中狀態 */}
                   <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                   <span className="text-base font-medium text-red-600">
-                    {formatTime(recordingTime)} / 0:45
+                    {formatTime(recordingTime)} / {formatTime(timeLimit)}
                   </span>
                   <Button
                     size="sm"

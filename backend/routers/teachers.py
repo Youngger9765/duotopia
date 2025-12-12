@@ -3362,7 +3362,11 @@ async def get_assignment_preview(
                 "order": idx + 1,
                 "type": content.type.value if content.type else "reading_assessment",
                 "title": content.title,
-                "duration": content.time_limit_seconds or 60,
+                "duration": (
+                    assignment.time_limit_per_question
+                    if assignment.time_limit_per_question
+                    else 30
+                ),
                 "points": 100 // len(assignment_contents)
                 if len(assignment_contents) > 0
                 else 100,
