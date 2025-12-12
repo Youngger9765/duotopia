@@ -1624,7 +1624,7 @@ export default function TeacherAssignmentDetailPage() {
                 />
               </div>
 
-              {/* Status Filter */}
+              {/* Status Filter - 🆕 rearrangement 模式只顯示 4 種狀態 */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -1642,15 +1642,20 @@ export default function TeacherAssignmentDetailPage() {
                 <option value="IN_PROGRESS">
                   {t("assignmentDetail.labels.inProgress")}
                 </option>
-                <option value="SUBMITTED">
-                  {t("assignmentDetail.labels.submitted")}
-                </option>
-                <option value="RETURNED">
-                  {t("assignmentDetail.labels.returned")}
-                </option>
-                <option value="RESUBMITTED">
-                  {t("assignmentDetail.labels.resubmitted")}
-                </option>
+                {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    <option value="SUBMITTED">
+                      {t("assignmentDetail.labels.submitted")}
+                    </option>
+                    <option value="RETURNED">
+                      {t("assignmentDetail.labels.returned")}
+                    </option>
+                    <option value="RESUBMITTED">
+                      {t("assignmentDetail.labels.resubmitted")}
+                    </option>
+                  </>
+                )}
                 <option value="GRADED">
                   {t("assignmentDetail.labels.graded")}
                 </option>
