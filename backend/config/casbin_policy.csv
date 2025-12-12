@@ -1,59 +1,30 @@
-g, 1, org_owner, org-801fe819-5120-42dc-926a-baa7309485dc
-g, 1, org_owner, org-a40b89aa-0c15-4aec-b02d-a05e769fe768
-g, 2, org_admin, org-a40b89aa-0c15-4aec-b02d-a05e769fe768
-g, 1, org_owner, org-8401840b-0304-458c-b170-b9c91b4790d3
-g, 1, org_owner, org-63aed5b1-f3f0-4c97-8815-fdaf64ced98b
-g, 1, org_owner, org-bdf5e734-6168-493e-bf62-92c13d31b29a
-g, 1, org_owner, org-f7aeff02-a2f1-45f3-90c5-f81611b7f75e
-g, 1, org_owner, org-1e7ec681-c7f3-47e3-b44b-68cca0763ffa
-g, 1, org_owner, org-af66a777-a70e-4aab-ba3f-71092795144b
-g, 1, org_owner, org-61576e02-5222-4789-a165-615ab866a365
-g, 1, org_admin, org-8da773bd-85c0-402a-b906-f8935df15428
-g, 2, org_owner, org-8da773bd-85c0-402a-b906-f8935df15428
-g, 1, org_owner, org-fbeabc49-e12b-4c56-8270-1f8c6346b45a
-g, 2, org_owner, org-669a6736-5031-443e-845e-e20e4b847c80
-g, 1, org_owner, org-fdffa6b2-56a8-42ae-a383-446d294c5381
-g, 2, org_admin, org-fdffa6b2-56a8-42ae-a383-446d294c5381
-g, 1, org_owner, org-61096275-c56d-465e-8d15-fc6425f25322
-g, 1, org_owner, org-d67304cf-249e-43db-8289-0b4911ecc0ec
-g, 1, org_owner, org-e9a07b0e-c2fe-4e61-9af1-f34c10b12eb5
-g, 1, org_owner, org-f1805ad7-e278-4a44-8f50-65ca28a137b3
-g, 2, org_owner, org-4dc40cb8-7b24-47a0-aa28-8058db647a84
-g, 1, org_owner, org-20a0f5e5-0367-4fe1-9b1a-19bca97cf27f
-g, 1, org_owner, org-91317a1e-be7f-4c02-84df-36294f7b7692
-g, 1, org_owner, org-8dcf2e79-223e-48cf-8235-5bf814c2b9db
-g, 1, org_owner, org-14068b71-8dcf-4d31-afa8-dfeeb969c4b1
-g, 1, org_owner, org-8d397ff6-9ecb-4bcb-bb44-538b038e0ea6
-g, 2, org_admin, org-8d397ff6-9ecb-4bcb-bb44-538b038e0ea6
-g, 1, org_owner, org-f408c35c-a977-4628-97b1-652bc8a8e807
-g, 2, school_admin, school-41596b2d-e996-4b6e-b31c-85adf24112b3
-g, 1, org_owner, org-04d2aeb6-3cf9-478e-8c52-6ec2ee8b7a90
-g, 2, school_admin, school-fe257593-415c-41ff-9407-9ba0bfc14fd1
-g, 2, teacher, school-fe257593-415c-41ff-9407-9ba0bfc14fd1
-g, 1, org_owner, org-171d08c3-9d53-41f4-ac04-d55159389a1e
-g, 1, org_owner, org-0c8760fa-e7c6-42da-8ba6-889424f444a6
-g, 1, org_owner, org-406ba60e-3341-46c4-8429-085348418fd3
-g, 1, org_owner, org-7b23c1cf-8e1c-423f-b184-c0dc44636ade
-g, 1, org_owner, org-4de04d9a-5505-4f64-a11c-c99daba5d7aa
-g, 1, org_admin, org-291f42af-88ce-4450-9eea-9c0c109bd699
-g, 2, org_owner, org-291f42af-88ce-4450-9eea-9c0c109bd699
-g, 1, org_owner, org-99e11313-87e6-4567-97db-788e67f97b1c
-g, 2, org_owner, org-2d7591f9-1853-423f-a013-ef32621f4f7b
-g, 1, org_owner, org-e6e51e3d-1fbe-473d-9108-ece60e08c5cd
-g, 2, org_admin, org-e6e51e3d-1fbe-473d-9108-ece60e08c5cd
-g, 1, org_owner, org-3e57f477-ec2c-49a7-b521-66313e20f7e6
-g, 1, org_owner, org-3f233bed-fd10-4160-9cc0-36ebb74e0d5a
-g, 1, org_owner, org-82317e73-1df1-43cd-980f-7ea56ef90e55
-g, 1, org_owner, org-9c78b1d3-1e8b-4cd3-8b7d-bf04784d7ded
-g, 1, org_owner, org-9d6fdf3d-d7a6-44cb-a891-4488a959be26
-g, 1, org_owner, org-d5599ede-ff7a-42fe-882a-ce2988069575
-g, 1, org_admin, org-bb01d39a-c50c-4ec0-b1e1-5d7de2881487
-g, 2, org_owner, org-bb01d39a-c50c-4ec0-b1e1-5d7de2881487
-g, 1, org_owner, org-4c67a568-7500-4ae2-8d97-718ff3bf075d
-g, 1, org_owner, org-0a8281e1-fe95-4d59-8636-3c75eae9b499
-g, 1, org_owner, org-89accb15-90fb-4594-a514-9de53d5972b1
-g, 1, org_owner, org-4dce47ef-a0b5-46c7-9386-af3cd241c606
-g, 1, org_owner, org-486ac77f-891e-43f4-b0b0-f833b08bf838
-g, 1, org_admin, org-9c304f62-5c66-4e9a-bf53-97167f90983e
-g, 2, org_owner, org-9c304f62-5c66-4e9a-bf53-97167f90983e
-g, 1, org_owner, org-622bab07-f0b5-4995-8b95-15a60d647717
+# Casbin Policy Definitions for Duotopia
+# Format: p, role, domain, resource, action
+
+# org_owner permissions (can manage everything in their organization)
+p, org_owner, *, manage_schools, write
+p, org_owner, *, manage_teachers, write
+p, org_owner, *, manage_students, read
+p, org_owner, *, manage_students, write
+p, org_owner, *, manage_classrooms, write
+p, org_owner, *, manage_subscription, write
+p, org_owner, *, view_analytics, read
+
+# org_admin permissions (can manage schools and teachers, but not subscription)
+p, org_admin, *, manage_schools, write
+p, org_admin, *, manage_teachers, write
+p, org_admin, *, manage_students, read
+p, org_admin, *, manage_students, write
+p, org_admin, *, manage_classrooms, write
+p, org_admin, *, view_analytics, read
+
+# school_admin permissions (can manage teachers and students in their school only)
+p, school_admin, *, manage_teachers, write
+p, school_admin, *, manage_students, write
+p, school_admin, *, manage_classrooms, write
+p, school_admin, *, view_school_analytics, read
+
+# teacher permissions (can only manage own classrooms)
+p, teacher, *, manage_own_classrooms, write
+p, teacher, *, manage_students, read
+p, teacher, *, view_own_analytics, read

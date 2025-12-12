@@ -9,6 +9,10 @@ export interface StudentUser {
   classroom_id: number;
   classroom_name?: string;
   teacher_name?: string;
+  school_id?: string;
+  school_name?: string;
+  organization_id?: string;
+  organization_name?: string;
 }
 
 interface StudentAuthState {

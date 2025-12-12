@@ -479,8 +479,15 @@ async def add_teacher_to_organization(
     db.commit()
     db.refresh(teacher_org)
 
-    # Add Casbin role
-    casbin_service.add_role_for_user(request.teacher_id, request.role, f"org-{org_id}")
+    # Sync Casbin roles for this teacher
+    try:
+        casbin_service.sync_teacher_roles(request.teacher_id)
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync Casbin roles for teacher {request.teacher_id}: {e}")
 
     return TeacherRelationResponse.from_orm(teacher_org)
 
@@ -539,8 +546,15 @@ async def remove_teacher_from_organization(
     teacher_org.is_active = False
     db.commit()
 
-    # Remove Casbin role
-    casbin_service.delete_role_for_user(teacher_id, teacher_org.role, f"org-{org_id}")
+    # Sync Casbin roles for this teacher (will remove inactive roles)
+    try:
+        casbin_service.sync_teacher_roles(teacher_id)
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync Casbin roles for teacher {teacher_id}: {e}")
 
     return {"message": "Teacher removed from organization successfully"}
 
