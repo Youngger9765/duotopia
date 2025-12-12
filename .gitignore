@@ -1,6 +1,7 @@
 # Environment Variables (IMPORTANT: Never commit these!)
 .env
 .env.local
+.env.local.*
 .env.*.local
 *.env
 !.env.example
@@ -42,6 +43,7 @@ yarn-error.log*
 # Environment variables
 .env
 .env.local
+.env.local.*
 .env.production
 .env.staging
 
@@ -67,6 +69,9 @@ Thumbs.db
 tmp/
 *.png
 /test_*.py  # Only ignore test files in root directory, not in tests/ folders
+
+# Temporary issue planning documents
+ISSUE_*_*.md
 
 # Logs
 *.log
@@ -107,3 +112,15 @@ mcp-servers/browser/screenshots/
 *.screenshot.png
 # Note: .claude/mcp.json should be COMMITTED (team collaboration)
 # Only ignore if it contains secrets (it shouldn't!)
+
+# Load Testing Artifacts
+# Ignore all generated test results and artifacts
+backend/tests/load_testing/results/
+backend/tests/load_testing/audio_samples/*.webm
+backend/tests/load_testing/audio_samples/*.wav
+backend/tests/load_testing/audio_samples/*.mp3
+backend/tests/load_testing/.env
+backend/tests/load_testing/__pycache__/
+# Keep .gitkeep files to track empty directories
+!backend/tests/load_testing/audio_samples/.gitkeep
+!backend/tests/load_testing/results/.gitkeep
