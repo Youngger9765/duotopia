@@ -1872,15 +1872,20 @@ export default function TeacherAssignmentDetailPage() {
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     {t("assignmentDetail.labels.inProgress")}
                   </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.submitted")}
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.returned")}
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.resubmitted")}
-                  </th>
+                  {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 欄位 */}
+                  {assignment?.practice_mode !== "rearrangement" && (
+                    <>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.submitted")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.returned")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.resubmitted")}
+                      </th>
+                    </>
+                  )}
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     {t("assignmentDetail.labels.graded")}
                   </th>
@@ -2111,15 +2116,20 @@ export default function TeacherAssignmentDetailPage() {
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("IN_PROGRESS")}
                         </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("SUBMITTED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RETURNED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RESUBMITTED")}
-                        </td>
+                        {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 欄位 */}
+                        {assignment?.practice_mode !== "rearrangement" && (
+                          <>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("SUBMITTED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RETURNED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RESUBMITTED")}
+                            </td>
+                          </>
+                        )}
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("GRADED")}
                         </td>
