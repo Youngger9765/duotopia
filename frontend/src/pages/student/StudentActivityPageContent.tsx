@@ -461,13 +461,13 @@ export default function StudentActivityPageContent({
           if (!isPreviewMode) {
             toast.success(t("studentActivityPage.recording.complete"), {
               description: t("studentActivityPage.recording.duration", {
-                duration: validationResult.duration.toFixed(1),
+                duration: Math.round(validationResult.duration),
               }),
             });
           } else {
             toast.success(t("studentActivityPage.recording.completePreview"), {
               description: t("studentActivityPage.recording.duration", {
-                duration: validationResult.duration.toFixed(1),
+                duration: Math.round(validationResult.duration),
               }),
             });
           }
@@ -896,7 +896,7 @@ export default function StudentActivityPageContent({
       }
 
       toast.success(t("studentActivity.toast.uploadSuccess"), {
-        description: `${file.name}（${duration.toFixed(1)} 秒）`,
+        description: `${file.name}（${Math.round(duration)} 秒）`,
       });
 
       console.log("✅ File validated successfully, starting upload to GCS...");

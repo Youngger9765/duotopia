@@ -932,7 +932,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   {/* 錄音中狀態 */}
                   <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                   <span className="text-base font-medium text-red-600">
-                    {formatTime(recordingTime)} / {formatTime(timeLimit)}
+                    {formatTime(
+                      recordingTime >= timeLimit - 1
+                        ? timeLimit
+                        : recordingTime,
+                    )}{" "}
+                    / {formatTime(timeLimit)}
                   </span>
                   <Button
                     size="sm"
