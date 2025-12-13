@@ -796,7 +796,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           />
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {formatAudioTime(duration || 0)}
+                          {formatAudioTime(
+                            duration >= timeLimit - 1 ? timeLimit : duration,
+                          )}
                         </div>
                       </div>
 
